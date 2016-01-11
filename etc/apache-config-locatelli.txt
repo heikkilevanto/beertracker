@@ -7,13 +7,13 @@
 
 #<Directory /home/heikki/proj/beertracker/>
 
-<Directory /var/www/html/beertracker/>
+<Directory /var/www/beertracker/>
     AllowOverride All
     Options +FollowSymLinks +ExecCGI 
 
     AddHandler cgi-script .cgi 
 
-    AuthUserFile /var/www/html/beertracker/.htpasswd
+    AuthUserFile /var/www/beertracker/.htpasswd
     AuthName "Please Enter Password"
     AuthType Basic
     Require valid-user
