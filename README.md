@@ -16,6 +16,11 @@ Outline
  - Store all data in a flat text file
  - Write in Perl
 
+Although this is a personal project to scratch my own itch, I might as well
+release it under GPL, in case someone else finds this interesting. That does
+not mean I am willing to accept feature requests or support users! But I would
+like to know if you like this.
+
 
 
 
