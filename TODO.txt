@@ -3,8 +3,11 @@ What to do next
 Since this is a hobby project, it can lay dormant for long periods. So 
 it is important that I can come back to it, and know what to do next.
 
-- Set up Apache on my home server, and on my workstation for experiments.
-Get a Perl script to say hello. Require password.
+- Print the complete form, first without initial data.
+- Detect a POST request, get data into the file
+- Make the quick menu
+- Populate form from quick menu
+- Edit last entry
 
 
 
