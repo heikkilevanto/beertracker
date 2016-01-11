@@ -2,9 +2,28 @@
 
 # Heikki's simple beer tracker
 #
+# Keeps beer drinking history in a flat text file.
+#
+# TODO - get username from CGI, use as data file name 
+#
+# TODO - Display the history of the last 24 hrs at the top. With a link for
+# each to populate the form.
+#
+# TODO - Select by location, brewery, style, etc. 
+#
+# TODO - When selecting, show only matching entries instead of night history.
+#
+# TODO - Sanitize input data
+#
+# TODO - Change filtering to use fieldname and value
+#
+# TODO - A way to show lists of locations, breweries, styles, etc.
+#
+# Later - Reporting
+# Later - Wines and other drinks?
+
 
 use CGI;
-
 my $q = CGI->new;
 
 # Constants
