@@ -4,20 +4,14 @@
 #
 # Keeps beer drinking history in a flat text file.
 #
-# TODO - get username from CGI, use as data file name 
-#
-# TODO - Display the history of the last 24 hrs at the top. With a link for
-# each to populate the form.
-#
-# TODO - Select by location, brewery, style, etc. 
-#
-# TODO - When selecting, show only matching entries instead of night history.
-#
+# TODO - Make a list segment of the display, under the form. 
+# TODO - List head with links to choose what to list
+# TODO - Better param handling when listing
+# TODO - Make location more sticky, needs active change. Save the change in 
+# the file without any beer on the line. Serves as a starting point too.
+# TODO - List items to select and prepopulate the form
+# TODO - Lists to have a "more" link that shows all matching
 # TODO - Sanitize input data
-#
-# TODO - Change filtering to use fieldname and value
-#
-# TODO - A way to show lists of locations, breweries, styles, etc.
 #
 # Later - Reporting
 # Later - Wines and other drinks?
@@ -27,7 +21,13 @@ use CGI;
 my $q = CGI->new;
 
 # Constants
-my $datafile = "./beerdata/beer.data";
+my $datadir = "./beerdata/";
+my $datafile = "";
+if ( $q->remote_user() =~ /^[a-zA-Z0-9]+$/ ) {
+  $datafile = $datadir . $q->remote_user() . ".data";
+} else {
+  error ("Bad username");
+}
 
 
 # Parameters - data file fields are the same order
@@ -69,7 +69,8 @@ if ( $q->request_method eq "POST" ) {
 # Read the file
 # Set defaults for the form, usually from last line in the file
 open F, "<$datafile" 
-  or error("Could not open $datafile for reading: $!");
+  or error("Could not open $datafile for reading: $!".
+     "<br/>Probably the user hasn't been set up yet" );
 my $foundline = "";
 my $lastline = "";
 while (<F>) {
@@ -105,8 +106,12 @@ print "</head><body>\n";
 
 # Status line
 #my ($date, $time) = split(' ', $laststamp);
-my $time = $1 if ( $laststamp =~ / (\d\d:\d\d)/);
-print "<b>$time $lastbeer</b><p/>\n";
+if ( $laststamp =~ / (\d\d:\d\d)/) {
+  my $time = $1;
+  print "<b>$time $lastbeer</b><p/>\n";
+} else {
+  print "<b>Welcome to BeerTrack</b><p/>\n";
+}
 
 # Main input form
 print "<form method='POST'>\n";
