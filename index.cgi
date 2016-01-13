@@ -4,20 +4,24 @@
 #
 # Keeps beer drinking history in a flat text file.
 #
-# TODO - Make a list segment of the display, under the form. 
-# TODO - List head with links to choose what to list
+# TODO - Add weekday in the date stamp, display in list
+# TODO - Form captions list locations, breweries, etc. 
+# TODO - Beer list full of links, to show beers from matching brewery, loc, etc
 # TODO - Better param handling when listing
 # TODO - Make location more sticky, needs active change. Save the change in 
-# the file without any beer on the line. Serves as a starting point too.
+#        the file without any beer on the line. Serves as a starting point too.
 # TODO - List items to select and prepopulate the form
 # TODO - Lists to have a "more" link that shows all matching
 # TODO - Sanitize input data
+#
 #
 # Later - Reporting
 # Later - Wines and other drinks?
 
 
 use CGI;
+use URI::Escape;
+
 my $q = CGI->new;
 
 # Constants
@@ -44,6 +48,8 @@ my $pr  = $q->param("p") || "";  # price, in local currency
 my $rate= $q->param("r") || "";  # rating, 0=worst, 10=best
 my $com = $q->param("c") || "";  # Comments
 my $del = $q->param("x") || "";  # delete/update last entry - not in data file
+my $qry = $q->param("q") || "";  # filter query, greps the list
+my $op  = $q->param("o") || "";  # operation, to list breweries, locations, etc
 
 # POST data into the file
 if ( $q->request_method eq "POST" ) {
@@ -73,10 +79,12 @@ open F, "<$datafile"
      "<br/>Probably the user hasn't been set up yet" );
 my $foundline = "";
 my $lastline = "";
+my @lines;
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
   next unless $_; # skip empty lines
+  push @lines, $_; # collect them all
   my ( $t, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
   my $found = 0;
   if ( $beer ) {
@@ -127,6 +135,45 @@ print "<tr><td>Rating</td><td><input name='r' value='$rate' /></td></tr>\n";
 print "<tr><td>Comment</td><td><input name='c' value='$com' /></td></tr>\n";
 print "<tr><td>&nbsp;</td><td><input type='submit' value='Record'/></td></tr>\n";
 print "</table>\n";
+
+# List section
+if ( $op eq "loc" ) { # list locations
+  print "Location list not implemented yet <br/>\n";
+} else { # Regular beer list, with filters
+  print "<hr/><a href='" . $q->url . "'>Filter: <b>$qry</b></a><p/>\n" if $qry;
+  my $i = scalar( @lines );
+  my $lastloc = "";
+  my $maxlines = 15;
+  while ( $i > 0 ) {
+    $i--;
+    next unless ( !$qry || $lines[$i] =~ /$qry/i );
+    ( $stamp, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+       split( /; */, $lines[$i] );
+    my $date = "";
+    my $time = "";
+    if ( $stamp =~ /(^[0-9-]+) (\d\d?:\d\d?):/ ) {
+      $date = $1;
+      $time = $2;
+    }
+    my $dateloc = "$date : $loc";
+    print "<p/>\n";
+    print "<hr/>$date <a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a><p/>\n" 
+        if ( $dateloc ne $lastloc );
+    print "<i>$time &nbsp;</i>" .
+      "<a href='". $q->url ."?q=".uri_escape($mak) ."' >$mak</a> : " .
+      "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
+    print "$vol cl " if ($vol);
+    print "- $pr kr " if ($pr);
+    print "- $alc % " if ($alc);
+    print " - $rate pts" if ($rate);
+    print "<br/>\n";
+    print "$sty <br/>\n" if ($sty);
+    print "$com <br/>\n" if ($com);
+    $lastloc = $dateloc;
+    $maxlines--;
+    last if ($maxlines <= 0);
+  }
+}
 
 # HTML footer
 print "</body></html>\n";
