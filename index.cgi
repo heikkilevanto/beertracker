@@ -4,19 +4,6 @@
 #
 # Keeps beer drinking history in a flat text file.
 #
-# TODO - Add weekday in the date stamp, display in list
-# TODO - Form captions list locations, breweries, etc. 
-# TODO - Beer list full of links, to show beers from matching brewery, loc, etc
-# TODO - Better param handling when listing
-# TODO - Make location more sticky, needs active change. Save the change in 
-#        the file without any beer on the line. Serves as a starting point too.
-# TODO - List items to select and prepopulate the form
-# TODO - Lists to have a "more" link that shows all matching
-# TODO - Sanitize input data
-#
-#
-# Later - Reporting
-# Later - Wines and other drinks?
 
 
 use CGI;
