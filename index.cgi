@@ -150,7 +150,7 @@ if ( $op eq "loc" ) { # list locations
     }
     my $dateloc = "$effdate : $loc";
     print "<p/>\n";
-    print "<hr/>$date <a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a><p/>\n" 
+    print "<hr/>$wday $date <a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a><p/>\n" 
         if ( $dateloc ne $lastloc );
     print "<i>$time &nbsp;</i>" .
       "<a href='". $q->url ."?q=".uri_escape($mak) ."' >$mak</a> : " .
