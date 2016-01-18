@@ -25,6 +25,8 @@ if ( $q->remote_user() =~ /^[a-zA-Z0-9]+$/ ) {
 # but there is a time stamp first, and the $del never gets to the data file
 # TODO - make a helper to get the param, and sanitize it
 my $stamp = "";  # make a new timestamp by default
+my $wday = ""; # weekday
+my $effdate = ""; # effective date
 my $loc = $q->param("l") || "";  # location
 my $mak = $q->param("m") || "";  # brewery (maker)
 my $beer= $q->param("b") || "";  # beer
@@ -44,13 +46,17 @@ if ( $q->request_method eq "POST" ) {
   #TODO - Check if $del, and remove the last line of the file
   if ( ! $stamp ) {
     $stamp = `date "+%F %T"`;  # TODO - Do this in perl
+    chomp($stamp);
   }
-  chomp($stamp);
+  if ( ! $effdate ) { # Effective date can be the day before
+    $effdate = `date "+%a; %F" -d '8 hours ago' `;  
+    chomp($effdate);
+  }
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
   if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
     open F, ">>$datafile" 
       or error ("Could not open $datafile for appending");
-    print F "$stamp; $line \n"
+    print F "$stamp; $effdate; $line \n"
       or error ("Could not write in $datafile");
     close(F) 
       or error("Could not close data file");
@@ -72,7 +78,7 @@ while (<F>) {
   s/#.*$//;  # remove comments
   next unless $_; # skip empty lines
   push @lines, $_; # collect them all
-  my ( $t, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
+  my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
   my $found = 0;
   if ( $beer ) {
     $found = 1 if ( $beer eq $b ) ;
@@ -86,7 +92,7 @@ while (<F>) {
 }
 my ( $laststamp, undef, undef, $lastbeer, undef ) = split( /; */, $lastline );
 # Get new values. Not rating nor comment, they should be fresh every time
-( $stamp, $loc, $mak, $beer, $vol, $sty, $alc, $pr, undef, undef ) = 
+( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, undef, undef ) = 
     split( /; */, $foundline );
 
 
@@ -130,11 +136,11 @@ if ( $op eq "loc" ) { # list locations
   print "<hr/><a href='" . $q->url . "'>Filter: <b>$qry</b></a><p/>\n" if $qry;
   my $i = scalar( @lines );
   my $lastloc = "";
-  my $maxlines = 15;
+  my $maxlines = 25;
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /$qry/i );
-    ( $stamp, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
        split( /; */, $lines[$i] );
     my $date = "";
     my $time = "";
@@ -142,7 +148,7 @@ if ( $op eq "loc" ) { # list locations
       $date = $1;
       $time = $2;
     }
-    my $dateloc = "$date : $loc";
+    my $dateloc = "$effdate : $loc";
     print "<p/>\n";
     print "<hr/>$date <a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a><p/>\n" 
         if ( $dateloc ne $lastloc );
