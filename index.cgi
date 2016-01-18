@@ -40,6 +40,8 @@ my $del = $q->param("x") || "";  # delete/update last entry - not in data file
 my $qry = $q->param("q") || "";  # filter query, greps the list
 my $op  = $q->param("o") || "";  # operation, to list breweries, locations, etc
 
+$qry =~ s/[&.*+^\$]/./g;  # Remove special characters
+
 # POST data into the file
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
