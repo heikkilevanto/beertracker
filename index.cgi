@@ -108,6 +108,11 @@ print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n"
 print "</head><body>\n";
 
 # Status line
+my $hostname = `hostname`;
+chomp($hostname);
+if ( $hostname ne "locatelli" ) {
+  print "Local test installation<br/>\n";
+}
 #my ($date, $time) = split(' ', $laststamp);
 if ( $laststamp =~ / (\d\d:\d\d)/) {
   my $time = $1;
