@@ -165,12 +165,12 @@ if ( $op eq "loc" ) { # list locations
     print "<i>$time &nbsp;</i>" .
       "<a href='". $q->url ."?q=".uri_escape($mak) ."' >$mak</a> : " .
       "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
+    print "$sty " if ($sty);
     print "$vol cl " if ($vol);
     print "- $pr kr " if ($pr);
     print "- $alc % " if ($alc);
     print " - $rate pts" if ($rate);
     print "<br/>\n";
-    print "$sty <br/>\n" if ($sty);
     print "$com <br/>\n" if ($com);
     $lastloc = $dateloc;
     $maxlines--;
