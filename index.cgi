@@ -24,9 +24,9 @@ if ( $q->remote_user() =~ /^[a-zA-Z0-9]+$/ ) {
 # Parameters - data file fields are the same order
 # but there is a time stamp first, and the $del never gets to the data file
 # TODO - make a helper to get the param, and sanitize it
-my $stamp = "";  # make a new timestamp by default
-my $wday = ""; # weekday
-my $effdate = ""; # effective date
+my $stamp = $q->param("st") || "";  
+my $wday = $q->param("wd") || "";  # weekday
+my $effdate = $q->param("ed") || "";  # effective date
 my $loc = $q->param("l") || "";  # location
 my $mak = $q->param("m") || "";  # brewery (maker)
 my $beer= $q->param("b") || "";  # beer
@@ -39,6 +39,7 @@ my $com = $q->param("c") || "";  # Comments
 my $del = $q->param("x") || "";  # delete/update last entry - not in data file
 my $qry = $q->param("q") || "";  # filter query, greps the list
 my $op  = $q->param("o") || "";  # operation, to list breweries, locations, etc
+my $edit= $q->param("e") || "";  # Record to edit
 
 $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
@@ -46,6 +47,7 @@ $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
   #TODO - Check if $del, and remove the last line of the file
+  my $sub = $q->param("submit") || "";
   if ( ! $stamp ) {
     $stamp = `date "+%F %T"`;  # TODO - Do this in perl
     chomp($stamp);
@@ -53,15 +55,44 @@ if ( $q->request_method eq "POST" ) {
   if ( ! $effdate ) { # Effective date can be the day before
     $effdate = `date "+%a; %F" -d '8 hours ago' `;  
     chomp($effdate);
+  } else {
+    $effdate = "$wday; $effdate";
   }
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
-  if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
-    open F, ">>$datafile" 
-      or error ("Could not open $datafile for appending");
-    print F "$stamp; $effdate; $line \n"
-      or error ("Could not write in $datafile");
-    close(F) 
-      or error("Could not close data file");
+  if ( $sub eq "Record" || $sub eq "Copy" ) {
+    if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
+        open F, ">>$datafile" 
+          or error ("Could not open $datafile for appending");
+        print F "$stamp; $effdate; $line \n"
+          or error ("Could not write in $datafile");
+        close(F) 
+          or error("Could not close data file");
+    }
+  } else { # Editing or deleting an existing line
+    # TODO Rewrite the file line by line, except the one we wanted to edit or delete
+    # Copy the data file to .bak
+    my $bakfile = $datafile . ".bak";
+    system("cat $datafile > $bakfile");
+    open BF, $bakfile
+      or error ("Could not open $bakfile for reading");
+    open F, ">$datafile"
+      or error ("Could not open $datafile for writing");
+    while (<BF>) {
+      my ( $stp, undef) = split( /; */ );
+      if ( $stp ne $edit ) {
+        print F $_;
+      } else { # found the line
+        print F "#" . $_ ;  # comment the original line out
+        if ( $sub eq "Save" ) {
+          print F "$stamp; $effdate; $line \n";
+        }
+      }
+    }
+    close F 
+      or error("Error closing $datafile: $!");
+    close BF
+      or error("Error closing $bakfile: $!");
+
   }
   print $q->redirect( $q->url ); 
   exit();
@@ -81,13 +112,7 @@ while (<F>) {
   next unless $_; # skip empty lines
   push @lines, $_; # collect them all
   my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
-  my $found = 0;
-  if ( $beer ) {
-    $found = 1 if ( $beer eq $b ) ;
-  } else {  # no condition, take always. Last line wins
-    $found = 1;
-  }
-  if ( $found ) { # copy everything over to the form
+  if ( ! $edit || ($edit eq $t) ) {
     $foundline = $_;
   }
   $lastline = $_;
@@ -113,6 +138,8 @@ chomp($hostname);
 if ( $hostname ne "locatelli" ) {
   print "Local test installation<br/>\n";
 }
+# print "e='$edit' f='$foundline'<br/>"; # ###
+
 #my ($date, $time) = split(' ', $laststamp);
 if ( $laststamp =~ / (\d\d:\d\d)/) {
   my $time = $1;
@@ -124,6 +151,13 @@ if ( $laststamp =~ / (\d\d:\d\d)/) {
 # Main input form
 print "<form method='POST'>\n";
 print "<table >";
+if ( $edit ) {
+    print "<tr><td><b>Editing record</b></td><td><b>$edit</b> ".
+        "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
+    print "<tr><td>Stamp</td><td><input name='st' value='$stamp' /></td></tr>\n";
+    print "<tr><td>Wday</td><td><input name='wd' value='$wday' /></td></tr>\n";
+    print "<tr><td>Effdate</td><td><input name='ed' value='$effdate' /></td></tr>\n";
+}
 print "<tr><td>Location</td><td><input name='l' value='$loc' /></td></tr>\n";
 print "<tr><td>Brewery</td><td><input name='m' value='$mak' /></td></tr>\n";
 print "<tr><td>Beer</td><td><input name='b' value='$beer' /></td></tr>\n";
@@ -133,7 +167,12 @@ print "<tr><td>Alc</td><td><input name='a' value='$alc' /></td></tr>\n";
 print "<tr><td>Price</td><td><input name='p' value='$pr' /></td></tr>\n";
 print "<tr><td>Rating</td><td><input name='r' value='$rate' /></td></tr>\n";
 print "<tr><td>Comment</td><td><input name='c' value='$com' /></td></tr>\n";
-print "<tr><td>&nbsp;</td><td><input type='submit' value='Record'/></td></tr>\n";
+if ( $edit ) {
+  print "<tr><td><input type='submit' name='submit' value='Delete'/></td>\n";
+  print "<td><input type='submit' name='submit' value='Save'/></td></tr>\n";
+} else {
+  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td></tr>\n";
+}
 print "</table>\n";
 
 # List section
@@ -173,6 +212,7 @@ if ( $op eq "loc" ) { # list locations
     print "<br/>\n";
     print "$com <br/>\n" if ($com);
     print "<form method='POST'>\n";
+    print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
     print "<input type='hidden' name='l' value='$loc' />\n";
     print "<input type='hidden' name='m' value='$mak' />\n";
     print "<input type='hidden' name='b' value='$beer' />\n";
@@ -180,7 +220,7 @@ if ( $op eq "loc" ) { # list locations
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
     print "<input type='hidden' name='p' value='$pr' />\n";
-    print "<input type='submit' value='Copy'/>\n";
+    print "<input type='submit' name='submit' value='Copy'/>\n";
     print "</form>\n";
 
     $lastloc = $dateloc;
