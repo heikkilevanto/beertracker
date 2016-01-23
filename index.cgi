@@ -172,6 +172,17 @@ if ( $op eq "loc" ) { # list locations
     print " - $rate pts" if ($rate);
     print "<br/>\n";
     print "$com <br/>\n" if ($com);
+    print "<form method='POST'>\n";
+    print "<input type='hidden' name='l' value='$loc' />\n";
+    print "<input type='hidden' name='m' value='$mak' />\n";
+    print "<input type='hidden' name='b' value='$beer' />\n";
+    print "<input type='hidden' name='v' value='$vol' />\n";
+    print "<input type='hidden' name='s' value='$sty' />\n";
+    print "<input type='hidden' name='a' value='$alc' />\n";
+    print "<input type='hidden' name='p' value='$pr' />\n";
+    print "<input type='submit' value='Copy'/>\n";
+    print "</form>\n";
+
     $lastloc = $dateloc;
     $maxlines--;
     last if ($maxlines <= 0);
