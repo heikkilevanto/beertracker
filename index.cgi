@@ -182,6 +182,7 @@ if ( $op eq "loc" ) { # list locations
   print "<hr/><a href='" . $q->url . "'>Filter: <b>$qry</b></a><p/>\n" if $qry;
   my $i = scalar( @lines );
   my $lastloc = "";
+  my $lastdate = "";
   my $maxlines = 25;
   while ( $i > 0 ) {
     $i--;
@@ -195,13 +196,14 @@ if ( $op eq "loc" ) { # list locations
       $time = $2;
     }
     my $dateloc = "$effdate : $loc";
-    print "<p/>\n";
-    print "<hr/>$wday $date <a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a><p/>\n" 
+    print "<hr/>\n" 
+      if ( $lastdate ne $date );
+    print "<b>$wday $date </b><a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a><p/>\n" 
         if ( $dateloc ne $lastloc );
     if ( $date ne $effdate ) {
       $time = "($time)";
     }
-    print "<i>$time &nbsp;</i>" .
+    print "<p><i>$time &nbsp;</i>" .
       "<a href='". $q->url ."?q=".uri_escape($mak) ."' >$mak</a> : " .
       "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
     print "$sty " if ($sty);
@@ -221,9 +223,10 @@ if ( $op eq "loc" ) { # list locations
     print "<input type='hidden' name='a' value='$alc' />\n";
     print "<input type='hidden' name='p' value='$pr' />\n";
     print "<input type='submit' name='submit' value='Copy'/>\n";
-    print "</form>\n";
+    print "</form></p>\n";
 
     $lastloc = $dateloc;
+    $lastdate = $date;
     $maxlines--;
     last if ($maxlines <= 0);
   }
