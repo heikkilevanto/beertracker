@@ -196,9 +196,12 @@ if ( $op eq "loc" ) { # list locations
       $time = $2;
     }
     my $dateloc = "$effdate : $loc";
-    print "<hr/>\n" 
-      if ( $lastdate ne $date );
-    print "<b>$wday $date </b><a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a><p/>\n" 
+      if ( $lastdate ne $effdate ) {
+      print "<hr/>\n" ;
+      $lastloc = "";
+    }
+    print "<b>$wday $date </b>" .
+          "<a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a> $effdate<p/>\n" 
         if ( $dateloc ne $lastloc );
     if ( $date ne $effdate ) {
       $time = "($time)";
@@ -226,7 +229,7 @@ if ( $op eq "loc" ) { # list locations
     print "</form></p>\n";
 
     $lastloc = $dateloc;
-    $lastdate = $date;
+    $lastdate = $effdate;
     $maxlines--;
     last if ($maxlines <= 0);
   }
