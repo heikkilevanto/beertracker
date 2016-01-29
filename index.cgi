@@ -19,6 +19,9 @@ if ( $q->remote_user() =~ /^[a-zA-Z0-9]+$/ ) {
 } else {
   error ("Bad username");
 }
+my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
+"Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect",
+"I'm in love" );
 
 
 # Parameters - data file fields are the same order
@@ -164,12 +167,22 @@ if ( $edit ) {
 print "<tr><td>Location</td><td><input name='l' value='$loc' /></td></tr>\n";
 print "<tr><td>Brewery</td><td><input name='m' value='$mak' /></td></tr>\n";
 print "<tr><td>Beer</td><td><input name='b' value='$beer' /></td></tr>\n";
-print "<tr><td>Volume</td><td><input name='v' value='$vol' /></td></tr>\n";
+#print "<tr><td>Volume</td><td><input name='v' value='$vol' /></td></tr>\n";
+#print "<tr><td>Alc</td><td><input name='a' value='$alc' /></td></tr>\n";
+#print "<tr><td>Price</td><td><input name='p' value='$pr' /></td></tr>\n";
+print "<tr><td colspan='2'>Vol <input name='v' value='$vol' size='3'/>\n";
+print "Alc <input name='a' value='$alc' size='3' />\n";
+print "Price <input name='p' value='$pr' size='3'/></td></tr>\n";
 print "<tr><td>Style</td><td><input name='s' value='$sty' /></td></tr>\n";
-print "<tr><td>Alc</td><td><input name='a' value='$alc' /></td></tr>\n";
-print "<tr><td>Price</td><td><input name='p' value='$pr' /></td></tr>\n";
-print "<tr><td>Rating</td><td><input name='r' value='$rate' /></td></tr>\n";
-#print "<tr><td>Comment</td><td><input name='c' value='$com' /></td></tr>\n";
+#print "<tr><td>Rating</td><td><input name='r' value='$rate' /></td></tr>\n";
+print "<tr><td>Rating</td><td><select name='r' value='$rate' />" .
+   "<option value=''></option>\n";
+for my $ro (0 .. scalar(@ratings)-1) {
+  print "<option value='$ro'" ;
+  print " selected='selected'" if ( $ro eq $rate );
+  print  ">$ro - $ratings[$ro]</option>\n";
+}
+print "</select></td></tr>\n";
 print "<tr><td>Comment</td><td><textarea name='c' cols='20' rows='3' />$com</textarea></td></tr>\n";
 if ( $edit ) {
   print "<tr><td><input type='submit' name='submit' value='Delete'/></td>\n";
@@ -213,11 +226,14 @@ if ( $op eq "loc" ) { # list locations
     print "<p><i>$time &nbsp;</i>" .
       "<a href='". $q->url ."?q=".uri_escape($mak) ."' >$mak</a> : " .
       "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
-    print "$sty " if ($sty);
+    if ( $sty || $rate ) {
+      print "$rate p ($ratings[$rate])" if ($rate);
+      print " $sty" if ($sty);
+      print "<br/>\n";
+    }
     print "$vol cl " if ($vol);
     print "- $pr kr " if ($pr);
     print "- $alc % " if ($alc);
-    print " - $rate pts" if ($rate);
     print "<br/>\n";
     print "$com <br/>\n" if ($com);
     print "<form method='POST'>\n";
@@ -246,13 +262,16 @@ exit();
 
 ############################################
 
+# Helper to sanitize input data
 sub param {
   my $tag = shift;
   my $val = $q->param($tag) || "";
-  $val =~ s/[^ a-zA-Z0-9.,&:-]/_/g; 
+  $val =~ s/[^a-zA-Z\/ 0-9.,&:-]/_/g; 
   return $val;
 }
 
+
+# Helper to make an error message
 sub error {
   my $msg = shift;
   print $q->header("Content-type: text/plain");
