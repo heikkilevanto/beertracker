@@ -24,22 +24,22 @@ if ( $q->remote_user() =~ /^[a-zA-Z0-9]+$/ ) {
 # Parameters - data file fields are the same order
 # but there is a time stamp first, and the $del never gets to the data file
 # TODO - make a helper to get the param, and sanitize it
-my $stamp = $q->param("st") || "";  
-my $wday = $q->param("wd") || "";  # weekday
-my $effdate = $q->param("ed") || "";  # effective date
-my $loc = $q->param("l") || "";  # location
-my $mak = $q->param("m") || "";  # brewery (maker)
-my $beer= $q->param("b") || "";  # beer
-my $vol = $q->param("v") || "";  # volume, in cl
-my $sty = $q->param("s") || "";  # style
-my $alc = $q->param("a") || "";  # alc, in %vol, up to 1 decimal
-my $pr  = $q->param("p") || "";  # price, in local currency
-my $rate= $q->param("r") || "";  # rating, 0=worst, 10=best
-my $com = $q->param("c") || "";  # Comments
-my $del = $q->param("x") || "";  # delete/update last entry - not in data file
-my $qry = $q->param("q") || "";  # filter query, greps the list
-my $op  = $q->param("o") || "";  # operation, to list breweries, locations, etc
-my $edit= $q->param("e") || "";  # Record to edit
+my $stamp = param("st");
+my $wday = param("wd");  # weekday
+my $effdate = param("ed");  # effective date
+my $loc = param("l");  # location
+my $mak = param("m");  # brewery (maker)
+my $beer= param("b");  # beer
+my $vol = param("v");  # volume, in cl
+my $sty = param("s");  # style
+my $alc = param("a");  # alc, in %vol, up to 1 decimal
+my $pr  = param("p");  # price, in local currency
+my $rate= param("r");  # rating, 0=worst, 10=best
+my $com = param("c");  # Comments
+my $del = param("x");  # delete/update last entry - not in data file
+my $qry = param("q");  # filter query, greps the list
+my $op  = param("o");  # operation, to list breweries, locations, etc
+my $edit= param("e");  # Record to edit
 
 $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
@@ -118,10 +118,13 @@ while (<F>) {
   $lastline = $_;
 }
 my ( $laststamp, undef, undef, $lastbeer, undef ) = split( /; */, $lastline );
-# Get new values. Not rating nor comment, they should be fresh every time
-( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, undef, undef ) = 
+# Get new values
+( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
     split( /; */, $foundline );
-
+if ( ! $edit ) { # not editing, do not default rates and comments from last beer
+  $rate = "";
+  $com = ""; 
+}
 
 print $q->header("Content-type: text/html;charset=UTF-8");
 
@@ -166,7 +169,8 @@ print "<tr><td>Style</td><td><input name='s' value='$sty' /></td></tr>\n";
 print "<tr><td>Alc</td><td><input name='a' value='$alc' /></td></tr>\n";
 print "<tr><td>Price</td><td><input name='p' value='$pr' /></td></tr>\n";
 print "<tr><td>Rating</td><td><input name='r' value='$rate' /></td></tr>\n";
-print "<tr><td>Comment</td><td><input name='c' value='$com' /></td></tr>\n";
+#print "<tr><td>Comment</td><td><input name='c' value='$com' /></td></tr>\n";
+print "<tr><td>Comment</td><td><textarea name='c' cols='20' rows='3' />$com</textarea></td></tr>\n";
 if ( $edit ) {
   print "<tr><td><input type='submit' name='submit' value='Delete'/></td>\n";
   print "<td><input type='submit' name='submit' value='Save'/></td></tr>\n";
@@ -241,6 +245,13 @@ print "</body></html>\n";
 exit();
 
 ############################################
+
+sub param {
+  my $tag = shift;
+  my $val = $q->param($tag) || "";
+  $val =~ s/[^ a-zA-Z0-9.,&:-]/_/g; 
+  return $val;
+}
 
 sub error {
   my $msg = shift;
