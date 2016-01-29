@@ -266,7 +266,7 @@ exit();
 sub param {
   my $tag = shift;
   my $val = $q->param($tag) || "";
-  $val =~ s/[^a-zA-Z\/ 0-9.,&:-]/_/g; 
+  $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:-]/_/g; 
   return $val;
 }
 
