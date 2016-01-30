@@ -157,25 +157,31 @@ if ( $laststamp =~ / (\d\d:\d\d)/) {
 # Main input form
 print "<form method='POST'>\n";
 print "<table >";
+my $c2 = "colspan='2'";
+my $c3 = "colspan='3'";
+my $c4 = "colspan='4'";
+my $c6 = "colspan='6'";
+my $sz = "size='30'";
+my $sz2 = "size='2'";
 if ( $edit ) {
-    print "<tr><td><b>Editing record</b></td><td><b>$edit</b> ".
+    print "<tr><td $c6><b>Editing record $edit</b> ".
         "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
-    print "<tr><td>Stamp</td><td><input name='st' value='$stamp' /></td></tr>\n";
-    print "<tr><td>Wday</td><td><input name='wd' value='$wday' /></td></tr>\n";
-    print "<tr><td>Effdate</td><td><input name='ed' value='$effdate' /></td></tr>\n";
+    print "<tr><td $c2>Stamp</td><td $c4><input name='st' value='$stamp' $sz /></td></tr>\n";
+    print "<tr><td $c2>Wday</td><td $c4><input name='wd' value='$wday'  $sz /></td></tr>\n";
+    print "<tr><td $c2>Effdate</td><td $c4><input name='ed' value='$effdate'  $sz /></td></tr>\n";
 }
-print "<tr><td>Location</td><td><input name='l' value='$loc' /></td></tr>\n";
-print "<tr><td>Brewery</td><td><input name='m' value='$mak' /></td></tr>\n";
-print "<tr><td>Beer</td><td><input name='b' value='$beer' /></td></tr>\n";
+print "<tr><td $c2>Location</td><td $c4><input name='l' value='$loc' $sz /></td></tr>\n";
+print "<tr><td $c2>Brewery</td><td $c4><input name='m' value='$mak' $sz /></td></tr>\n";
+print "<tr><td $c2>Beer</td><td $c4><input name='b' value='$beer' $sz /></td></tr>\n";
 #print "<tr><td>Volume</td><td><input name='v' value='$vol' /></td></tr>\n";
 #print "<tr><td>Alc</td><td><input name='a' value='$alc' /></td></tr>\n";
 #print "<tr><td>Price</td><td><input name='p' value='$pr' /></td></tr>\n";
-print "<tr><td colspan='2'>Vol <input name='v' value='$vol' size='3'/>\n";
-print "Alc <input name='a' value='$alc' size='3' />\n";
-print "Price <input name='p' value='$pr' size='3'/></td></tr>\n";
-print "<tr><td>Style</td><td><input name='s' value='$sty' /></td></tr>\n";
+print "<tr><td>Vol</td><td><input name='v' value='$vol' $sz2 />\n";
+print "<td>Alc</td><td><input name='a' value='$alc' $sz2 /></td>\n";
+print "<td>Price</td><td><input name='p' value='$pr' $sz2/></td></tr>\n";
+print "<tr><td $c2>Style</td><td $c4><input name='s' value='$sty' $sz2/></td></tr>\n";
 #print "<tr><td>Rating</td><td><input name='r' value='$rate' /></td></tr>\n";
-print "<tr><td>Rating</td><td><select name='r' value='$rate' />" .
+print "<tr><td $c2>Rating</td><td $c4><select name='r' value='$rate' />" .
    "<option value=''></option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
@@ -183,10 +189,10 @@ for my $ro (0 .. scalar(@ratings)-1) {
   print  ">$ro - $ratings[$ro]</option>\n";
 }
 print "</select></td></tr>\n";
-print "<tr><td>Comment</td><td><textarea name='c' cols='20' rows='3' />$com</textarea></td></tr>\n";
+print "<tr><td $c2>Comment</td><td $c4><textarea name='c' cols='30' rows='3' />$com</textarea></td></tr>\n";
 if ( $edit ) {
   print "<tr><td><input type='submit' name='submit' value='Delete'/></td>\n";
-  print "<td><input type='submit' name='submit' value='Save'/></td></tr>\n";
+  print "<td>&nbsp;</td><td><input type='submit' name='submit' value='Save'/></td></tr>\n";
 } else {
   print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td></tr>\n";
 }
