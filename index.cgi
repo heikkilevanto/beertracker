@@ -43,6 +43,7 @@ my $del = param("x");  # delete/update last entry - not in data file
 my $qry = param("q");  # filter query, greps the list
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
+my $maxlines = param("maxl") || "25";  # negative = unlimites
 
 $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
@@ -120,7 +121,7 @@ while (<F>) {
   }
   $lastline = $_;
 }
-my ( $laststamp, undef, undef, $lastbeer, undef ) = split( /; */, $lastline );
+my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) = split( /; */, $lastline );
 # Get new values
 ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
     split( /; */, $foundline );
@@ -149,7 +150,7 @@ if ( $hostname ne "locatelli" ) {
 #my ($date, $time) = split(' ', $laststamp);
 if ( $laststamp =~ / (\d\d:\d\d)/) {
   my $time = $1;
-  print "<b>$time $lastbeer</b><p/>\n";
+  print "<b>$time $lastloc: $lastbeer</b><p/>\n";
 } else {
   print "<b>Welcome to BeerTrack</b><p/>\n";
 }
@@ -179,7 +180,7 @@ print "<tr><td $c2>Beer</td><td $c4><input name='b' value='$beer' $sz /></td></t
 print "<tr><td>Vol</td><td><input name='v' value='$vol' $sz2 />\n";
 print "<td>Alc</td><td><input name='a' value='$alc' $sz2 /></td>\n";
 print "<td>Price</td><td><input name='p' value='$pr' $sz2/></td></tr>\n";
-print "<tr><td $c2>Style</td><td $c4><input name='s' value='$sty' $sz2/></td></tr>\n";
+print "<tr><td $c2>Style</td><td $c4><input name='s' value='$sty' $sz/></td></tr>\n";
 #print "<tr><td>Rating</td><td><input name='r' value='$rate' /></td></tr>\n";
 print "<tr><td $c2>Rating</td><td $c4><select name='r' value='$rate' />" .
    "<option value=''></option>\n";
@@ -206,7 +207,7 @@ if ( $op eq "loc" ) { # list locations
   my $i = scalar( @lines );
   my $lastloc = "";
   my $lastdate = "";
-  my $maxlines = 25;
+  #my $maxlines = 25;
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /$qry/i );
@@ -257,8 +258,13 @@ if ( $op eq "loc" ) { # list locations
     $lastloc = $dateloc;
     $lastdate = $effdate;
     $maxlines--;
-    last if ($maxlines <= 0);
+    last if ($maxlines == 0); # if negative, will go for ever
   }
+  if ( $maxlines >= 0 ) {
+    print "<p/><a href='" . $q->url . "?maxl=-1&" . $q->query_string() . "'>" .
+      "More</a><br/>\n";
+  }
+
 }
 
 # HTML footer
