@@ -44,6 +44,12 @@ my $qry = param("q");  # filter query, greps the list
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimites
+my $localtest = 0; # Local test installation
+my $hostname = `hostname`;
+chomp($hostname);
+if ( $hostname ne "locatelli" ) {
+  $localtest = 1;
+}
 
 $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
@@ -137,7 +143,16 @@ print "<html><head>\n";
 print "<title>Beer</title>\n";
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
 print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
-print "</head><body>\n";
+if ( ! $localtest ) {
+    print "<style rel='stylesheet'>\n";
+    #print "* { margin: 1px; padding: 0px; }\n";
+    print "* { background-color: #493D26; color: #FFFFFF }\n";
+    print "</style>\n";
+}
+print "</head>\n";
+
+#print "<body bgcolor='#493D26' text='#FFFFFF' link='#46C7C7' vlink='#46C7C7'>\n";
+print "<body>\n";
 
 # Status line
 my $hostname = `hostname`;
@@ -236,11 +251,12 @@ if ( $op eq "loc" ) { # list locations
     }
     $daysum += ( $alc * $vol ) ;
     print "<p><i>$time &nbsp;</i>" .
-      "<a href='". $q->url ."?q=".uri_escape($mak) ."' >$mak</a> : " .
+      "<a href='". $q->url ."?q=".uri_escape($mak) ."' ><i>$mak</i></a> : " .
       "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
     if ( $sty || $rate ) {
       print "$rate p ($ratings[$rate])" if ($rate);
-      print " $sty" if ($sty);
+      print "<a href='". $q->url ."?q=".uri_escape($sty) ."' ><b>$sty</b></a>\n"
+        if ($sty);
       print "<br/>\n";
     }
     print "$vol cl " if ($vol);
