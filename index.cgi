@@ -255,7 +255,7 @@ if ( $op eq "loc" ) { # list locations
       "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
     if ( $sty || $rate ) {
       print "$rate p ($ratings[$rate])" if ($rate);
-      print "<a href='". $q->url ."?q=".uri_escape($sty) ."' ><b>$sty</b></a>\n"
+      print " <a href='". $q->url ."?q=".uri_escape($sty) ."' ><b> $sty</b></a>\n"
         if ($sty);
       print "<br/>\n";
     }
@@ -281,6 +281,9 @@ if ( $op eq "loc" ) { # list locations
     $maxlines--;
     last if ($maxlines == 0); # if negative, will go for ever
   }
+  my $drinks = sprintf("%3.1f", $daysum / ( 33 * 4.7 )) ; # std danish beer
+  print "total $drinks std drinks\n" if ( $drinks > 0.1 && !$qry);
+  print "<hr/>\n" ;
   if ( $maxlines >= 0 ) {
     print "<p/><a href='" . $q->url . "?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
