@@ -208,6 +208,7 @@ if ( $op eq "loc" ) { # list locations
   my $lastloc = "";
   my $lastdate = "";
   #my $maxlines = 25;
+  my $daysum = 0.0;
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /$qry/i );
@@ -221,6 +222,9 @@ if ( $op eq "loc" ) { # list locations
     }
     my $dateloc = "$effdate : $loc";
       if ( $lastdate ne $effdate ) {
+      my $drinks = sprintf("%3.1f", $daysum / ( 33 * 4.7 )) ; # std danish beer
+      print "total $drinks std drinks\n" if ( $drinks > 0.1 && !$qry);
+      $daysum = 0.0;
       print "<hr/>\n" ;
       $lastloc = "";
     }
@@ -230,6 +234,7 @@ if ( $op eq "loc" ) { # list locations
     if ( $date ne $effdate ) {
       $time = "($time)";
     }
+    $daysum += ( $alc * $vol ) ;
     print "<p><i>$time &nbsp;</i>" .
       "<a href='". $q->url ."?q=".uri_escape($mak) ."' >$mak</a> : " .
       "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
