@@ -225,7 +225,7 @@ if ( $op eq "loc" ) { # list locations
       $lastloc = "";
     }
     print "<b>$wday $date </b>" .
-          "<a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a> $effdate<p/>\n" 
+          "<a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a><p/>\n" 
         if ( $dateloc ne $lastloc );
     if ( $date ne $effdate ) {
       $time = "($time)";
@@ -263,6 +263,8 @@ if ( $op eq "loc" ) { # list locations
   if ( $maxlines >= 0 ) {
     print "<p/><a href='" . $q->url . "?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
+  } else {
+    print "<p/>That was the whole list<br/>\n";
   }
 
 }
