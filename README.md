@@ -19,11 +19,10 @@ Outline
 Although this is a personal project to scratch my own itch, I might as well
 release it under GPL, in case someone else finds this interesting. That does
 not mean I am willing to accept feature requests or support users! But I would
-like to know if you like this.
+like to know if you like this. 
 
-At the moment I am setting up a simple prototype that may or may not evolve
-into the real thing.
 
+At the moment I have a simple prototype running in "production". 
 
 
 
