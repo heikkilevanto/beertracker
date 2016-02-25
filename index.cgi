@@ -208,7 +208,8 @@ print "</select></td></tr>\n";
 print "<tr><td $c2>Comment</td><td $c4><textarea name='c' cols='30' rows='3' />$com</textarea></td></tr>\n";
 if ( $edit ) {
   print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Save'/></td>\n";
-  print "<td>&nbsp;</td><td>&nbsp;</td><td><input type='submit' name='submit' value='Delete'/></td></tr>\n";
+  print "<td>&nbsp;</td><td><a href='". $q->url . "' >cancel</a></td>";
+  print "<td>&nbsp;</td><td><input type='submit' name='submit' value='Delete'/></td></tr>\n";
 } else {
   print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td></tr>\n";
 }
@@ -262,12 +263,12 @@ if ( $op eq "loc" ) { # list locations
         if ($sty);
       print "<br/>\n";
     }
+    print "$pr kr. &nbsp; " if ($pr);
     print "$vol cl " if ($vol);
-    print "- $pr kr " if ($pr);
-    print "- $alc % " if ($alc);
+    print "* $alc % " if ($alc);
     if ( $alc && $vol ) {
-      my $dr = sprintf("(%1.2f dr)", ($alc * $vol) / (33 * 4.7) );
-      print "- $dr ";
+      my $dr = sprintf("%1.2f", ($alc * $vol) / (33 * 4.7) );
+      print "= $dr d ";
     }
     print "<br/>\n";
     print "$com <br/>\n" if ($com);
