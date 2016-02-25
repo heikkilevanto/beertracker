@@ -56,11 +56,14 @@ $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
 # Read the file
 # Set defaults for the form, usually from last line in the file
+# Actually, at this point only set $lastline and $foundline
+# They get split later
 open F, "<$datafile" 
   or error("Could not open $datafile for reading: $!".
      "<br/>Probably the user hasn't been set up yet" );
 my $foundline = "";
 my $lastline = "";
+my $thisloc = "";
 my @lines;
 while (<F>) {
   chomp();
@@ -68,6 +71,7 @@ while (<F>) {
   next unless $_; # skip empty lines
   push @lines, $_; # collect them all
   my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
+  $thisloc = $l if $l;
   if ( ! $edit || ($edit eq $t) ) {
     $foundline = $_;
   }
@@ -89,6 +93,24 @@ if ( $q->request_method eq "POST" ) {
     chomp($effdate);
   } else {
     $effdate = "$wday; $effdate";
+  }
+  # Check for missing values in the input, copy from the most recent beer with
+  # the same name.
+  $loc = $thisloc unless $loc;  # Always default to the last one
+  my $i = scalar( @lines );
+  while ( $i > 0 && $beer && ( !$mak || !$vol || !$sty || !$alc || !$pr )) {
+    print STDERR "Considering " . $lines[$i] . "\n";
+    ( undef, undef, undef, undef, $imak, $ibeer, $ivol, $isty, $ialc, $ipr, undef, undef) = 
+       split( /; */, $lines[$i] );
+    if ( uc($beer) eq uc($ibeer) ) {
+      $beer = $ibeer; # with proper case letters
+      $mak = $imak unless $mak;
+      $vol = $ivol unless $vol;
+      $sty = $isty unless $sty;
+      $alc = $ialc unless $alc;
+      $pr  = $ipr  unless $pr;
+    }
+    $i--;
   }
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
   if ( $sub eq "Record" || $sub eq "Copy" ) {
@@ -153,13 +175,10 @@ if ( ! $localtest ) {
     print "</style>\n";
 }
 print "</head>\n";
-
-#print "<body bgcolor='#493D26' text='#FFFFFF' link='#46C7C7' vlink='#46C7C7'>\n";
 print "<body>\n";
 
 my $script = <<'SCRIPTEND';
   function clearinputs() {
-    //document.write("Hello there");
     var inputs = document.getElementsByTagName('input');
     for (var i = 0; i < inputs.length; i++ ) {
       if ( inputs[i].type == "text" ) 
