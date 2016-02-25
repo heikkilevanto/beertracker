@@ -207,8 +207,8 @@ for my $ro (0 .. scalar(@ratings)-1) {
 print "</select></td></tr>\n";
 print "<tr><td $c2>Comment</td><td $c4><textarea name='c' cols='30' rows='3' />$com</textarea></td></tr>\n";
 if ( $edit ) {
-  print "<tr><td><input type='submit' name='submit' value='Delete'/></td>\n";
-  print "<td>&nbsp;</td><td><input type='submit' name='submit' value='Save'/></td></tr>\n";
+  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Save'/></td>\n";
+  print "<td>&nbsp;</td><td>&nbsp;</td><td><input type='submit' name='submit' value='Delete'/></td></tr>\n";
 } else {
   print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td></tr>\n";
 }
