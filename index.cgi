@@ -334,11 +334,11 @@ if ( $op ) { # various lists
     $moneysum += $pr if ($pr) ;
     print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") . "<br/>\n";
     if ( $sty || $rate ) {
-      print "$rate p ($ratings[$rate])" if ($rate);
-      print " " . filt($sty) ."\n"
-        if ($sty);
+      print filt($sty)   if ($sty);
+      print " ($rate: $ratings[$rate])" if ($rate);
       print "<br/>\n";
     }
+    print "<i>$com</i> <br/>\n" if ($com);
     print "$pr kr. &nbsp; " if ($pr);
     print "$vol cl " if ($vol);
     print "* $alc % " if ($alc);
@@ -347,7 +347,6 @@ if ( $op ) { # various lists
       print "= $dr d ";
     }
     print "<br/>\n";
-    print "$com <br/>\n" if ($com);
     print "<form method='POST'>\n";
     print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
     print "<input type='hidden' name='l' value='$loc' />\n";
