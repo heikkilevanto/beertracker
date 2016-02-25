@@ -53,6 +53,28 @@ if ( $hostname ne "locatelli" ) {
 
 $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
+
+# Read the file
+# Set defaults for the form, usually from last line in the file
+open F, "<$datafile" 
+  or error("Could not open $datafile for reading: $!".
+     "<br/>Probably the user hasn't been set up yet" );
+my $foundline = "";
+my $lastline = "";
+my @lines;
+while (<F>) {
+  chomp();
+  s/#.*$//;  # remove comments
+  next unless $_; # skip empty lines
+  push @lines, $_; # collect them all
+  my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
+  if ( ! $edit || ($edit eq $t) ) {
+    $foundline = $_;
+  }
+  $lastline = $_;
+}
+
+
 # POST data into the file
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
@@ -108,34 +130,15 @@ if ( $q->request_method eq "POST" ) {
   exit();
 }
 
-# Read the file
-# Set defaults for the form, usually from last line in the file
-open F, "<$datafile" 
-  or error("Could not open $datafile for reading: $!".
-     "<br/>Probably the user hasn't been set up yet" );
-my $foundline = "";
-my $lastline = "";
-my @lines;
-while (<F>) {
-  chomp();
-  s/#.*$//;  # remove comments
-  next unless $_; # skip empty lines
-  push @lines, $_; # collect them all
-  my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
-  if ( ! $edit || ($edit eq $t) ) {
-    $foundline = $_;
-  }
-  $lastline = $_;
-}
+
+# Get new values from the file we ingested earlier
 my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) = split( /; */, $lastline );
-# Get new values
 ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
     split( /; */, $foundline );
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
   $com = ""; 
 }
-
 print $q->header("Content-type: text/html;charset=UTF-8");
 
 # HTML head
@@ -154,10 +157,21 @@ print "</head>\n";
 #print "<body bgcolor='#493D26' text='#FFFFFF' link='#46C7C7' vlink='#46C7C7'>\n";
 print "<body>\n";
 
+my $script = <<'SCRIPTEND';
+  function clearinputs() {
+    //document.write("Hello there");
+    var inputs = document.getElementsByTagName('input');
+    for (var i = 0; i < inputs.length; i++ ) {
+      if ( inputs[i].type == "text" ) 
+        inputs[i].value = "";
+    }
+  };
+SCRIPTEND
+print "<script>\n$script</script>\n";
+
+
 # Status line
-my $hostname = `hostname`;
-chomp($hostname);
-if ( $hostname ne "locatelli" ) {
+if (  $localtest) {
   print "Local test installation<br/>\n";
 }
 # print "e='$edit' f='$foundline'<br/>"; # ###
@@ -211,7 +225,9 @@ if ( $edit ) {
   print "<td>&nbsp;</td><td><a href='". $q->url . "' >cancel</a></td>";
   print "<td>&nbsp;</td><td><input type='submit' name='submit' value='Delete'/></td></tr>\n";
 } else {
-  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td></tr>\n";
+  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td>";
+  print "<td>&nbsp;</td><td><input type='button' value='clear' onclick='clearinputs()'/></td>";
+  print "</tr>\n";
 }
 print "</table>\n";
 
@@ -252,9 +268,9 @@ if ( $op eq "loc" ) { # list locations
     if ( $date ne $effdate ) {
       $time = "($time)";
     }
-    $daysum += ( $alc * $vol ) ;
+    $daysum += ( $alc * $vol ) if ($alc && $vol) ;
     $moneysum += $pr if ($pr) ;
-    print "<p><i>$time &nbsp;</i>" .
+    print "<p>$time &nbsp;" .
       "<a href='". $q->url ."?q=".uri_escape($mak) ."' ><i>$mak</i></a> : " .
       "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
     if ( $sty || $rate ) {
