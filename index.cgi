@@ -41,6 +41,7 @@ my $rate= param("r");  # rating, 0=worst, 10=best
 my $com = param("c");  # Comments
 my $del = param("x");  # delete/update last entry - not in data file
 my $qry = param("q");  # filter query, greps the list
+my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimites
@@ -226,7 +227,7 @@ print "<tr><td>Vol</td><td><input name='v' value='$vol' $sz2 />\n";
 print "<td>Alc</td><td><input name='a' value='$alc' $sz2 /></td>\n";
 print "<td>Price</td><td><input name='p' value='$pr' $sz2/></td></tr>\n";
 print "<tr><td $c2>".lst("Style")."</td><td $c4><input name='s' value='$sty' $sz/></td></tr>\n";
-print "<tr><td $c2>Rating</td><td $c4><select name='r' value='$rate' />" .
+print "<tr><td $c2><a href='" . $q->url . "?f=r'>Rating</a></td><td $c4><select name='r' value='$rate' />" .
    "<option value=''></option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
@@ -234,7 +235,7 @@ for my $ro (0 .. scalar(@ratings)-1) {
   print  ">$ro - $ratings[$ro]</option>\n";
 }
 print "</select></td></tr>\n";
-print "<tr><td $c2>Comment</td><td $c4><textarea name='c' cols='30' rows='3' />$com</textarea></td></tr>\n";
+print "<tr><td $c2><a href='" . $q->url . "?f=c'>Comment</a></td><td $c4><textarea name='c' cols='30' rows='3' />$com</textarea></td></tr>\n";
 if ( $edit ) {
   print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Save'/></td>\n";
   print "<td>&nbsp;</td><td><a href='". $q->url . "' >cancel</a></td>";
@@ -284,7 +285,18 @@ if ( $op ) { # various lists
   print "</table>\n";
   
 } else { # Regular beer list, with filters
-  print "<hr/><a href='" . $q->url . "'>Filter: <b>$qry</b></a><p/>\n" if $qry;
+  if ($qry || $qrylim) {
+    print "<hr/> Filter: ";
+    print "<a href='" . $q->url . "?q=" . uri_escape($qry) ."'><b>$qry</b></a>" if ($qry);
+    print " -".$qrylim if ($qrylim);
+    print " &nbsp; <a href='" . $q->url . "'>Clear</a> \n";
+    print "<br/>";
+    print "<a href='" . $q->url . "?q=" . uri_escape($qry) . 
+        "&f=r' >Ratings</a>\n";
+    print "<a href='" . $q->url . "?q=" . uri_escape($qry) . 
+        "&f=c' >Comments</a>\n";
+    print "<p/>\n";
+  }
   my $i = scalar( @lines );
   my $lastloc = "";
   my $lastdate = "";
@@ -296,6 +308,8 @@ if ( $op ) { # various lists
     next unless ( !$qry || $lines[$i] =~ /$qry/i );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
        split( /; */, $lines[$i] );
+    next if ( $qrylim eq "r" && ! $rate );
+    next if ( $qrylim eq "c" && ! $com );
     my $date = "";
     my $time = "";
     if ( $stamp =~ /(^[0-9-]+) (\d\d?:\d\d?):/ ) {
