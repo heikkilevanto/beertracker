@@ -224,6 +224,7 @@ if ( $op eq "loc" ) { # list locations
   my $lastdate = "";
   #my $maxlines = 25;
   my $daysum = 0.0;
+  my $moneysum = 0;
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /$qry/i );
@@ -238,8 +239,9 @@ if ( $op eq "loc" ) { # list locations
     my $dateloc = "$effdate : $loc";
       if ( $lastdate ne $effdate ) {
       my $drinks = sprintf("%3.1f", $daysum / ( 33 * 4.7 )) ; # std danish beer
-      print "total $drinks std drinks\n" if ( $drinks > 0.1 && !$qry);
+      print "total $drinks std drinks and $moneysum kr\n" if ( $drinks > 0.1 && !$qry);
       $daysum = 0.0;
+      $moneysum = 0;
       print "<hr/>\n" ;
       $lastloc = "";
     }
@@ -250,6 +252,7 @@ if ( $op eq "loc" ) { # list locations
       $time = "($time)";
     }
     $daysum += ( $alc * $vol ) ;
+    $moneysum += $pr if ($pr) ;
     print "<p><i>$time &nbsp;</i>" .
       "<a href='". $q->url ."?q=".uri_escape($mak) ."' ><i>$mak</i></a> : " .
       "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
@@ -262,6 +265,10 @@ if ( $op eq "loc" ) { # list locations
     print "$vol cl " if ($vol);
     print "- $pr kr " if ($pr);
     print "- $alc % " if ($alc);
+    if ( $alc && $vol ) {
+      my $dr = sprintf("(%1.2f dr)", ($alc * $vol) / (33 * 4.7) );
+      print "- $dr ";
+    }
     print "<br/>\n";
     print "$com <br/>\n" if ($com);
     print "<form method='POST'>\n";
@@ -282,7 +289,7 @@ if ( $op eq "loc" ) { # list locations
     last if ($maxlines == 0); # if negative, will go for ever
   }
   my $drinks = sprintf("%3.1f", $daysum / ( 33 * 4.7 )) ; # std danish beer
-  print "total $drinks std drinks\n" if ( $drinks > 0.1 && !$qry);
+  print "total $drinks std drinks and $moneysum kr\n" if ( $drinks > 0.1 && !$qry);
   print "<hr/>\n" ;
   if ( $maxlines >= 0 ) {
     print "<p/><a href='" . $q->url . "?maxl=-1&" . $q->query_string() . "'>" .
