@@ -196,12 +196,12 @@ if (  $localtest) {
 # print "e='$edit' f='$foundline'<br/>"; # ###
 
 #my ($date, $time) = split(' ', $laststamp);
-if ( $laststamp =~ / (\d\d:\d\d)/) {
-  my $time = $1;
-  print "<b>$time $lastloc: $lastbeer</b><p/>\n";
-} else {
-  print "<b>Welcome to BeerTrack</b><p/>\n";
-}
+#if ( $laststamp =~ / (\d\d:\d\d)/) {
+#  my $time = $1;
+#  print "<b>$time $lastloc: $lastbeer</b><p/>\n";
+#} else {
+#  print "<b>Welcome to BeerTrack</b><p/>\n";
+#}
 
 # Main input form
 print "<form method='POST'>\n";
@@ -219,17 +219,13 @@ if ( $edit ) {
     print "<tr><td $c2>Wday</td><td $c4><input name='wd' value='$wday'  $sz /></td></tr>\n";
     print "<tr><td $c2>Effdate</td><td $c4><input name='ed' value='$effdate'  $sz /></td></tr>\n";
 }
-print "<tr><td $c2>Location</td><td $c4><input name='l' value='$loc' $sz /></td></tr>\n";
-print "<tr><td $c2>Brewery</td><td $c4><input name='m' value='$mak' $sz /></td></tr>\n";
-print "<tr><td $c2>Beer</td><td $c4><input name='b' value='$beer' $sz /></td></tr>\n";
-#print "<tr><td>Volume</td><td><input name='v' value='$vol' /></td></tr>\n";
-#print "<tr><td>Alc</td><td><input name='a' value='$alc' /></td></tr>\n";
-#print "<tr><td>Price</td><td><input name='p' value='$pr' /></td></tr>\n";
+print "<tr><td $c2>".lst("Location")."</td><td $c4><input name='l' value='$loc' $sz /></td></tr>\n";
+print "<tr><td $c2>".lst("Brewery")."</td><td $c4><input name='m' value='$mak' $sz /></td></tr>\n";
+print "<tr><td $c2>".lst("Beer")."</td><td $c4><input name='b' value='$beer' $sz /></td></tr>\n";
 print "<tr><td>Vol</td><td><input name='v' value='$vol' $sz2 />\n";
 print "<td>Alc</td><td><input name='a' value='$alc' $sz2 /></td>\n";
 print "<td>Price</td><td><input name='p' value='$pr' $sz2/></td></tr>\n";
-print "<tr><td $c2>Style</td><td $c4><input name='s' value='$sty' $sz/></td></tr>\n";
-#print "<tr><td>Rating</td><td><input name='r' value='$rate' /></td></tr>\n";
+print "<tr><td $c2>".lst("Style")."</td><td $c4><input name='s' value='$sty' $sz/></td></tr>\n";
 print "<tr><td $c2>Rating</td><td $c4><select name='r' value='$rate' />" .
    "<option value=''></option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
@@ -251,8 +247,42 @@ if ( $edit ) {
 print "</table>\n";
 
 # List section
-if ( $op eq "loc" ) { # list locations
-  print "Location list not implemented yet <br/>\n";
+if ( $op ) { # various lists
+  print "<hr/><a href='" . $q->url . "'><b>$op</b> list</a><p/>\n";
+  my $i = scalar( @lines );
+  my $fld;
+  my $line;
+  my %seen;
+  print "<table>\n";
+  while ( $i > 0 ) {
+    $i--;
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+       split( /; */, $lines[$i] );
+    $fld = "";
+    if ( $op eq "Location" ) {
+      $fld = $loc;
+      $line = "<td>" . filt($loc,"b") . "</td><td>$effdate</td><td>" . 
+           filt($mak,"i") . "</td><td>" . filt($beer) . "</td>";
+    } elsif ( $op eq "Brewery" ) {
+      $fld = $mak;
+      $line = "<td>" . filt($mak,"b")  . "</td><td>$effdate</td><td>" . 
+           filt($loc,"i") . "</td><td>" . filt($beer) .  "</td><td>" . filt($sty) ."</td>";
+    } elsif ( $op eq "Beer" ) {
+      $fld = $beer;
+      $line = "<td>" . filt($beer,"b")  . "</td><td>" . filt($mak,"i") . "</td><td>" . filt($sty) .
+           "</td><td> $effdate</td><td>" .  filt($loc,"i") . "</td>";
+    } elsif ( $op eq "Style" ) {
+      $fld = $sty;
+      $line = "<td>" . filt($sty,"b")  . "</td><td>" . filt($mak,"i") . "</td><td>" . filt($beer,"b") .
+           "</td><td> $effdate</td><td>" .  filt($loc,"i") . "</td>";
+    }
+    next unless $fld;
+    next if $seen{$fld};
+    print "<tr>$line</tr>\n";
+    $seen{$fld} = 1;
+  }
+  print "</table>\n";
+  
 } else { # Regular beer list, with filters
   print "<hr/><a href='" . $q->url . "'>Filter: <b>$qry</b></a><p/>\n" if $qry;
   my $i = scalar( @lines );
@@ -281,20 +311,17 @@ if ( $op eq "loc" ) { # list locations
       print "<hr/>\n" ;
       $lastloc = "";
     }
-    print "<b>$wday $date </b>" .
-          "<a href='" . $q->url ."?q=".uri_escape($loc) ."' ><b>$loc</b></a><p/>\n" 
+    print "<b>$wday $date </b>" . filt($loc,"b") . "</a><p/>\n" 
         if ( $dateloc ne $lastloc );
     if ( $date ne $effdate ) {
       $time = "($time)";
     }
     $daysum += ( $alc * $vol ) if ($alc && $vol) ;
     $moneysum += $pr if ($pr) ;
-    print "<p>$time &nbsp;" .
-      "<a href='". $q->url ."?q=".uri_escape($mak) ."' ><i>$mak</i></a> : " .
-      "<a href='". $q->url ."?q=".uri_escape($beer) ."' ><b>$beer</b></a><br/>\n";
+    print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") . "<br/>\n";
     if ( $sty || $rate ) {
       print "$rate p ($ratings[$rate])" if ($rate);
-      print " <a href='". $q->url ."?q=".uri_escape($sty) ."' ><b> $sty</b></a>\n"
+      print " " . filt($sty) ."\n"
         if ($sty);
       print "<br/>\n";
     }
@@ -351,6 +378,20 @@ sub param {
   return $val;
 }
 
+# Helper to make a filter link
+sub filt {
+  my $f = shift;
+  my $tag = shift || "nop";
+  my $link = "<a href='" . $q->url ."?q=".uri_escape($f) ."' ><$tag>$f</$tag></a>";
+  return $link;
+}
+
+# Helper to make a link to a list
+sub lst {
+  my $op = shift;
+  my $link = "<a href='" . $q->url ."?o=".uri_escape($op) ."' >$op</a>";
+  return $link;
+}
 
 # Helper to make an error message
 sub error {
