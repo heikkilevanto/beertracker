@@ -266,16 +266,17 @@ if ( $op ) { # various lists
            filt($mak,"i") . ":" . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
       $fld = $mak;
+      $mak =~ s"/"/<br/>";
       $line = "<td>" . filt($mak,"b")  . "</td><td>$wday $effdate " .filt($loc) .
-            "<br/>" . filt($sty) . "  " . filt($beer,"b")  ."</td>";
+            "<br/>" . filt("[$sty]") . "  " . filt($beer,"b")  ."</td>";
     } elsif ( $op eq "Beer" ) {
       $fld = $beer;
       $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) .
-            "<br/>" . filt($mak,"i") . " " . filt($sty) . "</td>";
+            "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Style" ) {
       $fld = $sty;
-      $line = "<td>" . filt($sty,"b")  . "</td><td>$wday $effdate " .  filt($loc,"i") . 
-            "<br/>" . filt($mak,"i") . ":" . filt($beer,"b");
+      $line = "<td>" . filt("[$sty]","b")  . "</td><td>$wday $effdate " .  filt($loc,"i") . 
+            "<br/>" . filt($mak,"i") . ":" . filt($beer,"b") . "</td>";
     }
     next unless $fld;
     next if $seen{$fld};
@@ -287,14 +288,16 @@ if ( $op ) { # various lists
 } else { # Regular beer list, with filters
   if ($qry || $qrylim) {
     print "<hr/> Filter: ";
-    print "<a href='" . $q->url . "?q=" . uri_escape($qry) ."'><b>$qry</b></a>" if ($qry);
+    print "<a href='" . $q->url ."'><b>$qry (Clear)</b></a>" if ($qry);
     print " -".$qrylim if ($qrylim);
-    print " &nbsp; <a href='" . $q->url . "'>Clear</a> \n";
+    print " &nbsp;  \n";
     print "<br/>";
     print "<a href='" . $q->url . "?q=" . uri_escape($qry) . 
         "&f=r' >Ratings</a>\n";
     print "<a href='" . $q->url . "?q=" . uri_escape($qry) . 
         "&f=c' >Comments</a>\n";
+    print "<a href='" . $q->url . "?q=" . uri_escape($qry) . 
+         "'>All</a>\n";
     print "<p/>\n";
   }
   my $i = scalar( @lines );
@@ -334,7 +337,7 @@ if ( $op ) { # various lists
     $moneysum += $pr if ($pr) ;
     print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") . "<br/>\n";
     if ( $sty || $rate ) {
-      print filt($sty)   if ($sty);
+      print filt("[$sty]")   if ($sty);
       print " ($rate: $ratings[$rate])" if ($rate);
       print "<br/>\n";
     }
@@ -395,7 +398,9 @@ sub param {
 sub filt {
   my $f = shift;
   my $tag = shift || "nop";
-  my $link = "<a href='" . $q->url ."?q=".uri_escape($f) ."' ><$tag>$f</$tag></a>";
+  my $param = $f;
+  $param =~ s"[\[\]]""g; # remove the [] around styles etc
+  my $link = "<a href='" . $q->url ."?q=".uri_escape($param) ."' ><$tag>$f</$tag></a>";
   return $link;
 }
 
