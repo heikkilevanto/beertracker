@@ -262,20 +262,20 @@ if ( $op ) { # various lists
     $fld = "";
     if ( $op eq "Location" ) {
       $fld = $loc;
-      $line = "<td>" . filt($loc,"b") . "</td><td>$effdate</td><td>" . 
-           filt($mak,"i") . "</td><td>" . filt($beer) . "</td>";
+      $line = "<td>" . filt($loc,"b") . "</td><td>$wday $effdate<br/>" . 
+           filt($mak,"i") . ":" . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
       $fld = $mak;
-      $line = "<td>" . filt($mak,"b")  . "</td><td>$effdate</td><td>" . 
-           filt($loc,"i") . "</td><td>" . filt($beer) .  "</td><td>" . filt($sty) ."</td>";
+      $line = "<td>" . filt($mak,"b")  . "</td><td>$wday $effdate " .filt($loc) .
+            "<br/>" . filt($sty) . "  " . filt($beer,"b")  ."</td>";
     } elsif ( $op eq "Beer" ) {
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "</td><td>" . filt($mak,"i") . "</td><td>" . filt($sty) .
-           "</td><td> $effdate</td><td>" .  filt($loc,"i") . "</td>";
+      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) .
+            "<br/>" . filt($mak,"i") . " " . filt($sty) . "</td>";
     } elsif ( $op eq "Style" ) {
       $fld = $sty;
-      $line = "<td>" . filt($sty,"b")  . "</td><td>" . filt($mak,"i") . "</td><td>" . filt($beer,"b") .
-           "</td><td> $effdate</td><td>" .  filt($loc,"i") . "</td>";
+      $line = "<td>" . filt($sty,"b")  . "</td><td>$wday $effdate " .  filt($loc,"i") . 
+            "<br/>" . filt($mak,"i") . ":" . filt($beer,"b");
     }
     next unless $fld;
     next if $seen{$fld};
