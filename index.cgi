@@ -279,6 +279,7 @@ if ( $op ) { # various lists
             "<br/>" . filt($mak,"i") . ":" . filt($beer,"b") . "</td>";
     }
     next unless $fld;
+    $fld = uc($fld); 
     next if $seen{$fld};
     print "<tr>$line</tr>\n";
     $seen{$fld} = 1;
