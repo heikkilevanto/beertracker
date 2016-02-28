@@ -302,10 +302,14 @@ if ( $op ) { # various lists
   }
   my $i = scalar( @lines );
   my $lastloc = "";
-  my $lastdate = "";
+  my $lastdate = "today";
+  my $lastloc2 = ""; 
+  my $lastwday = "";
   #my $maxlines = 25;
-  my $daysum = 0.0;
-  my $moneysum = 0;
+  my $daydsum = 0.0;
+  my $daymsum = 0;
+  my $locdsum = 0.0;
+  my $locmsum = 0;
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /$qry/i );
@@ -319,22 +323,41 @@ if ( $op ) { # various lists
       $date = $1;
       $time = $2;
     }
+
     my $dateloc = "$effdate : $loc";
-      if ( $lastdate ne $effdate ) {
-      my $drinks = sprintf("%3.1f", $daysum / ( 33 * 4.7 )) ; # std danish beer
-      print "total $drinks std drinks and $moneysum kr\n" if ( $drinks > 0.1 && !$qry);
-      $daysum = 0.0;
-      $moneysum = 0;
+
+    if ( $dateloc ne $lastloc && ! $qry) { # summary of loc and maybe date
+      my $locdrinks = sprintf("%3.1f", $locdsum / ( 33 * 4.7 )) ; # std danish beer
+      my $daydrinks = sprintf("%3.1f", $daydsum / ( 33 * 4.7 )) ; # std danish beer
+      # loc summary: if nonzero, and diff from daysummary or there is a new loc coming
+      if ( $locdrinks > 0.1 ) {
+        print "$lastloc2: $locdrinks d, $locmsum kr. \n";
+        $locdsum = 0.0;
+        $locmsum = 0;
+      }
+      # day summary: if nonzero and diff from daysummary and end of day
+      if ( abs ( $daydrinks > 0.1 ) && abs ( $daydrinks - $locdrinks ) > 0.1 &&
+         $lastdate ne $effdate ) {
+        print " <b>$lastwday</b>: $daydrinks d, $daymsum kr\n";
+        $daydsum = 0.0;
+        $daymsum = 0;
+      }
+      print "<p/>";
+    }
+    if ( $lastdate ne $effdate ) { # New date
       print "<hr/>\n" ;
       $lastloc = "";
     }
-    print "<b>$wday $date </b>" . filt($loc,"b") . "</a><p/>\n" 
-        if ( $dateloc ne $lastloc );
+    if ( $dateloc ne $lastloc ) { # New location and maybe also new date
+      print "<b>$wday $date </b>" . filt($loc,"b") . "</a><p/>\n" ;
+    }
     if ( $date ne $effdate ) {
       $time = "($time)";
     }
-    $daysum += ( $alc * $vol ) if ($alc && $vol) ;
-    $moneysum += $pr if ($pr) ;
+    $daydsum += ( $alc * $vol ) if ($alc && $vol) ;
+    $daymsum += $pr if ($pr) ;
+    $locdsum += ( $alc * $vol ) if ($alc && $vol) ;
+    $locmsum += $pr if ($pr) ;
     print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") . "<br/>\n";
     if ( $sty || $rate ) {
       print filt("[$sty]")   if ($sty);
@@ -363,12 +386,27 @@ if ( $op ) { # various lists
     print "</form></p>\n";
 
     $lastloc = $dateloc;
+    $lastloc2 = $loc;
     $lastdate = $effdate;
+    $lastwday = $wday;
     $maxlines--;
     last if ($maxlines == 0); # if negative, will go for ever
   }
-  my $drinks = sprintf("%3.1f", $daysum / ( 33 * 4.7 )) ; # std danish beer
-  print "total $drinks std drinks and $moneysum kr\n" if ( $drinks > 0.1 && !$qry);
+  if ( ! $qry) { # final summary
+    my $locdrinks = sprintf("%3.1f", $locdsum / ( 33 * 4.7 )) ; # std danish beer
+    my $daydrinks = sprintf("%3.1f", $daydsum / ( 33 * 4.7 )) ; # std danish beer
+    # loc summary: if nonzero, and diff from daysummary or there is a new loc coming
+    if ( $locdrinks > 0.1 ) {
+      print "$lastloc2: $locdrinks d, $locmsum kr. \n";
+      }
+      # day summary: if nonzero and diff from daysummary and end of day
+    if ( abs ( $daydrinks > 0.1 ) && abs ( $daydrinks - $locdrinks ) > 0.1 &&
+         $lastdate ne $effdate ) {
+      print " <b>$lastwday</b>: $daydrinks d, $daymsum kr\n";
+      }
+      print "<p/>";
+    }
+
   print "<hr/>\n" ;
   if ( $maxlines >= 0 ) {
     print "<p/><a href='" . $q->url . "?maxl=-1&" . $q->query_string() . "'>" .
