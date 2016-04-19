@@ -83,7 +83,6 @@ while (<F>) {
 # POST data into the file
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
-  #TODO - Check if $del, and remove the last line of the file
   my $sub = $q->param("submit") || "";
   if ( ! $stamp ) {
     $stamp = `date "+%F %T"`;  # TODO - Do this in perl
@@ -150,6 +149,7 @@ if ( $q->request_method eq "POST" ) {
 
   }
   print $q->redirect( $q->url ); 
+  # TODO - plot the values in a graph
   exit();
 }
 
