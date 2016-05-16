@@ -148,6 +148,7 @@ if ( $q->request_method eq "POST" ) {
       or error("Error closing $bakfile: $!");
 
   }
+  # Redirect to the same script, without the POST, so we see the results
   print $q->redirect( $q->url ); 
   # TODO - plot the values in a graph
   exit();
@@ -332,14 +333,16 @@ if ( $op ) { # various lists
       my $daydrinks = sprintf("%3.1f", $daydsum / ( 33 * 4.7 )) ; # std danish beer
       # loc summary: if nonzero, and diff from daysummary or there is a new loc coming
       if ( $locdrinks > 0.1 ) {
-        print "$lastloc2: $locdrinks d, $locmsum kr. \n";
+        print "$lastloc2: $locdrinks d, $locmsum kr. <br/>\n";
         $locdsum = 0.0;
         $locmsum = 0;
       }
       # day summary: if nonzero and diff from daysummary and end of day
-      if ( abs ( $daydrinks > 0.1 ) && abs ( $daydrinks - $locdrinks ) > 0.1 &&
-         $lastdate ne $effdate ) {
-        print " <b>$lastwday</b>: $daydrinks d, $daymsum kr\n";
+      #if ( abs ( $daydrinks > 0.1 ) && abs ( $daydrinks - $locdrinks ) > 0.1 &&
+      #   $lastdate ne $effdate ) {
+      if ( abs ( $daydrinks > 0.1 ) && $lastdate ne $effdate ) {
+      #if ( $daydrinks > 0.1 ){
+        print " <b>$lastwday</b>: $daydrinks d, $daymsum kr <br/>\n";
         $daydsum = 0.0;
         $daymsum = 0;
       }
