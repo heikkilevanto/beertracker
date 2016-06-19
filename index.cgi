@@ -176,6 +176,7 @@ if ( ! $localtest ) {
     print "* { background-color: #493D26; color: #FFFFFF }\n";
     print "</style>\n";
 }
+print "<link rel='shortcut icon' href='beer.png'/>\n";
 print "</head>\n";
 print "<body>\n";
 
