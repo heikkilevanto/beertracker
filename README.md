@@ -22,7 +22,9 @@ not mean I am willing to accept feature requests or support users! But I would
 like to know if you like this. 
 
 
-At the moment I have a simple prototype running in "production". 
+Version 1.0 was released in Feb-2016. It works, and I am using it myself. Of
+course there is a small list of features I will want to add some day "real
+soon now".
 
 
 <!--- This is a comment -->
