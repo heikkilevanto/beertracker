@@ -27,6 +27,6 @@ course there is a small list of features I will want to add some day "real
 soon now".
 
 
-<!--- This is a comment
+Next to this is a comment: <!--- This is a comment
 on two lines -->
 
