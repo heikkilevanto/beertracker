@@ -112,8 +112,11 @@ if ( $q->request_method eq "POST" ) {
     }
     $i--;
   }
+  if (  $sub =~ /Copy (\d+)/ ) {  # copy different volumes
+    $vol = $1 if ( $1 );
+  }
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
-  if ( $sub eq "Record" || $sub eq "Copy" ) {
+  if ( $sub eq "Record" || $sub =~ /^Copy/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
         open F, ">>$datafile" 
           or error ("Could not open $datafile for appending");
@@ -387,28 +390,19 @@ if ( $op ) { # various lists
       $vol4 = 40; 
     }
  
-    print "<form method='POST'>\n";
     print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
+    print "<form method='POST' style='display: inline;' >\n";
     print "<input type='hidden' name='l' value='$loc' />\n";
     print "<input type='hidden' name='m' value='$mak' />\n";
     print "<input type='hidden' name='b' value='$beer' />\n";
-    print "<input type='hidden' name='v' value='$vol2' />\n";
+    print "<input type='hidden' name='v' value='' />\n";
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
     print "<input type='hidden' name='p' value='$pr' />\n";
-    print "<input type='submit' name='submit' value='Copy $vol2'/>\n";
-    print "</form>\n";
-
-    print "<form method='POST'>\n";
-    print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
-    print "<input type='hidden' name='l' value='$loc' />\n";
-    print "<input type='hidden' name='m' value='$mak' />\n";
-    print "<input type='hidden' name='b' value='$beer' />\n";
-    print "<input type='hidden' name='v' value='$vol4' />\n";
-    print "<input type='hidden' name='s' value='$sty' />\n";
-    print "<input type='hidden' name='a' value='$alc' />\n";
-    print "<input type='hidden' name='p' value='$pr' />\n";
-    print "<input type='submit' name='submit' value='Copy $vol4'/>\n";
+    print "<input type='submit' name='submit' value='Copy $vol2'
+                  style='display: inline;' />\n";
+    print "<input type='submit' name='submit' value='Copy $vol4'
+                  style='display: inline;' />\n";
     print "</form>\n";
 
     print"</p>\n";
