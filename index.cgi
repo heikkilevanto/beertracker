@@ -378,17 +378,40 @@ if ( $op ) { # various lists
       print "= $dr d ";
     }
     print "<br/>\n";
+    # guess sizes for small/large beers
+    my $vol2 = $vol;
+    my $vol4 = $vol;
+    if ( $vol > 30 ) {
+      $vol2 = 25; 
+    } else {
+      $vol4 = 40; 
+    }
+ 
     print "<form method='POST'>\n";
     print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
     print "<input type='hidden' name='l' value='$loc' />\n";
     print "<input type='hidden' name='m' value='$mak' />\n";
     print "<input type='hidden' name='b' value='$beer' />\n";
-    print "<input type='hidden' name='v' value='$vol' />\n";
+    print "<input type='hidden' name='v' value='$vol2' />\n";
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
     print "<input type='hidden' name='p' value='$pr' />\n";
-    print "<input type='submit' name='submit' value='Copy'/>\n";
-    print "</form></p>\n";
+    print "<input type='submit' name='submit' value='Copy $vol2'/>\n";
+    print "</form>\n";
+
+    print "<form method='POST'>\n";
+    print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
+    print "<input type='hidden' name='l' value='$loc' />\n";
+    print "<input type='hidden' name='m' value='$mak' />\n";
+    print "<input type='hidden' name='b' value='$beer' />\n";
+    print "<input type='hidden' name='v' value='$vol4' />\n";
+    print "<input type='hidden' name='s' value='$sty' />\n";
+    print "<input type='hidden' name='a' value='$alc' />\n";
+    print "<input type='hidden' name='p' value='$pr' />\n";
+    print "<input type='submit' name='submit' value='Copy $vol4'/>\n";
+    print "</form>\n";
+
+    print"</p>\n";
 
     $lastloc = $dateloc;
     $lastloc2 = $loc;
