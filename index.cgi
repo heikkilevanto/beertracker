@@ -251,6 +251,7 @@ if ( $edit ) {
   print "</tr>\n";
 }
 print "</table>\n";
+print "</form>\n";
 
 # List section
 if ( $op ) { # various lists
@@ -366,6 +367,7 @@ if ( $op ) { # various lists
     $daymsum += $pr if ($pr) ;
     $locdsum += ( $alc * $vol ) if ($alc && $vol) ;
     $locmsum += $pr if ($pr) ;
+    print "<form method='POST' style='display: inline;' >\n";
     print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") . "<br/>\n";
     if ( $sty || $rate ) {
       print filt("[$sty]")   if ($sty);
@@ -373,7 +375,7 @@ if ( $op ) { # various lists
       print "<br/>\n";
     }
     print "<i>$com</i> <br/>\n" if ($com);
-    print "$pr kr. &nbsp; " if ($pr);
+    print "$pr kr. &nbsp; " if ($pr && $pr =~ /\d+/);
     print "$vol cl " if ($vol);
     print "* $alc % " if ($alc);
     if ( $alc && $vol ) {
@@ -391,7 +393,6 @@ if ( $op ) { # various lists
     }
  
     print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
-    print "<form method='POST' style='display: inline;' >\n";
     print "<input type='hidden' name='l' value='$loc' />\n";
     print "<input type='hidden' name='m' value='$mak' />\n";
     print "<input type='hidden' name='b' value='$beer' />\n";
