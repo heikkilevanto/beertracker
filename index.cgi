@@ -384,13 +384,11 @@ if ( $op ) { # various lists
     }
     print "<br/>\n";
     # guess sizes for small/large beers
-    my $vol2 = $vol;
-    my $vol4 = $vol;
-    if ( $vol > 30 ) {
-      $vol2 = 25; 
-    } else {
-      $vol4 = 40; 
-    }
+    my %vols;
+    $vols{$vol} = 1;
+    $vols{25} = 1;
+    #$vols{33} = 1;
+    $vols{40} = 1;
  
     print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
     print "<input type='hidden' name='l' value='$loc' />\n";
@@ -400,10 +398,10 @@ if ( $op ) { # various lists
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
     print "<input type='hidden' name='p' value='$pr' />\n";
-    print "<input type='submit' name='submit' value='Copy $vol2'
+    foreach my $volx (sort keys(%vols)  ){
+      print "<input type='submit' name='submit' value='Copy $volx'
                   style='display: inline;' />\n";
-    print "<input type='submit' name='submit' value='Copy $vol4'
-                  style='display: inline;' />\n";
+    }
     print "</form>\n";
 
     print"</p>\n";
