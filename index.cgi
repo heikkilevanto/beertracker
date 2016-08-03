@@ -54,6 +54,16 @@ if ( $hostname ne "locatelli" ) {
 
 $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
+if ( ! $stamp ) {
+  $stamp = `date "+%F %T"`;  # TODO - Do this in perl
+  chomp($stamp);
+}
+if ( ! $effdate ) { # Effective date can be the day before
+  $effdate = `date "+%a; %F" -d '8 hours ago' `;  
+  chomp($effdate);
+} else {
+  $effdate = "$wday; $effdate";
+}
 
 # Read the file
 # Set defaults for the form, usually from last line in the file
@@ -65,6 +75,9 @@ open F, "<$datafile"
 my $foundline = "";
 my $lastline = "";
 my $thisloc = "";
+my $lastdatesum = 0.0;
+my $lastdatemsum = 0;
+my $todaydrinks = "";
 my @lines;
 while (<F>) {
   chomp();
@@ -77,6 +90,12 @@ while (<F>) {
     $foundline = $_;
   }
   $lastline = $_;
+  if ( $effdate eq "$wd; $ed" ) {
+    $lastdatesum += ( $a * $v ) if ($a && $v);
+    $lastdatemsum += $p if ( $p =~ /\d/ );
+    $todaydrinks = sprintf("%3.1f", $lastdatesum / ( 33 * 4.7 )) . " d " ;
+    $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
+  }
 }
 
 
@@ -84,16 +103,6 @@ while (<F>) {
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
   my $sub = $q->param("submit") || "";
-  if ( ! $stamp ) {
-    $stamp = `date "+%F %T"`;  # TODO - Do this in perl
-    chomp($stamp);
-  }
-  if ( ! $effdate ) { # Effective date can be the day before
-    $effdate = `date "+%a; %F" -d '8 hours ago' `;  
-    chomp($effdate);
-  } else {
-    $effdate = "$wday; $effdate";
-  }
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
   $loc = $thisloc unless $loc;  # Always default to the last one
@@ -248,6 +257,9 @@ if ( $edit ) {
 } else {
   print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td>";
   print "<td>&nbsp;</td><td><input type='button' value='clear' onclick='clearinputs()'/></td>";
+  if ( $todaydrinks ) {
+    print "<td>&nbsp;</td><td>$todaydrinks</td>";
+  }
   print "</tr>\n";
 }
 print "</table>\n";
@@ -324,6 +336,7 @@ if ( $op ) { # various lists
        split( /; */, $lines[$i] );
     next if ( $qrylim eq "r" && ! $rate );
     next if ( $qrylim eq "c" && ! $com );
+    $pr = 0 unless ( $pr =~ /\d/ ); # Skip 'X' and other non-numericals
     my $date = "";
     my $time = "";
     if ( $stamp =~ /(^[0-9-]+) (\d\d?:\d\d?):/ ) {
