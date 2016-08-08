@@ -272,17 +272,10 @@ if ( $edit ) {
 print "</table>\n";
 print "</form>\n";
 
-# List section
+# List or graph section
+
 if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   my $graphtype = $1 || 2;
-  my $numberofdays=7;
-  if ( $graphtype == 1 ) {
-    $numberofdays = 8;
-  } elsif ( $graphtype == 2 ) {
-    $numberofdays = 35;
-  } elsif ( $graphtype == 3 ) {
-    $numberofdays = 370;
-  }
   my %sums; 
   my $firstdate;
   my $lastdate;
@@ -300,32 +293,54 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   while ( $ndays++ >= 0 ) {
     my $date = `date +%F -d "$firstdate + $ndays days" `;
     chomp($date);
+    my $mdate = $1."-01" if ( $date =~ /^(\d+-\d+)-\d+/);
     my $tot = ( $sums{$date} || 0 ) / ( 33 * 4.7) ;
     #print "$ndays: $date: $tot <br/>";
-    print F "$date $tot\n";
+    print F "$date $tot $mdate\n";
     if ( $date eq $lastdate ) {
       $ndays = -1; # signal stop
     }
   }
   close(F);
-  $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
-  chomp($startdate);
-  $enddate = `date +%F -d "next sunday"` ;
-  $enddate = `date +%F -d "tomorrow"` ;
   my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
-  if ( $graphtype < 3 ) {
-    $xtics =  "set xtics \"$startdate\", $oneweek";
-  } 
+  my $oneday = 24 * 60 * 60 ; 
+  my $xtics = "";
+  my $numberofdays=7;
+  my $xformat = "\"%d\\n%b\"";
+  my $avgline = "";
+  if ( $graphtype == 1 ) {
+    $numberofdays = 6;
+    $xformat = "\"%a\\n%d";
+    $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
+    chomp($startdate);
+    $xtics =  "set xtics \"$startdate\", $oneday \n";
+  } elsif ( $graphtype == 2 ) {
+    $numberofdays = 35;
+    $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
+    chomp($startdate);
+    $xtics =  "set xtics \"$startdate\", $oneweek \n";
+    $avgline = "\"$plotfile\" " .
+         "using 3:2 smooth cspline with line lc 1 lw 2 notitle ,";
+  } elsif ( $graphtype == 3 ) {
+    $numberofdays = 370;
+    $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
+    chomp($startdate);
+    $avgline = "\"$plotfile\" " .
+         "using 3:2 smooth cspline with line lc 1 lw 2 notitle ," .
+       "\"$plotfile\" " .
+         "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
+  }
+  $enddate = `date +%F -d "tomorrow"` ;
   chomp($enddate);
   my $cmd = "" .
-       "set term png \n".
+       "set term png small size 320,240 \n".
        "set out \"$pngfile\" \n".
        "set xdata time \n".
        "set timefmt \"%Y-%m-%d\" \n".
        "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
        "set yrange [ -0.3 : ] \n" .
-       "set format x \"%d\\n%b\" \n" . 
-       "$xtics \n" .
+       "set format x $xformat \n" . 
+       "$xtics" .
        #"set yrange [ \"$ymin\" : ] \n".
        #"set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
 #       "set title \"monthly minimum saldo\" \n".
@@ -334,29 +349,31 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
        "set style fill solid \n" . 
        "set boxwidth 0.1 relative \n" .
        "set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
-       "plot \"$plotfile\" " .
-         "every 7::0 " .
-         "using 1:2 with boxes lc 0 notitle ," .  # wed
-             # lc 0: grey 1: red, 2: green, 3: blue
-       "\"$plotfile\" " .
-         "every 7::1 " .
-         "using 1:2 with boxes lc 0 notitle ," .  # thu
-       "\"$plotfile\" " .
-         "every 7::2 " .
-         "using 1:2 with boxes lc 0 notitle ," .  # fri
-       "\"$plotfile\" " .
-         "every 7::3 " .
-         "using 1:2 with boxes lc 3 notitle ," .  # sat
-       "\"$plotfile\" " .
-         "every 7::4 " .
-         "using 1:2 with boxes lc 3 notitle ," .  # sun
-       "\"$plotfile\" " .
-         "every 7::5 " .
-         "using 1:2 with boxes lc 0 notitle ," .  # mon
-       "\"$plotfile\" " .
-         "every 7::6 " .
-         "using 1:2 with boxes lc 0 notitle \n" .  # tue
-       "";
+       "plot " .
+             # lc 0=grey 1=red, 2=green, 3=blue
+        "\"$plotfile\" " .
+            "every 7::0 " .
+            "using 1:2 with boxes lc 0 notitle ," .  # tue
+        "\"$plotfile\" " .
+            "every 7::1 " .
+            "using 1:2 with boxes lc 0 notitle ," .  # wed
+        "\"$plotfile\" " .
+            "every 7::2 " .
+            "using 1:2 with boxes lc 0 notitle ," .  # thu
+        "\"$plotfile\" " .
+            "every 7::3 " .
+            "using 1:2 with boxes lc 3 notitle ," .  # fri
+        "\"$plotfile\" " .
+            "every 7::4 " .
+            "using 1:2 with boxes lc 3 notitle," .  # sat
+        "\"$plotfile\" " .
+            "every 7::5 " .
+            "using 1:2 with boxes lc 3 notitle, " .  # sun
+        $avgline .
+        "\"$plotfile\" " .
+            "every 7::6 " .
+            "using 1:2 with boxes lc 0 notitle," .  # mon
+        "";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
   print C $cmd;
