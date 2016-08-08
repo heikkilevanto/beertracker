@@ -263,16 +263,26 @@ if ( $edit ) {
 } else {
   print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td>";
   print "<td>&nbsp;</td><td><input type='button' value='clear' onclick='clearinputs()'/></td>";
-  if ( $todaydrinks ) {
-    print "<td>&nbsp;</td><td>$todaydrinks</td>";
+  if ( ! $todaydrinks ) {
+    $todaydrinks = "Graph";
   }
+  print "<td>&nbsp;</td><td><a href='" . $q->url . "?o=Graph'>$todaydrinks</a></td>";
   print "</tr>\n";
 }
 print "</table>\n";
 print "</form>\n";
 
 # List section
-if ( $op && $op eq "Graph" ) { # make a graph
+if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
+  my $graphtype = $1 || 2;
+  my $numberofdays=7;
+  if ( $graphtype == 1 ) {
+    $numberofdays = 8;
+  } elsif ( $graphtype == 2 ) {
+    $numberofdays = 35;
+  } elsif ( $graphtype == 3 ) {
+    $numberofdays = 370;
+  }
   my %sums; 
   my $firstdate;
   my $lastdate;
@@ -298,20 +308,24 @@ if ( $op && $op eq "Graph" ) { # make a graph
     }
   }
   close(F);
-  $startdate = `date +%F -d "last sunday -49 days"` ;
+  $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
   chomp($startdate);
   $enddate = `date +%F -d "next sunday"` ;
-  chomp($enddate);
+  $enddate = `date +%F -d "tomorrow"` ;
   my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
+  if ( $graphtype < 3 ) {
+    $xtics =  "set xtics \"$startdate\", $oneweek";
+  } 
+  chomp($enddate);
   my $cmd = "" .
        "set term png \n".
        "set out \"$pngfile\" \n".
        "set xdata time \n".
        "set timefmt \"%Y-%m-%d\" \n".
-       "set xrange [ \"$startdate\" : ] \n".
+       "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
        "set yrange [ -0.3 : ] \n" .
        "set format x \"%d\\n%b\" \n" . 
-       "set xtics \"$startdate\", $oneweek \n" .
+       "$xtics \n" .
        #"set yrange [ \"$ymin\" : ] \n".
        #"set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
 #       "set title \"monthly minimum saldo\" \n".
@@ -349,6 +363,11 @@ if ( $op && $op eq "Graph" ) { # make a graph
   close(C);
   system ("gnuplot $cmdfile ");
   print "<hr/>\n";
+  print "<a href='" . $q->url . "?o=Graph1'>Week</a> \n";
+  print "<a href='" . $q->url . "?o=Graph2'>Month</a> \n";
+  print "<a href='" . $q->url . "?o=Graph3'>Year</a> \n";
+  print "<a href='" . $q->url . "'>(back)</a> \n";
+  print "<p/>\n";
   print "<img src=\"$pngfile\"/>\n";
 
 } elsif ( $op ) { # various lists
