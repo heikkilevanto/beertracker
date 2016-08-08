@@ -14,8 +14,14 @@ my $q = CGI->new;
 # Constants
 my $datadir = "./beerdata/";
 my $datafile = "";
+my $plotfile = "";
+my $cmdfile = "";
+my $pngfile = "";
 if ( $q->remote_user() =~ /^[a-zA-Z0-9]+$/ ) {
   $datafile = $datadir . $q->remote_user() . ".data";
+  $plotfile = $datadir . $q->remote_user() . ".plot";
+  $cmdfile = $datadir . $q->remote_user() . ".cmd";
+  $pngfile = $datadir . $q->remote_user() . ".png";
 } else {
   error ("Bad username");
 }
@@ -266,7 +272,86 @@ print "</table>\n";
 print "</form>\n";
 
 # List section
-if ( $op ) { # various lists
+if ( $op && $op eq "Graph" ) { # make a graph
+  my %sums; 
+  my $firstdate;
+  my $lastdate;
+  for ( my $i = 0; $i < scalar(@lines); $i++ ) {
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+       split( /; */, $lines[$i] );
+    $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
+    $firstdate = $effdate unless $firstdate;
+    $lastdate = $effdate;
+    #print "$effdate: $sums{$effdate} <br/>\n";
+  }
+  my $ndays = 0;
+  open F, ">$plotfile"
+      or error ("Could not open $plotfile for writing");
+  while ( $ndays++ >= 0 ) {
+    my $date = `date +%F -d "$firstdate + $ndays days" `;
+    chomp($date);
+    my $tot = ( $sums{$date} || 0 ) / ( 33 * 4.7) ;
+    #print "$ndays: $date: $tot <br/>";
+    print F "$date $tot\n";
+    if ( $date eq $lastdate ) {
+      $ndays = -1; # signal stop
+    }
+  }
+  close(F);
+  $startdate = `date +%F -d "last sunday -49 days"` ;
+  chomp($startdate);
+  $enddate = `date +%F -d "next sunday"` ;
+  chomp($enddate);
+  my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
+  my $cmd = "" .
+       "set term png \n".
+       "set out \"$pngfile\" \n".
+       "set xdata time \n".
+       "set timefmt \"%Y-%m-%d\" \n".
+       "set xrange [ \"$startdate\" : ] \n".
+       "set yrange [ -0.3 : ] \n" .
+       "set format x \"%d\\n%b\" \n" . 
+       "set xtics \"$startdate\", $oneweek \n" .
+       #"set yrange [ \"$ymin\" : ] \n".
+       #"set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
+#       "set title \"monthly minimum saldo\" \n".
+#       "set key bmargin left\n".
+       #"set key right bottom\n".
+       "set style fill solid \n" . 
+       "set boxwidth 0.1 relative \n" .
+       "set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
+       "plot \"$plotfile\" " .
+         "every 7::0 " .
+         "using 1:2 with boxes lc 0 notitle ," .  # wed
+             # lc 0: grey 1: red, 2: green, 3: blue
+       "\"$plotfile\" " .
+         "every 7::1 " .
+         "using 1:2 with boxes lc 0 notitle ," .  # thu
+       "\"$plotfile\" " .
+         "every 7::2 " .
+         "using 1:2 with boxes lc 0 notitle ," .  # fri
+       "\"$plotfile\" " .
+         "every 7::3 " .
+         "using 1:2 with boxes lc 3 notitle ," .  # sat
+       "\"$plotfile\" " .
+         "every 7::4 " .
+         "using 1:2 with boxes lc 3 notitle ," .  # sun
+       "\"$plotfile\" " .
+         "every 7::5 " .
+         "using 1:2 with boxes lc 0 notitle ," .  # mon
+       "\"$plotfile\" " .
+         "every 7::6 " .
+         "using 1:2 with boxes lc 0 notitle \n" .  # tue
+       "";
+  open C, ">$cmdfile"
+      or error ("Could not open $plotfile for writing");
+  print C $cmd;
+  close(C);
+  system ("gnuplot $cmdfile ");
+  print "<hr/>\n";
+  print "<img src=\"$pngfile\"/>\n";
+
+} elsif ( $op ) { # various lists
   print "<hr/><a href='" . $q->url . "'><b>$op</b> list</a><p/>\n";
   my $i = scalar( @lines );
   my $fld;
