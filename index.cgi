@@ -372,7 +372,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
         $avgline .
         "\"$plotfile\" " .
             "every 7::6 " .
-            "using 1:2 with boxes lc 0 notitle," .  # mon
+            "using 1:2 with boxes lc 0 notitle\n" .  # mon
         "";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
