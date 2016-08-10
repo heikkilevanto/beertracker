@@ -296,7 +296,9 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     my $mdate = $1."-01" if ( $date =~ /^(\d+-\d+)-\d+/);
     my $tot = ( $sums{$date} || 0 ) / ( 33 * 4.7) ;
     #print "$ndays: $date: $tot <br/>";
-    print F "$date $tot $mdate\n";
+    my $zero = "";
+    $zero = -0.1 unless $tot;
+    print F "$date $tot $mdate $zero\n";
     if ( $date eq $lastdate ) {
       $ndays = -1; # signal stop
     }
@@ -338,7 +340,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
        "set xdata time \n".
        "set timefmt \"%Y-%m-%d\" \n".
        "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
-       "set yrange [ -0.3 : ] \n" .
+       "set yrange [ -.5 : ] \n" .
        "set format x $xformat \n" . 
        "$xtics" .
        #"set yrange [ \"$ymin\" : ] \n".
@@ -351,6 +353,12 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
        "set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
        "plot " .
              # lc 0=grey 1=red, 2=green, 3=blue
+             # note the order of plotting, later ones get on top
+             # so we plot weekdays, weekends, avg line, and just one
+             # weekday, to handle commas in the avg line
+        "\"$plotfile\" " .
+            "every 7::6 " .
+            "using 1:2 with boxes lc 0 notitle ," .  # mon
         "\"$plotfile\" " .
             "every 7::0 " .
             "using 1:2 with boxes lc 0 notitle ," .  # tue
@@ -371,8 +379,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
             "using 1:2 with boxes lc 3 notitle, " .  # sun
         $avgline .
         "\"$plotfile\" " .
-            "every 7::6 " .
-            "using 1:2 with boxes lc 0 notitle\n" .  # mon
+            "using 1:4 with points lc 2 pointtype 11 notitle \n" .  # zeroes
         "";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
