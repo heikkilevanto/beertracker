@@ -321,10 +321,9 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   my $numberofdays=7;
   my $xformat = "\"%d\\n%b\"";
   my $avgline = "";
-  if ( $graphtype == 1 ) {
-    $numberofdays = 6;
+  if ( $graphtype == 1 ) { # week
     $xformat = "\"%a\\n%d";
-    $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
+    $startdate = `date +%F -d "last sunday -6 days"` ;
     chomp($startdate);
     $xtics =  "set xtics \"$startdate\", $oneday \n";
   } elsif ( $graphtype == 2 ) {
@@ -335,6 +334,14 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     $avgline = "\"$plotfile\" " .
          "using 3:2 smooth cspline with line lc 1 lw 2 notitle ,";
   } elsif ( $graphtype == 3 ) {
+    $numberofdays = 100;
+    $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
+    chomp($startdate);
+    $avgline = "\"$plotfile\" " .
+         "using 3:2 smooth cspline with line lc 1 lw 2 notitle ," .
+       "\"$plotfile\" " .
+         "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
+  } elsif ( $graphtype == 4 ) {
     $numberofdays = 370;
     $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
     chomp($startdate);
@@ -395,8 +402,8 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   print "<hr/>\n";
   print "<a href='" . $q->url . "?o=Graph1'>Week</a> \n";
   print "<a href='" . $q->url . "?o=Graph2'>Month</a> \n";
-  print "<a href='" . $q->url . "?o=Graph3'>Year</a> \n";
-  print "<a href='" . $q->url . "'>(back)</a> \n";
+  print "<a href='" . $q->url . "?o=Graph3'>Quarter</a> \n";
+  print "<a href='" . $q->url . "?o=Graph4'>Year</a> \n";
   print "<p/>\n";
   print "<img src=\"$pngfile\"/>\n";
 
