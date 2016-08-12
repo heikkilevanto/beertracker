@@ -340,7 +340,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   $enddate = `date +%F -d "tomorrow"` ;
   chomp($enddate);
   my $cmd = "" .
-       "set term png small size 320,240 \n".
+       "set term png small size 360,240 \n".
        "set out \"$pngfile\" \n".
        "set xdata time \n".
        "set timefmt \"%Y-%m-%d\" \n".
