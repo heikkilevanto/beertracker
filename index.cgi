@@ -268,11 +268,12 @@ if ( $edit ) {
   print "<td>&nbsp;</td><td><input type='button' value='clear' onclick='clearinputs()'/></td>\n";
   print "<td>&nbsp;</td>";
   print "<td><select name='ops' " .
-              "onclick='document.location=\"" . $q->url ."?\"+this.value;' >";
-  print "<option value=' ' selected='selected' >Full List</option>\n";
+              "onchange='document.location=\"" . $q->url ."?\"+this.value;' >";
+  print "<option value='' >Show</option>\n";
+  print "<option value='' >Full List</option>\n";
   my @ops = ("Graph", "Location","Brewery", "Beer", "Style");
-  for my $op ( @ops ) {
-    print "<option value='o=$op'>$op</option>\n";
+  for my $opt ( @ops ) {
+    print "<option value='o=$opt'>$opt</option>\n";
   }
   print "<option value='f=r'>Ratings</option>\n";
   print "<option value='f=c'>Comments</option>\n";
