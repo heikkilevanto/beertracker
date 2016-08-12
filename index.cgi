@@ -168,7 +168,6 @@ if ( $q->request_method eq "POST" ) {
   }
   # Redirect to the same script, without the POST, so we see the results
   print $q->redirect( $q->url ); 
-  # TODO - plot the values in a graph
   exit();
 }
 
@@ -261,12 +260,18 @@ if ( $edit ) {
   print "<td>&nbsp;</td><td><a href='". $q->url . "' >cancel</a></td>";
   print "<td>&nbsp;</td><td><input type='submit' name='submit' value='Delete'/></td></tr>\n";
 } else {
-  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td>";
-  print "<td>&nbsp;</td><td><input type='button' value='clear' onclick='clearinputs()'/></td>";
-  if ( ! $todaydrinks ) {
-    $todaydrinks = "Graph";
+  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td>\n";
+  print "<td>&nbsp;</td><td><input type='button' value='clear' onclick='clearinputs()'/></td>\n";
+  print "<td>&nbsp;</td>";
+  if ( $todaydrinks ) {
+    print "<td><a href='" . $q->url . "?o=Graph'>$todaydrinks</a></td>";
+  } else {
+    if ( $op && $op =~ /Graph(\d*)/ ) {
+      print "<td><a href='" . $q->url . "'>List</a></td>";
+    } else {
+      print "<td><a href='" . $q->url . "?o=Graph'>Graph</a></td>";
+    }
   }
-  print "<td>&nbsp;</td><td><a href='" . $q->url . "?o=Graph'>$todaydrinks</a></td>";
   print "</tr>\n";
 }
 print "</table>\n";
@@ -343,11 +348,6 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
        "set yrange [ -.5 : ] \n" .
        "set format x $xformat \n" . 
        "$xtics" .
-       #"set yrange [ \"$ymin\" : ] \n".
-       #"set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
-#       "set title \"monthly minimum saldo\" \n".
-#       "set key bmargin left\n".
-       #"set key right bottom\n".
        "set style fill solid \n" . 
        "set boxwidth 0.1 relative \n" .
        "set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
