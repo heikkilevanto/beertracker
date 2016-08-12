@@ -83,7 +83,7 @@ my $lastline = "";
 my $thisloc = "";
 my $lastdatesum = 0.0;
 my $lastdatemsum = 0;
-my $todaydrinks = "";
+my $todaydrinks = "(none)";
 my @lines;
 while (<F>) {
   chomp();
@@ -205,6 +205,9 @@ my $script = <<'SCRIPTEND';
         inputs[i].value = "";
     }
   };
+  var changeop = function(to) {
+    document.location = to;
+  }
 SCRIPTEND
 print "<script>\n$script</script>\n";
 
@@ -239,14 +242,14 @@ if ( $edit ) {
     print "<tr><td $c2>Wday</td><td $c4><input name='wd' value='$wday'  $sz /></td></tr>\n";
     print "<tr><td $c2>Effdate</td><td $c4><input name='ed' value='$effdate'  $sz /></td></tr>\n";
 }
-print "<tr><td $c2>".lst("Location")."</td><td $c4><input name='l' value='$loc' $sz /></td></tr>\n";
-print "<tr><td $c2>".lst("Brewery")."</td><td $c4><input name='m' value='$mak' $sz /></td></tr>\n";
-print "<tr><td $c2>".lst("Beer")."</td><td $c4><input name='b' value='$beer' $sz /></td></tr>\n";
+print "<tr><td $c2>Location</td><td $c4><input name='l' value='$loc' $sz /></td></tr>\n";
+print "<tr><td $c2>Brewery</td><td $c4><input name='m' value='$mak' $sz /></td></tr>\n";
+print "<tr><td $c2>Beer</td><td $c4><input name='b' value='$beer' $sz /></td></tr>\n";
 print "<tr><td>Vol</td><td><input name='v' value='$vol' $sz2 />\n";
 print "<td>Alc</td><td><input name='a' value='$alc' $sz2 /></td>\n";
 print "<td>Price</td><td><input name='p' value='$pr' $sz2/></td></tr>\n";
-print "<tr><td $c2>".lst("Style")."</td><td $c4><input name='s' value='$sty' $sz/></td></tr>\n";
-print "<tr><td $c2><a href='" . $q->url . "?f=r'>Rating</a></td><td $c4><select name='r' value='$rate' />" .
+print "<tr><td $c2>Style</td><td $c4><input name='s' value='$sty' $sz/></td></tr>\n";
+print "<tr><td $c2>Rating</td><td $c4><select name='r' value='$rate' />" .
    "<option value=''></option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
@@ -254,7 +257,8 @@ for my $ro (0 .. scalar(@ratings)-1) {
   print  ">$ro - $ratings[$ro]</option>\n";
 }
 print "</select></td></tr>\n";
-print "<tr><td $c2><a href='" . $q->url . "?f=c'>Comment</a></td><td $c4><textarea name='c' cols='30' rows='3' />$com</textarea></td></tr>\n";
+print "<tr><td $c2>Comment<br/>$todaydrinks</td>";
+print " <td $c4><textarea name='c' cols='30' rows='3' />$com</textarea></td></tr>\n";
 if ( $edit ) {
   print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Save'/></td>\n";
   print "<td>&nbsp;</td><td><a href='". $q->url . "' >cancel</a></td>";
@@ -263,15 +267,16 @@ if ( $edit ) {
   print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td>\n";
   print "<td>&nbsp;</td><td><input type='button' value='clear' onclick='clearinputs()'/></td>\n";
   print "<td>&nbsp;</td>";
-  if ( $todaydrinks ) {
-    print "<td><a href='" . $q->url . "?o=Graph'>$todaydrinks</a></td>";
-  } else {
-    if ( $op && $op =~ /Graph(\d*)/ ) {
-      print "<td><a href='" . $q->url . "'>List</a></td>";
-    } else {
-      print "<td><a href='" . $q->url . "?o=Graph'>Graph</a></td>";
-    }
+  print "<td><select name='ops' " .
+              "onclick='document.location=\"" . $q->url ."?\"+this.value;' >";
+  print "<option value=' ' selected='selected' >Full List</option>\n";
+  my @ops = ("Graph", "Location","Brewery", "Beer", "Style");
+  for my $op ( @ops ) {
+    print "<option value='o=$op'>$op</option>\n";
   }
+  print "<option value='f=r'>Ratings</option>\n";
+  print "<option value='f=c'>Comments</option>\n";
+  print "</select></td>\n";
   print "</tr>\n";
 }
 print "</table>\n";
@@ -298,7 +303,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   while ( $ndays++ >= 0 ) {
     my $date = `date +%F -d "$firstdate + $ndays days" `;
     chomp($date);
-    my $mdate = $1."-01" if ( $date =~ /^(\d+-\d+)-\d+/);
+    my $mdate = $1."-15" if ( $date =~ /^(\d+-\d+)-\d+/);
     my $tot = ( $sums{$date} || 0 ) / ( 33 * 4.7) ;
     #print "$ndays: $date: $tot <br/>";
     my $zero = "";
