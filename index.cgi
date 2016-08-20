@@ -83,7 +83,9 @@ my $lastline = "";
 my $thisloc = "";
 my $lastdatesum = 0.0;
 my $lastdatemsum = 0;
-my $todaydrinks = "(none)";
+my $todaydrinks = "";
+my $thisdate = "";
+my $lastwday = "";
 my @lines;
 while (<F>) {
   chomp();
@@ -96,12 +98,27 @@ while (<F>) {
     $foundline = $_;
   }
   $lastline = $_;
-  if ( $effdate eq "$wd; $ed" ) {
+  if ( $thisdate ne "$wd; $ed" ) { # new date
+    $lastdatesum = 0.0;
+    $lastdatemsum = 0;
+    $thisdate = "$wd; $ed";
+    $lastwday = $wd;
+  }
+  $lastdatesum += ( $a * $v ) if ($a && $v);
+  $lastdatemsum += $p if ( $p =~ /\d/ );
+  if ( $effdate eq "$wd; $ed" ) { # today
+    $todaydrinks = sprintf("%3.1f", $lastdatesum / ( 33 * 4.7 )) . " d " ;
+    $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
+  }
+  if ( 0 ) {
     $lastdatesum += ( $a * $v ) if ($a && $v);
     $lastdatemsum += $p if ( $p =~ /\d/ );
     $todaydrinks = sprintf("%3.1f", $lastdatesum / ( 33 * 4.7 )) . " d " ;
     $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
   }
+}
+if ( ! $todaydrinks ) { # not today
+  $todaydrinks = "($lastwday: " . sprintf("%3.1f", $lastdatesum / ( 33 * 4.7 )) . "d)" ;    
 }
 
 
