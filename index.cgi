@@ -105,7 +105,7 @@ while (<F>) {
     $lastwday = $wd;
   }
   $lastdatesum += ( $a * $v ) if ($a && $v);
-  $lastdatemsum += $p if ( $p =~ /\d/ );
+  $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
   if ( $effdate eq "$wd; $ed" ) { # today
     $todaydrinks = sprintf("%3.1f", $lastdatesum / ( 33 * 4.7 )) . " d " ;
     $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
