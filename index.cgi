@@ -315,7 +315,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     $lastdate = $effdate;
     #print "$effdate: $sums{$effdate} <br/>\n";
   }
-  $enddate = `date +%F -d "tomorrow"` ;
+  $enddate = `date +%F -d "yesterday"` ;
   chomp($enddate);
   my $ndays = 0;
   my $date = $firstdate;
@@ -333,6 +333,8 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     print F "$date $tot $mdate $zero\n";
   }
   close(F);
+  $enddate = `date +%F -d "tomorrow"` ;
+  chomp($enddate);
   my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
   my $oneday = 24 * 60 * 60 ; 
   my $xtics = "";
