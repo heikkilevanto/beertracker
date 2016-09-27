@@ -315,21 +315,22 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     $lastdate = $effdate;
     #print "$effdate: $sums{$effdate} <br/>\n";
   }
+  $enddate = `date +%F -d "tomorrow"` ;
+  chomp($enddate);
   my $ndays = 0;
+  my $date = $firstdate;
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
-  while ( $ndays++ >= 0 ) {
-    my $date = `date +%F -d "$firstdate + $ndays days" `;
+  while ( $date lt $enddate) {
+    $ndays++;
+    $date = `date +%F -d "$firstdate + $ndays days" `;
     chomp($date);
     my $mdate = $1."-15" if ( $date =~ /^(\d+-\d+)-\d+/);
     my $tot = ( $sums{$date} || 0 ) / ( 33 * 4.7) ;
-    #print "$ndays: $date: $tot <br/>";
+    #print "$ndays: $date / $enddate: $tot <br/>";
     my $zero = "";
     $zero = -0.1 unless $tot;
     print F "$date $tot $mdate $zero\n";
-    if ( $date eq $lastdate ) {
-      $ndays = -1; # signal stop
-    }
   }
   close(F);
   my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
@@ -367,8 +368,6 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
        "\"$plotfile\" " .
          "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
   }
-  $enddate = `date +%F -d "tomorrow"` ;
-  chomp($enddate);
   my $cmd = "" .
        "set term png small size 360,240 \n".
        "set out \"$pngfile\" \n".
