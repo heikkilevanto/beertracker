@@ -321,7 +321,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   my $date = $firstdate;
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
-  while ( $date lt $enddate) {
+  while ( $date le $enddate) {
     $ndays++;
     $date = `date +%F -d "$firstdate + $ndays days" `;
     chomp($date);
