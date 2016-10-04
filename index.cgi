@@ -329,7 +329,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     my $tot = ( $sums{$date} || 0 ) / ( 33 * 4.7) ;
     #print "$ndays: $date / $enddate: $tot <br/>";
     my $zero = "";
-    $zero = -0.1 unless $tot;
+    $zero = -0.1 unless ( $tot || $date gt $enddate );
     print F "$date $tot $mdate $zero\n";
   }
   close(F);
