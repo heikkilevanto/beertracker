@@ -12,6 +12,7 @@ use URI::Escape;
 my $q = CGI->new;
 
 # Constants
+my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
 my $datadir = "./beerdata/";
 my $datafile = "";
 my $plotfile = "";
@@ -107,18 +108,18 @@ while (<F>) {
   $lastdatesum += ( $a * $v ) if ($a && $v);
   $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
   if ( $effdate eq "$wd; $ed" ) { # today
-    $todaydrinks = sprintf("%3.1f", $lastdatesum / ( 33 * 4.7 )) . " d " ;
+    $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
     $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
   }
   if ( 0 ) {
     $lastdatesum += ( $a * $v ) if ($a && $v);
     $lastdatemsum += $p if ( $p =~ /\d/ );
-    $todaydrinks = sprintf("%3.1f", $lastdatesum / ( 33 * 4.7 )) . " d " ;
+    $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
     $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
   }
 }
 if ( ! $todaydrinks ) { # not today
-  $todaydrinks = "($lastwday: " . sprintf("%3.1f", $lastdatesum / ( 33 * 4.7 )) . "d)" ;    
+  $todaydrinks = "($lastwday: " . sprintf("%3.1f", $lastdatesum / $onedrink ) . "d)" ;    
 }
 
 
@@ -313,7 +314,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
     $firstdate = $effdate unless $firstdate;
     $lastdate = $effdate;
-    #print "$effdate: $sums{$effdate} <br/>\n";
+    #print "$effdate: $sums{$effdate} a:'$alc' v:'$vol'<br/>\n";
   }
   $enddate = `date +%F -d "yesterday"` ;
   chomp($enddate);
@@ -326,7 +327,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     $date = `date +%F -d "$firstdate + $ndays days" `;
     chomp($date);
     my $mdate = $1."-15" if ( $date =~ /^(\d+-\d+)-\d+/);
-    my $tot = ( $sums{$date} || 0 ) / ( 33 * 4.7) ;
+    my $tot = ( $sums{$date} || 0 ) / $onedrink ;
     #print "$ndays: $date / $enddate: $tot <br/>";
     my $zero = "";
     $zero = -0.1 unless ( $tot || $date gt $enddate );
@@ -506,8 +507,8 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     my $dateloc = "$effdate : $loc";
 
     if ( $dateloc ne $lastloc && ! $qry) { # summary of loc and maybe date
-      my $locdrinks = sprintf("%3.1f", $locdsum / ( 33 * 4.7 )) ; # std danish beer
-      my $daydrinks = sprintf("%3.1f", $daydsum / ( 33 * 4.7 )) ; # std danish beer
+      my $locdrinks = sprintf("%3.1f", $locdsum / $onedrink) ; 
+      my $daydrinks = sprintf("%3.1f", $daydsum / $onedrink) ;
       # loc summary: if nonzero, and diff from daysummary or there is a new loc coming
       if ( $locdrinks > 0.1 ) {
         print "$lastloc2: $locdrinks d, $locmsum kr. <br/>\n";
@@ -551,7 +552,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     print "$vol cl " if ($vol);
     print "* $alc % " if ($alc);
     if ( $alc && $vol ) {
-      my $dr = sprintf("%1.2f", ($alc * $vol) / (33 * 4.7) );
+      my $dr = sprintf("%1.2f", ($alc * $vol) / $onedrink );
       print "= $dr d ";
     }
     print "<br/>\n";
@@ -586,8 +587,8 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     last if ($maxlines == 0); # if negative, will go for ever
   }
   if ( ! $qry) { # final summary
-    my $locdrinks = sprintf("%3.1f", $locdsum / ( 33 * 4.7 )) ; # std danish beer
-    my $daydrinks = sprintf("%3.1f", $daydsum / ( 33 * 4.7 )) ; # std danish beer
+    my $locdrinks = sprintf("%3.1f", $locdsum / $onedrink); 
+    my $daydrinks = sprintf("%3.1f", $daydsum / $onedrink);
     # loc summary: if nonzero, and diff from daysummary or there is a new loc coming
     if ( $locdrinks > 0.1 ) {
       print "$lastloc2: $locdrinks d, $locmsum kr. \n";
