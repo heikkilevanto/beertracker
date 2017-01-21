@@ -462,7 +462,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     }
     if ( $lastloc ne $loc ) {
       my $bold = "";
-      if ( defined($locseen{$loc}) ) {
+      if ( !defined($locseen{$loc}) ) {
         $bold = "b";
         }
       $places .= " " . filt($loc,$bold);
