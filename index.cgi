@@ -429,6 +429,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
 } elsif ( $op eq "short" ) { # short list, one line per day
   my $i = scalar( @lines );
   my $entry = "";
+  my $places = "";
   my $lastdate = "";
   my $lastloc = "";
   my $daysum = 0.0;
@@ -443,6 +444,9 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
         my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
         $entry .= " " . $daydrinks;
         print "$entry<br/>\n";
+        print "$places<p/>\n";
+        $maxlines--;
+        last if ($maxlines == 0); # if negative, will go for ever
       }
       my $thismonth = substr($effdate,0,7);
       my $bold = "";
@@ -451,6 +455,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
         $month = $thismonth;
       }
       $entry = filt($effdate, $bold) . " " . $wday ;
+      $places = "";
       $lastdate = $effdate;
       $lastloc = "";
       $daysum = 0.0;
@@ -460,11 +465,15 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       if ( defined($locseen{$loc}) ) {
         $bold = "b";
         }
-      $entry .= " " . filt($loc,$bold);
+      $places .= " " . filt($loc,$bold);
       $locseen{$loc} = 1;
       $lastloc = $loc;
     }
     $daysum += ( $alc * $vol ) if ($alc && $vol) ;
+  }
+  if ( $maxlines >= 0 ) {
+    print "<p/><a href='" . $q->url . "?maxl=-1&" . $q->query_string() . "'>" .
+      "More</a><br/>\n";
   }
 } elsif ( $op ) { # various lists
   print "<hr/><a href='" . $q->url . "'><b>$op</b> list</a><p/>\n";
