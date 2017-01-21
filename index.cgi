@@ -288,6 +288,7 @@ if ( $edit ) {
               "onchange='document.location=\"" . $q->url ."?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
   print "<option value='' >Full List</option>\n";
+  print "<option value='o=short' >Short List</option>\n";
   my @ops = ("Graph", "Location","Brewery", "Beer", "Style");
   for my $opt ( @ops ) {
     print "<option value='o=$opt'>$opt</option>\n";
@@ -424,7 +425,39 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   print "<a href='" . $q->url . "?o=Graph4'>Year</a> \n";
   print "<p/>\n";
   print "<img src=\"$pngfile\"/>\n";
-
+} elsif ( $op eq "short" ) { # short list, one line per day
+  my $i = scalar( @lines );
+  my $entry = "";
+  my $lastdate = "";
+  my $lastloc = "";
+  my $daysum = 0.0;
+  my %locseen;
+  while ( $i > 0 ) {
+    $i--;
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+       split( /; */, $lines[$i] );
+    if ( $lastdate ne $effdate ) {
+      if ( $entry ) {
+        my $daydrinks = sprintf("%3.1f", $daysum / ( 33 * 4.7 )) ; # std danish beer
+        $entry .= " " . $daydrinks;
+        print "$entry<br/>\n";
+      }
+      $entry = filt($effdate);
+      $lastdate = $effdate;
+      $lastloc = "";
+      $daysum = 0.0;
+    }
+    if ( $lastloc ne $loc ) {
+      if ( defined($locseen{$loc}) ) {
+        $entry .= " " . filt($loc);
+      } else {
+        $entry .= " " . filt($loc,"b");
+        $locseen{$loc} = 1;
+      }
+      $lastloc = $loc;
+    }
+    $daysum += ( $alc * $vol ) if ($alc && $vol) ;
+  }
 } elsif ( $op ) { # various lists
   print "<hr/><a href='" . $q->url . "'><b>$op</b> list</a><p/>\n";
   my $i = scalar( @lines );
@@ -463,7 +496,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   }
   print "</table>\n";
   
-} else { # Regular beer list, with filters
+} else { # Regular beer list, with filters, or a short list
   if ($qry || $qrylim) {
     print "<hr/> Filter: ";
     print "<a href='" . $q->url ."'><b>$qry (Clear)</b></a>" if ($qry);
@@ -561,7 +594,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     $vols{25} = 1;
     #$vols{33} = 1;
     $vols{40} = 1;
- 
+
     print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
     print "<input type='hidden' name='l' value='$loc' />\n";
     print "<input type='hidden' name='m' value='$mak' />\n";
@@ -577,7 +610,6 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     print "</form>\n";
 
     print"</p>\n";
-
     $lastloc = $dateloc;
     $lastloc2 = $loc;
     $lastdate = $effdate;
