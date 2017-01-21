@@ -433,6 +433,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   my $lastloc = "";
   my $daysum = 0.0;
   my %locseen;
+  my $month = "";
   while ( $i > 0 ) {
     $i--;
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
@@ -443,18 +444,24 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
         $entry .= " " . $daydrinks;
         print "$entry<br/>\n";
       }
-      $entry = filt($effdate) . " " . $wday ;
+      my $thismonth = substr($effdate,0,7);
+      my $bold = "";
+      if ( $thismonth ne $month ) {
+        $bold = "b";
+        $month = $thismonth;
+      }
+      $entry = filt($effdate, $bold) . " " . $wday ;
       $lastdate = $effdate;
       $lastloc = "";
       $daysum = 0.0;
     }
     if ( $lastloc ne $loc ) {
+      my $bold = "";
       if ( defined($locseen{$loc}) ) {
-        $entry .= " " . filt($loc);
-      } else {
-        $entry .= " " . filt($loc,"b");
-        $locseen{$loc} = 1;
-      }
+        $bold = "b";
+        }
+      $entry .= " " . filt($loc,$bold);
+      $locseen{$loc} = 1;
       $lastloc = $loc;
     }
     $daysum += ( $alc * $vol ) if ($alc && $vol) ;
