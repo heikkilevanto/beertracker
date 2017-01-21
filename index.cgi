@@ -439,11 +439,11 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
        split( /; */, $lines[$i] );
     if ( $lastdate ne $effdate ) {
       if ( $entry ) {
-        my $daydrinks = sprintf("%3.1f", $daysum / ( 33 * 4.7 )) ; # std danish beer
+        my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
         $entry .= " " . $daydrinks;
         print "$entry<br/>\n";
       }
-      $entry = filt($effdate);
+      $entry = filt($effdate) . " " . $wday ;
       $lastdate = $effdate;
       $lastloc = "";
       $daysum = 0.0;
