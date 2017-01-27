@@ -447,19 +447,19 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
         print "$places<p/>\n";
         $maxlines--;
         last if ($maxlines == 0); # if negative, will go for ever
-        # Check for empty days in between
-        my $ndays = 1;
-        my $zerodate;
-        do {
-          $zerodate = `date +%F -d "$lastdate + $ndays days ago" `;
-          $ndays++;
-        } while ( $zerodate gt $effdate );
-        $ndays-=3;
-        if ( $ndays == 1 ) {
-          print "(1 day) <p/>\n";
-        } elsif ( $ndays > 1) {
-          print "($ndays days)<p/>\n";
-        }
+      }
+      # Check for empty days in between
+      my $ndays = 1;
+      my $zerodate;
+      do {
+        $zerodate = `date +%F -d "$lastdate + $ndays days ago" `;
+        $ndays++;
+      } while ( $zerodate gt $effdate );
+      $ndays-=3;
+      if ( $ndays == 1 ) {
+        print "(1 day) <p/>\n";
+      } elsif ( $ndays > 1) {
+        print "($ndays days)<p/>\n";
       }
       my $thismonth = substr($effdate,0,7);
       my $bold = "";
