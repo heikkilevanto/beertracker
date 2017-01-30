@@ -448,7 +448,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
         my $shortplaces = $places;
         $shortplaces =~ s/<[^>]+>//g;
         #print "('$shortplaces' " . length($shortplaces) . ")";
-        print "<br/>\n" if ( length($shortplaces) > 15 );
+        print "<br/>&nbsp;\n" if ( length($shortplaces) > 15 );
         print "$places<p/>\n";
         $maxlines--;
         last if ($maxlines == 0); # if negative, will go for ever
