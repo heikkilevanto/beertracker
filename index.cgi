@@ -426,6 +426,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   print "<a href='" . $q->url . "?o=Graph4'>Year</a> \n";
   print "<p/>\n";
   print "<img src=\"$pngfile\"/>\n";
+
 } elsif ( $op eq "short" ) { # short list, one line per day
   my $i = scalar( @lines );
   my $entry = "";
@@ -443,7 +444,11 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       if ( $entry ) {
         my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
         $entry .= " " . $daydrinks;
-        print "$entry<br/>\n";
+        print "$entry";
+        my $shortplaces = $places;
+        $shortplaces =~ s/<[^>]+>//g;
+        #print "('$shortplaces' " . length($shortplaces) . ")";
+        print "<br/>\n" if ( length($shortplaces) > 15 );
         print "$places<p/>\n";
         $maxlines--;
         last if ($maxlines == 0); # if negative, will go for ever
@@ -453,7 +458,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       my $zerodate;
       do {
         $zerodate = `date +%F -d "$lastdate + $ndays days ago" `;
-        $ndays++;
+        $ndays++;  # that seems to work even without $lastdate, takes today!
       } while ( $zerodate gt $effdate );
       $ndays-=3;
       if ( $ndays == 1 ) {
