@@ -449,7 +449,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
         $shortplaces =~ s/<[^>]+>//g;
         #print "('$shortplaces' " . length($shortplaces) . ")";
         print "<br/>&nbsp;\n" if ( length($shortplaces) > 15 );
-        print "$places<p/>\n";
+        print "$places<br/>\n";
         $maxlines--;
         last if ($maxlines == 0); # if negative, will go for ever
       }
@@ -462,9 +462,9 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       } while ( $zerodate gt $effdate );
       $ndays-=3;
       if ( $ndays == 1 ) {
-        print "(1 day) <p/>\n";
+        print "... (1 day) ...<br/>\n";
       } elsif ( $ndays > 1) {
-        print "($ndays days)<p/>\n";
+        print "... ($ndays days) ...<br/>\n";
       }
       my $thismonth = substr($effdate,0,7);
       my $bold = "";
