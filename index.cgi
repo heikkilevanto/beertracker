@@ -381,6 +381,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
        "set yrange [ -.5 : ] \n" .
        "set format x $xformat \n" . 
        "$xtics" .
+       "set ytics 0,3\n" .
        "set style fill solid \n" . 
        "set boxwidth 0.1 relative \n" .
        "set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
