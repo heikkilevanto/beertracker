@@ -480,12 +480,14 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       $daysum = 0.0;
     }
     if ( $lastloc ne $loc ) {
-      my $bold = "";
-      if ( !defined($locseen{$loc}) ) {
-        $bold = "b";
+      if ( $places !~ /$loc/ ) {
+        my $bold = "";
+        if ( !defined($locseen{$loc}) ) {
+          $bold = "b";
+          }
+        $places .= " " . filt($loc,$bold);
+        $locseen{$loc} = 1;
         }
-      $places .= " " . filt($loc,$bold);
-      $locseen{$loc} = 1;
       $lastloc = $loc;
     }
     $daysum += ( $alc * $vol ) if ($alc && $vol) ;
