@@ -58,6 +58,11 @@ if ( $hostname ne "locatelli" ) {
   $localtest = 1;
 }
 
+# Default sizes
+$vol =~ s/^s$/25/i;
+$vol =~ s/^m$/33/i;
+$vol =~ s/^l$/40/i;
+
 $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
 if ( ! $stamp ) {
