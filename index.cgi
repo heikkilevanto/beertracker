@@ -248,25 +248,17 @@ print "<script>\n$script</script>\n";
 if (  $localtest) {
   print "Local test installation<br/>\n";
 }
-# print "e='$edit' f='$foundline'<br/>"; # ###
-
-#my ($date, $time) = split(' ', $laststamp);
-#if ( $laststamp =~ / (\d\d:\d\d)/) {
-#  my $time = $1;
-#  print "<b>$time $lastloc: $lastbeer</b><p/>\n";
-#} else {
-#  print "<b>Welcome to BeerTrack</b><p/>\n";
-#}
 
 # Main input form
 print "<form method='POST'>\n";
 print "<table >";
+my $clr = "OnDblclick='value=\"\";'";
 my $c2 = "colspan='2'";
 my $c3 = "colspan='3'";
 my $c4 = "colspan='4'";
 my $c6 = "colspan='6'";
-my $sz = "size='30'";
-my $sz2 = "size='2'";
+my $sz = "size='30' $clr";
+my $sz2 = "size='2' $clr";
 if ( $edit ) {
     print "<tr><td $c6><b>Editing record $edit</b> ".
         "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
