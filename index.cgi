@@ -134,11 +134,21 @@ if ( $q->request_method eq "POST" ) {
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
   $loc = $thisloc unless $loc;  # Always default to the last one
+  if (  $sub =~ /Copy (\d+)/ ) {  # copy different volumes
+    $vol = $1 if ( $1 );
+  }
+  my $priceguess = "";
   my $i = scalar( @lines );
   while ( $i > 0 && $beer && ( !$mak || !$vol || !$sty || !$alc || !$pr )) {
-    print STDERR "Considering " . $lines[$i] . "\n";
-    ( undef, undef, undef, undef, $imak, $ibeer, $ivol, $isty, $ialc, $ipr, undef, undef) = 
+    #print STDERR "Considering " . $lines[$i] . "\n";
+    ( undef, undef, undef, $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr, undef, undef) =
        split( /; */, $lines[$i] );
+    if ( !$priceguess &&    # Guess a price
+         uc($iloc) eq uc($loc) &&   # if same location and volume
+         $vol eq $ivol ) {
+      $priceguess = $ipr;
+      #print STDERR "Found a price guess $ipr\n";
+    }
     if ( uc($beer) eq uc($ibeer) ) {
       $beer = $ibeer; # with proper case letters
       $mak = $imak unless $mak;
@@ -151,9 +161,7 @@ if ( $q->request_method eq "POST" ) {
     }
     $i--;
   }
-  if (  $sub =~ /Copy (\d+)/ ) {  # copy different volumes
-    $vol = $1 if ( $1 );
-  }
+  $pr = $priceguess unless $pr;
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
   if ( $sub eq "Record" || $sub =~ /^Copy/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
