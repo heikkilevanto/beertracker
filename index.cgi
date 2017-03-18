@@ -252,7 +252,7 @@ if (  $localtest) {
 # Main input form
 print "<form method='POST'>\n";
 print "<table >";
-my $clr = "OnDblclick='value=\"\";'";
+my $clr = "Onclick='value=\"\";'";
 my $c2 = "colspan='2'";
 my $c3 = "colspan='3'";
 my $c4 = "colspan='4'";
