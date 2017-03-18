@@ -33,7 +33,6 @@ my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
 
 # Parameters - data file fields are the same order
 # but there is a time stamp first, and the $del never gets to the data file
-# TODO - make a helper to get the param, and sanitize it
 my $stamp = param("st");
 my $wday = param("wd");  # weekday
 my $effdate = param("ed");  # effective date
@@ -138,10 +137,12 @@ if ( $q->request_method eq "POST" ) {
     if ( uc($beer) eq uc($ibeer) ) {
       $beer = $ibeer; # with proper case letters
       $mak = $imak unless $mak;
-      $vol = $ivol unless $vol;
       $sty = $isty unless $sty;
       $alc = $ialc unless $alc;
-      $pr  = $ipr  unless $pr;
+      if ( $vol eq $ivol ) { # take price only from same volume
+        $pr  = $ipr  unless $pr;
+      }
+      $vol = $ivol unless $vol;
     }
     $i--;
   }
