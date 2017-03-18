@@ -354,14 +354,14 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     $startdate = `date +%F -d "last sunday -6 days"` ;
     chomp($startdate);
     $xtics =  "set xtics \"$startdate\", $oneday \n";
-  } elsif ( $graphtype == 2 ) {
+  } elsif ( $graphtype == 2 ) { # month
     $numberofdays = 35;
     $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
     chomp($startdate);
     $xtics =  "set xtics \"$startdate\", $oneweek \n";
     $avgline = "\"$plotfile\" " .
          "using 3:2 smooth cspline with line lc 1 lw 2 notitle ,";
-  } elsif ( $graphtype == 3 ) {
+  } elsif ( $graphtype == 3 ) { # quarter
     $numberofdays = 100;
     $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
     chomp($startdate);
@@ -369,9 +369,16 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
          "using 3:2 smooth cspline with line lc 1 lw 2 notitle ," .
        "\"$plotfile\" " .
          "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
-  } elsif ( $graphtype == 4 ) {
+  } elsif ( $graphtype == 4 ) { # year
     $numberofdays = 370;
     $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
+    chomp($startdate);
+    $avgline = "\"$plotfile\" " .
+         "using 3:2 smooth cspline with line lc 1 lw 2 notitle ," .
+       "\"$plotfile\" " .
+         "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
+  } elsif ( $graphtype == 5 ) { # all
+    $startdate = $firstdate;
     chomp($startdate);
     $avgline = "\"$plotfile\" " .
          "using 3:2 smooth cspline with line lc 1 lw 2 notitle ," .
@@ -431,6 +438,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   print "<a href='" . $q->url . "?o=Graph2'>Month</a> \n";
   print "<a href='" . $q->url . "?o=Graph3'>Quarter</a> \n";
   print "<a href='" . $q->url . "?o=Graph4'>Year</a> \n";
+  print "<a href='" . $q->url . "?o=Graph5'>All</a> \n";
   print "<p/>\n";
   print "<img src=\"$pngfile\"/>\n";
 
