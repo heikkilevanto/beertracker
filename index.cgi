@@ -59,9 +59,10 @@ if ( $hostname ne "locatelli" ) {
 }
 
 # Default sizes
-$vol =~ s/^s$/25/i;
-$vol =~ s/^m$/33/i;
-$vol =~ s/^l$/40/i;
+$vol =~ s/^T$/2/i;  # Taster, sizes vary, but always small
+$vol =~ s/^S$/25/i;
+$vol =~ s/^M$/33/i;   # TODO - guess better medium from beer or loc
+$vol =~ s/^L$/40/i;
 
 $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
