@@ -645,7 +645,6 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     my %vols;
     $vols{$vol} = 1;
     $vols{25} = 1;
-    #$vols{33} = 1;
     $vols{40} = 1;
 
     print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
@@ -655,7 +654,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     print "<input type='hidden' name='v' value='' />\n";
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
-    print "<input type='hidden' name='p' value='$pr' />\n";
+    #print "<input type='hidden' name='p' value='$pr' />\n";
     foreach my $volx (sort keys(%vols)  ){
       print "<input type='submit' name='submit' value='Copy $volx'
                   style='display: inline;' />\n";
