@@ -648,13 +648,13 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     $vols{40} = 1;
 
     print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
-    print "<input type='hidden' name='l' value='$loc' />\n";
+    # No price - the script guesses based on size.
+    # No location, reuse the current loc
     print "<input type='hidden' name='m' value='$mak' />\n";
     print "<input type='hidden' name='b' value='$beer' />\n";
     print "<input type='hidden' name='v' value='' />\n";
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
-    #print "<input type='hidden' name='p' value='$pr' />\n";
     foreach my $volx (sort keys(%vols)  ){
       print "<input type='submit' name='submit' value='Copy $volx'
                   style='display: inline;' />\n";
