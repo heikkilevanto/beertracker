@@ -90,6 +90,7 @@ my $thisloc = "";
 my $lastdatesum = 0.0;
 my $lastdatemsum = 0;
 my $todaydrinks = "";
+my $copylocation = 0;  # should the copy button copy location too
 my $thisdate = "";
 my $lastwday = "";
 my @lines;
@@ -125,6 +126,7 @@ while (<F>) {
 }
 if ( ! $todaydrinks ) { # not today
   $todaydrinks = "($lastwday: " . sprintf("%3.1f", $lastdatesum / $onedrink ) . "d)" ;    
+  $copylocation = 1;  
 }
 
 
@@ -655,6 +657,8 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     print "<input type='hidden' name='v' value='' />\n";
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
+    print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation );
+    
     foreach my $volx (sort keys(%vols)  ){
       print "<input type='submit' name='submit' value='Copy $volx'
                   style='display: inline;' />\n";
