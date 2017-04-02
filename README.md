@@ -14,12 +14,12 @@ What this is not
 Outline
  - Simple form to enter a beer I am drinking
  - Store all data in a flat text file
- - Write in Perl
+ - Write in Perl, run as a CGI script under Apache
 
 Although this is a personal project to scratch my own itch, I might as well
-release it under GPL, in case someone else finds this interesting. That does
-not mean I am willing to accept feature requests or support users! But I would
-like to know if you like this. 
+release it under GPL, in case someone else finds this interesting. The system
+can handle multiple accounts, so if you ask nicely (and if I know you already)
+I may give you one to play with.
 
 
 Version 1.0 was released in Feb-2016. It works, and I am using it myself. Of
