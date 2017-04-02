@@ -52,6 +52,7 @@ my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimites
 my $localtest = 0; # Local test installation
+my $sortlist = param("sort") || 0; # default to unsorted, chronological shortlists
 my $hostname = `hostname`;
 chomp($hostname);
 if ( $hostname ne "locatelli" ) {
@@ -514,10 +515,16 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       "More</a><br/>\n";
   }
 } elsif ( $op ) { # various lists
-  print "<hr/><a href='" . $q->url . "'><b>$op</b> list</a><p/>\n";
+  print "<hr/><a href='" . $q->url . "'><b>$op</b> list</a>.\n";
+  if ( !$sortlist) {
+    print "(<a href='" . $q->url . "?o=$op&sort=1' >sort</a>) <p/>\n";
+  } else {
+    print "(<a href='" . $q->url . "?o=$op'>Recent</a>) <p/>\n";
+  }
   my $i = scalar( @lines );
   my $fld;
   my $line;
+  my @displines;
   my %seen;
   print "<table>\n";
   while ( $i > 0 ) {
@@ -546,8 +553,13 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     next unless $fld;
     $fld = uc($fld); 
     next if $seen{$fld};
-    print "<tr>$line</tr>\n";
     $seen{$fld} = 1;
+    #print "<tr>$line</tr>\n";
+    push @displines, "<tr>$line</tr>\n";
+  }
+  @displines = sort(@displines)   if ( $sortlist );
+  foreach my $dl (@displines) {
+    print $dl;
   }
   print "</table>\n";
   
