@@ -551,7 +551,8 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   }
   print "</table>\n";
   
-} else { # Regular beer list, with filters, or a short list
+} 
+if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
   if ($qry || $qrylim) {
     print "<hr/> Filter: ";
     print "<a href='" . $q->url ."'><b>$qry (Clear)</b></a>" if ($qry);
