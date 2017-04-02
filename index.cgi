@@ -300,7 +300,7 @@ if ( $edit ) {
   print "<option value='' >Show</option>\n";
   print "<option value='' >Full List</option>\n";
   print "<option value='o=short' >Short List</option>\n";
-  my @ops = ("Graph", "Location","Brewery", "Beer", "Style");
+  my @ops = ("Graph", "Location","Brewery", "Beer", "Wine", "Booze", "Style");
   for my $opt ( @ops ) {
     print "<option value='o=$opt'>$opt</option>\n";
   }
@@ -542,10 +542,24 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       $line = "<td>" . filt($mak,"b")  . "</td><td>$wday $effdate " .filt($loc) .
             "<br/>" . filt("[$sty]") . "  " . filt($beer,"b")  ."</td>";
     } elsif ( $op eq "Beer" ) {
+      next if ( $mak =~ /^wine/i );  
+      next if ( $mak =~ /^booze/i ); 
+      $fld = $beer;
+      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) .
+            "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
+    } elsif ( $op eq "Wine" ) {
+      next unless ( $mak =~ /^wine/i );
+      $fld = $beer;
+      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) .
+            "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
+    } elsif ( $op eq "Booze" ) {
+      next unless ( $mak =~ /^booze/i );
       $fld = $beer;
       $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Style" ) {
+      next if ( $mak =~ /^wine/i );  
+      next if ( $mak =~ /^booze/i ); 
       $fld = $sty;
       $line = "<td>" . filt("[$sty]","b")  . "</td><td>$wday $effdate " .  filt($loc,"i") . 
             "<br/>" . filt($mak,"i") . ":" . filt($beer,"b") . "</td>";
@@ -557,7 +571,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     #print "<tr>$line</tr>\n";
     push @displines, "<tr>$line</tr>\n";
   }
-  @displines = sort(@displines)   if ( $sortlist );
+  @displines = sort { "\U$a" cmp "\U$b" } @displines   if ( $sortlist );
   foreach my $dl (@displines) {
     print $dl;
   }
