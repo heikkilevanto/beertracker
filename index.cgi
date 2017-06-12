@@ -3,7 +3,6 @@
 # Heikki's simple beer tracker
 #
 # Keeps beer drinking history in a flat text file.
-# ..
 
 
 use CGI;
