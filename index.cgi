@@ -53,6 +53,7 @@ my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimites
 my $localtest = 0; # Local test installation
 my $sortlist = param("sort") || 0; # default to unsorted, chronological shortlists
+my $url = $url;
 my $hostname = `hostname`;
 chomp($hostname);
 if ( $hostname ne "locatelli" ) {
@@ -129,7 +130,8 @@ while (<F>) {
   }
 }
 if ( ! $todaydrinks ) { # not today
-  $todaydrinks = "($lastwday: " . sprintf("%3.1f", $lastdatesum / $onedrink ) . "d)" ;    
+  $todaydrinks = "($lastwday: " . sprintf("%3.1f", $lastdatesum / $onedrink ) . 
+"d)" ;    
   $copylocation = 1;  
 }
 
@@ -148,7 +150,8 @@ if ( $q->request_method eq "POST" ) {
   my $i = scalar( @lines );
   while ( $i > 0 && $beer && ( !$mak || !$vol || !$sty || !$alc || !$pr )) {
     #print STDERR "Considering " . $lines[$i] . "\n";
-    ( undef, undef, undef, $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr, undef, undef) =
+    ( undef, undef, undef, $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr, 
+undef, undef) =
        split( /; */, $lines[$i] );
     if ( !$priceguess &&    # Guess a price
          uc($iloc) eq uc($loc) &&   # if same location and volume
@@ -180,7 +183,6 @@ if ( $q->request_method eq "POST" ) {
           or error("Could not close data file");
     }
   } else { # Editing or deleting an existing line
-    # TODO Rewrite the file line by line, except the one we wanted to edit or delete
     # Copy the data file to .bak
     my $bakfile = $datafile . ".bak";
     system("cat $datafile > $bakfile");
@@ -206,14 +208,16 @@ if ( $q->request_method eq "POST" ) {
 
   }
   # Redirect to the same script, without the POST, so we see the results
-  print $q->redirect( $q->url ); 
+  print $q->redirect( $url ); 
   exit();
 }
 
 
 # Get new values from the file we ingested earlier
-my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) = split( /; */, $lastline );
-( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) = split( /; */, 
+$lastline );
+( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com 
+) = 
     split( /; */, $foundline );
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
@@ -229,7 +233,8 @@ print $q->header(
 print "<html><head>\n";
 print "<title>Beer</title>\n";
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
-print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
+print "<meta name='viewport' content='width=device-width, 
+initial-scale=1.0'>\n";
 if ( ! $localtest ) {
     print "<style rel='stylesheet'>\n";
     #print "* { margin: 1px; padding: 0px; }\n";
@@ -273,17 +278,24 @@ my $sz2 = "size='2' $clr";
 if ( $edit ) {
     print "<tr><td $c6><b>Editing record $edit</b> ".
         "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
-    print "<tr><td $c2>Stamp</td><td $c4><input name='st' value='$stamp' $sz /></td></tr>\n";
-    print "<tr><td $c2>Wday</td><td $c4><input name='wd' value='$wday'  $sz /></td></tr>\n";
-    print "<tr><td $c2>Effdate</td><td $c4><input name='ed' value='$effdate'  $sz /></td></tr>\n";
+    print "<tr><td $c2>Stamp</td><td $c4><input name='st' value='$stamp' $sz 
+/></td></tr>\n";
+    print "<tr><td $c2>Wday</td><td $c4><input name='wd' value='$wday'  $sz 
+/></td></tr>\n";
+    print "<tr><td $c2>Effdate</td><td $c4><input name='ed' value='$effdate'  
+$sz /></td></tr>\n";
 }
-print "<tr><td $c2>Location</td><td $c4><input name='l' value='$loc' $sz /></td></tr>\n";
-print "<tr><td $c2>Brewery</td><td $c4><input name='m' value='$mak' $sz /></td></tr>\n";
-print "<tr><td $c2>Beer</td><td $c4><input name='b' value='$beer' $sz /></td></tr>\n";
+print "<tr><td $c2>Location</td><td $c4><input name='l' value='$loc' $sz 
+/></td></tr>\n";
+print "<tr><td $c2>Brewery</td><td $c4><input name='m' value='$mak' $sz 
+/></td></tr>\n";
+print "<tr><td $c2>Beer</td><td $c4><input name='b' value='$beer' $sz 
+/></td></tr>\n";
 print "<tr><td>Vol</td><td><input name='v' value='$vol' $sz2 />\n";
 print "<td>Alc</td><td><input name='a' value='$alc' $sz2 /></td>\n";
 print "<td>Price</td><td><input name='p' value='$pr' $sz2/></td></tr>\n";
-print "<tr><td $c2>Style</td><td $c4><input name='s' value='$sty' $sz/></td></tr>\n";
+print "<tr><td $c2>Style</td><td $c4><input name='s' value='$sty' 
+$sz/></td></tr>\n";
 print "<tr><td $c2>Rating</td><td $c4><select name='r' value='$rate' />" .
    "<option value=''></option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
@@ -293,17 +305,22 @@ for my $ro (0 .. scalar(@ratings)-1) {
 }
 print "</select></td></tr>\n";
 print "<tr><td $c2>Comment<br/>$todaydrinks</td>";
-print " <td $c4><textarea name='c' cols='30' rows='3' />$com</textarea></td></tr>\n";
+print " <td $c4><textarea name='c' cols='30' rows='3' 
+/>$com</textarea></td></tr>\n";
 if ( $edit ) {
-  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Save'/></td>\n";
-  print "<td>&nbsp;</td><td><a href='". $q->url . "' >cancel</a></td>";
-  print "<td>&nbsp;</td><td><input type='submit' name='submit' value='Delete'/></td></tr>\n";
+  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' 
+value='Save'/></td>\n";
+  print "<td>&nbsp;</td><td><a href='$url' >cancel</a></td>";
+  print "<td>&nbsp;</td><td><input type='submit' name='submit' 
+value='Delete'/></td></tr>\n";
 } else {
-  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' value='Record'/></td>\n";
-  print "<td>&nbsp;</td><td><input type='button' value='clear' onclick='clearinputs()'/></td>\n";
+  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' 
+value='Record'/></td>\n";
+  print "<td>&nbsp;</td><td><input type='button' value='clear' 
+onclick='clearinputs()'/></td>\n";
   print "<td>&nbsp;</td>";
   print "<td><select name='ops' " .
-              "onchange='document.location=\"" . $q->url ."?\"+this.value;' >";
+              "onchange='document.location=\"$url?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
   print "<option value='' >Full List</option>\n";
   print "<option value='o=short' >Short List</option>\n";
@@ -329,7 +346,8 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   my $firstdate;
   my $lastdate;
   for ( my $i = 0; $i < scalar(@lines); $i++ ) {
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, 
+$com ) = 
        split( /; */, $lines[$i] );
     $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
     $firstdate = $effdate unless $firstdate;
@@ -447,11 +465,11 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   close(C);
   system ("gnuplot $cmdfile ");
   print "<hr/>\n";
-  print "<a href='" . $q->url . "?o=Graph1'>Week</a> \n";
-  print "<a href='" . $q->url . "?o=Graph2'>Month</a> \n";
-  print "<a href='" . $q->url . "?o=Graph3'>Quarter</a> \n";
-  print "<a href='" . $q->url . "?o=Graph4'>Year</a> \n";
-  print "<a href='" . $q->url . "?o=Graph5'>All</a> \n";
+  print "<a href='$url?o=Graph1'>Week</a> \n";
+  print "<a href='$url?o=Graph2'>Month</a> \n";
+  print "<a href='$url?o=Graph3'>Quarter</a> \n";
+  print "<a href='$url?o=Graph4'>Year</a> \n";
+  print "<a href='$url?o=Graph5'>All</a> \n";
   print "<p/>\n";
   print "<img src=\"$pngfile\"/>\n";
 
@@ -466,7 +484,8 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   my $month = "";
   while ( $i > 0 ) {
     $i--;
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, 
+$com ) = 
        split( /; */, $lines[$i] );
     if ( $lastdate ne $effdate ) {
       if ( $entry ) {
@@ -520,18 +539,18 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     $daysum += ( $alc * $vol ) if ($alc && $vol) ;
   }
   if ( $maxlines >= 0 ) {
-    print "<p/><a href='" . $q->url . "?maxl=-1&" . $q->query_string() . "'>" .
+    print "<p/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
   }
 } elsif ( $op ) { # various lists
-  print "<hr/><a href='" . $q->url . "'><b>$op</b> list</a>.\n";
+  print "<hr/><a href='$url'><b>$op</b> list</a>.\n";
   if ( !$sortlist) {
-    print "(<a href='" . $q->url . "?o=$op&sort=1' >sort</a>) <p/>\n";
+    print "(<a href='$url?o=$op&sort=1' >sort</a>) <p/>\n";
   } else {
-    print "(<a href='" . $q->url . "?o=$op'>Recent</a>) <p/>\n";
+    print "(<a href='$url?o=$op'>Recent</a>) <p/>\n";
   }
-  print "Filter: $qry " .
-     "<a href='" . $q->url . "?o=$op'>(clear) <p/>" if $qry;
+  print "Filter: <a href='$url?q=$qry'>$qry</a> " .
+     "<a href='$url?o=$op'>(clear) <p/>" if $qry;
   
   my $i = scalar( @lines );
   my $fld;
@@ -549,7 +568,7 @@ $com ) =
     if ( $op eq "Location" ) {
       $fld = $loc;
       $line = "<td>" . filt($loc,"b") . "</td><td>$wday $effdate<br/>" . 
-           filt($mak,"i") . ":" . filt($beer) . "</td>";
+           lst("Beer",$mak,"i") . ":" . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
       next if ( $mak =~ /^wine/i );  
       next if ( $mak =~ /^booze/i ); 
@@ -557,24 +576,28 @@ $com ) =
       $fld = $mak;
       $mak =~ s"/"/<br/>";
       $line = "<td>" . lst("Beer",$mak) . "</td>" .
-      "<td>$wday $effdate " .filt($loc) .
-            "<br/>" . filt("[$sty]") . "  " . filt($beer,"b")  ."</td>";
+      "<td>$wday $effdate " .lst("Beer",$loc) .
+            "<br/>" . filt("[$sty]") . "  " . filt($beer,"b")  ."&nbsp;</td>";
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );  
       next if ( $mak =~ /^booze/i ); 
       next if ( $mak =~ /^restaurant/i ); 
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) .
-            "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
+      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) 
+.
+            "<br/>" . filt("[$sty]"). " " . 
+            lst("Beer",$mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Wine" ) {
       next unless ( $mak =~ /^wine/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) .
+      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". 
+            lst("Wine",$loc) .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze/i );
       $fld = $beer;
-      $line = "<td>" .filt($beer,"b") . "</td><td>$wday $effdate ". filt($loc) .
+      $line = "<td>" .filt($beer,"b") . "</td><td>$wday $effdate ".
+            lst("Booze",$loc) .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $mak =~ /^restaurant/i );
@@ -589,8 +612,9 @@ $com ) =
       next if ( $mak =~ /^restaurant/i ); 
       next if ( $sty =~ /^misc/i ); 
       $fld = $sty;
-      $line = "<td>" . filt("[$sty]","b")  . "</td><td>$wday $effdate " .  filt($loc,"i") . 
-            "<br/>" . filt($mak,"i") . ":" . filt($beer,"b") . "</td>";
+      $line = "<td>" . filt("[$sty]","b")  . "</td><td>$wday $effdate " .  
+            lst("Beer",$loc,"i") . 
+            "<br/>" . lst("Beer",$mak,"i") . ":" . filt($beer,"b") . "</td>";
     }
     next unless $fld;
     $fld = uc($fld); 
@@ -609,16 +633,15 @@ $com ) =
 if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
   if ($qry || $qrylim) {
     print "<hr/> Filter: ";
-    print "<a href='" . $q->url ."'><b>$qry (Clear)</b></a>" if ($qry);
+    print "<a href='$url'><b>$qry (Clear)</b></a>" if ($qry);
     print " -".$qrylim if ($qrylim);
-    print " &nbsp;  \n";
+    print " &nbsp; \n";
     print "<br/>";
-    print "<a href='" . $q->url . "?q=" . uri_escape($qry) . 
+    print "<a href='$url?q=" . uri_escape($qry) . 
         "&f=r' >Ratings</a>\n";
-    print "<a href='" . $q->url . "?q=" . uri_escape($qry) . 
+    print "<a href='$url?q=" . uri_escape($qry) . 
         "&f=c' >Comments</a>\n";
-    print "<a href='" . $q->url . "?q=" . uri_escape($qry) . 
-         "'>All</a>\n";
+    print "<a href='$url?q=" . uri_escape($qry) . "'>All</a>\n";
     print "<p/>\n";
   }
   my $i = scalar( @lines );
@@ -634,7 +657,8 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /$qry/i );
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, 
+$com ) = 
        split( /; */, $lines[$i] );
     next if ( $qrylim eq "r" && ! $rate );
     next if ( $qrylim eq "c" && ! $com );
@@ -651,7 +675,8 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
     if ( $dateloc ne $lastloc && ! $qry) { # summary of loc and maybe date
       my $locdrinks = sprintf("%3.1f", $locdsum / $onedrink) ; 
       my $daydrinks = sprintf("%3.1f", $daydsum / $onedrink) ;
-      # loc summary: if nonzero, and diff from daysummary or there is a new loc coming
+      # loc summary: if nonzero, and diff from daysummary 
+      # or there is a new loc coming
       if ( $locdrinks > 0.1 ) {
         print "$lastloc2: $locdrinks d, $locmsum kr. <br/>\n";
         $locdsum = 0.0;
@@ -683,7 +708,8 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
     $locdsum += ( $alc * $vol ) if ($alc && $vol) ;
     $locmsum += $pr if ($pr) ;
     print "<form method='POST' style='display: inline;' >\n";
-    print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") . "<br/>\n";
+    print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") . 
+"<br/>\n";
     if ( $sty || $rate ) {
       print filt("[$sty]")   if ($sty);
       print " ($rate: $ratings[$rate])" if ($rate);
@@ -704,7 +730,7 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
     $vols{25} = 1;
     $vols{40} = 1;
 
-    print "<a href='".  $q->url ."?e=" . uri_escape($stamp) ."' >Edit</a>\n";
+    print "<a href='$url?e=" . uri_escape($stamp) ."' >Edit</a>\n";
     # No price - the script guesses based on size.
     # No location, reuse the current loc
     print "<input type='hidden' name='m' value='$mak' />\n";
@@ -712,7 +738,8 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
     print "<input type='hidden' name='v' value='' />\n";
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
-    print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation );
+    print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation 
+);
     
     foreach my $volx (sort keys(%vols)  ){
       print "<input type='submit' name='submit' value='Copy $volx'
@@ -731,7 +758,8 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
   if ( ! $qry) { # final summary
     my $locdrinks = sprintf("%3.1f", $locdsum / $onedrink); 
     my $daydrinks = sprintf("%3.1f", $daydsum / $onedrink);
-    # loc summary: if nonzero, and diff from daysummary or there is a new loc coming
+    # loc summary: if nonzero, and diff from daysummary 
+    # or there is a new loc coming
     if ( $locdrinks > 0.1 ) {
       print "$lastloc2: $locdrinks d, $locmsum kr. \n";
       }
@@ -745,7 +773,7 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
 
   print "<hr/>\n" ;
   if ( $maxlines >= 0 ) {
-    print "<p/><a href='" . $q->url . "?maxl=-1&" . $q->query_string() . "'>" .
+    print "<p/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
   } else {
     print "<p/>That was the whole list<br/>\n";
@@ -774,7 +802,8 @@ sub filt {
   my $tag = shift || "nop";
   my $param = $f;
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
-  my $link = "<a href='" . $q->url ."?q=".uri_escape($param) ."' ><$tag>$f</$tag></a>";
+  my $link = "<a href='$url?q=".uri_escape($param) ."' 
+><$tag>$f</$tag></a>";
   return $link;
 }
 
@@ -782,10 +811,11 @@ sub filt {
 sub lst {
   my $op = shift; # The kind of list
   my $qry = shift; # Optional query to filter the list
+  my $tag = shift || "nop";
   my $dsp = $qry || $op;
   $qry = "&q=" . uri_escape($qry) if $qry;
   $op = uri_escape($op);
-  my $link = "<a href='" . $q->url ."?o=$op" . $qry ."' >$dsp</a>";
+  my $link = "<a href='$url?o=$op" . $qry ."' ><$tag>$dsp</$tag></a>";
   return $link;
 }
 
