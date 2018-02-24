@@ -53,7 +53,7 @@ my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimites
 my $localtest = 0; # Local test installation
 my $sortlist = param("sort") || 0; # default to unsorted, chronological shortlists
-my $url = $url;
+my $url = $q->url;
 my $hostname = `hostname`;
 chomp($hostname);
 if ( $hostname ne "locatelli" ) {
