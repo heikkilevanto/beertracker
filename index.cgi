@@ -563,6 +563,7 @@ $com ) =
   my $line;
   my @displines;
   my %seen;
+  my $anchor;
   print "<table>\n";
   while ( $i > 0 ) {
     $i--;
@@ -667,7 +668,10 @@ $com ) =
        split( /; */, $lines[$i] );
     next if ( $qrylim eq "r" && ! $rate );
     next if ( $qrylim eq "c" && ! $com );
-    $pr = 0 unless ( $pr =~ /\d/ ); # Skip 'X' and other non-numericals
+    $pr = number($pr);
+    $alc = number($alc);
+    $vol = number($vol);
+    #$pr = 0 unless ( $pr =~ /\d/ ); # Skip 'X' and other non-numericals
     my $date = "";
     my $time = "";
     if ( $stamp =~ /(^[0-9-]+) (\d\d?:\d\d?):/ ) {
@@ -712,6 +716,9 @@ $com ) =
     $daymsum += $pr if ($pr) ;
     $locdsum += ( $alc * $vol ) if ($alc && $vol) ;
     $locmsum += $pr if ($pr) ;
+    $anchor = $stamp;
+    $anchor =~ s/[^0-9]//g;
+    print "<a id='$anchor'/>\n";
     print "<form method='POST' style='display: inline;' >\n";
     print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") . 
 "<br/>\n";
@@ -778,7 +785,7 @@ $com ) =
 
   print "<hr/>\n" ;
   if ( $maxlines >= 0 ) {
-    print "<p/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
+    print "<p/><a href='$url?maxl=-1" . $q->query_string() . "#$anchor'>" .
       "More</a><br/>\n";
   } else {
     print "<p/>That was the whole list<br/>\n";
@@ -826,9 +833,10 @@ sub lst {
 
 # Helper to sanitize numbers
 sub number {
-  $v = shift; 
+  $v = shift;
   $v =~ s/,/./g;  # occasionally I type a decimal comma
   $v =~ s/[^0-9.]//g; # Remove all non-numeric chars
+  $v=0 unless  $v;
   return $v;
 }
 
