@@ -530,6 +530,9 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   } else {
     print "(<a href='" . $q->url . "?o=$op'>Recent</a>) <p/>\n";
   }
+  print "Filter: $qry " .
+     "<a href='" . $q->url . "?o=$op'>(clear) <p/>" if $qry;
+  
   my $i = scalar( @lines );
   my $fld;
   my $line;
@@ -538,7 +541,9 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
   print "<table>\n";
   while ( $i > 0 ) {
     $i--;
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
+    next unless ( !$qry || $lines[$i] =~ /$qry/i );
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, 
+$com ) = 
        split( /; */, $lines[$i] );
     $fld = "";
     if ( $op eq "Location" ) {
@@ -551,7 +556,8 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       next if ( $mak =~ /^restaurant/i ); 
       $fld = $mak;
       $mak =~ s"/"/<br/>";
-      $line = "<td>" . filt($mak,"b")  . "</td><td>$wday $effdate " .filt($loc) .
+      $line = "<td>" . lst("Beer",$mak) . "</td>" .
+      "<td>$wday $effdate " .filt($loc) .
             "<br/>" . filt("[$sty]") . "  " . filt($beer,"b")  ."</td>";
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );  
@@ -774,8 +780,12 @@ sub filt {
 
 # Helper to make a link to a list
 sub lst {
-  my $op = shift;
-  my $link = "<a href='" . $q->url ."?o=".uri_escape($op) ."' >$op</a>";
+  my $op = shift; # The kind of list
+  my $qry = shift; # Optional query to filter the list
+  my $dsp = $qry || $op;
+  $qry = "&q=" . uri_escape($qry) if $qry;
+  $op = uri_escape($op);
+  my $link = "<a href='" . $q->url ."?o=$op" . $qry ."' >$dsp</a>";
   return $link;
 }
 
