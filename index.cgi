@@ -61,9 +61,12 @@ if ( $hostname ne "locatelli" ) {
 
 # Default sizes
 $vol =~ s/^T$/2/i;  # Taster, sizes vary, but always small
-$vol =~ s/^S$/25/i;
-$vol =~ s/^M$/33/i;   # TODO - guess better medium from beer or loc
-$vol =~ s/^L$/40/i;
+$vol =~ s/^G$/12/i; # Glass of wine
+$vol =~ s/^S$/25/i; # Small, usually 25
+$vol =~ s/^M$/33/i; # Medium, typically a bottle beer
+$vol =~ s/^L$/40/i; # Large, 40cl in most places I frequent
+$vol =~ s/^B$/75/i; # Bottle of wine
+
 
 $qry =~ s/[&.*+^\$]/./g;  # Remove special characters
 
