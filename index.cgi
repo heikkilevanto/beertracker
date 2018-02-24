@@ -300,7 +300,9 @@ if ( $edit ) {
   print "<option value='' >Show</option>\n";
   print "<option value='' >Full List</option>\n";
   print "<option value='o=short' >Short List</option>\n";
-  my @ops = ("Graph", "Location","Brewery", "Beer", "Wine", "Booze", "Style");
+  my @ops = ("Graph", 
+     "Location","Brewery", "Beer", 
+     "Wine", "Booze", "Restaurant", "Style");
   for my $opt ( @ops ) {
     print "<option value='o=$opt'>$opt</option>\n";
   }
@@ -537,6 +539,9 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       $line = "<td>" . filt($loc,"b") . "</td><td>$wday $effdate<br/>" . 
            filt($mak,"i") . ":" . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
+      next if ( $mak =~ /^wine/i );  
+      next if ( $mak =~ /^booze/i ); 
+      next if ( $mak =~ /^restaurant/i ); 
       $fld = $mak;
       $mak =~ s"/"/<br/>";
       $line = "<td>" . filt($mak,"b")  . "</td><td>$wday $effdate " .filt($loc) .
@@ -544,6 +549,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );  
       next if ( $mak =~ /^booze/i ); 
+      next if ( $mak =~ /^restaurant/i ); 
       $fld = $beer;
       $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
@@ -555,11 +561,21 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) .
+      $line = "<td>" .filt($beer,"b") . "</td><td>$wday $effdate ". filt($loc) .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
+    } elsif ( $op eq "Restaurant" ) {
+      next unless ( $mak =~ /^restaurant/i );
+      $fld = "$loc";
+      my $r = "";
+      $r = "$rate: $ratings[$rate]" if $rate;
+      $line = "<td>" . filt($loc,"b") . "</td><td>". filt($beer).
+            "<br/>" . "$wday $effdate $r $pr kr<br/>".
+            "$com</td>";
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );  
       next if ( $mak =~ /^booze/i ); 
+      next if ( $mak =~ /^restaurant/i ); 
+      next if ( $sty =~ /^misc/i ); 
       $fld = $sty;
       $line = "<td>" . filt("[$sty]","b")  . "</td><td>$wday $effdate " .  filt($loc,"i") . 
             "<br/>" . filt($mak,"i") . ":" . filt($beer,"b") . "</td>";
