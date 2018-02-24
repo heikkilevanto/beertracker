@@ -216,7 +216,11 @@ if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
   $com = ""; 
 }
-print $q->header("Content-type: text/html;charset=UTF-8");
+print $q->header(
+  -type => "text/html;charset=UTF-8",
+  -Cache_Control => "no-cache, no-store, must-revalidate",
+  -Pragma => "no-cache",
+  -Expires => "0");
 
 # HTML head
 print "<html><head>\n";
