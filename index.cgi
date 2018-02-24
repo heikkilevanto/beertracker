@@ -560,7 +560,7 @@ $com ) =
   print "<table>\n";
   while ( $i > 0 ) {
     $i--;
-    next unless ( !$qry || $lines[$i] =~ /$qry/i );
+    next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, 
 $com ) = 
        split( /; */, $lines[$i] );
@@ -655,7 +655,7 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
   my $locmsum = 0;
   while ( $i > 0 ) {
     $i--;
-    next unless ( !$qry || $lines[$i] =~ /$qry/i );
+    next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, 
 $com ) = 
        split( /; */, $lines[$i] );
