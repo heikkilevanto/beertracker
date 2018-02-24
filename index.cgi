@@ -583,9 +583,8 @@ $com ) =
       next if ( $mak =~ /^booze/i ); 
       next if ( $mak =~ /^restaurant/i ); 
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". filt($loc) 
-.
-            "<br/>" . filt("[$sty]"). " " . 
+      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ". 
+            lst("Beer",$loc) .  "<br/>" . filt("[$sty]"). " " . 
             lst("Beer",$mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Wine" ) {
       next unless ( $mak =~ /^wine/i );
