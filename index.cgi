@@ -574,8 +574,7 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
       $pr = "$pr kr" if $pr;
       $line = "<td>" . filt($loc,"b") . "<br/>$pr</td><td>". 
 filt($beer).
-            "<br/>" . "$wday $effdate $rate<br/>".
-            "$com</td>";
+            "<br/>" . "$wday $effdate $rate</td>";
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );  
       next if ( $mak =~ /^booze/i ); 
