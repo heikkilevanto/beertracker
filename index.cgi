@@ -570,10 +570,9 @@ if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $mak =~ /^restaurant/i );
       $fld = "$loc";
-      $rate = "$rate: $ratings[$rate]" if $rate;
+      $rate = "$rate: <b>$ratings[$rate]</b>" if $rate;
       $pr = "$pr kr" if $pr;
-      $line = "<td>" . filt($loc,"b") . "<br/>$pr</td><td>". 
-filt($beer).
+      $line = "<td>" . filt($loc,"b") . "<br/>$pr</td><td><i>$beer</i>".
             "<br/>" . "$wday $effdate $rate</td>";
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );  
