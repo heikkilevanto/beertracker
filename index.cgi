@@ -116,6 +116,9 @@ while (<F>) {
     $thisdate = "$wd; $ed";
     $lastwday = $wd;
   }
+  $a = number($a);  # Sanitize numbers
+  $v = number($v);
+  $p = number($p);
   $lastdatesum += ( $a * $v ) if ($a && $v);
   $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
   if ( $effdate eq "$wd; $ed" ) { # today
@@ -172,6 +175,9 @@ undef, undef) =
     $i--;
   }
   $pr = $priceguess unless $pr;
+  $vol = number($vol);
+  $pr = number($pr);
+  $alc = number($alc);
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
   if ( $sub eq "Record" || $sub =~ /^Copy/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
@@ -816,6 +822,14 @@ sub lst {
   $op = uri_escape($op);
   my $link = "<a href='$url?o=$op" . $qry ."' ><$tag>$dsp</$tag></a>";
   return $link;
+}
+
+# Helper to sanitize numbers
+sub number {
+  $v = shift; 
+  $v =~ s/,/./g;  # occasionally I type a decimal comma
+  $v =~ s/[^0-9.]//g; # Remove all non-numeric chars
+  return $v;
 }
 
 # Helper to make an error message
