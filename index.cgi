@@ -51,14 +51,14 @@ my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimites
-my $localtest = 0; # Local test installation
-my $sortlist = param("sort") || 0; # default to unsorted, chronological shortlists
+my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
+my $localtest = 0; # Local test installation
 my $hostname = `hostname`;
 chomp($hostname);
-if ( $hostname ne "locatelli" ) {
-  $localtest = 1;
-}
+#if ( $hostname ne "locatelli" ) {
+#  $localtest = 1;  # Not on locatelli anymore.
+#}  # Running dev and prod on corelli
 
 # Default sizes
 $vol =~ s/^T$/2/i;  # Taster, sizes vary, but always small
