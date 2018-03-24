@@ -8,6 +8,7 @@
 
 use CGI;
 use URI::Escape;
+use feature 'unicode_strings';
 
 my $q = CGI->new;
 
@@ -69,7 +70,9 @@ $vol =~ s/^L$/40/i; # Large, 40cl in most places I frequent
 $vol =~ s/^B$/75/i; # Bottle of wine
 
 
-$qry =~ s/[&.*+^\$]/./g;  # Remove special characters
+# The query is already cleaned in param()
+#$qry =~ s/[&.*+^\$]/./g;  # Remove special characters
+#$qry =~ s/[^A-Za-z0-9 ,.-]/./g;  # Remove special characters
 
 if ( ! $stamp ) {
   $stamp = `date "+%F %T"`;  # TODO - Do this in perl
@@ -563,7 +566,7 @@ $com ) =
   my $line;
   my @displines;
   my %seen;
-  my $anchor;
+  my $anchor="";
   print "<table>\n";
   while ( $i > 0 ) {
     $i--;
@@ -716,7 +719,7 @@ $com ) =
     $daymsum += $pr if ($pr) ;
     $locdsum += ( $alc * $vol ) if ($alc && $vol) ;
     $locmsum += $pr if ($pr) ;
-    $anchor = $stamp;
+    $anchor = $stamp || "";
     $anchor =~ s/[^0-9]//g;
     print "<a id='$anchor'/>\n";
     print "<form method='POST' style='display: inline;' >\n";
@@ -784,15 +787,14 @@ $com ) =
     }
 
   print "<hr/>\n" ;
-  if ( $maxlines >= 0 ) {
+  if ( $maxlines >= 0 && $anchor ) {
     print "<p/><a href='$url?maxl=-1" . $q->query_string() . "#$anchor'>" .
       "More</a><br/>\n";
   } else {
     print "<p/>That was the whole list<br/>\n";
   }
-
 }
-
+ 
 # HTML footer
 print "</body></html>\n";
 
