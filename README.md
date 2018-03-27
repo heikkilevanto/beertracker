@@ -40,7 +40,7 @@ Debian server. Adjust as needed
 # Create a .htpasswd with your username: htpasswd .htpasswd heikki
 # mkdir beerdata
 # touch beerdata/heikki.data
-# chgrp www-data beerdata beerdata/*
+# chown www-data beerdata beerdata/*
 # chmod g+w beerdata beerdata/*
 
 <Directory /var/www/html/beertracker/>
