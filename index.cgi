@@ -153,8 +153,10 @@ if ( $q->request_method eq "POST" ) {
     $vol = $1 if ( $1 );
   }
   my $priceguess = "";
+  #print STDERR "Guessing values. pr='$pr'";
   my $i = scalar( @lines );
-  while ( $i > 0 && $beer && ( !$mak || !$vol || !$sty || !$alc || !$pr )) {
+  while ( $i > 0 && $beer 
+    && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' )) {
     #print STDERR "Considering " . $lines[$i] . "\n";
     ( undef, undef, undef, $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr, 
 undef, undef) =
@@ -170,14 +172,16 @@ undef, undef) =
       $mak = $imak unless $mak;
       $sty = $isty unless $sty;
       $alc = $ialc unless $alc;
-      if ( $vol eq $ivol ) { # take price only from same volume
-        $pr  = $ipr  unless $pr;
+      if ( $vol eq $ivol && $ipr=~/^ *[0-9.]+ *$/) { 
+      # take price only from same volume, and only if numerical
+        #print STDERR "Found price $ipr. pr='$pr' <br/>\n";
+        $pr  = $ipr if $pr eq "";
       }
       $vol = $ivol unless $vol;
     }
     $i--;
   }
-  $pr = $priceguess unless $pr;
+  $pr = $priceguess if $pr eq "";
   $vol = number($vol);
   $pr = number($pr);
   $alc = number($alc);
@@ -313,7 +317,7 @@ for my $ro (0 .. scalar(@ratings)-1) {
   print  ">$ro - $ratings[$ro]</option>\n";
 }
 print "</select></td></tr>\n";
-print "<tr><td $c2>Comment<br/>$todaydrinks</td>";
+ print "<tr><td $c2>Comment<br/>$todaydrinks</td>";
 print " <td $c4><textarea name='c' cols='30' rows='3' 
 />$com</textarea></td></tr>\n";
 if ( $edit ) {
@@ -663,6 +667,7 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
   my $daymsum = 0;
   my $locdsum = 0.0;
   my $locmsum = 0;
+  my $origpr = "";
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
@@ -671,6 +676,7 @@ $com ) =
        split( /; */, $lines[$i] );
     next if ( $qrylim eq "r" && ! $rate );
     next if ( $qrylim eq "c" && ! $com );
+    $origpr = $pr;
     $pr = number($pr);
     $alc = number($alc);
     $vol = number($vol);
@@ -731,7 +737,7 @@ $com ) =
       print "<br/>\n";
     }
     print "<i>$com</i> <br/>\n" if ($com);
-    print "$pr kr. &nbsp; " if ($pr && $pr =~ /\d+/);
+    print "$pr kr. &nbsp; " if ($origpr =~ /\d+/);
     print "$vol cl " if ($vol);
     print "* $alc % " if ($alc);
     if ( $alc && $vol ) {
@@ -805,7 +811,8 @@ exit();
 # Helper to sanitize input data
 sub param {
   my $tag = shift;
-  my $val = $q->param($tag) || "";
+  my $val = $q->param($tag);
+  $val = "" if !defined($val);
   $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:-]/_/g; 
   return $val;
 }
