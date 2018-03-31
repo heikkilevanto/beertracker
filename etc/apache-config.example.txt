@@ -4,6 +4,9 @@
 # Copy or symlink to /etc/apache2/conf-available|enabled or conf.d
 # Make also a symlink in /var/www/html/beertracker to the right place
 # Create a .htpasswd 
+# Create a directory called beerdata, and your own data file in it,
+# same name as your username. Make both owned and writable by www-data.
+
 
 #<Directory /home/heikki/proj/beertracker/>
 
@@ -19,4 +22,8 @@
     Require valid-user
 
 
+</Directory>
+
+<Directory /var/www/html/beertracker/beerdata>
+   Deny from All
 </Directory>
