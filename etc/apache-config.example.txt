@@ -26,4 +26,7 @@
 
 <Directory /var/www/html/beertracker/beerdata>
    Deny from All
+  <FilesMatch "\.png$">
+    Allow from All
+  </FilesMatch>
 </Directory>
