@@ -24,6 +24,7 @@
 
 </Directory>
 
+# Hide most of the data directory, but not the graphs we build there
 <Directory /var/www/html/beertracker/beerdata>
    Deny from All
   <FilesMatch "\.png$">

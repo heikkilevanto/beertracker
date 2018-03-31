@@ -31,30 +31,12 @@ soon now".
 Here are a few things you need to remember when setting this up. I am using a 
 Debian server. Adjust as needed
 
-```
-# Apache config snippet for Heikki's beer tracker
-# Edit the paths as necessary
+There is an Apache config file example under /etc.
 
-# Copy or symlink to /etc/apache2/conf-available|enabled or conf.d
-# Make also a symlink in /var/www/html/beertracker to the right place 
-# Create a .htpasswd with your username: htpasswd .htpasswd heikki
-# mkdir beerdata
-# touch beerdata/heikki.data
-# chown www-data beerdata beerdata/*
-# chmod g+w beerdata beerdata/*
+You need to set up a .htpasswd to protect  the main directory, and make a 
+directory under it called beerdata, and an empty file like `heikki.data` in
+it. Both need to be owned and writable by www-data. 
 
-<Directory /var/www/html/beertracker/>
-    AllowOverride All
-    Options +FollowSymLinks +ExecCGI 
-
-    AddHandler cgi-script .cgi 
-
-    AuthUserFile /var/www/html/beertracker/.htpasswd
-    AuthName "Please Enter Password"
-    AuthType Basic
-    Require valid-user
-</Directory>
-```
 Point your browser to beerdata. You should see a dark input form. If not, check
 /var/log/apache2/error.log. If you do, enter a test beer or two, and look at 
 the lists.
