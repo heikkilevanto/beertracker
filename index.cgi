@@ -46,12 +46,13 @@ my $alc = param("a");  # alc, in %vol, up to 1 decimal
 my $pr  = param("p");  # price, in local currency
 my $rate= param("r");  # rating, 0=worst, 10=best
 my $com = param("c");  # Comments
+  # The rest are not in the data file
 my $del = param("x");  # delete/update last entry - not in data file
 my $qry = param("q");  # filter query, greps the list
 my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
-my $maxlines = param("maxl") || "25";  # negative = unlimites
+my $maxlines = param("maxl") || "25";  # negative = unlimited
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
 my $localtest = 0; # Local test installation
@@ -68,7 +69,11 @@ $vol =~ s/^S$/25/i; # Small, usually 25
 $vol =~ s/^M$/33/i; # Medium, typically a bottle beer
 $vol =~ s/^L$/40/i; # Large, 40cl in most places I frequent
 $vol =~ s/^B$/75/i; # Bottle of wine
-
+print STDERR "Checking ounces: '$vol' \n";
+if ( $vol =~ /([0-9]+) *oz/i ) {  # (us) fluid ounces
+  $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
+  print STDERR "FOUND ounces: '$vol' '$1' \n";
+}
 
 # The query is already cleaned in param()
 #$qry =~ s/[&.*+^\$]/./g;  # Remove special characters
