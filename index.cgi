@@ -69,10 +69,8 @@ $vol =~ s/^S$/25/i; # Small, usually 25
 $vol =~ s/^M$/33/i; # Medium, typically a bottle beer
 $vol =~ s/^L$/40/i; # Large, 40cl in most places I frequent
 $vol =~ s/^B$/75/i; # Bottle of wine
-print STDERR "Checking ounces: '$vol' \n";
 if ( $vol =~ /([0-9]+) *oz/i ) {  # (us) fluid ounces
   $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
-  print STDERR "FOUND ounces: '$vol' '$1' \n";
 }
 
 # The query is already cleaned in param()
@@ -799,7 +797,7 @@ $com ) =
 
   print "<hr/>\n" ;
   if ( $maxlines >= 0 && $anchor ) {
-    print "<p/><a href='$url?maxl=-1" . $q->query_string() . "#$anchor'>" .
+    print "<p/><a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
       "More</a><br/>\n";
   } else {
     print "<p/>That was the whole list<br/>\n";
