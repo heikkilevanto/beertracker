@@ -124,7 +124,7 @@ while (<F>) {
   }
   $a = number($a);  # Sanitize numbers
   $v = number($v);
-  $p = number($p);
+  $p = price($p);
   $lastdatesum += ( $a * $v ) if ($a && $v);
   $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
   if ( $effdate eq "$wd; $ed" ) { # today
@@ -186,7 +186,7 @@ undef, undef) =
   }
   $pr = $priceguess if $pr eq "";
   $vol = number($vol);
-  $pr = number($pr);
+  $pr = price($pr);
   $alc = number($alc);
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
   if ( $sub eq "Record" || $sub =~ /^Copy/ ) {
@@ -311,9 +311,9 @@ print "<tr><td>
   <input name='m' value='$mak' $sz placeholder='brewery'/></td>\n";
 print "<td>
   <input name='b' value='$beer' $sz placeholder='beer'/></td></tr>\n";
-print "<tr><td><input name='v' value='$vol' $sz2 placeholder='Vol' />\n";
-print "<input name='a' value='$alc' $sz2 placeholder='Alc' />\n";
-print "<input name='p' value='$pr' $sz2 placeholder='Price' /></td>\n";
+print "<tr><td><input name='v' value='$vol cl' $sz2 placeholder='Vol' />\n";
+print "<input name='a' value='$alc %' $sz2 placeholder='Alc' />\n";
+print "<input name='p' value='$pr.-' $sz2 placeholder='Price' /></td>\n";
 print "<td><select name='r' value='$rate' placeholder='Rating' />" .
    "<option value=''></option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
@@ -846,10 +846,18 @@ sub lst {
 
 # Helper to sanitize numbers
 sub number {
-  $v = shift;
+  my $v = shift;
   $v =~ s/,/./g;  # occasionally I type a decimal comma
   $v =~ s/[^0-9.]//g; # Remove all non-numeric chars
   $v=0 unless  $v;
+  return $v;
+}
+
+# Sanitize prices to whole ints
+sub price {
+  my $v = shift;
+  $v = number($v);
+  $v =~ s/[^0-9]//g; # Remove also decimal points etc
   return $v;
 }
 
