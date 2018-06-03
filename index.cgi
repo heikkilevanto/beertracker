@@ -254,8 +254,8 @@ initial-scale=1.0'>\n";
 if ( ! $localtest ) {
     print "<style rel='stylesheet'>\n";
     #print "* { margin: 1px; padding: 0px; }\n";
-    print "* { background-color: #493D26; color: #FFFFFF }\n";
-    #print "* { background-color: #003000; color: #FFFFFF }\n";
+    #print "* { background-color: #493D26; color: #FFFFFF }\n";
+    print "* { background-color: #003000; color: #FFFFFF }\n";
     print "</style>\n";
 }
 print "<link rel='shortcut icon' href='beer.png'/>\n";
