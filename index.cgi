@@ -255,6 +255,7 @@ if ( ! $localtest ) {
     print "<style rel='stylesheet'>\n";
     #print "* { margin: 1px; padding: 0px; }\n";
     print "* { background-color: #493D26; color: #FFFFFF }\n";
+    #print "* { background-color: #003000; color: #FFFFFF }\n";
     print "</style>\n";
 }
 print "<link rel='shortcut icon' href='beer.png'/>\n";
@@ -289,30 +290,31 @@ my $c2 = "colspan='2'";
 my $c3 = "colspan='3'";
 my $c4 = "colspan='4'";
 my $c6 = "colspan='6'";
-my $sz = "size='30' $clr";
+my $sz = "size='15' $clr";
 my $sz2 = "size='2' $clr";
+my $sz3 = "size='8' $clr";
 if ( $edit ) {
-    print "<tr><td $c6><b>Editing record $edit</b> ".
+    print "<tr><td $c2><b>Editing record $edit</b> ".
         "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
-    print "<tr><td $c2>Stamp</td><td $c4><input name='st' value='$stamp' $sz 
-/></td></tr>\n";
-    print "<tr><td $c2>Wday</td><td $c4><input name='wd' value='$wday'  $sz 
-/></td></tr>\n";
-    print "<tr><td $c2>Effdate</td><td $c4><input name='ed' value='$effdate'  
-$sz /></td></tr>\n";
+    print "<tr><td><input name='st' value='$stamp' $sz placeholder='Stamp'
+/></td>\n";
+    print "<td><input name='wd' value='$wday'  $sz2 
+placeholder='wday' />\n";
+    print "<input name='ed' value='$effdate'  
+$sz3 placeholder='Eff' /></td></tr>\n";
 }
-print "<tr><td $c2>Location</td><td $c4><input name='l' value='$loc' $sz 
-/></td></tr>\n";
-print "<tr><td $c2>Brewery</td><td $c4><input name='m' value='$mak' $sz 
-/></td></tr>\n";
-print "<tr><td $c2>Beer</td><td $c4><input name='b' value='$beer' $sz 
-/></td></tr>\n";
-print "<tr><td>Vol</td><td><input name='v' value='$vol' $sz2 />\n";
-print "<td>Alc</td><td><input name='a' value='$alc' $sz2 /></td>\n";
-print "<td>Price</td><td><input name='p' value='$pr' $sz2/></td></tr>\n";
-print "<tr><td $c2>Style</td><td $c4><input name='s' value='$sty' 
-$sz/></td></tr>\n";
-print "<tr><td $c2>Rating</td><td $c4><select name='r' value='$rate' />" .
+print "<tr><td>
+  <input name='l' value='$loc' placeholder='location' $sz /></td>\n";
+print "<td><input name='s' value='$sty' $sz 
+placeholder='Style'/></td></tr>\n";
+print "<tr><td>
+  <input name='m' value='$mak' $sz placeholder='brewery'/></td>\n";
+print "<td>
+  <input name='b' value='$beer' $sz placeholder='beer'/></td></tr>\n";
+print "<tr><td><input name='v' value='$vol' $sz2 placeholder='Vol' />\n";
+print "<input name='a' value='$alc' $sz2 placeholder='Alc' />\n";
+print "<input name='p' value='$pr' $sz2 placeholder='Price' /></td>\n";
+print "<td><select name='r' value='$rate' placeholder='Rating' />" .
    "<option value=''></option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
@@ -320,21 +322,20 @@ for my $ro (0 .. scalar(@ratings)-1) {
   print  ">$ro - $ratings[$ro]</option>\n";
 }
 print "</select></td></tr>\n";
- print "<tr><td $c2>Comment<br/>$todaydrinks</td>";
-print " <td $c4><textarea name='c' cols='30' rows='3' 
-/>$com</textarea></td></tr>\n";
+ print "<tr>";
+print " <td $c6><textarea name='c' cols='36' rows='3' 
+  placeholder='$todaydrinks'/>$com</textarea></td></tr>\n";
 if ( $edit ) {
-  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' 
+  print "<tr><td><input type='submit' name='submit' 
 value='Save'/></td>\n";
-  print "<td>&nbsp;</td><td><a href='$url' >cancel</a></td>";
-  print "<td>&nbsp;</td><td><input type='submit' name='submit' 
-value='Delete'/></td></tr>\n";
+  print "<td><a href='$url' >cancel</a>";
+  print "&nbsp;<input type='submit' name='submit' value='Delete'/> 
+</td></tr>\n";
 } else {
-  print "<tr><td>&nbsp;</td><td><input type='submit' name='submit' 
-value='Record'/></td>\n";
-  print "<td>&nbsp;</td><td><input type='button' value='clear' 
+  print "<tr><td><input type='submit' name='submit' 
+value='Record'/>\n";
+  print "&nbsp;<input type='button' value='clear' 
 onclick='clearinputs()'/></td>\n";
-  print "<td>&nbsp;</td>";
   print "<td><select name='ops' " .
               "onchange='document.location=\"$url?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
