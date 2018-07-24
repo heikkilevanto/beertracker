@@ -157,7 +157,7 @@ if ( $q->request_method eq "POST" ) {
   }
   my $priceguess = "";
   #print STDERR "Guessing values. pr='$pr'";
-  my $i = scalar( @lines );
+  my $i = scalar( @lines )-1;
   while ( $i > 0 && $beer 
     && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' )) {
     #print STDERR "Considering " . $lines[$i] . "\n";
