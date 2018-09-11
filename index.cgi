@@ -37,7 +37,7 @@ my $stamp = param("st");
 my $wday = param("wd");  # weekday
 my $effdate = param("ed");  # effective date
 my $loc = param("l");  # location
-my $mak = param("m");  # brewery (maker)
+my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
 my $beer= param("b");  # beer
 my $vol = param("v");  # volume, in cl
 my $sty = param("s");  # style
@@ -124,22 +124,19 @@ while (<F>) {
   $a = number($a);  # Sanitize numbers
   $v = number($v);
   $p = price($p);
-  $lastdatesum += ( $a * $v ) if ($a && $v);
-  $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
-  if ( $effdate eq "$wd; $ed" ) { # today
-    $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
-    $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
-  }
-  if ( 0 ) {
+  if ( !( $m  =~ /^Restaurant,/i ) ) {
+    # do not sum restaurant lines, drinks filed separately
     $lastdatesum += ( $a * $v ) if ($a && $v);
-    $lastdatemsum += $p if ( $p =~ /\d/ );
-    $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
-    $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
+    $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
+    if ( $effdate eq "$wd; $ed" ) { # today
+        $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
+        $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
+    }
   }
 }
 if ( ! $todaydrinks ) { # not today
-  $todaydrinks = "($lastwday: " . sprintf("%3.1f", $lastdatesum / $onedrink ) . 
-"d)" ;    
+  $todaydrinks = "($lastwday: " . 
+    sprintf("%3.1f", $lastdatesum / $onedrink ) . "d)" ;    
   $copylocation = 1;  
 }
 
@@ -724,10 +721,12 @@ $com ) =
     if ( $date ne $effdate ) {
       $time = "($time)";
     }
-    $daydsum += ( $alc * $vol ) if ($alc && $vol) ;
-    $daymsum += $pr if ($pr) ;
-    $locdsum += ( $alc * $vol ) if ($alc && $vol) ;
-    $locmsum += $pr if ($pr) ;
+    if ( !( $mak  =~ /^Restaurant,/i ) ) { # don't count rest lines
+      $daydsum += ( $alc * $vol ) if ($alc && $vol) ;
+      $daymsum += $pr if ($pr) ;
+      $locdsum += ( $alc * $vol ) if ($alc && $vol) ;
+      $locmsum += $pr if ($pr) ;
+    }
     $anchor = $stamp || "";
     $anchor =~ s/[^0-9]//g;
     print "<a id='$anchor'/>\n";
