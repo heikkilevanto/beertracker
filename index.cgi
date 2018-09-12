@@ -352,82 +352,63 @@ print "</table>\n";
 print "</form>\n";
 
 # List or graph section
-
-if ( $op && $op =~ /Graph(\d*)/ ) { # make a graph
-  my $graphtype = $1 || 2;
+if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
+  my $startoff = $1 || 30;
+  my $endoff = $2 || 0;
+  my $graphtype = 99; ###
   my %sums; 
-  my $firstdate;
-  my $lastdate;
-  for ( my $i = 0; $i < scalar(@lines); $i++ ) {
+  my $startdate =  `date +%F -d "last sunday - $startoff days"`;
+  chomp($startdate);
+  my $enddate =  `date +%F -d "$endoff days ago"`;
+  chomp($enddate);
+  for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, 
 $com ) = 
        split( /; */, $lines[$i] );
     $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
-    $firstdate = $effdate unless $firstdate;
-    $lastdate = $effdate;
+    #$firstdate = $effdate unless $firstdate;
+    #$lastdate = $effdate;
     #print "$effdate: $sums{$effdate} a:'$alc' v:'$vol'<br/>\n";
   }
-  $enddate = `date +%F -d "yesterday"` ;
-  chomp($enddate);
-  my $ndays = 0;
-  my $date = $firstdate;
+  #$enddate = `date +%F -d "yesterday"` ;
+  #chomp($enddate);
+  my $ndays = $startoff+63; # to get enough material for splines
+  my $wkday = ""; # back to beginning of a week
+  while ( $wkday !~ /Tue/ ) {
+    $wkday = `date +%a -d "$ndays days ago"` ;
+    $ndays++;
+    #chomp($wkday); print "Backing to $ndays $wkday<br/>\n"; ###
+  }
+  my $date;
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
-  while ( $date le $enddate) {
-    $ndays++;
-    $date = `date +%F -d "$firstdate + $ndays days" `;
+  while ( $ndays > $endoff) {
+    $ndays--;
+    $date = `date +%F -d "$ndays days ago" `;
     chomp($date);
     my $mdate = $1."-15" if ( $date =~ /^(\d+-\d+)-\d+/);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
-    #print "$ndays: $date / $enddate: $tot <br/>";
     my $zero = "";
-    $zero = -0.1 unless ( $tot || $date gt $enddate );
+    $zero = -0.1 unless ( $tot );
+    if ( $ndays <=0 ) {      
+      $zero = ""; # no zero mark for current date, it isn't over yet
+      $mdate = ""; # screws up splines
+    }
+    #print "$ndays: $date / $mdate: $tot $zero <br/>"; ###
     print F "$date $tot $mdate $zero\n";
   }
   close(F);
-  $enddate = `date +%F -d "tomorrow"` ;
-  chomp($enddate);
   my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
   my $oneday = 24 * 60 * 60 ; 
   my $xtics = "";
   my $numberofdays=7;
   my $xformat = "\"%d\\n%b\"";
-  my $avgline = "";
-  if ( $graphtype == 1 ) { # week
-    $xformat = "\"%a\\n%d";
-    $startdate = `date +%F -d "last sunday -6 days"` ;
-    chomp($startdate);
-    $xtics =  "set xtics \"$startdate\", $oneday \n";
-  } elsif ( $graphtype == 2 ) { # month
-    $numberofdays = 35;
-    $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
-    chomp($startdate);
-    $xtics =  "set xtics \"$startdate\", $oneweek \n";
-    $avgline = "\"$plotfile\" " .
-         "using 3:2 smooth cspline with line lc 1 lw 2 notitle ,";
-  } elsif ( $graphtype == 3 ) { # quarter
-    $numberofdays = 100;
-    $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
-    chomp($startdate);
-    $avgline = "\"$plotfile\" " .
+  my $avgline = "\"$plotfile\" " .
          "using 3:2 smooth cspline with line lc 1 lw 2 notitle ," .
        "\"$plotfile\" " .
          "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
-  } elsif ( $graphtype == 4 ) { # year
-    $numberofdays = 370;
-    $startdate = `date +%F -d "last sunday -$numberofdays days"` ;
-    chomp($startdate);
-    $avgline = "\"$plotfile\" " .
-         "using 3:2 smooth cspline with line lc 1 lw 2 notitle ," .
-       "\"$plotfile\" " .
-         "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
-  } elsif ( $graphtype == 5 ) { # all
-    $startdate = $firstdate;
-    chomp($startdate);
-    $avgline = "\"$plotfile\" " .
-         "using 3:2 smooth cspline with line lc 1 lw 2 notitle ," .
-       "\"$plotfile\" " .
-         "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
+  if ( $startoff - $endoff > 180 ) {
+    $xformat="\"%b\\n%y\"";
   }
   my $cmd = "" .
        "set term png small size 360,240 \n".
@@ -476,15 +457,36 @@ $com ) =
       or error ("Could not open $plotfile for writing");
   print C $cmd;
   close(C);
+  my $htcmd = $cmd;
+  #$htcmd =~ s/\n/<br\/>\n/g;
+  #print "$htcmd <br/>\n";
   system ("gnuplot $cmdfile ");
   print "<hr/>\n";
-  print "<a href='$url?o=Graph1'>Week</a> \n";
-  print "<a href='$url?o=Graph2'>Month</a> \n";
-  print "<a href='$url?o=Graph3'>Quarter</a> \n";
-  print "<a href='$url?o=Graph4'>Year</a> \n";
-  print "<a href='$url?o=Graph5'>All</a> \n";
   print "<p/>\n";
-  print "<img src=\"$pngfile\"/>\n";
+  print "<img src=\"$pngfile\"/><br/>\n";
+  my $len = $startoff - $endoff;
+  my $es = $startoff + $len;
+  my $ee = $endoff + $len;
+  print "<a href='$url?o=Graph-$es-$ee'>Earlier</a>\n";
+  my $ls = $startoff - $len;
+  my $le = $endoff - $len;
+  if ($le < 0 ) { 
+    $ls += $ls;
+    $le = 0; 
+  }
+  print " / <a href='$url?o=Graph-$ls-$le'>Later</a>\n" if ($endoff);
+  my $zs = $startoff + int($len/2);
+  my $ze = $endoff - int($len/2);
+  if ( $ze < 0 ) {
+    $zs -= $ze;
+    $ze = 0 ;
+  }
+  print "; Zoom <a href='$url?o=Graph-$zs-$ze'>Out</a>\n";
+  my $is = $startoff - int($len/4);
+  my $ie = $endoff + int($len/4);
+  print " / <a href='$url?o=Graph-$is-$ie'>In</a>\n";
+  print " ; <a href='$url?o=Graph'>Month</a>\n";
+  print "<a href='$url?o=Graph-365'>Year</a> \n";
 
 } elsif ( $op eq "short" ) { # short list, one line per day
   my $i = scalar( @lines );
