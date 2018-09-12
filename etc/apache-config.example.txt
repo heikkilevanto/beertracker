@@ -31,3 +31,8 @@
     Allow from All
   </FilesMatch>
 </Directory>
+
+# Hide the .git directory too, although it is available at github
+<Directory /var/www/html/beertracker/.git>
+   Deny from All
+</Directory>
