@@ -408,7 +408,7 @@ $com ) =
        "\"$plotfile\" " .
          "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
   if ( $startoff - $endoff > 180 ) {
-    $xformat="\"%b\\n%y\"";
+    $xformat="\"%b\\n'%y\"";
   }
   my $cmd = "" .
        "set term png small size 360,240 \n".
@@ -467,26 +467,31 @@ $com ) =
   my $len = $startoff - $endoff;
   my $es = $startoff + $len;
   my $ee = $endoff + $len;
-  print "<a href='$url?o=Graph-$es-$ee'>Earlier</a>\n";
+  print "<a href='$url?o=Graph-$es-$ee'>&lt;&lt;</a> &nbsp; \n";
   my $ls = $startoff - $len;
   my $le = $endoff - $len;
   if ($le < 0 ) { 
     $ls += $ls;
     $le = 0; 
   }
-  print " / <a href='$url?o=Graph-$ls-$le'>Later</a>\n" if ($endoff);
+  if ($endoff) {
+    print "<a href='$url?o=Graph-$ls-$le'>&gt;&gt;</a>";
+  } else {
+    print "&gt;&gt;";
+  }
+  print " &nbsp; <a href='$url?o=Graph'>Month</a>";
+  print " <a href='$url?o=Graph-365'>Year</a> \n";
+  
   my $zs = $startoff + int($len/2);
   my $ze = $endoff - int($len/2);
   if ( $ze < 0 ) {
     $zs -= $ze;
     $ze = 0 ;
   }
-  print "; Zoom <a href='$url?o=Graph-$zs-$ze'>Out</a>\n";
+  print " &nbsp; <a href='$url?o=Graph-$zs-$ze'>[ - ]</a>\n";
   my $is = $startoff - int($len/4);
   my $ie = $endoff + int($len/4);
-  print " / <a href='$url?o=Graph-$is-$ie'>In</a>\n";
-  print " ; <a href='$url?o=Graph'>Month</a>\n";
-  print "<a href='$url?o=Graph-365'>Year</a> \n";
+  print " / <a href='$url?o=Graph-$is-$ie'>[ + ]</a>\n";
 
 } elsif ( $op eq "short" ) { # short list, one line per day
   my $i = scalar( @lines );
