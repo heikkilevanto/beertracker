@@ -351,13 +351,13 @@ onclick='clearinputs()'/></td>\n";
 print "</table>\n";
 print "</form>\n";
 
-# List or graph section
+# Graph
 if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $startoff = $1 || 30;
-  my $endoff = $2 || 0;
-  my $graphtype = 99; ###
+  my $endoff = $2 || -1;
   my %sums; 
-  my $startdate =  `date +%F -d "last sunday - $startoff days"`;
+  #my $startdate =  `date +%F -d "last sunday - $startoff days"`;
+  my $startdate =  `date +%F -d "last friday - $startoff days"`;
   chomp($startdate);
   my $enddate =  `date +%F -d "$endoff days ago"`;
   chomp($enddate);
@@ -366,47 +366,35 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
 $com ) = 
        split( /; */, $lines[$i] );
     $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
-    #$firstdate = $effdate unless $firstdate;
-    #$lastdate = $effdate;
-    #print "$effdate: $sums{$effdate} a:'$alc' v:'$vol'<br/>\n";
   }
-  #$enddate = `date +%F -d "yesterday"` ;
-  #chomp($enddate);
+  
   my $ndays = $startoff+63; # to get enough material for splines
   my $wkday = ""; # back to beginning of a week
-  while ( $wkday !~ /Tue/ ) {
-    $wkday = `date +%a -d "$ndays days ago"` ;
-    $ndays++;
-    #chomp($wkday); print "Backing to $ndays $wkday<br/>\n"; ###
-  }
   my $date;
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
+  my $sum30 = 0.0;
+  my $sum7 = 0.0;
   while ( $ndays > $endoff) {
     $ndays--;
     $date = `date +%F -d "$ndays days ago" `;
     chomp($date);
-    my $mdate = $1."-15" if ( $date =~ /^(\d+-\d+)-\d+/);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
+    $sum30 = $sum30 - $sum30 / 30 + $tot;
+    $sum7 = $sum7 - $sum7 / 7 + $tot;
     my $zero = "";
     $zero = -0.1 unless ( $tot );
     if ( $ndays <=0 ) {      
       $zero = ""; # no zero mark for current date, it isn't over yet
-      $mdate = ""; # screws up splines
     }
     #print "$ndays: $date / $mdate: $tot $zero <br/>"; ###
-    print F "$date $tot $mdate $zero\n";
+    print F "$date $tot " . $sum30 / 30 . " " . $sum7 / 7 . "  $zero \n";
   }
   close(F);
   my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
   my $oneday = 24 * 60 * 60 ; 
-  my $xtics = "";
   my $numberofdays=7;
   my $xformat = "\"%d\\n%b\"";
-  my $avgline = "\"$plotfile\" " .
-         "using 3:2 smooth cspline with line lc 1 lw 2 notitle ," .
-       "\"$plotfile\" " .
-         "using 3:2 smooth unique with points lc 1 pointtype 7 notitle ,";
   if ( $startoff - $endoff > 180 ) {
     $xformat="\"%b\\n'%y\"";
   }
@@ -418,7 +406,6 @@ $com ) =
        "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
        "set yrange [ -.5 : ] \n" .
        "set format x $xformat \n" . 
-       "$xtics" .
        "set ytics 0,3\n" .
        "set style fill solid \n" . 
        "set boxwidth 0.1 relative \n" .
@@ -429,29 +416,30 @@ $com ) =
              # so we plot weekdays, weekends, avg line, and just one
              # weekday, to handle commas in the avg line
         "\"$plotfile\" " .
-            "every 7::6 " .
+            "every 7::1 " .
             "using 1:2 with boxes lc 0 notitle ," .  # mon
         "\"$plotfile\" " .
-            "every 7::0 " .
+            "every 7::2 " .
             "using 1:2 with boxes lc 0 notitle ," .  # tue
         "\"$plotfile\" " .
-            "every 7::1 " .
+            "every 7::3 " .
             "using 1:2 with boxes lc 0 notitle ," .  # wed
         "\"$plotfile\" " .
-            "every 7::2 " .
+            "every 7::4 " .
             "using 1:2 with boxes lc 0 notitle ," .  # thu
         "\"$plotfile\" " .
-            "every 7::3 " .
+            "every 7::5 " .
             "using 1:2 with boxes lc 3 notitle ," .  # fri
         "\"$plotfile\" " .
-            "every 7::4 " .
+            "every 7::6 " .
             "using 1:2 with boxes lc 3 notitle," .  # sat
         "\"$plotfile\" " .
-            "every 7::5 " .
+            "every 7::0 " .
             "using 1:2 with boxes lc 3 notitle, " .  # sun
-        $avgline .
         "\"$plotfile\" " .
-            "using 1:4 with points lc 2 pointtype 11 notitle \n" .  # zeroes
+            "using 1:3 with line lc 9 lw 2 notitle, " .  # avg30
+        "\"$plotfile\" " .
+            "using 1:5 with points lc 2 pointtype 11 notitle \n" .  # zeroes
         "";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
