@@ -491,7 +491,7 @@ $com ) =
   print " &nbsp; <a href='$url?o=Graph-$zs-$ze'>[ - ]</a>\n";
   my $is = $startoff - int($len/4);
   my $ie = $endoff + int($len/4);
-  print " / <a href='$url?o=Graph-$is-$ie'>[ + ]</a>\n";
+  print " &nbsp; <a href='$url?o=Graph-$is-$ie'>[ + ]</a>\n";
 
 } elsif ( $op eq "short" ) { # short list, one line per day
   my $i = scalar( @lines );
