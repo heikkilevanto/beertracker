@@ -368,7 +368,9 @@ $com ) =
     $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
   }
   
-  my $ndays = $startoff+163; # to get enough material for the running average
+  my $ndays = $startoff+35; # to get enough material for the running average
+  # must be multiple of 7, to keep start weekday the same
+
   my $date;
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
@@ -387,14 +389,14 @@ $com ) =
       $sum30 += $month[$i];
     }
     print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/30 . "-->\n";
-    #$sum30 = $sum30 / 30;
+    $sum30 = $sum30 / scalar(@month);
     my $zero = "";
     $zero = -0.1 unless ( $tot );
     if ( $ndays <=0 ) {      
       $zero = ""; # no zero mark for current date, it isn't over yet
     }
     #print "$ndays: $date / $mdate: $tot $zero <br/>"; ###
-    print F "$date $tot " . $sum30 / 30 . " $zero \n";
+    print F "$date $tot " . $sum30  . " $zero \n";
   }
   close(F);
   my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
@@ -421,25 +423,25 @@ $com ) =
              # note the order of plotting, later ones get on top
              # so we plot weekdays, weekends, avg line, zeroes
         "\"$plotfile\" " .
-            "every 7::1 " .
+            "every 7::0 " .
             "using 1:2 with boxes lc 0 notitle ," .  # mon
         "\"$plotfile\" " .
-            "every 7::2 " .
+            "every 7::1 " .
             "using 1:2 with boxes lc 0 notitle ," .  # tue
         "\"$plotfile\" " .
-            "every 7::3 " .
+            "every 7::2 " .
             "using 1:2 with boxes lc 0 notitle ," .  # wed
         "\"$plotfile\" " .
-            "every 7::4 " .
+            "every 7::3 " .
             "using 1:2 with boxes lc 0 notitle ," .  # thu
         "\"$plotfile\" " .
-            "every 7::5 " .
+            "every 7::4 " .
             "using 1:2 with boxes lc 3 notitle ," .  # fri
         "\"$plotfile\" " .
-            "every 7::6 " .
+            "every 7::5 " .
             "using 1:2 with boxes lc 3 notitle," .  # sat
         "\"$plotfile\" " .
-            "every 7::0 " .
+            "every 7::6 " .
             "using 1:2 with boxes lc 3 notitle, " .  # sun
         "\"$plotfile\" " .
             "using 1:3 with line lc 9 lw 2 notitle, " .  # avg30
