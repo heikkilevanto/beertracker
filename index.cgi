@@ -368,27 +368,24 @@ $com ) =
     $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
   }
   
-  my $ndays = $startoff+63; # to get enough material for splines
-  my $wkday = ""; # back to beginning of a week
+  my $ndays = $startoff+163; # to get enough material for the running average
   my $date;
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
   my $sum30 = 0.0;
-  my $sum7 = 0.0;
   while ( $ndays > $endoff) {
     $ndays--;
     $date = `date +%F -d "$ndays days ago" `;
     chomp($date);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
     $sum30 = $sum30 - $sum30 / 30 + $tot;
-    $sum7 = $sum7 - $sum7 / 7 + $tot;
     my $zero = "";
     $zero = -0.1 unless ( $tot );
     if ( $ndays <=0 ) {      
       $zero = ""; # no zero mark for current date, it isn't over yet
     }
     #print "$ndays: $date / $mdate: $tot $zero <br/>"; ###
-    print F "$date $tot " . $sum30 / 30 . " " . $sum7 / 7 . "  $zero \n";
+    print F "$date $tot " . $sum30 / 30 . " $zero \n";
   }
   close(F);
   my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
@@ -413,8 +410,7 @@ $com ) =
        "plot " .
              # lc 0=grey 1=red, 2=green, 3=blue
              # note the order of plotting, later ones get on top
-             # so we plot weekdays, weekends, avg line, and just one
-             # weekday, to handle commas in the avg line
+             # so we plot weekdays, weekends, avg line, zeroes
         "\"$plotfile\" " .
             "every 7::1 " .
             "using 1:2 with boxes lc 0 notitle ," .  # mon
@@ -439,7 +435,7 @@ $com ) =
         "\"$plotfile\" " .
             "using 1:3 with line lc 9 lw 2 notitle, " .  # avg30
         "\"$plotfile\" " .
-            "using 1:5 with points lc 2 pointtype 11 notitle \n" .  # zeroes
+            "using 1:4 with points lc 2 pointtype 11 notitle \n" .  # zeroes
         "";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
