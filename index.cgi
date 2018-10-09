@@ -373,12 +373,21 @@ $com ) =
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
   my $sum30 = 0.0;
+  my @month;
   while ( $ndays > $endoff) {
     $ndays--;
     $date = `date +%F -d "$ndays days ago" `;
     chomp($date);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
-    $sum30 = $sum30 - $sum30 / 30 + $tot;
+    #$sum30 = $sum30 - $sum30 / 30 + $tot;
+    @month = ( @month, $tot);
+    shift @month if scalar(@month)>=30;
+    $sum30 = 0;
+    for ( my $i = 0; $i < scalar(@month); $i++) {
+      $sum30 += $month[$i];
+    }
+    print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/30 . "-->\n";
+    #$sum30 = $sum30 / 30;
     my $zero = "";
     $zero = -0.1 unless ( $tot );
     if ( $ndays <=0 ) {      
