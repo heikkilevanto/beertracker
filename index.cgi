@@ -356,32 +356,28 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $startoff = $1 || 30;
   my $endoff = $2 || -1;
   my %sums; 
-  #my $startdate =  `date +%F -d "last sunday - $startoff days"`;
-  my $startdate =  `date +%F -d "last friday - $startoff days"`;
+  my $startdate =  `date +%F -d "$startoff days ago"`;
   chomp($startdate);
   my $enddate =  `date +%F -d "$endoff days ago"`;
   chomp($enddate);
   for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, 
-$com ) = 
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) = 
        split( /; */, $lines[$i] );
     $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
   }
-  
   my $ndays = $startoff+35; # to get enough material for the running average
-  # must be multiple of 7, to keep start weekday the same
-
   my $date;
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
   my $sum30 = 0.0;
   my @month;
+  my $wkday;
   while ( $ndays > $endoff) {
     $ndays--;
-    $date = `date +%F -d "$ndays days ago" `;
-    chomp($date);
+    $rawdate = `date +%F:%u -d "$ndays days ago" `;
+    chomp($rawdate);
+    ($date,$wkday) = split(':',$rawdate);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
-    #$sum30 = $sum30 - $sum30 / 30 + $tot;
     @month = ( @month, $tot);
     shift @month if scalar(@month)>=30;
     $sum30 = 0;
@@ -395,8 +391,13 @@ $com ) =
     if ( $ndays <=0 ) {      
       $zero = ""; # no zero mark for current date, it isn't over yet
     }
-    #print "$ndays: $date / $mdate: $tot $zero <br/>"; ###
-    print F "$date $tot " . $sum30  . " $zero \n";
+    my $wkend = 0;
+    if ($wkday > 4) {
+       $wkend = $tot;
+       $tot = 0;
+    }
+    #print "$ndays: $date / $wkday -  $tot $wkend $zero <br/>"; ###
+    print F "$date $tot $wkend $sum30 $zero \n";
   }
   close(F);
   my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
@@ -416,37 +417,20 @@ $com ) =
        "set format x $xformat \n" . 
        "set ytics 0,3\n" .
        "set style fill solid \n" . 
-       "set boxwidth 0.1 relative \n" .
+       "set boxwidth 0.7 relative \n" .
        "set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
        "plot " .
              # lc 0=grey 1=red, 2=green, 3=blue
              # note the order of plotting, later ones get on top
              # so we plot weekdays, weekends, avg line, zeroes
         "\"$plotfile\" " .
-            "every 7::0 " .
-            "using 1:2 with boxes lc 0 notitle ," .  # mon
+            "using 1:2 with boxes lc 0 notitle ," .  # weekdays
         "\"$plotfile\" " .
-            "every 7::1 " .
-            "using 1:2 with boxes lc 0 notitle ," .  # tue
+            "using 1:3 with boxes lc 3 notitle," .  # weekends
         "\"$plotfile\" " .
-            "every 7::2 " .
-            "using 1:2 with boxes lc 0 notitle ," .  # wed
+            "using 1:4 with line lc 9 lw 2 notitle, " .  # avg30
         "\"$plotfile\" " .
-            "every 7::3 " .
-            "using 1:2 with boxes lc 0 notitle ," .  # thu
-        "\"$plotfile\" " .
-            "every 7::4 " .
-            "using 1:2 with boxes lc 3 notitle ," .  # fri
-        "\"$plotfile\" " .
-            "every 7::5 " .
-            "using 1:2 with boxes lc 3 notitle," .  # sat
-        "\"$plotfile\" " .
-            "every 7::6 " .
-            "using 1:2 with boxes lc 3 notitle, " .  # sun
-        "\"$plotfile\" " .
-            "using 1:3 with line lc 9 lw 2 notitle, " .  # avg30
-        "\"$plotfile\" " .
-            "using 1:4 with points lc 2 pointtype 11 notitle \n" .  # zeroes
+            "using 1:5 with points lc 2 pointtype 11 notitle \n" .  # zeroes
         "";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
