@@ -390,6 +390,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
     $zero = -0.1 unless ( $tot );
     if ( $ndays <=0 ) {      
       $zero = ""; # no zero mark for current date, it isn't over yet
+      $sum30=""; # and no average
     }
     my $wkend = 0;
     if ($wkday > 4) {
