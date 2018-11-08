@@ -380,12 +380,15 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
     @month = ( @month, $tot);
     shift @month if scalar(@month)>=30;
-    $sum30 = 0;
+    $sum30 = 0.0;
+    my $sumw = 0.0;
     for ( my $i = 0; $i < scalar(@month); $i++) {
-      $sum30 += $month[$i];
+      my $w = $i+1 ;  #+1 to avoid zeroes
+      $sum30 += $month[$i] * $w;
+      $sumw += $w;
     }
-    print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/30 . "-->\n";
-    $sum30 = $sum30 / scalar(@month);
+    #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
+    $sum30 = $sum30 / $sumw;
     my $zero = "";
     $zero = -0.1 unless ( $tot );
     if ( $ndays <=0 ) {      
