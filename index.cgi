@@ -29,7 +29,10 @@ if ( $q->remote_user() =~ /^[a-zA-Z0-9]+$/ ) {
 my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect",
 "I'm in love" );
-
+# Links to beer lists at the most common locations and breweries
+my %links;
+$links{"Ølbaren"} = "http://oelbaren.dk/oel/";
+$links{"Dry and Bitter"} = "http://www.dryandbitter.com/products.php";
 
 # Parameters - data file fields are the same order
 # but there is a time stamp first, and the $del never gets to the data file
@@ -803,6 +806,11 @@ sub filt {
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
   my $link = "<a href='$url?q=".uri_escape($param) ."' 
 ><$tag>$f</$tag></a>";
+  #if ( $links{$f} ) {  # Does not look good
+  #  my $l = $links{$f};
+  #  $link .= " <a href='$l'> L </a>";
+  #}
+  
   return $link;
 }
 
