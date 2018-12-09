@@ -55,11 +55,6 @@ my $maxlines = param("maxl") || "25";  # negative = unlimited
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
 my $localtest = 0; # Local test installation
-my $hostname = `hostname`;
-chomp($hostname);
-#if ( $hostname ne "locatelli" ) {
-#  $localtest = 1;  # Not on locatelli anymore.
-#}  # Running dev and prod on corelli
 
 # Default sizes
 $vol =~ s/^T$/2/i;  # Taster, sizes vary, but always small
@@ -245,15 +240,10 @@ print $q->header(
 print "<html><head>\n";
 print "<title>Beer</title>\n";
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
-print "<meta name='viewport' content='width=device-width, 
-initial-scale=1.0'>\n";
-if ( ! $localtest ) {
-    print "<style rel='stylesheet'>\n";
-    #print "* { margin: 1px; padding: 0px; }\n";
-    #print "* { background-color: #493D26; color: #FFFFFF }\n";
-    print "* { background-color: #003000; color: #FFFFFF }\n";
-    print "</style>\n";
-}
+print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
+print "<style rel='stylesheet'>\n";
+print   "* { background-color: #003000; color: #FFFFFF }\n";
+print "</style>\n";
 print "<link rel='shortcut icon' href='beer.png'/>\n";
 print "</head>\n";
 print "<body>\n";
@@ -273,10 +263,6 @@ SCRIPTEND
 print "<script>\n$script</script>\n";
 
 
-# Status line
-if (  $localtest) {
-  print "Local test installation<br/>\n";
-}
 
 # Main input form
 print "<form method='POST'>\n";
