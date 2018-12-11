@@ -712,13 +712,8 @@ $com ) =
     print "<form method='POST' style='display: inline;' >\n";
     print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") . 
 "<br/>\n";
-    if ( $sty || $rate ) {
-      print filt("[$sty]")   if ($sty);
-      print " ($rate: $ratings[$rate])" if ($rate);
-      print "<br/>\n";
-    }
-    print "<i>$com</i> <br/>\n" if ($com);
-    print "$pr kr. &nbsp; " if ($origpr =~ /\d+/);
+    print filt("[$sty]") . " "   if ($sty);
+    print "$pr kr " if ($origpr =~ /\d+/);
     print "$vol cl " if ($vol);
     print "* $alc % " if ($alc);
     if ( $alc && $vol ) {
@@ -726,6 +721,12 @@ $com ) =
       print "= $dr d ";
     }
     print "<br/>\n";
+    if ($rate || $com) {
+      print " <b>$rate-$ratings[$rate]</b>" if ($rate);
+      print ": " if ($rate && $com);
+      print "<i>$com</i>" if ($com);
+      print "<br/>\n";
+    }
     # guess sizes for small/large beers
     my %vols;
     $vols{$vol} = 1;
