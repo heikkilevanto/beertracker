@@ -13,8 +13,8 @@ What this is not
 
 Outline
  - Simple form to enter a beer I am drinking
- - Store all data in a flat text file
- - Write in Perl, run as a CGI script under Apache
+ - Stores all data in a flat text file
+ - Written in Perl, run as a CGI script under Apache
 
 Although this is a personal project to scratch my own itch, I might as well
 release it under GPL, in case someone else finds this interesting. The system
@@ -65,14 +65,17 @@ selected from the "show" pull-down in the input form.
 
 * I use the brewery field for specifying non-beer categories. All of them should
 have a comma in the name, for example `Booze, whisky`, or `Wine, Red`. These can
-be shown in separate booze and wine lists.
+be shown in separate booze and wine lists. I try to put wine styles in the style
+field, but it is small, so most of the stuff needs to go in the comments.
 * I file restaurants the same way, for example "Restaurant, Thai". I fill in the 
 whole price of the evening, for one person. But no alcohol or volume, those I
 should have filed separately. In the comments I write what I ate and drunk, some
 comments about prices, or what ever else comes to mind.
 * There is a small list of pre-defined beer sizes. The most common (for me, in 
 Denmark) are `L` which is 40 cl, and `S` for 25 cl. Also a `T` for a 2cl taster.
-
+The complete list is in the code, near https://github.com/heikkilevanto/beertracker/blob/master/index.cgi#L63
+If traveling in the US, you can give the size as `12 oz` and it will be converted
+into 36 cl.
 
 ## Problems
 If you are just starting, I may be willing to help with technical issues, especially
