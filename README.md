@@ -41,5 +41,46 @@ Point your browser to beerdata. You should see a dark input form. If not, check
 /var/log/apache2/error.log. If you do, enter a test beer or two, and look at 
 the lists.
 
-File issues or pull requests if you find something broken or missing.
+## Getting started
+When you start, the database is empty. You need to enter all details on the first 
+beers. Your browser will remember some of those values and suggest them to you.
+If you leave values empty (just click on any field, it clears), the program will
+try to make a guess from your history. This only works if you spell the beer
+name the same way, so be correct there. It is handy for picking up the strength
+and price of beer, etc. 
+
+Most of the time, if you have drunk that beer before, it is easy to find the beer
+in the list, and just click on the `copy` buttons. They come in predefined sizes of
+25 and 40 cl, and if you drank some other quantity, that gets a copy button too.
+
+On the beer list, almost every word is a link to filter the list. If you click on
+the brewery name, the list shows only beers from that brewery. Same for location, 
+etc. You can also filter only those entries that have ratings on them, or comments.
+This is good if you want to look up a beer before buying.
+
+There are dedicated lists for beers, breweries, locations, etc. Those can be
+selected from the "show" pull-down in the input form. 
+
+## Tpis and tricks
+
+* I use the brewery field for specifying non-beer categories. All of them should
+have a comma in the name, for example `Booze, whisky`, or `Wine, Red`. These can
+be shown in separate booze and wine lists.
+* I file restaurants the same way, for example "Restaurant, Thai". I fill in the 
+whole price of the evening, for one person. But no alcohol or volume, those I
+should have filed separately. In the comments I write what I ate and drunk, some
+comments about prices, or what ever else comes to mind.
+* There is a small list of pre-defined beer sizes. The most common (for me, in 
+Denmark) are `L` which is 40 cl, and `S` for 25 cl. Also a `T` for a 2cl taster.
+
+
+## Problems
+If you are just starting, I may be willing to help with technical issues, especially
+if I have set up an account for you on my system. If you are self-hosting, I hope you
+can manage most technical problems yourself, and/or look in the code to see what 
+is going on.
+
+If you run into bugs and real problems, please file them as issues on GitHub, at
+https://github.com/heikkilevanto/beertracker/issues. Even better, if you can fix it
+yourself, file a pull request.
 
