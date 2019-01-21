@@ -32,7 +32,9 @@ my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
 # Links to beer lists at the most common locations and breweries
 my %links;
 $links{"Ølbaren"} = "http://oelbaren.dk/oel/";
+$links{"Fermentoren"} = "http://fermentoren.com/index";
 $links{"Dry and Bitter"} = "http://www.dryandbitter.com/products.php";
+$links{"Dudes"} = "http://www.dudes.bar";
 
 # Parameters - data file fields are the same order
 # but there is a time stamp first, and the $del never gets to the data file
@@ -562,8 +564,11 @@ $com ) =
     $fld = "";
     if ( $op eq "Location" ) {
       $fld = $loc;
-      $line = "<td>" . filt($loc,"b") . "</td><td>$wday $effdate<br/>" . 
-           lst("Beer",$mak,"i") . ":" . filt($beer) . "</td>";
+
+      $line = "<td>" . filt($loc,"b") .
+        "<br/>" . loclink($loc) . "</td>" .
+        "<td>$wday $effdate<br/>" .
+        lst("Beer",$mak,"i") . ":" . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
       next if ( $mak =~ /^wine/i );  
       next if ( $mak =~ /^booze/i ); 
@@ -697,7 +702,7 @@ $com ) =
       $lastloc = "";
     }
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
-      print "<b>$wday $date </b>" . filt($loc,"b") . "</a><p/>\n" ;
+      print "<b>$wday $date </b>" . filt($loc,"b") . loclink($loc) . "<p/>\n" ;
     }
     if ( $date ne $effdate ) {
       $time = "($time)";
@@ -809,10 +814,6 @@ sub filt {
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
   my $link = "<a href='$url?q=".uri_escape($param) ."' 
 ><$tag>$f</$tag></a>";
-  #if ( $links{$f} ) {  # Does not look good
-  #  my $l = $links{$f};
-  #  $link .= " <a href='$l'> L </a>";
-  #}
   
   return $link;
 }
@@ -827,6 +828,16 @@ sub lst {
   $op = uri_escape($op);
   my $link = "<a href='$url?o=$op" . $qry ."' ><$tag>$dsp</$tag></a>";
   return $link;
+}
+
+# Helper to make a link to a bar of brewery web page
+sub loclink {
+  my $loc = shift;
+  my $lnk = "";
+  if (defined($links{$loc})) {
+    $lnk = " &nbsp; <i>(<a href='" . $links{$loc} . "' target='_blank' >list</a>)</i>" ;
+  }
+  return $lnk
 }
 
 # Helper to sanitize numbers
