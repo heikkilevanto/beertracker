@@ -554,7 +554,10 @@ $com ) =
   my @displines;
   my %seen;
   my $anchor="";
-  print "<table>\n";
+  my $odd = 1;
+  print "<table style='background-color: #006000;' >\n";
+  # For some reason this sets a color between the cells, not within them.
+  # which is ok, makes it easier to see what is what.
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
@@ -564,7 +567,6 @@ $com ) =
     $fld = "";
     if ( $op eq "Location" ) {
       $fld = $loc;
-
       $line = "<td>" . filt($loc,"b") .
         "<br/>" . loclink($loc) . "</td>" .
         "<td>$wday $effdate<br/>" .
