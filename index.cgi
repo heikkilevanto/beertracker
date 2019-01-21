@@ -381,8 +381,10 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
     my $zero = "";
     $zero = -0.1 unless ( $tot );
     if ( $ndays <=0 ) {      
-      $zero = ""; # no zero mark for current date, it isn't over yet
-      $sum30=""; # and no average
+      $zero = ""; # no zero mark for current or next date, it isn't over yet
+    }
+    if ( $ndays <0 ) {      
+      $sum30=""; # No avg for next date, but yes for current
     }
     my $wkend = 0;
     if ($wkday > 4) {
