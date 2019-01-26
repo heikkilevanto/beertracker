@@ -690,13 +690,11 @@ $com ) =
           print "$lastloc2: $locdrinks d, $locmsum kr. <br/>\n";
         }
       }
-      # day summary: if nonzero and diff from daysummary and end of day
-      #if ( abs ( $daydrinks > 0.1 ) && abs ( $daydrinks - $locdrinks ) > 0.1 &&
-      #   $lastdate ne $effdate ) {
-      #if ( abs ( $daydrinks > 0.1 ) && $lastdate ne $effdate ) {
-      #if ( $daydrinks > 0.1 ){
-      if ($lastdate ne $effdate && $locdrinks ne $daydrinks) {
-        print " <b>$lastwday</b>: $daydrinks d, $daymsum kr <br/>\n";
+      # day summary
+      if ($lastdate ne $effdate ) {
+        if ( $locdrinks ne $daydrinks) {
+          print " <b>$lastwday</b>: $daydrinks d, $daymsum kr <br/>\n";
+        }
         $daydsum = 0.0;
         $daymsum = 0;
       }
