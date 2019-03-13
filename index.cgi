@@ -413,7 +413,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
        "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
        "set yrange [ -.5 : ] \n" .
        "set format x $xformat \n" .
-       "set ytics 0,3\n" .
+       "set ytics 0,2\n" .
        "set style fill solid \n" .
        "set boxwidth 0.7 relative \n" .
        "set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
