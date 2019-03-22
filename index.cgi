@@ -36,6 +36,11 @@ $links{"Fermentoren"} = "http://fermentoren.com/index";
 $links{"Dry and Bitter"} = "http://www.dryandbitter.com/products.php";
 $links{"Dudes"} = "http://www.dudes.bar";
 
+# currency conversions
+my %currency;
+$currency{"eur"} = 7.5;
+$currency{"e"} = 7.5;
+
 # Parameters - data file fields are the same order
 # but there is a time stamp first, and the $del never gets to the data file
 my $stamp = param("st");
@@ -47,7 +52,7 @@ my $beer= param("b");  # beer
 my $vol = param("v");  # volume, in cl
 my $sty = param("s");  # style
 my $alc = param("a");  # alc, in %vol, up to 1 decimal
-my $pr  = param("p");  # price, in local currency
+my $pr  = param("p");  # price, DKK
 my $rate= param("r");  # rating, 0=worst, 10=best
 my $com = param("c");  # Comments
   # The rest are not in the data file
@@ -182,7 +187,13 @@ undef, undef) =
   }
   $pr = $priceguess if $pr eq "";
   $vol = number($vol);
-  $pr = price($pr);
+  my $curpr = curprice($pr);
+  if ($curpr) {
+    $com .= " ($pr)";
+    $pr = $curpr;
+  } else {
+    $pr = price($pr);
+  }
   $alc = number($alc);
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
   if ( $sub eq "Record" || $sub =~ /^Copy/ ) {
@@ -862,6 +873,21 @@ sub price {
   $v = number($v);
   $v =~ s/[^0-9]//g; # Remove also decimal points etc
   return $v;
+}
+
+# Convert prices to DKK if in other currencies
+sub curprice {
+  my $v = shift;
+  #print STDERR "Checking '$v' for currency";
+  for my $c (keys(%currency)) {
+    if ( $v =~ /^([0-9.]+) *$c/ ) {
+      #print STDERR "Found currency $c, worth " . $currency{$c};
+      my $dkk = int(0.5 + $1 * $currency{$c});
+      #print STDERR "That makes $dkk";
+      return $dkk;
+    }
+  } 
+  return "";
 }
 
 # Helper to make an error message
