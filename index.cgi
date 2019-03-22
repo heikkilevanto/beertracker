@@ -676,7 +676,8 @@ if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
 $com ) =
        split( /; */, $lines[$i] );
     next if ( $qrylim eq "r" && ! $rate );
-    next if ( $qrylim eq "c" && ! $com );
+    next if ( $qrylim eq "c" && (! $com || $com =~ /^ *\(/ ) );
+      # Skip also comments like "(4 EUR)"
     $origpr = $pr;
     $pr = number($pr);
     $alc = number($alc);
@@ -880,7 +881,7 @@ sub curprice {
   my $v = shift;
   #print STDERR "Checking '$v' for currency";
   for my $c (keys(%currency)) {
-    if ( $v =~ /^([0-9.]+) *$c/ ) {
+    if ( $v =~ /^([0-9.]+) *$c/i ) {
       #print STDERR "Found currency $c, worth " . $currency{$c};
       my $dkk = int(0.5 + $1 * $currency{$c});
       #print STDERR "That makes $dkk";
