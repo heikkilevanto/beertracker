@@ -189,7 +189,8 @@ undef, undef) =
   $vol = number($vol);
   my $curpr = curprice($pr);
   if ($curpr) {
-    $com .= " ($pr)";
+    $com =~ s/ *\[\d+\w+\] *$//i; # Remove old price
+    $com .= " [$pr]";
     $pr = $curpr;
   } else {
     $pr = price($pr);
@@ -821,7 +822,7 @@ sub param {
   my $tag = shift;
   my $val = $q->param($tag);
   $val = "" if !defined($val);
-  $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:-]/_/g;
+  $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:\(\)\[\]-]/_/g;
   return $val;
 }
 
