@@ -77,10 +77,6 @@ if ( $vol =~ /([0-9]+) *oz/i ) {  # (us) fluid ounces
   $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
 }
 
-# The query is already cleaned in param()
-#$qry =~ s/[&.*+^\$]/./g;  # Remove special characters
-#$qry =~ s/[^A-Za-z0-9 ,.-]/./g;  # Remove special characters
-
 if ( ! $stamp ) {
   $stamp = `date "+%F %T"`;  # TODO - Do this in perl
   chomp($stamp);
@@ -92,6 +88,7 @@ if ( ! $effdate ) { # Effective date can be the day before
   $effdate = "$wday; $effdate";
 }
 
+##############################
 # Read the file
 # Set defaults for the form, usually from last line in the file
 # Actually, at this point only set $lastline and $foundline
@@ -146,6 +143,7 @@ if ( ! $todaydrinks ) { # not today
 }
 
 
+################################
 # POST data into the file
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
@@ -236,7 +234,7 @@ undef, undef) =
   exit();
 }
 
-
+############################
 # Get new values from the file we ingested earlier
 my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) = split( /; */,
 $lastline );
@@ -247,13 +245,14 @@ if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
   $com = "";
 }
+
+########################
+# HTML head
 print $q->header(
   -type => "text/html;charset=UTF-8",
   -Cache_Control => "no-cache, no-store, must-revalidate",
   -Pragma => "no-cache",
   -Expires => "0");
-
-# HTML head
 print "<html><head>\n";
 print "<title>Beer</title>\n";
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
@@ -280,7 +279,7 @@ SCRIPTEND
 print "<script>\n$script</script>\n";
 
 
-
+#############################
 # Main input form
 print "<form method='POST'>\n";
 print "<table >";
@@ -325,16 +324,12 @@ print "</select></td></tr>\n";
 print " <td $c6><textarea name='c' cols='36' rows='3'
   placeholder='$todaydrinks'/>$com</textarea></td></tr>\n";
 if ( $edit ) {
-  print "<tr><td><input type='submit' name='submit'
-value='Save'/></td>\n";
+  print "<tr><td><input type='submit' name='submit' value='Save'/></td>\n";
   print "<td><a href='$url' >cancel</a>";
-  print "&nbsp;<input type='submit' name='submit' value='Delete'/>
-</td></tr>\n";
+  print "&nbsp;<input type='submit' name='submit' value='Delete'/></td></tr>\n";
 } else {
-  print "<tr><td><input type='submit' name='submit'
-value='Record'/>\n";
-  print "&nbsp;<input type='button' value='clear'
-onclick='clearinputs()'/></td>\n";
+  print "<tr><td><input type='submit' name='submit' value='Record'/>\n";
+  print "&nbsp;<input type='button' value='clear' onclick='clearinputs()'/></td>\n";
   print "<td><select name='ops' " .
               "onchange='document.location=\"$url?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
@@ -354,6 +349,7 @@ onclick='clearinputs()'/></td>\n";
 print "</table>\n";
 print "</form>\n";
 
+##############
 # Graph
 if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $startoff = $1 || 30;
@@ -482,7 +478,9 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $ie = $endoff + int($len/4);
   print " &nbsp; <a href='$url?o=Graph-$is-$ie'>[ + ]</a>\n";
 
-} elsif ( $op eq "short" ) { # short list, one line per day
+########################
+# short list, one line per day
+} elsif ( $op eq "short" ) {
   my $i = scalar( @lines );
   my $entry = "";
   my $places = "";
@@ -551,7 +549,9 @@ $com ) =
     print "<p/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
   }
-} elsif ( $op ) { # various lists
+#######################
+# various lists
+} elsif ( $op ) {
   print "<hr/><a href='$url'><b>$op</b> list</a>.\n";
   if ( !$sortlist) {
     print "(<a href='$url?o=$op&sort=1' >sort</a>) <p/>\n";
@@ -644,7 +644,9 @@ $com ) =
   print "</table>\n";
 
 }
-if ( !$op || $op =~ /Graph(\d*)/ ) { # Regular list, on its own, or after graph
+########################
+# Regular list, on its own, or after graph
+if ( !$op || $op =~ /Graph(\d*)/ ) {
   if ($qry || $qrylim) {
     print "<hr/> Filter: ";
     print "<a href='$url'><b>$qry (Clear)</b></a>" if ($qry);
@@ -738,7 +740,7 @@ $com ) =
     print "<a id='$anchor'/>\n";
     print "<form method='POST' style='display: inline;' >\n";
     print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") .
-"<br/>\n";
+      "<br/>\n";
     print filt("[$sty]") . " "   if ($sty);
     print "$pr kr " if ($origpr =~ /\d+/);
     print "$vol cl " if ($vol);
@@ -888,7 +890,7 @@ sub curprice {
       #print STDERR "That makes $dkk";
       return $dkk;
     }
-  } 
+  }
   return "";
 }
 
