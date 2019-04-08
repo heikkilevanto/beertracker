@@ -337,7 +337,7 @@ if ( $edit ) {
   print "<option value='o=short' >Short List</option>\n";
   my @ops = ("Graph",
      "Location","Brewery", "Beer",
-     "Wine", "Booze", "Restaurant", "Style");
+     "Wine", "Booze", "Restaurant", "Style", "Year");
   for my $opt ( @ops ) {
     print "<option value='o=$opt'>$opt</option>\n";
   }
@@ -548,6 +548,67 @@ $com ) =
   if ( $maxlines >= 0 ) {
     print "<p/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
+  }
+#######################
+# Annual summary
+} elsif ( $op eq "Year" ) {
+  my $i = scalar( @lines );
+  my %sum;
+  my %alc;
+  my $ysum = 0;
+  my $yalc = 0;
+  my $thisyear = "";
+  my $sofar = " so far";
+  my $y;
+  while ( $i > 0 ) {
+    $i--;
+    #print "$thisyear $i: $lines[$i]<br/>\n";
+    if ($i == 0) {
+      $y = "END";
+    } else {
+      ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
+        split( /; */, $lines[$i] );
+      next if ($mak =~ /restaurant/i );
+      $y = substr($effdate,0,4);
+    }
+    if ( $y ne $thisyear ) {
+      if ($thisyear) {
+        print "Year $thisyear $sofar<br/>\n";
+        $sofar = "";
+        my @kl = sort { $sum{$b} <=> $sum{$a} }  keys %sum;
+        $k = 0;
+        print "<pre>";
+        while ( $k < 12 && $kl[$k] ) {
+          my $loc = $kl[$k];
+          my $alc = sprintf("%5.0fd", $alc{$loc} / $onedrink) ;
+          my $pr = sprintf("%6.0f", $sum{$loc});
+          print "$pr $alc $loc\n";
+          $k++;
+        }
+        my $loc = " = TOTAL for $thisyear";
+        my $alc = sprintf("%5.0fd", $yalc / $onedrink) ;
+        my $pr = sprintf("%6.0f", $ysum);
+        print "$pr $alc $loc\n";
+        print "</pre>";
+      }
+      %sum = ();
+      %alc = ();
+      $ysum = 0;
+      $yalc = 0;
+      $thisyear = $y;
+      last if ($y eq "END");
+    } # new year
+    $pr = number($pr);
+    $alc = number($alc);
+    $vol = number($vol);
+    $sum{$loc} = ( $sum{$loc} || 0.1 / $i ) + $pr if ($pr);  # $i keeps sort order
+    $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol);
+    $ysum += $pr if ($pr);
+    $yalc += $alc * $vol if ($alc && $vol);
+    #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
+  }
+} elsif ( $op eq "foo" ) {
+  if (0) {
   }
 #######################
 # various lists
