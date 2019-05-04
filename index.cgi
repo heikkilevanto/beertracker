@@ -677,12 +677,17 @@ $com ) =
             lst("Booze",$loc) .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Restaurant" ) {
-      next unless ( $mak =~ /^restaurant/i );
+      next unless ( $mak =~ /^restaurant,? *(.*)$/i );
+      my $rstyle="";  # op,qry,tag,dsp
+      if ( $1 ) { $rstyle = lst($op, "Restaurant, $1", "", $1); }
       $fld = "$loc";
       $rate = "$rate: <b>$ratings[$rate]</b>" if $rate;
-      $pr = "$pr kr" if $pr;
-      $line = "<td>" . filt($loc,"b") . "<br/>$pr</td><td><i>$beer</i>".
-            "<br/>" . "$wday $effdate $rate</td>";
+      my $rpr = "";
+      $rpr = "$pr kr" if ($pr && $pr >0) ;
+      $line = "<td>" . filt($loc,"b") . "<br/>".
+              "$rpr $rstyle</td>
+              <td><i>$beer</i>". "<br/>" .
+              "$wday $effdate $rate</td>";
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
@@ -908,7 +913,7 @@ sub lst {
   my $op = shift; # The kind of list
   my $qry = shift; # Optional query to filter the list
   my $tag = shift || "nop";
-  my $dsp = $qry || $op;
+  my $dsp = shift || $qry || $op;
   $qry = "&q=" . uri_escape($qry) if $qry;
   $op = uri_escape($op);
   my $link = "<a href='$url?o=$op" . $qry ."' ><$tag>$dsp</$tag></a>";
