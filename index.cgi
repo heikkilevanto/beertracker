@@ -106,6 +106,7 @@ my $copylocation = 0;  # should the copy button copy location too
 my $thisdate = "";
 my $lastwday = "";
 my @lines;
+my %seen; # Count how many times var names seen before
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -113,6 +114,10 @@ while (<F>) {
   push @lines, $_; # collect them all
   my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
   $thisloc = $l if $l;
+  $seen{$l}++;
+  $seen{$m}++;
+  $seen{$b}++;
+  $seen{$s}++;
   if ( ! $edit || ($edit eq $t) ) {
     $foundline = $_;
   }
@@ -791,7 +796,7 @@ $com ) =
       $lastloc = "";
     }
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
-      print "<b>$wday $date </b>" . filt($loc,"b") . loclink($loc) . "<p/>\n" ;
+      print "<b>$wday $date </b>" . filt($loc,"b") . newmark($loc) . loclink($loc) . "<p/>\n" ;
     }
     if ( $date ne $effdate ) {
       $time = "($time)";
@@ -807,9 +812,10 @@ $com ) =
     $anchor =~ s/[^0-9]//g;
     print "<a id='$anchor'/>\n";
     print "<form method='POST' style='display: inline;' >\n";
-    print "<p>$time &nbsp;" . filt($mak,"i") . " : " . filt($beer,"b") .
+    print "<p>$time &nbsp;" . filt($mak,"i") . newmark($mak) .
+            " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br/>\n";
-    print filt("[$sty]") . " "   if ($sty);
+    print filt("[$sty]") . newmark($sty) . " "   if ($sty);
     print "$pr kr " if ($origpr =~ /\d+/);
     print "$vol cl " if ($vol);
     print "* $alc % " if ($alc);
@@ -906,6 +912,16 @@ sub filt {
 ><$tag>$f</$tag></a>";
 
   return $link;
+}
+
+# Helper to print "(NEW)" in case we never seen the entry before
+sub newmark {
+  my $v = shift;
+  my $rest = shift || "";
+  return "" if ( $rest =~ /^Restaurant/);
+  #return " ($seen{$v}) " if ($seen{$v} != 1);
+  return "" if ($seen{$v} && $seen{$v} != 1);
+  return " (new?) ";
 }
 
 # Helper to make a link to a list
