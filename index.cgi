@@ -569,7 +569,7 @@ $com ) =
   my $ysum = 0;
   my $yalc = 0;
   my $thisyear = "";
-  my $sofar = " so far";
+  my $sofar = "so far";
   my $y;
   while ( $i > 0 ) {
     $i--;
@@ -585,7 +585,6 @@ $com ) =
     if ( $y ne $thisyear ) {
       if ($thisyear) {
         print "Year $thisyear $sofar<br/>\n";
-        $sofar = "";
         my @kl = sort { $sum{$b} <=> $sum{$a} }  keys %sum;
         $k = 0;
         print "<pre>";
@@ -596,11 +595,12 @@ $com ) =
           print "$pr $alc $loc\n";
           $k++;
         }
-        my $loc = " = TOTAL for $thisyear";
+        my $loc = " = TOTAL for $thisyear $sofar";
         my $alc = sprintf("%5.0fd", $yalc / $onedrink) ;
         my $pr = sprintf("%6.0f", $ysum);
         print "$pr $alc $loc\n";
         print "</pre>";
+        $sofar = "";
       }
       %sum = ();
       %alc = ();
@@ -635,7 +635,7 @@ $com ) =
   my $fld;
   my $line;
   my @displines;
-  my %seen;
+  my %lineseen;
   my $anchor="";
   my $odd = 1;
   print "<table style='background-color: #006000;' >\n";
@@ -652,8 +652,8 @@ $com ) =
       $fld = $loc;
       $line = "<td>" . filt($loc,"b") .
         "<br/>" . loclink($loc) . "</td>" .
-        "<td>$wday $effdate<br/>" .
-        lst("Beer",$mak,"i") . ":" . filt($beer) . "</td>";
+        "<td>$wday $effdate ($seen{$loc})<br/>" .
+        lst("Beer",$mak,"i") . ": " . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
@@ -661,7 +661,7 @@ $com ) =
       $fld = $mak;
       $mak =~ s"/"/<br/>";
       $line = "<td>" . lst("Beer",$mak) . "</td>" .
-      "<td>$wday $effdate " .lst("Beer",$loc) .
+      "<td>$wday $effdate " .lst("Beer",$loc) . " ($seen{$fld})" .  # $mak before cleaning
             "<br/>" . filt("[$sty]") . "  " . filt($beer,"b")  ."&nbsp;</td>";
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );
@@ -669,19 +669,20 @@ $com ) =
       next if ( $mak =~ /^restaurant/i );
       $fld = $beer;
       $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ".
-            lst("Beer",$loc) .  "<br/>" . filt("[$sty]"). " " .
+            lst("Beer",$loc) .  " ($seen{$beer})<br/>" .
+            filt("[$sty]"). " " .
             lst("Beer",$mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Wine" ) {
       next unless ( $mak =~ /^wine/i );
       $fld = $beer;
       $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ".
-            lst("Wine",$loc) .
+            lst("Wine",$loc) . " ($seen{$beer})" .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze/i );
       $fld = $beer;
       $line = "<td>" .filt($beer,"b") . "</td><td>$wday $effdate ".
-            lst("Booze",$loc) .
+            lst("Booze",$loc) ." ($seen{$beer})" .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $mak =~ /^restaurant,? *(.*)$/i );
@@ -692,8 +693,8 @@ $com ) =
       my $rpr = "";
       $rpr = "$pr kr" if ($pr && $pr >0) ;
       $line = "<td>" . filt($loc,"b") . "<br/>".
-              "$rpr $rstyle</td>
-              <td><i>$beer</i>". "<br/>" .
+              "$rpr $rstyle ($seen{$loc}) </td>" .
+              "<td><i>$beer</i>". "<br/>" .
               "$wday $effdate $rate</td>";
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );
@@ -701,14 +702,14 @@ $com ) =
       next if ( $mak =~ /^restaurant/i );
       next if ( $sty =~ /^misc/i );
       $fld = $sty;
-      $line = "<td>" . filt("[$sty]","b")  . "</td><td>$wday $effdate " .
+      $line = "<td>" . filt("[$sty]","b") . " ($seen{$sty})" . "</td><td>$wday $effdate " .
             lst("Beer",$loc,"i") .
             "<br/>" . lst("Beer",$mak,"i") . ":" . filt($beer,"b") . "</td>";
     }
     next unless $fld;
     $fld = uc($fld);
-    next if $seen{$fld};
-    $seen{$fld} = 1;
+    next if $lineseen{$fld};
+    $lineseen{$fld} = 1;
     #print "<tr>$line</tr>\n";
     push @displines, "<tr>$line</tr>\n";
   }
