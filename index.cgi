@@ -718,6 +718,7 @@ $com ) =
     print $dl;
   }
   print "</table>\n";
+  print "<p/>Total " . scalar(@displines) . " entries <p/>\n";
 
 }
 ########################
