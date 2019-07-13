@@ -18,13 +18,13 @@ my $datafile = "";
 my $plotfile = "";
 my $cmdfile = "";
 my $pngfile = "";
-if ( $q->remote_user() =~ /^[a-zA-Z0-9]+$/ ) {
+if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
   $datafile = $datadir . $q->remote_user() . ".data";
   $plotfile = $datadir . $q->remote_user() . ".plot";
   $cmdfile = $datadir . $q->remote_user() . ".cmd";
   $pngfile = $datadir . $q->remote_user() . ".png";
 } else {
-  error ("Bad username");
+  error ("Bad username\n");
 }
 my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect",
@@ -107,6 +107,7 @@ my $thisdate = "";
 my $lastwday = "";
 my @lines;
 my %seen; # Count how many times var names seen before
+my %restaurants; # maps location name to restaurant types
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -139,6 +140,9 @@ while (<F>) {
         $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
         $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
     }
+  }
+  if ( ( $m  =~ /^Restaurant,/i ) ) {
+    $restaurants{$l} = $m;
   }
 }
 if ( ! $todaydrinks ) { # not today
@@ -200,7 +204,7 @@ undef, undef) =
   }
   $alc = number($alc);
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
-  if ( $sub eq "Record" || $sub =~ /^Copy/ ) {
+  if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
         open F, ">>$datafile"
           or error ("Could not open $datafile for appending");
@@ -776,7 +780,21 @@ $com ) =
       # or there is a new loc coming,
       if ( $locdrinks > 0.1) {
         if ( $loccnt > 1 ) { # but only if more than one drink at loc
-          print "$lastloc2: $locdrinks d, $locmsum kr. <br/>\n";
+          print "$lastloc2: $locdrinks d, $locmsum kr. \n";
+      # Restaurant copy button
+      print "<form method='POST' style='display: inline;' >\n";
+      print "<input type='hidden' name='l' value='' />\n";  # let it default to same
+      my $rtype = $restaurants{$lastloc2} || "Restaurant, unspecified";
+      print "<input type='hidden' name='m' value='$rtype' />\n";
+      print "<input type='hidden' name='b' value='Food and Drink' />\n";
+      print "<input type='hidden' name='v' value='' />\n";
+      print "<input type='hidden' name='s' value='Unspecified Style' />\n";
+      print "<input type='hidden' name='a' value='0' />\n";
+      print "<input type='hidden' name='p' value='$locmsum kr' />\n";
+      $rtype =~ s/^Restaurant, //;
+      print "<input type='submit' name='submit' value='Rest'
+                  style='display: inline;' />\n";
+      print "</form><br/>\n";
         }
       }
       # day summary
@@ -859,8 +877,6 @@ $com ) =
     $lastloc2 = $loc;
     $lastdate = $effdate;
     $lastwday = $wday;
-    #$maxlines--;
-    #last if ($maxlines == 0); # if negative, will go for ever
   }
   if ( ! $qry) { # final summary
     my $locdrinks = sprintf("%3.1f", $locdsum / $onedrink);
