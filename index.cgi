@@ -724,6 +724,7 @@ $com ) =
 ########################
 # Regular list, on its own, or after graph
 if ( !$op || $op =~ /Graph(\d*)/ ) {
+  my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   if ($qry || $qrylim) {
     print "<hr/> Filter: ";
     print "<a href='$url'><b>$qry (Clear)</b></a>" if ($qry);
@@ -851,6 +852,7 @@ $com ) =
       print "<i>$com</i>" if ($com);
       print "<br/>\n";
     }
+    $ratecounts[$rate] ++ if ($rate);
     # guess sizes for small/large beers
     my %vols;
     $vols{$vol} = 1;
@@ -902,6 +904,21 @@ $com ) =
       "More</a><br/>\n";
   } else {
     print "<p/>That was the whole list<br/>\n";
+  }
+  my $rsum = 0;
+  my $rcnt = 0;
+  print "<p/>Ratings:<br/>\n";
+  for (my $i = 0; $i<11; $i++) {
+    $rsum += $ratecounts[$i] * $i;
+    $rcnt += $ratecounts[$i];
+    print "&nbsp;<b>" . sprintf("%3d",$ratecounts[$i]). "</b> ".
+      "times <i>$ratings[$i] ($i)</i> <br/>" if ($ratecounts[$i]);
+  }
+  if ($rcnt) {
+    print "$rcnt ratings avg <b>" . sprintf("%3.1f", $rsum/$rcnt).
+      " " . $ratings[$rsum/$rcnt] .
+    "</b><br/>\n";
+    print "<p/>\n";
   }
 }
 
