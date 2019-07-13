@@ -614,12 +614,10 @@ $com ) =
     $yalc += $alc * $vol if ($alc && $vol);
     #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
   }
-} elsif ( $op eq "foo" ) {
-  if (0) {
-  }
-#######################
-# various lists
 } elsif ( $op ) {
+
+#######################
+# various lists (beer, location, etc)
   print "<hr/><a href='$url'><b>$op</b> list</a>.\n";
   if ( !$sortlist) {
     print "(<a href='$url?o=$op&sort=1' >sort</a>) <p/>\n";
@@ -754,6 +752,9 @@ $com ) =
     next if ( $qrylim eq "r" && ! $rate );
     next if ( $qrylim eq "c" && (! $com || $com =~ /^ *\(/ ) );
       # Skip also comments like "(4 EUR)"
+    $maxlines--;
+    last if ($maxlines == 0); # if negative, will go for ever
+
     $origpr = $pr;
     $pr = number($pr);
     $alc = number($alc);
@@ -858,8 +859,8 @@ $com ) =
     $lastloc2 = $loc;
     $lastdate = $effdate;
     $lastwday = $wday;
-    $maxlines--;
-    last if ($maxlines == 0); # if negative, will go for ever
+    #$maxlines--;
+    #last if ($maxlines == 0); # if negative, will go for ever
   }
   if ( ! $qry) { # final summary
     my $locdrinks = sprintf("%3.1f", $locdsum / $onedrink);
@@ -878,7 +879,7 @@ $com ) =
     }
 
   print "<hr/>\n" ;
-  if ( $maxlines >= 0 && $anchor ) {
+  if ( $maxlines == 0 && $anchor ) {
     print "<p/><a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
       "More</a><br/>\n";
   } else {
