@@ -26,6 +26,9 @@ Version 1.0 was released in Feb-2016. It works, and I am using it myself. Of
 course there is a small list of features I will want to add some day "real
 soon now".
 
+As of July 2019, we are at version 1.2, and I am still using this to track 
+(almost?) all the beers I drink. 
+
 ## Installation
 
 Here are a few things you need to remember when setting this up. I am using a 
