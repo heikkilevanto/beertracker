@@ -725,17 +725,23 @@ $com ) =
 # Regular list, on its own, or after graph
 if ( !$op || $op =~ /Graph(\d*)/ ) {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
-  if ($qry || $qrylim) {
-    print "<hr/> Filter: ";
-    print "<a href='$url'><b>$qry (Clear)</b></a>" if ($qry);
+  #if ($qry || $qrylim) {
+  if (1) {
+    print "<hr/> ";
+    print "Filter: <a href='$url'><b>$qry (Clear)</b></a>" if ($qry || $qrylim);
     print " -".$qrylim if ($qrylim);
     print " &nbsp; \n";
-    print "<br/>";
+    print "<br/>"if ($qry || $qrylim);
     print "<a href='$url?q=" . uri_escape($qry) .
         "&f=r' >Ratings</a>\n";
     print "<a href='$url?q=" . uri_escape($qry) .
         "&f=c' >Comments</a>\n";
-    print "<a href='$url?q=" . uri_escape($qry) . "'>All</a>\n";
+    if ($qrylim) {
+      print "<a href='$url?q=" . uri_escape($qry) . "'>All</a><br/>\n";
+      for ( my $i = 0; $i < 11; $i++) {
+        print "<a href='$url?q=" . uri_escape($qry) . "&f=r$i' >$i</a> &nbsp;";
+      }
+    }
     print "<p/>\n";
   }
   my $i = scalar( @lines );
@@ -753,12 +759,12 @@ if ( !$op || $op =~ /Graph(\d*)/ ) {
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
-$com ) =
-       split( /; */, $lines[$i] );
-    next if ( $qrylim eq "r" && ! $rate );
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer,
+      $vol, $sty, $alc, $pr, $rate, $com ) = split( /; */, $lines[$i] );
     next if ( $qrylim eq "c" && (! $com || $com =~ /^ *\(/ ) );
       # Skip also comments like "(4 EUR)"
+    next if ( $qrylim =~ /^r(\d*)/ && ! $rate );  # any rating
+    next if ( $1 && $rate ne $1 );  # filter on "r7" or such
     $maxlines--;
     last if ($maxlines == 0); # if negative, will go for ever
 
