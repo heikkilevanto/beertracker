@@ -415,12 +415,15 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
     print F "$date $tot $wkend $sum30 $zero \n";
   }
   close(F);
-  my $oneweek = 7 * 24 * 60 * 60 ; # in seconds
-  my $oneday = 24 * 60 * 60 ;
+  my $oneday = 24 * 60 * 60 ; # in seconds
+  my $oneweek = 7 * $oneday ;
+  my $onemonth = 365.24 * $oneday / 12;
   my $numberofdays=7;
-  my $xformat = "\"%d\\n%b\"";
-  if ( $startoff - $endoff > 180 ) {
-    $xformat="\"%b\\n'%y\"";
+  my $xformat = "\"%d\\n%b\"";  # 14 Jul
+  my $xtic = $oneweek;
+  if ( $startoff - $endoff > 120 ) {
+    $xformat="\"%b\\n'%y\"";  # Jul 19
+    $xtic = $onemonth;
   }
   my $cmd = "" .
        "set term png small size 360,240 \n".
@@ -431,7 +434,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
        "set yrange [ -.5 : ] \n" .
        "set format x $xformat \n" .
        "set ytics 0,2 out\n" .
-       "set xtics out\n" .
+       "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
        "set mytics 2 \n".
        "set style fill solid \n" .
        "set boxwidth 0.7 relative \n" .
