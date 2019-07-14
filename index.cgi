@@ -151,7 +151,6 @@ if ( ! $todaydrinks ) { # not today
   $copylocation = 1;
 }
 
-
 ################################
 # POST data into the file
 if ( $q->request_method eq "POST" ) {
@@ -272,6 +271,7 @@ print "</style>\n";
 print "<link rel='shortcut icon' href='beer.png'/>\n";
 print "</head>\n";
 print "<body>\n";
+print "\n<!-- Read " . scalar(@lines). " lines from $datafile -->\n\n" ;
 
 my $script = <<'SCRIPTEND';
   function clearinputs() {
@@ -290,7 +290,7 @@ print "<script>\n$script</script>\n";
 
 #############################
 # Main input form
-print "<form method='POST'>\n";
+print "\n<form method='POST'>\n";
 print "<table >";
 my $clr = "Onclick='value=\"\";'";
 my $c2 = "colspan='2'";
@@ -342,7 +342,7 @@ if ( $edit ) {
   print "<td><select name='ops' " .
               "onchange='document.location=\"$url?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
-  print "<option value='' >Full List</option>\n";
+  print "<option value='o=full' >Full List</option>\n";
   print "<option value='o=short' >Short List</option>\n";
   my @ops = ("Graph",
      "Location","Brewery", "Beer",
@@ -360,9 +360,14 @@ print "</form>\n";
 
 ##############
 # Graph
+if ( !$op && $ENV{'HTTP_USER_AGENT'} !~ /Android/ ) {
+  $op = "Graph";  # Default to showing the graph on desktops
+} # but not on mobile devics
+
 if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $startoff = $1 || 30;
   my $endoff = $2 || -1;
+  print "\n<!-- " . ($op || "Graph") . "-->\n";
   my %sums;
   my $startdate =  `date +%F -d "$startoff days ago"`;
   chomp($startdate);
@@ -474,11 +479,11 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
     $le = 0;
   }
   if ($endoff) {
-    print "<a href='$url?o=Graph-$ls-$le'>&gt;&gt;</a>";
+    print "<a href='$url?o=Graph-$ls-$le'>&gt;&gt;</a>\n";
   } else {
-    print "&gt;&gt;";
+    print "&gt;&gt;n";
   }
-  print " &nbsp; <a href='$url?o=Graph'>Month</a>";
+  print " &nbsp; <a href='$url?o=Graph'>Month</a>\n";
   print " <a href='$url?o=Graph-365'>Year</a> \n";
 
   my $zs = $startoff + int($len/2);
@@ -491,7 +496,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $is = $startoff - int($len/4);
   my $ie = $endoff + int($len/4);
   print " &nbsp; <a href='$url?o=Graph-$is-$ie'>[ + ]</a>\n";
-
+  print "<br/>\n";
 ########################
 # short list, one line per day
 } elsif ( $op eq "short" ) {
@@ -621,6 +626,8 @@ $com ) =
     $yalc += $alc * $vol if ($alc && $vol);
     #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
   }
+} elsif ( $op eq "full" ) {
+  # Ignore for now, we print the full list later.
 } elsif ( $op ) {
 
 #######################
@@ -708,6 +715,9 @@ $com ) =
       $line = "<td>" . filt("[$sty]","b") . " ($seen{$sty})" . "</td><td>$wday $effdate " .
             lst("Beer",$loc,"i") .
             "<br/>" . lst("Beer",$mak,"i") . ":" . filt($beer,"b") . "</td>";
+    } else {
+      print "<!-- unknown shortlist '$op' -->\n";
+      last;
     }
     next unless $fld;
     $fld = uc($fld);
@@ -721,32 +731,29 @@ $com ) =
     print $dl;
   }
   print "</table>\n";
-  print "<p/>Total " . scalar(@displines) . " entries <p/>\n";
+  print "<p/>Total " . scalar(@displines) . " entries <p/>\n" if (scalar(@displines));
 
 }
 ########################
 # Regular list, on its own, or after graph
-if ( !$op || $op =~ /Graph(\d*)/ ) {
+if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
-  #if ($qry || $qrylim) {
-  if (1) {
-    print "<hr/> ";
-    print "Filter: <a href='$url'><b>$qry (Clear)</b></a>" if ($qry || $qrylim);
-    print " -".$qrylim if ($qrylim);
-    print " &nbsp; \n";
-    print "<br/>"if ($qry || $qrylim);
-    print "<a href='$url?q=" . uri_escape($qry) .
-        "&f=r' >Ratings</a>\n";
-    print "<a href='$url?q=" . uri_escape($qry) .
-        "&f=c' >Comments</a>\n";
-    if ($qrylim) {
-      print "<a href='$url?q=" . uri_escape($qry) . "'>All</a><br/>\n";
-      for ( my $i = 0; $i < 11; $i++) {
-        print "<a href='$url?q=" . uri_escape($qry) . "&f=r$i' >$i</a> &nbsp;";
-      }
+  print "\n<!-- Full list -->\n ";
+  print "<hr/>Filter: <a href='$url'><b>$qry (Clear)</b></a>" if ($qry || $qrylim);
+  print " -".$qrylim if ($qrylim);
+  print " &nbsp; \n";
+  print "<br/>"if ($qry || $qrylim);
+  print "<a href='$url?q=" . uri_escape($qry) .
+      "&f=r' >Ratings</a>\n";
+  print "<a href='$url?q=" . uri_escape($qry) .
+      "&f=c' >Comments</a>\n";
+  if ($qrylim) {
+    print "<a href='$url?q=" . uri_escape($qry) . "'>All</a><br/>\n";
+    for ( my $i = 0; $i < 11; $i++) {
+      print "<a href='$url?q=" . uri_escape($qry) . "&f=r$i' >$i</a> &nbsp;";
     }
-    print "<p/>\n";
   }
+  print "<p/>\n";
   my $i = scalar( @lines );
   my $lastloc = "";
   my $lastdate = "today";
@@ -770,12 +777,12 @@ if ( !$op || $op =~ /Graph(\d*)/ ) {
     next if ( $1 && $rate ne $1 );  # filter on "r7" or such
     $maxlines--;
     last if ($maxlines == 0); # if negative, will go for ever
+    # Stop here, when we know we have more to come, so we can show proper "more" link
 
     $origpr = $pr;
     $pr = number($pr);
     $alc = number($alc);
     $vol = number($vol);
-    #$pr = 0 unless ( $pr =~ /\d/ ); # Skip 'X' and other non-numericals
     my $date = "";
     my $time = "";
     if ( $stamp =~ /(^[0-9-]+) (\d\d?:\d\d?):/ ) {
@@ -786,6 +793,7 @@ if ( !$op || $op =~ /Graph(\d*)/ ) {
     my $dateloc = "$effdate : $loc";
 
     if ( $dateloc ne $lastloc && ! $qry) { # summary of loc and maybe date
+      print "\n";
       my $locdrinks = sprintf("%3.1f", $locdsum / $onedrink) ;
       my $daydrinks = sprintf("%3.1f", $daydsum / $onedrink) ;
       # loc summary: if nonzero, and diff from daysummary
@@ -841,7 +849,7 @@ if ( !$op || $op =~ /Graph(\d*)/ ) {
     }
     $anchor = $stamp || "";
     $anchor =~ s/[^0-9]//g;
-    print "<a id='$anchor'/>\n";
+    print "\n<a id='$anchor'/>\n";
     print "<form method='POST' style='display: inline;' >\n";
     print "<p>$time &nbsp;" . filt($mak,"i") . newmark($mak) .
             " : " . filt($beer,"b") . newmark($beer, $mak) .
