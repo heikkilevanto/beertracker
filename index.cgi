@@ -873,7 +873,11 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $vols{25} = 1;
     $vols{40} = 1;
 
-    print "<a href='$url?e=" . uri_escape($stamp) ."' >Edit</a>\n";
+    print "<a href='$url?e=" . uri_escape($stamp) ."' >Edit</a> \n";
+    my $gqry=uri_escape("$mak $beer");
+    print "<a href='https://www.google.com/search?q=$gqry'  target='_blank'>" .
+      "(G)</a>\n";
+
     # No price - the script guesses based on size.
     # No location, reuse the current loc
     print "<input type='hidden' name='m' value='$mak' />\n";
