@@ -58,7 +58,7 @@ my $com = param("c");  # Comments
   # The rest are not in the data file
 my $del = param("x");  # delete/update last entry - not in data file
 my $qry = param("q");  # filter query, greps the list
-my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings
+my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "l" for extra links
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimited
@@ -346,12 +346,10 @@ if ( $edit ) {
   print "<option value='o=short' >Short List</option>\n";
   my @ops = ("Graph",
      "Location","Brewery", "Beer",
-     "Wine", "Booze", "Restaurant", "Style", "Year");
+     "Wine", "Booze", "Restaurant", "Style", "Year", "About");
   for my $opt ( @ops ) {
     print "<option value='o=$opt'>$opt</option>\n";
   }
-  print "<option value='f=r'>Ratings</option>\n";
-  print "<option value='f=c'>Comments</option>\n";
   print "</select></td>\n";
   print "</tr>\n";
 }
@@ -625,6 +623,19 @@ $com ) =
     $yalc += $alc * $vol if ($alc && $vol);
     #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
   }
+#############################
+# About page
+} elsif ( $op eq "About" ) {
+  print "<hr/><h2>Beertracker</h2>\n";
+  print "Copyright 2019 Heikki Levanto. <br/>";
+  print "Beertracker is my little script to help me remember all the beers I meet.\n";
+  print "It is Open Source.\n";
+  print "<hr/>";
+  print "Some links I may find useful: <ul>";
+  print "<li><a href='https://github.com/heikkilevanto/beertracker' target='_blank'>Beertracker on GitHub</a></li>\n";
+  print "<li><a href='https://www.ratebeer.com' target='_blank'>RateBeer</a></li>\n";
+  print "<li><a href='https://untappd.com' target='_blank'>Untappd</a></li>\n";
+  print "</ul>\n";
 } elsif ( $op eq "full" ) {
   # Ignore for now, we print the full list later.
 } elsif ( $op ) {
@@ -749,6 +760,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       "&f=r' >Ratings</a>\n";
   print "<a href='$url?q=" . uri_escape($qry) .
       "&f=c' >Comments</a>\n";
+  print "<a href='$url?q=" . uri_escape($qry) .
+      "&f=l' >Links</a>\n";
   if ($qrylim) {
     print "<a href='$url?q=" . uri_escape($qry) . "'>All</a><br/>\n";
     for ( my $i = 0; $i < 11; $i++) {
@@ -877,7 +890,6 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $vols{40} = 1;
 
     print "<a href='$url?e=" . uri_escape($stamp) ."' >Edit</a> \n";
-    print glink("$mak $beer");
 
     # No price - the script guesses based on size.
     # No location, reuse the current loc
@@ -894,6 +906,12 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
                   style='display: inline; font-size: small' />\n";
     }
     print "</form>\n";
+    if ( $qrylim eq "l" ) {
+      print "<br/>";
+      print glink("$mak $beer", "Google") . "&nbsp;\n";
+      print rblink("$mak $beer", "RateBeer") . "&nbsp;\n";
+      print utlink("$mak $beer", "Untappd") . "&nbsp;\n";
+    }
 
     print"<br/>\n";
     $lastloc = $dateloc;
@@ -1008,6 +1026,27 @@ sub glink {
   return "" unless $qry;
   $qry = uri_escape($qry);
   my $lnk = "<i><a href='https://www.google.com/search?q=$qry'  target='_blank'>" .
+      "$txt</a></i>\n";
+  return $lnk;
+}
+
+# Helper to make a Ratebeer search link
+sub rblink {
+  my $qry = shift;
+  my $txt = shift || "(Ratebeer)";
+  return "" unless $qry;
+  $qry = uri_escape($qry);
+  my $lnk = "<i><a href='https://www.ratebeer.com/search?q=$qry' target='_blank'>" .
+      "$txt</a></i>\n";
+  return $lnk;
+}
+# Helper to make a Untappd search link
+sub utlink {
+  my $qry = shift;
+  my $txt = shift || "(Ratebeer)";
+  return "" unless $qry;
+  $qry = uri_escape($qry);
+  my $lnk = "<i><a href='https://untappd.com/search?q=$qry' target='_blank'>" .
       "$txt</a></i>\n";
   return $lnk;
 }
