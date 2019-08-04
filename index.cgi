@@ -660,7 +660,7 @@ $com ) =
     if ( $op eq "Location" ) {
       $fld = $loc;
       $line = "<td>" . filt($loc,"b") .
-        "<br/>" . loclink($loc) . "</td>" .
+        "<br/> &nbsp; " . loclink($loc) . "  " . glink($loc) . "</td>" .
         "<td>$wday $effdate ($seen{$loc})<br/>" .
         lst("Beer",$mak,"i") . ": " . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
@@ -669,7 +669,7 @@ $com ) =
       next if ( $mak =~ /^restaurant/i );
       $fld = $mak;
       $mak =~ s"/"/<br/>";
-      $line = "<td>" . lst("Beer",$mak) . "</td>" .
+      $line = "<td>" . lst("Beer",$mak) . "<br/>&nbsp;&nbsp;" . glink($mak) . "</td>" .
       "<td>$wday $effdate " .lst("Beer",$loc) . " ($seen{$fld})" .  # $mak before cleaning
             "<br/>" . filt("[$sty]") . "  " . filt($beer,"b")  ."&nbsp;</td>";
     } elsif ( $op eq "Beer" ) {
@@ -677,20 +677,23 @@ $com ) =
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ".
+      $line = "<td>" . filt($beer,"b")  . "<br/>&nbsp;&nbsp;" . glink($mak) ."</td>" .
+            "<td>$wday $effdate ".
             lst("Beer",$loc) .  " ($seen{$beer})<br/>" .
             filt("[$sty]"). " " .
             lst("Beer",$mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Wine" ) {
       next unless ( $mak =~ /^wine/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "</td><td>$wday $effdate ".
+      $line = "<td>" . filt($beer,"b")  . "<br/>&nbsp;&nbsp;" . glink($beer) . "</td>" .
+            "<td>$wday $effdate ".
             lst("Wine",$loc) . " ($seen{$beer})" .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze/i );
       $fld = $beer;
-      $line = "<td>" .filt($beer,"b") . "</td><td>$wday $effdate ".
+      $line = "<td>" .filt($beer,"b") . "<br/>&nbsp;&nbsp;" . glink($beer) ."</td>" .
+            "<td>$wday $effdate ".
             lst("Booze",$loc) ." ($seen{$beer})" .
             "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Restaurant" ) {
@@ -702,7 +705,7 @@ $com ) =
       my $rpr = "";
       $rpr = "$pr kr" if ($pr && $pr >0) ;
       $line = "<td>" . filt($loc,"b") . "<br/>".
-              "$rpr $rstyle ($seen{$loc}) </td>" .
+              "$rpr $rstyle ($seen{$loc}) &nbsp;" . glink($loc) . "</td>" .
               "<td><i>$beer</i>". "<br/>" .
               "$wday $effdate $rate</td>";
     } elsif ( $op eq "Style" ) {
@@ -874,9 +877,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $vols{40} = 1;
 
     print "<a href='$url?e=" . uri_escape($stamp) ."' >Edit</a> \n";
-    my $gqry=uri_escape("$mak $beer");
-    print "<a href='https://www.google.com/search?q=$gqry'  target='_blank'>" .
-      "(G)</a>\n";
+    print glink("$mak $beer");
 
     # No price - the script guesses based on size.
     # No location, reuse the current loc
@@ -998,6 +999,17 @@ sub loclink {
     $lnk = " &nbsp; <i>(<a href='" . $links{$loc} . "' target='_blank' >list</a>)</i>" ;
   }
   return $lnk
+}
+
+# Helper to make a google link
+sub glink {
+  my $qry = shift;
+  my $txt = shift || "(Google)";
+  return "" unless $qry;
+  $qry = uri_escape($qry);
+  my $lnk = "<i><a href='https://www.google.com/search?q=$qry'  target='_blank'>" .
+      "$txt</a></i>\n";
+  return $lnk;
 }
 
 # Helper to sanitize numbers
