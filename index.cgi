@@ -650,7 +650,6 @@ $com ) =
   }
   print "Filter: <a href='$url?q=$qry'>$qry</a> " .
      "<a href='$url?o=$op'>(clear) <br/>" if $qry;
-
   my $i = scalar( @lines );
   my $fld;
   my $line;
@@ -755,6 +754,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   print "<hr/>Filter: <a href='$url'><b>$qry (Clear)</b></a>" if ($qry || $qrylim);
   print " -".$qrylim if ($qrylim);
   print " &nbsp; \n";
+  print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) ."\n" if ($qry);
+
   print "<br/>"if ($qry || $qrylim);
   print "<a href='$url?q=" . uri_escape($qry) .
       "&f=r' >Ratings</a>\n";
@@ -1043,7 +1044,7 @@ sub rblink {
 # Helper to make a Untappd search link
 sub utlink {
   my $qry = shift;
-  my $txt = shift || "(Ratebeer)";
+  my $txt = shift || "(Untappd)";
   return "" unless $qry;
   $qry = uri_escape($qry);
   my $lnk = "<i><a href='https://untappd.com/search?q=$qry' target='_blank'>" .
