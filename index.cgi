@@ -797,9 +797,22 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       # loc summary: if nonzero, and diff from daysummary
       # or there is a new loc coming,
       if ( $locdrinks > 0.1) {
-        if ( $loccnt > 1 ) { # but only if more than one drink at loc
-          print "$lastloc2: $locdrinks d, $locmsum kr. <br/> \n";
-        }
+        print "<br/>$lastwday ";
+        print "$lastloc2: $locdrinks d, $locmsum kr. \n";
+        # Restaurant copy button
+        print "<form method='POST' style='display: inline;' >\n";
+        print "<input type='hidden' name='l' value='$loc' />\n";
+        my $rtype = $restaurants{$loc} || "Restaurant, unspecified";
+        print "<input type='hidden' name='m' value='$rtype' />\n";
+        print "<input type='hidden' name='b' value='Food and Drink' />\n";
+        print "<input type='hidden' name='v' value='' />\n";
+        print "<input type='hidden' name='s' value='Unspecified Style' />\n";
+        print "<input type='hidden' name='a' value='0' />\n";
+        print "<input type='hidden' name='p' value='$locmsum kr' />\n";
+        $rtype =~ s/^Restaurant, //;
+        print "<input type='submit' name='submit' value='Rest'
+                    style='display: inline; font-size: x-small' />\n";
+        print "</form><br/>\n";
       }
       # day summary
       if ($lastdate ne $effdate ) {
@@ -819,20 +832,6 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     }
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
       print "<br/><b>$wday $date </b>" . filt($loc,"b") . newmark($loc) . loclink($loc);
-      # Restaurant copy button
-      print "<form method='POST' style='display: inline;' >\n";
-      print "<input type='hidden' name='l' value='$loc' />\n";
-      my $rtype = $restaurants{$loc} || "Restaurant, unspecified";
-      print "<input type='hidden' name='m' value='$rtype' />\n";
-      print "<input type='hidden' name='b' value='Food and Drink' />\n";
-      print "<input type='hidden' name='v' value='' />\n";
-      print "<input type='hidden' name='s' value='Unspecified Style' />\n";
-      print "<input type='hidden' name='a' value='0' />\n";
-      print "<input type='hidden' name='p' value='$locmsum kr' />\n";
-      $rtype =~ s/^Restaurant, //;
-      print "<input type='submit' name='submit' value='Rest'
-                  style='display: inline;' />\n";
-      print "</form>\n";
       print "<br/>\n" ;
     }
     if ( $date ne $effdate ) {
@@ -887,7 +886,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
 
     foreach my $volx (sort keys(%vols)  ){
       print "<input type='submit' name='submit' value='Copy $volx'
-                  style='display: inline;' />\n";
+                  style='display: inline; font-size: small' />\n";
     }
     print "</form>\n";
 
