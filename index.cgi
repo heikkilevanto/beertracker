@@ -266,7 +266,7 @@ print "<title>Beer</title>\n";
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
 print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
 print "<style rel='stylesheet'>\n";
-print   "* { background-color: #003000; color: #FFFFFF }\n";
+print   "* { background-color: #003000; color: #FFFFFF; font-size: small }\n";
 print "</style>\n";
 print "<link rel='shortcut icon' href='beer.png'/>\n";
 print "</head>\n";
@@ -431,7 +431,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
     $xtic = $onemonth;
   }
   my $cmd = "" .
-       "set term png small size 360,240 \n".
+       "set term png small size 340,240 \n".
        "set out \"$pngfile\" \n".
        "set xdata time \n".
        "set timefmt \"%Y-%m-%d\" \n".
@@ -466,7 +466,6 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   #print "$htcmd <br/>\n";
   system ("gnuplot $cmdfile ");
   print "<hr/>\n";
-  print "<p/>\n";
   print "<img src=\"$pngfile\"/><br/>\n";
   my $len = $startoff - $endoff;
   my $es = $startoff + $len;
@@ -565,7 +564,7 @@ $com ) =
     $daysum += ( $alc * $vol ) if ($alc && $vol) ;
   }
   if ( $maxlines >= 0 ) {
-    print "<p/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
+    print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
   }
 #######################
@@ -634,12 +633,12 @@ $com ) =
 # various lists (beer, location, etc)
   print "<hr/><a href='$url'><b>$op</b> list</a>.\n";
   if ( !$sortlist) {
-    print "(<a href='$url?o=$op&sort=1' >sort</a>) <p/>\n";
+    print "(<a href='$url?o=$op&sort=1' >sort</a>) <br/>\n";
   } else {
-    print "(<a href='$url?o=$op'>Recent</a>) <p/>\n";
+    print "(<a href='$url?o=$op'>Recent</a>) <br/>\n";
   }
   print "Filter: <a href='$url?q=$qry'>$qry</a> " .
-     "<a href='$url?o=$op'>(clear) <p/>" if $qry;
+     "<a href='$url?o=$op'>(clear) <br/>" if $qry;
 
   my $i = scalar( @lines );
   my $fld;
@@ -648,7 +647,7 @@ $com ) =
   my %lineseen;
   my $anchor="";
   my $odd = 1;
-  print "<table style='background-color: #006000;' >\n";
+  print "&nbsp;<br/><table style='background-color: #006000;' >\n";
   # For some reason this sets a color between the cells, not within them.
   # which is ok, makes it easier to see what is what.
   while ( $i > 0 ) {
@@ -731,7 +730,7 @@ $com ) =
     print $dl;
   }
   print "</table>\n";
-  print "<p/>Total " . scalar(@displines) . " entries <p/>\n" if (scalar(@displines));
+  print "<br/>Total " . scalar(@displines) . " entries <br/>\n" if (scalar(@displines));
 
 }
 ########################
@@ -753,7 +752,6 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       print "<a href='$url?q=" . uri_escape($qry) . "&f=r$i' >$i</a> &nbsp;";
     }
   }
-  print "<p/>\n";
   my $i = scalar( @lines );
   my $lastloc = "";
   my $lastdate = "today";
@@ -800,7 +798,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       # or there is a new loc coming,
       if ( $locdrinks > 0.1) {
         if ( $loccnt > 1 ) { # but only if more than one drink at loc
-          print "$lastloc2: $locdrinks d, $locmsum kr. \n";
+          print "$lastloc2: $locdrinks d, $locmsum kr. <br/> \n";
         }
       }
       # day summary
@@ -814,14 +812,13 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       $locdsum = 0.0;
       $locmsum = 0;
       $loccnt = 0;
-      print "<p/>";
     }
     if ( $lastdate ne $effdate ) { # New date
       print "<hr/>\n" ;
       $lastloc = "";
     }
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
-      print "<p><b>$wday $date </b>" . filt($loc,"b") . newmark($loc) . loclink($loc);
+      print "<br/><b>$wday $date </b>" . filt($loc,"b") . newmark($loc) . loclink($loc);
       # Restaurant copy button
       print "<form method='POST' style='display: inline;' >\n";
       print "<input type='hidden' name='l' value='$loc' />\n";
@@ -836,7 +833,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       print "<input type='submit' name='submit' value='Rest'
                   style='display: inline;' />\n";
       print "</form>\n";
-      print "</p>\n" ;
+      print "<br/>\n" ;
     }
     if ( $date ne $effdate ) {
       $time = "($time)";
@@ -852,16 +849,16 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $anchor =~ s/[^0-9]//g;
     print "\n<a id='$anchor'/>\n";
     print "<form method='POST' style='display: inline;' >\n";
-    print "<p>$time &nbsp;" . filt($mak,"i") . newmark($mak) .
+    print "<br/>$time &nbsp;" . filt($mak,"i") . newmark($mak) .
             " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br/>\n";
     print filt("[$sty]") . newmark($sty) . " "   if ($sty);
-    print "$pr kr " if ($origpr =~ /\d+/);
-    print "$vol cl " if ($vol);
-    print "* $alc % " if ($alc);
+    print $pr ."kr " if ($origpr =~ /^[1-9]\d*/);
+    print $vol. "cl " if ($vol);
+    print "·$alc%" if ($alc);
     if ( $alc && $vol ) {
       my $dr = sprintf("%1.2f", ($alc * $vol) / $onedrink );
-      print "= $dr d ";
+      print " $dr"." d";
     }
     print "<br/>\n";
     if ($rate || $com) {
@@ -894,7 +891,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     }
     print "</form>\n";
 
-    print"</p>\n";
+    print"<br/>\n";
     $lastloc = $dateloc;
     $lastloc2 = $loc;
     $lastdate = $effdate;
@@ -913,19 +910,19 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
          $lastdate ne $effdate ) {
       print " <b>$lastwday</b>: $daydrinks d, $daymsum kr\n";
       }
-      print "<p/>";
+      print "<br/>";
     }
 
   print "<hr/>\n" ;
   if ( $maxlines == 0 && $anchor ) {
-    print "<p/><a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
+    print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
       "More</a><br/>\n";
   } else {
-    print "<p/>That was the whole list<br/>\n";
+    print "<br/>That was the whole list<br/>\n";
   }
   my $rsum = 0;
   my $rcnt = 0;
-  print "<p/>Ratings:<br/>\n";
+  print "<br/>Ratings:<br/>\n";
   for (my $i = 0; $i<11; $i++) {
     $rsum += $ratecounts[$i] * $i;
     $rcnt += $ratecounts[$i];
@@ -936,7 +933,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "$rcnt ratings avg <b>" . sprintf("%3.1f", $rsum/$rcnt).
       " " . $ratings[$rsum/$rcnt] .
     "</b><br/>\n";
-    print "<p/>\n";
+    print "<br/>\n";
   }
 }
 
