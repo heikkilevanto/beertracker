@@ -818,8 +818,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         print "$lastloc2: $locdrinks d, $locmsum kr. \n";
         # Restaurant copy button
         print "<form method='POST' style='display: inline;' >\n";
-        print "<input type='hidden' name='l' value='$loc' />\n";
-        my $rtype = $restaurants{$loc} || "Restaurant, unspecified";
+        print "<input type='hidden' name='l' value='$lastloc2' />\n";
+        my $rtype = $restaurants{$lastloc2} || "Restaurant, unspecified";
         print "<input type='hidden' name='m' value='$rtype' />\n";
         print "<input type='hidden' name='b' value='Food and Drink' />\n";
         print "<input type='hidden' name='v' value='' />\n";
