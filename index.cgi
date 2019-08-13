@@ -513,7 +513,7 @@ $com ) =
     if ( $lastdate ne $effdate ) {
       if ( $entry ) {
         my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
-        $entry .= " " . $daydrinks;
+        $entry .= " " . unit($daydrinks,"d");
         print "$entry";
         my $shortplaces = $places;
         $shortplaces =~ s/<[^>]+>//g;
@@ -687,10 +687,10 @@ $com ) =
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "<br/>&nbsp;&nbsp;" . glink($mak) ."</td>" .
+      $line = "<td>" . filt($beer,"b") . "<br/>&nbsp;&nbsp;" . glink($mak) ."</td>" .
             "<td>$wday $effdate ".
             lst("Beer",$loc) .  " ($seen{$beer})<br/>" .
-            filt("[$sty]"). " " .
+            filt("[$sty]"). " " . unit($alc,'%') .
             lst("Beer",$mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Wine" ) {
       next unless ( $mak =~ /^wine/i );
@@ -698,14 +698,14 @@ $com ) =
       $line = "<td>" . filt($beer,"b")  . "<br/>&nbsp;&nbsp;" . glink($beer) . "</td>" .
             "<td>$wday $effdate ".
             lst("Wine",$loc) . " ($seen{$beer})" .
-            "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
+            "<br/>" . filt("[$sty]"). " ". unit($alc,'%') . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze/i );
       $fld = $beer;
       $line = "<td>" .filt($beer,"b") . "<br/>&nbsp;&nbsp;" . glink($beer) ."</td>" .
             "<td>$wday $effdate ".
             lst("Booze",$loc) ." ($seen{$beer})" .
-            "<br/>" . filt("[$sty]"). " " . filt($mak,"i") . "&nbsp;</td>";
+            "<br/>" . filt("[$sty]"). " " . unit($alc,'%') . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $mak =~ /^restaurant,? *(.*)$/i );
       my $rstyle="";  # op,qry,tag,dsp
@@ -815,7 +815,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       # or there is a new loc coming,
       if ( $locdrinks > 0.1) {
         print "<br/>$lastwday ";
-        print "$lastloc2: $locdrinks d, $locmsum kr. \n";
+        print "$lastloc2: " . unit($locdrinks,"d"). unit($locmsum, "kr"). "\n";
         # Restaurant copy button
         print "<form method='POST' style='display: inline;' >\n";
         print "<input type='hidden' name='l' value='$lastloc2' />\n";
@@ -834,7 +834,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       # day summary
       if ($lastdate ne $effdate ) {
         if ( $locdrinks ne $daydrinks) {
-          print " <b>$lastwday</b>: $daydrinks d, $daymsum kr <br/>\n";
+          print " <b>$lastwday</b>: ". unit($daydrinks,"d"). unit($daymsum,"kr"). " <br/>\n";
         }
         $daydsum = 0.0;
         $daymsum = 0;
@@ -869,13 +869,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
             " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br/>\n";
     print filt("[$sty]") . newmark($sty) . " "   if ($sty);
-    print $pr ."kr " if ($origpr =~ /^[1-9]\d*/);
-    print $vol. "cl " if ($vol);
-    print "·$alc%" if ($alc);
-    if ( $alc && $vol ) {
-      my $dr = sprintf("%1.2f", ($alc * $vol) / $onedrink );
-      print " $dr"." d";
-    }
+    print units($pr, $vol, $alc) . " --- ";
     print "<br/>\n";
     if ($rate || $com) {
       print " <b>$rate-$ratings[$rate]</b>" if ($rate);
@@ -1083,6 +1077,31 @@ sub curprice {
   }
   return "";
 }
+
+# helper to make a unit displayed in smaller font
+sub unit {
+  my $v = shift;
+  my $u = shift;
+  return "" unless $v;
+  return "$v<span style='font-size: xx-small'>$u</span> ";
+}
+
+# helper to display the units string
+# price, alc, vol, drinks
+sub units {
+  my $pr = shift;
+  my $vol = shift;
+  my $alc = shift;
+  my $s = unit($pr,"kr") .
+    unit($vol, "cl").
+    unit($alc,'%');
+  if ( $alc && $vol ) {
+    my $dr = sprintf("%1.2f", ($alc * $vol) / $onedrink );
+    $s .= unit($dr, "d");
+  }
+  return $s;
+}
+
 
 # Helper to make an error message
 sub error {
