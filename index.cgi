@@ -68,10 +68,10 @@ my $localtest = 0; # Local test installation
 
 # Default sizes
 $vol =~ s/^T$/2/i;  # Taster, sizes vary, but always small
-$vol =~ s/^G$/12/i; # Glass of wine
+$vol =~ s/^G$/15/i; # Glass of wine - 12 in places, at home 15 is more realistic
 $vol =~ s/^S$/25/i; # Small, usually 25
 $vol =~ s/^M$/33/i; # Medium, typically a bottle beer
-$vol =~ s/^L$/40/i; # Large, 40cl in most places I frequent
+$vol =~ s/^L$/40/i; # Large, 40cl in most places I frequent (also half btl of wine)
 $vol =~ s/^B$/75/i; # Bottle of wine
 if ( $vol =~ /([0-9]+) *oz/i ) {  # (us) fluid ounces
   $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
@@ -869,8 +869,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
             " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br/>\n";
     print filt("[$sty]") . newmark($sty) . " "   if ($sty);
-    print units($pr, $vol, $alc) . " --- ";
-    print "<br/>\n";
+    print units($pr, $vol, $alc). "<br/>\n";
     if ($rate || $com) {
       print " <b>$rate-$ratings[$rate]</b>" if ($rate);
       print ": " if ($rate && $com);
