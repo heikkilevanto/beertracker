@@ -274,6 +274,7 @@ print "<body>\n";
 print "\n<!-- Read " . scalar(@lines). " lines from $datafile -->\n\n" ;
 
 my $script = <<'SCRIPTEND';
+  var clearonclick = true;
   function clearinputs() {
     var inputs = document.getElementsByTagName('input');
     for (var i = 0; i < inputs.length; i++ ) {
@@ -292,7 +293,7 @@ print "<script>\n$script</script>\n";
 # Main input form
 print "\n<form method='POST'>\n";
 print "<table >";
-my $clr = "Onclick='value=\"\";'";
+my $clr = "Onclick='if (clearonclick) {value=\"\";}'";
 my $c2 = "colspan='2'";
 my $c3 = "colspan='3'";
 my $c4 = "colspan='4'";
@@ -333,8 +334,11 @@ print "</select></td></tr>\n";
 print " <td $c6><textarea name='c' cols='36' rows='3'
   placeholder='$todaydrinks'/>$com</textarea></td></tr>\n";
 if ( $edit ) {
-  print "<tr><td><input type='submit' name='submit' value='Save'/></td>\n";
-  print "<td><a href='$url' >cancel</a>";
+  print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
+  print "&nbsp;<span align=right>Clr ";
+  print "<input type='checkbox' checked=clearonclick onclick='clearonclick=this.checked;'/></span></td>\n";
+  print "<td>";
+  print "<a href='$url' >cancel</a>";
   print "&nbsp;<input type='submit' name='submit' value='Delete'/></td></tr>\n";
 } else {
   print "<tr><td><input type='submit' name='submit' value='Record'/>\n";
