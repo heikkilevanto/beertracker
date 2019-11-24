@@ -142,7 +142,7 @@ while (<F>) {
     }
   }
   if ( ( $m  =~ /^Restaurant,/i ) ) {
-    $restaurants{$l} = $m;
+    $restaurants{$l} = $m; # Remember style
   }
 }
 if ( ! $todaydrinks ) { # not today
@@ -825,9 +825,10 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         print "<input type='hidden' name='l' value='$lastloc2' />\n";
         my $rtype = $restaurants{$lastloc2} || "Restaurant, unspecified";
         print "<input type='hidden' name='m' value='$rtype' />\n";
+        $rtype =~ s/Restaurant, //;
         print "<input type='hidden' name='b' value='Food and Drink' />\n";
         print "<input type='hidden' name='v' value='' />\n";
-        print "<input type='hidden' name='s' value='Unspecified Style' />\n";
+        print "<input type='hidden' name='s' value='$rtype' />\n";
         print "<input type='hidden' name='a' value='0' />\n";
         print "<input type='hidden' name='p' value='$locmsum kr' />\n";
         $rtype =~ s/^Restaurant, //;
