@@ -900,9 +900,14 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation
 );
 
-    foreach my $volx (sort keys(%vols)  ){
-      print "<input type='submit' name='submit' value='Copy $volx'
-                  style='display: inline; font-size: small' />\n";
+    if ( $mak  =~ /^Restaurant,/i ) {
+        print "<input type='submit' name='submit' value='Copy R'
+                    style='display: inline; font-size: small' />\n";
+    } else {
+      foreach my $volx (sort keys(%vols)  ){
+        print "<input type='submit' name='submit' value='Copy $volx'
+                    style='display: inline; font-size: small' />\n";
+      }
     }
     print "</form>\n";
     if ( $qrylim eq "l" ) {
