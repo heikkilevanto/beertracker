@@ -884,10 +884,18 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $ratecounts[$rate] ++ if ($rate);
     # guess sizes for small/large beers
     my %vols;
-    $vols{$vol} = 1;
-    $vols{25} = 1;
-    $vols{40} = 1;
-
+    $vols{$vol} = 1 if ($vol);
+    if ( $mak  =~ /^Restaurant,/i ) {
+      $vols{"R"} = 1;
+    } elsif ( $mak  =~ /^Wine,/i ) {
+      $vols{12} = 1;
+      $vols{16} = 1;
+      $vols{38} = 1;
+      $vols{75} = 1;
+    } else {
+      $vols{25} = 1;
+      $vols{40} = 1;
+    }
     print "<a href='$url?e=" . uri_escape($stamp) ."' >Edit</a> \n";
 
     # No price - the script guesses based on size.
@@ -897,17 +905,12 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "<input type='hidden' name='v' value='' />\n";
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
-    print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation
-);
+    print "<input type='hidden' name='l' value='$loc' />\n"
+      if ( $copylocation);
 
-    if ( $mak  =~ /^Restaurant,/i ) {
-        print "<input type='submit' name='submit' value='Copy R'
-                    style='display: inline; font-size: small' />\n";
-    } else {
-      foreach my $volx (sort keys(%vols)  ){
-        print "<input type='submit' name='submit' value='Copy $volx'
-                    style='display: inline; font-size: small' />\n";
-      }
+    foreach my $volx (sort keys(%vols)  ){
+      print "<input type='submit' name='submit' value='Copy $volx'
+                  style='display: inline; font-size: small' />\n";
     }
     print "</form>\n";
     if ( $qrylim eq "l" ) {
