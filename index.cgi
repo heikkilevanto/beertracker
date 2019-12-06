@@ -892,7 +892,10 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       $vols{16} = 1;
       $vols{38} = 1;
       $vols{75} = 1;
-    } else {
+    } elsif ( $mak  =~ /^Booze,/i ) {
+      $vols{2} = 1;
+      $vols{4} = 1;
+    } else { # Default to beer, usual sizes in craft beer world
       $vols{25} = 1;
       $vols{40} = 1;
     }
@@ -908,7 +911,9 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "<input type='hidden' name='l' value='$loc' />\n"
       if ( $copylocation);
 
-    foreach my $volx (sort keys(%vols)  ){
+    foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
+      # The sort order defaults to numerical, but if that fails, takes
+      # alphabetical ('R' for restaurant). Note the "no warnings".
       print "<input type='submit' name='submit' value='Copy $volx'
                   style='display: inline; font-size: small' />\n";
     }
