@@ -32,9 +32,10 @@ my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
 # Links to beer lists at the most common locations and breweries
 my %links;
 $links{"Ølbaren"} = "http://oelbaren.dk/oel/";
+$links{"Ølsnedkeren"} = "https://www.olsnedkeren.dk/";
 $links{"Fermentoren"} = "http://fermentoren.com/index";
 $links{"Dry and Bitter"} = "http://www.dryandbitter.com/products.php";
-$links{"Dudes"} = "http://www.dudes.bar";
+#$links{"Dudes"} = "http://www.dudes.bar"; # R.I.P Dec 2018
 
 # currency conversions
 my %currency;
