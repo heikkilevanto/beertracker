@@ -115,11 +115,14 @@ while (<F>) {
   next unless $_; # skip empty lines
   push @lines, $_; # collect them all
   my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
+  my $restname = "";
+  $restname = "$1$l" if ( $m  =~ /^(Restaurant,)/i );
   $thisloc = $l if $l;
   $seen{$l}++;
   $seen{$m}++;
   $seen{$b}++;
   $seen{$s}++;
+  $seen{$restname}++;
   if ( ! $edit || ($edit eq $t) ) {
     $foundline = $_;
   }
@@ -722,10 +725,11 @@ $com ) =
       if ( $1 ) { $rstyle = lst($op, "Restaurant, $1", "", $1); }
       $fld = "$loc";
       $rate = "$rate: <b>$ratings[$rate]</b>" if $rate;
+      my $restname = "Restaurant,$loc";
       my $rpr = "";
       $rpr = "&nbsp; $pr kr" if ($pr && $pr >0) ;
-      $line = "<td>" . filt($loc,"b") . "&nbsp; ($seen{$loc}) <br/>".
-              "$rstyle  &nbsp;" . glink($loc) . "</td>" .
+      $line = "<td>" . filt($loc,"b") . "&nbsp; ($seen{$restname})<br/>".
+              "$rstyle  &nbsp;" . glink("Restaurant $loc") . "</td>" .
               "<td><i>$beer</i>". " $rpr<br/>" .
               "$wday $effdate $rate</td>";
     } elsif ( $op eq "Style" ) {
