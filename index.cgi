@@ -645,10 +645,17 @@ $com ) =
   print "It is Open Source.\n";
   print "<hr/>";
   print "Some links I may find useful: <ul>";
-  print "<li><a href='https://github.com/heikkilevanto/beertracker' target='_blank'>Beertracker on GitHub</a></li>\n";
+  print "<li><a href='https://github.com/heikkilevanto/beertracker' target='_blank'>".
+     "Beertracker on GitHub</a></li>\n";
   print "<li><a href='https://www.ratebeer.com' target='_blank'>RateBeer</a></li>\n";
   print "<li><a href='https://untappd.com' target='_blank'>Untappd</a></li>\n";
-  print "</ul>\n";
+  print "</ul><p/>\n";
+  print "Some of my favourite bars<ul>";
+  for my $k ( keys(%links) ) {
+    print "<li><a href='$links{$k}'>$k</a></li>";
+  }
+  print "</ul><p/>\n";
+
 } elsif ( $op eq "full" ) {
   # Ignore for now, we print the full list later.
 } elsif ( $op ) {
@@ -700,25 +707,27 @@ $com ) =
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b") . "&nbsp;" . glink($mak,"G") ."</td>" .
+      $line = "<td>" . filt($beer,"b") . "&nbsp; ($seen{$beer}) &nbsp;" . glink($mak,"G") ."</td>" .
             "<td>$wday $effdate ".
-            lst("Beer",$loc) .  " ($seen{$beer})<br/>" .
+            lst("Beer",$loc) .  "<br/>" .
             filt("[$sty]"). " " . unit($alc,'%') .
             lst("Beer",$mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Wine" ) {
-      next unless ( $mak =~ /^wine/i );
+      next unless ( $mak =~ /^wine, *(.*)$/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "&nbsp;" . glink($beer, "G") . "</td>" .
+      my $stylename = $1;
+      $line = "<td>" . filt($beer,"b")  . "&nbsp; $stylename &nbsp;" . glink($beer, "G") . "</td>" .
             "<td>$wday $effdate ".
             lst("Wine",$loc) . " ($seen{$beer})" .
-            "<br/>" . filt("[$sty]"). " ". unit($alc,'%') . filt($mak,"i") . "&nbsp;</td>";
+            "<br/>" . filt("[$sty]"). "</td>";
     } elsif ( $op eq "Booze" ) {
-      next unless ( $mak =~ /^booze/i );
+      next unless ( $mak =~ /^booze, *(.*)$/i );
       $fld = $beer;
+      my $stylename = $1;
       $line = "<td>" .filt($beer,"b") . "&nbsp;" . glink($beer, "G") ."</td>" .
             "<td>$wday $effdate ".
             lst("Booze",$loc) ." ($seen{$beer})" .
-            "<br/>" . filt("[$sty]"). " " . unit($alc,'%') . filt($mak,"i") . "&nbsp;</td>";
+            "<br/>" . filt("[$sty]"). " " . unit($alc,'%') . filt($mak,"i", $stylename) . "&nbsp;</td>";
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $mak =~ /^restaurant,? *(.*)$/i );
       my $rstyle="";  # op,qry,tag,dsp
@@ -740,7 +749,7 @@ $com ) =
       $fld = $sty;
       $line = "<td>" . filt("[$sty]","b") . " ($seen{$sty})" . "</td><td>$wday $effdate " .
             lst("Beer",$loc,"i") .
-            "<br/>" . lst("Beer",$mak,"i") . ":" . filt($beer,"b") . "</td>";
+            "<br/>" . lst("Beer",$mak,"i") . ": " . filt($beer,"b") . "</td>";
     } else {
       print "<!-- unknown shortlist '$op' -->\n";
       last;
@@ -1001,10 +1010,11 @@ sub param {
 sub filt {
   my $f = shift;
   my $tag = shift || "nop";
+  my $dsp = shift || $f;
   my $param = $f;
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
   my $link = "<a href='$url?q=".uri_escape($param) ."'
-><$tag>$f</$tag></a>";
+><$tag>$dsp</$tag></a>";
 
   return $link;
 }
