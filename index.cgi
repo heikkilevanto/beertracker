@@ -499,6 +499,8 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $ie = $endoff + int($len/4);
   print " &nbsp; <a href='$url?o=Graph-$is-$ie'>[ + ]</a>\n";
   print "<br/>\n";
+
+
 ########################
 # short list, one line per day
 } elsif ( $op eq "short" ) {
@@ -570,6 +572,8 @@ $com ) =
     print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
   }
+
+
 #######################
 # Annual summary
 } elsif ( $op eq "Year" ) {
@@ -628,6 +632,7 @@ $com ) =
     $yalc += $alc * $vol if ($alc && $vol);
     #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
   }
+
 #############################
 # About page
 } elsif ( $op eq "About" ) {
@@ -675,7 +680,7 @@ $com ) =
     if ( $op eq "Location" ) {
       $fld = $loc;
       $line = "<td>" . filt($loc,"b") .
-        "<br/> &nbsp; " . loclink($loc) . "  " . glink($loc) . "</td>" .
+        "&nbsp; " . loclink($loc, "L") . "  " . glink($loc, "G") . "</td>" .
         "<td>$wday $effdate ($seen{$loc})<br/>" .
         lst("Beer",$mak,"i") . ": " . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
@@ -692,7 +697,7 @@ $com ) =
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b") . "<br/>&nbsp;&nbsp;" . glink($mak) ."</td>" .
+      $line = "<td>" . filt($beer,"b") . "&nbsp;" . glink($mak,"G") ."</td>" .
             "<td>$wday $effdate ".
             lst("Beer",$loc) .  " ($seen{$beer})<br/>" .
             filt("[$sty]"). " " . unit($alc,'%') .
@@ -700,14 +705,14 @@ $com ) =
     } elsif ( $op eq "Wine" ) {
       next unless ( $mak =~ /^wine/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b")  . "<br/>&nbsp;&nbsp;" . glink($beer) . "</td>" .
+      $line = "<td>" . filt($beer,"b")  . "&nbsp;" . glink($beer, "G") . "</td>" .
             "<td>$wday $effdate ".
             lst("Wine",$loc) . " ($seen{$beer})" .
             "<br/>" . filt("[$sty]"). " ". unit($alc,'%') . filt($mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze/i );
       $fld = $beer;
-      $line = "<td>" .filt($beer,"b") . "<br/>&nbsp;&nbsp;" . glink($beer) ."</td>" .
+      $line = "<td>" .filt($beer,"b") . "&nbsp;" . glink($beer, "G") ."</td>" .
             "<td>$wday $effdate ".
             lst("Booze",$loc) ." ($seen{$beer})" .
             "<br/>" . filt("[$sty]"). " " . unit($alc,'%') . filt($mak,"i") . "&nbsp;</td>";
@@ -718,10 +723,10 @@ $com ) =
       $fld = "$loc";
       $rate = "$rate: <b>$ratings[$rate]</b>" if $rate;
       my $rpr = "";
-      $rpr = "$pr kr" if ($pr && $pr >0) ;
-      $line = "<td>" . filt($loc,"b") . "<br/>".
-              "$rpr $rstyle ($seen{$loc}) &nbsp;" . glink($loc) . "</td>" .
-              "<td><i>$beer</i>". "<br/>" .
+      $rpr = "&nbsp; $pr kr" if ($pr && $pr >0) ;
+      $line = "<td>" . filt($loc,"b") . "&nbsp; ($seen{$loc}) <br/>".
+              "$rstyle  &nbsp;" . glink($loc) . "</td>" .
+              "<td><i>$beer</i>". " $rpr<br/>" .
               "$wday $effdate $rate</td>";
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );
@@ -1005,7 +1010,6 @@ sub newmark {
   my $v = shift;
   my $rest = shift || "";
   return "" if ( $rest =~ /^Restaurant/);
-  #return " ($seen{$v}) " if ($seen{$v} != 1);
   return "" if ($seen{$v} && $seen{$v} != 1);
   return " (new?) ";
 }
@@ -1025,9 +1029,10 @@ sub lst {
 # Helper to make a link to a bar of brewery web page
 sub loclink {
   my $loc = shift;
+  my $txt = shift || "List";
   my $lnk = "";
   if (defined($links{$loc})) {
-    $lnk = " &nbsp; <i>(<a href='" . $links{$loc} . "' target='_blank' >list</a>)</i>" ;
+    $lnk = " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' >$txt</a></i>" ;
   }
   return $lnk
 }
@@ -1038,7 +1043,7 @@ sub glink {
   my $txt = shift || "(Google)";
   return "" unless $qry;
   $qry = uri_escape($qry);
-  my $lnk = "<i><a href='https://www.google.com/search?q=$qry'  target='_blank'>" .
+  my $lnk = "&nbsp;<i><a href='https://www.google.com/search?q=$qry'  target='_blank'>" .
       "$txt</a></i>\n";
   return $lnk;
 }
