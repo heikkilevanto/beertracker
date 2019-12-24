@@ -432,12 +432,15 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $numberofdays=7;
   my $xformat = "\"%d\\n%b\"";  # 14 Jul
   my $xtic = $oneweek;
+  my $pointsize = "";
   if ( $startoff - $endoff > 120 ) {
     $xformat="\"%b\\n'%y\"";  # Jul 19
     $xtic = $onemonth;
+    $pointsize = "set pointsize 0.5\n" ;
   }
   my $cmd = "" .
        "set term png small size 340,240 \n".
+       $pointsize .
        "set out \"$pngfile\" \n".
        "set xdata time \n".
        "set timefmt \"%Y-%m-%d\" \n".
