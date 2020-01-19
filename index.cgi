@@ -433,7 +433,11 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $xformat = "\"%d\\n%b\"";  # 14 Jul
   my $xtic = $oneweek;
   my $pointsize = "";
-  if ( $startoff - $endoff > 120 ) {
+  if ( $startoff - $endoff > 400 ) {
+    $xformat="\"%Y\"";  # 2019
+    $xtic = $oneday * 365.24 ;
+    $pointsize = "set pointsize 0.2\n" ;
+  } elsif ( $startoff - $endoff > 120 ) {
     $xformat="\"%b\\n'%y\"";  # Jul 19
     $xtic = $onemonth;
     $pointsize = "set pointsize 0.5\n" ;
