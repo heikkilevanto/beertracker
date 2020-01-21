@@ -7,6 +7,8 @@
 
 use CGI;
 use URI::Escape;
+use Time::HiRes qw(gettimeofday tv_interval); # while debugging slowness
+use POSIX qw(strftime localtime);
 use feature 'unicode_strings';
 
 my $q = CGI->new;
@@ -79,12 +81,10 @@ if ( $vol =~ /([0-9]+) *oz/i ) {  # (us) fluid ounces
 }
 
 if ( ! $stamp ) {
-  $stamp = `date "+%F %T"`;  # TODO - Do this in perl
-  chomp($stamp);
+  $stamp = datestr( "%F %T");
 }
 if ( ! $effdate ) { # Effective date can be the day before
-  $effdate = `date "+%a; %F" -d '8 hours ago' `;
-  chomp($effdate);
+  $effdate = datestr( "%a; %F", -0.3);
 } else {
   $effdate = "$wday; $effdate";
 }
@@ -375,10 +375,8 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $endoff = $2 || -1;
   print "\n<!-- " . ($op || "Graph") . "-->\n";
   my %sums;
-  my $startdate =  `date +%F -d "$startoff days ago"`;
-  chomp($startdate);
-  my $enddate =  `date +%F -d "$endoff days ago"`;
-  chomp($enddate);
+  my $startdate = datestr ("%F", -$startoff );
+  my $enddate = datestr( "%F", -$endoff);
   for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
        split( /; */, $lines[$i] );
@@ -394,8 +392,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $wkday;
   while ( $ndays > $endoff) {
     $ndays--;
-    $rawdate = `date +%F:%u -d "$ndays days ago" `;
-    chomp($rawdate);
+    $rawdate = datestr("%F:%u", -$ndays);
     ($date,$wkday) = split(':',$rawdate);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
     @month = ( @month, $tot);
@@ -543,7 +540,8 @@ $com ) =
       # Check for empty days in between
       my $ndays = 1;
       my $zerodate;
-      do {
+      do { # TODO - Do this in perl, with datestr()
+           # TODO - Make this like the graph, build an array of entries first
         $zerodate = `date +%F -d "$lastdate + $ndays days ago" `;
         $ndays++;  # that seems to work even without $lastdate, takes today!
       } while ( $zerodate gt $effdate );
@@ -1026,6 +1024,7 @@ sub filt {
   return $link;
 }
 
+
 # Helper to print "(NEW)" in case we never seen the entry before
 sub newmark {
   my $v = shift;
@@ -1156,3 +1155,10 @@ sub error {
   exit();
 }
 
+# Helper to get a date string, with optional delta (in days)
+sub datestr {
+  my $form = shift || "%F %T";
+  my $delta = shift || 0;   # in days, may be fractional. Negative for ealier
+  my $dstr = strftime ($form, localtime(time() + $delta *60*60*24));
+  return $dstr;
+}
