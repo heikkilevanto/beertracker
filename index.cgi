@@ -390,6 +390,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $sum30 = 0.0;
   my @month;
   my $wkday;
+  my $zerodays = -1;
   while ( $ndays > $endoff) {
     $ndays--;
     $rawdate = datestr("%F:%u", -$ndays);
@@ -407,7 +408,12 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
     #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
     $sum30 = $sum30 / $sumw;
     my $zero = "";
-    $zero = -0.1 unless ( $tot );
+    if ($tot > 0.01 ) {
+      $zerodays = 0;
+    } elsif ($zerodays >= 0) { # have seen a real $tot
+      $zero = -0.1 + ($zerodays % 7) * 0.4 ;
+      $zerodays ++; # Move the subsequent zero markers higher up
+    }
     if ( $ndays <=0 ) {
       $zero = ""; # no zero mark for current or next date, it isn't over yet
     }
@@ -419,8 +425,8 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
        $wkend = $tot;
        $tot = 0;
     }
-    #print "$ndays: $date / $wkday -  $tot $wkend $zero <br/>"; ###
-    print F "$date $tot $wkend $sum30 $zero \n";
+    #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays<br/>"; ###
+    print F "$date $tot $wkend $sum30 $zero \n "  if ($zerodays >= 0);
   }
   close(F);
   my $oneday = 24 * 60 * 60 ; # in seconds
