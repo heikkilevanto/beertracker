@@ -388,7 +388,6 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
   my $sum30 = 0.0;
-  my $lastavg;
   my @month;
   my $wkday;
   my $zerodays = -1;
@@ -420,8 +419,6 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
     }
     if ( $ndays <0 ) {
       $sum30=""; # No avg for next date, but yes for current
-    } else {
-      $lastavg=$sum30;
     }
     my $wkend = 0;
     if ($wkday > 4) {
@@ -501,8 +498,8 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   } else {
     print "&gt;&gt;n";
   }
-  print " &nbsp; <a href='$url?o=Graph'>Mon</a>\n";
-  print " <a href='$url?o=Graph-365'>Yr</a> \n";
+  print " &nbsp; <a href='$url?o=Graph'>Month</a>\n";
+  print " <a href='$url?o=Graph-365'>Year</a> \n";
 
   my $zs = $startoff + int($len/2);
   my $ze = $endoff - int($len/2);
@@ -514,7 +511,6 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my $is = $startoff - int($len/4);
   my $ie = $endoff + int($len/4);
   print " &nbsp; <a href='$url?o=Graph-$is-$ie'>[ + ]</a>\n";
-  print unit(sprintf("%2.2f",$lastavg),"d");
   print "<br/>\n";
 
 
