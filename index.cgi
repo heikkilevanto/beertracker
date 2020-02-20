@@ -370,9 +370,9 @@ if ( !$op && $ENV{'HTTP_USER_AGENT'} !~ /Android/ ) {
   $op = "Graph";  # Default to showing the graph on desktops
 } # but not on mobile devics
 
-if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
-  my $startoff = $1 || 30;
-  my $endoff = $2 || -1;
+if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
+  my $startoff = $1 || 30; # days ago
+  my $endoff = $2 || 0 ; # -1;  # days ago, -1 defaults to tomorrow
   print "\n<!-- " . ($op || "Graph") . "-->\n";
   my %sums;
   my $startdate = datestr ("%F", -$startoff );
@@ -391,6 +391,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
   my @month;
   my $wkday;
   my $zerodays = -1;
+  my $fut = "NaN";
   while ( $ndays > $endoff) {
     $ndays--;
     $rawdate = datestr("%F:%u", -$ndays);
@@ -415,10 +416,11 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
       $zerodays ++; # Move the subsequent zero markers higher up
     }
     if ( $ndays <=0 ) {
-      $zero = ""; # no zero mark for current or next date, it isn't over yet
+      $zero = "NaN"; # no zero mark for current or next date, it isn't over yet
     }
     if ( $ndays <0 ) {
-      $sum30=""; # No avg for next date, but yes for current
+      $fut = $sum30;
+      $sum30="NaN"; # No avg for next date, but yes for current
     }
     my $wkend = 0;
     if ($wkday > 4) {
@@ -426,7 +428,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
        $tot = 0;
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays<br/>"; ###
-    print F "$date $tot $wkend $sum30 $zero \n "  if ($zerodays >= 0);
+    print F "$date $tot $wkend $sum30 $zero $fut\n "  if ($zerodays >= 0);
   }
   close(F);
   my $oneday = 24 * 60 * 60 ; # in seconds
@@ -471,6 +473,8 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
         "\"$plotfile\" " .
             "using 1:4 with line lc 9 lw 2 notitle, " .  # avg30
         "\"$plotfile\" " .
+            "using 1:6 with dots lc 9 notitle, " .  # future tail
+        "\"$plotfile\" " .
             "using 1:5 with points lc 2 pointtype 11 notitle \n" .  # zeroes
         "";
   open C, ">$cmdfile"
@@ -493,10 +497,10 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(\d+)?/i ) { # make a graph
     $ls += $ls;
     $le = 0;
   }
-  if ($endoff) {
+  if ($endoff>0) {
     print "<a href='$url?o=Graph-$ls-$le'>&gt;&gt;</a>\n";
-  } else {
-    print "&gt;&gt;n";
+  } else { # at today, >> plots a zero-tail
+    print "<a href='$url?o=Graph-$startoff--14'>&gt;</a>\n";
   }
   print " &nbsp; <a href='$url?o=Graph'>Month</a>\n";
   print " <a href='$url?o=Graph-365'>Year</a> \n";
