@@ -372,11 +372,11 @@ if ( !$op && $ENV{'HTTP_USER_AGENT'} !~ /Android/ ) {
 
 if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $startoff = $1 || 30; # days ago
-  my $endoff = $2 || 0 ; # -1;  # days ago, -1 defaults to tomorrow
-  print "\n<!-- " . ($op || "Graph") . "-->\n";
-  my %sums;
+  my $endoff = $2 || -1;  # days ago, -1 defaults to tomorrow
   my $startdate = datestr ("%F", -$startoff );
   my $enddate = datestr( "%F", -$endoff);
+  print "\n<!-- " . $op . " $startdate to $enddate -->\n";
+  my %sums; # drink sums by (eff) date
   for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
        split( /; */, $lines[$i] );
