@@ -75,6 +75,7 @@ $vol =~ s/^G$/15/i; # Glass of wine - 12 in places, at home 15 is more realistic
 $vol =~ s/^S$/25/i; # Small, usually 25
 $vol =~ s/^M$/33/i; # Medium, typically a bottle beer
 $vol =~ s/^L$/40/i; # Large, 40cl in most places I frequent (also half btl of wine)
+$vol =~ s/^C$/44/i; # A can of 44 cl (us pint?)
 $vol =~ s/^B$/75/i; # Bottle of wine
 if ( $vol =~ /([0-9]+) *oz/i ) {  # (us) fluid ounces
   $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
