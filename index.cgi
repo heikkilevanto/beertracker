@@ -70,6 +70,10 @@ my $url = $q->url;
 my $localtest = 0; # Local test installation
 
 # Default sizes
+my $defaultvol = 40;
+if ( $mak =~ /^Wine,/ ) {
+  $defaultvol = 16;
+}
 $vol =~ s/^T$/2/i;  # Taster, sizes vary, but always small
 $vol =~ s/^G$/15/i; # Glass of wine - 12 in places, at home 15 is more realistic
 $vol =~ s/^S$/25/i; # Small, usually 25
@@ -198,6 +202,9 @@ undef, undef) =
   }
   $pr = $priceguess if $pr eq "";
   $vol = number($vol);
+  if (!$vol) {
+    $vol = $defaultvol;
+  }
   my $curpr = curprice($pr);
   if ($curpr) {
     $com =~ s/ *\[\d+\w+\] *$//i; # Remove old price
