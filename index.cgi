@@ -378,6 +378,7 @@ if ( !$op && $ENV{'HTTP_USER_AGENT'} !~ /Android/ ) {
   $op = "Graph";  # Default to showing the graph on desktops
 } # but not on mobile devics
 
+my %averages; # floating average by effdate
 if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $startoff = $1 || 30; # days ago
   my $endoff = $2 || -1;  # days ago, -1 defaults to tomorrow
@@ -416,6 +417,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     }
     #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
     $sum30 = $sum30 / $sumw;
+    $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
     my $zero = "";
     if ($tot > 0.01 ) {
       $zerodays = 0;
@@ -862,6 +864,9 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       if ( $locdrinks > 0.1) {
         print "<br/>$lastwday ";
         print "$lastloc2: " . unit($locdrinks,"d"). unit($locmsum, "kr"). "\n";
+        if ($averages{$lastdate} && $locdrinks eq $daydrinks && $lastdate ne $effdate) {
+          print " (a=" . unit($averages{$lastdate},"d"). " )<br/>\n";
+        } # fl avg on loc line, if not going to print a day summary line
         # Restaurant copy button
         print "<form method='POST' style='display: inline;' >\n";
         print "<input type='hidden' name='l' value='$lastloc2' />\n";
@@ -876,12 +881,17 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         $rtype =~ s/^Restaurant, //;
         print "<input type='submit' name='submit' value='Rest'
                     style='display: inline; font-size: x-small' />\n";
-        print "</form><br/>\n";
+        print "</form>\n";
+        print "<br/>\n";
       }
       # day summary
       if ($lastdate ne $effdate ) {
         if ( $locdrinks ne $daydrinks) {
-          print " <b>$lastwday</b>: ". unit($daydrinks,"d"). unit($daymsum,"kr"). " <br/>\n";
+          print " <b>$lastwday</b>: ". unit($daydrinks,"d"). unit($daymsum,"kr");
+          if ($averages{$lastdate}) {
+            print " (a=" . unit($averages{$lastdate},"d"). " )\n";
+          }
+          print "<br/>\n";
         }
         $daydsum = 0.0;
         $daymsum = 0;
