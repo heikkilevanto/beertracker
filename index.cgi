@@ -272,7 +272,10 @@ print $q->header(
   -type => "text/html;charset=UTF-8",
   -Cache_Control => "no-cache, no-store, must-revalidate",
   -Pragma => "no-cache",
-  -Expires => "0");
+  -Expires => "0",
+  -X_beertracker => "This beertracker is my hobby project. It is open source",
+  -X_author => "Heikki Levanto",
+  -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
 print "<html><head>\n";
 print "<title>Beer</title>\n";
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
