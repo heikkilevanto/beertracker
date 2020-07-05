@@ -1069,7 +1069,7 @@ sub newmark {
   my $rest = shift || "";
   return "" if ( $rest =~ /^Restaurant/);
   return "" if ($seen{$v} && $seen{$v} != 1);
-  return " (new?) ";
+  return " (N?) ";
 }
 
 # Helper to make a link to a list
