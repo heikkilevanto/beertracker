@@ -587,6 +587,7 @@ $com ) =
         $bold = "b";
         $month = $thismonth;
       }
+      $wday = "<b>$wday</b>" if ($wday eq "Fri");
       $entry = filt($effdate, $bold) . " " . $wday ;
       $places = "";
       $lastdate = $effdate;
