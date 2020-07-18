@@ -31,6 +31,7 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
 my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect",
 "I'm in love" );
+
 # Links to beer lists at the most common locations and breweries
 my %links;
 $links{"Ølbaren"} = "http://oelbaren.dk/oel/";
@@ -38,6 +39,7 @@ $links{"Ølsnedkeren"} = "https://www.olsnedkeren.dk/";
 $links{"Fermentoren"} = "http://fermentoren.com/index";
 $links{"Dry and Bitter"} = "http://www.dryandbitter.com/products.php";
 #$links{"Dudes"} = "http://www.dudes.bar"; # R.I.P Dec 2018
+$links{"Taphouse"} = "http://www.taphouse.dk"; 
 
 # currency conversions
 my %currency;
