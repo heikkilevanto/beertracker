@@ -39,7 +39,7 @@ $links{"Ølsnedkeren"} = "https://www.olsnedkeren.dk/";
 $links{"Fermentoren"} = "http://fermentoren.com/index";
 $links{"Dry and Bitter"} = "http://www.dryandbitter.com/products.php";
 #$links{"Dudes"} = "http://www.dudes.bar"; # R.I.P Dec 2018
-$links{"Taphouse"} = "http://www.taphouse.dk"; 
+$links{"Taphouse"} = "http://www.taphouse.dk";
 
 # currency conversions
 my %currency;
@@ -1072,7 +1072,7 @@ sub newmark {
   my $rest = shift || "";
   return "" if ( $rest =~ /^Restaurant/);
   return "" if ($seen{$v} && $seen{$v} != 1);
-  return " (N?) ";
+  return " <i>new</i> ";
 }
 
 # Helper to make a link to a list
