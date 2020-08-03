@@ -124,12 +124,14 @@ my $lastwday = "";
 my @lines;
 my %seen; # Count how many times var names seen before
 my %restaurants; # maps location name to restaurant types
+my $allfirstdate = "";
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
   next unless $_; # skip empty lines
   push @lines, $_; # collect them all
   my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
+  $allfirstdate=$ed unless($allfirstdate);
   my $restname = "";
   $restname = "$1$l" if ( $m  =~ /^(Restaurant,)/i );
   $thisloc = $l if $l;
@@ -399,6 +401,12 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
   my $startdate = datestr ("%F", -$startoff );
   my $enddate = datestr( "%F", -$endoff);
+  if ( $startdate lt $allfirstdate) {
+    $startdate = $allfirstdate;
+    if ($enddate lt $startdate) {
+      $enddate = $allfirstdate;
+    }
+  }
   print "\n<!-- " . $op . " $startdate to $enddate -->\n";
   my %sums; # drink sums by (eff) date
   for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
