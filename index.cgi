@@ -393,9 +393,10 @@ if ( !$op && !$mobile ) {
 } # but not on mobile devics
 
 my %averages; # floating average by effdate
-if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
-  my $startoff = $1 || 30; # days ago
-  my $endoff = $2 || -1;  # days ago, -1 defaults to tomorrow
+if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
+  my $bigimg = $1 ||"";
+  my $startoff = $2 || 30; # days ago
+  my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
   my $startdate = datestr ("%F", -$startoff );
   my $enddate = datestr( "%F", -$endoff);
   print "\n<!-- " . $op . " $startdate to $enddate -->\n";
@@ -471,8 +472,12 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     $xtic = $onemonth;
     $pointsize = "set pointsize 0.5\n" ;
   }
+  my $imgsz = "340,240";
+  if ($bigimg) {
+    $imgsz = "640,480";
+  }
   my $cmd = "" .
-       "set term png small size 340,240 \n".
+       "set term png small size $imgsz \n".
        $pointsize .
        "set out \"$pngfile\" \n".
        "set xdata time \n".
@@ -514,7 +519,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $len = $startoff - $endoff;
   my $es = $startoff + $len;
   my $ee = $endoff + $len;
-  print "<a href='$url?o=Graph-$es-$ee'>&lt;&lt;</a> &nbsp; \n";
+  print "<a href='$url?o=Graph$bigimg-$es-$ee'>&lt;&lt;</a> &nbsp; \n";
   my $ls = $startoff - $len;
   my $le = $endoff - $len;
   if ($le < 0 ) {
@@ -522,12 +527,12 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     $le = 0;
   }
   if ($endoff>0) {
-    print "<a href='$url?o=Graph-$ls-$le'>&gt;&gt;</a>\n";
+    print "<a href='$url?o=Graph$bigimg-$ls-$le'>&gt;&gt;</a>\n";
   } else { # at today, >> plots a zero-tail
-    print "<a href='$url?o=Graph-$startoff--14'>&gt;</a>\n";
+    print "<a href='$url?o=Graph$bigimg-$startoff--14'>&gt;</a>\n";
   }
-  print " &nbsp; <a href='$url?o=Graph'>Month</a>\n";
-  print " <a href='$url?o=Graph-365'>Year</a> \n";
+  print " &nbsp; <a href='$url?o=Graph$bigimg'>Month</a>\n";
+  print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
 
   my $zs = $startoff + int($len/2);
   my $ze = $endoff - int($len/2);
@@ -535,10 +540,16 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     $zs -= $ze;
     $ze = 0 ;
   }
-  print " &nbsp; <a href='$url?o=Graph-$zs-$ze'>[ - ]</a>\n";
+  print " &nbsp; <a href='$url?o=Graph$bigimg-$zs-$ze'>[ - ]</a>\n";
   my $is = $startoff - int($len/4);
   my $ie = $endoff + int($len/4);
-  print " &nbsp; <a href='$url?o=Graph-$is-$ie'>[ + ]</a>\n";
+  print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'>[ + ]</a>\n";
+
+  if ($bigimg) {
+    print " &nbsp;<a href='$url?o=Graph-$startoff-$endoff'>[S]</a>\n";
+  } else {
+    print " &nbsp;<a href='$url?o=GraphB-$startoff-$endoff'>[B]</a>\n";
+  }
   print "<br/>\n";
 
 
