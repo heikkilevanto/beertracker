@@ -12,6 +12,7 @@ use POSIX qw(strftime localtime);
 use feature 'unicode_strings';
 
 my $q = CGI->new;
+my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android/ );
 
 # Constants
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
@@ -77,7 +78,7 @@ if ( $mak =~ /^Wine,/ ) {
   $defaultvol = 16;
 }
 my $half;
-if ( $vol =~ s/^(H)(.)$/\2/i ) {
+if ( $vol =~ s/^(H)(.)$/$2/i ) {
   $half = $1;
 }
 $vol =~ s/^T$/2/i;  # Taster, sizes vary, but always small
@@ -386,7 +387,8 @@ print "</form>\n";
 
 ##############
 # Graph
-if ( !$op && $ENV{'HTTP_USER_AGENT'} !~ /Android/ ) {
+#if ( !$op && $ENV{'HTTP_USER_AGENT'} !~ /Android/ ) {
+if ( !$op && !$mobile ) {
   $op = "Graph";  # Default to showing the graph on desktops
 } # but not on mobile devics
 
@@ -431,7 +433,7 @@ if ( $op && $op =~ /Graph-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     $sum30 = $sum30 / $sumw;
     $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
     my $zero = "";
-    if ($tot > 0.01 ) {
+    if ($tot > 0.15 ) { # one 0.5% "no-alc" beer still gets a zero mark
       $zerodays = 0;
     } elsif ($zerodays >= 0) { # have seen a real $tot
       $zero = -0.1 + ($zerodays % 7) * 0.4 ;
