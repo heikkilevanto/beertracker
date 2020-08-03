@@ -523,7 +523,11 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   #print "$htcmd <br/>\n";
   system ("gnuplot $cmdfile ");
   print "<hr/>\n";
-  print "<img src=\"$pngfile\"/><br/>\n";
+  if ($bigimg) {
+    print "<a href='$url?o=Graph-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
+  } else {
+    print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
+  }
   my $len = $startoff - $endoff;
   my $es = $startoff + $len;
   my $ee = $endoff + $len;
@@ -553,11 +557,6 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $ie = $endoff + int($len/4);
   print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'>[ + ]</a>\n";
 
-  if ($bigimg) {
-    print " &nbsp;<a href='$url?o=Graph-$startoff-$endoff'>[S]</a>\n";
-  } else {
-    print " &nbsp;<a href='$url?o=GraphB-$startoff-$endoff'>[B]</a>\n";
-  }
   print "<br/>\n";
 
 
