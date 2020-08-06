@@ -704,38 +704,76 @@ $com ) =
 ############################+
 # Monthly statistics from %monthdrinks and %monthprices
 } elsif ( $op eq "Months" ) {
-  my $y;
   if ( $allfirstdate !~ /^(\d\d\d\d)/ ) {
     print "Oops, no year from allfirstdate '$allfirstdate' <br/>\n";
     exit(); # Never mind missing footers
   }
-  $y=$1;
+  my $firsty=$1;
   my $lasty = datestr("%Y",0);
-  #print "Stats from $y to $lasty <br/>\n";
-  print "<table border=1 style='align:right'>\n";
-  print "<tr><td></td>\n";
-  foreach $m ( "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")  {
-    print "<td align=right>$m</td>\n";
+  my $lastym = datestr("%Y-%m",0);
+  open F, ">$plotfile"
+      or error ("Could not open $plotfile for writing");
+  my $t = "";
+  $t .= "<table border=1 style='align:right'>\n";
+  $t .="<tr><td></td>\n";
+  my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+  foreach $y ( reverse($firsty .. $lasty) ) {
+    $t .= "<td><b>$y</b></td>";
   }
-  print "</tr>";
-  while ($y <= $lasty ) {
-    print "<tr>\n";
-    print "<td>$y</td>\n";
-    for (my $m=1; $m<=12; $m++) {
+  $t .= "</tr>\n";
+  foreach $m ( 1 .. 12 ) {
+    $t .= "<tr><td>$months[$m]</td>\n";
+    print F "$m ";
+    foreach $y ( reverse($firsty .. $lasty) ) {
+      #print "<td>$y - $m </td>\n";
       my $calm = sprintf("%d-%02d",$y,$m);
       my $d="";
       if ($monthdrinks{$calm}) {
         $d = sprintf("%d",($monthdrinks{$calm}||0) / $onedrink);
-        $d = unit($d, "d");
       }
-      my $p = unit($monthprices{$calm}, "kr");
-      print "<td align=right>$d<br/>$p</td>\n";
+      my $p = $monthprices{$calm};
+      $t .= "<td align=right>".unit($d,"d") .
+        "<br/>".unit($p,kr)."</td>\n";
+      if ( !$d || $calm eq $lastym ) { # Don't plot the current month,
+        print F "NaN ";  # not finished with it yet
+      } else {
+        print F "$d ";
+      }
     }
-    print "</tr>\n";
-    $y++;
+    $t .= "</tr>";
+    print F "\n";
   }
-  print "</table>\n";
-
+  close(F);
+  $t .= "</table>\n";
+  my $cmd =
+  my $imgsz = "340,240";
+  if ($bigimg) {
+    $imgsz = "640,480";
+  }
+  my $cmd = "" .
+       "set term png small size $imgsz \n".
+       "set out \"$pngfile\" \n".
+       "set xrange [ 0 : 13 ]\n" .
+       "plot ";
+  my $i = 1; # column index
+  my $lw = "6";
+  foreach $y ( reverse($firsty .. $lasty )) {
+    $i++;
+    $cmd .= "\"$plotfile\" " .
+            "using 1:$i with line lw $lw title \"$y\" ," ;
+    $lw = $lw-1 || 1;
+  }
+  $cmd =~ s/,$//; # Remove last comma
+  $cmd .= "\n";
+  open C, ">$cmdfile"
+      or error ("Could not open $plotfile for writing");
+  print C $cmd;
+  close(C);
+  system ("gnuplot $cmdfile ");
+  print "<img src=\"$pngfile\"/>\n";
+  print "<hr/>";
+  print $t;  # The table we built above
 
 #############################
 # About page
