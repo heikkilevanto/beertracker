@@ -703,7 +703,8 @@ $com ) =
 
 ############################+
 # Monthly statistics from %monthdrinks and %monthprices
-} elsif ( $op eq "Months" ) {
+} elsif ( $op =~ /Months(B?)/ ) {
+  my $bigimg = $1 ||"";
   if ( $allfirstdate !~ /^(\d\d\d\d)/ ) {
     print "Oops, no year from allfirstdate '$allfirstdate' <br/>\n";
     exit(); # Never mind missing footers
@@ -733,6 +734,7 @@ $com ) =
       if ($monthdrinks{$calm}) {
         $d = ($monthdrinks{$calm}||0) / $onedrink;
         $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
+        $dd = "" if ( $calm eq $lastym );
         $d = sprintf("%d", $d);
         $d = unit($d,"d"). " " . unit($dd,"d");
       }
@@ -765,7 +767,7 @@ $com ) =
   my $lw = 1;
   for ( my $i = $lasty - $firsty +1; $i > 1; $i--) {
     $cmd .= "\"$plotfile\" " .
-            "using 1:$i with line lw $lw title \"$y\" ," ;
+            "using 1:$i with line lw $lw notitle," ;
     $lw+= 2;
   }
   $cmd =~ s/,$//; # Remove last comma
