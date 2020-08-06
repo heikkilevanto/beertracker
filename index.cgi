@@ -108,7 +108,7 @@ if ( ! $effdate ) { # Effective date can be the day before
 # Read the file
 # Set defaults for the form, usually from last line in the file
 # Actually, at this point only set $lastline and $foundline
-# They get split later
+# They get split later. Collects all kind of stats to be used later.
 open F, "<$datafile"
   or error("Could not open $datafile for reading: $!".
      "<br/>Probably the user hasn't been set up yet" );
@@ -125,6 +125,8 @@ my @lines;
 my %seen; # Count how many times var names seen before
 my %restaurants; # maps location name to restaurant types
 my $allfirstdate = "";
+my %monthdrinks; # total drinks for each calendar month
+my %monthprices; # total money spent. Indexed with "yyyy-mm"
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -160,6 +162,11 @@ while (<F>) {
     if ( $effdate eq "$wd; $ed" ) { # today
         $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
         $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
+    }
+    if ( $ed =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
+      my $calmon = $1;
+      $monthdrinks{$calmon} +=  $a * $v;
+      $monthprices{$calmon} += $p;
     }
   }
   if ( ( $m  =~ /^Restaurant,/i ) ) {
@@ -377,7 +384,7 @@ if ( $edit ) {
   print "<option value='o=short' >Short List</option>\n";
   my @ops = ("Graph",
      "Location","Brewery", "Beer",
-     "Wine", "Booze", "Restaurant", "Style", "Year", "About");
+     "Wine", "Booze", "Restaurant", "Style", "Months", "Years", "About");
   for my $opt ( @ops ) {
     print "<option value='o=$opt'>$opt</option>\n";
   }
@@ -637,7 +644,7 @@ $com ) =
 
 #######################
 # Annual summary
-} elsif ( $op eq "Year" ) {
+} elsif ( $op eq "Years" ) {
   my $i = scalar( @lines );
   my %sum;
   my %alc;
@@ -693,6 +700,42 @@ $com ) =
     $yalc += $alc * $vol if ($alc && $vol);
     #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
   }
+
+############################+
+# Monthly statistics from %monthdrinks and %monthprices
+} elsif ( $op eq "Months" ) {
+  my $y;
+  if ( $allfirstdate !~ /^(\d\d\d\d)/ ) {
+    print "Oops, no year from allfirstdate '$allfirstdate' <br/>\n";
+    exit(); # Never mind missing footers
+  }
+  $y=$1;
+  my $lasty = datestr("%Y",0);
+  #print "Stats from $y to $lasty <br/>\n";
+  print "<table border=1 style='align:right'>\n";
+  print "<tr><td></td>\n";
+  foreach $m ( "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")  {
+    print "<td align=right>$m</td>\n";
+  }
+  print "</tr>";
+  while ($y <= $lasty ) {
+    print "<tr>\n";
+    print "<td>$y</td>\n";
+    for (my $m=1; $m<=12; $m++) {
+      my $calm = sprintf("%d-%02d",$y,$m);
+      my $d="";
+      if ($monthdrinks{$calm}) {
+        $d = sprintf("%d",($monthdrinks{$calm}||0) / $onedrink);
+        $d = unit($d, "d");
+      }
+      my $p = unit($monthprices{$calm}, "kr");
+      print "<td align=right>$d<br/>$p</td>\n";
+    }
+    print "</tr>\n";
+    $y++;
+  }
+  print "</table>\n";
+
 
 #############################
 # About page
@@ -1189,6 +1232,7 @@ sub unit {
   return "" unless $v;
   return "$v<span style='font-size: xx-small'>$u</span> ";
 }
+
 
 # helper to display the units string
 # price, alc, vol, drinks
