@@ -729,16 +729,20 @@ $com ) =
       #print "<td>$y - $m </td>\n";
       my $calm = sprintf("%d-%02d",$y,$m);
       my $d="";
+      my $dd;
       if ($monthdrinks{$calm}) {
-        $d = sprintf("%d",($monthdrinks{$calm}||0) / $onedrink);
+        $d = ($monthdrinks{$calm}||0) / $onedrink;
+        $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
+        $d = sprintf("%d", $d);
+        $d = unit($d,"d"). " " . unit($dd,"d");
       }
       my $p = $monthprices{$calm};
-      $t .= "<td align=right>".unit($d,"d") .
-        "<br/>".unit($p,kr)."</td>\n";
+      $t .= "<td align=right>".$d .
+        "<br/>".unit($p,"kr")."</td>\n";
       if ( !$d || $calm eq $lastym ) { # Don't plot the current month,
         print F "NaN ";  # not finished with it yet
       } else {
-        print F "$d ";
+        print F "$dd ";
       }
     }
     $t .= "</tr>";
@@ -746,7 +750,6 @@ $com ) =
   }
   close(F);
   $t .= "</table>\n";
-  my $cmd =
   my $imgsz = "340,240";
   if ($bigimg) {
     $imgsz = "640,480";
@@ -754,15 +757,16 @@ $com ) =
   my $cmd = "" .
        "set term png small size $imgsz \n".
        "set out \"$pngfile\" \n".
-       "set xrange [ 0 : 13 ]\n" .
+       "set xrange [ 0.5 : 12.5 ]\n" .
+       "set xtics 1 \n" .
+       "set grid xtics ytics\n".
        "plot ";
   my $i = 1; # column index
-  my $lw = "6";
-  foreach $y ( reverse($firsty .. $lasty )) {
-    $i++;
+  my $lw = 1;
+  for ( my $i = $lasty - $firsty +1; $i > 1; $i--) {
     $cmd .= "\"$plotfile\" " .
             "using 1:$i with line lw $lw title \"$y\" ," ;
-    $lw = $lw-1 || 1;
+    $lw+= 2;
   }
   $cmd =~ s/,$//; # Remove last comma
   $cmd .= "\n";
