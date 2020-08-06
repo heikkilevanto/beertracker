@@ -725,7 +725,7 @@ $com ) =
   $t .= "</tr>\n";
   foreach $m ( 1 .. 12 ) {
     $t .= "<tr><td>$months[$m]</td>\n";
-    print F "$m ";
+    print F "$months[$m] ";
     foreach $y ( reverse($firsty .. $lasty) ) {
       #print "<td>$y - $m </td>\n";
       my $calm = sprintf("%d-%02d",$y,$m);
@@ -736,7 +736,8 @@ $com ) =
         $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
         $dd = "" if ( $calm eq $lastym );
         $d = sprintf("%d", $d);
-        $d = unit($d,"d"). " " . unit($dd,"d");
+        #$d = unit($d,"d"). " " . unit($dd,"d");
+        $d = unit($dd,"d");
       }
       my $p = $monthprices{$calm};
       $t .= "<td align=right>".$d .
@@ -759,9 +760,11 @@ $com ) =
   my $cmd = "" .
        "set term png small size $imgsz \n".
        "set out \"$pngfile\" \n".
-       "set xrange [ 0.5 : 12.5 ]\n" .
-       "set xtics 1 \n" .
+       "set mxtics 1\n".
        "set grid xtics ytics\n".
+       "set xdata time \n".
+       "set timefmt \"%b\" \n".
+       "set format x \"%b\"\n" .
        "plot ";
   my $i = 1; # column index
   my $lw = 1;
