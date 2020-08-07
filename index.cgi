@@ -766,9 +766,8 @@ $com ) =
        "set timefmt \"%b\" \n".
        "set format x \"%b\"\n" .
        "plot ";
-  my $i = 1; # column index
   my $lw = 1;
-  for ( my $i = $lasty - $firsty +1; $i > 1; $i--) {
+  for ( my $i = $lasty - $firsty +2; $i > 1; $i--) {
     $cmd .= "\"$plotfile\" " .
             "using 1:$i with line lw $lw notitle," ;
     $lw+= 2;
