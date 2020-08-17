@@ -165,7 +165,7 @@ while (<F>) {
     }
     if ( $ed =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
       my $calmon = $1;
-      $monthdrinks{$calmon} +=  $a * $v;
+      $monthdrinks{$calmon} += $a * $v;
       $monthprices{$calmon} += $p;
     }
   }
@@ -1157,7 +1157,7 @@ sub param {
   my $tag = shift;
   my $val = $q->param($tag);
   $val = "" if !defined($val);
-  $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:\(\)\[\]-]/_/g;
+  $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:\(\)\[\]?-]/_/g;
   return $val;
 }
 
