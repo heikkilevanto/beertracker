@@ -175,7 +175,7 @@ while (<F>) {
 }
 if ( ! $todaydrinks ) { # not today
   $todaydrinks = "($lastwday: " .
-    sprintf("%3.1f", $lastdatesum / $onedrink ) . "d)" ;
+    sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr)" ;
   $copylocation = 1;
 }
 
