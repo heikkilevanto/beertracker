@@ -127,6 +127,9 @@ my %restaurants; # maps location name to restaurant types
 my $allfirstdate = "";
 my %monthdrinks; # total drinks for each calendar month
 my %monthprices; # total money spent. Indexed with "yyyy-mm"
+my $weekago = datestr("%F", -7);
+my $weeksum = 0;
+my $weekmsum = 0;
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -162,6 +165,10 @@ while (<F>) {
     if ( $effdate eq "$wd; $ed" ) { # today
         $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
         $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
+    }
+    if ( $ed ge $weekago ) {
+      $weeksum += $a * $v;
+      $weekmsum += $p;
     }
     if ( $ed =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
       my $calmon = $1;
@@ -365,8 +372,10 @@ for my $ro (0 .. scalar(@ratings)-1) {
 }
 print "</select></td></tr>\n";
  print "<tr>";
+$weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
+my $comtxt = "$todaydrinks. \nWeek: $weeksum $weekmsum kr";
 print " <td $c6><textarea name='c' cols='36' rows='3'
-  placeholder='$todaydrinks'/>$com</textarea></td></tr>\n";
+  placeholder='$comtxt'/>$com</textarea></td></tr>\n";
 if ( $edit ) {
   print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
   print "&nbsp;<span align=right>Clr ";
@@ -1308,7 +1317,7 @@ sub error {
 
 # Helper to get a date string, with optional delta (in days)
 sub datestr {
-  my $form = shift || "%F %T";
+  my $form = shift || "%F %T";  # "YYYY-MM-DD hh:mm:ss"
   my $delta = shift || 0;   # in days, may be fractional. Negative for ealier
   my $dstr = strftime ($form, localtime(time() + $delta *60*60*24));
   return $dstr;
