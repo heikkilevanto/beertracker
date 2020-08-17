@@ -130,6 +130,7 @@ my %monthprices; # total money spent. Indexed with "yyyy-mm"
 my $weekago = datestr("%F", -7);
 my $weeksum = 0;
 my $weekmsum = 0;
+my $calmon; # YYYY-MM for montly stats
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -171,7 +172,7 @@ while (<F>) {
       $weekmsum += $p;
     }
     if ( $ed =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
-      my $calmon = $1;
+      $calmon = $1;
       $monthdrinks{$calmon} += $a * $v;
       $monthprices{$calmon} += $p;
     }
@@ -185,6 +186,10 @@ if ( ! $todaydrinks ) { # not today
     sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr)" ;
   $copylocation = 1;
 }
+$weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
+$todaydrinks .= "\nWeek: $weeksum $weekmsum kr";
+$todaydrinks .= "\n$calmon: " . sprintf("%3.1fd", $monthdrinks{$calmon}/$onedrink).
+  " $monthprices{$calmon} kr so far" if ($calmon);
 
 ################################
 # POST data into the file
@@ -372,10 +377,8 @@ for my $ro (0 .. scalar(@ratings)-1) {
 }
 print "</select></td></tr>\n";
  print "<tr>";
-$weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
-my $comtxt = "$todaydrinks. \nWeek: $weeksum $weekmsum kr";
 print " <td $c6><textarea name='c' cols='36' rows='3'
-  placeholder='$comtxt'/>$com</textarea></td></tr>\n";
+  placeholder='$todaydrinks'/>$com</textarea></td></tr>\n";
 if ( $edit ) {
   print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
   print "&nbsp;<span align=right>Clr ";
