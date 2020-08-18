@@ -741,9 +741,10 @@ $com ) =
   my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
   foreach $y ( reverse($firsty .. $lasty) ) {
-    $t .= "<td><b>$y</b></td>";
+    $t .= "<td><b>&nbsp;$y</b></td>";
   }
   $t .= "</tr>\n";
+  my $dayofmonth = datestr("%d");
   foreach $m ( 1 .. 12 ) {
     $t .= "<tr><td>$months[$m]</td>\n";
     print F "$months[$m] ";
@@ -755,15 +756,24 @@ $com ) =
       if ($monthdrinks{$calm}) {
         $d = ($monthdrinks{$calm}||0) / $onedrink;
         $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
-        $dd = "" if ( $calm eq $lastym );
-        $d = sprintf("%d", $d);
-        #$d = unit($d,"d"). " " . unit($dd,"d");
-        $d = unit($dd,"d");
+        if ( $calm eq $lastym ) { # current month
+          $dd = sprintf("%3.1f", $d / $dayofmonth); # scale to dr/day
+          $d = "~" . unit($dd,"d");
+        } else {
+          $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
+          $d = unit($dd,"d");
+        }
       }
       my $p = $monthprices{$calm};
       $t .= "<td align=right>".$d .
-        "<br/>".unit($p,"kr")."</td>\n";
-      if ( !$d || $calm eq $lastym ) { # Don't plot the current month,
+        "<br/>".unit($p,"kr");
+      if ($calm eq $lastym) {
+        $p = int($monthprices{$calm} / $dayofmonth * 30);
+        $t .= "<br/>~". unit($p,"kr");
+      }
+      $t .= "</td>\n";
+      #if ( !$d || $calm eq $lastym ) { # Don't plot the current month,
+      if ( !$d ) { # Don't plot the current month,
         print F "NaN ";  # not finished with it yet
       } else {
         print F "$dd ";
@@ -781,6 +791,7 @@ $com ) =
   my $cmd = "" .
        "set term png small size $imgsz \n".
        "set out \"$pngfile\" \n".
+       "set yrange [0:] \n" .
        "set mxtics 1\n".
        "set grid xtics ytics\n".
        "set xdata time \n".
@@ -788,10 +799,12 @@ $com ) =
        "set format x \"%b\"\n" .
        "plot ";
   my $lw = 1;
+  my $lc = 1;
   for ( my $i = $lasty - $firsty +2; $i > 1; $i--) {
     $cmd .= "\"$plotfile\" " .
-            "using 1:$i with line lw $lw notitle," ;
+            "using 1:$i with line lc $lc lw $lw notitle," ;
     $lw+= 2;
+    $lc++;
   }
   $cmd =~ s/,$//; # Remove last comma
   $cmd .= "\n";
@@ -1295,7 +1308,7 @@ sub curprice {
 # helper to make a unit displayed in smaller font
 sub unit {
   my $v = shift;
-  my $u = shift;
+  my $u = shift || "XXX";  # Indicate missing units so I see something is wrong
   return "" unless $v;
   return "$v<span style='font-size: xx-small'>$u</span> ";
 }
