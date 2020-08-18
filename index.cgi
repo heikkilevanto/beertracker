@@ -733,8 +733,12 @@ $com ) =
   my $firsty=$1;
   my $lasty = datestr("%Y",0);
   my $lastym = datestr("%Y-%m",0);
+  my $dayofmonth = datestr("%d");
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
+  my @ydays;
+  my @ydrinks;
+  my @yprice;
   my $t = "";
   $t .= "<table border=1 style='align:right'>\n";
   $t .="<tr><td></td>\n";
@@ -744,7 +748,6 @@ $com ) =
     $t .= "<td><b>&nbsp;$y</b></td>";
   }
   $t .= "</tr>\n";
-  my $dayofmonth = datestr("%d");
   foreach $m ( 1 .. 12 ) {
     $t .= "<tr><td>$months[$m]</td>\n";
     print F "$months[$m] ";
@@ -754,11 +757,15 @@ $com ) =
       my $d="";
       my $dd;
       if ($monthdrinks{$calm}) {
+        $ydrinks[$y] += $monthdrinks{$calm};
+        $yprice[$y] += $monthprices{$calm};
+        $ydays[$y] += 30;
         $d = ($monthdrinks{$calm}||0) / $onedrink;
         $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
         if ( $calm eq $lastym ) { # current month
           $dd = sprintf("%3.1f", $d / $dayofmonth); # scale to dr/day
           $d = "~" . unit($dd,"d");
+          $ydays[$y] += $dayofmonth - 30;
         } else {
           $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
           $d = unit($dd,"d");
@@ -783,6 +790,22 @@ $com ) =
     print F "\n";
   }
   close(F);
+  $t .= "<tr><td>Avg</td>\n";
+  foreach $y ( reverse($firsty .. $lasty) ) {
+    my $d = sprintf("%3.1f", $ydrinks[$y] / $ydays[$y] / $onedrink) ;
+    $d = unit($d, "d");
+    my $pr = sprintf("%3d", $yprice[$y]/$ydays[$y]);
+    $t .= "<td align=right>$d</td>";
+  }
+  $t .= "</tr>";
+  $t .= "<tr><td>Sum</td>\n";
+  foreach $y ( reverse($firsty .. $lasty) ) {
+    my $pr = sprintf("%5.0f", $yprice[$y] ) ;
+    $pr = unit($pr, "kr");
+    $t .= "<td align=right>$pr</td>";
+  }
+  $t .= "</tr>";
+
   $t .= "</table>\n";
   my $imgsz = "340,240";
   if ($bigimg) {
