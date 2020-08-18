@@ -131,6 +131,7 @@ my $weekago = datestr("%F", -7);
 my $weeksum = 0;
 my $weekmsum = 0;
 my $calmon; # YYYY-MM for montly stats
+my $lastmonthday = "";
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -176,6 +177,7 @@ while (<F>) {
       $monthdrinks{$calmon} += $a * $v;
       $monthprices{$calmon} += $p;
     }
+    $lastmonthday = $1 if ( $ed =~ /^\d\d\d\d-\d\d-(\d\d)/ );
   }
   if ( ( $m  =~ /^Restaurant,/i ) ) {
     $restaurants{$l} = $m; # Remember style
@@ -188,8 +190,9 @@ if ( ! $todaydrinks ) { # not today
 }
 $weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
 $todaydrinks .= "\nWeek: $weeksum $weekmsum kr";
-$todaydrinks .= "\n$calmon: " . sprintf("%3.1fd", $monthdrinks{$calmon}/$onedrink).
-  " $monthprices{$calmon} kr so far" if ($calmon);
+$todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
+       $monthdrinks{$calmon}/$onedrink, $monthdrinks{$calmon}/$onedrink/$lastmonthday).
+  " $monthprices{$calmon} kr" if ($calmon);
 
 ################################
 # POST data into the file
@@ -690,9 +693,15 @@ $com ) =
           $k++;
         }
         my $loc = " = TOTAL for $thisyear $sofar";
-        my $alc = sprintf("%5.0fd", $yalc / $onedrink) ;
+        my $alc = sprintf("%5.0f", $yalc / $onedrink) ;
         my $pr = sprintf("%6.0f", $ysum);
-        print "$pr $alc $loc\n";
+        print "$pr $alc"."d $loc\n";
+        if ($sofar) {
+          my $daynum = datestr("%j"); # day number in year
+          $alc = sprintf("%5.0fd", $alc / $daynum * 365);
+          $pr = sprintf("%6.0f", $pr / $daynum * 365);
+          print "$pr $alc  = PROJECTED for whole $thisyear\n";
+        }
         print "</pre>";
         $sofar = "";
       }
