@@ -7,7 +7,7 @@
 
 use CGI;
 use URI::Escape;
-use Time::HiRes qw(gettimeofday tv_interval); # while debugging slowness
+#use Time::HiRes qw(gettimeofday tv_interval); # while debugging slowness
 use POSIX qw(strftime localtime);
 use feature 'unicode_strings';
 
@@ -77,17 +77,25 @@ my $defaultvol = 40;
 if ( $mak =~ /^Wine,/ ) {
   $defaultvol = 16;
 }
+my %volumes = ( # Comment is displayed on the About page
+   'T' => " 2 Taster, sizes vary, always small",
+   'G' => "15 Glass of wine - 12 in places, at home 15 is more realistic",
+   'S' => "25 Small, usually 25",
+   'M' => "33 Medium, typically a bottle beer",
+   'L' => "40 Large, 40cl in most places I frequent",
+   'C' => "44 A can of 44 cl",
+   'W' => "75 Bottle of wine",
+   'B' => "75 Bottle of wine",
+);
 my $half;
-if ( $vol =~ s/^(H)(.)$/$2/i ) {
+if ( $vol =~ s/^(H)(.+)$/$2/i ) {
   $half = $1;
 }
-$vol =~ s/^T$/2/i;  # Taster, sizes vary, but always small
-$vol =~ s/^G$/15/i; # Glass of wine - 12 in places, at home 15 is more realistic
-$vol =~ s/^S$/25/i; # Small, usually 25
-$vol =~ s/^M$/33/i; # Medium, typically a bottle beer
-$vol =~ s/^L$/40/i; # Large, 40cl in most places I frequent (also half btl of wine)
-$vol =~ s/^C$/44/i; # A can of 44 cl (us pint?)
-$vol =~ s/^[WB]$/75/i; # Bottle of wine
+my $volunit = uc(substr($vol,0,1));
+if ( $volumes{$volunit} && $volumes{$volunit} =~ /^(\d+)/ ) {
+  $actvol = $1;
+  $vol =~s/$volunit/$actvol/i;
+}
 if ($half) {
   $vol = int($vol / 2) ;
 }
@@ -602,7 +610,7 @@ $com ) =
     if ( $i == 0 ) {
       $lastdate = "END";
       if (!$entry) { # make sure to count the last entry too
-        $entry = filt($effdate, $bold) . " " . $wday ;
+        $entry = filt($effdate, "") . " " . $wday ;
         $daysum += ( $alc * $vol ) if ($alc && $vol);
         $daymsum += $pr;
         if ( $places !~ /$loc/ ) {
@@ -874,7 +882,7 @@ $com ) =
 # About page
 } elsif ( $op eq "About" ) {
   print "<hr/><h2>Beertracker</h2>\n";
-  print "Copyright 2019 Heikki Levanto. <br/>";
+  print "Copyright 2020 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
   print "It is Open Source.\n";
   print "<hr/>";
@@ -884,11 +892,20 @@ $com ) =
   print "<li><a href='https://www.ratebeer.com' target='_blank'>RateBeer</a></li>\n";
   print "<li><a href='https://untappd.com' target='_blank'>Untappd</a></li>\n";
   print "</ul><p/>\n";
-  print "Some of my favourite bars<ul>";
-  for my $k ( keys(%links) ) {
+  print "Some of my favourite bars and breweries<ul>";
+  for my $k ( sort keys(%links) ) {
     print "<li><a href='$links{$k}'>$k</a></li>";
   }
   print "</ul><p/>\n";
+  print "<hr/>";
+  print "Shorthand for drink volumes<br/><ul>\n";
+  for my $k ( sort { $volumes{$a} cmp $volumes{$b} } keys(%volumes) ) {
+    print "<li><b>$k</b> $volumes{$k}</li>\n";
+  }
+  print "</ul>\n";
+  print "You can prefix them with 'h' for half, as in HW = half wine = 37cl<br/>\n";
+  print "Of course you can just enter the number of centiliters <br/>\n";
+  print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
 
 } elsif ( $op eq "full" ) {
   # Ignore for now, we print the full list later.
