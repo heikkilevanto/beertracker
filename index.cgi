@@ -92,7 +92,7 @@ if ( $vol =~ s/^(H)(.+)$/$2/i ) {
   $half = $1;
 }
 my $volunit = uc(substr($vol,0,1));
-if ( $volumes{$volunit} && $volumes{$volunit} =~ /^(\d+)/ ) {
+if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
   $actvol = $1;
   $vol =~s/$volunit/$actvol/i;
 }
@@ -608,7 +608,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
 $com ) =
        split( /; */, $lines[$i] );
     if ( $i == 0 ) {
-      $lastdate = "END";
+      $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
         $entry = filt($effdate, "") . " " . $wday ;
         $daysum += ( $alc * $vol ) if ($alc && $vol);
@@ -622,7 +622,6 @@ $com ) =
           $locseen{$loc} = 1;
         }
       }
-      #print "Zero: e=$effdate l=$lastdate e='$entry' <br/>\n";
     }
     if ( $lastdate ne $effdate ) {
       if ( $entry ) {
