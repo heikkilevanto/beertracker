@@ -591,6 +591,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $lastdate = "";
   my $lastloc = "";
   my $daysum = 0.0;
+  my $daymsum = 0.0;
   my %locseen;
   my $month = "";
   while ( $i > 0 ) {
@@ -598,10 +599,27 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
 $com ) =
        split( /; */, $lines[$i] );
+    if ( $i == 0 ) {
+      $lastdate = "END";
+      if (!$entry) { # make sure to count the last entry too
+        $entry = filt($effdate, $bold) . " " . $wday ;
+        $daysum += ( $alc * $vol ) if ($alc && $vol);
+        $daymsum += $pr;
+        if ( $places !~ /$loc/ ) {
+          my $bold = "";
+          if ( !defined($locseen{$loc}) ) {
+            $bold = "b";
+            }
+          $places .= " " . filt($loc,$bold);
+          $locseen{$loc} = 1;
+        }
+      }
+      #print "Zero: e=$effdate l=$lastdate e='$entry' <br/>\n";
+    }
     if ( $lastdate ne $effdate ) {
       if ( $entry ) {
         my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
-        $entry .= " " . unit($daydrinks,"d");
+        $entry .= " " . unit($daydrinks,"d") . " " . unit($daymsum,"kr");
         print "$entry";
         my $shortplaces = $places;
         $shortplaces =~ s/<[^>]+>//g;
@@ -637,7 +655,9 @@ $com ) =
       $lastdate = $effdate;
       $lastloc = "";
       $daysum = 0.0;
+      $daymsum = 0.0;
     }
+    next if ($mak =~ /restaurant/i );
     if ( $lastloc ne $loc ) {
       if ( $places !~ /$loc/ ) {
         my $bold = "";
@@ -650,6 +670,7 @@ $com ) =
       $lastloc = $loc;
     }
     $daysum += ( $alc * $vol ) if ($alc && $vol) ;
+    $daymsum += $pr;
   }
   if ( $maxlines >= 0 ) {
     print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
