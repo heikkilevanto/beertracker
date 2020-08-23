@@ -671,13 +671,22 @@ $com ) =
   while ( $i > 0 ) {
     $i--;
     #print "$thisyear $i: $lines[$i]<br/>\n";
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
+      split( /; */, $lines[$i] );
+    $y = substr($effdate,0,4);
+    #print "  y=$y, ty=$thisyear <br/>\n";
+    next if ($mak =~ /restaurant/i );
     if ($i == 0) {
+      $thisyear = $y unless ($thisyear);
       $y = "END";
-    } else {
-      ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
-        split( /; */, $lines[$i] );
-      next if ($mak =~ /restaurant/i );
-      $y = substr($effdate,0,4);
+      $pr = number($pr);  # count also the last line
+      $alc = number($alc);
+      $vol = number($vol);
+      $sum{$loc} = ( $sum{$loc} || 0.1 / ($i+1) ) + $pr if ($pr);  # $i keeps sort order
+      $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol);
+      $ysum += $pr if ($pr);
+      $yalc += $alc * $vol if ($alc && $vol);
+      #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
     }
     if ( $y ne $thisyear ) {
       if ($thisyear) {
@@ -715,7 +724,7 @@ $com ) =
     $pr = number($pr);
     $alc = number($alc);
     $vol = number($vol);
-    $sum{$loc} = ( $sum{$loc} || 0.1 / $i ) + $pr if ($pr);  # $i keeps sort order
+    $sum{$loc} = ( $sum{$loc} || 0.1 / ($i+1) ) + $pr if ($pr);  # $i keeps sort order
     $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol);
     $ysum += $pr if ($pr);
     $yalc += $alc * $vol if ($alc && $vol);
