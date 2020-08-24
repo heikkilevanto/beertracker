@@ -451,6 +451,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       or error ("Could not open $plotfile for writing");
   my $sum30 = 0.0;
   my @month;
+  my @week;
   my $wkday;
   my $zerodays = -1;
   my $fut = "NaN";
@@ -461,6 +462,8 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
     @month = ( @month, $tot);
     shift @month if scalar(@month)>=30;
+    @week = ( @week, $tot);
+    shift @week if scalar(@week)>=7;
     $sum30 = 0.0;
     my $sumw = 0.0;
     for ( my $i = 0; $i < scalar(@month); $i++) {
@@ -468,8 +471,15 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       $sum30 += $month[$i] * $w;
       $sumw += $w;
     }
+    my $sumweek = 0.0;
+    my $cntweek = 0;
+    foreach my $t ( @week ) {
+      $sumweek += $t;
+      $cntweek++;
+    }
     #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
     $sum30 = $sum30 / $sumw;
+    $sumweek = $sumweek / $cntweek;
     $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
     my $zero = "";
     if ($tot > 0.15 ) { # one 0.5% "no-alc" beer still gets a zero mark
@@ -484,6 +494,10 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ( $ndays <0 ) {
       $fut = $sum30;
       $sum30="NaN"; # No avg for next date, but yes for current
+      $sumweek = "NaN"; #
+    }
+    if ($startoff - $endoff > 45) {
+      $sumweek = "NaN"; # Can't see them anyway
     }
     my $wkend = 0;
     if ($wkday > 4) {
@@ -491,7 +505,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        $tot = 0;
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays<br/>"; ###
-    print F "$date $tot $wkend $sum30 $zero $fut\n "  if ($zerodays >= 0);
+    print F "$date $tot $wkend $sum30 $sumweek $zero $fut\n "  if ($zerodays >= 0);
   }
   close(F);
   my $oneday = 24 * 60 * 60 ; # in seconds
@@ -540,9 +554,12 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "\"$plotfile\" " .
             "using 1:4 with line lc 9 lw 2 notitle, " .  # avg30
         "\"$plotfile\" " .
-            "using 1:6 with dots lc 9 notitle, " .  # future tail
+            "using 1:5 with points pointtype 1 lc \"gray80\" notitle, " .  # avg7
+              # (pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
         "\"$plotfile\" " .
-            "using 1:5 with points lc 2 pointtype 11 notitle \n" .  # zeroes
+            "using 1:7 with dots lc 9 notitle, " .  # future tail
+        "\"$plotfile\" " .
+            "using 1:6 with points lc 2 pointtype 11 notitle \n" .  # zeroes
         "";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
