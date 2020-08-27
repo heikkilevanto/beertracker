@@ -176,9 +176,11 @@ while (<F>) {
         $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
         $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
     }
-    if ( $ed ge $weekago ) {
+    if ( $ed gt $weekago ) {
       $weeksum += $a * $v;
       $weekmsum += $p;
+      #print STDERR "wa=$weekago ed=$ed a=$a v=$v av=" . $a*$v / $onedrink .
+      # " p=$p ws=$weeksum =" . $weeksum/$onedrink . " wms=$weekmsum\n";
     }
     if ( $ed =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
       $calmon = $1;
@@ -463,7 +465,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     @month = ( @month, $tot);
     shift @month if scalar(@month)>=30;
     @week = ( @week, $tot);
-    shift @week if scalar(@week)>=7;
+    shift @week if scalar(@week)>7;
     $sum30 = 0.0;
     my $sumw = 0.0;
     for ( my $i = 0; $i < scalar(@month); $i++) {
@@ -478,6 +480,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       $cntweek++;
     }
     #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
+    #print "<!-- $date " . join(', ', @week). " $sumweek " . $sumweek/$cntweek . "-->\n";
     $sum30 = $sum30 / $sumw;
     $sumweek = $sumweek / $cntweek;
     $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
