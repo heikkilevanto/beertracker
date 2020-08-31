@@ -371,13 +371,13 @@ placeholder='wday' />\n";
 $sz3 placeholder='Eff' /></td></tr>\n";
 }
 print "<tr><td>
-  <input name='l' value='$loc' placeholder='location' $sz /></td>\n";
+  <input name='l' value='$loc' placeholder='Location' $sz /></td>\n";
 print "<td><input name='s' value='$sty' $sz
 placeholder='Style'/></td></tr>\n";
 print "<tr><td>
-  <input name='m' value='$mak' $sz placeholder='brewery'/></td>\n";
+  <input name='m' value='$mak' $sz placeholder='Brewery'/></td>\n";
 print "<td>
-  <input name='b' value='$beer' $sz placeholder='beer'/></td></tr>\n";
+  <input name='b' value='$beer' $sz placeholder='Beer'/></td></tr>\n";
 print "<tr><td><input name='v' value='$vol cl' $sz2 placeholder='Vol' />\n";
 print "<input name='a' value='$alc %' $sz2 placeholder='Alc' />\n";
 print "<input name='p' value='$pr.-' $sz2 placeholder='Price' /></td>\n";
@@ -707,7 +707,8 @@ $com ) =
 
 #######################
 # Annual summary
-} elsif ( $op eq "Years" ) {
+} elsif ( $op =~ /Years(d?)/i ) {
+  my $sortdr = $1;
   my $i = scalar( @lines );
   my %sum;
   my %alc;
@@ -716,6 +717,12 @@ $com ) =
   my $thisyear = "";
   my $sofar = "so far";
   my $y;
+  print "<hr/>\n";
+  if ($sortdr) {
+    print "Sorting by drinks (<a href='$url?o=Years'>Sort by money</a>)\n";
+  } else {
+    print "Sorting by money (<a href='$url?o=YearsD'>Sort by drinks</a>)\n";
+  }
   while ( $i > 0 ) {
     $i--;
     #print "$thisyear $i: $lines[$i]<br/>\n";
@@ -738,8 +745,13 @@ $com ) =
     }
     if ( $y ne $thisyear ) {
       if ($thisyear) {
-        print "Year $thisyear $sofar<br/>\n";
-        my @kl = sort { $sum{$b} <=> $sum{$a} }  keys %sum;
+        print "<hr/>Year $thisyear $sofar<br/>\n";
+        my @kl;
+        if ($sortdr) {
+          @kl = sort { $alc{$b} <=> $alc{$a} }  keys %alc;
+        } else {
+          @kl = sort { $sum{$b} <=> $sum{$a} }  keys %sum;
+        }
         $k = 0;
         print "<pre>";
         while ( $k < 12 && $kl[$k] ) {
