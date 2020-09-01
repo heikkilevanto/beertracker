@@ -255,7 +255,7 @@ undef, undef) =
   }
   my $curpr = curprice($pr);
   if ($curpr) {
-    $com =~ s/ *\[\d+\w+\] *$//i; # Remove old price
+    $com =~ s/ *\[\d+\w+\] *$//i; # Remove old currency price comment "[12eur]"
     $com .= " [$pr]";
     $pr = $curpr;
   } else {
