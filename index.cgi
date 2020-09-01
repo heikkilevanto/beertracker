@@ -245,9 +245,13 @@ undef, undef) =
     $i--;
   }
   $pr = $priceguess if $pr eq "";
-  $vol = number($vol);
-  if (!$vol) {
-    $vol = $defaultvol;
+  if ( uc($vol) eq "X" ) {
+    $vol = "";
+  } else {
+    $vol = number($vol);
+    if (!$vol) {
+      $vol = $defaultvol;
+    }
   }
   my $curpr = curprice($pr);
   if ($curpr) {
