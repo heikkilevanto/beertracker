@@ -159,17 +159,17 @@ while (<F>) {
     $foundline = $_;
   }
   $lastline = $_;
-  if ( $thisdate ne "$wd; $ed" ) { # new date
-    $lastdatesum = 0.0;
-    $lastdatemsum = 0;
-    $thisdate = "$wd; $ed";
-    $lastwday = $wd;
-  }
   $a = number($a);  # Sanitize numbers
   $v = number($v);
   $p = price($p);
   if ( !( $m  =~ /^Restaurant,/i ) ) {
     # do not sum restaurant lines, drinks filed separately
+    if ( $thisdate ne "$wd; $ed" ) { # new date
+      $lastdatesum = 0.0;
+      $lastdatemsum = 0;
+      $thisdate = "$wd; $ed";
+      $lastwday = $wd;
+    }
     $lastdatesum += ( $a * $v ) if ($a && $v);
     $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
     if ( $effdate eq "$wd; $ed" ) { # today
