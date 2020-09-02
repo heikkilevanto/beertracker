@@ -768,12 +768,15 @@ $com ) =
         my $loc = " = TOTAL for $thisyear $sofar";
         my $alc = sprintf("%5.0f", $yalc / $onedrink) ;
         my $pr = sprintf("%6.0f", $ysum);
-        print "$pr $alc"."d $loc\n";
+        print "$pr $alc"."d $loc";
         if ($sofar) {
           my $daynum = datestr("%j"); # day number in year
+          print " (=" . sprintf("%3.1f d/day", $alc/$daynum) . ")";
           $alc = sprintf("%5.0fd", $alc / $daynum * 365);
           $pr = sprintf("%6.0f", $pr / $daynum * 365);
-          print "$pr $alc  = PROJECTED for whole $thisyear\n";
+          print "\n$pr $alc  = PROJECTED for whole $thisyear\n";
+        } else {
+          print "(=" . sprintf("%3.1f d/day", $alc/365 ) . ")\n";
         }
         print "</pre>";
         $sofar = "";
