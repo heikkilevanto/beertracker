@@ -856,8 +856,15 @@ $com ) =
       }
       $t .= "</td>\n";
       #if ( !$d || $calm eq $lastym ) { # Don't plot the current month,
-      if ( !$d ) { # Don't plot the current month,
-        print F "NaN ";  # not finished with it yet
+      if ($y == $lasty ) { # First column is current year
+        if ( $d && $calm ne $lastym ) { # not including current month
+          print F "$dd ";
+        } else {
+          print F "NaN ";
+        }
+      }
+      if ( !$d ) { # Don't plot after the current month,
+        print F "NaN ";  # not known yet
       } else {
         print F "$dd ";
       }
@@ -899,13 +906,15 @@ $com ) =
        "plot ";
   my $lw = 1;
   my $lc = 1;
-  for ( my $i = $lasty - $firsty +2; $i > 1; $i--) {
+  for ( my $i = $lasty - $firsty +3; $i > 2; $i--) {
     $cmd .= "\"$plotfile\" " .
             "using 1:$i with line lc $lc lw $lw notitle," ;
     $lw+= 2;
     $lc++;
   }
-  $cmd =~ s/,$//; # Remove last comma
+  # Finish by highlighting current year, up to but not including current month
+  $cmd .= "\"$plotfile\" " .
+            "using 1:2 with line lc \"black\" lw 1 notitle," ;
   $cmd .= "\n";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
