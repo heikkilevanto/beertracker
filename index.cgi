@@ -460,12 +460,14 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my @week;
   my $wkday;
   my $zerodays = -1;
+  my $realdays = 0;
   my $fut = "NaN";
   while ( $ndays > $endoff) {
     $ndays--;
     $rawdate = datestr("%F:%u", -$ndays);
     ($date,$wkday) = split(':',$rawdate);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
+    $realdays ++ if ($tot);
     @month = ( @month, $tot);
     shift @month if scalar(@month)>=30;
     @week = ( @week, $tot);
@@ -535,6 +537,10 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   if ($bigimg) {
     $imgsz = "640,480";
   }
+  my $smooth = "";
+  if ($realdays > 3 ) { # Don't try to make splines with too little data
+    $smooth = "smooth cspline";
+  }
   my $cmd = "" .
        "set term png small size $imgsz \n".
        $pointsize .
@@ -559,7 +565,8 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "\"$plotfile\" " .
             "using 1:3 with boxes lc 3 notitle," .  # weekends
         "\"$plotfile\" " .
-            "using 1:4 with line smooth csplines lc 9 lw 2 notitle, " .  # avg30
+            "using 1:4 with line $smooth lc 9 lw 2 notitle, " .  # avg30
+               # smooth csplines
         "\"$plotfile\" " .
             "using 1:5 with points pointtype 1 lc \"gray80\" notitle, " .  # avg7
               # (pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
