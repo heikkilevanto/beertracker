@@ -314,6 +314,32 @@ if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $com = "";
 }
 
+#######################
+# Dump of the data file
+# Needs to be done before the HTML head, since we output text/plain
+
+if ( $op eq "Datafile" ) {
+  print $q->header(
+    -type => "text/plain;charset=UTF-8",
+    -Cache_Control => "no-cache, no-store, must-revalidate",
+    -Pragma => "no-cache",
+    -Expires => "0",
+    -X_beertracker => "This beertracker is my hobby project. It is open source",
+    -X_author => "Heikki Levanto",
+    -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
+  open F, "<$datafile"
+    or error("Could not open $datafile for reading: $!" );
+
+  print "# Dump of beerdata file for '". $q->remote_user() .
+    "' as of ". datestr() . "\n";
+  while (<F>) {
+    chomp();
+    print "$_ \n";
+  }
+  close(F);
+  exit();
+}
+
 ########################
 # HTML head
 print $q->header(
@@ -413,7 +439,7 @@ if ( $edit ) {
   print "<option value='o=short' >Short List</option>\n";
   my @ops = ("Graph",
      "Location","Brewery", "Beer",
-     "Wine", "Booze", "Restaurant", "Style", "Months", "Years", "About");
+     "Wine", "Booze", "Restaurant", "Style", "Months", "Years", "Datafile", "About");
   for my $opt ( @ops ) {
     print "<option value='o=$opt'>$opt</option>\n";
   }
@@ -963,6 +989,7 @@ $com ) =
 
 } elsif ( $op eq "full" ) {
   # Ignore for now, we print the full list later.
+
 } elsif ( $op ) {
 
 #######################
