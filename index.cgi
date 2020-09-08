@@ -529,7 +529,9 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ( $ndays <0 ) {
       $fut = $sum30;
       $sum30="NaN"; # No avg for next date, but yes for current
-      $sumweek = "NaN"; #
+      if (!$sumweek) { # Don't plot zero weeksums
+        $sumweek = "NaN";
+      }
     }
     if ($startoff - $endoff > 45) {
       $sumweek = "NaN"; # Can't see them anyway
