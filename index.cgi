@@ -780,7 +780,7 @@ $com ) =
       $lastloc = $loc;
     }
     $daysum += ( $alc * $vol ) if ($alc && $vol) ;
-    $daymsum += $pr;
+    $daymsum += $pr if ($pr);
   }
   if ( $maxlines >= 0 ) {
     print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
