@@ -174,6 +174,7 @@ my $weeksum = 0;
 my $weekmsum = 0;
 my $calmon; # YYYY-MM for montly stats
 my $lastmonthday = "";
+my $tz = "";
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -197,8 +198,8 @@ while (<F>) {
   $v = number($v);
   $p = price($p);
   if ( $m  =~ /^tz *, *([^ ]*) *$/i ) {
-    my $tz = $1;
-    if (!$tz) {
+    $tz = $1;
+    if (!$tz || $tz eq "X") {
       $ENV{"TZ"} = "/etc/localtime";  # clear it
       #print STDERR "Cleared tz. time now: ". localtime(time()) ."\n";
     } else {
@@ -271,7 +272,9 @@ if ( $q->request_method eq "POST" ) {
   my $sub = $q->param("submit") || "";
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
-  $loc = $thisloc unless $loc;  # Always default to the last one
+  if ($mak !~ /tz,/i ) {
+    $loc = $thisloc unless $loc;  # Always default to the last one, except for tz
+  }
   if (  $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $vol = $1 if ( $1 );
   }
@@ -322,6 +325,11 @@ undef, undef) =
     $pr = price($pr);
   }
   $alc = number($alc);
+  if ($mak =~ /tz,/i ) {
+    $vol = "";
+    $alc = "";
+    $pr = "";
+  }
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
   if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
@@ -999,11 +1007,13 @@ $com ) =
 #############################
 # About page
 } elsif ( $op eq "About" ) {
+
   print "<hr/><h2>Beertracker</h2>\n";
-  print "Copyright 2020 Heikki Levanto. <br/>";
+  print "Copyright 2016-2020 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
   print "It is Open Source.\n";
   print "<hr/>";
+
   print "Some links I may find useful: <ul>";
   print "<li><a href='https://github.com/heikkilevanto/beertracker' target='_blank'>".
      "Beertracker on GitHub</a></li>\n";
@@ -1015,6 +1025,13 @@ $com ) =
     print "<li><a href='$links{$k}'>$k</a></li>";
   }
   print "</ul><p/>\n";
+  print "<hr/>";
+  if ($tz) {
+    print "Your time zone is: $tz<br>\n";
+  } else  {
+    print "You have not set your timezone. <br/>\n";
+  }
+  print "You can set it with a 'brewery' line like 'tz, Copenhagen'<br/>\n";
   print "<hr/>";
   print "Shorthand for drink volumes<br/><ul>\n";
   for my $k ( sort { $volumes{$a} cmp $volumes{$b} } keys(%volumes) ) {
@@ -1056,6 +1073,7 @@ $com ) =
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
 $com ) =
        split( /; */, $lines[$i] );
+    next if ( $mak =~ /tz,/ );
     $fld = "";
     if ( $op eq "Location" ) {
       $fld = $loc;
@@ -1270,20 +1288,24 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "<br/>$time &nbsp;" . filt($mak,"i") . newmark($mak) .
             " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br/>\n";
-    print filt("[$sty]") . newmark($sty) . " "   if ($sty);
-    print units($pr, $vol, $alc). "<br/>\n";
-    if ($rate || $com) {
-      print " <b>$rate-$ratings[$rate]</b>" if ($rate);
-      print ": " if ($rate && $com);
-      print "<i>$com</i>" if ($com);
-      print "<br/>\n";
+    if ( $sty || $pr || $vol || $alc || $rate || $com ) {
+      print filt("[$sty]") . newmark($sty) . " "   if ($sty);
+      print units($pr, $vol, $alc). "<br/>\n" if ($sty || $pr || $alc);
+      if ($rate || $com) {
+        print " <b>$rate-$ratings[$rate]</b>" if ($rate);
+        print ": " if ($rate && $com);
+        print "<i>$com</i>" if ($com);
+        print "<br/>\n";
+      }
+      $ratecounts[$rate] ++ if ($rate);
     }
-    $ratecounts[$rate] ++ if ($rate);
     # guess sizes for small/large beers
     my %vols;
     $vols{$vol} = 1 if ($vol);
     if ( $mak  =~ /^Restaurant,/i ) {
       $vols{"R"} = 1;
+    } elsif ( $mak  =~ /^tz,/i ) {
+      %vols=();
     } elsif ( $mak  =~ /^Wine,/i ) {
       $vols{12} = 1;
       $vols{16} = 1;
