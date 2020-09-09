@@ -112,6 +112,33 @@ if ( ! $effdate ) { # Effective date can be the day before
   $effdate = "$wday; $effdate";
 }
 
+
+#######################
+# Dump of the data file
+# Needs to be done before the HTML head, since we output text/plain
+
+if ( $op eq "Datafile" ) {
+  print $q->header(
+    -type => "text/plain;charset=UTF-8",
+    -Cache_Control => "no-cache, no-store, must-revalidate",
+    -Pragma => "no-cache",
+    -Expires => "0",
+    -X_beertracker => "This beertracker is my hobby project. It is open source",
+    -X_author => "Heikki Levanto",
+    -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
+  open F, "<$datafile"
+    or error("Could not open $datafile for reading: $!" );
+
+  print "# Dump of beerdata file for '". $q->remote_user() .
+    "' as of ". datestr() . "\n";
+  print "# Date Time; Weekday; Effective-date; Location; Brewery; Beer; Vol; Style; Alc; Price; Rating; Comment\n";
+  while (<F>) {
+    chomp();
+    print "$_ \n";
+  }
+  close(F);
+  exit();
+}
 ##############################
 # Read the file
 # Set defaults for the form, usually from last line in the file
@@ -314,31 +341,7 @@ if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $com = "";
 }
 
-#######################
-# Dump of the data file
-# Needs to be done before the HTML head, since we output text/plain
 
-if ( $op eq "Datafile" ) {
-  print $q->header(
-    -type => "text/plain;charset=UTF-8",
-    -Cache_Control => "no-cache, no-store, must-revalidate",
-    -Pragma => "no-cache",
-    -Expires => "0",
-    -X_beertracker => "This beertracker is my hobby project. It is open source",
-    -X_author => "Heikki Levanto",
-    -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
-  open F, "<$datafile"
-    or error("Could not open $datafile for reading: $!" );
-
-  print "# Dump of beerdata file for '". $q->remote_user() .
-    "' as of ". datestr() . "\n";
-  while (<F>) {
-    chomp();
-    print "$_ \n";
-  }
-  close(F);
-  exit();
-}
 
 ########################
 # HTML head
