@@ -50,6 +50,7 @@ $currency{"e"} = 7.5;
 # Parameters - data file fields are the same order
 # but there is a time stamp first, and the $del never gets to the data file
 my $stamp = param("st");
+my $origstamp = $stamp; # Remember if we had a stamp from the input
 my $wday = param("wd");  # weekday
 my $effdate = param("ed");  # effective date
 my $loc = param("l");  # location
@@ -74,9 +75,14 @@ my $localtest = 0; # Local test installation
 
 # Default sizes
 my $defaultvol = 40;
-if ( $mak =~ /^Wine,/ ) {
+if ( $mak =~ /^Wine,/i ) {
   $defaultvol = 16;
+} elsif ( $mak =~ /Booze,/i ) {
+  $defaultvol = 4;
+} elsif ( $mak =~ /,/i ) {
+  $defaultvol = ""; # for restaurants, time zones, etc^
 }
+
 my %volumes = ( # Comment is displayed on the About page
    'T' => " 2 Taster, sizes vary, always small",
    'G' => "15 Glass of wine - 12 in places, at home 15 is more realistic",
@@ -103,11 +109,12 @@ if ( $vol =~ /([0-9]+) *oz/i ) {  # (us) fluid ounces
   $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
 }
 
-if ( ! $stamp ) {
+# Both $stamp and $effdate may get rewritten every time we see a tz line in the file
+if (!$origstamp) { # but $origstamp stays, telling us we can overwrite $stamp
   $stamp = datestr( "%F %T");
 }
 if ( ! $effdate ) { # Effective date can be the day before
-  $effdate = datestr( "%a; %F", -0.3);
+  $effdate = datestr( "%a; %F", -0.3); # effdate changes at 08
 } else {
   $effdate = "$wday; $effdate";
 }
@@ -189,6 +196,28 @@ while (<F>) {
   $a = number($a);  # Sanitize numbers
   $v = number($v);
   $p = price($p);
+  if ( $m  =~ /^tz *, *([^ ]*) *$/i ) {
+    my $tz = $1;
+    if (!$tz) {
+      $ENV{"TZ"} = "/etc/localtime";  # clear it
+      #print STDERR "Cleared tz. time now: ". localtime(time()) ."\n";
+    } else {
+      foreach $zonedir ( "/usr/share/zoneinfo", "/usr/share/zoneinfo/Europe",
+        "/usr/share/zoneinfo/US") {
+        my $zonefile = "$zonedir/$tz";
+        if ( -f $zonefile ) {
+          $ENV{"TZ"} = $zonefile;
+          #print STDERR "Set tz to '$zonefile'. time now: ". localtime(time()) ."\n";
+          last;
+        }
+      }
+    }
+    if ( ! $origstamp ) { # Recalculate $stamp and effdate, unless given as inputs
+      $stamp = datestr( "%F %T");
+      $effdate = datestr( "%a; %F", -0.3);
+    }
+    next;
+  }
   if ( !( $m  =~ /^Restaurant,/i ) ) {
     # do not sum restaurant lines, drinks filed separately
     if ( $thisdate ne "$wd; $ed" ) { # new date
@@ -220,11 +249,15 @@ while (<F>) {
     $restaurants{$l} = $m; # Remember style
   }
 }
+# Now we can make a proper time stamp, in the correct time zone
+
 if ( ! $todaydrinks ) { # not today
   $todaydrinks = "($lastwday: " .
     sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr)" ;
   $copylocation = 1;
 }
+
+# Remember some values to display in the comment box when no comment to show
 $weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
 $todaydrinks .= "\nWeek: $weeksum $weekmsum kr";
 $todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
