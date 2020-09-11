@@ -383,7 +383,6 @@ if ( ! $edit ) { # not editing, do not default rates and comments from last beer
 }
 
 
-
 ########################
 # HTML head
 print $q->header(
@@ -399,7 +398,14 @@ print "<title>Beer</title>\n";
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
 print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
 print "<style rel='stylesheet'>\n";
-print   "* { background-color: #003000; color: #FFFFFF; font-size: small }\n";
+# Background color. Normally a dark green (matching the "racing green" at Øb),
+# but with experimental versions of the script, a dark blue, to indicate that
+# I am not running the real thing.
+if ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ ) {
+  print   "* { background-color: #003000; color: #FFFFFF; font-size: small }\n";
+} else {
+  print   "* { background-color: #003050; color: #FFFFFF; font-size: small }\n";
+}
 print "</style>\n";
 print "<link rel='shortcut icon' href='beer.png'/>\n";
 print "</head>\n";
