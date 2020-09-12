@@ -185,17 +185,18 @@ while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
   next unless $_; # skip empty lines
-  push @lines, $_; # collect them all
   my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
+  next unless $wd; # We can get silly comment lines, Bom mark, etc
+  push @lines, $_; # collect them all
   $allfirstdate=$ed unless($allfirstdate);
   my $restname = "";
   $m = $m || "";
   $restname = "$1$l" if ( $m  =~ /^(Restaurant,)/i );
   $thisloc = $l if $l;
-  $seen{$l||""}++;
-  $seen{$m||""}++;
-  $seen{$b||""}++;
-  $seen{$s||""}++;
+  $seen{$l}++;
+  $seen{$m}++;
+  $seen{$b}++;
+  $seen{$s}++;
   $seen{$restname}++;
   if ( ! $edit || ($edit eq $t) ) {
     $foundline = $_;
@@ -833,7 +834,7 @@ $com ) =
       $pr = number($pr);  # count also the last line
       $alc = number($alc);
       $vol = number($vol);
-      $sum{$loc} = ( $sum{$loc} || 0.1 / ($i+1) ) + $pr if ($pr);  # $i keeps sort order
+      $sum{$loc} = ( $sum{$loc} || 0 ) + ( $pr || 0) ;
       $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol);
       $ysum += $pr if ($pr);
       $yalc += $alc * $vol if ($alc && $vol);
@@ -883,7 +884,7 @@ $com ) =
     $pr = number($pr);
     $alc = number($alc);
     $vol = number($vol);
-    $sum{$loc} = ( $sum{$loc} || 0.1 / ($i+1) ) + $pr if ($pr);  # $i keeps sort order
+    $sum{$loc} = ( $sum{$loc} || 0.1 / ($i+1) ) + ($pr || 0) ;  # $i keeps sort order
     $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol);
     $ysum += $pr if ($pr);
     $yalc += $alc * $vol if ($alc && $vol);
@@ -1505,7 +1506,7 @@ sub utlink {
 
 # Helper to sanitize numbers
 sub number {
-  my $v = shift;
+  my $v = shift || "";
   $v =~ s/,/./g;  # occasionally I type a decimal comma
   $v =~ s/[^0-9.]//g; # Remove all non-numeric chars
   $v=0 unless  $v;
@@ -1514,7 +1515,7 @@ sub number {
 
 # Sanitize prices to whole ints
 sub price {
-  my $v = shift;
+  my $v = shift || "";
   $v = number($v);
   $v =~ s/[^0-9]//g; # Remove also decimal points etc
   return $v;
