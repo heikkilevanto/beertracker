@@ -1162,17 +1162,18 @@ $com ) =
     next if $lineseen{$fld};
     $lineseen{$fld} = $line;
     #print "<tr>$line</tr>\n";
-    push @displines, "<tr>$line</tr>\n";
+    push @displines, "$line";
   }
   if ($sortlist) {
     @displines = ();
     for $k ( sort { "\U$a" cmp "\U$b" } keys(%lineseen) ) {
-      push @displines, "<tr>" . $lineseen{$k} . "</tr>\n";
+      print "<tr>$lineseen{$k}</tr>\n";
     }
     #@displines = sort { "\U$a" cmp "\U$b" } @displines   if ( $sortlist );
-  }
-  foreach my $dl (@displines) {
-    print $dl;
+  } else {
+    foreach my $dl (@displines) {
+      print "<tr>$dl</tr>\n";
+    }
   }
   print "</table>\n";
   print "<br/>Total " . scalar(@displines) . " entries <br/>\n" if (scalar(@displines));
