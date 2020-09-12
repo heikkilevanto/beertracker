@@ -15,7 +15,8 @@ use POSIX qw(locale_h);
 use utf8;
 use locale;
 use open ':std', ':encoding(UTF-8)';
-setlocale(LC_ALL, "da_DK.utf8");
+setlocale(LC_COLLATE, "da_DK.utf8");
+setlocale(LC_CTYPE, "da_DK.utf8");
 
 my $q = CGI->new;
 my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android/ );
