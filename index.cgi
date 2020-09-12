@@ -5,7 +5,7 @@
 # Keeps beer drinking history in a flat text file.
 #
 
-use CGI;
+use CGI qw( -utf8 );
 use URI::Escape;
 #use Time::HiRes qw(gettimeofday tv_interval); # while debugging slowness
 use POSIX qw(strftime localtime);
@@ -14,11 +14,16 @@ use feature 'unicode_strings';
 use POSIX qw(locale_h);
 use utf8;
 use locale;
-use open ':std', ':encoding(UTF-8)';
+#use open ':std', ':encoding(UTF-8)';
+use open ':encoding(UTF-8)';
+binmode STDOUT, ":utf8";
+
 setlocale(LC_COLLATE, "da_DK.utf8");
 setlocale(LC_CTYPE, "da_DK.utf8");
 
 my $q = CGI->new;
+$q->charset( "UTF-8" );
+
 my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android/ );
 
 # Constants
@@ -439,7 +444,7 @@ print "<script>\n$script</script>\n";
 
 #############################
 # Main input form
-print "\n<form method='POST'>\n";
+print "\n<form method='POST' accept-charset='UTF-8' >\n";
 print "<table >";
 my $clr = "Onclick='if (clearonclick) {value=\"\";}'";
 my $c2 = "colspan='2'";
@@ -1422,9 +1427,11 @@ exit();
 # Helper to sanitize input data
 sub param {
   my $tag = shift;
-  my $val = $q->param($tag);
-  $val = "" if !defined($val);
-  $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:\(\)\[\]?-]/_/g;
+  my $val = $q->param($tag) || "";
+
+  my $x=$val;
+  $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
+  print STDERR "Normalized '$x' to '$val'\n" if ( $x ne $val );  # FIXME - Delete this
   return $val;
 }
 
