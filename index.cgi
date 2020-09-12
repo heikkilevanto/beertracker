@@ -11,6 +11,12 @@ use URI::Escape;
 use POSIX qw(strftime localtime);
 use feature 'unicode_strings';
 
+use POSIX qw(locale_h);
+use utf8;
+use locale;
+use open ':std', ':encoding(UTF-8)';
+setlocale(LC_ALL, "da_DK.utf8");
+
 my $q = CGI->new;
 my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android/ );
 
@@ -183,12 +189,13 @@ while (<F>) {
   my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
   $allfirstdate=$ed unless($allfirstdate);
   my $restname = "";
+  $m = $m || "";
   $restname = "$1$l" if ( $m  =~ /^(Restaurant,)/i );
   $thisloc = $l if $l;
-  $seen{$l}++;
-  $seen{$m}++;
-  $seen{$b}++;
-  $seen{$s}++;
+  $seen{$l||""}++;
+  $seen{$m||""}++;
+  $seen{$b||""}++;
+  $seen{$s||""}++;
   $seen{$restname}++;
   if ( ! $edit || ($edit eq $t) ) {
     $foundline = $_;
@@ -1151,11 +1158,17 @@ $com ) =
     next unless $fld;
     $fld = uc($fld);
     next if $lineseen{$fld};
-    $lineseen{$fld} = 1;
+    $lineseen{$fld} = $line;
     #print "<tr>$line</tr>\n";
     push @displines, "<tr>$line</tr>\n";
   }
-  @displines = sort { "\U$a" cmp "\U$b" } @displines   if ( $sortlist );
+  if ($sortlist) {
+    @displines = ();
+    for $k ( sort { "\U$a" cmp "\U$b" } keys(%lineseen) ) {
+      push @displines, "<tr>" . $lineseen{$k} . "</tr>\n";
+    }
+    #@displines = sort { "\U$a" cmp "\U$b" } @displines   if ( $sortlist );
+  }
   foreach my $dl (@displines) {
     print $dl;
   }
