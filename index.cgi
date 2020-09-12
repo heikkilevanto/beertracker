@@ -864,19 +864,21 @@ $com ) =
           print "$pr $alc $loc\n";
           $k++;
         }
-        my $loc = " = TOTAL for $thisyear $sofar";
         my $alc = sprintf("%5.0f", $yalc / $onedrink) ;
         my $pr = sprintf("%6.0f", $ysum);
-        print "$pr $alc"."d $loc";
+        print "\n$pr $alc". "d  = TOTAL for $thisyear $sofard \n";
+        my $daynum = 365;
         if ($sofar) {
-          my $daynum = datestr("%j"); # day number in year
-          print " (=" . sprintf("%3.1f d/day", $alc/$daynum) . ")";
-          $alc = sprintf("%5.0fd", $alc / $daynum * 365);
-          $pr = sprintf("%6.0f", $pr / $daynum * 365);
-          print "\n$pr $alc  = PROJECTED for whole $thisyear\n";
-        } else {
-          print "(=" . sprintf("%3.1f d/day", $alc/365 ) . ")\n";
+          $daynum = datestr("%j"); # day number in year
         }
+        if ($sofar) {
+          my $alcp = sprintf("%5.0fd", $alc / $daynum * 365);
+          my $prp = sprintf("%6.0f", $pr / $daynum * 365);
+          print "$prp $alcp  = PROJECTED for whole $thisyear\n";
+        }
+        my $alcday = sprintf("%5.1f", $alc / $daynum);
+        my $prday = sprintf("%6.0f", $pr / $daynum);
+        print "$prday $alcday"."d  = per day\n";
         print "</pre>";
         $sofar = "";
       }
