@@ -184,6 +184,7 @@ my %monthprices; # total money spent. Indexed with "yyyy-mm"
 my $weekago = datestr("%F", -7);
 my $weeksum = 0;
 my $weekmsum = 0;
+my %weekdates; # count the dates within last week where we have an entry
 my $calmon; # YYYY-MM for montly stats
 my $lastmonthday = "";
 my $tz = "";
@@ -211,7 +212,7 @@ while (<F>) {
   $a = number($a);  # Sanitize numbers
   $v = number($v);
   $p = price($p);
-  if ( $m  =~ /^tz *, *([^ ]*) *$/i ) {
+  if ( $m  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone
     $tz = $1;
     if (!$tz || $tz eq "X") {
       $ENV{"TZ"} = "/etc/localtime";  # clear it
@@ -232,7 +233,7 @@ while (<F>) {
       $effdate = datestr( "%a; %F", -0.3);
     }
     next;
-  }
+  } # tz
   if ( !( $m  =~ /^Restaurant,/i ) ) {
     # do not sum restaurant lines, drinks filed separately
     if ( $thisdate ne "$wd; $ed" ) { # new date
@@ -250,6 +251,7 @@ while (<F>) {
     if ( $ed gt $weekago ) {
       $weeksum += $a * $v;
       $weekmsum += $p;
+      $weekdates{$ed}++;
       #print STDERR "wa=$weekago ed=$ed a=$a v=$v av=" . $a*$v / $onedrink .
       # " p=$p ws=$weeksum =" . $weeksum/$onedrink . " wms=$weekmsum\n";
     }
@@ -274,10 +276,11 @@ if ( ! $todaydrinks ) { # not today
 
 # Remember some values to display in the comment box when no comment to show
 $weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
-$todaydrinks .= "\nWeek: $weeksum $weekmsum kr";
+$todaydrinks .= "\nWeek: $weeksum $weekmsum kr. " . (7 - scalar( keys(%weekdates) ) ) . "z";
 $todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
        $monthdrinks{$calmon}/$onedrink, $monthdrinks{$calmon}/$onedrink/$lastmonthday).
-  " $monthprices{$calmon} kr" if ($calmon);
+  " $monthprices{$calmon} kr."
+  if ($calmon);
 
 ################################
 # POST data into the file
@@ -866,7 +869,7 @@ $com ) =
         }
         my $alc = sprintf("%5.0f", $yalc / $onedrink) ;
         my $pr = sprintf("%6.0f", $ysum);
-        print "\n$pr $alc". "d  = TOTAL for $thisyear $sofard \n";
+        print "\n$pr $alc". "d  = TOTAL for $thisyear $sofar \n";
         my $daynum = 365;
         if ($sofar) {
           $daynum = datestr("%j"); # day number in year
