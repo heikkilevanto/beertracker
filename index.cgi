@@ -4,26 +4,30 @@
 #
 # Keeps beer drinking history in a flat text file.
 #
+# This is a simple CGI script
+# See https://github.com/heikkilevanto/beertracker/
+#
 
+
+
+###################
+# Modules and UTF-8 stuff
 use CGI qw( -utf8 );
 use URI::Escape;
-#use Time::HiRes qw(gettimeofday tv_interval); # while debugging slowness
-use POSIX qw(strftime localtime);
+use POSIX qw(strftime localtime locale_h);
 use feature 'unicode_strings';
-
-use POSIX qw(locale_h);
-use utf8;
-use locale;
-#use open ':std', ':encoding(UTF-8)';
-use open ':encoding(UTF-8)';
-binmode STDOUT, ":utf8";
-
-setlocale(LC_COLLATE, "da_DK.utf8");
+use utf8;  # Source code and string literals are utf-8
+use locale; # The data file can contain locale overrides
+setlocale(LC_COLLATE, "da_DK.utf8"); # but dk is the default
 setlocale(LC_CTYPE, "da_DK.utf8");
+use open ':encoding(UTF-8)';  # Data files are in utf-8
+binmode STDOUT, ":utf8"; # Stdout too. Not STDIN, the CGI module handles that
 
 my $q = CGI->new;
 $q->charset( "UTF-8" );
 
+####################
+# Constants and setup
 my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android/ );
 
 # Constants
@@ -41,6 +45,10 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
 } else {
   error ("Bad username\n");
 }
+if ( ! -w $datafile ) {
+  error ("Bad username: $datafile not writable\n");
+}
+
 my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect",
 "I'm in love" );
@@ -58,13 +66,16 @@ $links{"Taphouse"} = "http://www.taphouse.dk";
 my %currency;
 $currency{"eur"} = 7.5;
 $currency{"e"} = 7.5;
+$currency{"usd"} = 6.3;  # Varies bit over time
+#$currency{"\$"} = 6.3;  # € and $ don't work, get filtered away in param
 
-# Parameters - data file fields are the same order
-# but there is a time stamp first, and the $del never gets to the data file
+###################
+# Input Parameters - data file fields are the same order
+# from when POSTing a new beer entry
 my $stamp = param("st");
 my $origstamp = $stamp; # Remember if we had a stamp from the input
 my $wday = param("wd");  # weekday
-my $effdate = param("ed");  # effective date
+my $effdate = param("ed");  # effective date. Drinks after midnight count as night before
 my $loc = param("l");  # location
 my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
 my $beer= param("b");  # beer
@@ -83,7 +94,6 @@ my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimited
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
-my $localtest = 0; # Local test installation
 
 # Default sizes
 my $defaultvol = 40;
@@ -92,7 +102,7 @@ if ( $mak =~ /^Wine,/i ) {
 } elsif ( $mak =~ /Booze,/i ) {
   $defaultvol = 4;
 } elsif ( $mak =~ /,/i ) {
-  $defaultvol = ""; # for restaurants, time zones, etc^
+  $defaultvol = ""; # for restaurants, time zones, and other strange stuff
 }
 
 my %volumes = ( # Comment is displayed on the About page
@@ -105,10 +115,12 @@ my %volumes = ( # Comment is displayed on the About page
    'W' => "75 Bottle of wine",
    'B' => "75 Bottle of wine",
 );
-my $half;
+
+my $half;  # Volumes can be prefixed with 'h' for half measures.
 if ( $vol =~ s/^(H)(.+)$/$2/i ) {
   $half = $1;
 }
+
 my $volunit = uc(substr($vol,0,1));
 if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
   $actvol = $1;
@@ -117,7 +129,7 @@ if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
 if ($half) {
   $vol = int($vol / 2) ;
 }
-if ( $vol =~ /([0-9]+) *oz/i ) {  # (us) fluid ounces
+if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
   $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
 }
 
@@ -158,11 +170,11 @@ if ( $op eq "Datafile" ) {
   close(F);
   exit();
 }
+
 ##############################
 # Read the file
-# Set defaults for the form, usually from last line in the file
-# Actually, at this point only set $lastline and $foundline
-# They get split later. Collects all kind of stats to be used later.
+# Remembers the last line for defaults, and collects all kind of stats
+# to be used later.
 open F, "<$datafile"
   or error("Could not open $datafile for reading: $!".
      "<br/>Probably the user hasn't been set up yet" );
@@ -212,18 +224,16 @@ while (<F>) {
   $a = number($a);  # Sanitize numbers
   $v = number($v);
   $p = price($p);
-  if ( $m  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone
+  if ( $m  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone (optional spaces)
     $tz = $1;
     if (!$tz || $tz eq "X") {
       $ENV{"TZ"} = "/etc/localtime";  # clear it
-      #print STDERR "Cleared tz. time now: ". localtime(time()) ."\n";
     } else {
       foreach $zonedir ( "/usr/share/zoneinfo", "/usr/share/zoneinfo/Europe",
         "/usr/share/zoneinfo/US") {
         my $zonefile = "$zonedir/$tz";
         if ( -f $zonefile ) {
           $ENV{"TZ"} = $zonefile;
-          #print STDERR "Set tz to '$zonefile'. time now: ". localtime(time()) ."\n";
           last;
         }
       }
@@ -234,39 +244,37 @@ while (<F>) {
     }
     next;
   } # tz
-  if ( !( $m  =~ /^Restaurant,/i ) ) {
-    # do not sum restaurant lines, drinks filed separately
-    if ( $thisdate ne "$wd; $ed" ) { # new date
-      $lastdatesum = 0.0;
-      $lastdatemsum = 0;
-      $thisdate = "$wd; $ed";
-      $lastwday = $wd;
-    }
-    $lastdatesum += ( $a * $v ) if ($a && $v);
-    $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
-    if ( $effdate eq "$wd; $ed" ) { # today
-        $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
-        $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
-    }
-    if ( $ed gt $weekago ) {
-      $weeksum += $a * $v;
-      $weekmsum += $p;
-      $weekdates{$ed}++;
-      #print STDERR "wa=$weekago ed=$ed a=$a v=$v av=" . $a*$v / $onedrink .
-      # " p=$p ws=$weeksum =" . $weeksum/$onedrink . " wms=$weekmsum\n";
-    }
-    if ( $ed =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
-      $calmon = $1;
-      $monthdrinks{$calmon} += $a * $v;
-      $monthprices{$calmon} += $p;
-    }
-    $lastmonthday = $1 if ( $ed =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-  }
   if ( ( $m  =~ /^Restaurant,/i ) ) {
     $restaurants{$l} = $m; # Remember style
+    next; # do not sum restaurant lines, drinks filed separately
   }
+
+  if ( $thisdate ne "$wd; $ed" ) { # new date
+    $lastdatesum = 0.0;
+    $lastdatemsum = 0;
+    $thisdate = "$wd; $ed";
+    $lastwday = $wd;
+  }
+  $lastdatesum += ( $a * $v ) if ($a && $v);
+  $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
+  if ( $effdate eq "$wd; $ed" ) { # today
+      $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
+      $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
+  }
+  if ( $ed gt $weekago ) {
+    $weeksum += $a * $v;
+    $weekmsum += $p;
+    $weekdates{$ed}++;
+    #print STDERR "wa=$weekago ed=$ed a=$a v=$v av=" . $a*$v / $onedrink .
+    # " p=$p ws=$weeksum =" . $weeksum/$onedrink . " wms=$weekmsum\n";
+  }
+  if ( $ed =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
+    $calmon = $1;
+    $monthdrinks{$calmon} += $a * $v;
+    $monthprices{$calmon} += $p;
+  }
+  $lastmonthday = $1 if ( $ed =~ /^\d\d\d\d-\d\d-(\d\d)/ );
 }
-# Now we can make a proper time stamp, in the correct time zone
 
 if ( ! $todaydrinks ) { # not today
   $todaydrinks = "($lastwday: " .
@@ -289,18 +297,16 @@ if ( $q->request_method eq "POST" ) {
   my $sub = $q->param("submit") || "";
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
-  if ($mak !~ /tz,/i ) {
-    $loc = $thisloc unless $loc;  # Always default to the last one, except for tz
+  if ( $mak !~ /tz,/i ) {
+    $loc = $thisloc unless $loc;  # Always default to the last location, except for tz
   }
-  if (  $sub =~ /Copy (\d+)/ ) {  # copy different volumes
+  if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $vol = $1 if ( $1 );
   }
   my $priceguess = "";
-  #print STDERR "Guessing values. pr='$pr'";
   my $i = scalar( @lines )-1;
   while ( $i > 0 && $beer
     && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' )) {
-    #print STDERR "Considering " . $lines[$i] . "\n";
     ( undef, undef, undef, $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr,
 undef, undef) =
        split( /; */, $lines[$i] );
@@ -308,9 +314,8 @@ undef, undef) =
          uc($iloc) eq uc($loc) &&   # if same location and volume
          $vol eq $ivol ) {
       $priceguess = $ipr;
-      #print STDERR "Found a price guess $ipr\n";
     }
-    if ( uc($beer) eq uc($ibeer) ) {
+    if ( uc($beer) eq uc($ibeer) ) { # Same beer, copy values over if not set
       $beer = $ibeer; # with proper case letters
       $mak = $imak unless $mak;
       $sty = $isty unless $sty;
@@ -325,7 +330,7 @@ undef, undef) =
     $i--;
   }
   $pr = $priceguess if $pr eq "";
-  if ( uc($vol) eq "X" ) {
+  if ( uc($vol) eq "X" ) {  # 'X' is an explicit way to indicate a null value
     $vol = "";
   } else {
     $vol = number($vol);
@@ -429,6 +434,11 @@ print "</head>\n";
 print "<body>\n";
 print "\n<!-- Read " . scalar(@lines). " lines from $datafile -->\n\n" ;
 
+######################
+# Javascript trickery to clear fields when clicked on
+# Easier to use on my phone. Can be disabled with the Clr checkbox.
+# Also a two-liner to redirect to a new page from the 'Show' menu when
+# that changes
 my $script = <<'SCRIPTEND';
   var clearonclick = true;
   function clearinputs() {
@@ -1436,7 +1446,7 @@ sub param {
 
   my $x=$val;
   $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
-  print STDERR "Normalized '$x' to '$val'\n" if ( $x ne $val );  # FIXME - Delete this
+  #print STDERR "Normalized '$x' to '$val'\n" if ( $x ne $val );  # FIXME - Delete this
   return $val;
 }
 
