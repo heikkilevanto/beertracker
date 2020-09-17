@@ -12,8 +12,6 @@
 
 ###################
 # Modules and UTF-8 stuff
-use CGI qw( -utf8 );
-use URI::Escape;
 use POSIX qw(strftime localtime locale_h);
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
@@ -23,6 +21,8 @@ setlocale(LC_CTYPE, "da_DK.utf8");
 use open ':encoding(UTF-8)';  # Data files are in utf-8
 binmode STDOUT, ":utf8"; # Stdout too. Not STDIN, the CGI module handles that
 
+use URI::Escape;
+use CGI qw( -utf8 );
 my $q = CGI->new;
 $q->charset( "UTF-8" );
 
@@ -292,13 +292,14 @@ $todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
 
 ################################
 # POST data into the file
+# Try to guess missing values from last entries
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
   my $sub = $q->param("submit") || "";
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
   if ( $mak !~ /tz,/i ) {
-    $loc = $thisloc unless $loc;  # Always default to the last location, except for tz
+    $loc = $thisloc unless $loc;  # Always default to the last location, except for tz lines
   }
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $vol = $1 if ( $1 );
@@ -819,6 +820,7 @@ $com ) =
     print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
   }
+  exit(); # All done
 
 
 #######################
@@ -911,6 +913,7 @@ $com ) =
     $yalc += $alc * $vol if ($alc && $vol);
     #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
   }
+  exit();
 
 ############################+
 # Monthly statistics from %monthdrinks and %monthprices
@@ -1038,6 +1041,7 @@ $com ) =
   print "<img src=\"$pngfile\"/>\n";
   print "<hr/>";
   print $t;  # The table we built above
+  exit();
 
 #############################
 # About page
@@ -1076,6 +1080,8 @@ $com ) =
   print "You can prefix them with 'h' for half, as in HW = half wine = 37cl<br/>\n";
   print "Of course you can just enter the number of centiliters <br/>\n";
   print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
+
+  exit();
 
 } elsif ( $op eq "full" ) {
   # Ignore for now, we print the full list later.
@@ -1198,6 +1204,7 @@ $com ) =
   print "</table>\n";
   print "<br/>Total " . scalar(@displines) . " entries <br/>\n" if (scalar(@displines));
 
+  exit();
 }
 ########################
 # Regular list, on its own, or after graph
