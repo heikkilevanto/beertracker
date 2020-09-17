@@ -1450,10 +1450,7 @@ exit();
 sub param {
   my $tag = shift;
   my $val = $q->param($tag) || "";
-
-  my $x=$val;
   $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
-  #print STDERR "Normalized '$x' to '$val'\n" if ( $x ne $val );  # FIXME - Delete this
   return $val;
 }
 
@@ -1464,8 +1461,7 @@ sub filt {
   my $dsp = shift || $f;
   my $param = $f;
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
-  my $link = "<a href='$url?q=".uri_escape($param) ."'
-><$tag>$dsp</$tag></a>";
+  my $link = "<a href='$url?q=".uri_escape($param) ."'><$tag>$dsp</$tag></a>";
 
   return $link;
 }
@@ -1509,7 +1505,7 @@ sub glink {
   my $txt = shift || "(Google)";
   return "" unless $qry;
   $qry = uri_escape($qry);
-  my $lnk = "&nbsp;<i><a href='https://www.google.com/search?q=$qry'  target='_blank'>" .
+  my $lnk = "&nbsp;<i><a href='https://www.google.com/search?q=$qry' target='_blank'>" .
       "$txt</a></i>\n";
   return $lnk;
 }
@@ -1540,7 +1536,7 @@ sub number {
   my $v = shift || "";
   $v =~ s/,/./g;  # occasionally I type a decimal comma
   $v =~ s/[^0-9.]//g; # Remove all non-numeric chars
-  $v=0 unless  $v;
+  $v = 0 unless $v;
   return $v;
 }
 
