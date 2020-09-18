@@ -188,7 +188,7 @@ my $copylocation = 0;  # should the copy button copy location too
 my $thisdate = "";
 my $lastwday = "";
 my @lines;
-my %seen; # Count how many times var names seen before
+my %seen; # Count how many times various names seen before
 my %restaurants; # maps location name to restaurant types
 my $allfirstdate = "";
 my %monthdrinks; # total drinks for each calendar month
@@ -200,6 +200,8 @@ my %weekdates; # count the dates within last week where we have an entry
 my $calmon; # YYYY-MM for montly stats
 my $lastmonthday = "";
 my $tz = "";
+my %daydsums; # Sum of drinks for each date   # TODO Sum these up here
+my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -207,7 +209,10 @@ while (<F>) {
   my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
   next unless $wd; # We can get silly comment lines, Bom mark, etc
   push @lines, $_; # collect them all
-  $allfirstdate=$ed unless($allfirstdate);
+  if (!$allfirstdate) {
+    $allfirstdate=$ed;
+    # TODO Clear daydsums and daymsums for every date from $ed to today
+  }
   my $restname = "";
   $m = $m || "";
   $restname = "$1$l" if ( $m  =~ /^(Restaurant,)/i );
@@ -276,10 +281,18 @@ while (<F>) {
   $lastmonthday = $1 if ( $ed =~ /^\d\d\d\d-\d\d-(\d\d)/ );
 }
 
+
 if ( ! $todaydrinks ) { # not today
   $todaydrinks = "($lastwday: " .
     sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr)" ;
   $copylocation = 1;
+  my $today = datestr("%F");
+  if ( $today =~ /$calmon-(\d\d)/ ) {
+    $lastmonthday = $1;
+    # TODO - This still fails when today is in the next month, then it shows
+    # prev month up to the last entry date, not to end of the month. I can
+    # live with that for now.
+  }
 }
 
 # Remember some values to display in the comment box when no comment to show
