@@ -1243,6 +1243,13 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     }
   }
   my $i = scalar( @lines );
+  my $todaydate = datestr("%F");
+  if ($averages{$todaydate} && $lines[$i-1] !~ /$todaydate/) {
+    # We have an average from the graph for today, but the last entry is not
+    # for today, so we have a zero day. Display the average
+    print "<hr/>\n";
+    print "<b>". datestr("%a %F"). "</b> (a=$averages{$todaydate}) <br/>\n";
+  }
   my $lastloc = "";
   my $lastdate = "today";
   my $lastloc2 = "";
