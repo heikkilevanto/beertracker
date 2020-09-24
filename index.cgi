@@ -200,7 +200,7 @@ my %weekdates; # count the dates within last week where we have an entry
 my $calmon; # YYYY-MM for montly stats
 my $lastmonthday = "";
 my $tz = "";
-my %daydsums; # Sum of drinks for each date   # TODO Sum these up here
+my %daydsums; # Sum of drinks for each date   # TODO Sum these up here (See #142)
 my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
 while (<F>) {
   chomp();
