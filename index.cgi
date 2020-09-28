@@ -1230,16 +1230,16 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) ."\n" if ($qry);
 
   print "<br/>"if ($qry || $qrylim);
-  print "<a href='$url?q=" . uri_escape($qry) .
+  print "<a href='$url?q=" . uri_escape_utf8($qry) .
       "&f=r' >Ratings</a>\n";
-  print "<a href='$url?q=" . uri_escape($qry) .
+  print "<a href='$url?q=" . uri_escape_utf8($qry) .
       "&f=c' >Comments</a>\n";
-  print "<a href='$url?q=" . uri_escape($qry) .
+  print "<a href='$url?q=" . uri_escape_utf8($qry) .
       "&f=l' >Links</a>\n";
   if ($qrylim) {
-    print "<a href='$url?q=" . uri_escape($qry) . "'>All</a><br/>\n";
+    print "<a href='$url?q=" . uri_escape_utf8($qry) . "'>All</a><br/>\n";
     for ( my $i = 0; $i < 11; $i++) {
-      print "<a href='$url?q=" . uri_escape($qry) . "&f=r$i' >$i</a> &nbsp;";
+      print "<a href='$url?q=" . uri_escape_utf8($qry) . "&f=r$i' >$i</a> &nbsp;";
     }
   }
   my $i = scalar( @lines );
@@ -1387,7 +1387,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       $vols{25} = 1;
       $vols{40} = 1;
     }
-    print "<a href='$url?e=" . uri_escape($stamp) ."' >Edit</a> \n";
+    print "<a href='$url?e=" . uri_escape_utf8($stamp) ."' >Edit</a> \n";
 
     # No price - the script guesses based on size.
     # No location, reuse the current loc
@@ -1481,7 +1481,7 @@ sub filt {
   my $dsp = shift || $f;
   my $param = $f;
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
-  my $link = "<a href='$url?q=".uri_escape($param) ."'><$tag>$dsp</$tag></a>";
+  my $link = "<a href='$url?q=".uri_escape_utf8($param) ."'><$tag>$dsp</$tag></a>";
 
   return $link;
 }
@@ -1502,8 +1502,8 @@ sub lst {
   my $qry = shift; # Optional query to filter the list
   my $tag = shift || "nop";
   my $dsp = shift || $qry || $op;
-  $qry = "&q=" . uri_escape($qry) if $qry;
-  $op = uri_escape($op);
+  $qry = "&q=" . uri_escape_utf8($qry) if $qry;
+  $op = uri_escape_utf8($op);
   my $link = "<a href='$url?o=$op" . $qry ."' ><$tag>$dsp</$tag></a>";
   return $link;
 }
@@ -1524,7 +1524,7 @@ sub glink {
   my $qry = shift;
   my $txt = shift || "(Google)";
   return "" unless $qry;
-  $qry = uri_escape($qry);
+  $qry = uri_escape_utf8($qry);
   my $lnk = "&nbsp;<i><a href='https://www.google.com/search?q=$qry' target='_blank'>" .
       "$txt</a></i>\n";
   return $lnk;
@@ -1535,7 +1535,7 @@ sub rblink {
   my $qry = shift;
   my $txt = shift || "(Ratebeer)";
   return "" unless $qry;
-  $qry = uri_escape($qry);
+  $qry = uri_escape_utf8($qry);
   my $lnk = "<i><a href='https://www.ratebeer.com/search?q=$qry' target='_blank'>" .
       "$txt</a></i>\n";
   return $lnk;
@@ -1545,7 +1545,7 @@ sub utlink {
   my $qry = shift;
   my $txt = shift || "(Untappd)";
   return "" unless $qry;
-  $qry = uri_escape($qry);
+  $qry = uri_escape_utf8($qry);
   my $lnk = "<i><a href='https://untappd.com/search?q=$qry' target='_blank'>" .
       "$txt</a></i>\n";
   return $lnk;
