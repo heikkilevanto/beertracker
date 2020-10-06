@@ -1111,6 +1111,7 @@ $com ) =
   }
   print "Filter: <a href='$url?q=$qry'>$qry</a> " .
      "<a href='$url?o=$op'>(clear) <br/>" if $qry;
+  my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   my $i = scalar( @lines );
   my $fld;
   my $line;
@@ -1175,14 +1176,15 @@ $com ) =
       my $rstyle="";  # op,qry,tag,dsp
       if ( $1 ) { $rstyle = lst($op, "Restaurant, $1", "", $1); }
       $fld = "$loc";
-      $rate = "$rate: <b>$ratings[$rate]</b>" if $rate;
+      my $ratestr = "";
+      $ratestr = "$rate: <b>$ratings[$rate]</b>" if $rate;
       my $restname = "Restaurant,$loc";
       my $rpr = "";
       $rpr = "&nbsp; $pr kr" if ($pr && $pr >0) ;
       $line = "<td>" . filt($loc,"b") . "&nbsp; ($seen{$restname})<br/>".
               "$rstyle  &nbsp;" . glink("Restaurant $loc") . "</td>" .
               "<td><i>$beer</i>". " $rpr<br/>" .
-              "$wday $effdate $rate</td>";
+              "$wday $effdate $ratestr</td>";
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
@@ -1202,6 +1204,7 @@ $com ) =
     $lineseen{$fld} = $line;
     #print "<tr>$line</tr>\n";
     push @displines, "$line";
+    $ratecounts[$rate] ++ if ($rate);
   }
   if ($sortlist) {
     @displines = ();
@@ -1216,6 +1219,21 @@ $com ) =
   }
   print "</table>\n";
   print "<br/>Total " . scalar(@displines) . " entries <br/>\n" if (scalar(@displines));
+  my $rsum = 0;
+  my $rcnt = 0;
+  print "<br/>Ratings:<br/>\n";
+  for (my $i = 0; $i<11; $i++) {
+    $rsum += $ratecounts[$i] * $i;
+    $rcnt += $ratecounts[$i];
+    print "&nbsp;<b>" . sprintf("%3d",$ratecounts[$i]). "</b> ".
+      "times <i>$ratings[$i] ($i)</i> <br/>" if ($ratecounts[$i]);
+  }
+  if ($rcnt) {
+    print "$rcnt ratings avg <b>" . sprintf("%3.1f", $rsum/$rcnt).
+      " " . $ratings[$rsum/$rcnt] .
+    "</b><br/>\n";
+    print "<br/>\n";
+  }
 
   exit();
 }
