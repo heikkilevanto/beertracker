@@ -1226,7 +1226,7 @@ $com ) =
     $rsum += $ratecounts[$i] * $i;
     $rcnt += $ratecounts[$i];
     print "&nbsp;<b>" . sprintf("%3d",$ratecounts[$i]). "</b> ".
-      "times <i>$ratings[$i] ($i)</i> <br/>" if ($ratecounts[$i]);
+      "times <i>$i: $ratings[$i]</i> <br/>" if ($ratecounts[$i]);
   }
   if ($rcnt) {
     print "$rcnt ratings avg <b>" . sprintf("%3.1f", $rsum/$rcnt).
@@ -1467,7 +1467,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $rsum += $ratecounts[$i] * $i;
     $rcnt += $ratecounts[$i];
     print "&nbsp;<b>" . sprintf("%3d",$ratecounts[$i]). "</b> ".
-      "times <i>$ratings[$i] ($i)</i> <br/>" if ($ratecounts[$i]);
+      "times <i>$i: $ratings[$i]</i> <br/>" if ($ratecounts[$i]);
   }
   if ($rcnt) {
     print "$rcnt ratings avg <b>" . sprintf("%3.1f", $rsum/$rcnt).
