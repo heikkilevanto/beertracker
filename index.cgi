@@ -641,14 +641,23 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $onemonth = 365.24 * $oneday / 12;
   my $numberofdays=7;
   my $xformat = "\"%d\\n%b\"";  # 14 Jul
+  if ($startoff > 365) {
+    $xformat = "\"%d\\n%b\\n%y\"";  # 14 Jul 20
+  }
   my $xtic = $oneweek;
   my $pointsize = "";
   if ( $startoff - $endoff > 400 ) {
-    $xformat="\"%Y\"";  # 2019
-    $xtic = $oneday * 365.24 ;
+    $xformat="\"%b\\n%y\"";  # Jul 19
+    #$xformat="\"%Y\"";  # 2019
+    #$xtic = $oneday * 365.24 ;
+    if ( $startoff - $endoff > 1200 ) {
+      $xtic = $onemonth * 12;
+    } else {
+      $xtic = $onemonth * 3;
+    }
     $pointsize = "set pointsize 0.2\n" ;
   } elsif ( $startoff - $endoff > 120 ) {
-    $xformat="\"%b\\n'%y\"";  # Jul 19
+    $xformat="\"%b\\n%y\"";  # Jul 19
     $xtic = $onemonth;
     $pointsize = "set pointsize 0.5\n" ;
   }
