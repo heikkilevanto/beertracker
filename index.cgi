@@ -696,7 +696,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
             "using 1:4 with line $smooth lc 9 lw 2 notitle, " .  # avg30
                # smooth csplines
         "\"$plotfile\" " .
-            "using 1:5 with points pointtype 1 lc \"gray80\" notitle, " .  # avg7
+            "using 1:5 with points pointtype 1 lc \"gray10\" notitle, " .  # avg7
               # (pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
         "\"$plotfile\" " .
             "using 1:7 with dots lc 9 notitle, " .  # future tail
