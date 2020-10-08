@@ -720,8 +720,14 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   }
   if ($endoff>0) {
     print "<a href='$url?o=Graph$bigimg-$ls-$le'>&gt;&gt;</a>\n";
-  } else { # at today, >> plots a zero-tail
-    print "<a href='$url?o=Graph$bigimg-$startoff--14'>&gt;</a>\n";
+  } else { # at today, '>' plots a zero-tail
+    my $newend = $endoff;
+    if ($newend > -3) {
+      $newend = -7;
+    } else {
+      $newend = $newend - 7;
+    }
+    print "<a href='$url?o=Graph$bigimg-$startoff-$newend'>&gt;</a>\n";
   }
   print " &nbsp; <a href='$url?o=Graph$bigimg'>Month</a>\n";
   print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
