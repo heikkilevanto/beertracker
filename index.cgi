@@ -478,27 +478,30 @@ my $c2 = "colspan='2'";
 my $c3 = "colspan='3'";
 my $c4 = "colspan='4'";
 my $c6 = "colspan='6'";
-my $sz = "size='15' $clr";
-my $sz2 = "size='2' $clr";
-my $sz3 = "size='8' $clr";
+my $sz1n = "size='15'";
+my $sz1 = "$sz1n $clr";
+my $sz2n = "size='2'";
+my $sz2 = "$sz2n $clr";
+my $sz3n = "size='8'";
+my $sz3 = "$sz3n $clr";
 if ( $edit ) {
-    print "<tr><td $c2><b>Editing record $edit</b> ".
+    print "<tr><td $c2><b>Editing record '$edit'</b> ".
         "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
-    print "<tr><td><input name='st' value='$stamp' $sz placeholder='Stamp'
+    print "<tr><td><input name='st' value='$stamp' $sz1n placeholder='Stamp'
 /></td>\n";
-    print "<td><input name='wd' value='$wday'  $sz2
+    print "<td><input name='wd' value='$wday'  $sz2n
 placeholder='wday' />\n";
     print "<input name='ed' value='$effdate'
-$sz3 placeholder='Eff' /></td></tr>\n";
+$sz3n placeholder='Eff' /></td></tr>\n";
 }
 print "<tr><td>
-  <input name='l' value='$loc' placeholder='Location' $sz /></td>\n";
-print "<td><input name='s' value='$sty' $sz
+  <input name='l' value='$loc' placeholder='Location' $sz1 /></td>\n";
+print "<td><input name='s' value='$sty' $sz1
 placeholder='Style'/></td></tr>\n";
 print "<tr><td>
-  <input name='m' value='$mak' $sz placeholder='Brewery'/></td>\n";
+  <input name='m' value='$mak' $sz1 placeholder='Brewery'/></td>\n";
 print "<td>
-  <input name='b' value='$beer' $sz placeholder='Beer'/></td></tr>\n";
+  <input name='b' value='$beer' $sz1 placeholder='Beer'/></td></tr>\n";
 print "<tr><td><input name='v' value='$vol cl' $sz2 placeholder='Vol' />\n";
 print "<input name='a' value='$alc %' $sz2 placeholder='Alc' />\n";
 print "<input name='p' value='$pr.-' $sz2 placeholder='Price' /></td>\n";
