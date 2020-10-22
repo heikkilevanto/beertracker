@@ -635,7 +635,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        $wkend = $tot;
        $tot = 0;
     }
-    #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays<br/>"; ###
+    #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays $sum30 $sumweek $fut <br/>"; ###
     print F "$date $tot $wkend $sum30 $sumweek $zero $fut\n "  if ($zerodays >= 0);
   }
   close(F);
@@ -1655,9 +1655,19 @@ sub error {
 }
 
 # Helper to get a date string, with optional delta (in days)
+my $starttime = "";
+
 sub datestr {
   my $form = shift || "%F %T";  # "YYYY-MM-DD hh:mm:ss"
   my $delta = shift || 0;   # in days, may be fractional. Negative for ealier
-  my $dstr = strftime ($form, localtime(time() + $delta *60*60*24));
+  if (!$starttime) {
+    $starttime = time();
+    my $clockhours = strftime("%H", localtime($starttime));
+    $starttime = $starttime - $clockhours*3600 + 12 * 3600;
+    # Adjust time to the noon of the same date
+    # This is to fix dates jumping when script running close to miodnight,
+    # when we switch between DST and normal time. See issue #153
+  }
+  my $dstr = strftime ($form, localtime($starttime + $delta *60*60*24));
   return $dstr;
 }
