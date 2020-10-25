@@ -723,42 +723,43 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   } else {
     print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
   }
-  my $len = $startoff - $endoff;
-  my $es = $startoff + $len;
-  my $ee = $endoff + $len;
-  print "<a href='$url?o=Graph$bigimg-$es-$ee'>&lt;&lt;</a> &nbsp; \n";
-  my $ls = $startoff - $len;
-  my $le = $endoff - $len;
-  if ($le < 0 ) {
-    $ls += $ls;
-    $le = 0;
-  }
-  if ($endoff>0) {
-    print "<a href='$url?o=Graph$bigimg-$ls-$le'>&gt;&gt;</a>\n";
-  } else { # at today, '>' plots a zero-tail
-    my $newend = $endoff;
-    if ($newend > -3) {
-      $newend = -7;
-    } else {
-      $newend = $newend - 7;
+  if (!$print) {
+    my $len = $startoff - $endoff;
+    my $es = $startoff + $len;
+    my $ee = $endoff + $len;
+    print "<a href='$url?o=Graph$bigimg-$es-$ee'>&lt;&lt;</a> &nbsp; \n";
+    my $ls = $startoff - $len;
+    my $le = $endoff - $len;
+    if ($le < 0 ) {
+      $ls += $ls;
+      $le = 0;
     }
-    print "<a href='$url?o=Graph$bigimg-$startoff-$newend'>&gt;</a>\n";
-  }
-  print " &nbsp; <a href='$url?o=Graph$bigimg'>Month</a>\n";
-  print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
+    if ($endoff>0) {
+      print "<a href='$url?o=Graph$bigimg-$ls-$le'>&gt;&gt;</a>\n";
+    } else { # at today, '>' plots a zero-tail
+      my $newend = $endoff;
+      if ($newend > -3) {
+        $newend = -7;
+      } else {
+        $newend = $newend - 7;
+      }
+      print "<a href='$url?o=Graph$bigimg-$startoff-$newend'>&gt;</a>\n";
+    }
+    print " &nbsp; <a href='$url?o=Graph$bigimg'>Month</a>\n";
+    print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
 
-  my $zs = $startoff + int($len/2);
-  my $ze = $endoff - int($len/2);
-  if ( $ze < 0 ) {
-    $zs -= $ze;
-    $ze = 0 ;
+    my $zs = $startoff + int($len/2);
+    my $ze = $endoff - int($len/2);
+    if ( $ze < 0 ) {
+      $zs -= $ze;
+      $ze = 0 ;
+    }
+    print " &nbsp; <a href='$url?o=Graph$bigimg-$zs-$ze'>[ - ]</a>\n";
+    my $is = $startoff - int($len/4);
+    my $ie = $endoff + int($len/4);
+    print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'>[ + ]</a>\n";
+    print "<br/>\n";
   }
-  print " &nbsp; <a href='$url?o=Graph$bigimg-$zs-$ze'>[ - ]</a>\n";
-  my $is = $startoff - int($len/4);
-  my $ie = $endoff + int($len/4);
-  print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'>[ + ]</a>\n";
-
-  print "<br/>\n";
 
 
 ########################
@@ -1277,16 +1278,20 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) ."\n" if ($qry);
 
   print "<br/>"if ($qry || $qrylim);
-  print "<a href='$url?q=" . uri_escape_utf8($qry) .
-      "&f=r' >Ratings</a>\n";
-  print "<a href='$url?q=" . uri_escape_utf8($qry) .
-      "&f=c' >Comments</a>\n";
-  print "<a href='$url?q=" . uri_escape_utf8($qry) .
-      "&f=l' >Links</a>\n";
-  if ($qrylim) {
-    print "<a href='$url?q=" . uri_escape_utf8($qry) . "'>All</a><br/>\n";
-    for ( my $i = 0; $i < 11; $i++) {
-      print "<a href='$url?q=" . uri_escape_utf8($qry) . "&f=r$i' >$i</a> &nbsp;";
+  if (!$print) {
+    print "<a href='$url?q=" . uri_escape_utf8($qry) .
+        "&f=r' >Ratings</a>\n";
+    print "<a href='$url?q=" . uri_escape_utf8($qry) .
+        "&f=c' >Comments</a>\n";
+    print "<a href='$url?q=" . uri_escape_utf8($qry) .
+        "&f=l' >Links</a>\n";
+    print "<a href='$url?q=" . uri_escape_utf8($qry) .
+        "&o=$op&print=1' >Print</a>\n";
+    if ($qrylim) {
+      print "<a href='$url?q=" . uri_escape_utf8($qry) . "'>All</a><br/>\n";
+      for ( my $i = 0; $i < 11; $i++) {
+        print "<a href='$url?q=" . uri_escape_utf8($qry) . "&f=r$i' >$i</a> &nbsp;";
+      }
     }
   }
   my $i = scalar( @lines );
@@ -1346,22 +1351,24 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         if ($averages{$lastdate} && $locdrinks eq $daydrinks && $lastdate ne $effdate) {
           print " (a=" . unit($averages{$lastdate},"d"). " )<br/>\n";
         } # fl avg on loc line, if not going to print a day summary line
-        # Restaurant copy button
-        print "<form method='POST' style='display: inline;' >\n";
-        print "<input type='hidden' name='l' value='$lastloc2' />\n";
-        my $rtype = $restaurants{$lastloc2} || "Restaurant, unspecified";
-        print "<input type='hidden' name='m' value='$rtype' />\n";
-        $rtype =~ s/Restaurant, //;
-        print "<input type='hidden' name='b' value='Food and Drink' />\n";
-        print "<input type='hidden' name='v' value='' />\n";
-        print "<input type='hidden' name='s' value='$rtype' />\n";
-        print "<input type='hidden' name='a' value='0' />\n";
-        print "<input type='hidden' name='p' value='$locmsum kr' />\n";
-        $rtype =~ s/^Restaurant, //;
-        print "<input type='submit' name='submit' value='Rest'
-                    style='display: inline; font-size: x-small' />\n";
-        print "</form>\n";
-        print "<br/>\n";
+        if (!$print) {
+          # Restaurant copy button
+          print "<form method='POST' style='display: inline;' >\n";
+          print "<input type='hidden' name='l' value='$lastloc2' />\n";
+          my $rtype = $restaurants{$lastloc2} || "Restaurant, unspecified";
+          print "<input type='hidden' name='m' value='$rtype' />\n";
+          $rtype =~ s/Restaurant, //;
+          print "<input type='hidden' name='b' value='Food and Drink' />\n";
+          print "<input type='hidden' name='v' value='' />\n";
+          print "<input type='hidden' name='s' value='$rtype' />\n";
+          print "<input type='hidden' name='a' value='0' />\n";
+          print "<input type='hidden' name='p' value='$locmsum kr' />\n";
+          $rtype =~ s/^Restaurant, //;
+          print "<input type='submit' name='submit' value='Rest'
+                      style='display: inline; font-size: x-small' />\n";
+          print "</form>\n";
+          print "<br/>\n";
+        }
       }
       # day summary
       if ($lastdate ne $effdate ) {
@@ -1415,52 +1422,53 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       }
       $ratecounts[$rate] ++ if ($rate);
     }
-    # guess sizes for small/large beers
-    my %vols;
-    $vols{$vol} = 1 if ($vol);
-    if ( $mak  =~ /^Restaurant,/i ) {
-      $vols{"R"} = 1;
-    } elsif ( $mak  =~ /^tz,/i ) {
-      %vols=();
-    } elsif ( $mak  =~ /^Wine,/i ) {
-      $vols{12} = 1;
-      $vols{16} = 1;
-      $vols{38} = 1;
-      $vols{75} = 1;
-    } elsif ( $mak  =~ /^Booze,/i ) {
-      $vols{2} = 1;
-      $vols{4} = 1;
-    } else { # Default to beer, usual sizes in craft beer world
-      $vols{25} = 1;
-      $vols{40} = 1;
-    }
-    print "<a href='$url?e=" . uri_escape_utf8($stamp) ."' >Edit</a> \n";
+    if (!$print) {
+      # guess sizes for small/large beers
+      my %vols;
+      $vols{$vol} = 1 if ($vol);
+      if ( $mak  =~ /^Restaurant,/i ) {
+        $vols{"R"} = 1;
+      } elsif ( $mak  =~ /^tz,/i ) {
+        %vols=();
+      } elsif ( $mak  =~ /^Wine,/i ) {
+        $vols{12} = 1;
+        $vols{16} = 1;
+        $vols{38} = 1;
+        $vols{75} = 1;
+      } elsif ( $mak  =~ /^Booze,/i ) {
+        $vols{2} = 1;
+        $vols{4} = 1;
+      } else { # Default to beer, usual sizes in craft beer world
+        $vols{25} = 1;
+        $vols{40} = 1;
+      }
+      print "<a href='$url?e=" . uri_escape_utf8($stamp) ."' >Edit</a> \n";
 
-    # No price - the script guesses based on size.
-    # No location, reuse the current loc
-    print "<input type='hidden' name='m' value='$mak' />\n";
-    print "<input type='hidden' name='b' value='$beer' />\n";
-    print "<input type='hidden' name='v' value='' />\n";
-    print "<input type='hidden' name='s' value='$sty' />\n";
-    print "<input type='hidden' name='a' value='$alc' />\n";
-    print "<input type='hidden' name='l' value='$loc' />\n"
-      if ( $copylocation);
+      # No price - the script guesses based on size.
+      # No location, reuse the current loc
+      print "<input type='hidden' name='m' value='$mak' />\n";
+      print "<input type='hidden' name='b' value='$beer' />\n";
+      print "<input type='hidden' name='v' value='' />\n";
+      print "<input type='hidden' name='s' value='$sty' />\n";
+      print "<input type='hidden' name='a' value='$alc' />\n";
+      print "<input type='hidden' name='l' value='$loc' />\n"
+        if ( $copylocation);
 
-    foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
-      # The sort order defaults to numerical, but if that fails, takes
-      # alphabetical ('R' for restaurant). Note the "no warnings".
-      print "<input type='submit' name='submit' value='Copy $volx'
-                  style='display: inline; font-size: small' />\n";
+      foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
+        # The sort order defaults to numerical, but if that fails, takes
+        # alphabetical ('R' for restaurant). Note the "no warnings".
+        print "<input type='submit' name='submit' value='Copy $volx'
+                    style='display: inline; font-size: small' />\n";
+      }
+      print "</form>\n";
+      if ( $qrylim eq "l" ) {
+        print "<br/>";
+        print glink("$mak $beer", "Google") . "&nbsp;\n";
+        print rblink("$mak $beer", "RateBeer") . "&nbsp;\n";
+        print utlink("$mak $beer", "Untappd") . "&nbsp;\n";
+      }
+      print"<br/>\n";
     }
-    print "</form>\n";
-    if ( $qrylim eq "l" ) {
-      print "<br/>";
-      print glink("$mak $beer", "Google") . "&nbsp;\n";
-      print rblink("$mak $beer", "RateBeer") . "&nbsp;\n";
-      print utlink("$mak $beer", "Untappd") . "&nbsp;\n";
-    }
-
-    print"<br/>\n";
     $lastloc = $dateloc;
     $lastloc2 = $loc;
     $lastdate = $effdate;
