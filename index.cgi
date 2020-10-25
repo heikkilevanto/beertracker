@@ -93,6 +93,7 @@ my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimited
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
+my $print = param("print");  # Printable page, no imput form
 my $url = $q->url;
 
 # Default sizes
@@ -471,77 +472,79 @@ print "<script>\n$script</script>\n";
 
 #############################
 # Main input form
-print "\n<form method='POST' accept-charset='UTF-8' >\n";
-print "<table >";
-my $clr = "Onclick='if (clearonclick) {value=\"\";}'";
-my $c2 = "colspan='2'";
-my $c3 = "colspan='3'";
-my $c4 = "colspan='4'";
-my $c6 = "colspan='6'";
-my $sz1n = "size='15'";
-my $sz1 = "$sz1n $clr";
-my $sz2n = "size='2'";
-my $sz2 = "$sz2n $clr";
-my $sz3n = "size='8'";
-my $sz3 = "$sz3n $clr";
-if ( $edit ) {
-    print "<tr><td $c2><b>Editing record '$edit'</b> ".
-        "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
-    print "<tr><td><input name='st' value='$stamp' $sz1n placeholder='Stamp'
-/></td>\n";
-    print "<td><input name='wd' value='$wday'  $sz2n
-placeholder='wday' />\n";
-    print "<input name='ed' value='$effdate'
-$sz3n placeholder='Eff' /></td></tr>\n";
-}
-print "<tr><td>
-  <input name='l' value='$loc' placeholder='Location' $sz1 /></td>\n";
-print "<td><input name='s' value='$sty' $sz1
-placeholder='Style'/></td></tr>\n";
-print "<tr><td>
-  <input name='m' value='$mak' $sz1 placeholder='Brewery'/></td>\n";
-print "<td>
-  <input name='b' value='$beer' $sz1 placeholder='Beer'/></td></tr>\n";
-print "<tr><td><input name='v' value='$vol cl' $sz2 placeholder='Vol' />\n";
-print "<input name='a' value='$alc %' $sz2 placeholder='Alc' />\n";
-print "<input name='p' value='$pr.-' $sz2 placeholder='Price' /></td>\n";
-print "<td><select name='r' value='$rate' placeholder='Rating' />" .
-   "<option value=''></option>\n";
-for my $ro (0 .. scalar(@ratings)-1) {
-  print "<option value='$ro'" ;
-  print " selected='selected'" if ( $ro eq $rate );
-  print  ">$ro - $ratings[$ro]</option>\n";
-}
-print "</select></td></tr>\n";
- print "<tr>";
-print " <td $c6><textarea name='c' cols='36' rows='3'
-  placeholder='$todaydrinks'/>$com</textarea></td></tr>\n";
-if ( $edit ) {
-  print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
-  print "&nbsp;<span align=right>Clr ";
-  print "<input type='checkbox' checked=clearonclick onclick='clearonclick=this.checked;'/></span></td>\n";
-  print "<td>";
-  print "<a href='$url' >cancel</a>";
-  print "&nbsp;<input type='submit' name='submit' value='Delete'/></td></tr>\n";
-} else {
-  print "<tr><td><input type='submit' name='submit' value='Record'/>\n";
-  print "&nbsp;<input type='button' value='clear' onclick='clearinputs()'/></td>\n";
-  print "<td><select name='ops' " .
-              "onchange='document.location=\"$url?\"+this.value;' >";
-  print "<option value='' >Show</option>\n";
-  print "<option value='o=full' >Full List</option>\n";
-  print "<option value='o=short' >Short List</option>\n";
-  my @ops = ("Graph",
-     "Location","Brewery", "Beer",
-     "Wine", "Booze", "Restaurant", "Style", "Months", "Years", "Datafile", "About");
-  for my $opt ( @ops ) {
-    print "<option value='o=$opt'>$opt</option>\n";
+if ( ! $print ) {
+  print "\n<form method='POST' accept-charset='UTF-8' >\n";
+  print "<table >";
+  my $clr = "Onclick='if (clearonclick) {value=\"\";}'";
+  my $c2 = "colspan='2'";
+  my $c3 = "colspan='3'";
+  my $c4 = "colspan='4'";
+  my $c6 = "colspan='6'";
+  my $sz1n = "size='15'";
+  my $sz1 = "$sz1n $clr";
+  my $sz2n = "size='2'";
+  my $sz2 = "$sz2n $clr";
+  my $sz3n = "size='8'";
+  my $sz3 = "$sz3n $clr";
+  if ( $edit ) {
+      print "<tr><td $c2><b>Editing record '$edit'</b> ".
+          "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
+      print "<tr><td><input name='st' value='$stamp' $sz1n placeholder='Stamp'
+  /></td>\n";
+      print "<td><input name='wd' value='$wday'  $sz2n
+  placeholder='wday' />\n";
+      print "<input name='ed' value='$effdate'
+  $sz3n placeholder='Eff' /></td></tr>\n";
   }
-  print "</select></td>\n";
-  print "</tr>\n";
+  print "<tr><td>
+    <input name='l' value='$loc' placeholder='Location' $sz1 /></td>\n";
+  print "<td><input name='s' value='$sty' $sz1
+  placeholder='Style'/></td></tr>\n";
+  print "<tr><td>
+    <input name='m' value='$mak' $sz1 placeholder='Brewery'/></td>\n";
+  print "<td>
+    <input name='b' value='$beer' $sz1 placeholder='Beer'/></td></tr>\n";
+  print "<tr><td><input name='v' value='$vol cl' $sz2 placeholder='Vol' />\n";
+  print "<input name='a' value='$alc %' $sz2 placeholder='Alc' />\n";
+  print "<input name='p' value='$pr.-' $sz2 placeholder='Price' /></td>\n";
+  print "<td><select name='r' value='$rate' placeholder='Rating' />" .
+    "<option value=''></option>\n";
+  for my $ro (0 .. scalar(@ratings)-1) {
+    print "<option value='$ro'" ;
+    print " selected='selected'" if ( $ro eq $rate );
+    print  ">$ro - $ratings[$ro]</option>\n";
+  }
+  print "</select></td></tr>\n";
+  print "<tr>";
+  print " <td $c6><textarea name='c' cols='36' rows='3'
+    placeholder='$todaydrinks'/>$com</textarea></td></tr>\n";
+  if ( $edit ) {
+    print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
+    print "&nbsp;<span align=right>Clr ";
+    print "<input type='checkbox' checked=clearonclick onclick='clearonclick=this.checked;'/></span></td>\n";
+    print "<td>";
+    print "<a href='$url' >cancel</a>";
+    print "&nbsp;<input type='submit' name='submit' value='Delete'/></td></tr>\n";
+  } else {
+    print "<tr><td><input type='submit' name='submit' value='Record'/>\n";
+    print "&nbsp;<input type='button' value='clear' onclick='clearinputs()'/></td>\n";
+    print "<td><select name='ops' " .
+                "onchange='document.location=\"$url?\"+this.value;' >";
+    print "<option value='' >Show</option>\n";
+    print "<option value='o=full' >Full List</option>\n";
+    print "<option value='o=short' >Short List</option>\n";
+    my @ops = ("Graph",
+      "Location","Brewery", "Beer",
+      "Wine", "Booze", "Restaurant", "Style", "Months", "Years", "Datafile", "About");
+    for my $opt ( @ops ) {
+      print "<option value='o=$opt'>$opt</option>\n";
+    }
+    print "</select></td>\n";
+    print "</tr>\n";
+  }
+  print "</table>\n";
+  print "</form>\n";
 }
-print "</table>\n";
-print "</form>\n";
 
 ##############
 # Graph
@@ -964,8 +967,12 @@ $com ) =
   my @ydrinks;
   my @yprice;
   my $t = "";
-  $t .= "<table border=1 style='align:right'>\n";
-  $t .="<tr><td></td>\n";
+  if (!$print) {
+    $t .= "<table border=1 style='align:right'>\n";
+  } else {
+    $t .= "<table border=0 style='align:right'>\n";
+  }
+  $t .="<tr><td>&nbsp;</td>\n";
   my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
   foreach $y ( reverse($firsty .. $lasty) ) {
@@ -1069,8 +1076,12 @@ $com ) =
   print C $cmd;
   close(C);
   system ("gnuplot $cmdfile ");
-  print "<img src=\"$pngfile\"/>\n";
-  print "<hr/>";
+  if ($bigimg) {
+    print "<a href='$url?o=Months&print=1'><img src=\"$pngfile\"/></a><br/>\n";
+  } else {
+    print "<a href='$url?o=MonthsB'><img src=\"$pngfile\"/></a><br/>\n";
+  }
+  #print "<hr/>";
   print $t;  # The table we built above
   exit();
 
