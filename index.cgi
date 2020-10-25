@@ -1679,6 +1679,7 @@ my $starttime = "";
 sub datestr {
   my $form = shift || "%F %T";  # "YYYY-MM-DD hh:mm:ss"
   my $delta = shift || 0;   # in days, may be fractional. Negative for ealier
+
   if (!$starttime) {
     $starttime = time();
     my $clockhours = strftime("%H", localtime($starttime));
@@ -1687,6 +1688,10 @@ sub datestr {
     # This is to fix dates jumping when script running close to miodnight,
     # when we switch between DST and normal time. See issue #153
   }
-  my $dstr = strftime ($form, localtime($starttime + $delta *60*60*24));
+  my $usetime = $starttime;
+  if ( $form =~ /%T/ ) { # If we want the time (when making a timestamp),
+    $usetime = time();   # base it on unmodified time
+  }
+  my $dstr = strftime ($form, localtime($usetime + $delta *60*60*24));
   return $dstr;
 }
