@@ -872,9 +872,14 @@ $com ) =
   my $y;
   print "<hr/>\n";
   if ($sortdr) {
-    print "Sorting by drinks (<a href='$url?o=Years'>Sort by money</a>)\n";
+    print "Sorting by drinks (<a href='$url?o=Years&print=$print'>Sort by money</a>)\n";
   } else {
-    print "Sorting by money (<a href='$url?o=YearsD'>Sort by drinks</a>)\n";
+    print "Sorting by money (<a href='$url?o=YearsD&print=$print'>Sort by drinks</a>)\n";
+  }
+  if ($print) {
+     print "&nbsp;<a href='$url?o=$op'>Back</a>\n";
+  } else {
+     print "&nbsp;<a href='$url?o=$op&print=1'>Print</a>\n";
   }
   while ( $i > 0 ) {
     $i--;
