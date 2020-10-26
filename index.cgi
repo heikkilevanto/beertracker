@@ -86,7 +86,7 @@ my $pr  = param("p");  # price, DKK
 my $rate= param("r");  # rating, 0=worst, 10=best
 my $com = param("c");  # Comments
   # The rest are not in the data file
-my $del = param("x");  # delete/update last entry - not in data file
+my $del = param("x");  # delete/update last entry
 my $qry = param("q");  # filter query, greps the list
 my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "l" for extra links
 my $op  = param("o");  # operation, to list breweries, locations, etc
