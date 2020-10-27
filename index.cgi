@@ -635,7 +635,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     }
     my $wkend = 0;
     if ($wkday > 4) {
-       $wkend = $tot;
+       $wkend = $tot || -0.08; # mark weekends in the fut graph
        $tot = 0;
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays $sum30 $sumweek $fut <br/>"; ###
