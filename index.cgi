@@ -689,6 +689,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        "set yrange [ -.5 : ] \n" .
        "set format x $xformat \n" .
        "set ytics 0,2 out\n" .
+       "set ytics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5
        "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
        "set mytics 2 \n".
        "set style fill solid \n" .
