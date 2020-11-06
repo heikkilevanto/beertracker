@@ -688,13 +688,14 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
        "set yrange [ -.5 : ] \n" .
        "set format x $xformat \n" .
-       "set ytics 0,2 out\n" .
-       "set ytics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5
+       "unset ytics\n" .  # y2tics are on the right side, where I want them
+       "set y2tics 0,2 out\n" .
+       "set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5
        "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
-       "set mytics 2 \n".
+       "set my2tics 2 \n".
        "set style fill solid \n" .
        "set boxwidth 0.7 relative \n" .
-       "set grid xtics ytics  linewidth 0.1 linecolor 4 \n".
+       "set grid xtics y2tics  linewidth 0.1 linecolor 4 \n".
        "plot " .
              # lc 0=grey 1=red, 2=green, 3=blue
              # note the order of plotting, later ones get on top
