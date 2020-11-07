@@ -733,7 +733,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     my $len = $startoff - $endoff;
     my $es = $startoff + $len;
     my $ee = $endoff + $len;
-    print "<a href='$url?o=Graph$bigimg-$es-$ee'>&lt;&lt;</a> &nbsp; \n";
+    print "<a href='$url?o=Graph$bigimg-$es-$ee'>&lt;&lt;</a> &nbsp; \n"; # '<<'
     my $ls = $startoff - $len;
     my $le = $endoff - $len;
     if ($le < 0 ) {
@@ -741,7 +741,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       $le = 0;
     }
     if ($endoff>0) {
-      print "<a href='$url?o=Graph$bigimg-$ls-$le'>&gt;&gt;</a>\n";
+      print "<a href='$url?o=Graph$bigimg-$ls-$le'>&gt;&gt;</a>\n"; # '>>'
     } else { # at today, '>' plots a zero-tail
       my $newend = $endoff;
       if ($newend > -3) {
@@ -749,10 +749,14 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       } else {
         $newend = $newend - 7;
       }
-      print "<a href='$url?o=Graph$bigimg-$startoff-$newend'>&gt;</a>\n";
+      print "<a href='$url?o=Graph$bigimg-$startoff-$newend'>&gt;</a>\n"; # '>'
     }
     print " &nbsp; <a href='$url?o=Graph$bigimg'>Month</a>\n";
     print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
+    if (scalar(@lines)>500) {
+      my $all = scalar(@lines); # can't be more days than we have entries
+      print " <a href='$url?o=Graph$bigimg-$all'>All</a> \n"; # graph will trunc
+    }
 
     my $zs = $startoff + int($len/2);
     my $ze = $endoff - int($len/2);
