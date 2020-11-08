@@ -139,7 +139,7 @@ if (!$origstamp) { # but $origstamp stays, telling us we can overwrite $stamp
   $stamp = datestr( "%F %T");
 }
 if ( ! $effdate ) { # Effective date can be the day before
-  $effdate = datestr( "%a; %F", -0.3); # effdate changes at 08
+  $effdate = datestr( "%a; %F", -0.3, 1); # effdate changes at 08
 } else {
   $effdate = "$wday; $effdate";
 }
@@ -609,7 +609,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       $cntweek++;
     }
     #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
-    #print "<!-- $date " . join(', ', @week). " $sumweek " . $sumweek/$cntweek . "-->\n";
+    #print "<!-- $date [" . join(', ', @week). "] = $sumweek " . $sumweek/$cntweek . "-->\n";
     $sum30 = $sum30 / $sumw;
     $sumweek = $sumweek / $cntweek;
     $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
@@ -642,7 +642,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
          $wkend = $wkend || -0.08 ;
        }
     }
-    #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays $sum30 $sumweek $fut <br/>"; ###
+    #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
     print F "$date $tot $wkend $sum30 $sumweek $zero $fut\n "  if ($zerodays >= 0);
   }
   close(F);
@@ -1693,8 +1693,8 @@ my $starttime = "";
 
 sub datestr {
   my $form = shift || "%F %T";  # "YYYY-MM-DD hh:mm:ss"
-  my $delta = shift || 0;   # in days, may be fractional. Negative for ealier
-
+  my $delta = shift || 0;  # in days, may be fractional. Negative for ealier
+  my $exact = shift || 0;  # Pass non-zero to use the actual clock, not starttime
   if (!$starttime) {
     $starttime = time();
     my $clockhours = strftime("%H", localtime($starttime));
@@ -1704,7 +1704,7 @@ sub datestr {
     # when we switch between DST and normal time. See issue #153
   }
   my $usetime = $starttime;
-  if ( $form =~ /%T/ ) { # If we want the time (when making a timestamp),
+  if ( $form =~ /%T/ || $exact ) { # If we want the time (when making a timestamp),
     $usetime = time();   # base it on unmodified time
   }
   my $dstr = strftime ($form, localtime($usetime + $delta *60*60*24));
