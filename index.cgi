@@ -691,7 +691,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        "unset ytics\n" .  # y2tics are on the right side, where I want them
        "set ytics 0,2 out format \"\" \n" .  # Note that we need ytics, to make
        "set mytics 2 \n".   # the scaling work, and y2tics to show legend on the right
-       "set y2tics 0,2 out\n" .
+       "set y2tics 0,2 out format \"%2.0f\"\n" .
        "set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5
        "set my2tics 2 \n".
        "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
@@ -1450,7 +1450,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       } elsif ( $mak  =~ /^Wine,/i ) {
         $vols{12} = 1;
         $vols{16} = 1;
-        $vols{38} = 1;
+        $vols{37} = 1;
         $vols{75} = 1;
       } elsif ( $mak  =~ /^Booze,/i ) {
         $vols{2} = 1;
