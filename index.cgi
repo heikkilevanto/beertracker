@@ -136,14 +136,13 @@ if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
 
 # Both $stamp and $effdate may get rewritten every time we see a tz line in the file
 if (!$origstamp) { # but $origstamp stays, telling us we can overwrite $stamp
-  $stamp = datestr( "%F %T");
+  $stamp = datestr( "%F %T", 0,1 ); # no offset, actual time
 }
 if ( ! $effdate ) { # Effective date can be the day before
   $effdate = datestr( "%a; %F", -0.3, 1); # effdate changes at 08
 } else {
   $effdate = "$wday; $effdate";
 }
-
 
 #######################
 # Dump of the data file
@@ -245,8 +244,8 @@ while (<F>) {
       }
     }
     if ( ! $origstamp ) { # Recalculate $stamp and effdate, unless given as inputs
-      $stamp = datestr( "%F %T");
-      $effdate = datestr( "%a; %F", -0.3);
+      $stamp = datestr( "%F %T", 0, 1);
+      $effdate = datestr( "%a; %F", -0.3, 1);
     }
     next;
   } # tz
