@@ -206,7 +206,7 @@ while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
   next unless $_; # skip empty lines
-  my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( /; */ );
+  my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( / *; */ );
   next unless $wd; # We can get silly comment lines, Bom mark, etc
   push @lines, $_; # collect them all
   if (!$allfirstdate) {
@@ -323,7 +323,7 @@ if ( $q->request_method eq "POST" ) {
     && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' )) {
     ( undef, undef, undef, $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr,
 undef, undef) =
-       split( /; */, $lines[$i] );
+       split( / *; */, $lines[$i] );
     if ( !$priceguess &&    # Guess a price
          uc($iloc) eq uc($loc) &&   # if same location and volume
          $vol eq $ivol ) {
@@ -385,7 +385,7 @@ undef, undef) =
     open F, ">$datafile"
       or error ("Could not open $datafile for writing");
     while (<BF>) {
-      my ( $stp, undef) = split( /; */ );
+      my ( $stp, undef) = split( / *; */ );
       if ( $stp ne $edit ) {
         print F $_;
       } else { # found the line
@@ -408,11 +408,11 @@ undef, undef) =
 
 ############################
 # Get new values from the file we ingested earlier
-my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) = split( /; */,
+my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) = split( / *; */,
 $lastline );
 ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com
 ) =
-    split( /; */, $foundline );
+    split( / *; */, $foundline );
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
   $com = "";
@@ -569,7 +569,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my %sums; # drink sums by (eff) date
   for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
-       split( /; */, $lines[$i] );
+       split( / *; */, $lines[$i] );
     next if ( $mak =~ /^restaurant/i );
     $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
   }
@@ -789,7 +789,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     $i--;
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
 $com ) =
-       split( /; */, $lines[$i] );
+       split( / *; */, $lines[$i] );
     if ( $i == 0 ) {
       $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
@@ -896,7 +896,7 @@ $com ) =
     $i--;
     #print "$thisyear $i: $lines[$i]<br/>\n";
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
-      split( /; */, $lines[$i] );
+      split( / *; */, $lines[$i] );
     $y = substr($effdate,0,4);
     #print "  y=$y, ty=$thisyear <br/>\n";
     next if ($mak =~ /restaurant/i );
@@ -1156,7 +1156,7 @@ $com ) =
     print "(<a href='$url?o=$op'>Recent</a>) <br/>\n";
   }
   print "Filter: <a href='$url?q=$qry'>$qry</a> " .
-     "<a href='$url?o=$op'>(clear) <br/>" if $qry;
+     "<a href='$url?o=$op'>(clear)</a> <br/>" if $qry;
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   my $i = scalar( @lines );
   my $fld;
@@ -1173,7 +1173,7 @@ $com ) =
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
 $com ) =
-       split( /; */, $lines[$i] );
+       split( / *; */, $lines[$i] );
     next if ( $mak =~ /tz,/ );
     $fld = "";
     if ( $op eq "Location" ) {
@@ -1288,7 +1288,7 @@ $com ) =
 if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   print "\n<!-- Full list -->\n ";
-  print "<hr/>Filter: <a href='$url'><b>$qry (Clear)</b></a>" if ($qry || $qrylim);
+  print "<hr/>Filter: <b>$qry</b> <a href='$url'>(Clear)</a>" if ($qry || $qrylim);
   print " -".$qrylim if ($qrylim);
   print " &nbsp; \n";
   print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) ."\n" if ($qry);
@@ -1333,7 +1333,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer,
-      $vol, $sty, $alc, $pr, $rate, $com ) = split( /; */, $lines[$i] );
+      $vol, $sty, $alc, $pr, $rate, $com ) = split( / *; */, $lines[$i] );
     next if ( $qrylim eq "c" && (! $com || $com =~ /^ *\(/ ) );
       # Skip also comments like "(4 EUR)"
     next if ( $qrylim =~ /^r(\d*)/ && ! $rate );  # any rating
@@ -1542,6 +1542,8 @@ sub param {
   my $tag = shift;
   my $val = $q->param($tag) || "";
   $val =~ s/[^a-zA-ZåæøÅÆØöÖäÄ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
+  $val =~ s/^ +//; # Trim leading spaces
+  $val =~ s/ +$//; # and trailing
   return $val;
 }
 
