@@ -1071,6 +1071,8 @@ $com ) =
        "set out \"$pngfile\" \n".
        "set yrange [0:] \n" .
        "set mxtics 1\n".
+       "set ytics 1\n".
+       "set mytics 2\n".
        "set grid xtics ytics\n".
        "set xdata time \n".
        "set timefmt \"%b\" \n".
