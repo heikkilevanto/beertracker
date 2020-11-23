@@ -1116,7 +1116,8 @@ $com ) =
 
   print "Some links I may find useful: <ul>";
   print "<li><a href='https://github.com/heikkilevanto/beertracker' target='_blank'>".
-     "Beertracker on GitHub</a></li>\n";
+     "Beertracker on GitHub</a>.".
+     "&nbsp; <a href='https://github.com/heikkilevanto/beertracker/issues' target='_blank'>Bug tracker</li>\n";
   print "<li><a href='https://www.ratebeer.com' target='_blank'>RateBeer</a></li>\n";
   print "<li><a href='https://untappd.com' target='_blank'>Untappd</a></li>\n";
   print "</ul><p/>\n";
