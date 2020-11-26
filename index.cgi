@@ -629,8 +629,8 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         $sumweek = "NaN";
       }
     }
-    if ($startoff - $endoff > 99 && $ndays >0) {
-      $sumweek = "NaN"; # Can't see them anyway
+    if ($startoff - $endoff > 99 && $wkday != 3) {
+      $sumweek = "NaN"; # Can't see them anyway - plot only for Wed
     }
     my $wkend = 0;
     if ($wkday > 4) {
@@ -642,7 +642,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        }
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
-    print F "$date $tot $wkend $sum30 $sumweek $zero $fut\n "  if ($zerodays >= 0);
+    print F "$date $tot $wkend $sum30 $sumweek $zero $fut\n"  if ($zerodays >= 0);
   }
   close(F);
   my $oneday = 24 * 60 * 60 ; # in seconds
@@ -698,7 +698,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        "set boxwidth 0.7 relative \n" .
        "set grid xtics y2tics  linewidth 0.1 linecolor 4 \n".
        "plot " .
-             # lc 0=grey 1=red, 2=green, 3=blue
+             # lc 0=grey 1=red, 2=green, 3=blue 9=purple
              # note the order of plotting, later ones get on top
              # so we plot weekdays, weekends, avg line, zeroes
         "\"$plotfile\" " .
