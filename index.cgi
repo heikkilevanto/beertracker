@@ -629,8 +629,8 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         $sumweek = "NaN";
       }
     }
-    if ($startoff - $endoff > 99 && $wkday != 3) {
-      $sumweek = "NaN"; # Can't see them anyway - plot only for Wed
+    if ($startoff - $endoff > 99 && $wkday != 2) {
+      $sumweek = "NaN"; # Can't see them anyway - plot only for Tuesdays.
     }
     my $wkend = 0;
     if ($wkday > 4) {
