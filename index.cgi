@@ -674,10 +674,6 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   if ($bigimg) {
     $imgsz = "640,480";
   }
-  my $smooth = "";
-  if ($realdays > 3 ) { # Don't try to make splines with too little data
-    $smooth = "smooth cspline";
-  }
   my $cmd = "" .
        "set term png small size $imgsz \n".
        $pointsize .
@@ -706,7 +702,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "\"$plotfile\" " .
             "using 1:3 with boxes lc 3 notitle," .  # weekends
         "\"$plotfile\" " .
-            "using 1:4 with line $smooth lc 9 lw 2 notitle, " .  # avg30
+            "using 1:4 with line lc 9 lw 2 notitle, " .  # avg30
                # smooth csplines
         "\"$plotfile\" " .
             "using 1:5 with points pointtype 1 lc \"gray10\" notitle, " .  # avg7
