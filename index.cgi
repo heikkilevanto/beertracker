@@ -73,7 +73,7 @@ $currency{"usd"} = 6.3;  # Varies bit over time
 # Input Parameters - data file fields are the same order
 # from when POSTing a new beer entry
 my $stamp = param("st");
-my $origstamp = $stamp; # Remember if we had a stamp from the input
+my $origstamp = $stamp; # Remember if we had a stamp from the input, indicating editing
 my $wday = param("wd");  # weekday
 my $effdate = param("ed");  # effective date. Drinks after midnight count as night before
 my $loc = param("l");  # location
@@ -86,6 +86,8 @@ my $pr  = param("p");  # price, DKK
 my $rate= param("r");  # rating, 0=worst, 10=best
 my $com = param("c");  # Comments
   # The rest are not in the data file
+my $date = param("d"); # Date, if entered. Overrides stamp and effdate.
+my $time = param("t"); # Time, if entered.
 my $del = param("x");  # delete/update last entry
 my $qry = param("q");  # filter query, greps the list
 my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "l" for extra links
@@ -289,9 +291,10 @@ if ( ! $todaydrinks ) { # not today
   my $today = datestr("%F");
   if ( $today =~ /$calmon-(\d\d)/ ) {
     $lastmonthday = $1;
-    # TODO - This still fails when today is in the next month, then it shows
-    # prev month up to the last entry date, not to end of the month. I can
-    # live with that for now.
+    # TODO - When today is in the next month, it shows prev month up to the last
+    # entry date, not to end of the month. I can live with that for now, esp
+    # since the entry must be pretty close to the end of the month. Showing
+    # zeroes for the current month would be no fun.
   }
 }
 
@@ -311,6 +314,38 @@ if ( $q->request_method eq "POST" ) {
   my $sub = $q->param("submit") || "";
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
+  if ( !$origstamp) { # New record, process date and time if entered
+    #print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
+    if ($date =~ /^ *L/i ) { # 'L' for last date
+      if ( $lastline =~ /(^[0-9-]+) +(\d+):(\d+)/ ) {
+        $date = $1;
+        if (! $time ){ # Guess a time
+          my $hr = $2;
+          my $min = $3;
+          $min += 5;  # 5 min past the previous looks right
+          if ($min > 59 ) {
+            $min -= 60;
+            $hr++;
+            $hr -= 24 if ($hr >= 24);
+          }
+          $time = "$hr:$min";
+        }
+      }
+    } # L
+    # Default to current date and time
+    $date = $date || datestr( "%F", 0, 1);
+    $time = $time || datestr( "%T", 0, 1);
+    $stamp = `date -d "$date $time" "+%F %T; %a"`;
+    chomp($stamp);
+    $effdate = $date;
+    if ($time lt "08") { # Times past midnight count as prev date
+      my $wkday = $1 if ($stamp =~ /^[^;]+; *(\w+)/ );
+      $stamp = `date -d "$date $time tomorrow" "+%F %T"`;
+      chomp($stamp);
+      $stamp .= "; $wkday";
+    }
+    #print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate' W='$wkday'\n";
+  }
   if ( $mak !~ /tz,/i ) {
     $loc = $thisloc unless $loc;  # Always default to the last location, except for tz lines
   }
@@ -399,7 +434,6 @@ undef, undef) =
       or error("Error closing $datafile: $!");
     close BF
       or error("Error closing $bakfile: $!");
-
   }
   # Redirect to the same script, without the POST, so we see the results
   print $q->redirect( $url );
@@ -486,14 +520,15 @@ if ( ! $print ) {
   my $sz3n = "size='8'";
   my $sz3 = "$sz3n $clr";
   if ( $edit ) {
-      print "<tr><td $c2><b>Editing record '$edit'</b> ".
-          "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
-      print "<tr><td><input name='st' value='$stamp' $sz1n placeholder='Stamp'
-  /></td>\n";
-      print "<td><input name='wd' value='$wday'  $sz2n
-  placeholder='wday' />\n";
-      print "<input name='ed' value='$effdate'
-  $sz3n placeholder='Eff' /></td></tr>\n";
+    print "<tr><td $c2><b>Editing record '$edit'</b> ".
+        "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
+    print "<tr><td><input name='st' value='$stamp' $sz1n placeholder='Stamp' /></td>\n";
+    print "<td><input name='wd' value='$wday' $sz2n placeholder='wday' />\n";
+    print "<input name='ed' value='$effdate' $sz3n placeholder='Eff' /></td></tr>\n";
+  } else { # fields to enter date and time
+    print "<tr><td><input name='d' value='' $sz1n placeholder='YYYY-MM-DD' /></td>\n";
+    print "<td><input name='t' value='' $sz3n placeholder='HH:MM' /></td></tr>\n";
+
   }
   print "<tr><td>
     <input name='l' value='$loc' placeholder='Location' $sz1 /></td>\n";
