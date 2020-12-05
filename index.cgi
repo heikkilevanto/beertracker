@@ -328,10 +328,21 @@ if ( $q->request_method eq "POST" ) {
             $hr++;
             $hr -= 24 if ($hr >= 24);
           }
-          $time = "$hr:$min";
+          $time = sprintf("%02d:%02d", $hr,$min);
         }
       }
     } # L
+    if ( $date =~ /^ *Y/i ) { # 'Y' for yesterday
+      $date = datestr( "%F", -1, 1);
+    }
+    $time =~ s/^([0-9:]*p?).*/$1/i; # Remove AM markers (but not the p in pm)
+    $time =~ s/^(\d\d?)(\d\d)(p?)/$1:$2$3/i; # expand 0130 to 01:30, keeping the p
+    if ( $time =~ /^(\d\d?)(p?)$/i ) { # default to full hrs
+      $time = "$1:00$2";
+    }
+    if ( $time =~ /^(\d+):(\d+) *(p)/i ) { # Convert 'P' or 'PM' to 24h
+      $time = sprintf( "%02d:%02d", $1+12, $2);
+    }
     # Default to current date and time
     $date = $date || datestr( "%F", 0, 1);
     $time = $time || datestr( "%T", 0, 1);
@@ -344,7 +355,7 @@ if ( $q->request_method eq "POST" ) {
       chomp($stamp);
       $stamp .= "; $wkday";
     }
-    #print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate' W='$wkday'\n";
+    #print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate'\n";
   }
   if ( $mak !~ /tz,/i ) {
     $loc = $thisloc unless $loc;  # Always default to the last location, except for tz lines
