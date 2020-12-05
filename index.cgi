@@ -316,7 +316,7 @@ if ( $q->request_method eq "POST" ) {
   # the same name.
   if ( !$origstamp) { # New record, process date and time if entered
     #print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
-    if ($date =~ /^ *L/i ) { # 'L' for last date
+    if ($date =~ /^L$/i ) { # 'L' for last date
       if ( $lastline =~ /(^[0-9-]+) +(\d+):(\d+)/ ) {
         $date = $1;
         if (! $time ){ # Guess a time
@@ -332,9 +332,10 @@ if ( $q->request_method eq "POST" ) {
         }
       }
     } # L
-    if ( $date =~ /^ *Y/i ) { # 'Y' for yesterday
+    if ( $date =~ /^Y$/i ) { # 'Y' for yesterday
       $date = datestr( "%F", -1, 1);
     }
+    $time = "" if ($time !~ /^\d/); # Remove real bad times, default to now
     $time =~ s/^([0-9:]*p?).*/$1/i; # Remove AM markers (but not the p in pm)
     $time =~ s/^(\d\d?)(\d\d)(p?)/$1:$2$3/i; # expand 0130 to 01:30, keeping the p
     if ( $time =~ /^(\d\d?)(p?)$/i ) { # default to full hrs
