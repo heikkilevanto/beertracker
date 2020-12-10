@@ -1230,6 +1230,7 @@ $com ) =
        split( / *; */, $lines[$i] );
     next if ( $mak =~ /tz,/ );
     $fld = "";
+
     if ( $op eq "Location" ) {
       $fld = $loc;
       $line = "<td>" . filt($loc,"b") .
@@ -1237,16 +1238,18 @@ $com ) =
         "&nbsp; " . loclink($loc, "L") . "  " . glink($loc, "G") . "</span>" .
         "</td>" .
         "<td>$wday $effdate ($seen{$loc}) <br class='no-wide'/>" .
-        lst("Beer",$mak,"i") . ": " . filt($beer) . "</td>";
+        lst("Location",$mak,"i") . ": " . lst($op,$beer) . "</td>";
+
     } elsif ( $op eq "Brewery" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
       $fld = $mak;
       $mak =~ s"/"/<br/>"; # Split collab brews on two lines
-      $line = "<td>" . lst("Beer",$mak) . "<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
-      "<td>$wday $effdate " .lst("Beer",$loc) . " ($seen{$fld}) " .  # $mak before cleaning
-            "<br class='no-wide'/> " . filt("[$sty]") . "  " . filt($beer,"b")  ."&nbsp;</td>";
+      $line = "<td>" . filt($mak) . "<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
+      "<td>$wday $effdate " . lst($op,$loc) . " ($seen{$fld}) " .  # $mak before cleaning
+            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]") . "  " . lst($op,$beer,"b")  ."</td>";
+
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
@@ -1254,26 +1257,29 @@ $com ) =
       $fld = $beer;
       $line = "<td>" . filt($beer,"b") . "&nbsp; ($seen{$beer}) &nbsp;" . glink($mak,"G") ."</td>" .
             "<td>$wday $effdate ".
-            lst("Beer",$loc) .  " <br class='no-wide'/> " .
-            filt("[$sty]"). " " . unit($alc,'%') .
-            lst("Beer",$mak,"i") . "&nbsp;</td>";
+            lst($op,$loc) .  " <br class='no-wide'/> " .
+            lst($op,$sty,"","[$sty]"). " " . unit($alc,'%') .
+            lst($op,$mak,"i") . "&nbsp;</td>";
+
     } elsif ( $op eq "Wine" ) {
       next unless ( $mak =~ /^wine, *(.*)$/i );
       $fld = $beer;
       my $stylename = $1;
       $line = "<td>" . filt($beer,"b")  . "&nbsp; $stylename &nbsp;" . glink($beer, "G") . "</td>" .
             "<td>$wday $effdate ".
-            lst("Wine",$loc) . " ($seen{$beer}) " .
-            "<br class='no-wide'/> " . filt("[$sty]"). "</td>";
+            lst($op,$loc) . " ($seen{$beer}) " .
+            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). "</td>";
+
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze, *(.*)$/i );
       $fld = $beer;
       my $stylename = $1;
       $line = "<td>" .filt($beer,"b") . "&nbsp;" . glink($beer, "G") ."</td>" .
             "<td>$wday $effdate ".
-            lst("Booze",$loc) ." ($seen{$beer}) " .
-            "<br class='no-wide'/> " . filt("[$sty]"). " " . unit($alc,'%') .
-              filt($mak,"i", $stylename) . "</td>";
+            lst($op,$loc) ." ($seen{$beer}) " .
+            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). " " . unit($alc,'%') .
+              lst($op, $mak,"i", $stylename) . "</td>";
+
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $mak =~ /^restaurant,? *(.*)$/i );
       my $rstyle="";  # op,qry,tag,dsp
@@ -1288,6 +1294,7 @@ $com ) =
               "$rstyle  &nbsp;" . glink("Restaurant $loc") . "</td>" .
               "<td><i>$beer</i>". " $rpr <br class='no-wide'/> " .
               "$wday $effdate $ratestr</td>";
+
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
@@ -1296,7 +1303,7 @@ $com ) =
       $fld = $sty;
       $line = "<td>" . filt("[$sty]","b") . " ($seen{$sty})" . "</td><td>$wday $effdate " .
             lst("Beer",$loc,"i") .
-            " <br class='no-wide'/> " . lst("Beer",$mak,"i") . ": " . filt($beer,"b") . "</td>";
+            " <br class='no-wide'/> " . lst($op,$mak,"i") . ": " . lst($op,$beer,"b") . "</td>";
     } else {
       print "<!-- unknown shortlist '$op' -->\n";
       last;
@@ -1597,9 +1604,9 @@ sub param {
   return $val;
 }
 
-# Helper to make a filter link
+# Helper to make a filter link, always to the default (long) list
 sub filt {
-  my $f = shift;
+  my $f = shift; # filter term
   my $tag = shift || "nop";
   my $dsp = shift || $f;
   my $param = $f;
