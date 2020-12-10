@@ -483,12 +483,15 @@ print "<style rel='stylesheet'>\n";
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.
+my $bgcolor = "#003000";
+$bgcolor = "#003050" unless ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ );
 print '@media screen {';
-if ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ ) {
-  print   "* { background-color: #003000; color: #FFFFFF; font-size: small }\n";
-} else {
-  print   "* { background-color: #003050; color: #FFFFFF; font-size: small }\n";
-}
+print "  * { background-color: $bgcolor; color: #FFFFFF; }\n";
+print "  * { font-size: small; }\n";
+print "}\n";
+print '@media print{';
+print "  * { font-size: xx-small; }\n";
+print "  .no-print, .no-print * { display: none !important; }\n";
 print "}\n";
 print "</style>\n";
 print "<link rel='shortcut icon' href='beer.png'/>\n";
@@ -520,7 +523,7 @@ print "<script>\n$script</script>\n";
 #############################
 # Main input form
 if ( ! $print ) {
-  print "\n<form method='POST' accept-charset='UTF-8' >\n";
+  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' >\n";
   print "<table >";
   my $clr = "Onclick='if (clearonclick) {value=\"\";}'";
   my $c2 = "colspan='2'";
@@ -784,6 +787,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   } else {
     print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
   }
+  print "<div class='no-print'>\n";
   if (!$print) {
     my $len = $startoff - $endoff;
     my $es = $startoff + $len;
@@ -825,6 +829,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'>[ + ]</a>\n";
     print "<br/>\n";
   }
+  print "</div>\n";
 
 
 ########################
