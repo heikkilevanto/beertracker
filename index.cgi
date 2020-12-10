@@ -633,11 +633,17 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $zerodays = -1;
   my $realdays = 0;
   my $fut = "NaN";
+  my $allsum = 0.0;  # Sum for the whole graph
+  my $allcount = 0;
   while ( $ndays > $endoff) {
     $ndays--;
     $rawdate = datestr("%F:%u", -$ndays);
     ($date,$wkday) = split(':',$rawdate);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
+    if ( $date ge $startdate && $date lt $enddate ) {
+      $allsum += $tot;
+      $allcount++;
+    }
     $realdays ++ if ($tot);
     @month = ( @month, $tot);
     shift @month if scalar(@month)>=30;
@@ -724,6 +730,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   if ($bigimg) {
     $imgsz = "640,480";
   }
+  my $allavg = sprintf("%4.1f", $allsum / $allcount);
   my $cmd = "" .
        "set term png small size $imgsz \n".
        $pointsize .
@@ -748,9 +755,10 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
              # note the order of plotting, later ones get on top
              # so we plot weekdays, weekends, avg line, zeroes
         "\"$plotfile\" " .
-            "using 1:2 with boxes lc 0 notitle ," .  # weekdays
+            "using 1:2 with boxes lc 0 notitle," .  # weekdays
         "\"$plotfile\" " .
             "using 1:3 with boxes lc 3 notitle," .  # weekends
+         "$allavg with line lc \"black\" notitle, ". # Avg line for the whole plot
         "\"$plotfile\" " .
             "using 1:4 with line lc 9 lw 2 notitle, " .  # avg30
                # smooth csplines
