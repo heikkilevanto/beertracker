@@ -763,7 +763,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
             "using 1:2 with boxes lc 0 notitle," .  # weekdays
         "\"$plotfile\" " .
             "using 1:3 with boxes lc 3 notitle," .  # weekends
-         "$allavg with line lc \"black\" notitle, ". # Avg line for the whole plot
+         "$allavg with dots lc \"brown\" notitle, ". # Avg line for the whole plot
         "\"$plotfile\" " .
             "using 1:4 with line lc 9 lw 2 notitle, " .  # avg30
                # smooth csplines
