@@ -488,9 +488,13 @@ print '@media screen {';
 print "  * { background-color: $bgcolor; color: #FFFFFF; }\n";
 print "  * { font-size: small; }\n";
 print "}\n";
+print '@media screen and (min-width: 700px){';
+print "  .no-wide, .no-wide * { display: none !important; }\n";
+print "}\n";
 print '@media print{';
 print "  * { font-size: xx-small; }\n";
 print "  .no-print, .no-print * { display: none !important; }\n";
+print "  .no-wide, .no-wide * { display: none !important; }\n";
 print "}\n";
 print "</style>\n";
 print "<link rel='shortcut icon' href='beer.png'/>\n";
@@ -1205,7 +1209,7 @@ $com ) =
     print "(<a href='$url?o=$op'>Recent</a>) <br/>\n";
   }
   print "Filter: <a href='$url?q=$qry'>$qry</a> " .
-     "<a href='$url?o=$op' class='no-print'>(clear)</a> <br/>" if $qry;
+     "<a href='$url?o=$op'>(clear)</a> <br/>" if $qry;
   print "</div>\n";
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   my $i = scalar( @lines );
@@ -1232,7 +1236,7 @@ $com ) =
         "<span class='no-print'> ".
         "&nbsp; " . loclink($loc, "L") . "  " . glink($loc, "G") . "</span>" .
         "</td>" .
-        "<td>$wday $effdate ($seen{$loc}) <br class='no-print'/>" .
+        "<td>$wday $effdate ($seen{$loc}) <br class='no-wide'/>" .
         lst("Beer",$mak,"i") . ": " . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
       next if ( $mak =~ /^wine/i );
@@ -1240,9 +1244,9 @@ $com ) =
       next if ( $mak =~ /^restaurant/i );
       $fld = $mak;
       $mak =~ s"/"/<br/>"; # Split collab brews on two lines
-      $line = "<td>" . lst("Beer",$mak) . "<br/ class='no-print'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
+      $line = "<td>" . lst("Beer",$mak) . "<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
       "<td>$wday $effdate " .lst("Beer",$loc) . " ($seen{$fld}) " .  # $mak before cleaning
-            "<br class='no-print'/> " . filt("[$sty]") . "  " . filt($beer,"b")  ."&nbsp;</td>";
+            "<br class='no-wide'/> " . filt("[$sty]") . "  " . filt($beer,"b")  ."&nbsp;</td>";
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
@@ -1250,7 +1254,7 @@ $com ) =
       $fld = $beer;
       $line = "<td>" . filt($beer,"b") . "&nbsp; ($seen{$beer}) &nbsp;" . glink($mak,"G") ."</td>" .
             "<td>$wday $effdate ".
-            lst("Beer",$loc) .  "<br class='no-print'/>" .
+            lst("Beer",$loc) .  " <br class='no-wide'/> " .
             filt("[$sty]"). " " . unit($alc,'%') .
             lst("Beer",$mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Wine" ) {
@@ -1260,7 +1264,7 @@ $com ) =
       $line = "<td>" . filt($beer,"b")  . "&nbsp; $stylename &nbsp;" . glink($beer, "G") . "</td>" .
             "<td>$wday $effdate ".
             lst("Wine",$loc) . " ($seen{$beer}) " .
-            "<br class='no-print'/> " . filt("[$sty]"). "</td>";
+            "<br class='no-wide'/> " . filt("[$sty]"). "</td>";
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze, *(.*)$/i );
       $fld = $beer;
@@ -1268,7 +1272,7 @@ $com ) =
       $line = "<td>" .filt($beer,"b") . "&nbsp;" . glink($beer, "G") ."</td>" .
             "<td>$wday $effdate ".
             lst("Booze",$loc) ." ($seen{$beer}) " .
-            "<br class='no-print'/> " . filt("[$sty]"). " " . unit($alc,'%') .
+            "<br class='no-wide'/> " . filt("[$sty]"). " " . unit($alc,'%') .
               filt($mak,"i", $stylename) . "</td>";
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $mak =~ /^restaurant,? *(.*)$/i );
@@ -1280,9 +1284,9 @@ $com ) =
       my $restname = "Restaurant,$loc";
       my $rpr = "";
       $rpr = "&nbsp; $pr kr" if ($pr && $pr >0) ;
-      $line = "<td>" . filt($loc,"b") . "&nbsp; ($seen{$restname}) <br class='no-print'/> ".
+      $line = "<td>" . filt($loc,"b") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> ".
               "$rstyle  &nbsp;" . glink("Restaurant $loc") . "</td>" .
-              "<td><i>$beer</i>". " $rpr <br class='no-print'/> " .
+              "<td><i>$beer</i>". " $rpr <br class='no-wide'/> " .
               "$wday $effdate $ratestr</td>";
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );
@@ -1292,7 +1296,7 @@ $com ) =
       $fld = $sty;
       $line = "<td>" . filt("[$sty]","b") . " ($seen{$sty})" . "</td><td>$wday $effdate " .
             lst("Beer",$loc,"i") .
-            " <br class='no-print'/> " . lst("Beer",$mak,"i") . ": " . filt($beer,"b") . "</td>";
+            " <br class='no-wide'/> " . lst("Beer",$mak,"i") . ": " . filt($beer,"b") . "</td>";
     } else {
       print "<!-- unknown shortlist '$op' -->\n";
       last;
