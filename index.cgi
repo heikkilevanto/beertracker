@@ -1431,7 +1431,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         } # fl avg on loc line, if not going to print a day summary line
         if (!$print) {
           # Restaurant copy button
-          print "<form method='POST' style='display: inline;' >\n";
+          print "<form method='POST' style='display: inline;' class='no-print'>\n";
           print "<input type='hidden' name='l' value='$lastloc2' />\n";
           my $rtype = $restaurants{$lastloc2} || "Restaurant, unspecified";
           print "<input type='hidden' name='m' value='$rtype' />\n";
@@ -1485,10 +1485,9 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $anchor = $stamp || "";
     $anchor =~ s/[^0-9]//g;
     print "\n<a id='$anchor'/>\n";
-    print "<form method='POST' style='display: inline;' >\n";
-    print "<br/>$time &nbsp;" . filt($mak,"i") . newmark($mak) .
+    print "<br class='no-print'/>$time &nbsp;" . filt($mak,"i") . newmark($mak) .
             " : " . filt($beer,"b") . newmark($beer, $mak) .
-      "<br/>\n";
+      "<br class='no-print'/>\n";
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       print filt("[$sty]") . newmark($sty) . " "   if ($sty);
       print units($pr, $vol, $alc). "<br/>\n" if ($sty || $pr || $alc);
@@ -1520,6 +1519,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         $vols{25} = 1;
         $vols{40} = 1;
       }
+      print "<form method='POST' style='display: inline;' class='no-print' >\n";
       print "<a href='$url?e=" . uri_escape_utf8($stamp) ."' >Edit</a> \n";
 
       # No price - the script guesses based on size.
@@ -1538,7 +1538,6 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         print "<input type='submit' name='submit' value='Copy $volx'
                     style='display: inline; font-size: small' />\n";
       }
-      print "</form>\n";
       if ( $qrylim eq "l" ) {
         print "<br/>";
         print glink("$mak $beer", "Google") . "&nbsp;\n";
@@ -1546,6 +1545,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         print utlink("$mak $beer", "Untappd") . "&nbsp;\n";
       }
       print"<br/>\n";
+      print "</form>\n";
     }
     $lastloc = $dateloc;
     $lastloc2 = $loc;
