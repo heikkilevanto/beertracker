@@ -624,6 +624,8 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $date;
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
+  my $legend = "# Date  WkDay WkEnd  Sum30  Sum7  Zeromark  Future";
+  print F "$legend \n";
   my $sum30 = 0.0;
   my @month;
   my @week;
@@ -689,8 +691,9 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        }
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
-    print F "$date $tot $wkend $sum30 $sumweek $zero $fut\n"  if ($zerodays >= 0);
+    print F "$date  $tot $wkend   $sum30 $sumweek   $zero  $fut\n"  if ($zerodays >= 0);
   }
+  print F "$legend \n";
   close(F);
   my $oneday = 24 * 60 * 60 ; # in seconds
   my $oneweek = 7 * $oneday ;
