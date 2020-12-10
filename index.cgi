@@ -942,9 +942,9 @@ $com ) =
   my $y;
   print "<hr/>\n";
   if ($sortdr) {
-    print "Sorting by drinks (<a href='$url?o=Years&print=$print'>Sort by money</a>)\n";
+    print "Sorting by drinks <a href='$url?o=Years&print=$print' class='no-print'>(Sort by money)</a>\n";
   } else {
-    print "Sorting by money (<a href='$url?o=YearsD&print=$print'>Sort by drinks</a>)\n";
+    print "Sorting by money <a href='$url?o=YearsD&print=$print' class='no-print'>(Sort by drinks)</a>\n";
   }
   if ($print) {
      print "&nbsp;<a href='$url?o=$op'>Back</a>\n";
@@ -1159,7 +1159,6 @@ $com ) =
   } else {
     print "<a href='$url?o=MonthsB'><img src=\"$pngfile\"/></a><br/>\n";
   }
-  #print "<hr/>";
   print $t;  # The table we built above
   exit();
 
@@ -1211,14 +1210,16 @@ $com ) =
 
 #######################
 # various lists (beer, location, etc)
-  print "<hr/><a href='$url'><b>$op</b> list</a>.\n";
+  print "<hr/><a href='$url'><b>$op</b> list</a>\n";
+  print "<div class='no-print'>\n";
   if ( !$sortlist) {
     print "(<a href='$url?o=$op&sort=1' >sort</a>) <br/>\n";
   } else {
     print "(<a href='$url?o=$op'>Recent</a>) <br/>\n";
   }
   print "Filter: <a href='$url?q=$qry'>$qry</a> " .
-     "<a href='$url?o=$op'>(clear)</a> <br/>" if $qry;
+     "<a href='$url?o=$op' class='no-print'>(clear)</a> <br/>" if $qry;
+  print "</div>\n";
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   my $i = scalar( @lines );
   my $fld;
@@ -1227,7 +1228,7 @@ $com ) =
   my %lineseen;
   my $anchor="";
   my $odd = 1;
-  print "&nbsp;<br/><table style='background-color: #006000;' >\n";
+  print "&nbsp;<br/><table style='background-color: #00600;' >\n";
   # For some reason this sets a color between the cells, not within them.
   # which is ok, makes it easier to see what is what.
   while ( $i > 0 ) {
@@ -1241,18 +1242,20 @@ $com ) =
     if ( $op eq "Location" ) {
       $fld = $loc;
       $line = "<td>" . filt($loc,"b") .
-        "&nbsp; " . loclink($loc, "L") . "  " . glink($loc, "G") . "</td>" .
-        "<td>$wday $effdate ($seen{$loc})<br/>" .
+        "<span class='no-print'> ".
+        "&nbsp; " . loclink($loc, "L") . "  " . glink($loc, "G") . "</span>" .
+        "</td>" .
+        "<td>$wday $effdate ($seen{$loc}) <br class='no-print'/>" .
         lst("Beer",$mak,"i") . ": " . filt($beer) . "</td>";
     } elsif ( $op eq "Brewery" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
       $fld = $mak;
-      $mak =~ s"/"/<br/>";
-      $line = "<td>" . lst("Beer",$mak) . "<br/>&nbsp;&nbsp;" . glink($mak) . "</td>" .
-      "<td>$wday $effdate " .lst("Beer",$loc) . " ($seen{$fld})" .  # $mak before cleaning
-            "<br/>" . filt("[$sty]") . "  " . filt($beer,"b")  ."&nbsp;</td>";
+      $mak =~ s"/"/<br/>"; # Split collab brews on two lines
+      $line = "<td>" . lst("Beer",$mak) . "<br/ class='no-print'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
+      "<td>$wday $effdate " .lst("Beer",$loc) . " ($seen{$fld}) " .  # $mak before cleaning
+            "<br class='no-print'/> " . filt("[$sty]") . "  " . filt($beer,"b")  ."&nbsp;</td>";
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
@@ -1260,7 +1263,7 @@ $com ) =
       $fld = $beer;
       $line = "<td>" . filt($beer,"b") . "&nbsp; ($seen{$beer}) &nbsp;" . glink($mak,"G") ."</td>" .
             "<td>$wday $effdate ".
-            lst("Beer",$loc) .  "<br/>" .
+            lst("Beer",$loc) .  "<br class='no-print'/>" .
             filt("[$sty]"). " " . unit($alc,'%') .
             lst("Beer",$mak,"i") . "&nbsp;</td>";
     } elsif ( $op eq "Wine" ) {
@@ -1269,16 +1272,17 @@ $com ) =
       my $stylename = $1;
       $line = "<td>" . filt($beer,"b")  . "&nbsp; $stylename &nbsp;" . glink($beer, "G") . "</td>" .
             "<td>$wday $effdate ".
-            lst("Wine",$loc) . " ($seen{$beer})" .
-            "<br/>" . filt("[$sty]"). "</td>";
+            lst("Wine",$loc) . " ($seen{$beer}) " .
+            "<br class='no-print'/> " . filt("[$sty]"). "</td>";
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze, *(.*)$/i );
       $fld = $beer;
       my $stylename = $1;
       $line = "<td>" .filt($beer,"b") . "&nbsp;" . glink($beer, "G") ."</td>" .
             "<td>$wday $effdate ".
-            lst("Booze",$loc) ." ($seen{$beer})" .
-            "<br/>" . filt("[$sty]"). " " . unit($alc,'%') . filt($mak,"i", $stylename) . "&nbsp;</td>";
+            lst("Booze",$loc) ." ($seen{$beer}) " .
+            "<br class='no-print'/> " . filt("[$sty]"). " " . unit($alc,'%') .
+              filt($mak,"i", $stylename) . "</td>";
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $mak =~ /^restaurant,? *(.*)$/i );
       my $rstyle="";  # op,qry,tag,dsp
@@ -1289,9 +1293,9 @@ $com ) =
       my $restname = "Restaurant,$loc";
       my $rpr = "";
       $rpr = "&nbsp; $pr kr" if ($pr && $pr >0) ;
-      $line = "<td>" . filt($loc,"b") . "&nbsp; ($seen{$restname})<br/>".
+      $line = "<td>" . filt($loc,"b") . "&nbsp; ($seen{$restname}) <br class='no-print'/> ".
               "$rstyle  &nbsp;" . glink("Restaurant $loc") . "</td>" .
-              "<td><i>$beer</i>". " $rpr<br/>" .
+              "<td><i>$beer</i>". " $rpr <br class='no-print'/> " .
               "$wday $effdate $ratestr</td>";
     } elsif ( $op eq "Style" ) {
       next if ( $mak =~ /^wine/i );
@@ -1301,7 +1305,7 @@ $com ) =
       $fld = $sty;
       $line = "<td>" . filt("[$sty]","b") . " ($seen{$sty})" . "</td><td>$wday $effdate " .
             lst("Beer",$loc,"i") .
-            "<br/>" . lst("Beer",$mak,"i") . ": " . filt($beer,"b") . "</td>";
+            " <br class='no-print'/> " . lst("Beer",$mak,"i") . ": " . filt($beer,"b") . "</td>";
     } else {
       print "<!-- unknown shortlist '$op' -->\n";
       last;
@@ -1319,7 +1323,6 @@ $com ) =
     for $k ( sort { "\U$a" cmp "\U$b" } keys(%lineseen) ) {
       print "<tr>$lineseen{$k}</tr>\n";
     }
-    #@displines = sort { "\U$a" cmp "\U$b" } @displines   if ( $sortlist );
   } else {
     foreach my $dl (@displines) {
       print "<tr>$dl</tr>\n";
@@ -1660,7 +1663,7 @@ sub glink {
   my $txt = shift || "(Google)";
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
-  my $lnk = "&nbsp;<i><a href='https://www.google.com/search?q=$qry' target='_blank'>" .
+  my $lnk = "&nbsp;<i><a href='https://www.google.com/search?q=$qry' target='_blank' class='no-print'>" .
       "$txt</a></i>\n";
   return $lnk;
 }
@@ -1671,7 +1674,7 @@ sub rblink {
   my $txt = shift || "(Ratebeer)";
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
-  my $lnk = "<i><a href='https://www.ratebeer.com/search?q=$qry' target='_blank'>" .
+  my $lnk = "<i><a href='https://www.ratebeer.com/search?q=$qry' target='_blank' class='no-print'>" .
       "$txt</a></i>\n";
   return $lnk;
 }
@@ -1681,7 +1684,7 @@ sub utlink {
   my $txt = shift || "(Untappd)";
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
-  my $lnk = "<i><a href='https://untappd.com/search?q=$qry' target='_blank'>" .
+  my $lnk = "<i><a href='https://untappd.com/search?q=$qry' target='_blank' class='no-print'>" .
       "$txt</a></i>\n";
   return $lnk;
 }
