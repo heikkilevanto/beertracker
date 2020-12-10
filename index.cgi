@@ -483,11 +483,13 @@ print "<style rel='stylesheet'>\n";
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.
+print '@media screen {';
 if ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ ) {
   print   "* { background-color: #003000; color: #FFFFFF; font-size: small }\n";
 } else {
   print   "* { background-color: #003050; color: #FFFFFF; font-size: small }\n";
 }
+print "}\n";
 print "</style>\n";
 print "<link rel='shortcut icon' href='beer.png'/>\n";
 print "</head>\n";
