@@ -631,7 +631,6 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my @week;
   my $wkday;
   my $zerodays = -1;
-  my $realdays = 0;
   my $fut = "NaN";
   my $allsum = 0.0;  # Sum for the whole graph
   my $allcount = 0;
@@ -641,10 +640,9 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     ($date,$wkday) = split(':',$rawdate);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
     if ( $date ge $startdate && $date lt $enddate ) {
-      $allsum += $tot;
-      $allcount++;
+      $allsum += $tot;  # Global avg for the graph
+      $allcount++;  # excl the last day, often a zero
     }
-    $realdays ++ if ($tot);
     @month = ( @month, $tot);
     shift @month if scalar(@month)>=30;
     @week = ( @week, $tot);
