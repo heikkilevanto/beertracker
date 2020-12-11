@@ -58,7 +58,8 @@ my %links;
 $links{"Ølbaren"} = "http://oelbaren.dk/oel/";
 $links{"Ølsnedkeren"} = "https://www.olsnedkeren.dk/";
 $links{"Fermentoren"} = "http://fermentoren.com/index";
-$links{"Dry and Bitter"} = "http://www.dryandbitter.com/products.php";
+$links{"Dry and Bitter"} = "https://www.dryandbitter.com/collections/beer/";
+   # Used to be http://www.dryandbitter.com/products.php, changed in Dec-2020
 #$links{"Dudes"} = "http://www.dudes.bar"; # R.I.P Dec 2018
 $links{"Taphouse"} = "http://www.taphouse.dk";
 
@@ -478,15 +479,19 @@ print "<html><head>\n";
 print "<title>Beer</title>\n";
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
 print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
-print "<style rel='stylesheet'>\n";
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.
 my $bgcolor = "#003000";
 $bgcolor = "#003050" unless ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ );
+# Style sheet - included right in the HTML headers
+print "<style rel='stylesheet'>\n";
 print '@media screen {';
 print "  * { background-color: $bgcolor; color: #FFFFFF; }\n";
 print "  * { font-size: small; }\n";
+print "}\n";
+print '@media screen and (max-width: 700px){';
+print "  .only-wide, .only-wide * { display: none !important; }\n";
 print "}\n";
 print '@media screen and (min-width: 700px){';
 print "  .no-wide, .no-wide * { display: none !important; }\n";
@@ -1164,15 +1169,14 @@ $com ) =
   print "<hr/>";
 
   print "Some links I may find useful: <ul>";
-  print "<li><a href='https://github.com/heikkilevanto/beertracker' target='_blank'>".
-     "Beertracker on GitHub</a>.".
-     "&nbsp; <a href='https://github.com/heikkilevanto/beertracker/issues' target='_blank'>Bug tracker</li>\n";
-  print "<li><a href='https://www.ratebeer.com' target='_blank'>RateBeer</a></li>\n";
-  print "<li><a href='https://untappd.com' target='_blank'>Untappd</a></li>\n";
+  print aboutlink("GitHub","https://github.com/heikkilevanto/beertracker");
+  print aboutlink("Bugtracker", "https://github.com/heikkilevanto/beertracker/issues");
+  print aboutlink("Ratebeer", "https://www.ratebeer.com");
+  print aboutlink("Untappd", "https://untappd.com");
   print "</ul><p/>\n";
   print "Some of my favourite bars and breweries<ul>";
   for my $k ( sort keys(%links) ) {
-    print "<li><a href='$links{$k}'>$k</a></li>";
+    print aboutlink($k, $links{$k});
   }
   print "</ul><p/>\n";
   print "<hr/>";
@@ -1647,6 +1651,25 @@ sub loclink {
     $lnk = " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' >$txt</a></i>" ;
   }
   return $lnk
+}
+
+# Helper to make a link on the about page
+# These links should have the URL visible
+# They all are inside a bullet list, so we enclose them in li tags
+# Unless third argument gives another tag to use
+# Displaying only a part of the url on narrow devices
+sub aboutlink {
+  my $name = shift;
+  my $url = shift;
+  my $tag = shift || "li";
+  my $long = $url;
+  $long =~ s/^https?:\/\/(www)?\.?\/?//i;  # remove prefixes
+  $long =~ s/\/$//;
+  my $short = $1 if ( $long =~ /([^\/]+)\/?$/ );  # last part of the path
+  return "<$tag>$name: <a href='$url' target='_blank' > ".
+    "<span class='only-wide'>$long</span>".
+    "<span class='no-wide'>$short</span>".
+  "</a></$tag>\n";
 }
 
 # Helper to make a google link
