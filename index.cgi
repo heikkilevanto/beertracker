@@ -937,7 +937,6 @@ $com ) =
 # Annual summary
 } elsif ( $op =~ /Years(d?)/i ) {
   my $sortdr = $1;
-  my $i = scalar( @lines );
   my %sum;
   my %alc;
   my $ysum = 0;
@@ -951,6 +950,8 @@ $com ) =
   } else {
     print "Sorting by money <a href='$url?o=YearsD&' class='no-print'>(Sort by drinks)</a>\n";
   }
+  print "<table border=1>\n";
+  my $i = scalar( @lines );
   while ( $i > 0 ) {
     $i--;
     #print "$thisyear $i: $lines[$i]<br/>\n";
@@ -973,7 +974,7 @@ $com ) =
     }
     if ( $y ne $thisyear ) {
       if ($thisyear) {
-        print "<hr/>Year $thisyear $sofar<br/>\n";
+        print "<tr><td colspan='3'><br/>Year <b>$thisyear</b> $sofar</td></tr>\n";
         my @kl;
         if ($sortdr) {
           @kl = sort { $alc{$b} <=> $alc{$a} }  keys %alc;
@@ -981,29 +982,35 @@ $com ) =
           @kl = sort { $sum{$b} <=> $sum{$a} }  keys %sum;
         }
         $k = 0;
-        print "<pre>";
         while ( $k < 12 && $kl[$k] ) {
           my $loc = $kl[$k];
-          my $alc = sprintf("%5.0fd", $alc{$loc} / $onedrink) ;
-          my $pr = sprintf("%6.0f", $sum{$loc});
-          print "$pr $alc $loc\n";
+          my $alc = unit(sprintf("%5.0f", $alc{$loc} / $onedrink),"d");
+          my $pr = unit(sprintf("%6.0f", $sum{$loc}),"kr");
+          print "<tr><td align='right'>$pr&nbsp;</td>\n" .
+            "<td align=right>$alc&nbsp;</td>" .
+            "<td>&nbsp;". filt($loc)."</td></tr>\n";
           $k++;
         }
-        my $alc = sprintf("%5.0f", $yalc / $onedrink) ;
-        my $pr = sprintf("%6.0f", $ysum);
-        print "\n$pr $alc". "d  = TOTAL for $thisyear $sofar \n";
+        my $alc = unit(sprintf("%5.0f", $yalc / $onedrink),"d");
+        my $pr = unit(sprintf("%6.0f", $ysum),"kr");
+        print "<tr><td align=right>$pr&nbsp;</td>" .
+          "<td align=right>$alc&nbsp;</td>" .
+          "<td> &nbsp;  = TOTAL for $thisyear $sofar</td></tr> \n";
         my $daynum = 365;
         if ($sofar) {
+          # TODO - This seems to fail on 01-Jan, before entering drinks for the new year
           $daynum = datestr("%j"); # day number in year
+          my $alcp = unit(sprintf("%5.0f", $yalc / $onedrink / $daynum * 365),"d");
+          my $prp = unit(sprintf("%6.0f", $ysum / $daynum * 365),"kr");
+          print "<tr><td align=right>$prp&nbsp;</td>".
+            "<td align=right>$alcp&nbsp;</td>".
+            "<td>&nbsp; = PROJECTED for whole $thisyear</td></tr>\n";
         }
-        if ($sofar) {
-          my $alcp = sprintf("%5.0fd", $alc / $daynum * 365);
-          my $prp = sprintf("%6.0f", $pr / $daynum * 365);
-          print "$prp $alcp  = PROJECTED for whole $thisyear\n";
-        }
-        my $alcday = sprintf("%5.1f", $alc / $daynum);
-        my $prday = sprintf("%6.0f", $pr / $daynum);
-        print "$prday $alcday"."d  = per day\n";
+        my $alcday = unit(sprintf("%5.1f", $yalc / $onedrink / $daynum),"d");
+        my $prday = unit(sprintf("%6.0f", $ysum / $daynum),"kr");
+        print "<tr><td align=right>$prday&nbsp;</td>" .
+          "<td align=right>$alcday&nbsp;</td>" .
+          "<td>&nbsp; = per day</td></tr>\n";
         print "</pre>";
         $sofar = "";
       }
@@ -1023,6 +1030,7 @@ $com ) =
     $yalc += $alc * $vol if ($alc && $vol);
     #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
   }
+  print "</table>\n";
   exit();
 
 ############################+
@@ -1043,7 +1051,7 @@ $com ) =
   my @ydrinks;
   my @yprice;
   my $t = "";
-    $t .= "<table border=1 style='align:right'>\n";
+    $t .= "<table border=1 >\n";
   $t .="<tr><td>&nbsp;</td>\n";
   my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
