@@ -944,11 +944,15 @@ $com ) =
   my $thisyear = "";
   my $sofar = "so far";
   my $y;
+  if ( $qry ) {
+    $sofar = "";
+  }
+  my $nlines = param("maxl") || 10;
   print "<hr/>\n";
   if ($sortdr) {
-    print "Sorting by drinks <a href='$url?o=Years&' class='no-print'>(Sort by money)</a>\n";
+    print "Sorting by drinks <a href='$url?o=Years&q=$qry' class='no-print'>(Sort by money)</a>\n";
   } else {
-    print "Sorting by money <a href='$url?o=YearsD&' class='no-print'>(Sort by drinks)</a>\n";
+    print "Sorting by money <a href='$url?o=YearsD&q=$qry' class='no-print'>(Sort by drinks)</a>\n";
   }
   print "<table border=1>\n";
   my $i = scalar( @lines );
@@ -960,6 +964,7 @@ $com ) =
     $y = substr($effdate,0,4);
     #print "  y=$y, ty=$thisyear <br/>\n";
     next if ($mak =~ /restaurant/i );
+
     if ($i == 0) {
       $thisyear = $y unless ($thisyear);
       $y = "END";
@@ -973,8 +978,12 @@ $com ) =
       #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
     }
     if ( $y ne $thisyear ) {
-      if ($thisyear) {
-        print "<tr><td colspan='3'><br/>Year <b>$thisyear</b> $sofar</td></tr>\n";
+      if ($thisyear && (!$qry || $thisyear == $qry) ) {
+        my $yrlink = $thisyear;
+        if (!$qry) {
+          $yrlink = "<a href='$url?o=$op&q=$thisyear&maxl=20'>$thisyear</a>";
+        }
+        print "<tr><td colspan='3'><br/>Year <b>$yrlink</b> $sofar</td></tr>\n";
         my @kl;
         if ($sortdr) {
           @kl = sort { $alc{$b} <=> $alc{$a} }  keys %alc;
@@ -982,7 +991,7 @@ $com ) =
           @kl = sort { $sum{$b} <=> $sum{$a} }  keys %sum;
         }
         $k = 0;
-        while ( $k < 12 && $kl[$k] ) {
+        while ( $k < $nlines && $kl[$k] ) {
           my $loc = $kl[$k];
           my $alc = unit(sprintf("%5.0f", $alc{$loc} / $onedrink),"d");
           my $pr = unit(sprintf("%6.0f", $sum{$loc}),"kr");
@@ -1031,6 +1040,12 @@ $com ) =
     #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
   }
   print "</table>\n";
+  print "Show ";
+  for $top ( 5, 10, 20, 50, 100, 999999 ) {
+    print  "&nbsp; <a href='$url?o=$op&q=$qry&maxl=$top'>Top-$top</a>\n";
+  }
+    print  "<hr/>\n";
+
   exit();
 
 ############################+
