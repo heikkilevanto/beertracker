@@ -36,9 +36,18 @@ Debian server. Adjust as needed
 
 There is an Apache config file example under /etc.
 
-You need to set up a .htpasswd to protect  the main directory, and make a
-directory under it called beerdata, and an empty file like `heikki.data` in
-it. Both need to be owned and writable by www-data.
+You need to set up a .htpasswd to protect the main directory. First time with
+`htpasswd -c .htpasswd username`. For later users, do *not* include the `-c`.
+
+You also need to make a directory under it called beerdata, and an empty file
+like `heikki.data` in it. Both need to be owned and writable by www-data.
+```
+  mkdir beerdata
+  chown www-data beerdata
+  touch beerdata/heikki.data
+  chown www-data beerdata/*.data
+```
+
 
 Point your browser to beerdata. You should see a dark input form. If not, check
 /var/log/apache2/error.log. If you do, enter a test beer or two, and look at
