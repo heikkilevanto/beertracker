@@ -1511,11 +1511,12 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "\n<a id='$anchor'/>\n";
     print "<br class='no-print'/>$time &nbsp;" . filt($mak,"i") . newmark($mak) .
             " : " . filt($beer,"b") . newmark($beer, $mak) .
-      "<br class='no-print'/>\n";
+      "<br class='no-wide'/>\n";
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       print filt("[$sty]") . newmark($sty) . " "   if ($sty);
       print units($pr, $vol, $alc). "<br/>\n" if ($sty || $pr || $alc);
       if ($rate || $com) {
+        print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
         print " <b>$rate-$ratings[$rate]</b>" if ($rate);
         print ": " if ($rate && $com);
         print "<i>$com</i>" if ($com);
