@@ -48,7 +48,6 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
 if ( ! -w $datafile ) {
   error ("Bad username: $datafile not writable\n");
 }
-
 my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect",
 "I'm in love" );
@@ -506,6 +505,12 @@ print "<link rel='shortcut icon' href='beer.png'/>\n";
 print "</head>\n";
 print "<body>\n";
 print "\n<!-- Read " . scalar(@lines). " lines from $datafile -->\n\n" ;
+
+################
+# Default new users to the about page
+if ( !@lines && ! $op ) {
+  $op = "About";
+}
 
 ######################
 # Javascript trickery to clear fields when clicked on
@@ -1189,6 +1194,8 @@ $com ) =
   print "Copyright 2016-2020 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
   print "It is Open Source.\n";
+  print "<br/>To get started, look at the " .
+    aboutlink("documentation", "https://github.com/heikkilevanto/beertracker#getting-started", "nop");
   print "<hr/>";
 
   print "Some links I may find useful: <ul>";
