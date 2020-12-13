@@ -1696,7 +1696,7 @@ sub aboutlink {
   my $long = $url;
   $long =~ s/^https?:\/\/(www)?\.?\/?//i;  # remove prefixes
   $long =~ s/\/$//;
-  my $short = $1 if ( $long =~ /([^\/]+)\/?$/ );  # last part of the path
+  my $short = $1 if ( $long =~ /([^#\/]+)\/?$/ );  # last part of the path
   return "<$tag>$name: <a href='$url' target='_blank' > ".
     "<span class='only-wide'>$long</span>".
     "<span class='no-wide'>$short</span>".
