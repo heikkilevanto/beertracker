@@ -627,7 +627,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   while ( $startdate lt $allfirstdate) {
     $startoff --;
     $startdate = datestr ("%F", -$startoff );
-    while ($enddate le $startdate) {
+    if ($endoff >= 0 ) {
       $endoff --;
       $enddate = datestr( "%F", -$endoff);
     }
