@@ -623,12 +623,16 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
   my $startdate = datestr ("%F", -$startoff );
   my $enddate = datestr( "%F", -$endoff);
-  if ( $startdate lt $allfirstdate) {
-    $startdate = $allfirstdate;
-    if ($enddate lt $startdate) {
-      $enddate = $allfirstdate;
+  #print STDERR "Origin dates to $startoff $startdate - $endoff $enddate  - f= $allfirstdate\n";
+  while ( $startdate lt $allfirstdate) {
+    $startoff --;
+    $startdate = datestr ("%F", -$startoff );
+    while ($enddate le $startdate) {
+      $endoff --;
+      $enddate = datestr( "%F", -$endoff);
     }
   }
+  #print STDERR "Rolled dates to $startoff $startdate - $endoff $enddate  - f= $allfirstdate\n";
   print "\n<!-- " . $op . " $startdate to $enddate -->\n";
   my %sums; # drink sums by (eff) date
   for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
@@ -642,7 +646,8 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
   my $legend = "# Date  WkDay WkEnd  Sum30  Sum7  Zeromark  Future";
-  print F "$legend \n";
+  print F "$legend \n".
+    "#Plot $startdate ($startoff) to $enddate ($endoff) \n";
   my $sum30 = 0.0;
   my @month;
   my @week;
@@ -745,7 +750,8 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   if ($bigimg) {
     $imgsz = "640,480";
   }
-  my $allavg = sprintf("%4.1f", $allsum / $allcount);
+  my $allavg = "NaN";
+  $allavg = sprintf("%4.1f", $allsum / $allcount) if ( $allcount );
   my $cmd = "" .
        "set term png small size $imgsz \n".
        $pointsize .
