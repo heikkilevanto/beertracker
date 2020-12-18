@@ -60,7 +60,8 @@ $links{"Fermentoren"} = "http://fermentoren.com/index";
 $links{"Dry and Bitter"} = "https://www.dryandbitter.com/collections/beer/";
    # Used to be http://www.dryandbitter.com/products.php, changed in Dec-2020
 #$links{"Dudes"} = "http://www.dudes.bar"; # R.I.P Dec 2018
-$links{"Taphouse"} = "http://www.taphouse.dk";
+$links{"Taphouse"} = "http://www.taphouse.dk/";
+$links{"Slowburn"} = "https://slowburn.coop/";
 
 # currency conversions
 my %currency;
@@ -767,7 +768,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        "set ytics 0,2 out format \"\" \n" .  # Note that we need ytics, to make
        "set mytics 2 \n".   # the scaling work, and y2tics to show legend on the right
        "set y2tics 0,2 out format \"%2.0f\"\n" .
-       "set y2tics add (\" 3\" 3, \" 5\" 5, \"$allavglbl\" $allavg)\n" . # Add scale lines for 3 and 5, and allavg
+       "set y2tics add (\"\" 3, \"\" 5, \"$allavglbl\" $allavg)\n" . # Add scale lines for 3 and 5, and allavg
        "set my2tics 2 \n".
        "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
        "set style fill solid \n" .
