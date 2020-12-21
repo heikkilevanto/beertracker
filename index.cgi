@@ -657,6 +657,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $fut = "NaN";
   my $allsum = 0.0;  # Sum for the whole graph
   my $allcount = 0;
+  my $lastavg = ""; # Last floating average we have seen
   while ( $ndays > $endoff) {
     $ndays--;
     $rawdate = datestr("%F:%u", -$ndays);
@@ -704,6 +705,9 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       if (!$sumweek) { # Don't plot zero weeksums
         $sumweek = "NaN";
       }
+    }
+    if ( $sum30 > 0 && $ndays >=0 && $endoff<=0) {
+      $lastavg = sprintf("($date:%3.2f)", $sum30);
     }
     if ($startoff - $endoff > 99 && $wkday != 2) {
       $sumweek = "NaN"; # Can't see them anyway - plot only for Tuesdays.
@@ -783,7 +787,8 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "\"$plotfile\" " .
             "using 1:3 with boxes lc 3 notitle," .  # weekends
         "\"$plotfile\" " .
-            "using 1:4 with line lc 9 lw 2 notitle, " .  # avg30
+            #"using 1:4 with line lc 9 lw 2 notitle, " .  # avg30
+            "using 1:4 with line lc 9 lw 2 title \"Floating average $lastavg\", " .  # avg30
                # smooth csplines
         "\"$plotfile\" " .
             "using 1:5 with points pointtype 1 lc \"gray10\" notitle, " .  # avg7
