@@ -315,7 +315,7 @@ if ( $q->request_method eq "POST" ) {
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
   if ( !$origstamp) { # New record, process date and time if entered
-    #print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
+    print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
     if ($date =~ /^L$/i ) { # 'L' for last date
       if ( $lastline =~ /(^[0-9-]+) +(\d+):(\d+)/ ) {
         $date = $1;
@@ -347,16 +347,11 @@ if ( $q->request_method eq "POST" ) {
     # Default to current date and time
     $date = $date || datestr( "%F", 0, 1);
     $time = $time || datestr( "%T", 0, 1);
-    $stamp = `date -d "$date $time" "+%F %T; %a"`;
-    chomp($stamp);
-    $effdate = $date;
-    if ($time lt "08") { # Times past midnight count as prev date
-      my $wkday = $1 if ($stamp =~ /^[^;]+; *(\w+)/ );
-      $stamp = `date -d "$date $time tomorrow" "+%F %T"`;
-      chomp($stamp);
-      $stamp .= "; $wkday";
-    }
-    #print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate'\n";
+    $stamp = "$date $time";
+    $effdate = datestr("%F", -0.3, 1); # 0.3 days = 8hrs ago
+    my $wkday = datestr("%a", -0.3, 1);
+    $stamp .= "; $wkday";
+    print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate'\n";
   }
   if ( $mak !~ /tz,/i ) {
     $loc = $thisloc unless $loc;  # Always default to the last location, except for tz lines
