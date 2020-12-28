@@ -315,7 +315,7 @@ if ( $q->request_method eq "POST" ) {
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
   if ( !$origstamp) { # New record, process date and time if entered
-    print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
+    #print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
     if ($date =~ /^L$/i ) { # 'L' for last date
       if ( $lastline =~ /(^[0-9-]+) +(\d+):(\d+)/ ) {
         $date = $1;
@@ -338,20 +338,25 @@ if ( $q->request_method eq "POST" ) {
     $time = "" if ($time !~ /^\d/); # Remove real bad times, default to now
     $time =~ s/^([0-9:]*p?).*/$1/i; # Remove AM markers (but not the p in pm)
     $time =~ s/^(\d\d?)(\d\d)(p?)/$1:$2$3/i; # expand 0130 to 01:30, keeping the p
-    if ( $time =~ /^(\d\d?)(p?)$/i ) { # default to full hrs
+    if ( $time =~ /^(\d\d?) *(p?)$/i ) { # default to full hrs
       $time = "$1:00$2";
     }
-    if ( $time =~ /^(\d+):(\d+) *(p)/i ) { # Convert 'P' or 'PM' to 24h
-      $time = sprintf( "%02d:%02d", $1+12, $2);
+    if ( $time =~ /^(\d+):(\d+)(:\d+)? *(p)/i ) { # Convert 'P' or 'PM' to 24h
+      $time = sprintf( "%02d:%02d%s", $1+12, $2, $3);
     }
+    if ( $time =~ /^(\d+:\d+)$/i ) { # Convert 'P' or 'PM' to 24h
+      $time = "$1:" . datestr("%S", 0,1); # Get seconds from current time
+    }   # That keeps timestamps somewhat different, even if adding several entries in the same minute
     # Default to current date and time
     $date = $date || datestr( "%F", 0, 1);
     $time = $time || datestr( "%T", 0, 1);
     $stamp = "$date $time";
-    $effdate = datestr("%F", -0.3, 1); # 0.3 days = 8hrs ago
-    my $wkday = datestr("%a", -0.3, 1);
-    $stamp .= "; $wkday";
-    print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate'\n";
+    my $effdatestr = `date "+%F;%a" -d "$date $time 8 hours ago"`;
+    if ( $effdatestr =~ /([0-9-]+) *;(\w+)/ ) {
+      $effdate = $1;
+      $stamp .= "; $2";
+    }
+    #print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate'\n";
   }
   if ( $mak !~ /tz,/i ) {
     $loc = $thisloc unless $loc;  # Always default to the last location, except for tz lines
