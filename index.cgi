@@ -1088,7 +1088,7 @@ $com ) =
   my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
   foreach $y ( reverse($firsty .. $lasty) ) {
-    $t .= "<td><b>&nbsp;$y</b></td>";
+    $t .= "<td align='right'><b>&nbsp;$y</b></td>";
   }
   $t .= "</tr>\n";
   foreach $m ( 1 .. 12 ) {
