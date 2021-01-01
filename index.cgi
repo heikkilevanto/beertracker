@@ -1024,9 +1024,7 @@ $com ) =
           "<td align=right>$alc&nbsp;</td>" .
           "<td> &nbsp;  = TOTAL for $thisyear $sofar</td></tr> \n";
         my $daynum = 365;
-        if ($sofar) {
-          # TODO - This seems to fail on 01-Jan, before entering drinks for
-          # the new year. See issue #173
+        if ($sofar && $thisyear eq datestr("%Y") ) {
           $daynum = datestr("%j"); # day number in year
           my $alcp = unit(sprintf("%5.0f", $yalc / $onedrink / $daynum * 365),"d");
           my $prp = unit(sprintf("%6.0f", $ysum / $daynum * 365),"kr");
