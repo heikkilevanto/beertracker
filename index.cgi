@@ -1118,7 +1118,8 @@ $com ) =
       my $p = $monthprices{$calm};
       $t .= "<td align=right>".$d .
         "<br/>".unit($p,"kr");
-      if ($calm eq $lastym) {
+      if ($calm eq $lastym && $monthprices{$calm} ) {
+        $p = "";
         $p = int($monthprices{$calm} / $dayofmonth * 30);
         $t .= "<br/>~". unit($p,"kr");
       }
@@ -1143,16 +1144,22 @@ $com ) =
   close(F);
   $t .= "<tr><td>Avg</td>\n";
   foreach $y ( reverse($firsty .. $lasty) ) {
-    my $d = sprintf("%3.1f", $ydrinks[$y] / $ydays[$y] / $onedrink) ;
-    $d = unit($d, "d");
-    my $pr = sprintf("%3d", $yprice[$y]/$ydays[$y]);
+    my $d = "";
+    if ( $ydays[$y] ) { # have data for the year
+      $d = sprintf("%3.1f", $ydrinks[$y] / $ydays[$y] / $onedrink) ;
+      $d = unit($d, "d");
+      my $pr = sprintf("%3d", $yprice[$y]/$ydays[$y]);
+    }
     $t .= "<td align=right>$d</td>";
   }
   $t .= "</tr>";
   $t .= "<tr><td>Sum</td>\n";
   foreach $y ( reverse($firsty .. $lasty) ) {
-    my $pr = sprintf("%5.0f", $yprice[$y] ) ;
-    $pr = unit($pr, "kr");
+    my $pr  = "";
+    if ( $ydays[$y] ) { # have data for the year
+      $pr = sprintf("%5.0f", $yprice[$y] ) ;
+      $pr = unit($pr, "kr");
+    }
     $t .= "<td align=right>$pr</td>";
   }
   $t .= "</tr>";
