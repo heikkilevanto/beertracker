@@ -1086,7 +1086,7 @@ $com ) =
   my @ydrinks;
   my @yprice;
   my $t = "";
-    $t .= "<table border=1 >\n";
+    $t .= "<br/><table border=1 >\n";
   $t .="<tr><td>&nbsp;</td>\n";
   my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
@@ -1117,13 +1117,12 @@ $com ) =
           $d = unit($dd,"d");
         }
       }
-      my $p = $monthprices{$calm};
-      $t .= "<td align=right>".$d .
-        "<br/>".unit($p,"kr");
+      my $p = $monthprices{$calm}||"";
+      $t .= "<td align=right>$d<br/>$p";
       if ($calm eq $lastym && $monthprices{$calm} ) {
         $p = "";
         $p = int($monthprices{$calm} / $dayofmonth * 30);
-        $t .= "<br/>~". unit($p,"kr");
+        $t .= "<br/>~$p";
       }
       $t .= "</td>\n";
       #if ( !$d || $calm eq $lastym ) { # Don't plot the current month,
@@ -1160,7 +1159,6 @@ $com ) =
     my $pr  = "";
     if ( $ydays[$y] ) { # have data for the year
       $pr = sprintf("%5.0f", $yprice[$y] ) ;
-      $pr = unit($pr, "kr");
     }
     $t .= "<td align=right>$pr</td>";
   }
