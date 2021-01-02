@@ -997,6 +997,9 @@ $com ) =
     }
     if ( $y ne $thisyear ) {
       if ($thisyear && (!$qry || $thisyear == $qry) ) {
+        if ( $thisyear ne datestr("%Y") ) { # We are in the next year already
+          $sofar = "";
+        }
         my $yrlink = $thisyear;
         if (!$qry) {
           $yrlink = "<a href='$url?o=$op&q=$thisyear&maxl=20'>$thisyear</a>";
@@ -1024,7 +1027,7 @@ $com ) =
           "<td align=right>$alc&nbsp;</td>" .
           "<td> &nbsp;  = TOTAL for $thisyear $sofar</td></tr> \n";
         my $daynum = 365;
-        if ($sofar && $thisyear eq datestr("%Y") ) {
+        if ($sofar) {
           $daynum = datestr("%j"); # day number in year
           my $alcp = unit(sprintf("%5.0f", $yalc / $onedrink / $daynum * 365),"d");
           my $prp = unit(sprintf("%6.0f", $ysum / $daynum * 365),"kr");
@@ -1185,7 +1188,7 @@ $com ) =
   for ( my $i = $lasty - $firsty +3; $i > 2; $i--) {
     $cmd .= "\"$plotfile\" " .
             "using 1:$i with line lc $lc lw $lw notitle," ;
-    $lw+= 2;
+    $lw+= 1;
     $lc++;
   }
   # Finish by highlighting current year, up to but not including current month
