@@ -709,9 +709,6 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ( $sum30 > 0 && $ndays >=0 && $endoff<=0) {
       $lastavg = sprintf("(%3.2f)", $sum30);
     }
-    if ($startoff - $endoff > 99 && $wkday != 2) {
-      $sumweek = "NaN"; # Can't see them anyway - plot only for Tuesdays.
-    }
     my $wkend = 0;
     if ($wkday > 4) {
        #$wkend = $tot || -0.08; # mark weekends in the fut graph
@@ -780,7 +777,8 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        "set key left top\n" .
        "set grid xtics y2tics  linewidth 0.1 linecolor 4 \n".
        "plot " .
-             # lc 0=grey 1=red, 2=green, 3=blue 9=purple
+             # linecolor lc 0=grey 1=red, 2=green, 3=blue 9=purple
+             # pointtype pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
              # note the order of plotting, later ones get on top
              # so we plot weekdays, weekends, avg line, zeroes
         "\"$plotfile\" " .
@@ -788,13 +786,12 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "\"$plotfile\" " .
             "using 1:3 with boxes lc 3 title \"std drinks/day\"," .  # weekends
         "\"$plotfile\" " .
-            "using 1:4 with line lc 9 lw 2 title \"Floating avg $lastavg\", " .  # avg30
+            "using 1:5 with line lc \"gray30\" notitle, " .  # avg7
+        "\"$plotfile\" " .
+            "using 1:4 with line lc 9 lw 3 title \"Floating avg $lastavg\", " .  # avg30
                # smooth csplines
         "\"$plotfile\" " .
-            "using 1:5 with points pointtype 1 lc \"gray10\" notitle, " .  # avg7
-              # (pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
-        "\"$plotfile\" " .
-            "using 1:7 with dots lc 9 notitle, " .  # future tail
+            "using 1:7 with points pointtype 1 lc 9 notitle, " .  # future tail
         "\"$plotfile\" " .
             "using 1:6 with points lc 2 pointtype 11 notitle \n" .  # zeroes
         "";
