@@ -1181,7 +1181,7 @@ $com ) =
        "set timefmt \"%b\" \n".
        "set format x \"%b\"\n" .
        "plot ";
-  my $lw = 1;
+  my $lw = 2;
   my $lc = 1;
   for ( my $i = $lasty - $firsty +3; $i > 2; $i--) {
     $cmd .= "\"$plotfile\" " .
