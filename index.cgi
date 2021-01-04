@@ -655,18 +655,12 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $wkday;
   my $zerodays = -1;
   my $fut = "NaN";
-  my $allsum = 0.0;  # Sum for the whole graph
-  my $allcount = 0;
   my $lastavg = ""; # Last floating average we have seen
   while ( $ndays > $endoff) {
     $ndays--;
     $rawdate = datestr("%F:%u", -$ndays);
     ($date,$wkday) = split(':',$rawdate);
     my $tot = ( $sums{$date} || 0 ) / $onedrink ;
-    if ( $date ge $startdate && $date lt $enddate ) {
-      $allsum += $tot;  # Global avg for the graph
-      $allcount++;  # excl the last day, often a zero
-    }
     @month = ( @month, $tot);
     shift @month if scalar(@month)>=30;
     @week = ( @week, $tot);
@@ -752,10 +746,6 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   if ($bigimg) {
     $imgsz = "640,480";
   }
-  my $allavg = "NaN";
-  $allavg = sprintf("%.1f", $allsum / $allcount) if ( $allcount );
-  my $allavglbl = $allavg;
-  $allavglbl =~ s/^\d+/ /; # just the decimal part, ".8"
   my $cmd = "" .
        "set term png small size $imgsz \n".
        $pointsize .
@@ -769,7 +759,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        "set ytics 0,2 out format \"\" \n" .  # Note that we need ytics, to make
        "set mytics 2 \n".   # the scaling work, and y2tics to show legend on the right
        "set y2tics 0,2 out format \"%2.0f\"\n" .
-       "set y2tics add (\"\" 3, \"\" 5, \"$allavglbl\" $allavg)\n" . # Add scale lines for 3 and 5, and allavg
+       "set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5,
        "set my2tics 2 \n".
        "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
        "set style fill solid \n" .
