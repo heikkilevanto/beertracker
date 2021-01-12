@@ -625,7 +625,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $startdate = datestr ("%F", -$startoff );
   my $enddate = datestr( "%F", -$endoff);
   #print STDERR "Origin dates to $startoff $startdate - $endoff $enddate  - f= $allfirstdate\n";
-  while ( $startdate lt $allfirstdate) {
+  while ( $startdate lt $allfirstdate) { # Normalized limits to where we have data
     $startoff --;
     $startdate = datestr ("%F", -$startoff );
     if ($endoff >= 0 ) {
@@ -636,6 +636,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   #print STDERR "Rolled dates to $startoff $startdate - $endoff $enddate  - f= $allfirstdate\n";
   print "\n<!-- " . $op . " $startdate to $enddate -->\n";
   my %sums; # drink sums by (eff) date
+  my $futable = ""; # Table to display the 'future' values
   for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
        split( / *; */, $lines[$i] );
@@ -693,6 +694,14 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ( $ndays <=0 ) {
       $zero = "NaN"; # no zero mark for current or next date, it isn't over yet
     }
+    if ( $ndays <=0 && $sum30 > 0.1 && $endoff < -13) {
+      # Display future numbers in table form, if asking for 2 weeks ahead
+      my $weekday = ( "Mon", "Tue", "Wed", "Thu", "<b>Fri</b>", "<b>Sat</b>", "<b>Sun</b>" ) [$wkday-1];
+      $futable .= "<tr><td>&nbsp;$weekday&nbsp;</td><td>&nbsp;$date&nbsp;</td>";
+      $futable .= "<td align=right>&nbsp;" . sprintf("%4.2f",$sum30) . "</td>";
+      $futable .= "<td align=right>&nbsp;" . sprintf("%4.2f",$sumweek) ."</td>" if ($sumweek > 0.1);
+      $futable .= "</tr>\n";
+    }
     if ( $ndays <0 ) {
       $fut = $sum30;
       $fut = "NaN" if ($fut < 0.1); # Hide (almost)zeroes
@@ -706,11 +715,10 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     }
     my $wkend = 0;
     if ($wkday > 4) {
-       #$wkend = $tot || -0.08; # mark weekends in the fut graph
        $wkend = $tot;
        $tot = 0;
        if ( $ndays <= 0 ) {
-         $wkend = $wkend || -0.08 ;
+         $wkend = $wkend || -0.08 ; # mark weekends in the fut graph
        }
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
@@ -777,9 +785,9 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "\"$plotfile\" " .
             "using 1:3 with boxes lc 3 title \"std drinks/day\"," .  # weekends
         "\"$plotfile\" " .
-            "using 1:5 with line lc \"gray30\" notitle, " .  # avg7
+            "using 1:5 with line lc \"gray30\" title \"7-day avg\", " .
         "\"$plotfile\" " .
-            "using 1:4 with line lc 9 lw 3 title \"Floating avg $lastavg\", " .  # avg30
+            "using 1:4 with line lc 9 lw 3 title \"30-day fl. avg $lastavg\", " .  # avg30
                # smooth csplines
         "\"$plotfile\" " .
             "using 1:7 with points pointtype 1 lc 9 notitle, " .  # future tail
@@ -841,6 +849,12 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'>[ + ]</a>\n";
   print "<br/>\n";
   print "</div>\n";
+  if ( $futable ){
+    print "<hr/><table border=1>";
+    print "<tr><td colspan=2><b>Projected</b></td>";
+    print "<td>Avg</td><td>Week</td></tr>\n";
+    print "$futable</table><hr/>\n";
+  }
 
 
 ########################
