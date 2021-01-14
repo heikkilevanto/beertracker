@@ -688,7 +688,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ($tot > 0.15 ) { # one 0.5% "no-alc" beer still gets a zero mark
       $zerodays = 0;
     } elsif ($zerodays >= 0) { # have seen a real $tot
-      $zero = -0.1 + ($zerodays % 7) * 0.4 ;
+      $zero = -0.1 + ($zerodays % 7) * 0.35 ; # makes the 7th mark nicely on 2.0d
       $zerodays ++; # Move the subsequent zero markers higher up
     }
     if ( $ndays <=0 ) {
