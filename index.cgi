@@ -618,8 +618,10 @@ if ( !$op && !$mobile ) {
 } # but not on mobile devics
 
 my %averages; # floating average by effdate
-if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
-  my $bigimg = $1 ||"";
+if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
+  my $defbig = $mobile ? "S" : "B";
+  my $bigimg = $1 || $defbig;
+  $bigimg = "" if ($bigimg =~ /s/i );
   my $startoff = $2 || 30; # days ago
   my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
   my $startdate = datestr ("%F", -$startoff );
@@ -804,7 +806,7 @@ if ( $op && $op =~ /Graph(B?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   system ("gnuplot $cmdfile ");
   print "<hr/>\n";
   if ($bigimg) {
-    print "<a href='$url?o=Graph-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
+    print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
   } else {
     print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
   }
