@@ -110,7 +110,7 @@ if ( $mak =~ /^Wine,/i ) {
 
 my %volumes = ( # Comment is displayed on the About page
    'T' => " 2 Taster, sizes vary, always small",
-   'G' => "15 Glass of wine - 12 in places, at home 15 is more realistic",
+   'G' => "16 Glass of wine - 12 in places, at home 16 is more realistic",
    'S' => "25 Small, usually 25",
    'M' => "33 Medium, typically a bottle beer",
    'L' => "40 Large, 40cl in most places I frequent",
