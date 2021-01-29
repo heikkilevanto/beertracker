@@ -1074,8 +1074,10 @@ $com ) =
 
 ############################+
 # Monthly statistics from %monthdrinks and %monthprices
-} elsif ( $op =~ /Months(B?)/ ) {
-  my $bigimg = $1 ||"";
+} elsif ( $op =~ /Months([BS])?/ ) {
+  my $defbig = $mobile ? "S" : "B";
+  my $bigimg = $1 || $defbig;
+  $bigimg =~ s/S//i ;
   if ( $allfirstdate !~ /^(\d\d\d\d)/ ) {
     print "Oops, no year from allfirstdate '$allfirstdate' <br/>\n";
     exit(); # Never mind missing footers
@@ -1203,7 +1205,7 @@ $com ) =
   close(C);
   system ("gnuplot $cmdfile ");
   if ($bigimg) {
-    print "<a href='$url?o=Months'><img src=\"$pngfile\"/></a><br/>\n";
+    print "<a href='$url?o=MonthsS'><img src=\"$pngfile\"/></a><br/>\n";
   } else {
     print "<a href='$url?o=MonthsB'><img src=\"$pngfile\"/></a><br/>\n";
   }
