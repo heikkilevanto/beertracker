@@ -331,7 +331,7 @@ if ( $q->request_method eq "POST" ) {
           $time = sprintf("%02d:%02d", $hr,$min);
         }
       }
-    } # L
+    } # date 'L'
     if ( $date =~ /^Y$/i ) { # 'Y' for yesterday
       $date = datestr( "%F", -1, 1);
     }
@@ -373,7 +373,7 @@ undef, undef) =
        split( / *; */, $lines[$i] );
     if ( !$priceguess &&    # Guess a price
          uc($iloc) eq uc($loc) &&   # if same location and volume
-         $vol eq $ivol ) {
+         $vol eq $ivol ) { # even if different beer, good fallback
       $priceguess = $ipr;
     }
     if ( uc($beer) eq uc($ibeer) ) { # Same beer, copy values over if not set
@@ -406,6 +406,10 @@ undef, undef) =
     $pr = $curpr;
   } else {
     $pr = price($pr);
+  }
+  if ($vol < 0 ) { # Neg vol means not consumed (by me).
+    $pr = "";
+    $alc = "";
   }
   $alc = number($alc);
   if ($mak =~ /tz,/i ) {
@@ -570,7 +574,9 @@ print "<td>
   <input name='b' value='$beer' $sz1 placeholder='Beer'/></td></tr>\n";
 print "<tr><td><input name='v' value='$vol cl' $sz2 placeholder='Vol' />\n";
 print "<input name='a' value='$alc %' $sz2 placeholder='Alc' />\n";
-print "<input name='p' value='$pr.-' $sz2 placeholder='Price' /></td>\n";
+my $prc = $pr;
+$prc =~ s/(-?[0-9]+).*$/$1.-/;
+print "<input name='p' value='$prc' $sz2 placeholder='Price' /></td>\n";
 print "<td><select name='r' value='$rate' placeholder='Rating' />" .
   "<option value=''></option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
@@ -987,10 +993,10 @@ $com ) =
     #print "  y=$y, ty=$thisyear <br/>\n";
     next if ($mak =~ /restaurant/i );
 
-    if ($i == 0) {
+    if ($i == 0) { # count also the last line
       $thisyear = $y unless ($thisyear);
       $y = "END";
-      $pr = number($pr);  # count also the last line
+      $pr = number($pr);
       $alc = number($alc);
       $vol = number($vol);
       $sum{$loc} = ( $sum{$loc} || 0 ) + abs($pr);
@@ -1060,7 +1066,7 @@ $com ) =
     $sum{$loc} = ( $sum{$loc} || 0.1 / ($i+1) ) + abs($pr) ;  # $i keeps sort order
     $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol && $pr >= 0);
     $ysum += abs($pr);
-    $yalc += $alc * $vol if ($alc && $vol && $pr>0);
+    $yalc += $alc * $vol if ($alc && $vol && $pr>=0);
     #print "$i: $effdate $loc: $mak:  $pr:" . $sum{$loc} . "kr  " .$alc * $vol .":" . $alc{$loc} . " <br/>\n" ;
     #if ($loc =~ /Home/i) {
     #  print "$i: $effdate $loc: $mak:  p=$pr: " . $sum{$loc} . "kr  a=" .$alc * $vol .": " . $alc{$loc} . " <br/>\n" ;
@@ -1779,6 +1785,8 @@ sub number {
   my $v = shift || "";
   $v =~ s/,/./g;  # occasionally I type a decimal comma
   $v =~ s/[^0-9.-]//g; # Remove all non-numeric chars
+  $v =~ s/-$//; # No trailing '-', as in price 45.-
+  $v =~ s/\.$//; # Nor trailing decimal point
   $v = 0 unless $v;
   return $v;
 }
