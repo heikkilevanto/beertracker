@@ -262,13 +262,13 @@ while (<F>) {
     $thisdate = "$wd; $ed";
     $lastwday = $wd;
   }
-  $lastdatesum += ( $a * $v ) if ($a && $v);
+  $lastdatesum += ( $a * $v ) if ($a && $v && $p>=0); # neg price means whole box
   $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
   if ( $effdate eq "$wd; $ed" ) { # today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
       $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
   }
-  if ( $ed gt $weekago ) {
+  if ( $ed gt $weekago && $p >= 0 ) {
     $weeksum += $a * $v;
     $weekmsum += $p;
     $weekdates{$ed}++;
@@ -277,8 +277,8 @@ while (<F>) {
   }
   if ( $ed =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
     $calmon = $1;
-    $monthdrinks{$calmon} += $a * $v;
-    $monthprices{$calmon} += $p;
+    $monthdrinks{$calmon} += $a * $v if ( $p >= 0);
+    $monthprices{$calmon} += abs($p);
   }
   $lastmonthday = $1 if ( $ed =~ /^\d\d\d\d-\d\d-(\d\d)/ );
 }
@@ -621,7 +621,6 @@ my %averages; # floating average by effdate
 if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $defbig = $mobile ? "S" : "B";
   my $bigimg = $1 || $defbig;
-  $bigimg = "" if ($bigimg =~ /s/i );
   my $startoff = $2 || 30; # days ago
   my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
   my $startdate = datestr ("%F", -$startoff );
@@ -643,7 +642,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
        split( / *; */, $lines[$i] );
     next if ( $mak =~ /^restaurant/i );
-    $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol );
+    $pr = 0 unless ( $pr =~/^-?[0-9]+$/i);
+    $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol && $pr >= 0 );
   }
   my $ndays = $startoff+35; # to get enough material for the running average
   my $date;
@@ -754,7 +754,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     $pointsize = "set pointsize 0.5\n" ;
   }
   my $imgsz = "340,240";
-  if ($bigimg) {
+  if ($bigimg eq "B") {
     $imgsz = "640,480";
   }
   my $cmd = "" .
@@ -805,7 +805,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   #print "$htcmd <br/>\n";
   system ("gnuplot $cmdfile ");
   print "<hr/>\n";
-  if ($bigimg) {
+  if ($bigimg eq "B") {
     print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
   } else {
     print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
@@ -880,8 +880,8 @@ $com ) =
       $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
         $entry = filt($effdate, "") . " " . $wday ;
-        $daysum += ( $alc * $vol ) if ($alc && $vol);
-        $daymsum += $pr;
+        $daysum += ( $alc * $vol ) if ($alc && $vol && $pr >= 0);
+        $daymsum += abs($pr);
         if ( $places !~ /$loc/ ) {
           my $bold = "";
           if ( !defined($locseen{$loc}) ) {
@@ -945,8 +945,8 @@ $com ) =
         }
       $lastloc = $loc;
     }
-    $daysum += ( $alc * $vol ) if ($alc && $vol) ;
-    $daymsum += $pr if ($pr);
+    $daysum += ( $alc * $vol ) if ($alc && $vol && $pr >= 0) ;
+    $daymsum += abs($pr) if ($pr);
   }
   if ( $maxlines >= 0 ) {
     print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
@@ -993,10 +993,10 @@ $com ) =
       $pr = number($pr);  # count also the last line
       $alc = number($alc);
       $vol = number($vol);
-      $sum{$loc} = ( $sum{$loc} || 0 ) + ( $pr || 0) ;
-      $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol);
-      $ysum += $pr if ($pr);
-      $yalc += $alc * $vol if ($alc && $vol);
+      $sum{$loc} = ( $sum{$loc} || 0 ) + abs($pr);
+      $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol && $pr>=0);
+      $ysum += abs($pr) if ($pr);
+      $yalc += $alc * $vol if ($alc && $vol && $pr>=0);
       #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
     }
     if ( $y ne $thisyear ) {
@@ -1057,11 +1057,14 @@ $com ) =
     $pr = number($pr);
     $alc = number($alc);
     $vol = number($vol);
-    $sum{$loc} = ( $sum{$loc} || 0.1 / ($i+1) ) + ($pr || 0) ;  # $i keeps sort order
-    $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol);
-    $ysum += $pr if ($pr);
-    $yalc += $alc * $vol if ($alc && $vol);
-    #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
+    $sum{$loc} = ( $sum{$loc} || 0.1 / ($i+1) ) + abs($pr) ;  # $i keeps sort order
+    $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol && $pr >= 0);
+    $ysum += abs($pr);
+    $yalc += $alc * $vol if ($alc && $vol && $pr>0);
+    #print "$i: $effdate $loc: $mak:  $pr:" . $sum{$loc} . "kr  " .$alc * $vol .":" . $alc{$loc} . " <br/>\n" ;
+    #if ($loc =~ /Home/i) {
+    #  print "$i: $effdate $loc: $mak:  p=$pr: " . $sum{$loc} . "kr  a=" .$alc * $vol .": " . $alc{$loc} . " <br/>\n" ;
+    #}
   }
   print "</table>\n";
   print "Show ";
@@ -1131,13 +1134,8 @@ $com ) =
         $t .= "<br/>~$p";
       }
       $t .= "</td>\n";
-      #if ( !$d || $calm eq $lastym ) { # Don't plot the current month,
-      if ($y == $lasty ) { # First column is current year
-        if ( $d && $calm ne $lastym ) { # not including current month
-          print F "$dd ";
-        } else {
-          print F "NaN ";
-        }
+      if ($y == $lasty ) { # First column is special for projections
+        print F "NaN ";
       }
       if ( !$d ) { # Don't plot after the current month,
         print F "NaN ";  # not known yet
@@ -1148,6 +1146,18 @@ $com ) =
     $t .= "</tr>";
     print F "\n";
   }
+  # Projections
+  my $curmonth = datestr("%m",0);
+  my $cur = $months[$curmonth];
+  $curmonth = datestr("%Y-%m",0);
+  $d = ($monthdrinks{$curmonth}||0) / $onedrink ;
+  my $min = sprintf("%3.1f", $d / 30);  # for whole month
+  my $avg = $d / $dayofmonth;
+  my $max = 2 * $avg - $min;
+  $max = sprintf("%3.1f", $max);
+  print F "\n";
+  print F "$cur $min\n";
+  print F "$cur $max\n";
   close(F);
   $t .= "<tr><td>Avg</td>\n";
   foreach $y ( reverse($firsty .. $lasty) ) {
@@ -1195,9 +1205,10 @@ $com ) =
     $lw+= 1;
     $lc++;
   }
-  # Finish by highlighting current year, up to but not including current month
+  # Finish by plotting low/high projections for current month
+  $lc--;
   $cmd .= "\"$plotfile\" " .
-            "using 1:2 with line lc \"black\" lw 1 notitle," ;
+            "using 1:2 with points pt 1 lc $lc lw 1 notitle," ;
   $cmd .= "\n";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
@@ -1533,10 +1544,10 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       $time = "($time)";
     }
     if ( !( $mak  =~ /^Restaurant,/i ) ) { # don't count rest lines
-      $daydsum += ( $alc * $vol ) if ($alc && $vol) ;
-      $daymsum += $pr if ($pr) ;
-      $locdsum += ( $alc * $vol ) if ($alc && $vol) ;
-      $locmsum += $pr if ($pr) ;
+      $daydsum += ( $alc * $vol ) if ($alc && $vol && $pr >= 0) ;
+      $daymsum += abs($pr) if ($pr) ;
+      $locdsum += ( $alc * $vol ) if ($alc && $vol && $pr >= 0) ;
+      $locmsum += abs($pr) if ($pr) ;
       $loccnt++;
     }
     $anchor = $stamp || "";
@@ -1579,8 +1590,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "<form method='POST' style='display: inline;' class='no-print' >\n";
     print "<a href='$url?e=" . uri_escape_utf8($stamp) ."' >Edit</a> \n";
 
-    # No price - the script guesses based on size.
-    # No location, reuse the current loc
+    # Copy values
     print "<input type='hidden' name='m' value='$mak' />\n";
     print "<input type='hidden' name='b' value='$beer' />\n";
     print "<input type='hidden' name='v' value='' />\n";
@@ -1588,6 +1598,9 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "<input type='hidden' name='a' value='$alc' />\n";
     print "<input type='hidden' name='l' value='$loc' />\n"
       if ( $copylocation);
+    if ($pr && $pr <0) { # If it is a box, assume price of zero
+      print "<input type='hidden' name='p' value='X' />\n"
+    }
 
     foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
       # The sort order defaults to numerical, but if that fails, takes
@@ -1765,7 +1778,7 @@ sub utlink {
 sub number {
   my $v = shift || "";
   $v =~ s/,/./g;  # occasionally I type a decimal comma
-  $v =~ s/[^0-9.]//g; # Remove all non-numeric chars
+  $v =~ s/[^0-9.-]//g; # Remove all non-numeric chars
   $v = 0 unless $v;
   return $v;
 }
@@ -1774,7 +1787,7 @@ sub number {
 sub price {
   my $v = shift || "";
   $v = number($v);
-  $v =~ s/[^0-9]//g; # Remove also decimal points etc
+  $v =~ s/[^0-9-]//g; # Remove also decimal points etc
   return $v;
 }
 
@@ -1783,7 +1796,7 @@ sub curprice {
   my $v = shift;
   #print STDERR "Checking '$v' for currency";
   for my $c (keys(%currency)) {
-    if ( $v =~ /^([0-9.]+) *$c/i ) {
+    if ( $v =~ /^(-?[0-9.]+) *$c/i ) {
       #print STDERR "Found currency $c, worth " . $currency{$c};
       my $dkk = int(0.5 + $1 * $currency{$c});
       #print STDERR "That makes $dkk";
@@ -1811,7 +1824,7 @@ sub units {
   my $s = unit($pr,"kr") .
     unit($vol, "cl").
     unit($alc,'%');
-  if ( $alc && $vol ) {
+  if ( $alc && $vol && $pr >= 0) {
     my $dr = sprintf("%1.2f", ($alc * $vol) / $onedrink );
     $s .= unit($dr, "d");
   }
