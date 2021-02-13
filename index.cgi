@@ -204,6 +204,8 @@ my $lastmonthday = "";
 my $tz = "";
 my %daydsums; # Sum of drinks for each date   # TODO Sum these up here (See #142)
 my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
+my $boxno = 0; # Box number, from a comment like (B17:240)
+my $boxvol = ""; # Remaining volume in the box
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -256,6 +258,13 @@ while (<F>) {
     next; # do not sum restaurant lines, drinks filed separately
   }
 
+  $c = "" unless ($c);
+  if ($c =~ /\(B(\d+):\d+\)/ ) {
+    my $bn = $1;
+    if ($bn > $boxno) {
+      $boxno = $bn;
+    }
+  }
   if ( $thisdate ne "$wd; $ed" ) { # new date
     $lastdatesum = 0.0;
     $lastdatemsum = 0;
@@ -282,7 +291,6 @@ while (<F>) {
   }
   $lastmonthday = $1 if ( $ed =~ /^\d\d\d\d-\d\d-(\d\d)/ );
 }
-
 
 if ( ! $todaydrinks ) { # not today
   $todaydrinks = "($lastwday: " .
@@ -365,11 +373,9 @@ if ( $q->request_method eq "POST" ) {
     $vol = $1 if ( $1 );
   }
   my $priceguess = "";
-  my $boxno = ""; # Box number, from a comment like (B17:240)
-  my $boxvol = ""; # Remaining volume in the box
   my $i = scalar( @lines )-1;
   while ( $i > 0 && $beer
-    && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' )) {
+    && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' || !$boxvol)) {
     ( undef, undef, undef, $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr,
 undef, $icom) =
        split( / *; */, $lines[$i] );
@@ -388,7 +394,7 @@ undef, $icom) =
         $pr  = $ipr if $pr eq "";
       }
       $vol = $ivol unless $vol;
-      if ( ! $boxno && $com !~ /\(B\d+:\d+\)/) {
+      if ( ! $boxvol && $com !~ /\(B\d+:\d+\)/) {
         if ( $icom =~ /\(B(\d+): *(\d*) *\) *$/i ) {
           $boxno = $1;
           $boxvol = $2;
@@ -424,7 +430,12 @@ undef, $icom) =
     $alc = "";
     $pr = "";
   }
-  if ( $boxno ) {
+  if ($pr < 0 ) {  # Negatove price means buying a box
+    $boxno++;
+    $com =~ s/\(B\d+:\d+\) *$//;
+    $com .= " (B$boxno:$vol)";
+  }
+  if ( $boxvol ) {
     $boxvol -= abs($vol);
     $com =~ s/\(B\d+:\d+\) *$//;
     $com .= " (B$boxno:$boxvol)";
