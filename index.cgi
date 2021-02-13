@@ -204,7 +204,7 @@ my $lastmonthday = "";
 my $tz = "";
 my %daydsums; # Sum of drinks for each date   # TODO Sum these up here (See #142)
 my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
-my $boxno = 0; # Box number, from a comment like (B17:240)
+my $boxno = 1; # Box number, from a comment like (B17:240)
 my $boxvol = ""; # Remaining volume in the box
 while (<F>) {
   chomp();
@@ -1294,7 +1294,7 @@ $com ) =
 
   print "<p/>\n";
   print "For a new box wine (or booze bottle, etc), enter the price as negative.<br/>\n";
-  print "When using wine for cooking, or for guests, enter a negative volume. That <br/>\n":
+  print "When using wine for cooking, or for guests, enter a negative volume. That <br/>\n";
   print "gets subtracted from the box without affecting your stats.<br/>\n";
   exit();
 
