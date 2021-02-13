@@ -365,11 +365,13 @@ if ( $q->request_method eq "POST" ) {
     $vol = $1 if ( $1 );
   }
   my $priceguess = "";
+  my $boxno = ""; # Box number, from a comment like (B17:240)
+  my $boxvol = ""; # Remaining volume in the box
   my $i = scalar( @lines )-1;
   while ( $i > 0 && $beer
     && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' )) {
     ( undef, undef, undef, $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr,
-undef, undef) =
+undef, $icom) =
        split( / *; */, $lines[$i] );
     if ( !$priceguess &&    # Guess a price
          uc($iloc) eq uc($loc) &&   # if same location and volume
@@ -382,11 +384,16 @@ undef, undef) =
       $sty = $isty unless $sty;
       $alc = $ialc unless $alc;
       if ( $vol eq $ivol && $ipr=~/^ *[0-9.]+ *$/) {
-      # take price only from same volume, and only if numerical
-        #print STDERR "Found price $ipr. pr='$pr' <br/>\n";
+        # take price only from same volume, and only if numerical
         $pr  = $ipr if $pr eq "";
       }
       $vol = $ivol unless $vol;
+      if ( ! $boxno && $com !~ /\(B\d+:\d+\)/) {
+        if ( $icom =~ /\(B(\d+): *(\d*) *\) *$/i ) {
+          $boxno = $1;
+          $boxvol = $2;
+        }
+      }
     }
     $i--;
   }
@@ -416,6 +423,11 @@ undef, undef) =
     $vol = "";
     $alc = "";
     $pr = "";
+  }
+  if ( $boxno ) {
+    $boxvol -= abs($vol);
+    $com =~ s/\(B\d+:\d+\) *$//;
+    $com .= " (B$boxno:$boxvol)";
   }
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
   if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ ) {
@@ -1476,7 +1488,6 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       # Skip also comments like "(4 EUR)"
     if ( $qrylim =~ /^r(\d*)/ ){  # any rating
       my $rlim = $1 || "";
-      #print "i=$i: 1=$1 L=$rlim R=$rate -- $lines[$i]<br/>\n";
       next if ( !$rlim && !$rate); # l=r: Skip all that don't have a rating
       next if ( $rlim && $rate ne $rlim );  # filter on "r7" or such
       }
