@@ -1474,8 +1474,12 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       $vol, $sty, $alc, $pr, $rate, $com ) = split( / *; */, $lines[$i] );
     next if ( $qrylim eq "c" && (! $com || $com =~ /^ *\(/ ) );
       # Skip also comments like "(4 EUR)"
-    next if ( $qrylim =~ /^r(\d*)/ && ! $rate );  # any rating
-    next if ( $1 && $rate ne $1 );  # filter on "r7" or such
+    if ( $qrylim =~ /^r(\d*)/ ){  # any rating
+      my $rlim = $1 || "";
+      #print "i=$i: 1=$1 L=$rlim R=$rate -- $lines[$i]<br/>\n";
+      next if ( !$rlim && !$rate); # l=r: Skip all that don't have a rating
+      next if ( $rlim && $rate ne $rlim );  # filter on "r7" or such
+      }
     $maxlines--;
     last if ($maxlines == 0); # if negative, will go for ever
     # Stop here, when we know we have more to come, so we can show proper "more" link
