@@ -347,6 +347,11 @@ and it will be converted into 36 cl.
 * The time defaults to the time on the server. But you can enter a fake brewery
 line like 'tz,Copenhagen' to change your time zone. It gets remembered until you
 set it again. To clear it, just set a new with 'tz,'
+* If you buy a box wine, enter its price as negative. That way, the system
+knows it is a box wine, and makes a comment on it, like "(B17:300)". Enter your
+drinks as usual, and see the volume in the box comment go down. If you use wine
+for cooking, for guests, enter the volume as negative, that way the box volume
+will go down, but it will not be counted against you.
 
 ## Problems
 If you are just starting, I may be willing to help with technical issues, especially

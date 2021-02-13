@@ -1292,6 +1292,10 @@ $com ) =
   print "Of course you can just enter the number of centiliters <br/>\n";
   print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
 
+  print "<p/>\n";
+  print "For a new box wine (or booze bottle, etc), enter the price as negative.<br/>\n";
+  print "When using wine for cooking, or for guests, enter a negative volume. That <br/>\n":
+  print "gets subtracted from the box without affecting your stats.<br/>\n";
   exit();
 
 } elsif ( $op eq "full" ) {
