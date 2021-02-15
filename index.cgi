@@ -688,6 +688,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $zerodays = -1;
   my $fut = "NaN";
   my $lastavg = ""; # Last floating average we have seen
+  my $lastwk = "";
   while ( $ndays > $endoff) {
     $ndays--;
     $rawdate = datestr("%F:%u", -$ndays);
@@ -733,6 +734,10 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       $futable .= "<td align=right>&nbsp;" . sprintf("%4.2f",$sumweek) ."</td>" if ($sumweek > 0.1);
       $futable .= "</tr>\n";
     }
+    if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
+      $lastavg = sprintf("(%3.2f)", $sum30) if ($sum30 > 0);
+      $lastwk = sprintf("(%3.2f)", $sumweek) if ($sumweek > 0);
+    }
     if ( $ndays <0 ) {
       $fut = $sum30;
       $fut = "NaN" if ($fut < 0.1); # Hide (almost)zeroes
@@ -740,9 +745,6 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       if (!$sumweek) { # Don't plot zero weeksums
         $sumweek = "NaN";
       }
-    }
-    if ( $sum30 > 0 && $ndays >=0 && $endoff<=0) {
-      $lastavg = sprintf("(%3.2f)", $sum30);
     }
     my $wkend = 0;
     if ($wkday > 4) {
@@ -816,7 +818,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "\"$plotfile\" " .
             "using 1:3 with boxes lc 3 title \"std drinks/day\"," .  # weekends
         "\"$plotfile\" " .
-            "using 1:5 with line lc \"gray30\" title \"7-day avg\", " .
+            "using 1:5 with line lc \"gray30\" title \"7-day avg $lastwk\", " .
         "\"$plotfile\" " .
             "using 1:4 with line lc 9 lw 3 title \"30-day fl. avg $lastavg\", " .  # avg30
                # smooth csplines
