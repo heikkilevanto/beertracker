@@ -750,8 +750,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ($wkday > 4) {
        $wkend = $tot;
        $tot = 0;
-       if ( $ndays <= 0 ) {
-         $wkend = $wkend || -0.08 ; # mark weekends in the fut graph
+       if ( $ndays <= 0 || $zerodays > 1) { # fut graph, or zero-mark day
+         $wkend = $wkend || -0.08 ; # mark weekend days
        }
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
@@ -813,10 +813,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
              # pointtype pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
              # note the order of plotting, later ones get on top
              # so we plot weekdays, weekends, avg line, zeroes
-        "\"$plotfile\" " .
-            "using 1:2 with boxes lc 0 notitle ," .  # weekdays
-        "\"$plotfile\" " .
-            "using 1:3 with boxes lc 3 title \"std drinks/day\"," .  # weekends
+        "\"$plotfile\" using 1:3 with boxes lc 3 title \"std drinks/day\"," .  # weekends
+        "\"$plotfile\" using 1:2 with boxes lc 0 notitle ," .  # weekdays
         "\"$plotfile\" " .
             "using 1:5 with line lc \"gray30\" title \"7-day avg $lastwk\", " .
         "\"$plotfile\" " .
