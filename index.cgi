@@ -730,8 +730,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       # Display future numbers in table form, if asking for 2 weeks ahead
       my $weekday = ( "Mon", "Tue", "Wed", "Thu", "<b>Fri</b>", "<b>Sat</b>", "<b>Sun</b>" ) [$wkday-1];
       $futable .= "<tr><td>&nbsp;$weekday&nbsp;</td><td>&nbsp;$date&nbsp;</td>";
-      $futable .= "<td align=right>&nbsp;" . sprintf("%4.2f",$sum30) . "</td>";
-      $futable .= "<td align=right>&nbsp;" . sprintf("%4.2f",$sumweek) ."</td>" if ($sumweek > 0.1);
+      $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sum30,$sum30*7) . "</td>";
+      $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sumweek, $sumweek*7) ."</td>" if ($sumweek > 0.1);
       $futable .= "</tr>\n";
     }
     if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
