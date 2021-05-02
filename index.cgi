@@ -735,8 +735,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       $futable .= "</tr>\n";
     }
     if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
-      $lastavg = sprintf("(%3.2f/d %3.1f/w)", $sum30, $sum30*7) if ($sum30 > 0);
-      $lastwk = sprintf("(%3.2f/d %3.1f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
+      $lastavg = sprintf("(%2.1f/d %3.1f/w)", $sum30, $sum30*7) if ($sum30 > 0);
+      $lastwk = sprintf("(%2.1f/d %3.1f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
     }
     if ( $ndays <0 ) {
       $fut = $sum30;
