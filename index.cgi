@@ -806,7 +806,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
        "set style fill solid \n" .
        "set boxwidth 0.7 relative \n" .
-       "set key left top\n" .
+       "set key left top horizontal \n" .
        "set grid xtics y2tics  linewidth 0.1 linecolor 4 \n".
        "plot " .
              # linecolor lc 0=grey 1=red, 2=green, 3=blue 9=purple
@@ -816,9 +816,9 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "\"$plotfile\" using 1:3 with boxes lc 3 title \"std drinks/day\"," .  # weekends
         "\"$plotfile\" using 1:2 with boxes lc 0 notitle ," .  # weekdays
         "\"$plotfile\" " .
-            "using 1:5 with line lc \"gray30\" title \"7-day avg $lastwk\", " .
+            "using 1:5 with line lc \"gray30\" title \"7d $lastwk\", " .
         "\"$plotfile\" " .
-            "using 1:4 with line lc 9 lw 3 title \"30-day fl. avg $lastavg\", " .  # avg30
+            "using 1:4 with line lc 9 lw 3 title \" 30d avg $lastavg\", " .  # avg30
                # smooth csplines
         "\"$plotfile\" " .
             "using 1:7 with points pointtype 1 lc 9 notitle, " .  # future tail
