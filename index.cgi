@@ -95,7 +95,8 @@ my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "l" 
 my $yrlim = param("y"); # Filter by year
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
-my $maxlines = param("maxl") || "25";  # negative = unlimited
+my $maxlines = param("maxl") || "$yrlim$yrlim" || "25";  # negative = unlimited
+   # Defaults to 25, unless we have a year limit, in which case defaults to something huge.
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
 
@@ -912,7 +913,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     "&nbsp;<a href='$url?q=$qry'>Full)</a><hr/>" if ($qry);
   while ( $i > 0 ) {
     $i--;
-     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i==0);
+    next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i == 0 );
+    next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ || $i == 0 );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer,
       $vol, $sty, $alc, $pr, $rate, $com ) = split( / *; */, $lines[$i] );
     if ( $i == 0 ) {
@@ -952,6 +954,10 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
             # TODO - Make this like the graph, build an array of entries first
           $zerodate = `date +%F -d "$lastdate + $ndays days ago" `;
           $ndays++;  # that seems to work even without $lastdate, takes today!
+          if ($yrlim && $zerodate !~ /$yrlim/) {
+            $ndays = 0;
+            $zerodate = $effdate; # force the loop to end
+          }
         } while ( $zerodate gt $effdate );
         $ndays-=3;
         if ( $ndays == 1 ) {
@@ -960,7 +966,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
           print "... ($ndays days) ...<br/>\n";
         }
       }
-      my $thismonth = substr($effdate,0,7);
+      my $thismonth = substr($effdate,0,7); #yyyy-mm
       my $bold = "";
       if ( $thismonth ne $month ) {
         $bold = "b";
@@ -987,11 +993,17 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       $lastloc = $loc;
     }
     $daysum += ( $alc * $vol ) if ($alc && $vol && $pr =~ /^\d+$/) ;
-    $daymsum += abs($pr) if ($pr);
+    $daymsum += abs($pr) if ($pr =~ /^\d+$/);
   }
-  if ( $maxlines >= 0 ) {
+  if ( $maxlines >= 0 && $i > 0 && !$yrlim) {
     print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
       "More</a><br/>\n";
+  }
+  if ( scalar(keys(%years)) > 1 ) {
+    print "<br/>";
+    for $y ( sort(keys(%years)) ) {
+      print "<a href='$url?o=short&y=$y&q=$qry'>$y</a>\n" ;  # TODO - Skips some ??!!
+    }
   }
   exit(); # All done
 
@@ -1692,7 +1704,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
       "More</a><p/>\n";
   } else {
-    print "<br/>That was the whole list<p/>\n";
+    print "<br/>That was the whole list<p/>\n" unless ($yrlim);
   }
   if ( scalar(keys(%years)) > 1 ) {
     for $y ( sort(keys(%years)) ) {
