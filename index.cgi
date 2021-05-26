@@ -900,11 +900,13 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $daymsum = 0.0;
   my %locseen;
   my $month = "";
+  print "<hr/>Filter: <b>$qry</b> <a href='$url?o=short'>(Clear</a>" .
+    "&nbsp;<a href='$url?q=$qry'>Long)</a><hr/>" if ($qry);
   while ( $i > 0 ) {
     $i--;
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
-$com ) =
-       split( / *; */, $lines[$i] );
+     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i==0);
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer,
+      $vol, $sty, $alc, $pr, $rate, $com ) = split( / *; */, $lines[$i] );
     if ( $i == 0 ) {
       $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
@@ -916,7 +918,7 @@ $com ) =
           if ( !defined($locseen{$loc}) ) {
             $bold = "b";
             }
-          $places .= " " . filt($loc,$bold);
+          $places .= " " . filt($loc, $bold, $loc, "short");
           $locseen{$loc} = 1;
         }
       }
@@ -927,7 +929,7 @@ $com ) =
         $entry .= " " . unit($daydrinks,"d") . " " . unit($daymsum,"kr");
         print "$entry";
         my $shortplaces = $places;
-        $shortplaces =~ s/<[^>]+>//g;
+        $shortplaces =~ s/<[^>]+>//g; #remove html tags
         #print "('$shortplaces' " . length($shortplaces) . ")";
         print "<br/>&nbsp;\n" if ( length($shortplaces) > 15 );
         print "$places<br/>\n";
@@ -935,18 +937,20 @@ $com ) =
         last if ($maxlines == 0); # if negative, will go for ever
       }
       # Check for empty days in between
-      my $ndays = 1;
-      my $zerodate;
-      do { # TODO - Do this in perl, with datestr()
-           # TODO - Make this like the graph, build an array of entries first
-        $zerodate = `date +%F -d "$lastdate + $ndays days ago" `;
-        $ndays++;  # that seems to work even without $lastdate, takes today!
-      } while ( $zerodate gt $effdate );
-      $ndays-=3;
-      if ( $ndays == 1 ) {
-        print "... (1 day) ...<br/>\n";
-      } elsif ( $ndays > 1) {
-        print "... ($ndays days) ...<br/>\n";
+      if (!$qry) {
+        my $ndays = 1;
+        my $zerodate;
+        do { # TODO - Do this in perl, with datestr()
+            # TODO - Make this like the graph, build an array of entries first
+          $zerodate = `date +%F -d "$lastdate + $ndays days ago" `;
+          $ndays++;  # that seems to work even without $lastdate, takes today!
+        } while ( $zerodate gt $effdate );
+        $ndays-=3;
+        if ( $ndays == 1 ) {
+          print "... (1 day) ...<br/>\n";
+        } elsif ( $ndays > 1) {
+          print "... ($ndays days) ...<br/>\n";
+        }
       }
       my $thismonth = substr($effdate,0,7);
       my $bold = "";
@@ -969,7 +973,7 @@ $com ) =
         if ( !defined($locseen{$loc}) ) {
           $bold = "b";
           }
-        $places .= " " . filt($loc,$bold);
+        $places .= " " . filt($loc, $bold, $loc, "short");
         $locseen{$loc} = 1;
         }
       $lastloc = $loc;
@@ -1458,7 +1462,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   print "<hr/>Filter: <b>$qry</b> <a href='$url'>(Clear)</a>" if ($qry || $qrylim);
   print " -".$qrylim if ($qrylim);
   print " &nbsp; \n";
-  print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) ."\n" if ($qry);
+  print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) .
+    filt($qry, "", "Short", "short")  ."\n" if ($qry);
 
   print "<br/>"if ($qry || $qrylim);
   print "<span class='no-print'>\n";
@@ -1714,17 +1719,19 @@ sub param {
   return $val;
 }
 
-# Helper to make a filter link, always to the default (long) list
+# Helper to make a filter link
 sub filt {
   my $f = shift; # filter term
   my $tag = shift || "nop";
   my $dsp = shift || $f;
+  my $op = shift || "";
+  $op = "o=$op&" if ($op);
   my $param = $f;
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
-  my $link = "<a href='$url?q=".uri_escape_utf8($param) ."'><$tag>$dsp</$tag></a>";
-
+  my $link = "<a href='$url?$op"."q=".uri_escape_utf8($param) ."'><$tag>$dsp</$tag></a>";
   return $link;
 }
+
 
 
 # Helper to print "(NEW)" in case we never seen the entry before
