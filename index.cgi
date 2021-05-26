@@ -92,6 +92,7 @@ my $time = param("t"); # Time, if entered.
 my $del = param("x");  # delete/update last entry
 my $qry = param("q");  # filter query, greps the list
 my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "l" for extra links
+my $yrlim = param("y"); # Filter by year
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "25";  # negative = unlimited
@@ -204,18 +205,25 @@ my $lastmonthday = "";
 my $tz = "";
 my %daydsums; # Sum of drinks for each date   # TODO Sum these up here (See #142)
 my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
+my %years;  # Keep track which years we have seen, for the "more" links
 my $boxno = 1; # Box number, from a comment like (B17:240)
 my $boxvol = ""; # Remaining volume in the box
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
   next unless $_; # skip empty lines
+
   my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( / *; */ );
   next unless $wd; # We can get silly comment lines, Bom mark, etc
   push @lines, $_; # collect them all
   if (!$allfirstdate) {
     $allfirstdate=$ed;
     # TODO Clear daydsums and daymsums for every date from $ed to today
+  }
+  if ( /$qry/ ) {
+    if ( $ed =~ /^(\d+)/ ) {
+      $years{$1}++;
+    }
   }
   my $restname = "";
   $m = $m || "";
@@ -901,7 +909,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my %locseen;
   my $month = "";
   print "<hr/>Filter: <b>$qry</b> <a href='$url?o=short'>(Clear</a>" .
-    "&nbsp;<a href='$url?q=$qry'>Long)</a><hr/>" if ($qry);
+    "&nbsp;<a href='$url?q=$qry'>Full)</a><hr/>" if ($qry);
   while ( $i > 0 ) {
     $i--;
      next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i==0);
@@ -978,7 +986,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         }
       $lastloc = $loc;
     }
-    $daysum += ( $alc * $vol ) if ($alc && $vol && $pr >= 0) ;
+    $daysum += ( $alc * $vol ) if ($alc && $vol && $pr =~ /^\d+$/) ;
     $daymsum += abs($pr) if ($pr);
   }
   if ( $maxlines >= 0 ) {
@@ -1502,6 +1510,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
+    next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer,
       $vol, $sty, $alc, $pr, $rate, $com ) = split( / *; */, $lines[$i] );
     next if ( $qrylim eq "c" && (! $com || $com =~ /^ *\(/ ) );
@@ -1681,13 +1690,18 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   print "<hr/>\n" ;
   if ( $maxlines == 0 && $anchor ) {
     print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
-      "More</a><br/>\n";
+      "More</a><p/>\n";
   } else {
-    print "<br/>That was the whole list<br/>\n";
+    print "<br/>That was the whole list<p/>\n";
+  }
+  if ( scalar(keys(%years)) > 1 ) {
+    for $y ( sort(keys(%years)) ) {
+      print "<a href='$url?y=$y&q=$qry'>$y ($years{$y})</a>\n" ;  # TODO - Skips some ??!!
+    }
   }
   my $rsum = 0;
   my $rcnt = 0;
-  print "<br/>Ratings:<br/>\n";
+  print "<p/>Ratings:<br/>\n";
   for (my $i = 0; $i<11; $i++) {
     $rsum += $ratecounts[$i] * $i;
     $rcnt += $ratecounts[$i];
