@@ -285,7 +285,7 @@ where else to put.
 
 ---
 
-## Tpis and tricks
+## Tips and tricks
 
 * I use the brewery field for specifying non-beer categories. All of them should
 have a comma in the name, for example `Booze, whisky`, or `Wine, Red`. These can
@@ -319,3 +319,4 @@ If you run into bugs and real problems, please file them as issues on GitHub, at
 https://github.com/heikkilevanto/beertracker/issues. Even better, if you can fix it
 yourself, file a pull request.
 
+See also the [README](./README.md)
