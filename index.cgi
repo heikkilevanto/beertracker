@@ -952,6 +952,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         my $zerodate;
         do { # TODO - Do this in perl, with datestr()
             # TODO - Make this like the graph, build an array of entries first
+            # At the moment this is too slow to use in filtered lists.
           $zerodate = `date +%F -d "$lastdate + $ndays days ago" `;
           $ndays++;  # that seems to work even without $lastdate, takes today!
           if ($yrlim && $zerodate !~ /$yrlim/) {
