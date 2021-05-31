@@ -53,5 +53,7 @@ Point your browser to beerdata. You should see a dark input form. If not, check
 /var/log/apache2/error.log. If you do, enter a test beer or two, and look at
 the lists.
 
-There is some kind of user manual at manual.md
+## See also
+ - The [User Manual](./manual.md)
+
 
