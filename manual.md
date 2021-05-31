@@ -5,6 +5,7 @@ This is a simple script to track the beers I drink. I also use it for other
 purposes, like remembering restaurants, tracking wines and booze, and displaying
 nice graphs.
 
+---
 
 ## Getting started
 When you start, the database is empty. You need to enter all details on the first
@@ -30,6 +31,7 @@ This is good if you want to look up a beer before buying.
 There are dedicated lists for beers, breweries, locations, etc. Those can be
 selected from the "show" pull-down in the input form.
 
+---
 
 ## Input fields
 The first part of the screen is the put area, where you can enter what beers
@@ -120,7 +122,7 @@ Clears all input fields, in case you want to enter something completely differen
 This is the main menu, where you can choose what to show under the input form.
 See below.
 
-
+---
 
 ## Editing
 The input form is also used for editing old records. In that case there are
@@ -142,6 +144,7 @@ means that most of the fields are cleared as soon as you click on them. If you
 uncheck the box, the fields will not clear. This is handy for editing a small
 typing error.
 
+---
 
 ## The main menu
 The "Show" menu allows you to choose what gets shown under the input form.
@@ -280,9 +283,7 @@ where else to put.
 * Information on what time zone the system thinks you are in
 * Summary of the abbreviations for various volumes
 
-
-
-
+---
 
 ## Tpis and tricks
 
@@ -305,6 +306,8 @@ knows it is a box wine, and makes a comment on it, like "(B17:300)". Enter your
 drinks as usual, and see the volume in the box comment go down. If you use wine
 for cooking, for guests, enter the volume as negative, that way the box volume
 will go down, but it will not be counted against you.
+
+---
 
 ## Problems
 If you are just starting, I may be willing to help with technical issues, especially
