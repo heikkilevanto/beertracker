@@ -198,11 +198,10 @@ of drinks:
 * The grey bars represent weekdays, and the blue bars are weekends. This
 is to make it a bit easier to follow the days.
 * For days with no drinks, there is a green dot in the bottom.
-* For each day there is a little '+' that indicates the average number of
-drinks for the preceding 7 days. When showing a longer graph, this is only
-shown for Tuesdays, for clarity.
 * There is a purple line that is a floating average of the past 30 days, with
 higher weights for the more recent days.
+* There is a black line that shows the (arithmetic) average for the last 7
+days, including today.
 
 Under the graph are navigation buttons:
 * "<<" and ">>" move the graph earlier and later in time
