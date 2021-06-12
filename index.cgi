@@ -1011,7 +1011,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         $ysum += $years{$y};
       }
     }
-    print "<a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
+    print "<a href='$url?maxl=-1&" . $q->query_string(). ">" .
       "All</a> ($ysum)<p/>\n";
   } else {
     print "<br/>That was the whole list<p/>\n" unless ($yrlim);
@@ -1352,7 +1352,6 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   print "Filter: <a href='$url?y=$yrlim'>$yrlim</a> " .
      "<a href='$url?o=$op'>(clear)</a> <br/>" if $yrlim;
   print "</div>\n";
-  my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   my $i = scalar( @lines );
   my $fld;
   my $line;
@@ -1456,7 +1455,6 @@ $com ) =
     $lineseen{$fld} = $line;
     #print "<tr>$line</tr>\n";
     push @displines, "$line";
-    $ratecounts[$rate] ++ if ($rate);
   }
   if ($sortlist) {
     @displines = ();
@@ -1481,21 +1479,8 @@ $com ) =
       $ysum += $years{$y};
     }
   }
-  print "<a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
+  print "<a href='$url?maxl=-1&" . $q->query_string() . "'>" .
     "All</a> ($ysum)<p/>\n";
-  print "<br/>Ratings:<br/>\n";
-  for (my $i = 0; $i<11; $i++) {
-    $rsum += $ratecounts[$i] * $i;
-    $rcnt += $ratecounts[$i];
-    print "&nbsp;<b>" . sprintf("%3d",$ratecounts[$i]). "</b> ".
-      "times <i>$i: $ratings[$i]</i> <br/>" if ($ratecounts[$i]);
-  }
-  if ($rcnt) {
-    print "$rcnt ratings avg <b>" . sprintf("%3.1f", $rsum/$rcnt).
-      " " . $ratings[$rsum/$rcnt] .
-    "</b><br/>\n";
-    print "<br/>\n";
-  }
 
   exit();
 }
