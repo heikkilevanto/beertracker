@@ -913,8 +913,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $daymsum = 0.0;
   my %locseen;
   my $month = "";
-  print "<hr/>Filter: <b>$qry</b> <a href='$url?o=short'>(Clear</a>" .
-    "&nbsp;<a href='$url?q=$qry'>Full)</a><hr/>" if ($qry);
+  print "<hr/>Filter: <b>$yrlim $qry</b> <a href='$url?o=short'>(Clear</a>" .
+    "&nbsp;<a href='$url?q=$qry'>Full)</a><hr/>" if ($qry||$yrlim);
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i == 0 );
@@ -1000,15 +1000,21 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     $daysum += ( $alc * $vol ) if ($alc && $vol && $pr =~ /^\d+$/) ;
     $daymsum += abs($pr) if ($pr =~ /^\d+$/);
   }
-  if ( $maxlines >= 0 && $i > 0 && !$yrlim) {
-    print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "'>" .
-      "More</a><br/>\n";
-  }
-  if ( scalar(keys(%years)) > 1 ) {
-    print "<br/>";
-    for $y ( sort(keys(%years)) ) {
-      print "<a href='$url?o=short&y=$y&q=$qry'>$y</a>\n" ;  # TODO - Skips some ??!!
+
+  print "<hr/>\n";
+  if ( $maxlines == 0 || $yrlim ) {
+    print "More: <br/>\n";
+    my  $ysum ;
+    if ( scalar(keys(%years)) > 1 ) {
+      for $y ( reverse sort(keys(%years)) ) {
+        print "<a href='$url?o=short&y=$y&q=$qry'>$y</a> ($years{$y})<br/>\n" ;
+        $ysum += $years{$y};
+      }
     }
+    print "<a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
+      "All</a> ($ysum)<p/>\n";
+  } else {
+    print "<br/>That was the whole list<p/>\n" unless ($yrlim);
   }
   exit(); # All done
 
@@ -1343,6 +1349,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   }
   print "Filter: <a href='$url?q=$qry'>$qry</a> " .
      "<a href='$url?o=$op'>(clear)</a> <br/>" if $qry;
+  print "Filter: <a href='$url?y=$yrlim'>$yrlim</a> " .
+     "<a href='$url?o=$op'>(clear)</a> <br/>" if $yrlim;
   print "</div>\n";
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   my $i = scalar( @lines );
@@ -1358,6 +1366,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
+    next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
 $com ) =
        split( / *; */, $lines[$i] );
@@ -1463,6 +1472,17 @@ $com ) =
   print "<br/>Total " . scalar(@displines) . " entries <br/>\n" if (scalar(@displines));
   my $rsum = 0;
   my $rcnt = 0;
+  print "<hr/>\n" ;
+  print "More: <br/>\n";
+  my  $ysum ;
+  if ( scalar(keys(%years)) > 1 ) {
+    for $y ( reverse sort(keys(%years)) ) {
+      print "<a href='$url?o=$op&y=$y&q=$qry'>$y</a><br/>\n" ;  # TODO - Skips some ??!!
+      $ysum += $years{$y};
+    }
+  }
+  print "<a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
+    "All</a> ($ysum)<p/>\n";
   print "<br/>Ratings:<br/>\n";
   for (my $i = 0; $i<11; $i++) {
     $rsum += $ratecounts[$i] * $i;
