@@ -1705,16 +1705,19 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     }
 
   print "<hr/>\n" ;
-  if ( $maxlines == 0 && $anchor ) {
-    print "<br/><a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
-      "More</a><p/>\n";
+  if ( $maxlines == 0 || $yrlim ) {
+    print "More: <br/>\n";
+    my  $ysum ;
+    if ( scalar(keys(%years)) > 1 ) {
+      for $y ( reverse sort(keys(%years)) ) {
+        print "<a href='$url?y=$y&q=$qry'>$y</a> ($years{$y})<br/>\n" ;  # TODO - Skips some ??!!
+        $ysum += $years{$y};
+      }
+    }
+    print "<a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
+      "All</a> ($ysum)<p/>\n";
   } else {
     print "<br/>That was the whole list<p/>\n" unless ($yrlim);
-  }
-  if ( scalar(keys(%years)) > 1 ) {
-    for $y ( sort(keys(%years)) ) {
-      print "<a href='$url?y=$y&q=$qry'>$y ($years{$y})</a>\n" ;  # TODO - Skips some ??!!
-    }
   }
   my $rsum = 0;
   my $rcnt = 0;
