@@ -1484,7 +1484,7 @@ $com ) =
 if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   print "\n<!-- Full list -->\n ";
-  print "<hr/>Filter: <b>$qry</b> <a href='$url'>(Clear)</a>" if ($qry || $qrylim);
+  print "<hr/>Filter:<b>$yrlim $qry</b> <a href='$url'>(Clear)</a>" if ($qry || $qrylim || $yrlim);
   print " -".$qrylim if ($qrylim);
   print " &nbsp; \n";
   print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) .
