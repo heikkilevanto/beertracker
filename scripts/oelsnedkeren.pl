@@ -1,4 +1,3 @@
-
 #!/usr/bin/perl
 use XML::LibXML;
 use URI::URL;
@@ -25,7 +24,7 @@ my @taps;
 my $xpath = '//*[@class="beer-entry"]';
 my $count = 1;
 foreach my $design ($dom->findnodes($xpath)) {
-    
+
     my @beer;
     my $index = 0;
     foreach my $tdNodes ($design->findnodes('./div/div')) {
@@ -39,14 +38,14 @@ foreach my $design ($dom->findnodes($xpath)) {
     # 3 <div class="beer-facts"><div class="brewery-name"> ?lsnedkeren</div><div class="brewery-area"> Copenhagen, Region Hovedstaden</div></div>
     # 4 <div class="beer-facts"><div class="beer-description"> Double IPA with Citra and Mosaic. </div></div>
     my ($number) = $count; # $beer[0] =~ m/\<td.*?\>(.*?)\<\/td\>/g;
-    
+
     my ($model) = $beer[0] =~ m/beer-name">(.*?)</g;
     my ($maker) = $beer[3] =~ m/brewery-name">(.*?)</g;
     my ($type)  = $beer[1] =~ m/beer-style">(.*?)</g;
     my ($abv)   = $beer[2] =~ m/beer-abv">(.*?)%/g;
     my ($desc)  = $beer[4] =~ m/beer-description">[ ]*(.*?)[ ]*</g;
     print "RESULT:", $model, $maker, $type, $abc;
-	
+
     # <td>30cl <big>65</big><br/>20cl <big>45</big></td>
     # <td>30cl <big>55</big></td>
     # and one bad?
@@ -69,11 +68,11 @@ foreach my $design ($dom->findnodes($xpath)) {
 	    subtype => $subtype,
 	    desc   => $desc,
 	    sizePrice => [ @sizePrices ]
-	       
+
     };
     # why doesn't this work?
     $tapItem{'subtype'} = $subtype;
-	
+
     if ($model) {
 	push @taps, $tapItem;
     };

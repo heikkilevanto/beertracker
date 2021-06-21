@@ -1,4 +1,3 @@
-
 #!/usr/bin/perl
 use XML::LibXML;
 use URI::URL;
@@ -33,20 +32,20 @@ foreach my $design ($dom->findnodes($xpath)) {
 	$index++;
     }
     my ($number) = $beer[0] =~ m/\<td.*?\>(.*?)\<\/td\>/g;
-    
+
     my ($maker, $model, $type) = $beer[1] =~ m/\<td\>\<big\>(.*?) *\<b\>(.*?)\<\/b\>.*?\<br\/\>(.*?)\<\/td\>/g;
     # <br/>DK - NEIPA - 7.5%
     # <br/>DK - NEIPA - 7.5% - <a
     # <br/>DK - NEIPA - SUBTYPE - 7.5% [ - <a]
-    
-    
+
+
     my ($country, $type, $subtype) = $beer[1] =~ m/\<br\/\>(.*?) - (.*?) - (.*?) [-<]/g;
     my ($abv) = $beer[1] =~ m/([^ -]*?%)/g;
     # <br/>DK - NEIPA - 7.5% - <a
     if ($subtype == $abv) {
 	undef $subtype;
-    }	    
-    
+    }
+
     # <td>30cl <big>65</big><br/>20cl <big>45</big></td>
     # <td>30cl <big>55</big></td>
     # and one bad?
@@ -71,11 +70,11 @@ foreach my $design ($dom->findnodes($xpath)) {
     };
     # why doesn't this work?
     $tapItem{'subtype'} = $subtype;
-	
+
     if ($model) {
 	push @taps, $tapItem;
     };
-    # [ { size => $size, price => $price}, { size => $size2, price => $price2}]	    
+    # [ { size => $size, price => $price}, { size => $size2, price => $price2}]
 }
 
 print(to_json(\@taps, {pretty => 1}));
