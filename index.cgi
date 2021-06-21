@@ -62,6 +62,7 @@ $links{"Dry and Bitter"} = "https://www.dryandbitter.com/collections/beer/";
 #$links{"Dudes"} = "http://www.dudes.bar"; # R.I.P Dec 2018
 $links{"Taphouse"} = "http://www.taphouse.dk/";
 $links{"Slowburn"} = "https://slowburn.coop/";
+$links{"Brewpub"} = "https://brewpub.dk/vores-l";
 
 # currency conversions
 my %currency;
