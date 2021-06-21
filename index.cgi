@@ -1296,7 +1296,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
   print "It is Open Source.\n";
   print "<br/>To get started, look at the " .
-    aboutlink("documentation", "https://github.com/heikkilevanto/beertracker#getting-started", "nop");
+    aboutlink("documentation", "https://github.com/heikkilevanto/beertracker/blob/master/manual.md", "nop");
   print "<hr/>";
 
   print "Some links I may find useful: <ul>";
