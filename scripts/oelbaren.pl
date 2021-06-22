@@ -7,6 +7,7 @@ use utf8;
 
 my $base_url = "https://oelbaren.dk/oel/";
 
+binmode STDOUT, ":encoding(UTF-8)";
 my $ua = LWP::UserAgent->new;
 $res = $ua->get($base_url);
 # if CA is missing 
