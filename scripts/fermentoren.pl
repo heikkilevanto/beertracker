@@ -18,7 +18,6 @@ use utf8;
 # </span>
 
 my $base_url = "https://untappd.com/v/fermentoren/127076";
-# //*[@id="menu-3750"]/div[2]/div[2]/div[1]/div[1]/div
 my $xpath        = '//div[@class="beer-details"]';
 my $xpath_number = './/a[@data-href=":beer"]/text()';
 my $regex_number = '^([0-9]*?)\.';
