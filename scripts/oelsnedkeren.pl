@@ -1,18 +1,18 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use XML::LibXML;
 use URI::URL;
 use JSON qw(to_json);
 use LWP::UserAgent;
+use utf8;
 
 my $base_url = "https://www.olsnedkeren.dk";
 
-my $filename = 'oelbaren.html';
-
+binmode STDOUT, ":encoding(UTF-8)";
 my $ua = LWP::UserAgent->new;
 #$ua->ssl_opts(verify_hostname => 0);
 $res = $ua->get($base_url);
 
-die "Failed to fetch $base_urla", $res->status_line unless $res->is_success;
+die "Failed to fetch $base_url", $res->status_line unless $res->is_success;
 
 my $dom = XML::LibXML->load_html(
     string        => $res->content,
@@ -29,7 +29,6 @@ foreach my $design ($dom->findnodes($xpath)) {
     my $index = 0;
     foreach my $tdNodes ($design->findnodes('./div/div')) {
 	push @beer, $tdNodes->toString;
-	print($index . " " . $tdNodes->toString . "\n");
 	$index++;
     }
     # 0 <div class="beer-name">Slambert</div>
@@ -44,7 +43,7 @@ foreach my $design ($dom->findnodes($xpath)) {
     my ($type)  = $beer[1] =~ m/beer-style">(.*?)</g;
     my ($abv)   = $beer[2] =~ m/beer-abv">(.*?)%/g;
     my ($desc)  = $beer[4] =~ m/beer-description">[ ]*(.*?)[ ]*</g;
-    print "RESULT:", $model, $maker, $type, $abc;
+#    print "RESULT:", $model, $maker, $type, $abv;
 
     # <td>30cl <big>65</big><br/>20cl <big>45</big></td>
     # <td>30cl <big>55</big></td>
@@ -65,13 +64,12 @@ foreach my $design ($dom->findnodes($xpath)) {
 	    model  => $model,
 	    type   => $type,
 	    abv    => $abv,
-	    subtype => $subtype,
 	    desc   => $desc,
 	    sizePrice => [ @sizePrices ]
 
     };
     # why doesn't this work?
-    $tapItem{'subtype'} = $subtype;
+    $tapItem->{'subtype'} = $subtype if $subtype;
 
     if ($model) {
 	push @taps, $tapItem;
