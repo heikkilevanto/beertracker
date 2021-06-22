@@ -1,18 +1,18 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 use XML::LibXML;
 use URI::URL;
 use JSON qw(to_json);
 use LWP::UserAgent;
+use utf8;
 
 my $base_url = "https://oelbaren.dk/oel/";
 
-my $filename = 'oelbaren.html';
 
 my $ua = LWP::UserAgent->new;
-#$ua->ssl_opts(verify_hostname => 0);
 $res = $ua->get($base_url);
-
-die "Failed to fetch $base_urla", $res->status_line unless $res->is_success;
+# if CA is missing 
+# $ua->ssl_opts(verify_hostname => 1);
+die "Failed to fetch $base_url", $res->status_line unless $res->is_success;
 
 my $dom = XML::LibXML->load_html(
     string        => $res->content,
@@ -31,50 +31,56 @@ foreach my $design ($dom->findnodes($xpath)) {
 #	print($index . " " . $tdNodes->toString . "\n");
 	$index++;
     }
-    my ($number) = $beer[0] =~ m/\<td.*?\>(.*?)\<\/td\>/g;
+    my ($number) = $beer[0] =~ m/\>(.*?)\</g;
+    
+    my ($maker, $model) = $beer[1] =~ m/\<td\>\<big\>(.*?) *\<b\>(.*?)\<\/b\>.*?\<br\/\>/g;
+    # Skip empty taps
+    if ($model) {
+	# <br/>DK - NEIPA - 7.5% </td>
+	# <br/>DK - NEIPA - 7.5% - <a href...
+	# <br/>DK - NEIPA - SUBTYPE - 7.5% [- <a... >]</td>
+	my ($country, $type, $subtype) = $beer[1] =~ m/\<br\/\>(.*?) - (.*?) - (.*?) [-<]/g;
+	my ($test, $extra) = $beer[1] =~ m/\<br\/\>(.*? - .*?) - (.*?) /g;
+	my ($abv) = $beer[1] =~ m/([^ -]*?)%/g;
+	if ($subtype eq $abv) {
+	    undef $subtype;
+	} else {
+	    $type .= " - " . $subtype;
+	}
 
-    my ($maker, $model, $type) = $beer[1] =~ m/\<td\>\<big\>(.*?) *\<b\>(.*?)\<\/b\>.*?\<br\/\>(.*?)\<\/td\>/g;
-    # <br/>DK - NEIPA - 7.5%
-    # <br/>DK - NEIPA - 7.5% - <a
-    # <br/>DK - NEIPA - SUBTYPE - 7.5% [ - <a]
+	# <td>30cl <big>65</big><br/>20cl <big>45</big></td>
+	# <td>30cl <big>55</big></td>
+	# <td><br/>20cl <big>45</big></td>
+	my ($size, $price) = $beer[2]   =~ m/>([0-9]*?)cl.*?\<big\>([0-9\.,]*)\<\/big\>/g;
+	my ($size2, $price2) = $beer[2] =~ m/\<br\/\>(.*?)cl.*?\<big\>(.*?)\<\/big\>/g;
+	if ($size2 && $size == $size2) {
+	    undef $size2;
+	    undef $price2;
+	}
+	#    my($url) = $design->findnodes('./a/@href')->to_literal_list;
+	my @sizePrices = ();
 
-
-    my ($country, $type, $subtype) = $beer[1] =~ m/\<br\/\>(.*?) - (.*?) - (.*?) [-<]/g;
-    my ($abv) = $beer[1] =~ m/([^ -]*?%)/g;
-    # <br/>DK - NEIPA - 7.5% - <a
-    if ($subtype == $abv) {
-	undef $subtype;
-    }
-
-    # <td>30cl <big>65</big><br/>20cl <big>45</big></td>
-    # <td>30cl <big>55</big></td>
-    # and one bad?
-    # <td> <br>30cl <big>60</big></td>
-    my ($size, $price,$size2, $price2) = $beer[2]   =~ m/\>([0-9\.,]*?)cl  *?\<big\>([0-9\.,]*?)\<\/big\>/g;
-    my @sizePrices = ();
-
-    if ($size) {
-	push @sizePrices, { size => $size, price => $price};
-    }
-    if ($size2) {
-	push @sizePrices, { size => $size2, price => $price2};
-    }
-    my $tapItem = {
-	    number => $number,
+	if ($size) {
+	    push @sizePrices, { size => 1.0 * $size, price => 1.0 * $price };
+	}
+	if ($size2) {
+	    push @sizePrices, { size => 1.0 * $size2, price => 1.0 * $price2 };
+	}
+	# Reference to hash
+	my $tapItem = {
+	    id => 0 + $number,
 	    maker  => $maker,
 	    model  => $model,
 	    type   => $type,
-	    abv    => $abv,
 	    subtype => $subtype,
+	    abv    => 1.0 * $abv,
 	    sizePrice => [ @sizePrices ]
-    };
-    # why doesn't this work?
-    $tapItem{'subtype'} = $subtype;
+	};
 
-    if ($model) {
-	push @taps, $tapItem;
-    };
-    # [ { size => $size, price => $price}, { size => $size2, price => $price2}]
+	if ($model) {
+	    push @taps, $tapItem;
+	};
+    }
 }
 
-print(to_json(\@taps, {pretty => 1}));
+print to_json(\@taps, {pretty => 1});
