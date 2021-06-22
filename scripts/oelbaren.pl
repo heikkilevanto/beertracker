@@ -7,7 +7,6 @@ use utf8;
 
 my $base_url = "https://oelbaren.dk/oel/";
 
-
 my $ua = LWP::UserAgent->new;
 $res = $ua->get($base_url);
 # if CA is missing 
@@ -23,7 +22,6 @@ my $dom = XML::LibXML->load_html(
 my @taps;
 my $xpath = '//*[@id="beerTable"]/tbody/tr';
 foreach my $design ($dom->findnodes($xpath)) {
-
     my @beer;
     my $index = 0;
     foreach my $tdNodes ($design->findnodes('./td')) {
