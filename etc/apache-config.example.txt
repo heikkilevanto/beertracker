@@ -3,7 +3,7 @@
 
 # Copy or symlink to /etc/apache2/conf-available|enabled or conf.d
 # Make also a symlink in /var/www/html/beertracker to the right place
-# Create a .htpasswd 
+# Create a .htpasswd
 # Create a directory called beerdata, and your own data file in it,
 # same name as your username. Make both owned and writable by www-data.
 
@@ -12,9 +12,9 @@
 
 <Directory /var/www/html/beertracker/>
     AllowOverride All
-    Options +FollowSymLinks +ExecCGI 
+    Options +FollowSymLinks +ExecCGI
 
-    AddHandler cgi-script .cgi 
+    AddHandler cgi-script .cgi
 
     AuthUserFile /var/www/html/beertracker/.htpasswd
     AuthName "Please Enter Password"
@@ -34,5 +34,10 @@
 
 # Hide the .git directory too, although it is available at github
 <Directory /var/www/html/beertracker/.git>
+   Deny from All
+</Directory>
+
+# Hide the scripts directory
+<Directory /var/www/html/beertracker/scripts>
    Deny from All
 </Directory>
