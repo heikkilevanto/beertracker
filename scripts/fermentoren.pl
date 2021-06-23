@@ -74,19 +74,7 @@ foreach my $design ($dom->findnodes($xpath)) {
 
     $node = ($design->findnodes($xpath_abv))[0];
     ($abv) = $node->toString =~ m/$regex_abv/g;
-    print "ABV: $abv \n" if $abv;
 	    
-#    my ($model) = $beer[0] =~ m/beer-name">(.*?)</g;
-#    my ($maker) = $beer[3] =~ m/brewery">(.*?)</g;
-#    my ($type)  = $beer[1] =~ m/beer-style">(.*?)</g;
-#    my ($abv)   = $beer[2] =~ m/beer-abv">([0-9\.]*) /g;
-#    my ($desc)  = $beer[4] =~ m/beer-description">[ ]*(.*?)[ ]*</g;
-    print("RESULT: $model|$maker|$type|$abv\n");
-
-    # <td>30cl <big>65</big><br/>20cl <big>45</big></td>
-    # <td>30cl <big>55</big></td>
-    # and one bad?
-    # <td> <br>30cl <big>60</big></td>
     my ($size, $price,$size2, $price2) = (20, 30, 40, 50);
     my @sizePrices = ();
 
