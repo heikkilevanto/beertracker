@@ -811,9 +811,9 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "set yrange [ -.5 : ] \n" .
         "set format x $xformat \n" .
         "unset ytics\n" .  # y2tics are on the right side, where I want them
-        "set ytics 0,2 out format \"\" \n" .  # Note that we need ytics, to make
-        "set mytics 2 \n".   # the scaling work, and y2tics to show legend on the right
+        "set ytics 0,2 out format \"%2.0f\" \n" .  # Note that we need ytics, to make
         "set y2tics 0,2 out format \"%2.0f\"\n" .
+        "set mytics 2 \n".   # the scaling work, and y2tics to show legend on the right
         "set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5,
         "set my2tics 2 \n".
         "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
@@ -826,17 +826,17 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
               # pointtype pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
               # note the order of plotting, later ones get on top
               # so we plot weekdays, weekends, avg line, zeroes
-          "\"$plotfile\" using 1:3 with boxes lc 3 title \"std drinks/day\"," .  # weekends
-          "\"$plotfile\" using 1:2 with boxes lc 0 notitle ," .  # weekdays
+          "\"$plotfile\" using 1:3 with boxes lc 3 axes x1y2 title \"std drinks/day\"," .  # weekends
+          "\"$plotfile\" using 1:2 with boxes lc 0 axes x1y2 notitle ," .  # weekdays
           "\"$plotfile\" " .
-              "using 1:5 with line lc \"gray30\" title \"7d $lastwk\", " .
+              "using 1:5 with line lc \"gray30\" axes x1y2 title \"7d $lastwk\", " .
           "\"$plotfile\" " .
-              "using 1:4 with line lc 9 lw 3 title \" 30d avg $lastavg\", " .  # avg30
+              "using 1:4 with line lc 9 lw 3 axes x1y2 title \" 30d avg $lastavg\", " .  # avg30
                 # smooth csplines
           "\"$plotfile\" " .
-              "using 1:7 with points pointtype 1 lc 9 notitle, " .  # future tail
+              "using 1:7 with points pointtype 1 lc 9 axes x1y2 notitle, " .  # future tail
           "\"$plotfile\" " .
-              "using 1:6 with points lc 2 pointtype 11 notitle \n" .  # zeroes
+              "using 1:6 with points lc 2 pointtype 11 axes x1y2 notitle \n" .  # zeroes
           "";
     open C, ">$cmdfile"
         or error ("Could not open $plotfile for writing");
