@@ -801,6 +801,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ($bigimg eq "B") {
       $imgsz = "640,480";
     }
+    ### TODO Check out "set link y2 via (9/5.)*y+32 inverse (5/9.)*(y-32)"
     my $cmd = "" .
         "set term png small size $imgsz \n".
         $pointsize .
@@ -811,9 +812,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "set yrange [ -.5 : ] \n" .
         "set format x $xformat \n" .
         "unset ytics\n" .  # y2tics are on the right side, where I want them
-        "set ytics 0,2 out format \"%2.0f\" \n" .  # Note that we need ytics, to make
         "set y2tics 0,2 out format \"%2.0f\"\n" .
-        "set mytics 2 \n".   # the scaling work, and y2tics to show legend on the right
         "set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5,
         "set my2tics 2 \n".
         "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
@@ -842,9 +841,6 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         or error ("Could not open $plotfile for writing");
     print C $cmd;
     close(C);
-    my $htcmd = $cmd;
-    #$htcmd =~ s/\n/<br\/>\n/g;
-    #print "$htcmd <br/>\n";
     system ("gnuplot $cmdfile ");
     print "<hr/>\n";
     if ($bigimg eq "B") {
