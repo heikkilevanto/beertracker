@@ -13,13 +13,14 @@
 ###################
 # Modules and UTF-8 stuff
 use POSIX qw(strftime localtime locale_h);
+use JSON;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use locale; # The data file can contain locale overrides
 setlocale(LC_COLLATE, "da_DK.utf8"); # but dk is the default
 setlocale(LC_CTYPE, "da_DK.utf8");
 use open ':encoding(UTF-8)';  # Data files are in utf-8
-binmode STDOUT, ":utf8"; # Stdout too. Not STDIN, the CGI module handles that
+binmode STDOUT, ":utf8"; # Stdout only. Not STDIN, the CGI module handles that
 
 use URI::Escape;
 use CGI qw( -utf8 );
@@ -33,6 +34,7 @@ my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android/ );
 # Constants
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
 my $datadir = "./beerdata/";
+my $scriptdir = "./scripts/";  # screen scraping scripts
 my $datafile = "";
 my $plotfile = "";
 my $cmdfile = "";
@@ -64,6 +66,13 @@ $links{"Taphouse"} = "http://www.taphouse.dk/";
 $links{"Slowburn"} = "https://slowburn.coop/";
 $links{"Brewpub"} = "https://brewpub.dk/vores-l";
 
+# Beerlist scraping scrips
+my %scrapers;
+$scrapers{"Ølbaren"} = "oelbaren.pl";
+$scrapers{"Taphouse"} = "taphouse.pl";
+$scrapers{"Fermentoren"} = "fermentoren.pl";
+$scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
+
 # currency conversions
 my %currency;
 $currency{"eur"} = 7.5;
@@ -79,6 +88,7 @@ my $origstamp = $stamp; # Remember if we had a stamp from the input, indicating 
 my $wday = param("wd");  # weekday
 my $effdate = param("ed");  # effective date. Drinks after midnight count as night before
 my $loc = param("l");  # location
+my $locparam = $loc; # Actual parameter, without being clever
 my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
 my $beer= param("b");  # beer
 my $vol = param("v");  # volume, in cl
@@ -451,7 +461,7 @@ undef, $icom) =
     $com .= " (B$boxno:$boxvol)";
   }
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
-  if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ ) {
+  if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /\d+ cl/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
         open F, ">>$datafile"
           or error ("Could not open $datafile for appending");
@@ -485,16 +495,15 @@ undef, $icom) =
       or error("Error closing $bakfile: $!");
   }
   # Redirect to the same script, without the POST, so we see the results
-  print $q->redirect( $url );
+  print $q->redirect( "$url?o=$op" );
   exit();
 }
 
 ############################
 # Get new values from the file we ingested earlier
-my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) = split( / *; */,
-$lastline );
-( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com
-) =
+my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
+    split( / *; */, $lastline );
+( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com) =
     split( / *; */, $foundline );
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
@@ -635,6 +644,7 @@ if ( $edit ) {
               "onchange='document.location=\"$url?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
   print "<option value='o=full' >Full List</option>\n";
+  print "<option value='o=board' >Beer Board</option>\n";
   print "<option value='o=short' >Short List</option>\n";
   my @ops = ("Graph",
     "Location","Brewery", "Beer",
@@ -648,13 +658,74 @@ if ( $edit ) {
 print "</table>\n";
 print "</form>\n";
 
+if ( !$op) {
+  $op = "Graph";  # Default to showing the graph
+} # also on mobile devices
+
+#############
+# Beer list for the location. Scraped from their website
+if ( $op =~ /board/i ) {
+  $locparam = $loc unless ($locparam);
+  print "<hr/>\n"; # Pull-down for choosing the bar
+  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' >\n";
+  print "Beer list for\n";
+  print "<select onchange='document.location=\"$url?o=board&l=\" + this.value;' >\n";
+  for my $l ( sort(keys(%scrapers)) ) {
+    my $sel = "";
+    $sel = "selected" if ( $l eq $locparam);
+    print "<option value='$l' $sel>$l</option>\n";
+  }
+  print "</select>\n";
+  print "</form>\n";
+
+  if (!$scrapers{$locparam}) {
+    print "Sorry, no  beer list for $locparam\n";
+  } else {
+    my $script = $scriptdir . $scrapers{$locparam};
+    my $json = `perl $script`;
+    chomp($json);
+    #print "<!--\n$json\n-->\n";  # for debugging
+    my $beerlist = JSON->new->utf8->decode($json);
+    print "<table>\n";
+    foreach $e ( @$beerlist )  {
+      # TODO - Be more clever in displaying just the key info on one line
+      # Skip brewery if the name contains same words, etc
+      $mak = $e->{"maker"};
+      $beer = $e->{"model"};
+      $sty = $e->{"type"};
+      $loc = $locparam;
+      $alc = $e->{"abv"};
+      print "<tr><td>#" . $e->{"id"} . ":</td>";
+      print "<td>$beer</td></tr>\n";
+      print "<tr><td>&nbsp;</td><td>$alc% &nbsp;";
+      my $sizes = $e->{"sizePrice"};
+      foreach $sp ( @$sizes ) {
+        $vol = $sp->{"size"};
+        $pr = $sp->{"price"};
+        print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+        print "<input type='hidden' name='m' value='$mak' />\n" ;
+        print "<input type='hidden' name='b' value='$beer' />\n" ;
+        print "<input type='hidden' name='s' value='$sty' />\n" ;
+        print "<input type='hidden' name='a' value='$alc' />\n" ;
+        print "<input type='hidden' name='l' value='$loc' />\n" ;
+        print "<input type='hidden' name='v' value='$vol' />\n" ;
+        print "<input type='hidden' name='p' value='$pr' />\n" ;
+        print "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
+        print "<input type='submit' name='submit' value='$vol cl'/>\n";
+        print "$pr kr &nbsp;\n";
+        print "</form>\n";
+      }
+      print "</td></tr>\n";
+    }
+    print "</table>\n";
+  }
+
+  $op = "Graph"; # Continue with a graph and a full list after that
+} # Board
 
 ##############
 # Graph
 #if ( !$op && $ENV{'HTTP_USER_AGENT'} !~ /Android/ ) {
-if ( !$op) {
-  $op = "Graph";  # Default to showing the graph on desktops
-} # also on mobile devices
 
 my %averages; # floating average by effdate
 if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
@@ -1791,13 +1862,17 @@ sub lst {
   return $link;
 }
 
-# Helper to make a link to a bar of brewery web page
+# Helper to make a link to a bar of brewery web page and/or scraped beer menu
 sub loclink {
   my $loc = shift;
-  my $txt = shift || "List";
+  my $www = shift || "www";
+  my $scrape = shift || "List";
   my $lnk = "";
+  if (defined($scrapers{$loc})) {
+    $lnk .= " &nbsp; <i><a href='$url?o=board&l=$loc'>$scrape</a></i>" ;
+  }
   if (defined($links{$loc})) {
-    $lnk = " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' >$txt</a></i>" ;
+    $lnk .= " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' >$www</a></i>" ;
   }
   return $lnk
 }

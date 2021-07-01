@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use XML::LibXML;
 use URI::URL;
-use JSON qw(to_json);
+use JSON; #qw(to_json);
 use LWP::UserAgent;
 use utf8;
 
@@ -10,7 +10,7 @@ my $base_url = "https://oelbaren.dk/oel/";
 binmode STDOUT, ":encoding(UTF-8)";
 my $ua = LWP::UserAgent->new;
 $res = $ua->get($base_url);
-# if CA is missing 
+# if CA is missing
 # $ua->ssl_opts(verify_hostname => 1);
 die "Failed to fetch $base_url", $res->status_line unless $res->is_success;
 
@@ -31,7 +31,7 @@ foreach my $design ($dom->findnodes($xpath)) {
 	$index++;
     }
     my ($number) = $beer[0] =~ m/\>(.*?)\</g;
-    
+
     my ($maker, $model) = $beer[1] =~ m/\<td\>\<big\>(.*?) *\<b\>(.*?)\<\/b\>.*?\<br\/\>/g;
     # Skip empty taps
     if ($model) {
@@ -82,4 +82,10 @@ foreach my $design ($dom->findnodes($xpath)) {
     }
 }
 
-print to_json(\@taps, {pretty => 1});
+#print to_json(\@taps, {pretty => 1});
+print JSON->new
+  ->utf8
+  ->pretty(1)   # Pretty-print the json
+  ->ascii(1)    # Encode anything non-ascii
+  ->canonical(1) # Always order tags, produces same json
+  ->encode(\@taps);
