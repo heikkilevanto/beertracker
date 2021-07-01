@@ -38,14 +38,9 @@ foreach my $design ($dom->findnodes($xpath)) {
 	# <br/>DK - NEIPA - 7.5% </td>
 	# <br/>DK - NEIPA - 7.5% - <a href...
 	# <br/>DK - NEIPA - SUBTYPE - 7.5% [- <a... >]</td>
-	my ($country, $type, $subtype) = $beer[1] =~ m/\<br\/\>(.*?) - (.*?) - (.*?) [-<]/g;
-	my ($test, $extra) = $beer[1] =~ m/\<br\/\>(.*? - .*?) - (.*?) /g;
-	my ($abv) = $beer[1] =~ m/([^ -]*?)%/g;
-	if ($subtype eq $abv) {
-	    undef $subtype;
-	} else {
-	    $type .= " - " . $subtype;
-	}
+
+	my ($country, $type, $abv) = $beer[1] =~ m/\<br\/\>(.*?) - (.*?) - ([0-9.]+)% [-<]/g;
+  # $type can now include the subtype
 
 	# <td>30cl <big>65</big><br/>20cl <big>45</big></td>
 	# <td>30cl <big>55</big></td>
@@ -71,7 +66,6 @@ foreach my $design ($dom->findnodes($xpath)) {
 	    maker  => $maker,
 	    model  => $model,
 	    type   => $type,
-	    subtype => $subtype,
 	    abv    => 1.0 * $abv,
 	    sizePrice => [ @sizePrices ]
 	};
