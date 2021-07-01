@@ -665,7 +665,7 @@ if ( !$op) {
 #############
 # Beer list for the location. Scraped from their website
 if ( $op =~ /board/i ) {
-  $locparam = $loc unless ($locparam);
+  $locparam = $loc unless ($locparam); # can happen after posting
   print "<hr/>\n"; # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' class='no-print' >\n";
   print "Beer list for\n";
@@ -695,8 +695,27 @@ if ( $op =~ /board/i ) {
       $sty = $e->{"type"};
       $loc = $locparam;
       $alc = $e->{"abv"};
+      #my $line = $beer;
+      #if (length($line) < 25 && length($mak) < 25) {
+      #  $line = "$mak : $beer";
+      #}
+      my $disp = $mak;
+      $disp =~ s/the|brouwerij|brasserie//i; #stop words
+      $disp =~ s/ &amp; /&nbsp;/;  # Special case for Dry & Bitter
+      $disp =~ s/^ +//;
+      $disp =~ s/ .*$// ; # first word
+      if ( $beer =~ /$disp/ ) {
+        $disp = ""; # Same word in the beer, don't repeat
+      } else {
+        $disp = "<i>$disp:</i> ";
+      }
+      $disp.= "<b>$beer";
+      $disp = substr($disp,0,44) . "</b>";
+      if ( length($disp) + length($sty) < 45 ) {
+        $disp .= " " .$sty;
+      }
       print "<tr><td>#" . $e->{"id"} . ":</td>";
-      print "<td>$beer</td></tr>\n";
+      print "<td>$disp</td></tr>\n";
       print "<tr><td>&nbsp;</td><td>$alc% &nbsp;";
       my $sizes = $e->{"sizePrice"};
       foreach $sp ( @$sizes ) {
