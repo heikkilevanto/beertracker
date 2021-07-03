@@ -749,7 +749,6 @@ if ( $op =~ /board/i ) {
 
 ##############
 # Graph
-#if ( !$op && $ENV{'HTTP_USER_AGENT'} !~ /Android/ ) {
 
 my %averages; # floating average by effdate
 if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
@@ -819,6 +818,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     }
     #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
     #print "<!-- $date [" . join(', ', @week). "] = $sumweek " . $sumweek/$cntweek . "-->\n";
+    my $daystartsum = ( $sum30 - $tot *(scalar(@month)+1) ) / $sumw; # The avg excluding today
     $sum30 = $sum30 / $sumw;
     $sumweek = $sumweek / $cntweek;
     $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
@@ -843,6 +843,9 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
       $lastavg = sprintf("(%2.1f/d %3.1f/w)", $sum30, $sum30*7) if ($sum30 > 0);
       $lastwk = sprintf("(%2.1f/d %3.1f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
+    }
+    if ( $ndays == 0 ){
+      $fut = $daystartsum;
     }
     if ( $ndays <0 ) {
       $fut = $sum30;
