@@ -667,7 +667,7 @@ if ( !$op) {
 if ( $op =~ /board/i ) {
   $locparam = $loc unless ($locparam); # can happen after posting
   print "<hr/>\n"; # Pull-down for choosing the bar
-  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' >\n";
+  print "\n<form method='POST' accept-charset='UTF-8' style='display: inline; 'class='no-print' >\n";
   print "Beer list for\n";
   print "<select onchange='document.location=\"$url?o=board&l=\" + this.value;' >\n";
   for my $l ( sort(keys(%scrapers)) ) {
@@ -677,7 +677,10 @@ if ( $op =~ /board/i ) {
   }
   print "</select>\n";
   print "</form>\n";
-
+  if ($links{$locparam} ) {
+    print "&nbsp;&nbsp;<a href='$links{$locparam}'>Www</a>";
+  }
+  print "<p/>";
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for $locparam\n";
   } else {
@@ -705,7 +708,7 @@ if ( $op =~ /board/i ) {
       $disp =~ s/^ +//;
       $disp =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
       $disp =~ s/ .*$// ; # first word
-      if ( $beer =~ /$disp/ ) {
+      if ( $beer =~ /$disp/ || !$mak) {
         $disp = ""; # Same word in the beer, don't repeat
       } else {
         $disp = "<i>$disp:</i> ";
@@ -717,7 +720,8 @@ if ( $op =~ /board/i ) {
       }
       print "<tr><td>#" . $e->{"id"} . ":</td>";
       print "<td>$disp</td></tr>\n";
-      print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$e->{'country'}</td><td>$alc% &nbsp;";
+      my $country = $e->{'country'} || "";
+      print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td><td>$alc% &nbsp;";
       my $sizes = $e->{"sizePrice"};
       foreach $sp ( @$sizes ) {
         $vol = $sp->{"vol"};

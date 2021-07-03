@@ -37,40 +37,37 @@ my $dom = XML::LibXML->load_html(
 
 my @taps;
 foreach my $design ($dom->findnodes($xpath)) { # For each beer
-  my @beerdata = $design->findnodes('.//td');
-
+  my @beerdata = $design->findnodes('.//td');  # Get all TDs
   my $number = $beerdata[0]->textContent;
-  my $maker = $beerdata[1]->textContent;
-  $maker =~ s/^\s*(.*?)\s*$/$1/;  # Trim leading and trailing spaces (note non-greedy .*?)
+  if ($beerdata[1]) { # Skip empty entries
+    my $maker = $beerdata[1]->textContent;
+    $maker =~ s/^\s*(.*?)\s*$/$1/;  # Trim leading and trailing spaces (note non-greedy .*?)
+    my $beer = $beerdata[2]->findnodes('./text()');  # The only node that is pure text
+    $beer =~ s/^\s*(.*?)\s*$/$1/;  # Trim leading and trailing spaces
+    my $type = $beerdata[3]->textContent;
+    my $country = $beerdata[4]->textContent;
+    my $alc = $beerdata[5]->textContent;
+    $alc =~ s/[^0-9.]//g;
+    my @sizePrices = ();
+    if ( $beerdata[6]->textContent =~ /(\d+)cl *(\d+)/ ) {
+      push @sizePrices, { vol => $1, price => $2};
+    }
+    if ( $beerdata[7]->textContent =~ /(\d+)cl *(\d+)/ ) {
+      push @sizePrices, { vol => $1, price => $2};
+    }
 
-  my $beer = $beerdata[2]->findnodes('./text()');  # The only node that is pure text
-  $beer =~ s/^\s*(.*?)\s*$/$1/;  # Trim leading and trailing spaces
-  my $type = $beerdata[3]->textContent;
-  my $country = $beerdata[4]->textContent;
-  my $alc = $beerdata[5]->textContent;
-  $alc =~ s/[^0-9.]//g;
-  my @sizePrices = ();
-  if ( $beerdata[6]->textContent =~ /(\d+)cl *(\d+)/ ) {
-    push @sizePrices, { vol => $1, price => $2};
-  }
-  if ( $beerdata[7]->textContent =~ /(\d+)cl *(\d+)/ ) {
-    push @sizePrices, { vol => $1, price => $2};
-  }
+    my $tapItem = {
+      id     => 0 + $number,
+      maker  => $maker,
+      beer   => $beer,
+      type   => $type,
+      alc    => 0.0 + $alc,
+      country=> $country,
+      sizePrice => [ @sizePrices ]
+    };
 
-  my $tapItem = {
-    id     => 0 + $number,
-    maker  => $maker,
-    beer   => $beer,
-    type   => $type,
-    alc    => 0.0 + $alc,
-    country=> $country,
-  #    desc   => $desc,
-    sizePrice => [ @sizePrices ]
-  };
-
-  if ($beer) {
     push @taps, $tapItem;
-  };
+  }
 }
 
 print JSON->new

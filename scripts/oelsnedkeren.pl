@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use XML::LibXML;
 use URI::URL;
-use JSON qw(to_json);
+use JSON;
 use LWP::UserAgent;
 use utf8;
 
@@ -41,42 +41,38 @@ foreach my $design ($dom->findnodes($xpath)) {
 
   my ($model) = $beer[0] =~ m/beer-name">(.*?)</g;
   my ($maker) = $beer[3] =~ m/brewery-name">(.*?)</g;
+  $maker =~ s/\s*Ølsnedkeren\s*//; # They only serve their own beer, no need to repeat
   my ($type)  = $beer[1] =~ m/beer-style">(.*?)</g;
   my ($abv)   = $beer[2] =~ m/beer-abv">(.*?)%/g;
   my ($desc)  = $beer[4] =~ m/beer-description">[ ]*(.*?)[ ]*</g;
   #    print "RESULT:", $model, $maker, $type, $abv;
 
+  # The prices are not listed with the beers, but separately:
   # <td>30cl <big>65</big><br/>20cl <big>45</big></td>
   # <td>30cl <big>55</big></td>
   # and one bad?
   # <td> <br>30cl <big>60</big></td>
-  my ($size, $price,$size2, $price2) = (20, 30, 50, 50);
   my @sizePrices = ();
-
-  if ($size) {
-    push @sizePrices, { size => $size, price => $price};
-  }
-  if ($size2) {
-    push @sizePrices, { size => $size2, price => $price2};
-  }
+  push @sizePrices, { vol => 30, price => 40};
+  push @sizePrices, { vol => 50, price => 55};
   my $tapItem = {
-    number => $number,
+    id     => $number,
     maker  => $maker,
-    model  => $model,
+    beer  => $model,
     type   => $type,
-    abv    => $abv,
+    alc    => $abv,
     desc   => $desc,
     sizePrice => [ @sizePrices ]
     };
 
-  # why doesn't this work?
-  $tapItem->{'subtype'} = $subtype if $subtype;
-
   if ($model) {
     push @taps, $tapItem;
   };
-  # [ { size => $size, price => $price}, { size => $size2, price => $price2}]
   $count++;
 }
 
-print(to_json(\@taps, {pretty => 1}));
+print JSON->new
+  ->pretty(1)   # Pretty-print the json
+  ->ascii(1)    # Encode anything non-ascii
+  ->canonical(1) # Always order tags, produces same json
+  ->encode(\@taps);
