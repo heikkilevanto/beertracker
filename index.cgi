@@ -717,7 +717,7 @@ if ( $op =~ /board/i ) {
       }
       print "<tr><td>#" . $e->{"id"} . ":</td>";
       print "<td>$disp</td></tr>\n";
-      print "<tr><td>&nbsp;</td><td>$alc% &nbsp;";
+      print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$e->{'country'}</td><td>$alc% &nbsp;";
       my $sizes = $e->{"sizePrice"};
       foreach $sp ( @$sizes ) {
         $vol = $sp->{"vol"};

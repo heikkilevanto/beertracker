@@ -60,6 +60,7 @@ foreach my $design ($dom->findnodes($xpath)) {
       # Reference to hash
       my $tapItem = {
         id => 0 + $number,
+        country => $country,
         maker  => $maker,
         beer  => $model,
         type   => $type,
@@ -74,7 +75,6 @@ foreach my $design ($dom->findnodes($xpath)) {
 } # foreach
 
 print JSON->new
-  ->utf8
   ->pretty(1)   # Pretty-print the json
   ->ascii(1)    # Encode anything non-ascii
   ->canonical(1) # Always order tags, produces same json

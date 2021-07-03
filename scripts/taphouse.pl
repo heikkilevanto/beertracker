@@ -1,22 +1,25 @@
 #!/usr/bin/perl -w
 use XML::LibXML;
 use URI::URL;
-use JSON qw(to_json);
+use JSON;
 use LWP::UserAgent;
 use utf8;
 
+# <tr>
+# <td><div class="tapNumber mainBeverageType-dark-ale" title="Dark Ale">1</div></td>
+# <td data-sort-value="Bad Seed"><span class="glyphicon star onBigList"></span> Bad Seed</td>
+# <td data-sort-value="Rust Belt"><span class="glyphicon star onSmallList"></span> Rust Belt
+#    <span class="onSmallList"><a href="https://untappd.com/b/a/4329438" class="untappdLink">U</a></span></td>
+# <td>Brown Ale</td>
+# <td>DK</td>
+# <td>4.5%</td>
+# <td data-sort-value="58">40cl <big>58</big></td>
+# <td data-sort-value="40">25cl <big>40</big></td>
+# <td class="iconstring"><a href="https://untappd.com/b/a/4329438" class="untappdLink">U</a></td>
+# </tr>
+
 my $base_url = "https://taphouse.dk";
 my $xpath        = '//*[@id="beerTable"]/tbody/tr';
-my $xpath_number = './/td[position()=1]/text()';
-my $regex_number = '([0-9]*)';
-my $xpath_model  = './/td[position()=3]/text()';
-my $regex_model  = '.*?\. (.*)$';
-my $xpath_type   = './/td[position()=4]/text()';
-my $regex_type   = '.*';
-my $xpath_maker  = './/td[position()=2]/text()';
-my $regex_maker  = '.*';
-my $xpath_abv    = './/td[position()=2]/text()';
-my $regex_abv    = '([0-9\.,]*)%';
 
 
 binmode STDOUT, ":encoding(UTF-8)";
@@ -33,64 +36,45 @@ my $dom = XML::LibXML->load_html(
 );
 
 my @taps;
-my $count = 1;
-foreach my $design ($dom->findnodes($xpath)) {
-  my @beer;
-  my $index = 0;
+foreach my $design ($dom->findnodes($xpath)) { # For each beer
+  my @beerdata = $design->findnodes('.//td');
 
-  #    print $count, $design->toString;
-  my ($number,$model,$maker,$type,$abv, $other);
-  foreach my $node ($design->findnodes($xpath_number)) {
-    print("NUMBER: " . $node->toString . "\n");
-    ($number) = $node->toString =~ m/$regex_number/g;
-    $number = $count if not $number;
-    $index++;
-  }
+  my $number = $beerdata[0]->textContent;
+  my $maker = $beerdata[1]->textContent;
+  $maker =~ s/^\s*(.*?)\s*$/$1/;  # Trim leading and trailing spaces (note non-greedy .*?)
 
-  foreach my $node ($design->findnodes($xpath_model)) {
-    print("MODEL: " . $node->toString . "\n");
-    ($model) = $node->toString =~ m/$regex_model/g;
-    $index++;
-  }
-  foreach my $node ($design->findnodes($xpath_maker)) {
-    print("MAKER: " . $node->toString . "\n");
-    ($maker) = $node->toString =~ m/$regex_maker/g;
-    $index++;
-  }
-  foreach my $node ($design->findnodes($xpath_type)) {
-    print("ABV: " . $node->toString . "\n");
-    ($type) = $node->toString =~ m/$regex_type/g;
-    $index++;
-  }
-  #     print("RESULT: $number,$model, $maker, $type, $abv \n");
-
-  $node = ($design->findnodes($xpath_abv))[0];
-  ($abv) = $node->toString =~ m/$regex_abv/g;
-
-  my ($size, $price,$size2, $price2) = (20, 30, 40, 50);
+  my $beer = $beerdata[2]->findnodes('./text()');  # The only node that is pure text
+  $beer =~ s/^\s*(.*?)\s*$/$1/;  # Trim leading and trailing spaces
+  my $type = $beerdata[3]->textContent;
+  my $country = $beerdata[4]->textContent;
+  my $alc = $beerdata[5]->textContent;
+  $alc =~ s/[^0-9.]//g;
   my @sizePrices = ();
+  if ( $beerdata[6]->textContent =~ /(\d+)cl *(\d+)/ ) {
+    push @sizePrices, { vol => $1, price => $2};
+  }
+  if ( $beerdata[7]->textContent =~ /(\d+)cl *(\d+)/ ) {
+    push @sizePrices, { vol => $1, price => $2};
+  }
 
-  if ($size) {
-    push @sizePrices, { size => $size, price => $price};
-  }
-  if ($size2) {
-    push @sizePrices, { size => $size2, price => $price2};
-  }
   my $tapItem = {
-    number => $number,
+    id     => 0 + $number,
     maker  => $maker,
-    model  => $model,
+    beer   => $beer,
     type   => $type,
-    abv    => $abv,
+    alc    => 0.0 + $alc,
+    country=> $country,
   #    desc   => $desc,
     sizePrice => [ @sizePrices ]
   };
 
-  if ($model) {
+  if ($beer) {
     push @taps, $tapItem;
   };
-  # [ { size => $size, price => $price}, { size => $size2, price => $price2}]
-  $count++;
 }
 
-print(to_json(\@taps, {pretty => 1}));
+print JSON->new
+  ->pretty(1)   # Pretty-print the json
+  ->ascii(1)    # Encode anything non-ascii
+  ->canonical(1) # Always order tags, produces same json
+  ->encode(\@taps);
