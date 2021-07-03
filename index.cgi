@@ -70,7 +70,7 @@ $links{"Brewpub"} = "https://brewpub.dk/vores-l";
 my %scrapers;
 $scrapers{"Ølbaren"} = "oelbaren.pl";
 $scrapers{"Taphouse"} = "taphouse.pl";
-$scrapers{"Fermentoren"} = "fermentoren.pl";
+#$scrapers{"Fermentoren"} = "fermentoren.pl";  # Doesn't work yet.
 $scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
 
 # currency conversions
@@ -691,10 +691,10 @@ if ( $op =~ /board/i ) {
       # TODO - Be more clever in displaying just the key info on one line
       # Skip brewery if the name contains same words, etc
       $mak = $e->{"maker"};
-      $beer = $e->{"model"};
+      $beer = $e->{"beer"};
       $sty = $e->{"type"};
       $loc = $locparam;
-      $alc = $e->{"abv"};
+      $alc = $e->{"alc"};
       #my $line = $beer;
       #if (length($line) < 25 && length($mak) < 25) {
       #  $line = "$mak : $beer";
@@ -720,7 +720,7 @@ if ( $op =~ /board/i ) {
       print "<tr><td>&nbsp;</td><td>$alc% &nbsp;";
       my $sizes = $e->{"sizePrice"};
       foreach $sp ( @$sizes ) {
-        $vol = $sp->{"size"};
+        $vol = $sp->{"vol"};
         $pr = $sp->{"price"};
         print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
         print "<input type='hidden' name='m' value='$mak' />\n" ;
@@ -1464,7 +1464,7 @@ $com ) =
       $fld = $loc;
       $line = "<td>" . filt($loc,"b") .
         "<span class='no-print'> ".
-        "&nbsp; " . loclink($loc, "L") . "  " . glink($loc, "G") . "</span>" .
+        "&nbsp; " . loclink($loc, "Www") . "  " . glink($loc, "G") . "</span>" .
         "</td>" .
         "<td>$wday $effdate ($seen{$loc}) <br class='no-wide'/>" .
         lst("Location",$mak,"i") . ": " . lst($op,$beer) . "</td>";

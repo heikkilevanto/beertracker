@@ -52,18 +52,18 @@ foreach my $design ($dom->findnodes($xpath)) {
       my @sizePrices = ();
 
       if ($size) {
-        push @sizePrices, { size => 1.0 * $size, price => 1.0 * $price };
+        push @sizePrices, { vol => 1.0 * $size, price => 1.0 * $price };
       }
       if ($size2) {
-        push @sizePrices, { size => 1.0 * $size2, price => 1.0 * $price2 };
+        push @sizePrices, { vol => 1.0 * $size2, price => 1.0 * $price2 };
       }
       # Reference to hash
       my $tapItem = {
         id => 0 + $number,
         maker  => $maker,
-        model  => $model,
+        beer  => $model,
         type   => $type,
-        abv    => 1.0 * $abv,
+        alc    => 1.0 * $abv,
         sizePrice => [ @sizePrices ]
       };
 

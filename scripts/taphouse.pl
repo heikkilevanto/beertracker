@@ -85,8 +85,6 @@ foreach my $design ($dom->findnodes($xpath)) {
   #    desc   => $desc,
     sizePrice => [ @sizePrices ]
   };
-  # why doesn't this work?
-  $tapItem->{'subtype'} = $subtype if $subtype;
 
   if ($model) {
     push @taps, $tapItem;

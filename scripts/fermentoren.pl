@@ -5,6 +5,10 @@ use JSON qw(to_json);
 use LWP::UserAgent;
 use utf8;
 
+### Script to scrape from Untapped.
+# Unfortunately, it would require clicking on the "show more beers" button
+# and wait for the ajax code to load the rest of the list.
+# Also, prices seem not to be available.
 
 #<div class="beer-details">
 # <h5>
