@@ -38,70 +38,70 @@ my $ua = LWP::UserAgent->new;
 $res = $ua->get($base_url);
 
 die "Failed to fetch $base_url", $res->status_line unless $res->is_success;
-    
+
 my $dom = XML::LibXML->load_html(
-    string        => $res->content,
-    recover         => 1,
-    suppress_errors => 1,
+  string        => $res->content,
+  recover         => 1,
+  suppress_errors => 1,
 );
 
 my @taps;
 my $count = 1;
 foreach my $design ($dom->findnodes($xpath)) {
-    my @beer;
-    my $index = 0;
+  my @beer;
+  my $index = 0;
 
-#    print $count, $design->toString;
-    my ($number,$model,$maker,$type,$abv, $other); 
-    foreach my $node ($design->findnodes($xpath_number)) {
-	($number) = $node->toString =~ m/$regex_number/g;
-	$number = $count if not $number;
-	$index++;
-    }
+  #    print $count, $design->toString;
+  my ($number,$model,$maker,$type,$abv, $other);
+  foreach my $node ($design->findnodes($xpath_number)) {
+    ($number) = $node->toString =~ m/$regex_number/g;
+    $number = $count if not $number;
+    $index++;
+  }
 
-    foreach my $node ($design->findnodes($xpath_model)) {
-	($model) = $node->toString =~ m/$regex_model/g;
-	$index++;
-    }
-    foreach my $node ($design->findnodes($xpath_maker)) {
-	($maker) = $node->toString =~ m/$regex_maker/g;
-	$index++;
-    }
-    foreach my $node ($design->findnodes($xpath_type)) {
-	($type) = $node->toString =~ m/$regex_type/g;
-	$index++;
-    }
+  foreach my $node ($design->findnodes($xpath_model)) {
+    ($model) = $node->toString =~ m/$regex_model/g;
+    $index++;
+  }
+  foreach my $node ($design->findnodes($xpath_maker)) {
+    ($maker) = $node->toString =~ m/$regex_maker/g;
+    $index++;
+  }
+  foreach my $node ($design->findnodes($xpath_type)) {
+    ($type) = $node->toString =~ m/$regex_type/g;
+    $index++;
+  }
 
-    $node = ($design->findnodes($xpath_abv))[0];
-    ($abv) = $node->toString =~ m/$regex_abv/g;
-	    
-    my ($size, $price,$size2, $price2) = (20, 30, 40, 50);
-    my @sizePrices = ();
+  $node = ($design->findnodes($xpath_abv))[0];
+  ($abv) = $node->toString =~ m/$regex_abv/g;
 
-    if ($size) {
-	push @sizePrices, { size => $size, price => $price};
-    }
-    if ($size2) {
-	push @sizePrices, { size => $size2, price => $price2};
-    }
-    my $tapItem = {
-	    number => $number,
-	    maker  => $maker,
-	    model  => $model,
-	    type   => $type,
-	    abv    => $abv,
-#	    desc   => $desc,
-	    sizePrice => [ @sizePrices ]
+  my ($size, $price,$size2, $price2) = (20, 30, 40, 50);  # ???
+  my @sizePrices = ();
 
-    };
-    # why doesn't this work?
-    $tapItem->{'subtype'} = $subtype if $subtype;
+  if ($size) {
+    push @sizePrices, { size => $size, price => $price};
+  }
+  if ($size2) {
+    push @sizePrices, { size => $size2, price => $price2};
+  }
+  my $tapItem = {
+    number => $number,
+    maker  => $maker,
+    model  => $model,
+    type   => $type,
+    abv    => $abv,
+#    desc   => $desc,
+    sizePrice => [ @sizePrices ]
+  };
 
-    if ($model) {
-	push @taps, $tapItem;
-    };
-    # [ { size => $size, price => $price}, { size => $size2, price => $price2}]
-    $count++;
+  # why doesn't this work?
+  $tapItem->{'subtype'} = $subtype if $subtype;
+
+  if ($model) {
+    push @taps, $tapItem;
+  };
+  # [ { size => $size, price => $price}, { size => $size2, price => $price2}]
+  $count++;
 }
 
 print(to_json(\@taps, {pretty => 1}));
