@@ -701,8 +701,9 @@ if ( $op =~ /board/i ) {
       #}
       my $disp = $mak;
       $disp =~ s/the|brouwerij|brasserie//i; #stop words
-      $disp =~ s/ &amp; /&nbsp;/;  # Special case for Dry & Bitter
+      $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter
       $disp =~ s/^ +//;
+      $disp =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
       $disp =~ s/ .*$// ; # first word
       if ( $beer =~ /$disp/ ) {
         $disp = ""; # Same word in the beer, don't repeat
@@ -711,7 +712,7 @@ if ( $op =~ /board/i ) {
       }
       $disp.= "<b>$beer";
       $disp = substr($disp,0,44) . "</b>";
-      if ( length($disp) + length($sty) < 45 ) {
+      if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
         $disp .= " " .$sty;
       }
       print "<tr><td>#" . $e->{"id"} . ":</td>";
