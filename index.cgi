@@ -844,8 +844,12 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       $lastavg = sprintf("(%2.1f/d %3.1f/w)", $sum30, $sum30*7) if ($sum30 > 0);
       $lastwk = sprintf("(%2.1f/d %3.1f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
     }
-    if ( $ndays == 0 ){
-      $fut = $daystartsum;
+    if ( $ndays == 0 ){  # Plot the start of the day
+      if ( $tot ) {
+        $fut= $daystartsum; # with a '+' if some beers today
+      } else {
+        $zero = $daystartsum; # And with a zero mark, if not
+      }
     }
     if ( $ndays <0 ) {
       $fut = $sum30;
