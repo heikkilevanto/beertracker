@@ -73,6 +73,16 @@ $scrapers{"Taphouse"} = "taphouse.pl";
 #$scrapers{"Fermentoren"} = "fermentoren.pl";  # Doesn't work yet.
 $scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
 
+# Short names for the most commong watering holes
+my %shortnames;
+$shortnames{"Home"} = "H";
+$shortnames{"Fermentoren"} = "F";
+$shortnames{"Ølbaren"} = "Øb";
+$shortnames{"Ølsnedkeren"} = "Øls";
+$shortnames{"Hooked, Vesterbro"} = "Hooked Vbro";
+$shortnames{"Hooked, Nørrebro"} = "Hooked Nbro";
+$shortnames{"Dennis Place"} = "Dennis";
+
 # currency conversions
 my %currency;
 $currency{"eur"} = 7.5;
@@ -1041,10 +1051,6 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
         $entry .= " " . unit($daydrinks,"d") . " " . unit($daymsum,"kr");
         print "$entry";
-        my $shortplaces = $places;
-        $shortplaces =~ s/<[^>]+>//g; #remove html tags
-        #print "('$shortplaces' " . length($shortplaces) . ")";
-        print "<br/>&nbsp;\n" if ( length($shortplaces) > 15 );
         print "$places<br/>\n";
         $maxlines--;
         last if ($maxlines == 0); # if negative, will go for ever
@@ -1086,6 +1092,12 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     }
     next if ($mak =~ /restaurant/i );
     if ( $lastloc ne $loc ) {
+      # Abbreviate some names
+      for my $k ( keys(%shortnames) ) {
+        my $s = $shortnames{$k};
+        $loc =~ s/$k/$s/i;
+      }
+      $loc =~ s/ /&nbsp;/gi;   # Prevent names breaking in the middle
       if ( $places !~ /$loc/ ) {
         my $bold = "";
         if ( !defined($locseen{$loc}) ) {
