@@ -930,7 +930,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
           "\"$plotfile\" using 1:3 with boxes lc 3 axes x1y2 title \"std drinks/day\"," .  # weekends
           "\"$plotfile\" using 1:2 with boxes lc 0 axes x1y2 notitle ," .  # weekdays
           "\"$plotfile\" " .
-              "using 1:5 with line lc \"gray30\" axes x1y2 title \"7d $lastwk\", " .
+              "using 1:5 with line lc \"gray30\" axes x1y2 title \"wk $lastwk\", " .
           "\"$plotfile\" " .
               "using 1:4 with line lc 9 lw 3 axes x1y2 title \" 30d avg $lastavg\", " .  # avg30
                 # smooth csplines
