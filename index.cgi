@@ -861,6 +861,10 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         $zero = $daystartsum; # And with a zero mark, if not
       }
     }
+    if ( $ndays == -1 ) { # Break the week avg line to indicate future
+                          # (none of the others plot at this time)
+      print F "$date NaN NaN  NaN NaN  NaN Nan \n";
+    }
     if ( $ndays <0 ) {
       $fut = $sum30;
       $fut = "NaN" if ($fut < 0.1); # Hide (almost)zeroes
@@ -937,17 +941,17 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
               # pointtype pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
               # note the order of plotting, later ones get on top
               # so we plot weekdays, weekends, avg line, zeroes
-          "\"$plotfile\" using 1:3 with boxes lc 3 axes x1y2 title \"std drinks/day\"," .  # weekends
-          "\"$plotfile\" using 1:2 with boxes lc 0 axes x1y2 notitle ," .  # weekdays
+          "\"$plotfile\" using 1:3 with boxes lc \"royalblue\" axes x1y2 title \"std drinks/day\"," .  # weekends
+          "\"$plotfile\" using 1:2 with boxes lc \"grey60\" axes x1y2 notitle ," .  # weekdays
           "\"$plotfile\" " .
               "using 1:5 with line lc \"gray30\" axes x1y2 title \"wk $lastwk\", " .
           "\"$plotfile\" " .
-              "using 1:4 with line lc 9 lw 3 axes x1y2 title \" 30d avg $lastavg\", " .  # avg30
+              "using 1:4 with line lc \"dark-violet\" lw 3 axes x1y2 title \" 30d avg $lastavg\", " .  # avg30
                 # smooth csplines
           "\"$plotfile\" " .
-              "using 1:7 with points pointtype 1 lc 9 axes x1y2 notitle, " .  # future tail
+              "using 1:7 with points pointtype 1 lc \"dark-blue\" axes x1y2 notitle, " .  # future tail
           "\"$plotfile\" " .
-              "using 1:6 with points lc 2 pointtype 11 axes x1y2 notitle \n" .  # zeroes
+              "using 1:6 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
           "";
     open C, ">$cmdfile"
         or error ("Could not open $plotfile for writing");
