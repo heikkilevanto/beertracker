@@ -1644,7 +1644,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   my $locdsum = 0.0;
   my $locmsum = 0;
   my $origpr = "";
-  while ( $i > 0 ) {
+  $maxlines = $i*10 if ($maxlines <0); # neg means all of them
+  while ( $i > 0 ) {  # Usually we exit at end-of-day
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
     next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ );
@@ -1658,8 +1659,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       next if ( $rlim && $rate ne $rlim );  # filter on "r7" or such
       }
     $maxlines--;
-    last if ($maxlines == 0); # if negative, will go for ever
-    # Stop here, when we know we have more to come, so we can show proper "more" link
+    #last if ($maxlines == 0); # if negative, will go for ever
 
     $origpr = $pr;
     $pr = number($pr);
@@ -1714,6 +1714,10 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         }
         $daydsum = 0.0;
         $daymsum = 0;
+        if ($maxlines <= 0) {
+          $maxlines = 0; # signal that there is more data to come
+          last;
+        }
       }
       $locdsum = 0.0;
       $locmsum = 0;
@@ -1748,7 +1752,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       print units($pr, $vol, $alc). "<br/>\n" if ($sty || $pr || $alc);
       if ($rate || $com) {
         print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
-        print " <b>$rate-$ratings[$rate]</b>" if ($rate);
+        print " <b>'$rate'-$ratings[$rate]</b>" if ($rate);
         print ": " if ($rate && $com);
         print "<i>$com</i>" if ($com);
         print "<br/>\n";
@@ -1807,7 +1811,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $lastloc2 = $loc;
     $lastdate = $effdate;
     $lastwday = $wday;
-  }
+  } # line loop
+
   if ( ! $qry) { # final summary
     my $locdrinks = sprintf("%3.1f", $locdsum / $onedrink);
     my $daydrinks = sprintf("%3.1f", $daydsum / $onedrink);
@@ -1825,7 +1830,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     }
 
   print "<hr/>\n" ;
-  if ( $maxlines == 0 || $yrlim ) {
+  if ( $i > 0 || $yrlim ) {
     print "More: <br/>\n";
     my  $ysum ;
     if ( scalar(keys(%years)) > 1 ) {
@@ -1834,8 +1839,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         $ysum += $years{$y};
       }
     }
-    print "<a href='$url?maxl=-1&" . $q->query_string() . "#$anchor'>" .
-      "All</a> ($ysum)<p/>\n";
+    $anchor = "#".$anchor if ($anchor);
+    print "<a href='$url?maxl=-1$anchor' >All</a> ($ysum)<p/>\n";
   } else {
     print "<br/>That was the whole list<p/>\n" unless ($yrlim);
   }
