@@ -1281,10 +1281,14 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   foreach $y ( reverse($firsty .. $lasty) ) {
     $t .= "<td align='right'><b>&nbsp;$y</b></td>";
   }
+  $t .= "<td align='right'><b>&nbsp;Avg</b></td>";
   $t .= "</tr>\n";
   foreach $m ( 1 .. 12 ) {
     $t .= "<tr><td>$months[$m]</td>\n";
     print F "$months[$m] ";
+    my $mdrinks = 0;
+    my $mprice = 0;
+    my $mcount = 0;
     foreach $y ( reverse($firsty .. $lasty) ) {
       #print "<td>$y - $m </td>\n";
       my $calm = sprintf("%d-%02d",$y,$m);
@@ -1304,6 +1308,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
           $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
           $d = unit($dd,"d");
         }
+        $mdrinks += $dd;
+        $mcount++;
       }
       my $p = $monthprices{$calm}||"";
       $t .= "<td align=right>$d<br/>$p";
@@ -1312,6 +1318,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         $p = int($monthprices{$calm} / $dayofmonth * 30);
         $t .= "<br/>~$p";
       }
+      $mprice += $p if ($p);
       $t .= "</td>\n";
       if ($y == $lasty ) { # First column is special for projections
         print F "NaN ";
@@ -1322,6 +1329,12 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         print F "$dd ";
       }
     }
+    if ( $mcount) {
+      $mdrinks = sprintf("%3.1f", $mdrinks/$mcount);
+      $mprice = sprintf("%3.1d", $mprice/$mcount);
+      $t .= "<td align=right>". unit($mdrinks,"d") .
+        "<br/>&nbsp;$mprice</td>\n";
+   }
     $t .= "</tr>";
     print F "\n";
   }
