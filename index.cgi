@@ -1284,7 +1284,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   $t .= "<td align='right'><b>&nbsp;Avg</b></td>";
   $t .= "</tr>\n";
   foreach $m ( 1 .. 12 ) {
-    $t .= "<tr><td>$months[$m]</td>\n";
+    $t .= "<tr><td><b>$months[$m]</b></td>\n";
     print F "$months[$m] ";
     my $mdrinks = 0;
     my $mprice = 0;
@@ -1312,7 +1312,9 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         $mcount++;
       }
       my $p = $monthprices{$calm}||"";
-      $t .= "<td align=right>$d<br/>$p";
+      my $dw = $1 if ($d=~/([0-9.]+)/);
+      $dw = unit(int($dw*7+0.5), "/w");
+      $t .= "<td align=right>$d<br/>$dw<br/>$p";
       if ($calm eq $lastym && $monthprices{$calm} ) {
         $p = "";
         $p = int($monthprices{$calm} / $dayofmonth * 30);
@@ -1332,7 +1334,10 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ( $mcount) {
       $mdrinks = sprintf("%3.1f", $mdrinks/$mcount);
       $mprice = sprintf("%3.1d", $mprice/$mcount);
+      my $dw = $1 if ($mdrinks=~/([0-9.]+)/);
+      $dw = unit(int($dw*7+0.5), "/w");
       $t .= "<td align=right>". unit($mdrinks,"d") .
+        "<br/>$dw" .
         "<br/>&nbsp;$mprice</td>\n";
    }
     $t .= "</tr>";
@@ -1354,12 +1359,15 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   $t .= "<tr><td>Avg</td>\n";
   foreach $y ( reverse($firsty .. $lasty) ) {
     my $d = "";
+    my $dw = "";
     if ( $ydays[$y] ) { # have data for the year
       $d = sprintf("%3.1f", $ydrinks[$y] / $ydays[$y] / $onedrink) ;
+      $dw = $1 if ($d=~/([0-9.]+)/);
+      $dw = unit(int($dw*7+0.5), "/w");
       $d = unit($d, "d");
       my $pr = sprintf("%3d", $yprice[$y]/$ydays[$y]);
     }
-    $t .= "<td align=right>$d</td>";
+    $t .= "<td align=right>$d<br/>$dw</td>";
   }
   $t .= "</tr>";
   $t .= "<tr><td>Sum</td>\n";
