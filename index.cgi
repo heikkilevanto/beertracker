@@ -1393,6 +1393,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
        "set mxtics 1\n".
        "set ytics 1\n".
        "set mytics 2\n".
+       "set link y2 via y*7 inverse y/7\n".
+       "set y2tics 7\n".
        "set grid xtics ytics\n".
        "set xdata time \n".
        "set timefmt \"%b\" \n".
