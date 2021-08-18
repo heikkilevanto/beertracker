@@ -1313,7 +1313,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       }
       my $p = $monthprices{$calm}||"";
       my $dw = $1 if ($d=~/([0-9.]+)/);
-      $dw = unit(int($dw*7+0.5), "/w");
+      $dw = $dw || 0;
+      $dw = unit(int($dw *7 +0.5), "/w");
       $t .= "<td align=right>$d<br/>$dw<br/>$p";
       if ($calm eq $lastym && $monthprices{$calm} ) {
         $p = "";
