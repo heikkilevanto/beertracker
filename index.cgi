@@ -927,7 +927,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
         "set yrange [ -.5 : ] \n" .
         "set format x $xformat \n" .
-        "unset ytics\n" .  # y2tics are on the right side, where I want them
+        "set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
+        "set ytics 7\n" .
         "set y2tics 0,2 out format \"%2.0f\"\n" .
         "set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5,
         "set my2tics 2 \n".
