@@ -925,7 +925,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "set xdata time \n".
         "set timefmt \"%Y-%m-%d\" \n".
         "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
-        "set yrange [ -.5 : ] \n" .
+        "set y2range [ -.5 : ] \n" .
         "set format x $xformat \n" .
         "set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
         "set ytics 7\n" .
