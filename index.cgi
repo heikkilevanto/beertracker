@@ -689,9 +689,10 @@ if ( $op =~ /board/i ) {
   print "</select>\n";
   print "</form>\n";
   if ($links{$locparam} ) {
-    print "&nbsp;&nbsp;<a href='$links{$locparam}'>Www</a>";
+    print "&nbsp;&nbsp;<a href='$links{$locparam}'>Www</a> ";
   }
-  print "<p/>";
+  print "<a href='$url?o=$op&l=$locparam&q=IPA'>(IPA)</a> ";
+  print "<p/>\n";
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for $locparam\n";
   } else {
@@ -708,7 +709,6 @@ if ( $op =~ /board/i ) {
       if ($qry) {
       print "Filter:<b>$qry</b> " .
         "<a href='$url?o=$op&l=$locparam'>(Clear)</a> " .
-        "<a href='$url?o=$op&l=$locparam&q=IPA'>(IPA)</a>" .
         "<p/>\n";
       }
       print "<table>\n";
