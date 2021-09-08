@@ -736,6 +736,9 @@ if ( $op =~ /board/i ) {
         }
         print "<tr><td>#" . $e->{"id"} . ":</td>";
         print "<td>$disp</td></tr>\n";
+        $mak =~ s/'//g; # Apostrophes break the input form below
+        $beer =~ s/'//g; # So just drop them
+        $sty =~ s/'//g;
         my $country = $e->{'country'} || "";
         print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td><td>$alc% &nbsp;";
         my $sizes = $e->{"sizePrice"};
