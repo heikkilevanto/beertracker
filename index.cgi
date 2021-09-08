@@ -1903,7 +1903,7 @@ exit();
 sub param {
   my $tag = shift;
   my $val = $q->param($tag) || "";
-  $val =~ s/[^a-zA-ZåÅæÆøØÅöÖäÄéÉáÁ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
+  $val =~ s/[^a-zA-ZåÅæÆøØÅöÖäÄéÉáÁāĀ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
   $val =~ s/^ +//; # Trim leading spaces
   $val =~ s/ +$//; # and trailing
   return $val;
