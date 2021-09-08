@@ -65,6 +65,7 @@ $links{"Dry and Bitter"} = "https://www.dryandbitter.com/collections/beer/";
 $links{"Taphouse"} = "http://www.taphouse.dk/";
 $links{"Slowburn"} = "https://slowburn.coop/";
 $links{"Brewpub"} = "https://brewpub.dk/vores-l";
+$links{"Penyllan"} = "https://penyllan.com/";
 
 # Beerlist scraping scrips
 my %scrapers;
@@ -697,63 +698,68 @@ if ( $op =~ /board/i ) {
     my $script = $scriptdir . $scrapers{$locparam};
     my $json = `perl $script`;
     chomp($json);
-    #print "<!--\n$json\n-->\n";  # for debugging
-    my $beerlist = JSON->new->utf8->decode($json);
-    print "<table>\n";
-    foreach $e ( @$beerlist )  {
-      # TODO - Be more clever in displaying just the key info on one line
-      # Skip brewery if the name contains same words, etc
-      $mak = $e->{"maker"};
-      $beer = $e->{"beer"};
-      $sty = $e->{"type"};
-      $loc = $locparam;
-      $alc = $e->{"alc"};
-      #my $line = $beer;
-      #if (length($line) < 25 && length($mak) < 25) {
-      #  $line = "$mak : $beer";
-      #}
-      my $disp = $mak;
-      $disp =~ s/the|brouwerij|brasserie//i; #stop words
-      $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter
-      $disp =~ s/^ +//;
-      $disp =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
-      $disp =~ s/ .*$// ; # first word
-      if ( $beer =~ /$disp/ || !$mak) {
-        $disp = ""; # Same word in the beer, don't repeat
-      } else {
-        $disp = "<i>$disp:</i> ";
+    if (! $json) {
+      print "Sorry, could not get the list from $locparam\n";
+      print "<!-- Error running " . $scrapers{$locparam} . ". \n";
+      print "Result: '$json'\n -->\n";
+    }else {
+      #print "<!--\nPage:\n$json\n-->\n";  # for debugging
+      my $beerlist = JSON->new->utf8->decode($json);
+      print "<table>\n";
+      foreach $e ( @$beerlist )  {
+        # TODO - Be more clever in displaying just the key info on one line
+        # Skip brewery if the name contains same words, etc
+        $mak = $e->{"maker"};
+        $beer = $e->{"beer"};
+        $sty = $e->{"type"};
+        $loc = $locparam;
+        $alc = $e->{"alc"};
+        #my $line = $beer;
+        #if (length($line) < 25 && length($mak) < 25) {
+        #  $line = "$mak : $beer";
+        #}
+        my $disp = $mak;
+        $disp =~ s/the|brouwerij|brasserie//i; #stop words
+        $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter
+        $disp =~ s/^ +//;
+        $disp =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
+        $disp =~ s/ .*$// ; # first word
+        if ( $beer =~ /$disp/ || !$mak) {
+          $disp = ""; # Same word in the beer, don't repeat
+        } else {
+          $disp = "<i>$disp:</i> ";
+        }
+        $disp.= "<b>$beer";
+        $disp = substr($disp,0,44) . "</b>";
+        if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
+          $disp .= " " .$sty;
+        }
+        print "<tr><td>#" . $e->{"id"} . ":</td>";
+        print "<td>$disp</td></tr>\n";
+        my $country = $e->{'country'} || "";
+        print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td><td>$alc% &nbsp;";
+        my $sizes = $e->{"sizePrice"};
+        foreach $sp ( @$sizes ) {
+          $vol = $sp->{"vol"};
+          $pr = $sp->{"price"};
+          print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+          print "<input type='hidden' name='m' value='$mak' />\n" ;
+          print "<input type='hidden' name='b' value='$beer' />\n" ;
+          print "<input type='hidden' name='s' value='$sty' />\n" ;
+          print "<input type='hidden' name='a' value='$alc' />\n" ;
+          print "<input type='hidden' name='l' value='$loc' />\n" ;
+          print "<input type='hidden' name='v' value='$vol' />\n" ;
+          print "<input type='hidden' name='p' value='$pr' />\n" ;
+          print "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
+          print "<input type='submit' name='submit' value='$vol cl'/>\n";
+          print "$pr kr &nbsp;\n";
+          print "</form>\n";
+        }
+        print "</td></tr>\n";
       }
-      $disp.= "<b>$beer";
-      $disp = substr($disp,0,44) . "</b>";
-      if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
-        $disp .= " " .$sty;
-      }
-      print "<tr><td>#" . $e->{"id"} . ":</td>";
-      print "<td>$disp</td></tr>\n";
-      my $country = $e->{'country'} || "";
-      print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td><td>$alc% &nbsp;";
-      my $sizes = $e->{"sizePrice"};
-      foreach $sp ( @$sizes ) {
-        $vol = $sp->{"vol"};
-        $pr = $sp->{"price"};
-        print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
-        print "<input type='hidden' name='m' value='$mak' />\n" ;
-        print "<input type='hidden' name='b' value='$beer' />\n" ;
-        print "<input type='hidden' name='s' value='$sty' />\n" ;
-        print "<input type='hidden' name='a' value='$alc' />\n" ;
-        print "<input type='hidden' name='l' value='$loc' />\n" ;
-        print "<input type='hidden' name='v' value='$vol' />\n" ;
-        print "<input type='hidden' name='p' value='$pr' />\n" ;
-        print "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
-        print "<input type='submit' name='submit' value='$vol cl'/>\n";
-        print "$pr kr &nbsp;\n";
-        print "</form>\n";
-      }
-      print "</td></tr>\n";
+      print "</table>\n";
     }
-    print "</table>\n";
   }
-
   $op = "Graph"; # Continue with a graph and a full list after that
 } # Board
 
