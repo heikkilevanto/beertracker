@@ -705,32 +705,37 @@ if ( $op =~ /board/i ) {
     }else {
       #print "<!--\nPage:\n$json\n-->\n";  # for debugging
       my $beerlist = JSON->new->utf8->decode($json);
+      if ($qry) {
+      print "Filter:<b>$qry</b> " .
+        "<a href='$url?o=$op&l=$locparam'>(Clear)</a> " .
+        "<a href='$url?o=$op&l=$locparam&q=IPA'>(IPA)</a>" .
+        "<p/>\n";
+      }
       print "<table>\n";
       foreach $e ( @$beerlist )  {
-        # TODO - Be more clever in displaying just the key info on one line
         # Skip brewery if the name contains same words, etc
         $mak = $e->{"maker"};
         $beer = $e->{"beer"};
         $sty = $e->{"type"};
         $loc = $locparam;
         $alc = $e->{"alc"};
-        #my $line = $beer;
-        #if (length($line) < 25 && length($mak) < 25) {
-        #  $line = "$mak : $beer";
-        #}
+        if ( $qry ) {
+          my $line = "$mak $beer $sty";
+          next unless ( $line =~ /$qry/i );
+        }
+
         my $disp = $mak;
         $disp =~ s/the|brouwerij|brasserie//i; #stop words
-        $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter
+        $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
         $disp =~ s/^ +//;
         $disp =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
         $disp =~ s/ .*$// ; # first word
         if ( $beer =~ /$disp/ || !$mak) {
           $disp = ""; # Same word in the beer, don't repeat
         } else {
-          $disp = "<i>$disp:</i> ";
+          $disp = filt($mak, "i", $disp,"board&l=$locparam") . ": ";
         }
-        $disp.= "<b>$beer";
-        $disp = substr($disp,0,44) . "</b>";
+        $disp .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
         if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
           $disp .= " " .$sty;
         }
@@ -764,6 +769,7 @@ if ( $op =~ /board/i ) {
     }
   }
   $op = "Graph"; # Continue with a graph and a full list after that
+  $qry = ""; # Without filtering
 } # Board
 
 ##############
@@ -1866,7 +1872,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   print "<hr/>\n" ;
   if ( $i > 0 || $yrlim ) {
     print "More: <br/>\n";
-    my  $ysum ;
+    my  $ysum;
     if ( scalar(keys(%years)) > 1 ) {
       for $y ( reverse sort(keys(%years)) ) {
         print "<a href='$url?y=$y&q=$qry'>$y</a> ($years{$y})<br/>\n" ;  # TODO - Skips some ??!!
@@ -1874,6 +1880,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       }
     }
     $anchor = "#".$anchor if ($anchor);
+    $ysum = $ysum || "";
     print "<a href='$url?maxl=-1$anchor' >All</a> ($ysum)<p/>\n";
   } else {
     print "<br/>That was the whole list<p/>\n" unless ($yrlim);
