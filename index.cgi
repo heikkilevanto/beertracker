@@ -708,7 +708,7 @@ if ( $op =~ /board/i ) {
       my $beerlist = JSON->new->utf8->decode($json);
       if ($qry) {
       print "Filter:<b>$qry</b> " .
-        "<a href='$url?o=$op&l=$locparam'>(Clear)</a> " .
+        "(<a href='$url?o=$op&l=$locparam'>Clear</a>) " .
         "<p/>\n";
       }
       print "<table>\n";
@@ -1042,8 +1042,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $daymsum = 0.0;
   my %locseen;
   my $month = "";
-  print "<hr/>Filter: <b>$yrlim $qry</b> <a href='$url?o=short'>(Clear</a>" .
-    "&nbsp;<a href='$url?q=$qry'>Full)</a><hr/>" if ($qry||$yrlim);
+  print "<hr/>Filter: <b>$yrlim $qry</b> (<a href='$url?o=short'>Clear</a>)" .
+    "&nbsp;(<a href='$url?q=$qry'>Full</a>)<hr/>" if ($qry||$yrlim);
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i == 0 );
@@ -1054,7 +1054,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
       $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
         $entry = filt($effdate, "") . " " . $wday ;
-        $daysum += ( $alc * $vol ) if ($alc && $vol && $pr >= 0);
+        $daysum += ( $alc * $vol ) if ($alc && $vol && $pr && $pr >= 0);
         $daymsum += abs($pr);
         if ( $places !~ /$loc/ ) {
           my $bold = "";
@@ -1113,6 +1113,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     next if ($mak =~ /restaurant/i );
     if ( $lastloc ne $loc ) {
       # Abbreviate some names
+      my $full=$loc;
       for my $k ( keys(%shortnames) ) {
         my $s = $shortnames{$k};
         $loc =~ s/$k/$s/i;
@@ -1123,7 +1124,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         if ( !defined($locseen{$loc}) ) {
           $bold = "b";
           }
-        $places .= " " . filt($loc, $bold, $loc, "short");
+        $places .= " " . filt($full, $bold, $loc, "short");
         $locseen{$loc} = 1;
         }
       $lastloc = $loc;
@@ -1138,7 +1139,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     my  $ysum ;
     if ( scalar(keys(%years)) > 1 ) {
       for $y ( reverse sort(keys(%years)) ) {
-        print "<a href='$url?o=short&y=$y&q=$qry'>$y</a> ($years{$y})<br/>\n" ;
+        print "<a href='$url?o=short&y=$y&q=".uri_escape_utf8($qry)."'>$y</a> ($years{$y})<br/>\n" ;
         $ysum += $years{$y};
       }
     }
@@ -1167,9 +1168,11 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $nlines = param("maxl") || 10;
   print "<hr/>\n";
   if ($sortdr) {
-    print "Sorting by drinks <a href='$url?o=Years&q=$qry' class='no-print'>(Sort by money)</a>\n";
+    print "Sorting by drinks (<a href='$url?o=Years&q=" . uri_escape_utf8($qry) .
+       "' class='no-print'>Sort by money</a>)\n";
   } else {
-    print "Sorting by money <a href='$url?o=YearsD&q=$qry' class='no-print'>(Sort by drinks)</a>\n";
+    print "Sorting by money (<a href='$url?o=YearsD&q=" . uri_escape_utf8($qry) .
+       "' class='no-print'>Sort by drinks</a>)\n";
   }
   print "<table border=1>\n";
   my $i = scalar( @lines );
@@ -1264,7 +1267,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   print "</table>\n";
   print "Show ";
   for $top ( 5, 10, 20, 50, 100, 999999 ) {
-    print  "&nbsp; <a href='$url?o=$op&q=$qry&maxl=$top'>Top-$top</a>\n";
+    print  "&nbsp; <a href='$url?o=$op&q=" . uri_escape($qry) . "&maxl=$top'>Top-$top</a>\n";
   }
     print  "<hr/>\n";
 
@@ -1502,10 +1505,10 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   } else {
     print "(<a href='$url?o=$op'>Recent</a>) <br/>\n";
   }
-  print "Filter: <a href='$url?q=$qry'>$qry</a> " .
-     "<a href='$url?o=$op'>(clear)</a> <br/>" if $qry;
+  print "Filter: <a href='$url?q=" . uri_escape($qry) . "'>$qry</a> " .
+     "(<a href='$url?o=$op'>clear</a>) <br/>" if $qry;
   print "Filter: <a href='$url?y=$yrlim'>$yrlim</a> " .
-     "<a href='$url?o=$op'>(clear)</a> <br/>" if $yrlim;
+     "(<a href='$url?o=$op'>clear</a>) <br/>" if $yrlim;
   print "</div>\n";
   my $i = scalar( @lines );
   my $fld;
@@ -1630,7 +1633,8 @@ $com ) =
   my  $ysum ;
   if ( scalar(keys(%years)) > 1 ) {
     for $y ( reverse sort(keys(%years)) ) {
-      print "<a href='$url?o=$op&y=$y&q=$qry'>$y</a><br/>\n" ;  # TODO - Skips some ??!!
+      print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) .
+         "'>$y</a><br/>\n" ;
       $ysum += $years{$y};
     }
   }
@@ -1644,7 +1648,7 @@ $com ) =
 if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   print "\n<!-- Full list -->\n ";
-  print "<hr/>Filter:<b>$yrlim $qry</b> <a href='$url'>(Clear)</a>" if ($qry || $qrylim || $yrlim);
+  print "<hr/>Filter:<b>$yrlim $qry</b> (<a href='$url'>Clear</a>)" if ($qry || $qrylim || $yrlim);
   print " -".$qrylim if ($qrylim);
   print " &nbsp; \n";
   print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) .
@@ -1875,7 +1879,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     my  $ysum;
     if ( scalar(keys(%years)) > 1 ) {
       for $y ( reverse sort(keys(%years)) ) {
-        print "<a href='$url?y=$y&q=$qry'>$y</a> ($years{$y})<br/>\n" ;  # TODO - Skips some ??!!
+        print "<a href='$url?y=$y&q=" . uri_escape($qry) .
+            "'>$y</a> ($years{$y})<br/>\n" ;  # TODO - Skips some ??!!
         $ysum += $years{$y};
       }
     }
@@ -1992,32 +1997,32 @@ sub aboutlink {
 # Helper to make a google link
 sub glink {
   my $qry = shift;
-  my $txt = shift || "(Google)";
+  my $txt = shift || "Google";
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
-  my $lnk = "&nbsp;<i><a href='https://www.google.com/search?q=$qry' target='_blank' class='no-print'>" .
-      "$txt</a></i>\n";
+  my $lnk = "&nbsp;<i>(<a href='https://www.google.com/search?q=" .
+    uri_escape($qry) . "' target='_blank' class='no-print'>$txt</a>)</i>\n";
   return $lnk;
 }
 
 # Helper to make a Ratebeer search link
 sub rblink {
   my $qry = shift;
-  my $txt = shift || "(Ratebeer)";
+  my $txt = shift || "Ratebeer";
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
-  my $lnk = "<i><a href='https://www.ratebeer.com/search?q=$qry' target='_blank' class='no-print'>" .
-      "$txt</a></i>\n";
+  my $lnk = "<i>(<a href='https://www.ratebeer.com/search?q=" . uri_escape($qry) .
+    "' target='_blank' class='no-print'>$txt</a>)</i>\n";
   return $lnk;
 }
 # Helper to make a Untappd search link
 sub utlink {
   my $qry = shift;
-  my $txt = shift || "(Untappd)";
+  my $txt = shift || "Untappd";
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
-  my $lnk = "<i><a href='https://untappd.com/search?q=$qry' target='_blank' class='no-print'>" .
-      "$txt</a></i>\n";
+  my $lnk = "<i>(<a href='https://untappd.com/search?q=" . uri_escape($qry) .
+    "' target='_blank' class='no-print'>$txt</a>)</i>\n";
   return $lnk;
 }
 
