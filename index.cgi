@@ -689,9 +689,9 @@ if ( $op =~ /board/i ) {
   print "</select>\n";
   print "</form>\n";
   if ($links{$locparam} ) {
-    print "&nbsp;&nbsp;<a href='$links{$locparam}'>Www</a> ";
+    print loclink($locparam,"www"," ");
   }
-  print "(<a href='$url?o=$op&l=$locparam&q=IPA'>IPA</a>) "
+  print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=IPA'>IPA</a>) "
     unless ($qry eq "IPA");
   print "<p/>\n";
   if (!$scrapers{$locparam}) {
@@ -1967,10 +1967,10 @@ sub loclink {
   my $www = shift || "www";
   my $scrape = shift || "List";
   my $lnk = "";
-  if (defined($scrapers{$loc})) {
+  if (defined($scrapers{$loc}) && $scrape ne " ") {
     $lnk .= " &nbsp; <i><a href='$url?o=board&l=$loc'>$scrape</a></i>" ;
   }
-  if (defined($links{$loc})) {
+  if (defined($links{$loc}) && $www ne " ") {
     $lnk .= " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' >$www</a></i>" ;
   }
   return $lnk
