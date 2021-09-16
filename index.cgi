@@ -691,7 +691,8 @@ if ( $op =~ /board/i ) {
   if ($links{$locparam} ) {
     print "&nbsp;&nbsp;<a href='$links{$locparam}'>Www</a> ";
   }
-  print "<a href='$url?o=$op&l=$locparam&q=IPA'>(IPA)</a> ";
+  print "(<a href='$url?o=$op&l=$locparam&q=IPA'>IPA</a>) "
+    unless ($qry eq "IPA");
   print "<p/>\n";
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for $locparam\n";
