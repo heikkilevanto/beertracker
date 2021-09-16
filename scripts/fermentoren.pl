@@ -6,6 +6,13 @@ use LWP::UserAgent;
 use utf8;
 
 ### Script to scrape from Untapped.
+
+# TODO - Get the whole list from
+#        https://business.untappd.com/locations/2098/themes/4868/js
+# and parse the html out of the js
+
+# The rest is OUTDATED!
+
 # Unfortunately, it would require clicking on the "show more beers" button
 # and wait for the ajax code to load the rest of the list.
 # Also, prices seem not to be available.

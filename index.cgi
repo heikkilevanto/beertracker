@@ -681,6 +681,9 @@ if ( $op =~ /board/i ) {
   print "\n<form method='POST' accept-charset='UTF-8' style='display: inline; 'class='no-print' >\n";
   print "Beer list for\n";
   print "<select onchange='document.location=\"$url?o=board&l=\" + this.value;' >\n";
+  if (!$scrapers{$locparam}) {
+    $scrapers{$locparam} = "";
+  }
   for my $l ( sort(keys(%scrapers)) ) {
     my $sel = "";
     $sel = "selected" if ( $l eq $locparam);
@@ -692,7 +695,7 @@ if ( $op =~ /board/i ) {
     print loclink($locparam,"www"," ");
   }
   print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=IPA'>IPA</a>) "
-    unless ($qry eq "IPA");
+    if ($qry ne "IPA" && $scrapers{$locparam});
   print "<p/>\n";
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for $locparam\n";
