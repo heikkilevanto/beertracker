@@ -38,7 +38,12 @@ foreach my $design ($dom->findnodes($xpath)) {
       # <br/>DK - NEIPA - SUBTYPE - 7.5% [- <a... >]</td>
 
       my ($country, $type, $abv) = $beer[1] =~ m/\<br\/\>(.*?) - (.*?) - ([0-9.]+)% [-<]/g;
-
+      if (!$abv || !$type) {
+        print STDERR "Could not parse line '$beer[1]'\n";
+      }
+      $abv = $abv || 0; # Defend against parsing errors
+      $type = $type || "??";
+      $country = $country || "??";
       # <td>30cl <big>65</big><br/>20cl <big>45</big></td>
       # <td>30cl <big>55</big></td>
       # <td><br/>20cl <big>45</big></td>

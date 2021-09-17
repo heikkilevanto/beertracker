@@ -681,8 +681,8 @@ if ( $op =~ /board/i ) {
   print "\n<form method='POST' accept-charset='UTF-8' style='display: inline; 'class='no-print' >\n";
   print "Beer list for\n";
   print "<select onchange='document.location=\"$url?o=board&l=\" + this.value;' >\n";
-  if (!$scrapers{$locparam}) {
-    $scrapers{$locparam} = "";
+  if (!$scrapers{$locparam}) { #Include the current location, even if no scraper
+    $scrapers{$locparam} = ""; #that way, the pulldown looks reasonable
   }
   for my $l ( sort(keys(%scrapers)) ) {
     my $sel = "";
@@ -720,9 +720,9 @@ if ( $op =~ /board/i ) {
         # Skip brewery if the name contains same words, etc
         $mak = $e->{"maker"};
         $beer = $e->{"beer"};
-        $sty = $e->{"type"};
+        $sty = $e->{"type"} || "";
         $loc = $locparam;
-        $alc = $e->{"alc"};
+        $alc = $e->{"alc"} || 0;
         if ( $qry ) {
           my $line = "$mak $beer $sty";
           next unless ( $line =~ /$qry/i );
