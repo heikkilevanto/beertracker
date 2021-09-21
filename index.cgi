@@ -613,8 +613,8 @@ if ( $edit ) {
   print "<td><input name='wd' value='$wday' $sz2n placeholder='wday' />\n";
   print "<input name='ed' value='$effdate' $sz3n placeholder='Eff' /></td></tr>\n";
 } else { # fields to enter date and time
-  print "<tr><td><input name='d' value='' $sz1n placeholder='YYYY-MM-DD' /></td>\n";
-  print "<td><input name='t' value='' $sz3n placeholder='HH:MM' /></td></tr>\n";
+  print "<tr><td><input name='d' value='' $sz1n placeholder='" . datestr ("%F") . "' /></td>\n";
+  print "<td><input name='t' value='' $sz3n placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
 
 }
 print "<tr><td>
@@ -729,7 +729,7 @@ if ( $op =~ /board/i ) {
         }
 
         my $disp = $mak;
-        $disp =~ s/the|brouwerij|brasserie//i; #stop words
+        $disp =~ s/\b(the|brouwerij|brasserie|van|den)\b//ig; #stop words
         $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
         $disp =~ s/^ +//;
         $disp =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
