@@ -751,7 +751,7 @@ if ( $op =~ /board/i ) {
         my $country = $e->{'country'} || "";
         print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td><td>$alc% &nbsp;";
         my $sizes = $e->{"sizePrice"};
-        foreach $sp ( @$sizes ) {
+        foreach $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
           $vol = $sp->{"vol"};
           $pr = $sp->{"price"};
           print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
@@ -936,7 +936,6 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ($bigimg eq "B") {
       $imgsz = "640,480";
     }
-    ### TODO Check out "set link y2 via (9/5.)*y+32 inverse (5/9.)*(y-32)"
     my $cmd = "" .
         "set term png small size $imgsz \n".
         $pointsize .
@@ -982,7 +981,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ($bigimg eq "B") {
       print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
     } else {
-      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
+      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" style=\"max-width: 100%;\" /></a><br/>\n";
     }
   } # havedata
   print "<div class='no-print'>\n";
