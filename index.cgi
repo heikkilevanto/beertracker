@@ -1047,7 +1047,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $month = "";
   my $filts = splitfilter($qry);
   print "<hr/>Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'>Clear</a>)" .
-    "&nbsp;(<a href='$url?q=$qry'>Full</a>)<hr/>" if ($qry||$yrlim);
+    "&nbsp;(<a href='$url?q=$qry'>Full</a>)<br/>" if ($qry||$yrlim);
+  print searchform(). "<hr/>" if $qry;
   while ( $i > 0 ) {
     $i--;
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i == 0 );
@@ -1514,6 +1515,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
      "(<a href='$url?o=$op'>clear</a>) <br/>" if $qry;
   print "Filter: <a href='$url?y=$yrlim'>$yrlim</a> " .
      "(<a href='$url?o=$op'>clear</a>) <br/>" if $yrlim;
+  print searchform();
   print "</div>\n";
   my $i = scalar( @lines );
   my $fld;
@@ -1559,7 +1561,7 @@ $com ) =
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b") . "&nbsp; ($seen{$beer}) &nbsp;" . glink($mak,"G") ."</td>" .
+      $line = "<td>" . filt($beer,"b","","full") . "&nbsp; ($seen{$beer}) &nbsp;" . glink($mak,"G") ."</td>" .
             "<td>$wday $effdate ".
             lst($op,$loc) .  " <br class='no-wide'/> " .
             lst($op,$sty,"","[$sty]"). " " . unit($alc,'%') .
@@ -1634,9 +1636,9 @@ $com ) =
   my $rsum = 0;
   my $rcnt = 0;
   print "<hr/>\n" ;
-  print "More: <br/>\n";
   my  $ysum ;
   if ( scalar(keys(%years)) > 1 ) {
+    print "More: <br/>\n";
     for $y ( reverse sort(keys(%years)) ) {
       print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) .
          "'>$y</a><br/>\n" ;
@@ -1644,7 +1646,7 @@ $com ) =
     }
   }
   print "<a href='$url?maxl=-1&" . $q->query_string() . "'>" .
-    "All</a> ($ysum)<p/>\n";
+    "All</a> ($ysum)<p/>\n" if($ysum);
 
   exit();
 }
@@ -1657,7 +1659,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   print "<hr/>Filter:<b>$yrlim $filts</b> (<a href='$url'>Clear</a>)" if ($qry || $qrylim || $yrlim);
   print " -".$qrylim if ($qrylim);
   print " &nbsp; \n";
-  print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) .
+  print "<br/>" . searchform() . "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) .
     filt($qry, "", "Short", "short")  ."\n" if ($qry);
 
   print "<br/>"if ($qry || $qrylim);
@@ -1935,7 +1937,7 @@ sub filt {
   my $f = shift; # filter term
   my $tag = shift || "nop";
   my $dsp = shift || $f;
-  my $op = shift || "";
+  my $op = shift || $op || "";
   $op = "o=$op&" if ($op);
   my $param = $f;
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
@@ -1952,6 +1954,19 @@ sub splitfilter {
     $ret .= "<a href='$url?o=$op&q=".uri_escape_utf8($w)."'>$w</a> ";
   }
   return $ret;
+}
+
+# Helper to pring a search form
+sub searchform {
+  my $r = "" .
+    "<form method=GET accept-charset='UTF-8'> " .
+    "<input type=hidden name=o value=$op />\n" .
+    "<input type=text name=q />  \n " .
+    "<input type=submit value='Search'/> \n " .
+    "</form> \n" .
+    "";
+  return $r;
+
 }
 
 # Helper to print "(NEW)" in case we never seen the entry before
