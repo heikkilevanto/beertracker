@@ -1045,7 +1045,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   my $daymsum = 0.0;
   my %locseen;
   my $month = "";
-  print "<hr/>Filter: <b>$yrlim $qry</b> (<a href='$url?o=short'>Clear</a>)" .
+  my $filts = splitfilter($qry);
+  print "<hr/>Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'>Clear</a>)" .
     "&nbsp;(<a href='$url?q=$qry'>Full</a>)<hr/>" if ($qry||$yrlim);
   while ( $i > 0 ) {
     $i--;
@@ -1508,7 +1509,8 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
   } else {
     print "(<a href='$url?o=$op'>Recent</a>) <br/>\n";
   }
-  print "Filter: <a href='$url?q=" . uri_escape($qry) . "'>$qry</a> " .
+  my $filts = splitfilter($qry);
+  print "Filter: $filts " .
      "(<a href='$url?o=$op'>clear</a>) <br/>" if $qry;
   print "Filter: <a href='$url?y=$yrlim'>$yrlim</a> " .
      "(<a href='$url?o=$op'>clear</a>) <br/>" if $yrlim;
@@ -1651,7 +1653,8 @@ $com ) =
 if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   print "\n<!-- Full list -->\n ";
-  print "<hr/>Filter:<b>$yrlim $qry</b> (<a href='$url'>Clear</a>)" if ($qry || $qrylim || $yrlim);
+  my $filts = splitfilter($qry);
+  print "<hr/>Filter:<b>$yrlim $filts</b> (<a href='$url'>Clear</a>)" if ($qry || $qrylim || $yrlim);
   print " -".$qrylim if ($qrylim);
   print " &nbsp; \n";
   print "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) .
@@ -1940,7 +1943,16 @@ sub filt {
   return $link;
 }
 
-
+# Helper to split the filter string into individual words, each of which is
+# a new filter link. Useful with long beer names etc
+sub splitfilter {
+  my $f = shift || "";  # current filter term
+  my $ret = "";
+  for my $w ( split ( /\W+/, $f) ) {
+    $ret .= "<a href='$url?o=$op&q=".uri_escape_utf8($w)."'>$w</a> ";
+  }
+  return $ret;
+}
 
 # Helper to print "(NEW)" in case we never seen the entry before
 sub newmark {
