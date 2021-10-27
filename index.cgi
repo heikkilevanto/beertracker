@@ -1552,7 +1552,7 @@ $com ) =
       next if ( $mak =~ /^restaurant/i );
       $fld = $mak;
       $mak =~ s"/"/<br/>"; # Split collab brews on two lines
-      $line = "<td>" . filt($mak,"b","",full) . "<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
+      $line = "<td>" . filt($mak,"b","","full") . "<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
       "<td>$wday $effdate " . lst($op,$loc) . " ($seen{$fld}) " .  # $mak before cleaning
             "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]") . "  " . lst("full",$beer,"b")  ."</td>";
 
