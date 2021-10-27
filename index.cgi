@@ -654,14 +654,14 @@ if ( $edit ) {
   print "<td><select name='ops' " .
               "onchange='document.location=\"$url?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
-  print "<option value='o=full' >Full List</option>\n";
-  print "<option value='o=board' >Beer Board</option>\n";
-  print "<option value='o=short' >Short List</option>\n";
+  print "<option value='o=full&q=$qry' >Full List</option>\n";
+  print "<option value='o=board&q=$qry' >Beer Board</option>\n";
+  print "<option value='o=short&q=$qry' >Short List</option>\n";
   my @ops = ("Graph",
     "Location","Brewery", "Beer",
     "Wine", "Booze", "Restaurant", "Style", "Months", "Years", "Datafile", "About");
   for my $opt ( @ops ) {
-    print "<option value='o=$opt'>$opt</option>\n";
+    print "<option value='o=$opt&q=$qry'>$opt</option>\n";
   }
   print "</select></td>\n";
   print "</tr>\n";
@@ -1539,7 +1539,7 @@ $com ) =
 
     if ( $op eq "Location" ) {
       $fld = $loc;
-      $line = "<td>" . filt($loc,"b") .
+      $line = "<td>" . filt($loc,"b","","full") .
         "<span class='no-print'> ".
         "&nbsp; " . loclink($loc, "Www") . "  " . glink($loc, "G") . "</span>" .
         "</td>" .
@@ -1552,9 +1552,9 @@ $com ) =
       next if ( $mak =~ /^restaurant/i );
       $fld = $mak;
       $mak =~ s"/"/<br/>"; # Split collab brews on two lines
-      $line = "<td>" . filt($mak) . "<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
+      $line = "<td>" . filt($mak,"b","",full) . "<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
       "<td>$wday $effdate " . lst($op,$loc) . " ($seen{$fld}) " .  # $mak before cleaning
-            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]") . "  " . lst($op,$beer,"b")  ."</td>";
+            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]") . "  " . lst("full",$beer,"b")  ."</td>";
 
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );
@@ -1571,7 +1571,7 @@ $com ) =
       next unless ( $mak =~ /^wine, *(.*)$/i );
       $fld = $beer;
       my $stylename = $1;
-      $line = "<td>" . filt($beer,"b")  . "&nbsp; $stylename &nbsp;" . glink($beer, "G") . "</td>" .
+      $line = "<td>" . filt($beer,"b","","full")  . "&nbsp; $stylename &nbsp;" . glink($beer, "G") . "</td>" .
             "<td>$wday $effdate ".
             lst($op,$loc) . " ($seen{$beer}) " .
             "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). "</td>";
@@ -1580,7 +1580,7 @@ $com ) =
       next unless ( $mak =~ /^booze, *(.*)$/i );
       $fld = $beer;
       my $stylename = $1;
-      $line = "<td>" .filt($beer,"b") . "&nbsp;" . glink($beer, "G") ."</td>" .
+      $line = "<td>" .filt($beer,"b","","full") . "&nbsp;" . glink($beer, "G") ."</td>" .
             "<td>$wday $effdate ".
             lst($op,$loc) ." ($seen{$beer}) " .
             "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). " " . unit($alc,'%') .
@@ -1596,7 +1596,7 @@ $com ) =
       my $restname = "Restaurant,$loc";
       my $rpr = "";
       $rpr = "&nbsp; $pr kr" if ($pr && $pr >0) ;
-      $line = "<td>" . filt($loc,"b") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> ".
+      $line = "<td>" . filt($loc,"b","","full") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> ".
               "$rstyle  &nbsp;" . glink("Restaurant $loc") . "</td>" .
               "<td><i>$beer</i>". " $rpr <br class='no-wide'/> " .
               "$wday $effdate $ratestr</td>";
@@ -1607,9 +1607,9 @@ $com ) =
       next if ( $mak =~ /^restaurant/i );
       next if ( $sty =~ /^misc/i );
       $fld = $sty;
-      $line = "<td>" . filt("[$sty]","b") . " ($seen{$sty})" . "</td><td>$wday $effdate " .
+      $line = "<td>" . filt("[$sty]","b","","full") . " ($seen{$sty})" . "</td><td>$wday $effdate " .
             lst("Beer",$loc,"i") .
-            " <br class='no-wide'/> " . lst($op,$mak,"i") . ": " . lst($op,$beer,"b") . "</td>";
+            " <br class='no-wide'/> " . lst($op,$mak,"i") . ": " . lst("full",$beer,"b") . "</td>";
     } else {
       print "<!-- unknown shortlist '$op' -->\n";
       last;
