@@ -506,7 +506,15 @@ undef, $icom) =
       or error("Error closing $bakfile: $!");
   }
   # Redirect to the same script, without the POST, so we see the results
-  print $q->redirect( "$url?o=$op" );
+  if ($sub =~ /^Rest/i ) {
+    my ($recid) =  $stamp =~ /^([0-9-: ]+);/ ;
+    print STDERR "Editing '$recid' \n";
+    print $q->redirect( "$url?e=" . uri_escape_utf8($recid) );
+    # Get into edit mode for the just-inserted restaurant record
+  } else {
+    print $q->redirect( "$url?o=$op" );
+    # Usually just show the page
+  }
   exit();
 }
 
