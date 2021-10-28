@@ -508,7 +508,6 @@ undef, $icom) =
   # Redirect to the same script, without the POST, so we see the results
   if ($sub =~ /^Rest/i ) {
     my ($recid) =  $stamp =~ /^([0-9-: ]+);/ ;
-    print STDERR "Editing '$recid' \n";
     print $q->redirect( "$url?e=" . uri_escape_utf8($recid) );
     # Get into edit mode for the just-inserted restaurant record
   } else {
@@ -614,7 +613,9 @@ my $sz2n = "size='2'";
 my $sz2 = "$sz2n $clr";
 my $sz3n = "size='8'";
 my $sz3 = "$sz3n $clr";
-if ( $edit ) {
+if ( $edit && $foundline ) {
+  # Still produces lot of warnings if editing a non-existing record, all values
+  # are undefined. Should not happen anyway.
   print "<tr><td $c2><b>Editing record '$edit'</b> ".
       "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
   print "<tr><td><input name='st' value='$stamp' $sz1n placeholder='Stamp' /></td>\n";
@@ -649,7 +650,7 @@ print "</select></td></tr>\n";
 print "<tr>";
 print " <td $c6><textarea name='c' cols='36' rows='3'
   placeholder='$todaydrinks'/>$com</textarea></td></tr>\n";
-if ( $edit ) {
+if ( $edit && $foundline ) {
   print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
   print "&nbsp;<span align=right>Clr ";
   print "<input type='checkbox' checked=clearonclick onclick='clearonclick=this.checked;'/></span></td>\n";
