@@ -71,7 +71,7 @@ $links{"Penyllan"} = "https://penyllan.com/";
 my %scrapers;
 $scrapers{"Ølbaren"} = "oelbaren.pl";
 $scrapers{"Taphouse"} = "taphouse.pl";
-#$scrapers{"Fermentoren"} = "fermentoren.pl";  # Doesn't work yet.
+$scrapers{"Fermentoren"} = "fermentoren.pl";
 $scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
 
 # Short names for the most commong watering holes
@@ -740,6 +740,7 @@ if ( $op =~ /board/i ) {
         my $disp = $mak;
         $disp =~ s/\b(the|brouwerij|brasserie|van|den)\b//ig; #stop words
         $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
+        $disp =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
         $disp =~ s/^ +//;
         $disp =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
         $disp =~ s/ .*$// ; # first word

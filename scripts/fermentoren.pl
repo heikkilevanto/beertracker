@@ -28,17 +28,16 @@ use utf8;
 # href="/w/fermentoren/78485">Fermentoren</a>
 # </span>
 
-my $base_url = "https://untappd.com/v/fermentoren/127076";
-my $xpath        = '//div[@class="beer-details"]';
-my $xpath_number = './/a[@data-href=":beer"]/text()';
-my $regex_number = '^([0-9]*?)\.';
-my $xpath_model  = './/a[@data-href=":beer"]/text()';
-my $regex_model  = '.*?\. (.*)$';
-my $xpath_type   = './/em/text()';
+my $base_url = "https://business.untappd.com/locations/2098/themes/4868/js";
+my $xpath        = '//div[@class="beer"]';
+my $xpath_number = './/span[@class="tap-number-hideable"]/text()';
+my $xpath_model  = './/p[@class="beer-name"]/a';
+my $xpath_maker  = './/span[@class="brewery"]/a';
+
+my $xpath_type   = './/p[@class="beer-name"]/span';
 my $regex_type   = '.*';
-my $xpath_maker  = './/a[@data-href=":brewery"]/text()';
 my $regex_maker  = '.*';
-my $xpath_abv    = './/span/text()';
+my $xpath_abv    = './/span[@class="abv"]';
 my $regex_abv    = '^([0-9\.,]*)%';
 
 
@@ -50,69 +49,71 @@ $res = $ua->get($base_url);
 
 die "Failed to fetch $base_url", $res->status_line unless $res->is_success;
 
+my $xml = $res->content;
+#if ( $xml =~ /container.innerHTML = "(.*)\n";/mi ) {
+if ( $xml =~ /container.innerHTML = "(.*)/mi ) {
+  $xml = $1;
+  $xml =~ s/\\n/\n/g;  # Replace \n newlines
+  $xml =~ s/\\//g; # unquote
+} else {
+  die "Failed to extract html from " . substr($xml,0, 512). " \n";
+}
+
 my $dom = XML::LibXML->load_html(
-  string        => $res->content,
+  string        => $xml,
   recover         => 1,
   suppress_errors => 1,
 );
+
 
 my @taps;
 my $count = 1;
 foreach my $design ($dom->findnodes($xpath)) {
   my @beer;
-  my $index = 0;
 
-  #    print $count, $design->toString;
   my ($number,$model,$maker,$type,$abv, $other);
-  foreach my $node ($design->findnodes($xpath_number)) {
-    ($number) = $node->toString =~ m/$regex_number/g;
-    $number = $count if not $number;
-    $index++;
-  }
 
   foreach my $node ($design->findnodes($xpath_model)) {
-    ($model) = $node->toString =~ m/$regex_model/g;
-    $index++;
-  }
-  foreach my $node ($design->findnodes($xpath_maker)) {
-    ($maker) = $node->toString =~ m/$regex_maker/g;
-    $index++;
+    ($number,$model) = $node->textContent =~ m/([0-9]+)[ \.]*(.*)/g;
+    $model =~ s/ *$//;
   }
   foreach my $node ($design->findnodes($xpath_type)) {
-    ($type) = $node->toString =~ m/$regex_type/g;
-    $index++;
+    ($type) = $node->textContent =~ m/$regex_type/g;
+  }
+
+  foreach my $node ($design->findnodes($xpath_maker)) {
+    $maker = $node->textContent;
   }
 
   $node = ($design->findnodes($xpath_abv))[0];
-  ($abv) = $node->toString =~ m/$regex_abv/g;
+  ($abv) = $node->textContent =~ m/$regex_abv/g;
 
-  my ($size, $price,$size2, $price2) = (20, 30, 40, 50);  # ???
+  # The list has no prices, so we make a decent guess.
+  my ($size, $price,$size2, $price2) = (20, 30, 40, 50);
   my @sizePrices = ();
 
   if ($size) {
-    push @sizePrices, { size => $size, price => $price};
+    push @sizePrices, { vol => $size, price => $price};
   }
   if ($size2) {
-    push @sizePrices, { size => $size2, price => $price2};
+    push @sizePrices, { vol => $size2, price => $price2};
   }
   my $tapItem = {
-    number => $number,
+    id => 0 + $number,
     maker  => $maker,
-    model  => $model,
+    beer  => $model,
     type   => $type,
-    abv    => $abv,
+    alc    => 1.0 * $abv,
 #    desc   => $desc,
     sizePrice => [ @sizePrices ]
   };
 
-  # why doesn't this work?
-  $tapItem->{'subtype'} = $subtype if $subtype;
 
   if ($model) {
     push @taps, $tapItem;
   };
-  # [ { size => $size, price => $price}, { size => $size2, price => $price2}]
   $count++;
+
 }
 
 print(to_json(\@taps, {pretty => 1}));
