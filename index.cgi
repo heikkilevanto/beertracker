@@ -231,6 +231,7 @@ my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
 my %years;  # Keep track which years we have seen, for the "more" links
 my $boxno = 1; # Box number, from a comment like (B17:240)
 my $boxvol = ""; # Remaining volume in the box
+my $boxline = ""; # Values for the 'box' beer ('B' or 'B17');
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -295,6 +296,13 @@ while (<F>) {
     if ($bn > $boxno) {
       $boxno = $bn;
     }
+    if ($beer =~ /^B(\d*)/i) {
+      my $curbox = $1 || $bn;
+      if ( $curbox eq $bn ) {  # Same (or default) box
+        $boxline = $lastline;
+        #print STDERR "Found box '$beer' line: '$boxline'\n";
+      }
+    }
   }
   if ( $thisdate ne "$wd; $ed" ) { # new date
     $lastdatesum = 0.0;
@@ -335,6 +343,14 @@ if ( ! $todaydrinks ) { # not today
     # since the entry must be pretty close to the end of the month. Showing
     # zeroes for the current month would be no fun.
   }
+}
+if ($boxline) {
+  $lastline = $boxline;  # Found the line corresponding to a box wine
+    ( undef, undef, undef, $loc, $mak, $beer,
+      undef, $sty, $alc, undef, undef, undef) =
+         split( / *; */, $boxline );   # Copy values over
+  $pr=0; # Already paid
+  ($defaultvol) = $volumes{'G'} =~ /^(\d+)/;
 }
 
 # Remember some values to display in the comment box when no comment to show
@@ -439,7 +455,7 @@ undef, $icom) =
     $vol = "";
   } else {
     $vol = number($vol);
-    if (!$vol) {
+    if ($vol<=0) {
       $vol = $defaultvol;
     }
   }
@@ -461,7 +477,7 @@ undef, $icom) =
     $alc = "";
     $pr = "";
   }
-  if ($pr < 0 ) {  # Negatove price means buying a box
+  if ($pr < 0 ) {  # Negative price means buying a box
     $boxno++;
     $com =~ s/\(B\d+:\d+\) *$//;
     $com .= " (B$boxno:$vol)";
@@ -862,7 +878,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     $sumweek = $sumweek / $cntweek;
     $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
     my $zero = "";
-    if ($tot > 0.15 ) { # one 0.5% "no-alc" beer still gets a zero mark
+    if ($tot > 0.4 ) { # one small mild beer still gets a zero mark
       $zerodays = 0;
     } elsif ($zerodays >= 0) { # have seen a real $tot
       $zero = -0.1 + ($zerodays % 7) * 0.35 ; # makes the 7th mark nicely on 2.0d
