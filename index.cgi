@@ -1273,6 +1273,11 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         print "<tr><td align=right>$prday&nbsp;</td>" .
           "<td align=right>$alcday&nbsp;</td>" .
           "<td>&nbsp; = per day</td></tr>\n";
+        $alcday = unit(sprintf("%5.1f", $alcday *7),"d");
+        $prday = unit(sprintf("%6.0f", $prday *7),"kr");
+        print "<tr><td align=right>$prday&nbsp;</td>" .
+          "<td align=right>$alcday&nbsp;</td>" .
+          "<td>&nbsp; = per week</td></tr>\n";
         print "</pre>";
         $sofar = "";
       }
