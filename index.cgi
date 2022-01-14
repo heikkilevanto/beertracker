@@ -296,7 +296,7 @@ while (<F>) {
     if ($bn > $boxno) {
       $boxno = $bn;
     }
-    if ($beer =~ /^B(\d*)/i) {
+    if ($beer =~ /^B(\d*)$/i) {
       my $curbox = $1 || $bn;
       if ( $curbox eq $bn ) {  # Same (or default) box
         $boxline = $lastline;
