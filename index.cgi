@@ -215,6 +215,8 @@ my $thisdate = "";
 my $lastwday = "";
 my @lines;
 my %seen; # Count how many times various names seen before
+my %ratesum; # sum of ratings for every beer
+my %ratecount; # count of ratings for every beer, for averaging
 my %restaurants; # maps location name to restaurant types
 my $allfirstdate = "";
 my %monthdrinks; # total drinks for each calendar month
@@ -258,6 +260,10 @@ while (<F>) {
   $seen{$b}++;
   $seen{$s}++;
   $seen{$restname}++;
+  if ($r && $b) {
+    $ratesum{$b} += $r;
+    $ratecount{$b}++;
+  }
   if ( ! $edit || ($edit eq $t) ) {
     $foundline = $_;
   }
@@ -1832,7 +1838,16 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       "<br class='no-wide'/>\n";
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       print filt("[$sty]") . newmark($sty) . " "   if ($sty);
-      print units($pr, $vol, $alc). "<br/>\n" if ($sty || $pr || $alc);
+      if ($sty || $pr || $alc) {
+        print units($pr, $vol, $alc);
+        #print "" . ($seen{$b} || ""). " ";
+        if ( $ratecount{$beer} ) {
+          #print "s=$seen{$beer} rs=$ratesum{$beer} rc=$ratecount{$beer} "; # ###
+          #printf (" (%d:%3.1f)", $seen{$beer},$ratesum{$beer}/$ratecount{$beer});
+          # Doesn't look good on the phone
+        }
+        print "<br/>\n" ;
+      }
       if ($rate || $com) {
         print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
         print " <b>'$rate'-$ratings[$rate]</b>" if ($rate);
