@@ -979,9 +979,9 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
         "set format x $xformat \n" .
         "set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
         "set ytics 7\n" .
-        "set y2tics 0,2 out format \"%2.0f\"\n" .
-        "set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5,
-        "set my2tics 2 \n".
+        "set y2tics 0,1 out format \"%2.0f\"\n" .   # 0,1
+        #"set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5,
+        #"set my2tics 2 \n".
         "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
         "set style fill solid \n" .
         "set boxwidth 0.7 relative \n" .
@@ -1833,7 +1833,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     $anchor = $stamp || "";
     $anchor =~ s/[^0-9]//g;
     print "\n<a id='$anchor'/>\n";
-    print "<br class='no-print'/>$time &nbsp;" . filt($mak,"i") . newmark($mak) .
+    print "<br class='no-print'/>$time " . filt($mak,"i") . newmark($mak) .
             " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br class='no-wide'/>\n";
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
