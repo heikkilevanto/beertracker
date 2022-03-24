@@ -805,7 +805,7 @@ if ( $op =~ /board/i ) {
     }
   }
   $op = "Graph"; # Continue with a graph and a full list after that
-  $qry = ""; # Without filtering
+  # Keep $qry, so we filter the big list too
 } # Board
 
 ##############
