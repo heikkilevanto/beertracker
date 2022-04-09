@@ -886,7 +886,7 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ($tot > 0.4 ) { # one small mild beer still gets a zero mark
       $zerodays = 0;
     } elsif ($zerodays >= 0) { # have seen a real $tot
-      $zero = -0.1 + ($zerodays % 7) * 0.35 ; # makes the 7th mark nicely on 2.0d
+      $zero = 0.1 + ($zerodays % 7) * 0.35 ; # makes the 7th mark nicely on 2.0d
       $zerodays ++; # Move the subsequent zero markers higher up
     }
     if ( $ndays <=0 ) {
@@ -927,9 +927,9 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
     if ($wkday > 4) {
        $wkend = $tot;
        $tot = 0;
-       if ( $ndays <= 0 || $zerodays > 1) { # fut graph, or zero-mark day
-         $wkend = $wkend || -0.08 ; # mark weekend days
-       }
+       #if ( $ndays <= 0 || $zerodays > 1) { # fut graph, or zero-mark day
+         $wkend = $wkend || -0.2 ; # mark weekend days
+       #}
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
     print F "$date  $tot $wkend   $sum30 $sumweek   $zero  $fut\n"  if ($zerodays >= 0);
