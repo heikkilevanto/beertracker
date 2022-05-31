@@ -219,6 +219,7 @@ my %ratesum; # sum of ratings for every beer
 my %ratecount; # count of ratings for every beer, for averaging
 my %restaurants; # maps location name to restaurant types
 my $allfirstdate = "";
+my $lasttimestamp = "";
 my %monthdrinks; # total drinks for each calendar month
 my %monthprices; # total money spent. Indexed with "yyyy-mm"
 my $weekago = datestr("%F", -7);
@@ -246,6 +247,7 @@ while (<F>) {
     $allfirstdate=$ed;
     # TODO Clear daydsums and daymsums for every date from $ed to today
   }
+  $lasttimestamp = $t;
   if ( /$qry/ ) {
     if ( $ed =~ /^(\d+)/ ) {
       $years{$1}++;
@@ -417,7 +419,17 @@ if ( $q->request_method eq "POST" ) {
       $effdate = $1;
       $stamp .= "; $2";
     }
-    #print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate'\n";
+    #$lasttimestamp =~ s/\d\d$//;  # XXX Trick to make the bug easier to reproduce
+    if (  $stamp =~ /^$lasttimestamp/ ) {
+      if ( $stamp =~ /^(.*:)(\d\d)(;.*)$/ ) {
+        my $sec = $2;
+        $sec++;  # increment the seconds, even past 59.
+        $stamp = "$1$sec$3";
+      }
+      print STDERR "Oops, almost inserted a duplicate timestamp '$lasttimestamp'. ".
+        "Adjusted it to '$stamp' \n";
+    }
+    #print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate' L='$lasttimestamp'\n";
   }
   if ( $mak !~ /tz,/i ) {
     $loc = $thisloc unless $loc;  # Always default to the last location, except for tz lines
@@ -520,6 +532,7 @@ undef, $icom) =
         if ( $sub eq "Save" ) {
           print F "$stamp; $effdate; $line \n";
         }
+        $edit = "XXX"; # Do not delete another line, even if same timestamp
       }
     }
     close F
