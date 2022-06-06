@@ -17,24 +17,15 @@ use utf8;
 # and wait for the ajax code to load the rest of the list.
 # Also, prices seem not to be available.
 
-#<div class="beer-details">
-# <h5>
-# <a class="track-click" data-track="menu" data-href=":beer"
-# href="/b/fermentoren-yippie-ipa/1161868"
-# >1. Yippie IPA</a> <em>IPA - American</em></h5>
-# <h6>
-# <span>6.3% ABV • 75 IBU •
-# <a class="track-click" data-track="menu" data-href=":brewery"
-# href="/w/fermentoren/78485">Fermentoren</a>
-# </span>
 
 my $base_url = "https://business.untappd.com/locations/2098/themes/4868/js";
-my $xpath        = '//div[@class="beer"]';
+my $xpath        = '//div[@class="item"]';
 my $xpath_number = './/span[@class="tap-number-hideable"]/text()';
-my $xpath_model  = './/p[@class="beer-name"]/a';
+my $xpath_model  = './/p[@class="item-name"]/a';
+#my $xpath_model  = './/p[@class="beer-name"]/a';
 my $xpath_maker  = './/span[@class="brewery"]/a';
 
-my $xpath_type   = './/p[@class="beer-name"]/span';
+my $xpath_type   = './/p[@class="item-style beer-style-hideable item-title-color"]/span';
 my $regex_type   = '.*';
 my $regex_maker  = '.*';
 my $xpath_abv    = './/span[@class="abv"]';
@@ -65,11 +56,12 @@ my $dom = XML::LibXML->load_html(
   suppress_errors => 1,
 );
 
-
+#print STDERR $dom->toString() . "\n";
 my @taps;
 my $count = 1;
 foreach my $design ($dom->findnodes($xpath)) {
   my @beer;
+  # print STDERR "=========$count: " . $design->toString() . "\n";
 
   my ($number,$model,$maker,$type,$abv, $other);
 
@@ -111,9 +103,10 @@ foreach my $design ($dom->findnodes($xpath)) {
 
   if ($model) {
     push @taps, $tapItem;
+    #print STDERR "=== $count: " . to_json($tapItem, {pretty=>1}). "\n";
   };
   $count++;
 
 }
-
+print STDERR "Found $count beers for Fermentoren\n"; ###
 print(to_json(\@taps, {pretty => 1}));

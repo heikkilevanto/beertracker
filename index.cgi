@@ -762,8 +762,8 @@ if ( $op =~ /board/i ) {
       print "<table>\n";
       foreach $e ( @$beerlist )  {
         # Skip brewery if the name contains same words, etc
-        $mak = $e->{"maker"};
-        $beer = $e->{"beer"};
+        $mak = $e->{"maker"} || "" ;
+        $beer = $e->{"beer"} || "" ;
         $sty = $e->{"type"} || "";
         $loc = $locparam;
         $alc = $e->{"alc"} || 0;
