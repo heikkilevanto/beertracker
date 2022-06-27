@@ -78,10 +78,15 @@ foreach my $design ($dom->findnodes($xpath)) {
   }
 
   $node = ($design->findnodes($xpath_abv))[0];
-  ($abv) = $node->textContent =~ m/$regex_abv/g;
+  if ($node) {
+    ($abv) = $node->textContent =~ m/$regex_abv/g;
+    $abv = $abv * 1.0; # force it into a number
+  } else {
+    $abv = "";
+  }
 
   # The list has no prices, so we make a decent guess.
-  my ($size, $price,$size2, $price2) = (20, 30, 40, 50);
+  my ($size, $price,$size2, $price2) = (20, 30,  40, 50);
   my @sizePrices = ();
 
   if ($size) {
@@ -95,7 +100,7 @@ foreach my $design ($dom->findnodes($xpath)) {
     maker  => $maker,
     beer  => $model,
     type   => $type,
-    alc    => 1.0 * $abv,
+    alc    => $abv,
 #    desc   => $desc,
     sizePrice => [ @sizePrices ]
   };
