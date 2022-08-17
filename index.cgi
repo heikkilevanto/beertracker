@@ -738,7 +738,7 @@ if ( $op =~ /board/i ) {
   if ($links{$locparam} ) {
     print loclink($locparam,"www"," ");
   }
-  print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'>IPA</a>) "
+  print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'>PA</a>) "
     if ($qry ne "IPA" && $scrapers{$locparam});
   print "<p/>\n";
   if (!$scrapers{$locparam}) {
@@ -769,7 +769,7 @@ if ( $op =~ /board/i ) {
         $alc = $e->{"alc"} || 0;
         if ( $qry ) {
           my $line = "$mak $beer $sty";
-          next unless ( $line =~ /$qry/i );
+          next unless ( $sty =~ /$qry/i );
         }
 
         my $disp = $mak;
