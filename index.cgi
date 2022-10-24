@@ -836,7 +836,7 @@ if ( $op =~ /board/i ) {
         $sty =~ s/.*Belg.*/Belg/i;
         $sty =~ s/.*Barley.*Wine.*/BW/i;
         $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars   ### Remove this later
-        print STDERR "sty='$origsty' -> '$sty'    '$beer'\n";
+        #print STDERR "sty='$origsty' -> '$sty'    '$beer'\n";
         my $country = $e->{'country'} || "";
         print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td>" .
           "<td>$sty $alc% &nbsp;";
@@ -869,7 +869,7 @@ if ( $op =~ /board/i ) {
 # Graph
 
 my %averages; # floating average by effdate
-if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
+if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph (only if data)
   my $defbig = $mobile ? "S" : "B";
   my $bigimg = $1 || $defbig;
   my $startoff = $2 || 30; # days ago
@@ -1331,10 +1331,12 @@ if ( $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make a graph
             "<td align=right>$alcp&nbsp;</td>".
             "<td>&nbsp; = PROJECTED for whole $thisyear</td></tr>\n";
         }
-        my $alcday = unit(sprintf("%5.1f", $yalc / $onedrink / $daynum),"d");
-        my $prday = unit(sprintf("%6.0f", $ysum / $daynum),"kr");
-        print "<tr><td align=right>$prday&nbsp;</td>" .
-          "<td align=right>$alcday&nbsp;</td>" .
+        my $alcday = $yalc / $onedrink / $daynum;
+        my $prday = $ysum / $daynum;
+        my $alcdayu = unit(sprintf("%5.1f", $alcday),"d");
+        my $prdayu = unit(sprintf("%6.0f", $prday),"kr");
+        print "<tr><td align=right>$prdayu&nbsp;</td>" .
+          "<td align=right>$alcdayu&nbsp;</td>" .
           "<td>&nbsp; = per day</td></tr>\n";
         $alcday = unit(sprintf("%5.1f", $alcday *7),"d");
         $prday = unit(sprintf("%6.0f", $prday *7),"kr");
