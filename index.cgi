@@ -344,7 +344,7 @@ if ( ! $todaydrinks ) { # not today
     sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr)" ;
   $copylocation = 1;
   my $today = datestr("%F");
-  if ( $today =~ /$calmon-(\d\d)/ ) {
+  if ( $calmon && $today =~ /$calmon-(\d\d)/ ) {
     $lastmonthday = $1;
     # TODO - When today is in the next month, it shows prev month up to the last
     # entry date, not to end of the month. I can live with that for now, esp
@@ -556,8 +556,10 @@ undef, $icom) =
 # Get new values from the file we ingested earlier
 my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
     split( / *; */, $lastline );
-( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com) =
-    split( / *; */, $foundline );
+if ($foundline) {  # can be undef, if a new data file
+  ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com) =
+      split( / *; */, $foundline );
+  }
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
   $com = "";
