@@ -780,7 +780,7 @@ if ( $op =~ /board/i ) {
         $disp =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
         $disp =~ s/^ +//;
         $disp =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
-        $disp =~ s/ .*$// ; # first word
+        $disp =~ s/[ -].*$// ; # first word
         if ( $beer =~ /$disp/ || !$mak) {
           $disp = ""; # Same word in the beer, don't repeat
         } else {
