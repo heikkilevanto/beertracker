@@ -836,7 +836,7 @@ if ( $op =~ /board/i ) {
         $sty =~ s/.*Belg.*/Belg/i;
         $sty =~ s/.*Barley.*Wine.*/BW/i;
         $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars   ### Remove this later
-        #print STDERR "sty='$origsty' -> '$sty'    '$beer'\n";
+        print STDERR "sty='$origsty' -> '$sty'    '$beer'  '$mak'\n";
         my $country = $e->{'country'} || "";
         print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td>" .
           "<td>$sty $alc% &nbsp;";
@@ -959,8 +959,8 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       $futable .= "</tr>\n";
     }
     if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
-      $lastavg = sprintf("(%2.1f/d %3.1f/w)", $sum30, $sum30*7) if ($sum30 > 0);
-      $lastwk = sprintf("(%2.1f/d %3.1f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
+      $lastavg = sprintf("(%2.1f/d %0.0f/w)", $sum30, $sum30*7) if ($sum30 > 0);
+      $lastwk = sprintf("(%2.1f/d %0.0f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
     }
     if ( $ndays == 0 ){  # Plot the start of the day
       if ( $tot ) {
