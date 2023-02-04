@@ -1551,7 +1551,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
 } elsif ( $op eq "About" ) {
 
   print "<hr/><h2>Beertracker</h2>\n";
-  print "Copyright 2016-2022 Heikki Levanto. <br/>";
+  print "Copyright 2016-2023 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
   print "It is Open Source.\n";
   print "<br/>To get started, look at the " .
