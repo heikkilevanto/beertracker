@@ -795,7 +795,7 @@ if ( $op =~ /board/i ) {
         $mak =~ s/'//g; # Apostrophes break the input form below
         $beer =~ s/'//g; # So just drop them
         $sty =~ s/'//g;
-        my $origsty = $sty ; # just for logging while working on it
+        my $origsty = $sty ;
         $sty =~ s/\b(Beer|Style)\b//i; # Stop words
         $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
         $sty =~ s/\s+/ /g;
@@ -847,7 +847,7 @@ if ( $op =~ /board/i ) {
           print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
           print "<input type='hidden' name='m' value='$mak' />\n" ;
           print "<input type='hidden' name='b' value='$beer' />\n" ;
-          print "<input type='hidden' name='s' value='$sty' />\n" ;
+          print "<input type='hidden' name='s' value='$origsty' />\n" ;
           print "<input type='hidden' name='a' value='$alc' />\n" ;
           print "<input type='hidden' name='l' value='$loc' />\n" ;
           print "<input type='hidden' name='v' value='$vol' />\n" ;
