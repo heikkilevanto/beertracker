@@ -1422,11 +1422,11 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
         if ( $calm eq $lastym ) { # current month
           $dd = sprintf("%3.1f", $d / $dayofmonth); # scale to dr/day
-          $d = "~" . unit($dd,"d");
+          $d = "~" . unit($dd,"/d");
           $ydays[$y] += $dayofmonth - 30;
         } else {
           $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
-          $d = unit($dd,"d");
+          $d = unit($dd,"/d");
         }
         $mdrinks += $dd;
         $mcount++;
@@ -1457,7 +1457,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       $mprice = sprintf("%3.1d", $mprice/$mcount);
       my $dw = $1 if ($mdrinks=~/([0-9.]+)/);
       $dw = unit(int($dw*7+0.5), "/w");
-      $t .= "<td align=right>". unit($mdrinks,"d") .
+      $t .= "<td align=right>". unit($mdrinks,"/d") .
         "<br/>$dw" .
         "<br/>&nbsp;$mprice</td>\n";
    }
@@ -1485,7 +1485,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       $d = sprintf("%3.1f", $ydrinks[$y] / $ydays[$y] / $onedrink) ;
       $dw = $1 if ($d=~/([0-9.]+)/);
       $dw = unit(int($dw*7+0.5), "/w");
-      $d = unit($d, "d");
+      $d = unit($d, "/d");
       my $pr = sprintf("%3d", $yprice[$y]/$ydays[$y]);
     }
     $t .= "<td align=right>$d<br/>$dw</td>";
