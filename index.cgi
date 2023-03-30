@@ -709,8 +709,11 @@ if ( $edit && $foundline ) {
   for my $opt ( @ops ) {
     print "<option value='o=$opt&q=$qry'>$opt</option>\n";
   }
-  print "</select></td>\n";
-  print "</tr>\n";
+  print "</select>\n";
+  if ( $op && $op ne "graph" ) {
+    print " &nbsp; <a href='$url?op=graph'>G</a>";
+  }
+  print "</td></tr>\n";
 }
 print "</table>\n";
 print "</form>\n";
@@ -1492,14 +1495,19 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   }
   $t .= "</tr>";
   $t .= "<tr><td>Sum</td>\n";
+  my $grandtot = 0;
   foreach $y ( reverse($firsty .. $lasty) ) {
     my $pr  = "";
     if ( $ydays[$y] ) { # have data for the year
-      $pr = sprintf("%5.0f", $yprice[$y] ) ;
+      $pr = unit(sprintf("%5.0f", ($yprice[$y]+500)/1000), "kkr") ;
+      $grandtot += $yprice[$y];
     }
     $t .= "<td align=right>$pr</td>";
   }
+  $grandtot = unit(sprintf("%5.0f",($grandtot+500)/1000), "kkr");
+  $t .= "<td align=right>$grandtot</td>";
   $t .= "</tr>";
+
 
   $t .= "</table>\n";
   my $imgsz = "340,240";
