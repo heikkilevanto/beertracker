@@ -711,7 +711,9 @@ if ( $edit && $foundline ) {
   }
   print "</select>\n";
   if ( $op && $op ne "graph" ) {
-    print " &nbsp; <a href='$url?op=graph'>G</a>";
+    print " &nbsp; <a href='$url'>G</a>\n";
+  } else {
+    print " &nbsp; <a href='$url?o=board'>B</a>\n";
   }
   print "</td></tr>\n";
 }
@@ -747,8 +749,10 @@ if ( $op =~ /board/i ) {
     if ($qry ne "IPA" && $scrapers{$locparam});
   print "<p/>\n";
   if (!$scrapers{$locparam}) {
-    print "Sorry, no  beer list for $locparam\n";
-  } else {
+    print "Sorry, no  beer list for $locparam - showing Ølbaren instead<br/>\n";
+    $locparam="Ølbaren"; # A good default
+  } ;
+  {
     my $script = $scriptdir . $scrapers{$locparam};
     my $json = `perl $script`;
     chomp($json);
