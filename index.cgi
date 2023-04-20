@@ -100,7 +100,6 @@ my $wday = param("wd");  # weekday
 my $effdate = param("ed");  # effective date. Drinks after midnight count as night before
 my $loc = param("l");  # location
 my $locparam = $loc; # Actual parameter, without being clever
-my $geo = param("g");  # Geolocation f ex "[55.6531712/12.5042688]"
 my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
 my $beer= param("b");  # beer
 my $vol = param("v");  # volume, in cl
@@ -109,6 +108,7 @@ my $alc = param("a");  # alc, in %vol, up to 1 decimal
 my $pr  = param("p");  # price, DKK
 my $rate= param("r");  # rating, 0=worst, 10=best
 my $com = param("c");  # Comments
+my $geo = param("g");  # Geolocation f ex "[55.6531712/12.5042688]"
   # The rest are not in the data file
 my $date = param("d"); # Date, if entered. Overrides stamp and effdate.
 my $time = param("t"); # Time, if entered.
@@ -241,7 +241,7 @@ while (<F>) {
   s/#.*$//;  # remove comments
   next unless $_; # skip empty lines
 
-  my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c ) = split( / *; */ );
+  my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c, $g ) = split( / *; */ );
   next unless $wd; # We can get silly comment lines, Bom mark, etc
   push @lines, $_; # collect them all
   if (!$allfirstdate) {
@@ -254,7 +254,6 @@ while (<F>) {
       $years{$1}++;
     }
   }
-  my $g="";  # geolocation
   my $restname = "";
   $m = $m || "";
   $restname = "$1$l" if ( $m  =~ /^(Restaurant,)/i );
@@ -357,7 +356,7 @@ if ( ! $todaydrinks ) { # not today
 if ($boxline) {
   $lastline = $boxline;  # Found the line corresponding to a box wine
     ( undef, undef, undef, $loc, $mak, $beer,
-      undef, $sty, $alc, undef, undef, undef) =
+      undef, $sty, $alc, undef, undef, undef, undef) =
          split( / *; */, $boxline );   # Copy values over
   $pr=0; # Already paid
   ($defaultvol) = $volumes{'G'} =~ /^(\d+)/;
@@ -435,7 +434,6 @@ if ( $q->request_method eq "POST" ) {
   }
   if ( $mak !~ /tz,/i ) {
     $loc = $thisloc unless $loc;  # Always default to the last location, except for tz lines
-    #$loc .= " $geo" if ($geo); # Append the geolocation, if we have one
   }
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $vol = $1 if ( $1 );
@@ -444,8 +442,9 @@ if ( $q->request_method eq "POST" ) {
   my $i = scalar( @lines )-1;
   while ( $i > 0 && $beer
     && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' || !$boxvol)) {
-    ( undef, undef, undef, $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr,
-undef, $icom) =
+    ( undef, undef, undef,
+      $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr,
+      undef, $icom, undef) =
        split( / *; */, $lines[$i] );
     if ( !$priceguess &&    # Guess a price
          uc($iloc) eq uc($loc) &&   # if same location and volume
@@ -508,7 +507,7 @@ undef, $icom) =
     $com =~ s/\(B\d+:\d+\) *$//;
     $com .= " (B$boxno:$boxvol)";
   }
-  my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com";
+  my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
   if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /\d+ cl/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
         open F, ">>$datafile"
@@ -560,7 +559,7 @@ undef, $icom) =
 my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
     split( / *; */, $lastline );
 if ($foundline) {  # can be undef, if a new data file
-  ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com) =
+  ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo) =
       split( / *; */, $foundline );
   }
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
@@ -658,8 +657,10 @@ $script .= <<'SCRIPTEND';
     geoloc = "[" + myposition.coords.latitude + "/" + myposition.coords.longitude + "]";
     console.log("Got location: " + geoloc );
     //document.write("Got location: " + geoloc + "<br/" );
-    var geo = document.getElementById("geo");
-    if(geo) { geo.value = geoloc; }
+    if ( ! document.getElementById("editrec") ) {
+      var geo = document.getElementById("geo");
+      if(geo) { geo.value = geoloc; }
+    }
   }
   function getlocation () {
     if (navigator.geolocation) {
@@ -695,16 +696,17 @@ if ( $edit && $foundline ) {
   # Still produces lot of warnings if editing a non-existing record, all values
   # are undefined. Should not happen anyway.
   print "<tr><td $c2><b>Editing record '$edit'</b> ".
-      "<input name='e' type='hidden' value='$edit' /></td></tr>\n";
+      "<input name='e' type='hidden' value='$edit' id='editrec' /></td></tr>\n";
   print "<tr><td><input name='st' value='$stamp' $sz1n placeholder='Stamp' /></td>\n";
   print "<td><input name='wd' value='$wday' $sz2n placeholder='wday' />\n";
   print "<input name='ed' value='$effdate' $sz3n placeholder='Eff' /></td></tr>\n";
-} else { # fields to enter date and time
+} else {
+  # fields to enter date and time
   print "<tr><td><input name='d' value='' $sz1n placeholder='" . datestr ("%F") . "' /></td>\n";
   print "<td><input name='t' value='' $sz3n placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
 }
 # Geolocation
-print "<tr><td $c2><input name='g' value='' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
+print "<tr><td $c2><input name='g' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
 
 print "<tr><td><input name='l' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
 print "<td><input name='s' value='$sty' $sz1
@@ -940,7 +942,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   my %sums; # drink sums by (eff) date
   my $futable = ""; # Table to display the 'future' values
   for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
        split( / *; */, $lines[$i] );
     next if ( $mak =~ /^restaurant/i );
     $pr = 0 unless ( $pr =~/^-?[0-9]+$/i);
@@ -1192,7 +1194,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i == 0 );
     next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ || $i == 0 );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer,
-      $vol, $sty, $alc, $pr, $rate, $com ) = split( / *; */, $lines[$i] );
+      $vol, $sty, $alc, $pr, $rate, $com, $geo ) = split( / *; */, $lines[$i] );
     if ( $i == 0 ) {
       $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
@@ -1322,7 +1324,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   while ( $i > 0 ) {
     $i--;
     #print "$thisyear $i: $lines[$i]<br/>\n";
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com ) =
+    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
       split( / *; */, $lines[$i] );
     $y = substr($effdate,0,4);
     #print "  y=$y, ty=$thisyear <br/>\n";
@@ -1683,7 +1685,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
     next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
-$com ) =
+$com, $geo ) =
        split( / *; */, $lines[$i] );
     next if ( $mak =~ /tz,/ );
     $fld = "";
@@ -1853,7 +1855,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
     next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer,
-      $vol, $sty, $alc, $pr, $rate, $com ) = split( / *; */, $lines[$i] );
+      $vol, $sty, $alc, $pr, $rate, $com, $geo ) = split( / *; */, $lines[$i] );
     next if ( $qrylim eq "c" && (! $com || $com =~ /^ *\(/ ) );
       # Skip also comments like "(4 EUR)"
     if ( $qrylim =~ /^r(\d*)/ ){  # any rating
