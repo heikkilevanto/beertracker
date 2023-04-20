@@ -100,6 +100,7 @@ my $wday = param("wd");  # weekday
 my $effdate = param("ed");  # effective date. Drinks after midnight count as night before
 my $loc = param("l");  # location
 my $locparam = $loc; # Actual parameter, without being clever
+my $geo = param("g");  # Geolocation f ex "[55.6531712/12.5042688]"
 my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
 my $beer= param("b");  # beer
 my $vol = param("v");  # volume, in cl
@@ -253,6 +254,7 @@ while (<F>) {
       $years{$1}++;
     }
   }
+  my $g="";  # geolocation
   my $restname = "";
   $m = $m || "";
   $restname = "$1$l" if ( $m  =~ /^(Restaurant,)/i );
@@ -433,6 +435,7 @@ if ( $q->request_method eq "POST" ) {
   }
   if ( $mak !~ /tz,/i ) {
     $loc = $thisloc unless $loc;  # Always default to the last location, except for tz lines
+    #$loc .= " $geo" if ($geo); # Append the geolocation, if we have one
   }
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $vol = $1 if ( $1 );
@@ -576,6 +579,7 @@ print $q->header(
   -X_beertracker => "This beertracker is my hobby project. It is open source",
   -X_author => "Heikki Levanto",
   -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
+print "<!DOCTYPE html>\n";
 print "<html><head>\n";
 print "<title>Beer</title>\n";
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
@@ -615,23 +619,60 @@ if ( !@lines && ! $op ) {
 }
 
 ######################
-# Javascript trickery to clear fields when clicked on
+# Javascript trickery. Most of the logic is on the server side, but a few
+# things have to be done in the browser.
+
+# If fielfs should clear when clicked on
 # Easier to use on my phone. Can be disabled with the Clr checkbox.
-# Also a two-liner to redirect to a new page from the 'Show' menu when
-# that changes
+
 my $script = <<'SCRIPTEND';
-  var clearonclick = true;
-  function clearinputs() {
+  var clearonclick = true; // Clear inputs when clicked
+SCRIPTEND
+
+$script .= <<'SCRIPTEND';
+  function clearinputs() {  // Clear all inputs, used by the 'clear' button
     var inputs = document.getElementsByTagName('input');
     for (var i = 0; i < inputs.length; i++ ) {
       if ( inputs[i].type == "text" )
         inputs[i].value = "";
     }
   };
+SCRIPTEND
+
+# A simple two-liner to redirect to a new page from the 'Show' menu when
+# that changes
+$script .= <<'SCRIPTEND';
   var changeop = function(to) {
     document.location = to;
   }
 SCRIPTEND
+
+# Try to get the geolocation. Async function, to wait for the user to give
+# permission (for good, we hope)
+# Seems not to work on FF. Ok on Chrome, which I still use on my mobile
+$script .= <<'SCRIPTEND';
+  var geoloc = "";
+  console.log("Starting geoloc script");
+  function savelocation (myposition) {
+    console.log("Reading location from " + myposition);
+    geoloc = "[" + myposition.coords.latitude + "/" + myposition.coords.longitude + "]";
+    console.log("Got location: " + geoloc );
+    //document.write("Got location: " + geoloc + "<br/" );
+    var geo = document.getElementById("geo");
+    if(geo) { geo.value = geoloc; }
+  }
+  function getlocation () {
+    if (navigator.geolocation) {
+        console.log("Getting location");
+        navigator.geolocation.getCurrentPosition(savelocation);
+        console.log("Get location done: " + geoloc);
+      } else {
+        console.log("No geoloc support");
+      }
+  }
+  getlocation();
+SCRIPTEND
+
 print "<script>\n$script</script>\n";
 
 
@@ -661,10 +702,11 @@ if ( $edit && $foundline ) {
 } else { # fields to enter date and time
   print "<tr><td><input name='d' value='' $sz1n placeholder='" . datestr ("%F") . "' /></td>\n";
   print "<td><input name='t' value='' $sz3n placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
-
 }
-print "<tr><td>
-  <input name='l' value='$loc' placeholder='Location' $sz1 /></td>\n";
+# Geolocation
+print "<tr><td $c2><input name='g' value='' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
+
+print "<tr><td><input name='l' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
 print "<td><input name='s' value='$sty' $sz1
 placeholder='Style'/></td></tr>\n";
 print "<tr><td>
@@ -696,7 +738,7 @@ if ( $edit && $foundline ) {
   print "&nbsp;<input type='submit' name='submit' value='Delete'/></td></tr>\n";
 } else {
   print "<tr><td><input type='submit' name='submit' value='Record'/>\n";
-  print "&nbsp;<input type='button' value='clear' onclick='clearinputs()'/></td>\n";
+  print "&nbsp;<input type='button' value='clear' onclick='getlocation();clearinputs()'/></td>\n";
   print "<td><select name='ops' " .
               "onchange='document.location=\"$url?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
@@ -1602,6 +1644,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   print "For a new box wine (or booze bottle, etc), enter the price as negative.<br/>\n";
   print "When using wine for cooking, or for guests, enter a negative volume. That <br/>\n";
   print "gets subtracted from the box without affecting your stats.<br/>\n";
+
   exit();
 
 } elsif ( $op eq "full" ) {
