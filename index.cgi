@@ -438,6 +438,7 @@ if ( $q->request_method eq "POST" ) {
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $vol = $1 if ( $1 );
   }
+  # Try to guess missing values from previous lines
   my $priceguess = "";
   my $i = scalar( @lines )-1;
   while ( $i > 0 && $beer
@@ -559,8 +560,8 @@ if ( $q->request_method eq "POST" ) {
 my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
     split( / *; */, $lastline );
 if ($foundline) {  # can be undef, if a new data file
-  ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo) =
-      split( / *; */, $foundline );
+  ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, undef) =
+      split( / *; */, $foundline );   # do not copy geo
   }
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
@@ -653,7 +654,8 @@ $script .= <<'SCRIPTEND';
   var geoloc = "";
   console.log("Starting geoloc script");
   function savelocation (myposition) {
-    console.log("Reading location from " + myposition);
+    console.log("Reading location from ");
+    console.log(myposition);
     geoloc = "[" + myposition.coords.latitude + "/" + myposition.coords.longitude + "]";
     console.log("Got location: " + geoloc );
     //document.write("Got location: " + geoloc + "<br/" );
@@ -662,10 +664,14 @@ $script .= <<'SCRIPTEND';
       if(geo) { geo.value = geoloc; }
     }
   }
+  function geoerror(err) {
+    console.log("GeoError" );
+    console.log(err);
+  }
   function getlocation () {
     if (navigator.geolocation) {
         console.log("Getting location");
-        navigator.geolocation.getCurrentPosition(savelocation);
+        navigator.geolocation.getCurrentPosition(savelocation,geoerror);
         console.log("Get location done: " + geoloc);
       } else {
         console.log("No geoloc support");
@@ -692,6 +698,7 @@ my $sz2n = "size='2'";
 my $sz2 = "$sz2n $clr";
 my $sz3n = "size='8'";
 my $sz3 = "$sz3n $clr";
+$geo = $geo || "";  # Old lines don't have a geo field
 if ( $edit && $foundline ) {
   # Still produces lot of warnings if editing a non-existing record, all values
   # are undefined. Should not happen anyway.
