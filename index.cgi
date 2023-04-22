@@ -660,8 +660,15 @@ $script .= <<'SCRIPTEND';
     console.log("Got location: " + geoloc );
     //document.write("Got location: " + geoloc + "<br/" );
     if ( ! document.getElementById("editrec") ) {
-      var geo = document.getElementById("geo");
-      if(geo) { geo.value = geoloc; }
+      //var geo = document.getElementById("geo");
+      //if(geo) { geo.value = geoloc; }
+      var el = document.getElementsByName("g");
+      if (el) {
+        for ( i=0; i<el.length; i++) {
+          el[i].value=geoloc;
+        }
+      }
+      console.log("Saved the location in " + el.length + " inputs");
     }
   }
   function geoerror(err) {
@@ -910,6 +917,7 @@ if ( $op =~ /board/i ) {
           print "<input type='hidden' name='l' value='$loc' />\n" ;
           print "<input type='hidden' name='v' value='$vol' />\n" ;
           print "<input type='hidden' name='p' value='$pr' />\n" ;
+          print "<input type='hidden' name='g' value='' />\n" ;  # will be set by the geo func
           print "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
           print "<input type='submit' name='submit' value='$vol cl - $pr kr'/> &nbsp;\n";
           print "</form>\n";
@@ -2008,8 +2016,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     print "<input type='hidden' name='v' value='' />\n";
     print "<input type='hidden' name='s' value='$sty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
-    print "<input type='hidden' name='l' value='$loc' />\n"
-      if ( $copylocation);
+    print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation);
+    print "<input type='hidden' name='g' id='geo' value='' />\n";
     if ($pr && $pr <0) { # If it is a box, assume price of zero
       print "<input type='hidden' name='p' value='X' />\n"
     }
