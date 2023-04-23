@@ -194,7 +194,8 @@ if ( $op eq "Datafile" ) {
   if ($max) {
     print "# Only the last $max lines\n";
     my $len = `wc -l $datafile`;
-    $len =~ s/[^0-9]//;
+    chomp($len);
+    $len =~ s/[^0-9]//g;
     $skip = $len-$max;
   }
   print "# Date Time; Weekday; Effective-date; Location; Brewery; Beer; Vol; " .
@@ -569,12 +570,13 @@ if ( $q->request_method eq "POST" ) {
 my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
     split( / *; */, $lastline );
 if ($foundline) {  # can be undef, if a new data file
-  ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, undef) =
+  ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo) =
       split( / *; */, $foundline );   # do not copy geo
   }
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
   $com = "";
+  $geo = "";  # Also geolocation
 }
 
 
