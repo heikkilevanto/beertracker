@@ -99,6 +99,7 @@ my $origstamp = $stamp; # Remember if we had a stamp from the input, indicating 
 my $wday = param("wd");  # weekday
 my $effdate = param("ed");  # effective date. Drinks after midnight count as night before
 my $loc = param("l");  # location
+$loc =~ s/ *\[.*$//; # Drop the distance from geolocation
 my $locparam = $loc; # Actual parameter, without being clever
 my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
 my $beer= param("b");  # beer
@@ -247,6 +248,8 @@ my $boxno = 1; # Box number, from a comment like (B17:240)
 my $boxvol = ""; # Remaining volume in the box
 my $boxline = ""; # Values for the 'box' beer ('B' or 'B17');
 my %geolocations; # Latest known geoloc for each location name
+$geolocations{"Home "} = "[55.6588/12.0825]";  # Special case for Home.
+  # My desktop gets the coordinates wrong.
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -691,21 +694,25 @@ $script .= <<'SCRIPTEND';
       var locval = loc.value + " ";
       if ( locval.startsWith(" ")) {
         console.log("Trying to guess the location");
+        const R = 6371e3; // earth radius in meters
+        var latcorr = Math.cos(myposition.coords.latitude * Math.PI/180);
         var bestdist = 99999;
         var bestloc = "";
         for (var i in geolocations) {
-          var dlat = myposition.coords.latitude - geolocations[i].lat;
-          var dlon = myposition.coords.longitude - geolocations[i].lon;
-          var dist2 = (dlat * dlat) + (dlon * dlon);
-          console.log(geolocations[i].name, " ", dist2);
-          if ( dist2 < bestdist ) {
-            bestdist = dist2;
+          var dlat = (myposition.coords.latitude - geolocations[i].lat) * Math.PI / 180 * latcorr;
+          var dlon = (myposition.coords.longitude - geolocations[i].lon) * Math.PI / 180;
+          var dist = Math.round(Math.sqrt((dlat * dlat) + (dlon * dlon)) * R);
+          console.log(geolocations[i].name, " ", dist);
+          if ( dist < bestdist ) {
+            bestdist = dist;
             bestloc = geolocations[i].name;
           }
         }
         console.log("Best match: " + bestloc + " at " + bestdist );
-        if (bestloc && bestdist < 1) {
-          loc.value = " " + bestloc;
+
+        if (bestloc) {
+          //bestdist = Math.round(Math.sqrt(bestdist) * R);
+          loc.value = " " + bestloc + " [" + bestdist + "m]";
         }
       }
     }
@@ -825,6 +832,7 @@ if ( !$op) {
 # Beer list for the location. Scraped from their website
 if ( $op =~ /board/i ) {
   $locparam = $loc unless ($locparam); # can happen after posting
+  $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display: inline; 'class='no-print' >\n";
   print "Beer list for\n";
@@ -846,7 +854,7 @@ if ( $op =~ /board/i ) {
     if ($qry ne "IPA" && $scrapers{$locparam});
   print "<p/>\n";
   if (!$scrapers{$locparam}) {
-    print "Sorry, no  beer list for $locparam - showing Ølbaren instead<br/>\n";
+    print "Sorry, no  beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
     $locparam="Ølbaren"; # A good default
   } ;
   {
