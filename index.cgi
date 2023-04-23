@@ -246,6 +246,7 @@ my %years;  # Keep track which years we have seen, for the "more" links
 my $boxno = 1; # Box number, from a comment like (B17:240)
 my $boxvol = ""; # Remaining volume in the box
 my $boxline = ""; # Values for the 'box' beer ('B' or 'B17');
+my %geolocations; # Latest known geoloc for each location name
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -307,6 +308,10 @@ while (<F>) {
   if ( ( $m  =~ /^Restaurant,/i ) ) {
     $restaurants{$l} = $m; # Remember style
     next; # do not sum restaurant lines, drinks filed separately
+  }
+  if ($l && $g ) {
+    $geolocations{$l} = $g; # Save the last seen location
+    # TODO: Later we may start taking averages, or something
   }
 
   $c = "" unless ($c);
@@ -498,7 +503,7 @@ if ( $q->request_method eq "POST" ) {
   } else {
     $pr = price($pr);
   }
-  if ($vol < 0 ) { # Neg vol means not consumed (by me).
+  if (!$vol || $vol < 0 ) { # Neg vol means not consumed (by me).
     $pr = "";
     $alc = "";
   }
@@ -656,41 +661,63 @@ $script .= <<'SCRIPTEND';
   var changeop = function(to) {
     document.location = to;
   }
+
 SCRIPTEND
 
 # Try to get the geolocation. Async function, to wait for the user to give
 # permission (for good, we hope)
-# Seems not to work on FF. Ok on Chrome, which I still use on my mobile
+# (Note, on FF I needed to uninstall the geoclue package before I could get
+# locations on my desktop machine)
+$script .= "var geolocations = [ \n";
+for my $k (keys(%geolocations) ) {
+  my ($lat,$lon) = $geolocations{$k} =~ "([-0-9.]+)/([-0-9.]+)";
+  $script .= " { name: '$k', lat: $lat, lon: $lon }, \n";
+}
+$script .= " ]; \n";
+
 $script .= <<'SCRIPTEND';
   var geoloc = "";
-  console.log("Starting geoloc script");
   function savelocation (myposition) {
-    console.log("Reading location from ");
-    console.log(myposition);
     geoloc = "[" + myposition.coords.latitude + "/" + myposition.coords.longitude + "]";
-    console.log("Got location: " + geoloc );
-    //document.write("Got location: " + geoloc + "<br/" );
-    if ( ! document.getElementById("editrec") ) {
-      //var geo = document.getElementById("geo");
-      //if(geo) { geo.value = geoloc; }
+    if ( ! document.getElementById("editrec") ) { // if editing, keep as is.
       var el = document.getElementsByName("g");
       if (el) {
         for ( i=0; i<el.length; i++) {
           el[i].value=geoloc;
         }
       }
-      console.log("Saved the location in " + el.length + " inputs");
+      console.log("Saved the location " + geoloc + " in " + el.length + " inputs");
+      var loc = document.getElementById("loc");
+      var locval = loc.value + " ";
+      if ( locval.startsWith(" ")) {
+        console.log("Trying to guess the location");
+        var bestdist = 99999;
+        var bestloc = "";
+        for (var i in geolocations) {
+          var dlat = myposition.coords.latitude - geolocations[i].lat;
+          var dlon = myposition.coords.longitude - geolocations[i].lon;
+          var dist2 = (dlat * dlat) + (dlon * dlon);
+          console.log(geolocations[i].name, " ", dist2);
+          if ( dist2 < bestdist ) {
+            bestdist = dist2;
+            bestloc = geolocations[i].name;
+          }
+        }
+        console.log("Best match: " + bestloc + " at " + bestdist );
+        if (bestloc && bestdist < 1) {
+          loc.value = " " + bestloc;
+        }
+      }
     }
   }
+
   function geoerror(err) {
     console.log("GeoError" );
     console.log(err);
   }
   function getlocation () {
     if (navigator.geolocation) {
-        console.log("Getting location");
         navigator.geolocation.getCurrentPosition(savelocation,geoerror);
-        console.log("Get location done: " + geoloc);
       } else {
         console.log("No geoloc support");
       }
@@ -703,7 +730,7 @@ print "<script>\n$script</script>\n";
 
 #############################
 # Main input form
-print "\n<form method='POST' accept-charset='UTF-8' class='no-print' >\n";
+print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
 print "<table >";
 my $clr = "Onclick='if (clearonclick) {value=\"\";}'";
 my $c2 = "colspan='2'";
@@ -729,6 +756,7 @@ if ( $edit && $foundline ) {
   # fields to enter date and time
   print "<tr><td><input name='d' value='' $sz1n placeholder='" . datestr ("%F") . "' /></td>\n";
   print "<td><input name='t' value='' $sz3n placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
+  $loc = " " . $loc; # Mark it as uncertain
 }
 # Geolocation
 print "<tr><td $c2><input name='g' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
