@@ -189,10 +189,19 @@ if ( $op eq "Datafile" ) {
 
   print "# Dump of beerdata file for '". $q->remote_user() .
     "' as of ". datestr() . "\n";
-  print "# Date Time; Weekday; Effective-date; Location; Brewery; Beer; Vol; Style; Alc; Price; Rating; Comment\n";
+  my $max = param("maxl");
+  my $skip = -1;
+  if ($max) {
+    print "# Only the last $max lines\n";
+    my $len = `wc -l $datafile`;
+    $len =~ s/[^0-9]//;
+    $skip = $len-$max;
+  }
+  print "# Date Time; Weekday; Effective-date; Location; Brewery; Beer; Vol; " .
+    "Style; Alc; Price; Rating; Comment; GeoCoords\n";
   while (<F>) {
     chomp();
-    print "$_ \n";
+    print "$_ \n" unless ($skip-- >0);
   }
   close(F);
   exit();
@@ -1662,6 +1671,9 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   print "When using wine for cooking, or for guests, enter a negative volume. That <br/>\n";
   print "gets subtracted from the box without affecting your stats.<br/>\n";
 
+  print "<p/><hr/>\n";
+  print "Debug info <br/>\n";
+  print "<a href=$url?o=Datafile&maxl=50>Tail of the data file</a><br/>\n";
   exit();
 
 } elsif ( $op eq "full" ) {
