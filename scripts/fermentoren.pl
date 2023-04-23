@@ -61,7 +61,7 @@ my @taps;
 my $count = 1;
 foreach my $design ($dom->findnodes($xpath)) {
   my @beer;
-  # print STDERR "=========$count: " . $design->toString() . "\n";
+  print STDERR "=========$count: " . $design->toString() . "\n";
 
   my ($number,$model,$maker,$type,$abv, $other);
 
@@ -108,7 +108,7 @@ foreach my $design ($dom->findnodes($xpath)) {
 
   if ($model) {
     push @taps, $tapItem;
-    #print STDERR "=== $count: " . to_json($tapItem, {pretty=>1}). "\n";
+    print STDERR "=== $count: " . to_json($tapItem, {pretty=>1}). "\n";
   };
   $count++;
 
