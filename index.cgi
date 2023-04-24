@@ -221,6 +221,7 @@ my $lastline = "";
 my $thisloc = "";
 my $lastdatesum = 0.0;
 my $lastdatemsum = 0;
+my $lasteffdate = "";
 my $todaydrinks = "";
 my $copylocation = 0;  # should the copy button copy location too
 my $thisdate = "";
@@ -249,7 +250,13 @@ my $boxvol = ""; # Remaining volume in the box
 my $boxline = ""; # Values for the 'box' beer ('B' or 'B17');
 my %geolocations; # Latest known geoloc for each location name
 $geolocations{"Home "} = "[55.6588/12.0825]";  # Special case for Home.
-  # My desktop gets the coordinates wrong.
+  # My desktop gets the coordinates wrong. Somewhere in Roskilde Fjord
+  # Note also the trailing space, to distinguish from the ordinary 'Home'
+  # That gets filtered away before saving.
+  # (This could be saved in each users config, if we had such)
+my $alcinbody = 0; # Grams of alc inside my body
+my $balctime = 0; # Time of the last drink
+my %bloodalc; # max blood alc for each day
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -268,7 +275,7 @@ while (<F>) {
       $years{$1}++;
     }
   }
-  my $restname = "";
+  my $restname = ""; # Restaurants are like "Restaurant, Thai"
   $m = $m || "";
   $restname = "$1$l" if ( $m  =~ /^(Restaurant,)/i );
   $thisloc = $l if $l;
@@ -282,7 +289,7 @@ while (<F>) {
     $ratecount{$b}++;
   }
   if ( ! $edit || ($edit eq $t) ) {
-    $foundline = $_;
+    $foundline = $_; # Remember the last line, or the one we have edited
   }
   $lastline = $_;
   $a = number($a);  # Sanitize numbers
@@ -314,8 +321,8 @@ while (<F>) {
   }
   if ($l && $g ) {
     $geolocations{$l} = $g; # Save the last seen location
-    # TODO: Later we may start taking averages, or something
-  }
+    # TODO: Later we may start taking averages, or collect a few data points for each
+  } # Let's see how precise it seems to be
 
   $c = "" unless ($c);
   if ($c =~ /\(B(\d+):\d+\)/ ) {
@@ -335,13 +342,49 @@ while (<F>) {
     $lastdatesum = 0.0;
     $lastdatemsum = 0;
     $thisdate = "$wd; $ed";
+    $lasteffdate = $thisdate;
     $lastwday = $wd;
+    $alcinbody = 0; # Blood alcohol
+    $balctime = 0; # Time of the last drink
   }
+  # Blood alcohol
+  if ($a && $v && $p>=0  ) {
+    my $weight = 120; # kg, approx
+    my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
+    my $drtime = $1 + $2/60 if ( $t =~ / (\d\d):(\d\d)/ );   # time in fractional hours
+    if ($drtime < $balctime ) { $drtime += 24; } # past midnight
+    my $timediff = $drtime - $balctime;
+    $alcinbody -= $weight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
+    if ($alcinbody < 0) { $alcinbody = 0; }
+    $balctime = $drtime;
+    $alcinbody += $a * $v / $onedrink * 12 ; # grams of alc in body
+    my $ba = $alcinbody / ( $weight * .68 ); # non-fat weight
+    if ( $ba > ( $bloodalc{$thisdate} || 0 ) ) {
+      $bloodalc{$thisdate} = $ba;
+    }
+    $bloodalc{$t} = $ba;
+    #print STDERR "$thisdate '$effdate' : $alcinbody g = $ba\n" if ( $t =~ /2023-04-2/ );
+  }
+
   $lastdatesum += ( $a * $v ) if ($a && $v && $p>=0); # neg price means whole box
   $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
   if ( $effdate eq "$wd; $ed" ) { # today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
-      $todaydrinks .= ", $lastdatemsum kr." if $lastdatemsum > 0  ;
+      $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
+      if ($bloodalc{$effdate}) {
+        $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$effdate});
+        # TODO - This replicates the calculations above, move to a helper func
+        my $curtime = datestr("%H:%M",0,1);
+        my $weight = 120; # kg, approx
+        my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
+        my $drtime = $1 + $2/60 if ( $curtime =~ /(\d\d):(\d\d)/ );   # time in fractional hours
+        if ($drtime < $balctime ) { $drtime += 24; } # past midnight
+        my $timediff = $drtime - $balctime;
+        $alcinbody -= $weight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
+        if ($alcinbody < 0) { $alcinbody = 0; }
+        my $ba = $alcinbody / ( $weight * .68 ); # non-fat weight
+        $todaydrinks .= sprintf(" - %0.2f‰",$ba);
+      }
   }
   if ( $ed gt $weekago && $p >= 0 ) {
     $weeksum += $a * $v;
@@ -360,7 +403,10 @@ while (<F>) {
 
 if ( ! $todaydrinks ) { # not today
   $todaydrinks = "($lastwday: " .
-    sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr)" ;
+    sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr ";
+  $todaydrinks .=  sprintf("%4.2f‰",($bloodalc{$lasteffdate}))
+    if ($lasteffdate && $bloodalc{$lasteffdate});
+  $todaydrinks .= ")" ;
   $copylocation = 1;
   my $today = datestr("%F");
   if ( $calmon && $today =~ /$calmon-(\d\d)/ ) {
@@ -379,6 +425,7 @@ if ($boxline) {
   $pr=0; # Already paid
   ($defaultvol) = $volumes{'G'} =~ /^(\d+)/;
 }
+
 
 # Remember some values to display in the comment box when no comment to show
 $weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
@@ -696,7 +743,7 @@ $script .= <<'SCRIPTEND';
         console.log("Trying to guess the location");
         const R = 6371e3; // earth radius in meters
         var latcorr = Math.cos(myposition.coords.latitude * Math.PI/180);
-        var bestdist = 99999;
+        var bestdist = 1000;  // 1km is too far to count
         var bestloc = "";
         for (var i in geolocations) {
           var dlat = (myposition.coords.latitude - geolocations[i].lat) * Math.PI / 180 * latcorr;
@@ -1954,7 +2001,12 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         print "<br/>$lastwday ";
         print "$lastloc2: " . unit($locdrinks,"d"). unit($locmsum, "kr"). "\n";
         if ($averages{$lastdate} && $locdrinks eq $daydrinks && $lastdate ne $effdate) {
-          print " (a=" . unit($averages{$lastdate},"d"). " )<br/>\n";
+          print " (a=" . unit($averages{$lastdate},"d"). " )\n";
+          my $k = "$lastwday; $lastdate";
+          if ($bloodalc{$k}) {
+            print " ". unit(sprintf("%0.2f",$bloodalc{$k}), "‰");
+          }
+          print "<br/>\n";
         } # fl avg on loc line, if not going to print a day summary line
         # Restaurant copy button
         print "<form method='POST' style='display: inline;' class='no-print'>\n";
@@ -1979,6 +2031,10 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
           print " <b>$lastwday</b>: ". unit($daydrinks,"d"). unit($daymsum,"kr");
           if ($averages{$lastdate}) {
             print " (a=" . unit($averages{$lastdate},"d"). " )\n";
+          }
+          my $k = "$lastwday; $lastdate";
+          if ($bloodalc{$k}) {
+            print " ". unit(sprintf("%0.2f",$bloodalc{$k}), "‰");
           }
           print "<br/>\n";
         }
@@ -2020,7 +2076,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       print filt("[$sty]") . newmark($sty) . " "   if ($sty);
       if ($sty || $pr || $alc) {
-        print units($pr, $vol, $alc);
+        print units($pr, $vol, $alc, $bloodalc{$stamp});
         #print "" . ($seen{$b} || ""). " ";
         if ( $ratecount{$beer} ) {
           #print "s=$seen{$beer} rs=$ratesum{$beer} rc=$ratecount{$beer} "; # ###
@@ -2332,12 +2388,16 @@ sub units {
   my $pr = shift;
   my $vol = shift;
   my $alc = shift;
+  my $bloodalc = shift;
   my $s = unit($pr,"kr") .
     unit($vol, "cl").
     unit($alc,'%');
   if ( $alc && $vol && $pr >= 0) {
     my $dr = sprintf("%1.2f", ($alc * $vol) / $onedrink );
     $s .= unit($dr, "d");
+  }
+  if ($bloodalc) {
+    $s .= unit( sprintf("%0.2f",$bloodalc), "‰");
   }
   return $s;
 }
