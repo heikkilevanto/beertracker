@@ -628,10 +628,11 @@ if ($foundline) {  # can be undef, if a new data file
   ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo) =
       split( / *; */, $foundline );   # do not copy geo
   }
+if (! $geo) { $geo="";}   # Old lines don't have a geo field
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
   $com = "";
-  $geo = "";  # Also geolocation
+  $geo = "";  # And no geolocation
 }
 
 
@@ -740,7 +741,6 @@ $script .= <<'SCRIPTEND';
       var loc = document.getElementById("loc");
       var locval = loc.value + " ";
       if ( locval.startsWith(" ")) {
-        console.log("Trying to guess the location");
         const R = 6371e3; // earth radius in meters
         var latcorr = Math.cos(myposition.coords.latitude * Math.PI/180);
         var bestdist = 1000;  // 1km is too far to count
@@ -749,16 +749,14 @@ $script .= <<'SCRIPTEND';
           var dlat = (myposition.coords.latitude - geolocations[i].lat) * Math.PI / 180 * latcorr;
           var dlon = (myposition.coords.longitude - geolocations[i].lon) * Math.PI / 180;
           var dist = Math.round(Math.sqrt((dlat * dlat) + (dlon * dlon)) * R);
-          console.log(geolocations[i].name, " ", dist);
           if ( dist < bestdist ) {
             bestdist = dist;
             bestloc = geolocations[i].name;
           }
         }
-        console.log("Best match: " + bestloc + " at " + bestdist );
+        // console.log("Best match: " + bestloc + " at " + bestdist );
 
         if (bestloc) {
-          //bestdist = Math.round(Math.sqrt(bestdist) * R);
           loc.value = " " + bestloc + " [" + bestdist + "m]";
         }
       }
@@ -776,8 +774,12 @@ $script .= <<'SCRIPTEND';
         console.log("No geoloc support");
       }
   }
-  getlocation();
+
+  document.onload = getlocation();
+  setInterval(getlocation, 60*1000);
 SCRIPTEND
+# Might be nice to get the date and time to update automagically.
+# Not important, we just use server side time and the TZ trick.
 
 print "<script>\n$script</script>\n";
 
@@ -797,7 +799,6 @@ my $sz2n = "size='2'";
 my $sz2 = "$sz2n $clr";
 my $sz3n = "size='8'";
 my $sz3 = "$sz3n $clr";
-$geo = $geo || "";  # Old lines don't have a geo field
 if ( $edit && $foundline ) {
   # Still produces lot of warnings if editing a non-existing record, all values
   # are undefined. Should not happen anyway.
@@ -816,8 +817,7 @@ if ( $edit && $foundline ) {
 print "<tr><td $c2><input name='g' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
 
 print "<tr><td><input name='l' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
-print "<td><input name='s' value='$sty' $sz1
-placeholder='Style'/></td></tr>\n";
+print "<td><input name='s' value='$sty' $sz1 placeholder='Style'/></td></tr>\n";
 print "<tr><td>
   <input name='m' value='$mak' $sz1 placeholder='Brewery'/></td>\n";
 print "<td>
