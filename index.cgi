@@ -708,6 +708,22 @@ $script .= <<'SCRIPTEND';
   };
 SCRIPTEND
 
+# Simple script to show the normally hidden lines for entering date, time,
+# and geolocation
+$script .= <<'SCRIPTEND';
+  function showrows() {
+    console.log("Unhiding...");
+    var rows = [ "td1", "td2", "td3"];
+    for (i=0; i<rows.length; i++) {
+      var r = document.getElementById(rows[i]);
+      console.log("Unhiding " + i + ":" + rows[i], r);
+      if (r) {
+        r.hidden = false;
+      }
+    }
+  }
+SCRIPTEND
+
 # A simple two-liner to redirect to a new page from the 'Show' menu when
 # that changes
 $script .= <<'SCRIPTEND';
@@ -783,6 +799,7 @@ SCRIPTEND
 # Might be nice to get the date and time to update automagically.
 # Not important, we just use server side time and the TZ trick.
 
+
 print "<script>\n$script</script>\n";
 
 
@@ -801,6 +818,7 @@ my $sz2n = "size='2'";
 my $sz2 = "$sz2n $clr";
 my $sz3n = "size='8'";
 my $sz3 = "$sz3n $clr";
+my $hidden = "hidden";
 if ( $edit && $foundline ) {
   # Still produces lot of warnings if editing a non-existing record, all values
   # are undefined. Should not happen anyway.
@@ -809,14 +827,15 @@ if ( $edit && $foundline ) {
   print "<tr><td><input name='st' value='$stamp' $sz1n placeholder='Stamp' /></td>\n";
   print "<td><input name='wd' value='$wday' $sz2n placeholder='wday' />\n";
   print "<input name='ed' value='$effdate' $sz3n placeholder='Eff' /></td></tr>\n";
+  $hidden = "";  # show the geoloc
 } else {
   # fields to enter date and time
-  print "<tr><td><input name='d' value='' $sz1n placeholder='" . datestr ("%F") . "' /></td>\n";
-  print "<td><input name='t' value='' $sz3n placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
+  print "<tr><td id='td1' hidden><input name='d' value='' $sz1n placeholder='" . datestr ("%F") . "' /></td>\n";
+  print "<td id='td2' hidden><input name='t' value='' $sz3n placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
   $loc = " " . $loc; # Mark it as uncertain
 }
 # Geolocation
-print "<tr><td $c2><input name='g' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
+print "<tr><td id='td3' $hidden $c2><input name='g' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
 
 print "<tr><td><input name='l' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
 print "<td><input name='s' value='$sty' $sz1 placeholder='Style'/></td></tr>\n";
@@ -836,10 +855,14 @@ for my $ro (0 .. scalar(@ratings)-1) {
   print " selected='selected'" if ( $ro eq $rate );
   print  ">$ro - $ratings[$ro]</option>\n";
 }
-print "</select></td></tr>\n";
+print "</select>\n";
+print " <span onclick='showrows();'>";
+print "^ </span>\n";
+print "</td></tr>\n";
 print "<tr>";
 print " <td $c6><textarea name='c' cols='36' rows='3'
-  placeholder='$todaydrinks'/>$com</textarea></td></tr>\n";
+  placeholder='$todaydrinks'/>$com</textarea>\n";
+print "</td></tr>\n";
 if ( $edit && $foundline ) {
   print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
   print "&nbsp;<span align=right>Clr ";
