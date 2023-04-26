@@ -698,6 +698,18 @@ my $script = <<'SCRIPTEND';
   var clearonclick = true; // Clear inputs when clicked
 SCRIPTEND
 
+# Debug div to see debug output on my phone
+$script .= <<'SCRIPTEND';
+  function db(msg) {
+    var d = document.getElementById("debug");
+    if (d) {
+      d.hidden = false;
+      d.innerHTML += msg + "<br/>";
+    }
+  }
+SCRIPTEND
+
+
 $script .= <<'SCRIPTEND';
   function clearinputs() {  // Clear all inputs, used by the 'clear' button
     var inputs = document.getElementsByTagName('input');
@@ -793,8 +805,11 @@ $script .= <<'SCRIPTEND';
       }
   }
 
+  // Get the location in the beginning, when ever window gets focus, and once a minute when active
   document.onload = getlocation();
+  window.addEventListener('focus', getlocation);
   setInterval(getlocation, 60*1000);
+
 SCRIPTEND
 # Might be nice to get the date and time to update automagically.
 # Not important, we just use server side time and the TZ trick.
@@ -896,6 +911,7 @@ if ( $edit && $foundline ) {
 print "</table>\n";
 print "</form>\n";
 
+print "<div id='debug' hidden ><hr/>Debug<br/></div>\n";
 if ( !$op) {
   $op = "Graph";  # Default to showing the graph
 } # also on mobile devices
