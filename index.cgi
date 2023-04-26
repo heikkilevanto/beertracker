@@ -256,7 +256,7 @@ $geolocations{"Home "} = "[55.6588/12.0825]";  # Special case for Home.
   # (This could be saved in each users config, if we had such)
 my $alcinbody = 0; # Grams of alc inside my body
 my $balctime = 0; # Time of the last drink
-my %bloodalc; # max blood alc for each day
+my %bloodalc; # max blood alc for each day, and current bloodalc for each line
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -363,6 +363,7 @@ while (<F>) {
       $bloodalc{$thisdate} = $ba;
     }
     $bloodalc{$t} = $ba;
+    #print STDERR "$t     b:" . sprintf("%8.2f %8.2f",$ba,$bloodalc{$thisdate}). " \n"  if ($t=~/2023-04-26/) ; # ###
     #print STDERR "$thisdate '$effdate' : $alcinbody g = $ba\n" if ( $t =~ /2023-04-2/ );
   }
 
@@ -372,7 +373,7 @@ while (<F>) {
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
       $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
       if ($bloodalc{$effdate}) {
-        $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$effdate});
+        $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$effdate}); # max of the day
         # TODO - This replicates the calculations above, move to a helper func
         my $curtime = datestr("%H:%M",0,1);
         my $weight = 120; # kg, approx
@@ -380,10 +381,11 @@ while (<F>) {
         my $drtime = $1 + $2/60 if ( $curtime =~ /(\d\d):(\d\d)/ );   # time in fractional hours
         if ($drtime < $balctime ) { $drtime += 24; } # past midnight
         my $timediff = $drtime - $balctime;
-        $alcinbody -= $weight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
-        if ($alcinbody < 0) { $alcinbody = 0; }
-        my $ba = $alcinbody / ( $weight * .68 ); # non-fat weight
+        my $curalc = $alcinbody - $weight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
+        if ($curalc < 0) { $curalc = 0; }
+        my $ba = $curalc / ( $weight * .68 ); # non-fat weight
         $todaydrinks .= sprintf(" - %0.2f‰",$ba);
+           # if ( $bloodalc{$effdate} - $ba > 0.01 );
       }
   }
   if ( $ed gt $weekago && $p >= 0 ) {
@@ -2015,10 +2017,11 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         print "<input type='hidden' name='m' value='$rtype' />\n";
         $rtype =~ s/Restaurant, //;
         print "<input type='hidden' name='b' value='Food and Drink' />\n";
-        print "<input type='hidden' name='v' value='' />\n";
+        print "<input type='hidden' name='v' value='x' />\n";
         print "<input type='hidden' name='s' value='$rtype' />\n";
-        print "<input type='hidden' name='a' value='0' />\n";
+        print "<input type='hidden' name='a' value='x' />\n";
         print "<input type='hidden' name='p' value='$locmsum kr' />\n";
+        print "<input type='hidden' name='g' value='' />\n";
         $rtype =~ s/^Restaurant, //;
         print "<input type='submit' name='submit' value='Rest'
                     style='display: inline; font-size: x-small' />\n";
