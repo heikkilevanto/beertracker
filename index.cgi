@@ -249,9 +249,13 @@ my $boxno = 1; # Box number, from a comment like (B17:240)
 my $boxvol = ""; # Remaining volume in the box
 my $boxline = ""; # Values for the 'box' beer ('B' or 'B17');
 my %geolocations; # Latest known geoloc for each location name
-$geolocations{"Home "} = "[55.6588/12.0825]";  # Special case for Home.
-  # My desktop gets the coordinates wrong. Somewhere in Roskilde Fjord
-  # Note also the trailing space, to distinguish from the ordinary 'Home'
+$geolocations{"Home "} = "[55.6588/12.0825]";  # Special case for FF.
+$geolocations{"Home  "} = "[55.6531712/12.5042688]";  # Chrome
+$geolocations{"Home  "} = "[55.6717389/12.5563058]";  # Chrome
+
+  # My desktop machine gets the coordinates wrong. FF says Somewhere in Roskilde
+  # Fjord, Chrome says in Valby...
+  # Note also the trailing space(s), to distinguish from the ordinary 'Home'
   # That gets filtered away before saving.
   # (This could be saved in each users config, if we had such)
 my $alcinbody = 0; # Grams of alc inside my body
