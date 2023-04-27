@@ -805,10 +805,10 @@ $script .= <<'SCRIPTEND';
       }
   }
 
-  // Get the location in the beginning, when ever window gets focus, and once a minute when active
+  // Get the location in the beginning, when ever window gets focus
   document.onload = getlocation();
   window.addEventListener('focus', getlocation);
-  setInterval(getlocation, 60*1000);
+  //setInterval(getlocation, 60*1000);
 
 SCRIPTEND
 # Might be nice to get the date and time to update automagically.
