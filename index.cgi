@@ -249,10 +249,9 @@ my $boxno = 1; # Box number, from a comment like (B17:240)
 my $boxvol = ""; # Remaining volume in the box
 my $boxline = ""; # Values for the 'box' beer ('B' or 'B17');
 my %geolocations; # Latest known geoloc for each location name
-$geolocations{"Home "} = "[55.6588/12.0825]";  # Special case for FF.
-$geolocations{"Home  "} = "[55.6531712/12.5042688]";  # Chrome
-$geolocations{"Home  "} = "[55.6717389/12.5563058]";  # Chrome
-
+$geolocations{"Home "} =   "[55.6588/12.0825]";  # Special case for FF.
+$geolocations{"Home  "} =  "[55.6531712/12.5042688]";  # Chrome
+$geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
   # My desktop machine gets the coordinates wrong. FF says Somewhere in Roskilde
   # Fjord, Chrome says in Valby...
   # Note also the trailing space(s), to distinguish from the ordinary 'Home'
@@ -760,6 +759,8 @@ for my $k (keys(%geolocations) ) {
 }
 $script .= " ]; \n";
 
+$script .= "var origloc=\" $loc\"; \n";
+
 $script .= <<'SCRIPTEND';
   var geoloc = "";
   function savelocation (myposition) {
@@ -777,7 +778,7 @@ $script .= <<'SCRIPTEND';
       if ( locval.startsWith(" ")) {
         const R = 6371e3; // earth radius in meters
         var latcorr = Math.cos(myposition.coords.latitude * Math.PI/180);
-        var bestdist = 1000;  // 1km is too far to count
+        var bestdist = 200;  // max acceptable distance
         var bestloc = "";
         for (var i in geolocations) {
           var dlat = (myposition.coords.latitude - geolocations[i].lat) * Math.PI / 180 * latcorr;
@@ -792,7 +793,10 @@ $script .= <<'SCRIPTEND';
 
         if (bestloc) {
           loc.value = " " + bestloc + " [" + bestdist + "m]";
+        } else {
+          loc.value = origloc;
         }
+
       }
     }
   }
