@@ -971,7 +971,6 @@ if ( $op =~ /board/i ) {
       }
       print "<table>\n";
       foreach $e ( @$beerlist )  {
-        # Skip brewery if the name contains same words, etc
         $mak = $e->{"maker"} || "" ;
         $beer = $e->{"beer"} || "" ;
         $sty = $e->{"type"} || "";
@@ -984,6 +983,7 @@ if ( $op =~ /board/i ) {
 
         my $disp = $mak;
         $disp =~ s/\b(the|brouwerij|brasserie|van|den)\b//ig; #stop words
+        $disp =~ s/(Schneider).*/$1/i;
         $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
         $disp =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
         $disp =~ s/^ +//;
@@ -994,6 +994,7 @@ if ( $op =~ /board/i ) {
         } else {
           $disp = filt($mak, "i", $disp,"board&l=$locparam") . ": ";
         }
+        $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
         $disp .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
         if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
           $disp .= " " .$sty;
@@ -1003,6 +1004,7 @@ if ( $op =~ /board/i ) {
         $mak =~ s/'//g; # Apostrophes break the input form below
         $beer =~ s/'//g; # So just drop them
         $sty =~ s/'//g;
+        $sty =~ s/IPA .*(England|Hazy).*/IPA, NE/i;
         my $origsty = $sty ;
         $sty =~ s/\b(Beer|Style)\b//i; # Stop words
         $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
