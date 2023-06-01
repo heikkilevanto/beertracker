@@ -322,7 +322,7 @@ while (<F>) {
     $restaurants{$l} = $m; # Remember style
     next; # do not sum restaurant lines, drinks filed separately
   }
-  if ($l && $g ) {
+  if ($l && $g && $g =~ /\[\d+\/\d+\]/ ) {  # skip 'X' and such
     $geolocations{$l} = $g; # Save the last seen location
     # TODO: Later we may start taking averages, or collect a few data points for each
   } # Let's see how precise it seems to be
@@ -578,6 +578,7 @@ if ( $q->request_method eq "POST" ) {
     $com =~ s/\(B\d+:\d+\) *$//;
     $com .= " (B$boxno:$boxvol)";
   }
+  $geo = "" unless ( $geo =~ /\[\d+\/\d+\]/ ); # Skip bad ones
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
   if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /\d+ cl/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
