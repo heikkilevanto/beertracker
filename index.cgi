@@ -322,11 +322,10 @@ while (<F>) {
     $restaurants{$l} = $m; # Remember style
     next; # do not sum restaurant lines, drinks filed separately
   }
-  if ($l && $g && $g =~ /\[\d+\/\d+\]/ ) {  # skip 'X' and such
+  if ($l && $g && $g =~ /^\[\d+.*]/ ) {  # skip 'X' and such
     $geolocations{$l} = $g; # Save the last seen location
     # TODO: Later we may start taking averages, or collect a few data points for each
   } # Let's see how precise it seems to be
-
   $c = "" unless ($c);
   if ($c =~ /\(B(\d+):\d+\)/ ) {
     my $bn = $1;
@@ -463,6 +462,8 @@ if ( $q->request_method eq "POST" ) {
             $hr -= 24 if ($hr >= 24);
           }
           $time = sprintf("%02d:%02d", $hr,$min);
+          $loc = ""; # Fall back to last values
+          $geo = "";
         }
       }
     } # date 'L'
@@ -578,7 +579,7 @@ if ( $q->request_method eq "POST" ) {
     $com =~ s/\(B\d+:\d+\) *$//;
     $com .= " (B$boxno:$boxvol)";
   }
-  $geo = "" unless ( $geo =~ /\[\d+\/\d+\]/ ); # Skip bad ones
+  $geo = "" unless ( $geo =~ /\[[-0-9.,\/]+\]/ ); # Skip bad ones
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
   if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /\d+ cl/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
@@ -753,6 +754,7 @@ SCRIPTEND
 # permission (for good, we hope)
 # (Note, on FF I needed to uninstall the geoclue package before I could get
 # locations on my desktop machine)
+
 $script .= "var geolocations = [ \n";
 for my $k (keys(%geolocations) ) {
   my ($lat,$lon) = $geolocations{$k} =~ "([-0-9.]+)/([-0-9.]+)";
