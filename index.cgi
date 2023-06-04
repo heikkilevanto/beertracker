@@ -1812,8 +1812,37 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
 
   print "<p/><hr/>\n";
   print "Debug info <br/>\n";
-  print "<a href=$url?o=Datafile&maxl=50>Tail of the data file</a><br/>\n";
+  print "<a href=$url?o=Datafile&maxl=30>Tail of the data file</a><br/>\n";
+  print "<a href=$url?o=geo>Geolocation summary</a><br/>\n";
   exit();
+
+} elsif ( $op eq "geo" ) {
+#####################
+# Geolocation summary
+  if (!$qry) {  # no location, list them all
+    print "Geolocations <br/>\n";
+    print "<table>\n";
+    foreach my $k (sort(keys(%geolocations))) {
+      print "<tr><td><a href='$url?o=geo&q=$k' >$k</a></td>";
+      my ($lo,$la) = geo( $geolocations{$k} );
+      print "<td>$lo</td><td>$la</td></tr>\n";
+    }
+    print "<table>\n";
+  } else { # loc given, list all occurrences of that location
+    my $i = scalar( @lines );
+    print "Geolocation for $qry <br/>\n";
+    my $defloc = $geolocations{$qry} || "";
+    print "Default geo: $defloc <br/>\n" if ($defloc);
+    while ( $i-- > 0 ){
+      ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
+$com, $geo ) =
+       split( / *; */, $lines[$i] );
+      next unless $geo;
+      next unless ($loc eq $qry);
+      print "$geo</br>\n";
+    }
+  }
+
 
 } elsif ( $op eq "full" ) {
   # Ignore for now, we print the full list later.
@@ -2465,6 +2494,14 @@ sub error {
   print "ERROR\n";
   print $msg;
   exit();
+}
+
+# Helper to validate and split a geolocation string
+sub geo {
+  my $g = shift;
+  my ($lo,$la) = $g =~ /\[([-0-9.]+)\/([-0-9.]+)\]/ ;
+  return ($lo,$la) if ($la);
+  return undef;
 }
 
 # Helper to get a date string, with optional delta (in days)
