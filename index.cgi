@@ -115,7 +115,7 @@ my $date = param("d"); # Date, if entered. Overrides stamp and effdate.
 my $time = param("t"); # Time, if entered.
 my $del = param("x");  # delete/update last entry
 my $qry = param("q");  # filter query, greps the list
-my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "l" for extra links
+my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "l" for extra links, g for geodata
 my $yrlim = param("y"); # Filter by year
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
@@ -1835,7 +1835,9 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     print "<table>\n";
   } else { # loc given, list all occurrences of that location
     my $i = scalar( @lines );
-    print "<hr/>Geolocation for <b>$qry</b> <p/>\n";
+    print "<hr/>Geolocation for <b>$qry</b> &nbsp;";
+    print "<a href=$url?o=geo>Back</a>";
+    print "<p/>\n";
     my (undef,undef,$defloc) = geo($geolocations{$qry});
     print "Default geo: $defloc <p/>\n" if ($defloc);
     print "<table>\n";
@@ -1847,18 +1849,20 @@ $com, $geo ) =
       next unless $geo;
       next unless ($loc eq $qry);
       my ($la, $lo, $g) = geo($geo);
+      next unless ($lo);
       my $dist = geodist($defloc,$g);
       my $ddist = unit($dist,"m");
+      my $gdist;
       my $guess = "";
       if ($dist > 15.0) {
         $ddist = "<b>$ddist</b>";
-        $guess = guessloc($g, $qry);
+        ($guess, $gdist) = guessloc($g, $qry);
+        $gdist = unit($gdist,"m");
       }
-      next unless ($lo);
       print "<tr>\n";
       print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
       print "<td align='right'>$ddist</td>";
-      print "<td>$guess</td>\n";
+      print "<td>(<b>$guess $gdist ?)</b></td>\n" if ($guess);
       # TODO Show distance from the default coords, and date stamp
       # TODO Make a link to edit the record, or to clear the coords
       # TODO Sort the list by geo coords or distance. Deduplicate
@@ -2036,12 +2040,14 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
 
   print "<br/>"if ($qry || $qrylim);
   print "<span class='no-print'>\n";
-  print "<a href='$url?q=" . uri_escape_utf8($qry) .
+  print "<a href='$url?q=" . uri_escape_utf8($qry) . "&y=" . uri_escape_utf8($yrlim) .
       "&f=r' >Ratings</a>\n";
-  print "<a href='$url?q=" . uri_escape_utf8($qry) .
+  print "<a href='$url?q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
       "&f=c' >Comments</a>\n";
-  print "<a href='$url?q=" . uri_escape_utf8($qry) .
+  print "<a href='$url?q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
       "&f=l' >Links</a>\n";
+  print "<a href='$url?q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
+      "&f=g' >Geo</a>\n";
   if ($qrylim) {
     print "<a href='$url?q=" . uri_escape_utf8($qry) . "'>All</a><br/>\n";
     for ( my $i = 0; $i < 11; $i++) {
@@ -2164,6 +2170,19 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
       print "<br/><b>$wday $date </b>" . filt($loc,"b") . newmark($loc) . loclink($loc);
       print "<br/>\n" ;
+      if ($qrylim eq "g" ) {
+        my ( undef, undef, $gg) = geo($geolocations{$loc});
+        my $tdist = geodist($geo, $gg);
+        if ( $tdist && $tdist > 1 ) {
+          $tdist = "<b>".unit($tdist,"m"). "</b>";
+        } else {
+          $tdist = "";
+        }
+        my ($guess, $gdist) = guessloc($gg,$loc);
+        $gdist = unit($gdist,"m");
+        $guess = " <b>($guess $gdist?)</b> " if ($guess);
+        print "Geo: $gg $tdist $guess<br/>\n" if ($gg || $guess || $tdist);
+      }
     }
     if ( $date ne $effdate ) {
       $time = "($time)";
@@ -2192,6 +2211,15 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
           # Doesn't look good on the phone
         }
         print "<br/>\n" ;
+        if ( $qrylim eq "g" && $geo ) {
+          my (undef, undef, $gg) = geo($geo);
+          my $dist = "";
+          $dist = geodist( $geolocations{$loc}, $geo);
+          my ($guess,$gdist) = guessloc($gg,$loc);
+          $guess = " <b>($guess " . unit($gdist,"m"). " ?)</b> " if ($guess);
+          print "Geo: $gg $guess <br/>\n";
+
+        }
       }
       if ($rate || $com) {
         print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
@@ -2525,10 +2553,11 @@ sub error {
 # returns ( lat, long, string ), or "" if not valid coord
 sub geo {
   my $g = shift;
+  return ("","","") unless ($g);
   $g =~ s/\[([-0-9.]+)\/([-0-9.]+)\]/$1 $2/ ;  # Old format geo string
   my ($la,$lo) = $g =~ /([0-9.-]+) ([0-9.-]+)/;
   return ($la,$lo,$g) if ($lo);
-  return "";
+  return ("","","");
 }
 
 # Helper to return distance between 2 geolocations
@@ -2538,6 +2567,7 @@ sub geodist {
   return "" unless ($g1 && $g2);
   my ($la1, $lo1, undef) = geo($g1);
   my ($la2, $lo2, undef) = geo($g2);
+  return "" unless ($la1 && $la2 && $lo1 && $lo2);
   my $pi = 3.141592653589793238462643383279502884197;
   my $earthR = 6371e3; # meters
   my $latcorr = cos($la1 * $pi/180 );
@@ -2551,7 +2581,9 @@ sub geodist {
 sub guessloc {
   my $g = shift;
   my $def = shift || ""; # def value, not good as a guess
-  return "" unless $g;
+  $def =~ s/ *$//;
+  $def =~ s/^ *//;
+  return ("",0) unless $g;
   my $dist = 200;
   my $guess = "";
   foreach my $k ( sort(keys(%geolocations)) ) {
@@ -2559,10 +2591,15 @@ sub guessloc {
     if ( $d < $dist ) {
       $dist = $d;
       $guess = $k;
+      $guess =~ s/ *$//;
+      $guess =~ s/^ *//;
     }
   }
-  $guess = "" if ($def eq $guess );
-  return $guess;
+  if ($def eq $guess ){
+    $guess = "";
+    $dist = 0;
+  }
+  return ($guess,$dist);
 }
 
 
