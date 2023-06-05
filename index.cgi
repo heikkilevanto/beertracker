@@ -109,7 +109,7 @@ my $alc = param("a");  # alc, in %vol, up to 1 decimal
 my $pr  = param("p");  # price, DKK
 my $rate= param("r");  # rating, 0=worst, 10=best
 my $com = param("c");  # Comments
-my $geo = param("g");  # Geolocation f ex "[55.6531712/12.5042688]"
+my $geo = param("g");  # Geolocation old: "[55.6531712/12.5042688]" new "55.6531712 12.5042688"
   # The rest are not in the data file
 my $date = param("d"); # Date, if entered. Overrides stamp and effdate.
 my $time = param("t"); # Time, if entered.
@@ -322,8 +322,9 @@ while (<F>) {
     $restaurants{$l} = $m; # Remember style
     next; # do not sum restaurant lines, drinks filed separately
   }
-  if ($l && $g && $g =~ /^\[\d+.*]/ ) {  # skip 'X' and such
-    $geolocations{$l} = $g; # Save the last seen location
+  if ($l && $g ) {
+    (undef, undef, $g) = geo($g); #
+    $geolocations{$l} = $g if ($g); # Save the last seen location
     # TODO: Later we may start taking averages, or collect a few data points for each
   } # Let's see how precise it seems to be
   $c = "" unless ($c);
@@ -579,7 +580,7 @@ if ( $q->request_method eq "POST" ) {
     $com =~ s/\(B\d+:\d+\) *$//;
     $com .= " (B$boxno:$boxvol)";
   }
-  $geo = "" unless ( $geo =~ /\[[-0-9.,\/]+\]/ ); # Skip bad ones
+  (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
   if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /\d+ cl/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
@@ -635,7 +636,7 @@ if ($foundline) {  # can be undef, if a new data file
   ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo) =
       split( / *; */, $foundline );   # do not copy geo
   }
-if (! $geo) { $geo="";}   # Old lines don't have a geo field
+(undef, undef, $geo ) = geo($geo);
 if ( ! $edit ) { # not editing, do not default rates and comments from last beer
   $rate = "";
   $com = "";
@@ -757,7 +758,7 @@ SCRIPTEND
 
 $script .= "var geolocations = [ \n";
 for my $k (keys(%geolocations) ) {
-  my ($lat,$lon) = $geolocations{$k} =~ "([-0-9.]+)/([-0-9.]+)";
+  my ($lat,$lon, undef) = geo($geolocations{$k});
   $script .= " { name: '$k', lat: $lat, lon: $lon }, \n";
 }
 $script .= " ]; \n";
@@ -767,7 +768,7 @@ $script .= "var origloc=\" $loc\"; \n";
 $script .= <<'SCRIPTEND';
   var geoloc = "";
   function savelocation (myposition) {
-    geoloc = "[" + myposition.coords.latitude + "/" + myposition.coords.longitude + "]";
+    geoloc = myposition.coords.latitude + " " + myposition.coords.longitude;
     if ( ! document.getElementById("editrec") ) { // if editing, keep as is.
       var el = document.getElementsByName("g");
       if (el) {
@@ -787,7 +788,7 @@ $script .= <<'SCRIPTEND';
           var dlat = (myposition.coords.latitude - geolocations[i].lat) * Math.PI / 180 * latcorr;
           var dlon = (myposition.coords.longitude - geolocations[i].lon) * Math.PI / 180;
           var dist = Math.round(Math.sqrt((dlat * dlat) + (dlon * dlon)) * R);
-          if ( dist < bestdist ) {
+          if ( dist < bestdist ) { // actually, dist squared, but sorts as well
             bestdist = dist;
             bestloc = geolocations[i].name;
           }
@@ -1818,29 +1819,52 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
 
 } elsif ( $op eq "geo" ) {
 #####################
-# Geolocation summary
+# Geolocation debug
   if (!$qry) {  # no location, list them all
-    print "Geolocations <br/>\n";
+    print "<hr><b>Geolocations</b><p/>\n";
     print "<table>\n";
+    print "<tr><td>Latitude</td><td>Longitude</td><td>Location</td></tr>\n";
+    # TODO Sort by geo coords instead of name
     foreach my $k (sort(keys(%geolocations))) {
-      print "<tr><td><a href='$url?o=geo&q=$k' >$k</a></td>";
-      my ($lo,$la) = geo( $geolocations{$k} );
-      print "<td>$lo</td><td>$la</td></tr>\n";
+      print "<tr>\n";
+      my ($la,$lo, $g) = geo( $geolocations{$k} );
+      print "<td>$la</td><td>$lo</td>";
+      print "<td><a href='$url?o=geo&q=$k' >$k</a></td>";
+      print "</tr>\n";
     }
     print "<table>\n";
   } else { # loc given, list all occurrences of that location
     my $i = scalar( @lines );
-    print "Geolocation for $qry <br/>\n";
-    my $defloc = $geolocations{$qry} || "";
-    print "Default geo: $defloc <br/>\n" if ($defloc);
+    print "<hr/>Geolocation for <b>$qry</b> <p/>\n";
+    my (undef,undef,$defloc) = geo($geolocations{$qry});
+    print "Default geo: $defloc <p/>\n" if ($defloc);
+    print "<table>\n";
+    print "<tr><td>Latitude</td><td>Longitude</td><td>Distance</d></tr>\n";
     while ( $i-- > 0 ){
       ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
 $com, $geo ) =
        split( / *; */, $lines[$i] );
       next unless $geo;
       next unless ($loc eq $qry);
-      print "$geo</br>\n";
+      my ($la, $lo, $g) = geo($geo);
+      my $dist = geodist($defloc,$g);
+      my $ddist = unit($dist,"m");
+      my $guess = "";
+      if ($dist > 15.0) {
+        $ddist = "<b>$ddist</b>";
+        $guess = guessloc($g, $qry);
+      }
+      next unless ($lo);
+      print "<tr>\n";
+      print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
+      print "<td align='right'>$ddist</td>";
+      print "<td>$guess</td>\n";
+      # TODO Show distance from the default coords, and date stamp
+      # TODO Make a link to edit the record, or to clear the coords
+      # TODO Sort the list by geo coords or distance. Deduplicate
+      print "</tr>\n";
     }
+    print "</table>\n";
   }
 
 
@@ -2497,12 +2521,50 @@ sub error {
 }
 
 # Helper to validate and split a geolocation string
+# Takes one string, in either new or old format
+# returns ( lat, long, string ), or "" if not valid coord
 sub geo {
   my $g = shift;
-  my ($lo,$la) = $g =~ /\[([-0-9.]+)\/([-0-9.]+)\]/ ;
-  return ($lo,$la) if ($la);
-  return undef;
+  $g =~ s/\[([-0-9.]+)\/([-0-9.]+)\]/$1 $2/ ;  # Old format geo string
+  my ($la,$lo) = $g =~ /([0-9.-]+) ([0-9.-]+)/;
+  return ($la,$lo,$g) if ($lo);
+  return "";
 }
+
+# Helper to return distance between 2 geolocations
+sub geodist {
+  my $g1 = shift;
+  my $g2 = shift;
+  return "" unless ($g1 && $g2);
+  my ($la1, $lo1, undef) = geo($g1);
+  my ($la2, $lo2, undef) = geo($g2);
+  my $pi = 3.141592653589793238462643383279502884197;
+  my $earthR = 6371e3; # meters
+  my $latcorr = cos($la1 * $pi/180 );
+  my $dla = ($la2 - $la1) * $pi / 180 * $latcorr;
+  my $dlo = ($lo2 - $lo1) * $pi / 180;
+  my $dist = sqrt( ($dla*$dla) + ($dlo*$dlo)) * $earthR;
+  return sprintf("%3.0f", $dist);
+}
+
+# Helper to guess the closest location
+sub guessloc {
+  my $g = shift;
+  my $def = shift || ""; # def value, not good as a guess
+  return "" unless $g;
+  my $dist = 200;
+  my $guess = "";
+  foreach my $k ( sort(keys(%geolocations)) ) {
+    my $d = geodist( $g, $geolocations{$k} );
+    if ( $d < $dist ) {
+      $dist = $d;
+      $guess = $k;
+    }
+  }
+  $guess = "" if ($def eq $guess );
+  return $guess;
+}
+
 
 # Helper to get a date string, with optional delta (in days)
 my $starttime = "";
