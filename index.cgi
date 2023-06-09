@@ -1585,7 +1585,13 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   for $top ( 5, 10, 20, 50, 100, 999999 ) {
     print  "&nbsp; <a href='$url?o=$op&q=" . uri_escape($qry) . "&maxl=$top'>Top-$top</a>\n";
   }
-    print  "<hr/>\n";
+  if ($qry) {
+    my $prev = "<a href=$url?o=Years&q=" . ($qry - 1) . "&maxl=" . param('maxl') .">Prev</a> \n";
+    my $all = "<a href=$url?o=Years&&maxl=" . param('maxl') .">All</a> \n";
+    my $next = "<a href=$url?o=Years&q=" . ($qry + 1) . "&maxl=" . param('maxl') .">Next</a> \n";
+    print "<br/> $prev &nbsp; $all &nbsp; $next \n";
+  }
+  print  "<hr/>\n";
 
   exit();
 
@@ -1739,14 +1745,17 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
        "set xdata time \n".
        "set timefmt \"%b\" \n".
        "set format x \"%b\"\n" .
+       "set key right top horizontal \n " .
        "plot ";
   my $lw = 2;
   my $lc = 1;
+  my $yy = $firsty-2000;
   for ( my $i = $lasty - $firsty +3; $i > 2; $i--) {
     $cmd .= "\"$plotfile\" " .
-            "using 1:$i with line lc $lc lw $lw notitle," ;
-    $lw+= 1;
+            "using 1:$i with line lc $lc lw $lw title \" $yy\", " ;
+    $lw+= 0.5;
     $lc++;
+    $yy++;
   }
   # Finish by plotting low/high projections for current month
   $lc--;
@@ -1861,9 +1870,12 @@ $com, $geo ) =
       }
       print "<tr>\n";
       print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
-      print "<td align='right'>$ddist</td>";
-      print "<td>(<b>$guess $gdist ?)</b></td>\n" if ($guess);
-      # TODO Show distance from the default coords, and date stamp
+      print "<td align='right'><a href='$url?e=$stamp' >$ddist</a></td>";
+      if ($guess) {
+        print "<td>(<b>$guess $gdist ?)</b></td>\n" ;
+      } else {
+        print "<td>$stamp</td>\n";
+      }
       # TODO Make a link to edit the record, or to clear the coords
       # TODO Sort the list by geo coords or distance. Deduplicate
       print "</tr>\n";
