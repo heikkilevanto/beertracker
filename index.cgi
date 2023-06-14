@@ -880,7 +880,7 @@ print "<td><select name='r' value='$rate' placeholder='Rating' />" .
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
   print " selected='selected'" if ( $ro eq $rate );
-  print  ">$ro - $ratings[$ro]</option>\n";
+  print  ">$ro $ratings[$ro]</option>\n";
 }
 print "</select>\n";
 print " <span onclick='showrows();'>";
