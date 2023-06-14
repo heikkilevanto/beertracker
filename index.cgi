@@ -1068,7 +1068,7 @@ if ( $op =~ /board/i ) {
           print "<input type='hidden' name='p' value='$pr' />\n" ;
           print "<input type='hidden' name='g' value='' />\n" ;  # will be set by the geo func
           print "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
-          print "<input type='submit' name='submit' value='$vol cl - $pr kr'/> &nbsp;\n";
+          print "<input type='submit' name='submit' value='$vol c $pr.-'/> \n";
           print "</form>\n";
         }
         print "</td></tr>\n";
