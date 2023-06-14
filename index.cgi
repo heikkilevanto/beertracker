@@ -833,7 +833,7 @@ print "<script>\n$script</script>\n";
 #############################
 # Main input form
 print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
-print "<table >";
+print "<table>";
 my $clr = "Onclick='if (clearonclick) {value=\"\";}'";
 my $c2 = "colspan='2'";
 my $c3 = "colspan='3'";
@@ -841,7 +841,7 @@ my $c4 = "colspan='4'";
 my $c6 = "colspan='6'";
 my $sz1n = "size='15'";
 my $sz1 = "$sz1n $clr";
-my $sz2n = "size='2'";
+my $sz2n = "size='1'";
 my $sz2 = "$sz2n $clr";
 my $sz3n = "size='8'";
 my $sz3 = "$sz3n $clr";
@@ -884,7 +884,7 @@ for my $ro (0 .. scalar(@ratings)-1) {
 }
 print "</select>\n";
 print " <span onclick='showrows();'>";
-print "^ </span>\n";
+print "^ &nbsp;</span>\n";
 print "</td></tr>\n";
 print "<tr>";
 print " <td $c6><textarea name='c' cols='36' rows='3'
