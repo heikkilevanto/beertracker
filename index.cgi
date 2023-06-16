@@ -582,7 +582,7 @@ if ( $q->request_method eq "POST" ) {
   }
   (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
-  if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /\d+ cl/ ) {
+  if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /\d+ c/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
         open F, ">>$datafile"
           or error ("Could not open $datafile for appending");
