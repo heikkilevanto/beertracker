@@ -904,14 +904,13 @@ if ( $edit && $foundline ) {
               "onchange='document.location=\"$url?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
   print "<option value='o=full&q=$qry' >Full List</option>\n";
+  print "<option value='o=Graph&q=$qry' >Graph</option>\n";
   print "<option value='o=board&q=$qry' >Beer Board</option>\n";
-  print "<option value='o=short&q=$qry' >Short List</option>\n";
-  my @ops = ("Graph",
-    "Location","Brewery", "Beer",
-    "Wine", "Booze", "Restaurant", "Style", "Months", "Years", "Datafile", "About");
-  for my $opt ( @ops ) {
-    print "<option value='o=$opt&q=$qry'>$opt</option>\n";
-  }
+  print "<option value='o=Months&q=$qry' >Stats</option>\n";
+    # All the stats pages link to each other
+  print "<option value='o=Beer&q=$qry' >Beers</option>\n";
+    # The Beer list has links to locations, wines, and other such lists
+  print "<option value='o=About&q=$qry' >About</option>\n";
   print "</select>\n";
   if ( $op && $op ne "graph" ) {
     print " &nbsp; <a href='$url'>G</a>\n";
@@ -1349,6 +1348,11 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   my $daymsum = 0.0;
   my %locseen;
   my $month = "";
+  print "<hr/>Other stats: \n";
+  print "<a href='$url?o=short'>Days</a>&nbsp;\n";
+  print "<a href='$url?o=Months'>Months</a>&nbsp;\n";
+  print "<a href='$url?o=Years'>Years</a>&nbsp;\n";
+  print "<hr/>\n";
   my $filts = splitfilter($qry);
   print "<hr/>Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'>Clear</a>)" .
     "&nbsp;(<a href='$url?q=$qry'>Full</a>)<br/>" if ($qry||$yrlim);
@@ -1474,8 +1478,12 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   if ( $qry ) {
     $sofar = "";
   }
-  my $nlines = param("maxl") || 10;
+  print "<hr/>Other stats: \n";
+  print "<a href='$url?o=short'>Days</a>&nbsp;\n";
+  print "<a href='$url?o=Months'>Months</a>&nbsp;\n";
+  print "<a href='$url?o=Years'>Years</a>&nbsp;\n";
   print "<hr/>\n";
+  my $nlines = param("maxl") || 10;
   if ($sortdr) {
     print "Sorting by drinks (<a href='$url?o=Years&q=" . uri_escape_utf8($qry) .
        "' class='no-print'>Sort by money</a>)\n";
@@ -1605,6 +1613,12 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     print "Oops, no year from allfirstdate '$allfirstdate' <br/>\n";
     exit(); # Never mind missing footers
   }
+  print "<hr/>Other stats: \n";
+  print "<a href='$url?o=short'>Days</a>&nbsp;\n";
+  print "<a href='$url?o=Months'>Months</a>&nbsp;\n";
+  print "<a href='$url?o=Years'>Years</a>&nbsp;\n";
+  print "<hr/>\n";
+
   my $firsty=$1;
   my $lasty = datestr("%Y",0);
   my $lastym = datestr("%Y-%m",0);
@@ -1821,9 +1835,10 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   print "gets subtracted from the box without affecting your stats.<br/>\n";
 
   print "<p/><hr/>\n";
-  print "Debug info <br/>\n";
-  print "<a href=$url?o=Datafile&maxl=30>Tail of the data file</a><br/>\n";
-  print "<a href=$url?o=geo>Geolocation summary</a><br/>\n";
+  print "<b>Debug info </b><br/>\n";
+  print "&nbsp; <a href=$url?o=Datafile&maxl=30>Tail of the data file</a><br/>\n";
+  print "&nbsp; <a href=$url?o=Datafile>Download the whole data file</a><br/>\n";
+  print "&nbsp; <a href=$url?o=geo>Geolocation summary</a><br/>\n";
   exit();
 
 } elsif ( $op eq "geo" ) {
@@ -1904,6 +1919,12 @@ $com, $geo ) =
   print "Filter: <a href='$url?y=$yrlim'>$yrlim</a> " .
      "(<a href='$url?o=$op'>clear</a>) <br/>" if $yrlim;
   print searchform();
+  print "Other lists: " ;
+  my @ops = ( "Location", "Brewery", "Beer",
+      "Wine", "Booze", "Restaurant", "Style");
+  for my $l ( @ops ) {
+    print "<a href='$url?o=$l'>$l</a> &nbsp;\n";
+  }
   print "</div>\n";
   my $i = scalar( @lines );
   my $fld;
