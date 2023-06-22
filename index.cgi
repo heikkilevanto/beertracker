@@ -260,6 +260,7 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
 my $alcinbody = 0; # Grams of alc inside my body
 my $balctime = 0; # Time of the last drink
 my %bloodalc; # max blood alc for each day, and current bloodalc for each line
+my %literprices; # Liter prices we have seen
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -368,6 +369,11 @@ while (<F>) {
     $bloodalc{$t} = $ba;
     #print STDERR "$t     b:" . sprintf("%8.2f %8.2f",$ba,$bloodalc{$thisdate}). " \n"  if ($t=~/2023-04-26/) ; # ###
     #print STDERR "$thisdate '$effdate' : $alcinbody g = $ba\n" if ( $t =~ /2023-04-2/ );
+  }
+  # Liter prices
+  if ( $v && $p>0 && $m !~ /,/ ) {  # Skip all wines, boozes and such
+    my $litp = sprintf("%04d", $p / $v * 100 );
+    $literprices{$litp} ++;
   }
 
   $lastdatesum += ( $a * $v ) if ($a && $v && $p>=0); # neg price means whole box
@@ -911,6 +917,7 @@ if ( $edit && $foundline ) {
   print "<option value='o=Beer&q=$qry' >Beers</option>\n";
     # The Beer list has links to locations, wines, and other such lists
   print "<option value='o=About&q=$qry' >About</option>\n";
+  print "<option value='o=Price&q=$qry' >Prices</option>\n";
   print "</select>\n";
   if ( $op && $op ne "graph" ) {
     print " &nbsp; <a href='$url'>G</a>\n";
@@ -1840,6 +1847,43 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   print "&nbsp; <a href=$url?o=Datafile>Download the whole data file</a><br/>\n";
   print "&nbsp; <a href=$url?o=geo>Geolocation summary</a><br/>\n";
   exit();
+
+} elsif ( $op eq "Price" ) {
+###################
+# Price-volume table
+print "<br/><b>Prices</b><p/>\n";
+my @volumes = ( 100, 20, 30, 33, 40, 50 );
+print "<table border=1>\n";
+print "<tr>\n";
+for my $v ( @volumes ) {
+  print "<td>&nbsp;<b>". unit($v,"cl"). "</b></td>\n";
+}
+print "</tr>";
+my $lastp = 0;
+for my $p ( sort(keys(%literprices)) ) {
+  if ( $literprices{$p} > 5 &&  # Seen a few times
+       $p > 49 &&   # and not ridiculous low
+       $p - $lastp > 4 ) {    # and not too close to last one
+    $lastp = $p;
+    print "<tr>";
+    for my $v ( @volumes ) {
+      my $a = sprintf( "%4d", $v * $p / 100 + 0.5 ) ;
+      my $b = "";
+      if ( $v == 40 ) {
+          print "<td align=right><b>$a</b></td>\n";
+        } else {
+          print "<td align=right>$a</td>\n";
+        }
+    }
+    print "</tr>";
+  }
+}
+print "<tr>\n";
+for my $v ( @volumes ) {
+  print "<td><b>". unit($v,"cl"). "</b></td>\n";
+}
+print "</table>\n";
+
 
 } elsif ( $op eq "geo" ) {
 #####################
