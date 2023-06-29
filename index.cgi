@@ -1852,11 +1852,11 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
 ###################
 # Price-volume table
 print "<br/><b>Prices</b><p/>\n";
-my @volumes = ( 100, 20, 30, 33, 40, 50 );
+my @volumes = ( 20, 25, 30, 33, 40, 50, 100 );
 print "<table border=1>\n";
 print "<tr>\n";
 for my $v ( @volumes ) {
-  print "<td>&nbsp;<b>". unit($v,"cl"). "</b></td>\n";
+  print "<td>&nbsp;<b>". unit($v,"cl"). "</b>&nbsp;</td>\n";
 }
 print "</tr>";
 my $lastp = 0;
@@ -1868,14 +1868,18 @@ for my $p ( sort(keys(%literprices)) ) {
     print "<tr>";
     for my $v ( @volumes ) {
       my $a = sprintf( "%4d", $v * $p / 100 + 0.5 ) ;
-      my $b = "";
-      if ( $v == 40 ) {
-          print "<td align=right><b>$a</b></td>\n";
+      print "<td align=right>";
+      if ( $p % 50 == 0 ) {
+        print "<br/>";
+      }
+      if ( $v == 40 || $v == 25) {
+          print "<b>$a</b>";
         } else {
-          print "<td align=right>$a</td>\n";
+          print "$a";
         }
+      print "</td>\n";
     }
-    print "</tr>";
+    print "</tr>\n";
   }
 }
 print "<tr>\n";
