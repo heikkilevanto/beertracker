@@ -1317,6 +1317,8 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     print "<a href='$url?o=Graph$bigimg-$startoff-$newend'>&gt;</a>\n"; # '>'
   }
   print " &nbsp; <a href='$url?o=Graph$bigimg'>Month</a>\n";
+  print " <a href='$url?o=Graph$bigimg-90'>3m</a> \n";
+  print " <a href='$url?o=Graph$bigimg-180'>6m</a> \n";
   print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
   if (scalar(@lines)>500) {
     my $all = scalar(@lines); # can't be more days than we have entries
