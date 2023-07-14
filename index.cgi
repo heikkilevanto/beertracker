@@ -839,19 +839,19 @@ print "<script>\n$script</script>\n";
 #############################
 # Main input form
 print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
-print "<table>";
 my $clr = "Onclick='if (clearonclick) {value=\"\";}'";
 my $c2 = "colspan='2'";
 my $c3 = "colspan='3'";
 my $c4 = "colspan='4'";
-my $c6 = "colspan='6'";
+my $c6 = "colspan='8'";
 my $sz1n = "size='15'";
 my $sz1 = "$sz1n $clr";
-my $sz2n = "size='1'";
+my $sz2n = "size='2'";
 my $sz2 = "$sz2n $clr";
 my $sz3n = "size='8'";
 my $sz3 = "$sz3n $clr";
 my $hidden = "hidden";
+print "<table style='width:100%; max-width:500px' >";
 if ( $edit && $foundline ) {
   # Still produces lot of warnings if editing a non-existing record, all values
   # are undefined. Should not happen anyway.
@@ -889,12 +889,12 @@ for my $ro (0 .. scalar(@ratings)-1) {
   print  ">$ro $ratings[$ro]</option>\n";
 }
 print "</select>\n";
-print " <span onclick='showrows();'>";
-print "^ &nbsp;</span>\n";
 print "</td></tr>\n";
 print "<tr>";
-print " <td $c6><textarea name='c' cols='36' rows='3'
-  placeholder='$todaydrinks'/>$com</textarea>\n";
+print " <td $c6><textarea name='c' cols='45' rows='3'
+  placeholder='$todaydrinks'/>$com</textarea></td>\n";
+print "<td> <span onclick='showrows();' align=right>";
+print "^ &nbsp; &nbsp;</span>\n";
 print "</td></tr>\n";
 if ( $edit && $foundline ) {
   print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
