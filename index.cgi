@@ -2286,7 +2286,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       print filt("[$sty]") . newmark($sty) . " "   if ($sty);
       if ($sty || $pr || $alc) {
-        print units($pr, $vol, $alc, $bloodalc{$stamp});
+        #print units($pr, $vol, $alc, $bloodalc{$stamp});
+        print units($pr, $vol, $alc);  # too messy to show on every line
         #print "" . ($seen{$b} || ""). " ";
         if ( $ratecount{$beer} ) {
           #print "s=$seen{$beer} rs=$ratesum{$beer} rc=$ratecount{$beer} "; # ###
