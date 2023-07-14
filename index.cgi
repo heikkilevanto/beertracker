@@ -346,7 +346,7 @@ while (<F>) {
     $lastdatesum = 0.0;
     $lastdatemsum = 0;
     $thisdate = "$wd; $ed";
-    $lasteffdate = $thisdate;
+    $lasteffdate = $ed;
     $lastwday = $wd;
     $alcinbody = 0; # Blood alcohol
     $balctime = 0; # Time of the last drink
@@ -363,12 +363,12 @@ while (<F>) {
     $balctime = $drtime;
     $alcinbody += $a * $v / $onedrink * 12 ; # grams of alc in body
     my $ba = $alcinbody / ( $weight * .68 ); # non-fat weight
-    if ( $ba > ( $bloodalc{$thisdate} || 0 ) ) {
-      $bloodalc{$thisdate} = $ba;
+    if ( $ba > ( $bloodalc{$ed} || 0 ) ) {
+      $bloodalc{$ed} = $ba;
     }
-    $bloodalc{$t} = $ba;
-    #print STDERR "$t     b:" . sprintf("%8.2f %8.2f",$ba,$bloodalc{$thisdate}). " \n"  if ($t=~/2023-04-26/) ; # ###
-    #print STDERR "$thisdate '$effdate' : $alcinbody g = $ba\n" if ( $t =~ /2023-04-2/ );
+    $bloodalc{$t} = $ba;  # indexed by the whole timestamp
+    #print STDERR "$t     b:" . sprintf("%8.2f %8.2f",$ba,$bloodalc{$ed}). " \n"  if ($t=~/2023-04-26/) ; # ###
+    #print STDERR "$ed '$effdate' : $alcinbody ba= $ba\n" if ( $t =~ /2023-04-2/ );
   }
   # Liter prices
   if ( $v && $p>0 && $m !~ /,/ ) {  # Skip all wines, boozes and such
@@ -381,8 +381,8 @@ while (<F>) {
   if ( $effdate eq "$wd; $ed" ) { # today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
       $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
-      if ($bloodalc{$effdate}) {
-        $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$effdate}); # max of the day
+      if ($bloodalc{$ed}) {
+        $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$ed}); # max of the day
         # TODO - This replicates the calculations above, move to a helper func
         my $curtime = datestr("%H:%M",0,1);
         my $weight = 120; # kg, approx
@@ -394,7 +394,7 @@ while (<F>) {
         if ($curalc < 0) { $curalc = 0; }
         my $ba = $curalc / ( $weight * .68 ); # non-fat weight
         $todaydrinks .= sprintf(" - %0.2f‰",$ba);
-           # if ( $bloodalc{$effdate} - $ba > 0.01 );
+           # if ( $bloodalc{$ed} - $ba > 0.01 );
       }
   }
   if ( $ed gt $weekago && $p >= 0 ) {
@@ -935,7 +935,7 @@ if ( !$op) {
 } # also on mobile devices
 
 #############
-# Beer list for the location. Scraped from their website
+# Beer board (list) for the location. Scraped from their website
 if ( $op =~ /board/i ) {
   $locparam = $loc unless ($locparam); # can happen after posting
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
@@ -1379,11 +1379,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         $daysum += ( $alc * $vol ) if ($alc && $vol && $pr && $pr >= 0);
         $daymsum += abs($pr);
         if ( $places !~ /$loc/ ) {
-          my $bold = "";
-          if ( !defined($locseen{$loc}) ) {
-            $bold = "b";
-            }
-          $places .= " " . filt($loc, $bold, $loc, "short");
+          $places .= " " . filt($loc, "", $loc, "short");
           $locseen{$loc} = 1;
         }
       }
@@ -1392,6 +1388,8 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       if ( $entry ) {
         my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
         $entry .= " " . unit($daydrinks,"d") . " " . unit($daymsum,"kr");
+        $entry .= " " . unit(sprintf("%0.2f",$bloodalc{$lastdate}), "‰")
+          if ( ( $bloodalc{$lastdate} || 0 ) > 0.01 );
         print "$entry";
         print "$places<br/>\n";
         $maxlines--;
@@ -1442,11 +1440,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       }
       $loc =~ s/ /&nbsp;/gi;   # Prevent names breaking in the middle
       if ( $places !~ /$loc/ ) {
-        my $bold = "";
-        if ( !defined($locseen{$loc}) ) {
-          $bold = "b";
-          }
-        $places .= " " . filt($full, $bold, $loc, "short");
+        $places .= " " . filt($full, "", $loc, "short");
         $locseen{$loc} = 1;
         }
       $lastloc = $loc;
@@ -2198,9 +2192,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
         print "$lastloc2: " . unit($locdrinks,"d"). unit($locmsum, "kr"). "\n";
         if ($averages{$lastdate} && $locdrinks eq $daydrinks && $lastdate ne $effdate) {
           print " (a=" . unit($averages{$lastdate},"d"). " )\n";
-          my $k = "$lastwday; $lastdate";
-          if ($bloodalc{$k}) {
-            print " ". unit(sprintf("%0.2f",$bloodalc{$k}), "‰");
+          if ($bloodalc{$lastdate}) {
+            print " ". unit(sprintf("%0.2f",$bloodalc{$lastdate}), "‰");
           }
           print "<br/>\n";
         } # fl avg on loc line, if not going to print a day summary line
@@ -2229,9 +2222,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
           if ($averages{$lastdate}) {
             print " (a=" . unit($averages{$lastdate},"d"). " )\n";
           }
-          my $k = "$lastwday; $lastdate";
-          if ($bloodalc{$k}) {
-            print " ". unit(sprintf("%0.2f",$bloodalc{$k}), "‰");
+          if ($bloodalc{$lastdate}) {
+            print " ". unit(sprintf("%0.2f",$bloodalc{$lastdate}), "‰");
           }
           print "<br/>\n";
         }
@@ -2286,7 +2278,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       print filt("[$sty]") . newmark($sty) . " "   if ($sty);
       if ($sty || $pr || $alc) {
-        #print units($pr, $vol, $alc, $bloodalc{$stamp});
+        #print units($pr, $vol, $alc, $bloodalc{$effdate});
         print units($pr, $vol, $alc);  # too messy to show on every line
         #print "" . ($seen{$b} || ""). " ";
         if ( $ratecount{$beer} ) {
