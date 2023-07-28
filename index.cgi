@@ -919,7 +919,7 @@ if ( $edit && $foundline ) {
   print "<option value='o=About&q=$qry' >About</option>\n";
   print "<option value='o=Price&q=$qry' >Prices</option>\n";
   print "</select>\n";
-  if ( $op && $op ne "graph" ) {
+  if ( $op && $op !~ /graph/i ) {
     print " &nbsp; <a href='$url'>G</a>\n";
   } else {
     print " &nbsp; <a href='$url?o=board'>B</a>\n";
