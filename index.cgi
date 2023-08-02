@@ -992,8 +992,8 @@ if ( $op =~ /board/i ) {
         }
 
         my $disp = $mak;
-        $disp =~ s/\b(the|brouwerij|brasserie|van|den)\b//ig; #stop words
-        $disp =~ s/(Schneider).*/$1/i;
+        $disp =~ s/\b(the|brouwerij|brasserie|van|den|Bräu)\b//ig; #stop words
+        $disp =~ s/.*(Schneider).*/$1/i;
         $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
         $disp =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
         $disp =~ s/^ +//;
@@ -1005,6 +1005,8 @@ if ( $op =~ /board/i ) {
           $disp = filt($mak, "i", $disp,"board&l=$locparam") . ": ";
         }
         $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
+        $beer =~ s/.*(Hopfenweisse).*/$1/;
+        $beer =~ s/.*(Ungespundet).*/$1/;
         $disp .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
         if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
           $disp .= " " .$sty;
@@ -1056,7 +1058,7 @@ if ( $op =~ /board/i ) {
         $sty =~ s/.*Belg.*/Belg/i;
         $sty =~ s/.*Barley.*Wine.*/BW/i;
         $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars   ### Remove this later
-        print STDERR "sty='$origsty' -> '$sty'    '$beer'  '$mak'\n";
+        print STDERR "sty='$origsty' -> '$sty'   '$e->{'beer'}' -> '$beer'  '$e->{'maker'}' -> '$mak'\n";
         my $country = $e->{'country'} || "";
         print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td>" .
           "<td>$sty $alc% &nbsp;";
