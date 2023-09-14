@@ -1753,7 +1753,13 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       $pr = unit(sprintf("%5.0f", ($yprice[$y]+500)/1000), "kkr") ;
       $grandtot += $yprice[$y];
     }
-    $t .= "<td align=right>$pr</td>\n";
+    $t .= "<td align=right>$pr";
+    if ( $y eq $lasty && $yprice[$lasty] ) {
+      $pr = $yprice[$lasty] / $ydays[$lasty] * 365;
+      $pr = unit(sprintf("%5.0f", ($pr+500)/1000), "kkr") ;
+      $t .= "<br/>~$pr";
+    }
+    $t .= "</td>\n";
   }
   $grandtot = unit(sprintf("%5.0f",($grandtot+500)/1000), "kkr");
   $t .= "<td align=right>$grandtot</td>\n";
