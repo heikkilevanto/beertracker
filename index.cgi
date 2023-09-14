@@ -1625,7 +1625,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   }
   print "<hr/>Other stats: \n";
   print "<a href='$url?o=short'>Days</a>&nbsp;\n";
-  print "<a href='$url?o=Months'>Months</a>&nbsp;\n";
+  print "<a href='$url?o=Months'><b>Months</b></a>&nbsp;\n";
   print "<a href='$url?o=Years'>Years</a>&nbsp;\n";
   print "<hr/>\n";
 
@@ -1723,19 +1723,28 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   print F "$cur $max\n";
   close(F);
   $t .= "<tr><td>Avg</td>\n";
+  my $granddr = 0;
+  my $granddays = 0;
   foreach $y ( reverse($firsty .. $lasty) ) {
     my $d = "";
     my $dw = "";
     if ( $ydays[$y] ) { # have data for the year
+      $granddr += $ydrinks[$y];
+      $granddays += $ydays[$y];
       $d = sprintf("%3.1f", $ydrinks[$y] / $ydays[$y] / $onedrink) ;
       $dw = $1 if ($d=~/([0-9.]+)/);
       $dw = unit(int($dw*7+0.5), "/w");
       $d = unit($d, "/d");
-      my $pr = sprintf("%3d", $yprice[$y]/$ydays[$y]);
     }
-    $t .= "<td align=right>$d<br/>$dw</td>";
+    $t .= "<td align=right>$d<br/>$dw</td>\n";
   }
-  $t .= "</tr>";
+  my $d = sprintf("%3.1f", $granddr / $granddays / $onedrink) ;
+  my $dw = $1 if ($d=~/([0-9.]+)/);
+  $dw = unit(int($dw*7+0.5), "/w");
+  $d = unit($d, "/d");
+  $t .= "<td align=right>$d<br/>$dw</td>\n";
+  $t .= "</tr>\n";
+
   $t .= "<tr><td>Sum</td>\n";
   my $grandtot = 0;
   foreach $y ( reverse($firsty .. $lasty) ) {
@@ -1744,12 +1753,21 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       $pr = unit(sprintf("%5.0f", ($yprice[$y]+500)/1000), "kkr") ;
       $grandtot += $yprice[$y];
     }
-    $t .= "<td align=right>$pr</td>";
+    $t .= "<td align=right>$pr</td>\n";
   }
   $grandtot = unit(sprintf("%5.0f",($grandtot+500)/1000), "kkr");
-  $t .= "<td align=right>$grandtot</td>";
-  $t .= "</tr>";
+  $t .= "<td align=right>$grandtot</td>\n";
+  $t .= "</tr>\n";
 
+  # Column legends again
+  $t .="<tr><td>&nbsp;</td>\n";
+  my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+  foreach $y ( reverse($firsty .. $lasty) ) {
+    $t .= "<td align='right'><b>&nbsp;$y</b></td>";
+  }
+  $t .= "<td align='right'><b>&nbsp;Avg</b></td>";
+  $t .= "</tr>\n";
 
   $t .= "</table>\n";
   my $imgsz = "340,240";
