@@ -996,8 +996,7 @@ if ( $op =~ /board(x?)/i ) {
         $alc = $e->{"alc"} || "";
         $alc = sprintf("%4.1f%%",$alc) if ($alc);
         if ( $qry ) {
-          my $line = "$mak $beer $sty";
-          next unless ( $sty =~ /$qry/i );
+          next unless ( $sty =~ /$qry/ );
         }
 
         my $dispmak = $mak;
@@ -1017,8 +1016,8 @@ if ( $op =~ /board(x?)/i ) {
         $beer =~ s/.*(Hopfenweisse).*/$1/;
         $beer =~ s/.*(Ungespundet).*/$1/;
         if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
-          $dispmak = "Schlenkerla";
-          $mak = $dispmak;
+          $mak = "Schlenkerla";
+          $dispmak = filt($mak, "i", $mak,"board&l=$locparam");
         }
         my $dispbeer .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
         #if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
