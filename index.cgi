@@ -979,7 +979,7 @@ if ( $op =~ /board/i ) {
         "(<a href='$url?o=$op&l=$locparam'>Clear</a>) " .
         "<p/>\n";
       }
-      print "<table>\n";
+      print "<table border=0 style='white-space: nowrap; overflow:hidden; text-overflow=fade;'>\n";
       foreach $e ( @$beerlist )  {
         $mak = $e->{"maker"} || "" ;
         $beer = $e->{"beer"} || "" ;
@@ -1008,11 +1008,15 @@ if ( $op =~ /board/i ) {
         $beer =~ s/.*(Hopfenweisse).*/$1/;
         $beer =~ s/.*(Ungespundet).*/$1/;
         $disp .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
-        if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
-          $disp .= " " .$sty;
-        }
-        print "<tr><td>#" . $e->{"id"} . ":</td>";
-        print "<td>$disp</td></tr>\n";
+        #if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
+        #  $disp .= " " .$sty;
+        #}
+        print "<tr><td>" . $e->{"id"} . "</td>";
+        print "<td colspan=4 >";
+        print "<span style=''white-space: nowrap; overflow:hidden; text-overflow:clip; max-width=100px'>\n";
+        print "$disp</span></td></tr>\n";
+        # TODO - Still prints the whole disp, causing the table to be overly wide
+
         $mak =~ s/'//g; # Apostrophes break the input form below
         $beer =~ s/'//g; # So just drop them
         $sty =~ s/'//g;
@@ -1066,12 +1070,12 @@ if ( $op =~ /board/i ) {
         print STDERR "sty='$origsty' -> '$sty'   '$e->{'beer'}' -> '$beer'  '$e->{'maker'}' -> '$mak'\n";
         my $country = $e->{'country'} || "";
         print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td>" .
-          "<td>$sty $alc% &nbsp;";
+          "<td>$sty $alc% &nbsp;</td>";
         my $sizes = $e->{"sizePrice"};
         foreach $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
           $vol = $sp->{"vol"};
           $pr = $sp->{"price"};
-          print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+          print "<td align=right><form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
           print "<input type='hidden' name='m' value='$mak' />\n" ;
           print "<input type='hidden' name='b' value='$beer' />\n" ;
           print "<input type='hidden' name='s' value='$origsty' />\n" ;
@@ -1082,9 +1086,9 @@ if ( $op =~ /board/i ) {
           print "<input type='hidden' name='g' value='' />\n" ;  # will be set by the geo func
           print "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
           print "<input type='submit' name='submit' value='$vol c $pr.-'/> \n";
-          print "</form>\n";
+          print "</form></td>\n";
         }
-        print "</td></tr>\n";
+        print "<td width=100%>&nbsp;</td></tr>\n";  # Dirty trick to move buttons a bit left
       }
       print "</table>\n";
     }
