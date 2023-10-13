@@ -588,7 +588,7 @@ if ( $q->request_method eq "POST" ) {
   }
   (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
-  if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /\d+ c/ ) {
+  if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /^ *\d+/ ) {
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
         open F, ">>$datafile"
           or error ("Could not open $datafile for appending");
@@ -846,7 +846,7 @@ my $c4 = "colspan='4'";
 my $c6 = "colspan='8'";
 my $sz1n = "size='15'";
 my $sz1 = "$sz1n $clr";
-my $sz2n = "size='2'";
+my $sz2n = "size='3'";
 my $sz2 = "$sz2n $clr";
 my $sz3n = "size='8'";
 my $sz3 = "$sz3n $clr";
@@ -936,7 +936,8 @@ if ( !$op) {
 
 #############
 # Beer board (list) for the location. Scraped from their website
-if ( $op =~ /board/i ) {
+if ( $op =~ /board(x?)/i ) {
+  my $extraboard = $1;  # show all kind of extra info
   $locparam = $loc unless ($locparam); # can happen after posting
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
@@ -958,6 +959,11 @@ if ( $op =~ /board/i ) {
   }
   print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'>PA</a>) "
     if ($qry ne "IPA" && $scrapers{$locparam});
+  if ($extraboard) {
+    print "<a href=$url?o=board>Plain</a>\n";
+  } else {
+    print "<a href=$url?o=boardx>Ext</a>\n";
+  }
   print "<p/>\n";
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
@@ -974,48 +980,50 @@ if ( $op =~ /board/i ) {
     }else {
       #print "<!--\nPage:\n$json\n-->\n";  # for debugging
       my $beerlist = JSON->new->utf8->decode($json);
+      my $nbeers = 0;
       if ($qry) {
       print "Filter:<b>$qry</b> " .
         "(<a href='$url?o=$op&l=$locparam'>Clear</a>) " .
         "<p/>\n";
       }
-      print "<table border=0 style='white-space: nowrap; overflow:hidden; text-overflow=fade;'>\n";
+      print "<table border=0 style='white-space: nowrap;'>\n";
       foreach $e ( @$beerlist )  {
+        $nbeers++;
         $mak = $e->{"maker"} || "" ;
         $beer = $e->{"beer"} || "" ;
         $sty = $e->{"type"} || "";
         $loc = $locparam;
-        $alc = $e->{"alc"} || 0;
+        $alc = $e->{"alc"} || "";
+        $alc = sprintf("%4.1f%%",$alc) if ($alc);
         if ( $qry ) {
           my $line = "$mak $beer $sty";
           next unless ( $sty =~ /$qry/i );
         }
 
-        my $disp = $mak;
-        $disp =~ s/\b(the|brouwerij|brasserie|van|den|Bräu)\b//ig; #stop words
-        $disp =~ s/.*(Schneider).*/$1/i;
-        $disp =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
-        $disp =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
-        $disp =~ s/^ +//;
-        $disp =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
-        $disp =~ s/[ -].*$// ; # first word
-        if ( $beer =~ /$disp/ || !$mak) {
-          $disp = ""; # Same word in the beer, don't repeat
+        my $dispmak = $mak;
+        $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu)\b//ig; #stop words
+        $dispmak =~ s/.*(Schneider).*/$1/i;
+        $dispmak =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
+        $dispmak =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
+        $dispmak =~ s/^ +//;
+        $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
+        $dispmak =~ s/[ -].*$// ; # first word
+        if ( $beer =~ /$dispmak/ || !$mak) {
+          $dispmak = ""; # Same word in the beer, don't repeat
         } else {
-          $disp = filt($mak, "i", $disp,"board&l=$locparam") . ": ";
+          $dispmak = filt($mak, "i", $dispmak,"board&l=$locparam");
         }
         $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
         $beer =~ s/.*(Hopfenweisse).*/$1/;
         $beer =~ s/.*(Ungespundet).*/$1/;
-        $disp .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
+        if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
+          $dispmak = "Schlenkerla";
+          $mak = $dispmak;
+        }
+        my $dispbeer .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
         #if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
         #  $disp .= " " .$sty;
         #}
-        print "<tr><td>" . $e->{"id"} . "</td>";
-        print "<td colspan=4 >";
-        print "<span style=''white-space: nowrap; overflow:hidden; text-overflow:clip; max-width=100px'>\n";
-        print "$disp</span></td></tr>\n";
-        # TODO - Still prints the whole disp, causing the table to be overly wide
 
         $mak =~ s/'//g; # Apostrophes break the input form below
         $beer =~ s/'//g; # So just drop them
@@ -1069,28 +1077,59 @@ if ( $op =~ /board/i ) {
         $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars   ### Remove this later
         print STDERR "sty='$origsty' -> '$sty'   '$e->{'beer'}' -> '$beer'  '$e->{'maker'}' -> '$mak'\n";
         my $country = $e->{'country'} || "";
-        print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td>" .
-          "<td>$sty $alc% &nbsp;</td>";
         my $sizes = $e->{"sizePrice"};
+        my $buttons="";
         foreach $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
           $vol = $sp->{"vol"};
           $pr = $sp->{"price"};
-          print "<td align=right><form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
-          print "<input type='hidden' name='m' value='$mak' />\n" ;
-          print "<input type='hidden' name='b' value='$beer' />\n" ;
-          print "<input type='hidden' name='s' value='$origsty' />\n" ;
-          print "<input type='hidden' name='a' value='$alc' />\n" ;
-          print "<input type='hidden' name='l' value='$loc' />\n" ;
-          print "<input type='hidden' name='v' value='$vol' />\n" ;
-          print "<input type='hidden' name='p' value='$pr' />\n" ;
-          print "<input type='hidden' name='g' value='' />\n" ;  # will be set by the geo func
-          print "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
-          print "<input type='submit' name='submit' value='$vol c $pr.-'/> \n";
-          print "</form></td>\n";
+          $buttons .= "<td align=right><form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+          $buttons .= "<input type='hidden' name='m' value='$mak' />\n" ;
+          $buttons .= "<input type='hidden' name='b' value='$beer' />\n" ;
+          $buttons .= "<input type='hidden' name='s' value='$origsty' />\n" ;
+          $buttons .= "<input type='hidden' name='a' value='$alc' />\n" ;
+          $buttons .= "<input type='hidden' name='l' value='$loc' />\n" ;
+          $buttons .= "<input type='hidden' name='v' value='$vol' />\n" ;
+          $buttons .= "<input type='hidden' name='p' value='$pr' />\n" ;
+          #$buttons .= "<input type='hidden' name='g' value='' />\n" ;  # will be set by the geo func
+            # No geo here, we have enough coords for the places we have lists for
+            # Goes wrong when messing with the code at home
+          $buttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
+          my $lbl;
+          if ($extraboard) {
+            $lbl = "$vol: $pr.-";
+          } else {
+            $lbl = "$pr.-";
+          }
+          $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
+          $buttons .= "</form></td>\n";
         }
-        print "<td width=100%>&nbsp;</td></tr>\n";  # Dirty trick to move buttons a bit left
-      }
+        if ($extraboard) {
+          $dispmak .= ":" if ($dispmak);
+          print "<tr><td align=right>" . $e->{"id"} . "</td>\n";
+          print "<td colspan=4 >";
+          print "<span style=''white-space: nowrap; overflow:hidden; text-overflow:clip; max-width=100px'>\n";
+          print "$dispmak $dispbeer</span></td></tr>\n";
+          print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td>" .
+            "<td>$sty $alc &nbsp;</td>\n";
+          print $buttons;
+          print "<td width=100%>&nbsp;</td>\n"; # Dirty trick to move buttons a bit left
+          print "</tr>\n";
+        } else {
+          print "<tr><td align=right style='font-size: xx-small'>" . $e->{"id"} . "</td>\n";
+          #print "<td>&nbsp;</td>\n";
+          print "$buttons\n";
+          #print "<td style='max-width:100%; overflow:hidden;text-overflow:fade;' >$dispbeer $alc% $dispmak</td>\n";
+          print "<td style='font-size: x-small;' >$alc</td>\n";
+          print "<td>$dispbeer $dispmak ($country)</td>\n";
+          print "</tr>\n";
+        }
+      } # beer loop
       print "</table>\n";
+      if (! $nbeers ) {
+        print "Sorry, got no beers from $locparam\n";
+        print "<!-- Error running " . $scrapers{$locparam} . ". \n";
+        print "Result: '$json'\n -->\n";
+      }
     }
   }
   $op = "Graph"; # Continue with a graph and a full list after that
@@ -1771,8 +1810,6 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
 
   # Column legends again
   $t .="<tr><td>&nbsp;</td>\n";
-  my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
   foreach $y ( reverse($firsty .. $lasty) ) {
     $t .= "<td align='right'><b>&nbsp;$y</b></td>";
   }
