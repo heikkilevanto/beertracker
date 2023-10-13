@@ -1365,7 +1365,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   my %locseen;
   my $month = "";
   print "<hr/>Other stats: \n";
-  print "<a href='$url?o=short'>Days</a>&nbsp;\n";
+  print "<a href='$url?o=short'><b>Days</b></a>&nbsp;\n";
   print "<a href='$url?o=Months'>Months</a>&nbsp;\n";
   print "<a href='$url?o=Years'>Years</a>&nbsp;\n";
   print "<hr/>\n";
@@ -1491,7 +1491,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   print "<hr/>Other stats: \n";
   print "<a href='$url?o=short'>Days</a>&nbsp;\n";
   print "<a href='$url?o=Months'>Months</a>&nbsp;\n";
-  print "<a href='$url?o=Years'>Years</a>&nbsp;\n";
+  print "<a href='$url?o=Years'><b>Years</b></a>&nbsp;\n";
   print "<hr/>\n";
   my $nlines = param("maxl") || 10;
   if ($sortdr) {
