@@ -324,7 +324,7 @@ while (<F>) {
     next; # do not sum restaurant lines, drinks filed separately
   }
   if ($l && $g ) {
-    (undef, undef, $g) = geo($g); #
+    (undef, undef, $g) = geo($g);
     $geolocations{$l} = $g if ($g); # Save the last seen location
     # TODO: Later we may start taking averages, or collect a few data points for each
   } # Let's see how precise it seems to be
@@ -994,7 +994,7 @@ if ( $op =~ /board(x?)/i ) {
         $sty = $e->{"type"} || "";
         $loc = $locparam;
         $alc = $e->{"alc"} || "";
-        $alc = sprintf("%4.1f%%",$alc) if ($alc);
+        $alc = sprintf("%4.1f",$alc) if ($alc);
         if ( $qry ) {
           next unless ( $sty =~ /$qry/ );
         }
@@ -1019,7 +1019,8 @@ if ( $op =~ /board(x?)/i ) {
           $mak = "Schlenkerla";
           $dispmak = filt($mak, "i", $mak,"board&l=$locparam");
         }
-        my $dispbeer .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
+        #my $dispbeer .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
+        my $dispbeer .= filt($beer, "b", $beer, "board&l=$loc");
         #if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
         #  $disp .= " " .$sty;
         #}
@@ -1046,7 +1047,7 @@ if ( $op =~ /board(x?)/i ) {
           $sty =~ s/.*(New England|NE|Hazy).*(IPA).*/NEIPA/i;
           $sty =~ s/.*(New Zealand|NZ).*/NZ/i;
           $sty =~ s/.*(West Coast|WC).*/WC/i;
-          $sty =~ s/.*(America|US).*/AmIPA/i;
+          $sty =~ s/.*(America|US).*/AIPA/i;
         }
         $sty =~ s/India Lager/IL/i;
         $sty =~ s/Pale Lager/Lag/i;
@@ -1109,17 +1110,17 @@ if ( $op =~ /board(x?)/i ) {
           print "<span style=''white-space: nowrap; overflow:hidden; text-overflow:clip; max-width=100px'>\n";
           print "$dispmak $dispbeer</span></td></tr>\n";
           print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td>" .
-            "<td>$sty $alc &nbsp;</td>\n";
+            "<td>$sty $alc% &nbsp;</td>\n";
           print $buttons;
           print "<td width=100%>&nbsp;</td>\n"; # Dirty trick to move buttons a bit left
           print "</tr>\n";
         } else {
-          print "<tr><td align=right style='font-size: xx-small'>" . $e->{"id"} . "</td>\n";
+          print "<tr><td align=right style='font-size: x-small'>" . $e->{"id"} . "</td>\n";
           #print "<td>&nbsp;</td>\n";
           print "$buttons\n";
           #print "<td style='max-width:100%; overflow:hidden;text-overflow:fade;' >$dispbeer $alc% $dispmak</td>\n";
-          print "<td style='font-size: x-small;' >$alc</td>\n";
-          print "<td>$dispbeer $dispmak ($country)</td>\n";
+          print "<td style='font-size: x-small;' align=right>$alc</td>\n";
+          print "<td>$dispbeer $dispmak ($country) $sty</td>\n";
           print "</tr>\n";
         }
       } # beer loop
@@ -1182,6 +1183,14 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   my $fut = "NaN";
   my $lastavg = ""; # Last floating average we have seen
   my $lastwk = "";
+  my $weekends; # Code to draw background on weekend days
+  my $tmpwkend; # The beginning of the current weekend
+  my $wkendtag = 1;
+  my $oneday = 24 * 60 * 60 ; # in seconds
+  my $threedays = 3 * $oneday;
+  my $oneweek = 7 * $oneday ;
+  my $onemonth = 365.24 * $oneday / 12;
+  my $numberofdays=7;
   while ( $ndays > $endoff) {
     $ndays--;
     $rawdate = datestr("%F:%u", -$ndays);
@@ -1251,25 +1260,18 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         $sumweek = "NaN";
       }
     }
-    my $wkend = 0;
-    if ($wkday > 4) {
-       $wkend = $tot;
-       $tot = 0;
-       #if ( $ndays <= 0 || $zerodays > 1) { # fut graph, or zero-mark day
-         $wkend = $wkend || -0.2 ; # mark weekend days
-       #}
+    if ( $wkday == 6 ) {
+      $weekends .= "set object $wkendtag rect at \"$date\",50 " .
+         "size $threedays,200 behind  fc rgbcolor \"gray90\"  fillstyle solid noborder \n";
+      $wkendtag++;
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
-    print F "$date  $tot $wkend   $sum30 $sumweek   $zero  $fut\n"  if ($zerodays >= 0);
+    print F "$date  $tot 0   $sum30 $sumweek   $zero  $fut\n"  if ($zerodays >= 0);
     $havedata = 1;
   }
   print F "$legend \n";
   close(F);
   if ($havedata) {
-    my $oneday = 24 * 60 * 60 ; # in seconds
-    my $oneweek = 7 * $oneday ;
-    my $onemonth = 365.24 * $oneday / 12;
-    my $numberofdays=7;
     my $xformat = "\"%d\\n%b\"";  # 14 Jul
     if ($startoff > 365) {
       $xformat = "\"%d\\n%b\\n%y\"";  # 14 Jul 20
@@ -1314,6 +1316,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         "set boxwidth 0.7 relative \n" .
         "set key left top horizontal \n" .
         "set grid xtics y2tics  linewidth 0.1 linecolor 4 \n".
+        $weekends .
         "plot " .
               # linecolor lc 0=grey 1=red, 2=green, 3=blue 9=purple
               # pointtype pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
