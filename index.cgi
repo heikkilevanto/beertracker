@@ -1184,8 +1184,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   my $lastavg = ""; # Last floating average we have seen
   my $lastwk = "";
   my $weekends; # Code to draw background on weekend days
-  my $tmpwkend; # The beginning of the current weekend
-  my $wkendtag = 1;
+  my $wkendtag = 2;  # 1 is reserved for global bk
   my $oneday = 24 * 60 * 60 ; # in seconds
   my $threedays = 3 * $oneday;
   my $oneweek = 7 * $oneday ;
@@ -1262,7 +1261,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     }
     if ( $wkday == 6 ) {
       $weekends .= "set object $wkendtag rect at \"$date\",50 " .
-         "size $threedays,200 behind  fc rgbcolor \"gray90\"  fillstyle solid noborder \n";
+         "size $threedays,200 behind  fc rgbcolor \"#005000\"  fillstyle solid noborder \n";
       $wkendtag++;
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
@@ -1297,6 +1296,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     if ($bigimg eq "B") {
       $imgsz = "640,480";
     }
+    my $white = "textcolor \"white\" ";
     my $cmd = "" .
         "set term png small size $imgsz \n".
         $pointsize .
@@ -1307,15 +1307,18 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         "set y2range [ -.5 : ] \n" .
         "set format x $xformat \n" .
         "set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
-        "set ytics 7\n" .
-        "set y2tics 0,1 out format \"%2.0f\"\n" .   # 0,1
+        "set border linecolor \"white\" \n" .
+        "set ytics 7 $white \n" .
+        "set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
         #"set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5,
         #"set my2tics 2 \n".
-        "set xtics \"2015-11-01\", $xtic out\n" .  # Happens to be sunday, and first of month
+        "set xtics \"2015-11-01\", $xtic out $white \n" .  # Happens to be sunday, and first of month
         "set style fill solid \n" .
         "set boxwidth 0.7 relative \n" .
-        "set key left top horizontal \n" .
+        "set key left top horizontal textcolor \"white\" \n" .
         "set grid xtics y2tics  linewidth 0.1 linecolor 4 \n".
+        "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
+          "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
         $weekends .
         "plot " .
               # linecolor lc 0=grey 1=red, 2=green, 3=blue 9=purple
@@ -1325,12 +1328,12 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
           "\"$plotfile\" using 1:3 with boxes lc \"royalblue\" axes x1y2 title \"std drinks/day\"," .  # weekends
           "\"$plotfile\" using 1:2 with boxes lc \"grey60\" axes x1y2 notitle ," .  # weekdays
           "\"$plotfile\" " .
-              "using 1:5 with line lc \"gray30\" axes x1y2 title \"wk $lastwk\", " .
+              "using 1:5 with line lc \"gray90\" axes x1y2 title \"wk $lastwk\", " .
           "\"$plotfile\" " .
               "using 1:4 with line lc \"dark-violet\" lw 3 axes x1y2 title \" 30d avg $lastavg\", " .  # avg30
                 # smooth csplines
           "\"$plotfile\" " .
-              "using 1:7 with points pointtype 1 lc \"dark-blue\" axes x1y2 notitle, " .  # future tail
+              "using 1:7 with points pointtype 3 lc \"dark-violet\" axes x1y2 notitle, " .  # future tail
           "\"$plotfile\" " .
               "using 1:6 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
           "";
