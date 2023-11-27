@@ -227,7 +227,7 @@ my $copylocation = 0;  # should the copy button copy location too
 my $thisdate = "";
 my $lastwday = "";
 my @lines;
-my %seen; # Count how many times various names seen before
+my %seen; # Count how many times various names seen before (for NEW marks)
 my %ratesum; # sum of ratings for every beer
 my %ratecount; # count of ratings for every beer, for averaging
 my %restaurants; # maps location name to restaurant types
@@ -261,6 +261,7 @@ my $alcinbody = 0; # Grams of alc inside my body
 my $balctime = 0; # Time of the last drink
 my %bloodalc; # max blood alc for each day, and current bloodalc for each line
 my %literprices; # Liter prices we have seen
+my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -410,7 +411,8 @@ while (<F>) {
     $monthprices{$calmon} += abs($p);
   }
   $lastmonthday = $1 if ( $ed =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-}
+  $drinktypes{$ed} .= "$a $v $s $m;" if ($a > 0 && $v > 0);
+} # line loop
 
 if ( ! $todaydrinks ) { # not today
   $todaydrinks = "($lastwday: " .
@@ -1180,7 +1182,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
   my @week;
   my $wkday;
   my $zerodays = -1;
-  my $fut = "NaN";
+  my $fut = "NAN";
   my $lastavg = ""; # Last floating average we have seen
   my $lastwk = "";
   my $weekends; # Code to draw background on weekend days
@@ -1218,7 +1220,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     $sum30 = $sum30 / $sumw;
     $sumweek = $sumweek / $cntweek;
     $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
-    my $zero = "";
+    my $zero = "NAN";
     if ($tot > 0.4 ) { # one small mild beer still gets a zero mark
       $zerodays = 0;
     } elsif ($zerodays >= 0) { # have seen a real $tot
@@ -1264,8 +1266,55 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
          "size $threedays,200 behind  fc rgbcolor \"#005000\"  fillstyle solid noborder \n";
       $wkendtag++;
     }
+    my $totdrinks = $tot;
+    my $drinkline = "";
+    my $ndrinks = 0;
+    my @drinkcolors = (   # color, pattern. First match counts
+       "0xe2aaaa", "wine[, ]*white",
+       "0x801414", "wine[, ]*red",
+       "0x4f1717", "wine[, ]*port",
+       "0xaa7e7e", "wine",
+       "0xc1c10b", "IPA|NE|WC",
+       "0xd8d80f", "Pale Ale|PA",
+       "0xb7930e", "Old|Brown|Red|Dark|Ale|Belgian|IDA",   # Any kind of ales
+       "0xf2f21f", "Pilsner|Lager|Keller|Bock|Helles|IPL",
+       "0xe5bc27", "Classic|dunkel|shcwarz",
+       "0xd1d1b5", "smoke|rauch|sc?h?lenkerla",
+       "0x230606", "stout|port|imp",
+       "0x1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
+       "0x47ccc5", "booze|snaps|whisky",
+       "0x47cc7a", "cider",
+       "0xe8e8a7", "weiss|wit|wheat",
+       "0xdbb83b", "misc|mix|random",
+       );
+    if ( $drinktypes{$date} ) {
+      foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
+        my $color = "";
+        my ($alc, $vol, $type) =  $dt =~ /^([0-9.]+) ([0-9]+) (.*)/;
+        next unless ( $type );
+        my $drinks = $alc * $vol / $onedrink;
+        for ( my $i = 0; $i < scalar(@drinkcolors) && !$color ; $i+=2) {
+          my $pat = $drinkcolors[$i+1];
+          if ( $type =~ /$pat/i ) {
+            $color = $drinkcolors[$i] ;
+          }
+        }
+        if (!$color) {
+          print STDERR "No color (on $date) for  '$dt' \n";
+          $color = "0xffffff" ;
+        }
+        $drinkline .= "$totdrinks $color ";
+        $totdrinks -= $drinks;
+        $ndrinks ++;
+        last if ($totdrinks <= 0 );
+      }
+    }
+    while ( $ndrinks++ < 10 ) {
+      $drinkline .= "0 0xffffff ";
+    }
+
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
-    print F "$date  $tot $sum30 $sumweek   $zero  $fut\n"  if ($zerodays >= 0);
+    print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" if ($zerodays >= 0);
     $havedata = 1;
   }
   print F "$legend \n";
@@ -1277,7 +1326,9 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     }
     my $xtic = $oneweek;
     my $pointsize = "";
+    my $fillstyle = "fill solid border linecolor \"#003000\"";
     if ( $startoff - $endoff > 400 ) {
+      $fillstyle = "fill solid noborder";
       $xformat="\"%b\\n%y\"";  # Jul 19
       #$xformat="\"%Y\"";  # 2019
       #$xtic = $oneday * 365.24 ;
@@ -1288,6 +1339,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       }
       $pointsize = "set pointsize 0.2\n" ;
     } elsif ( $startoff - $endoff > 120 ) {
+      $fillstyle = "fill solid noborder";
       $xformat="\"%b\\n%y\"";  # Jul 19
       $xtic = $onemonth;
       $pointsize = "set pointsize 0.5\n" ;
@@ -1311,7 +1363,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         "set ytics 7 $white \n" .
         "set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
         "set xtics \"2015-11-01\", $xtic out $white \n" .  # Happens to be sunday, and first of month
-        "set style fill solid \n" .
+        "set style $fillstyle \n" .
         "set boxwidth 0.7 relative \n" .
         "set key left top horizontal textcolor \"white\" \n" .
         "set grid xtics y2tics  linewidth 0.1 linecolor 4 \n".
@@ -1321,11 +1373,23 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         "plot " .
               # note the order of plotting, later ones get on top
               # so we plot weekdays, avg line, zeroes
-          "\"$plotfile\" using 1:2 with boxes lc \"grey60\" axes x1y2 title \"std drinks/day\" ," .  # weekdays
+          #"\"$plotfile\" using 1:2 with boxes lc \"grey60\" axes x1y2 title \"std drinks/day\" ," .  # weekdays
+
+          "\"$plotfile\" using 1:7:8 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:9:10 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:11:12 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:13:14 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:15:16 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:17:18 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:19:20 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:21:22 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:23:24 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:25:26 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+
           "\"$plotfile\" " .
-              "using 1:4 with line lc \"gray90\" axes x1y2 title \"wk $lastwk\", " .
+              "using 1:4 with line lc \"white\" axes x1y2 title \"wk $lastwk\", " .
           "\"$plotfile\" " .
-              "using 1:3 with line lc \"dark-violet\" lw 3 axes x1y2 title \" 30d avg $lastavg\", " .  # avg30
+              "using 1:3 with line lc \"dark-violet\" lw 3 axes x1y2 title \" 30d $lastavg\", " .  # avg30
                 # smooth csplines
           "\"$plotfile\" " .
               "using 1:6 with points pointtype 3 lc \"dark-violet\" axes x1y2 notitle, " .  # future tail
