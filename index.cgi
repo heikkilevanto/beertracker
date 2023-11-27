@@ -1265,7 +1265,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       $wkendtag++;
     }
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
-    print F "$date  $tot 0   $sum30 $sumweek   $zero  $fut\n"  if ($zerodays >= 0);
+    print F "$date  $tot $sum30 $sumweek   $zero  $fut\n"  if ($zerodays >= 0);
     $havedata = 1;
   }
   print F "$legend \n";
@@ -1310,8 +1310,6 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         "set border linecolor \"white\" \n" .
         "set ytics 7 $white \n" .
         "set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
-        #"set y2tics add (\"\" 3, \"\" 5)\n" . # Add scale lines for 3 and 5,
-        #"set my2tics 2 \n".
         "set xtics \"2015-11-01\", $xtic out $white \n" .  # Happens to be sunday, and first of month
         "set style fill solid \n" .
         "set boxwidth 0.7 relative \n" .
@@ -1321,21 +1319,18 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
           "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
         $weekends .
         "plot " .
-              # linecolor lc 0=grey 1=red, 2=green, 3=blue 9=purple
-              # pointtype pt 0: dot, 1:+ 2:x 3:* 4:square 5:filled 6:o 7:filled 8:
               # note the order of plotting, later ones get on top
-              # so we plot weekdays, weekends, avg line, zeroes
-          "\"$plotfile\" using 1:3 with boxes lc \"royalblue\" axes x1y2 title \"std drinks/day\"," .  # weekends
-          "\"$plotfile\" using 1:2 with boxes lc \"grey60\" axes x1y2 notitle ," .  # weekdays
+              # so we plot weekdays, avg line, zeroes
+          "\"$plotfile\" using 1:2 with boxes lc \"grey60\" axes x1y2 title \"std drinks/day\" ," .  # weekdays
           "\"$plotfile\" " .
-              "using 1:5 with line lc \"gray90\" axes x1y2 title \"wk $lastwk\", " .
+              "using 1:4 with line lc \"gray90\" axes x1y2 title \"wk $lastwk\", " .
           "\"$plotfile\" " .
-              "using 1:4 with line lc \"dark-violet\" lw 3 axes x1y2 title \" 30d avg $lastavg\", " .  # avg30
+              "using 1:3 with line lc \"dark-violet\" lw 3 axes x1y2 title \" 30d avg $lastavg\", " .  # avg30
                 # smooth csplines
           "\"$plotfile\" " .
-              "using 1:7 with points pointtype 3 lc \"dark-violet\" axes x1y2 notitle, " .  # future tail
+              "using 1:6 with points pointtype 3 lc \"dark-violet\" axes x1y2 notitle, " .  # future tail
           "\"$plotfile\" " .
-              "using 1:6 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
+              "using 1:5 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
           "";
     open C, ">$cmdfile"
         or error ("Could not open $plotfile for writing");
