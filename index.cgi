@@ -1239,8 +1239,13 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       $futable .= "</tr>\n";
     }
     if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
-      $lastavg = sprintf("(%2.1f/d %0.0f/w)", $sum30, $sum30*7) if ($sum30 > 0);
-      $lastwk = sprintf("(%2.1f/d %0.0f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
+      if ($bigimg eq "B") {
+        $lastavg = sprintf("(%2.1f/d %0.0f/w)", $sum30, $sum30*7) if ($sum30 > 0);
+        $lastwk = sprintf("(%2.1f/d %0.0f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
+      } else {
+        $lastavg = sprintf("%2.1f %0.0f", $sum30, $sum30*7) if ($sum30 > 0);
+        $lastwk = sprintf("%2.1f %0.0f", $sumweek, $sumweek*7) if ($sumweek > 0);
+      }
     }
     if ( $ndays == 0 ){  # Plot the start of the day
       if ( $tot ) {
@@ -1306,10 +1311,12 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         $drinkline .= "$totdrinks $color ";
         $totdrinks -= $drinks;
         $ndrinks ++;
-        last if ($totdrinks <= 0 );
+        last if ($totdrinks <= 0 ); #defensive coding, have seen it happen once
       }
     }
-    while ( $ndrinks++ < 10 ) {
+    print STDERR "Many ($ndrinks) drink entries on $date \n"
+      if ( $ndrinks >= 18 ) ;
+    while ( $ndrinks++ < 18 ) {
       $drinkline .= "0 0xffffff ";
     }
 
@@ -1344,7 +1351,7 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
       $xtic = $onemonth;
       $pointsize = "set pointsize 0.5\n" ;
     }
-    my $imgsz = "340,240";
+    my $imgsz = "320,250";  # Works on my fairphone
     if ($bigimg eq "B") {
       $imgsz = "640,480";
     }
@@ -1373,7 +1380,9 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
         "plot " .
               # note the order of plotting, later ones get on top
               # so we plot weekdays, avg line, zeroes
-          #"\"$plotfile\" using 1:2 with boxes lc \"grey60\" axes x1y2 title \"std drinks/day\" ," .  # weekdays
+          "\"$plotfile\" using 1:2 with boxes lc \"white\" axes x1y2 notitle ," .
+             # This will normally not show at all, the individual drink segments wil override it
+             # May be removed in the near future.
 
           "\"$plotfile\" using 1:7:8 with boxes lc rgbcolor variable axes x1y2 notitle, " .
           "\"$plotfile\" using 1:9:10 with boxes lc rgbcolor variable axes x1y2 notitle, " .
@@ -1385,6 +1394,14 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
           "\"$plotfile\" using 1:21:22 with boxes lc rgbcolor variable axes x1y2 notitle, " .
           "\"$plotfile\" using 1:23:24 with boxes lc rgbcolor variable axes x1y2 notitle, " .
           "\"$plotfile\" using 1:25:26 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:27:28 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:29:30 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:31:32 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:33:34 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:35:36 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:37:38 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:39:40 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:41:42 with boxes lc rgbcolor variable axes x1y2 notitle, " .
 
           "\"$plotfile\" " .
               "using 1:4 with line lc \"white\" axes x1y2 title \"wk $lastwk\", " .
@@ -1405,7 +1422,8 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     if ($bigimg eq "B") {
       print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
     } else {
-      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" style=\"max-width: 100%;\" /></a><br/>\n";
+      #print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" style=\"max-width: 100%;\" /></a><br/>\n";
+      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" /></a><br/>\n";
     }
   } # havedata
   print "<div class='no-print'>\n";
