@@ -115,7 +115,7 @@ my $date = param("d"); # Date, if entered. Overrides stamp and effdate.
 my $time = param("t"); # Time, if entered.
 my $del = param("x");  # delete/update last entry
 my $qry = param("q");  # filter query, greps the list
-my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "l" for extra links, g for geodata
+my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info
 my $yrlim = param("y"); # Filter by year
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
@@ -2271,16 +2271,15 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
 
   print "<br/>"if ($qry || $qrylim);
   print "<span class='no-print'>\n";
+  print "Filter ";
   print "<a href='$url?q=" . uri_escape_utf8($qry) . "&y=" . uri_escape_utf8($yrlim) .
       "&f=r' >Ratings</a>\n";
   print "<a href='$url?q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
       "&f=c' >Comments</a>\n";
+  print " Show ";
   print "<a href='$url?q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
-      "&f=l' >Links</a>\n";
-  print "<a href='$url?q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
-      "&f=g' >Geo</a>\n";
+      "&f=x' >Extra info</a><br/>\n";
   if ($qrylim) {
-    print "<a href='$url?q=" . uri_escape_utf8($qry) . "'>All</a><br/>\n";
     for ( my $i = 0; $i < 11; $i++) {
       print "<a href='$url?q=" . uri_escape_utf8($qry) . "&f=r$i' >$i</a> &nbsp;";
     }
@@ -2298,7 +2297,6 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
   my $lastdate = "today";
   my $lastloc2 = "";
   my $lastwday = "";
-  #my $maxlines = 25;
   my $daydsum = 0.0;
   my $daymsum = 0;
   my $loccnt = 0;
@@ -2399,7 +2397,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
       print "<br/><b>$wday $date </b>" . filt($loc,"b") . newmark($loc) . loclink($loc);
       print "<br/>\n" ;
-      if ($qrylim eq "g" ) {
+      if ($qrylim eq "g" || $qrylim eq "x") {   # TODO Remove the "g" once we use "x" for all
         my ( undef, undef, $gg) = geo($geolocations{$loc});
         my $tdist = geodist($geo, $gg);
         if ( $tdist && $tdist > 1 ) {
@@ -2441,7 +2439,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
           # Doesn't look good on the phone
         }
         print "<br/>\n" ;
-        if ( $qrylim eq "g" && $geo ) {
+        if ( ($qrylim eq "g" || $qrylim eq "x") && $geo ) {
           my (undef, undef, $gg) = geo($geo);
           my $dist = "";
           $dist = geodist( $geolocations{$loc}, $geo);
@@ -2500,7 +2498,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       print "<input type='submit' name='submit' value='Copy $volx'
                   style='display: inline; font-size: small' />\n";
     }
-    if ( $qrylim eq "l" ) {
+    if ( $qrylim eq "l" || $qrylim eq "x" ) {  # TODO Remove the "l" once we use "x"
       print "<br/>";
       print glink("$mak $beer", "Google") . "&nbsp;\n";
       print rblink("$mak $beer", "RateBeer") . "&nbsp;\n";
