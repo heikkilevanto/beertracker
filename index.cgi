@@ -2397,7 +2397,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
       print "<br/><b>$wday $date </b>" . filt($loc,"b") . newmark($loc) . loclink($loc);
       print "<br/>\n" ;
-      if ($qrylim eq "g" || $qrylim eq "x") {   # TODO Remove the "g" once we use "x" for all
+      if ( $qrylim eq "x") {
         my ( undef, undef, $gg) = geo($geolocations{$loc});
         my $tdist = geodist($geo, $gg);
         if ( $tdist && $tdist > 1 ) {
@@ -2430,16 +2430,22 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       print filt("[$sty]") . newmark($sty) . " "   if ($sty);
       if ($sty || $pr || $alc) {
-        #print units($pr, $vol, $alc, $bloodalc{$effdate});
-        print units($pr, $vol, $alc);  # too messy to show on every line
-        #print "" . ($seen{$b} || ""). " ";
-        if ( $ratecount{$beer} ) {
-          #print "s=$seen{$beer} rs=$ratesum{$beer} rc=$ratecount{$beer} "; # ###
-          #printf (" (%d:%3.1f)", $seen{$beer},$ratesum{$beer}/$ratecount{$beer});
-          # Doesn't look good on the phone
+        if ( $qrylim ne "x" ) {
+          print units($pr, $vol, $alc);
+        } else {
+          print units($pr, $vol, $alc, $bloodalc{$stamp});
+          print "<br/> Seen " . ($seen{$beer}). " times. " if ($seen{$beer});
+          if ($ratecount{$beer}) {
+            my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
+            if ($ratecount{$beer} == 1 )  {
+              print " One rating: <b>$avgrate</b> ";
+            } else {
+              print " Avg of <b>$ratecount{$beer}</b> ratings: <b>$avgrate</b>";
+            }
+          }
         }
         print "<br/>\n" ;
-        if ( ($qrylim eq "g" || $qrylim eq "x") && $geo ) {
+        if ( $qrylim eq "x" && $geo ) {
           my (undef, undef, $gg) = geo($geo);
           my $dist = "";
           $dist = geodist( $geolocations{$loc}, $geo);
@@ -2498,7 +2504,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/ ) {
       print "<input type='submit' name='submit' value='Copy $volx'
                   style='display: inline; font-size: small' />\n";
     }
-    if ( $qrylim eq "l" || $qrylim eq "x" ) {  # TODO Remove the "l" once we use "x"
+    if ( $qrylim eq "x" ) {
       print "<br/>";
       print glink("$mak $beer", "Google") . "&nbsp;\n";
       print rblink("$mak $beer", "RateBeer") . "&nbsp;\n";
