@@ -1274,22 +1274,22 @@ if ( $allfirstdate && $op && $op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i ) { # make
     my $totdrinks = $tot;
     my $drinkline = "";
     my $ndrinks = 0;
-    my @drinkcolors = (   # color, pattern. First match counts
-       "0xe2aaaa", "wine[, ]*white",
-       "0x801414", "wine[, ]*red",
-       "0x4f1717", "wine[, ]*port",
+    my @drinkcolors = (   # color, pattern. First match counts, so order matters
+       "0xe2aaaa", "wine[, ]+white",
+       "0x801414", "wine[, ]+red",
+       "0x4f1717", "wine[, ]+port",
        "0xaa7e7e", "wine",
-       "0xc1c10b", "IPA|NE|WC",
-       "0xd8d80f", "Pale Ale|PA",
-       "0xb7930e", "Old|Brown|Red|Dark|Ale|Belgian|IDA",   # Any kind of ales
        "0xf2f21f", "Pilsner|Lager|Keller|Bock|Helles|IPL",
        "0xe5bc27", "Classic|dunkel|shcwarz",
        "0xd1d1b5", "smoke|rauch|sc?h?lenkerla",
        "0x230606", "stout|port|imp",
        "0x1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
-       "0x47ccc5", "booze|snaps|whisky",
+       "0x47ccc5", "booze|sc?h?nap+s|whisky",
        "0x47cc7a", "cider",
        "0xe8e8a7", "weiss|wit|wheat",
+       "0xc1c10b", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
+       "0xd8d80f", "Pale Ale|PA",
+       "0xb7930e", "Old|Brown|Red|Dark|Ale|Belgian|IDA",   # Any kind of ales (after Pale Ale)
        "0xdbb83b", "misc|mix|random",
        );
     if ( $drinktypes{$date} ) {
