@@ -228,6 +228,7 @@ my $thisdate = "";
 my $lastwday = "";
 my @lines;
 my %seen; # Count how many times various names seen before (for NEW marks)
+my %lastseen; # Last time I have seen a given beer
 my %ratesum; # sum of ratings for every beer
 my %ratecount; # count of ratings for every beer, for averaging
 my %restaurants; # maps location name to restaurant types
@@ -289,6 +290,7 @@ while (<F>) {
   $seen{$b}++;
   $seen{$s}++;
   $seen{$restname}++;
+  $lastseen{$b} = $ed;
   if ($r && $b) {
     $ratesum{$b} += $r;
     $ratecount{$b}++;
@@ -1302,9 +1304,9 @@ if ( $op =~ /board(x?)/i ) {
   print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'>PA</a>) "
     if ($qry ne "IPA" && $scrapers{$locparam});
   if ($extraboard) {
-    print "<a href=$url?o=board>Plain</a>\n";
+    print "<a href='$url?o=board'>Plain</a>\n";
   } else {
-    print "<a href=$url?o=boardx>Ext</a>\n";
+    print "<a href='$url?o=boardx'>Ext</a>\n";
   }
   print "<p>\n";
   if (!$scrapers{$locparam}) {
@@ -1316,7 +1318,7 @@ if ( $op =~ /board(x?)/i ) {
     my $json = `perl $script`;
     chomp($json);
     if (! $json) {
-      print "Sorry, could not get the list from $locparam\n";
+      print "Sorry, could not get the list from $locparam<br/>\n";
       print "<!-- Error running " . $scrapers{$locparam} . ". \n";
       print "Result: '$json'\n -->\n";
     }else {
@@ -1449,13 +1451,23 @@ if ( $op =~ /board(x?)/i ) {
           $dispmak .= ":" if ($dispmak);
           print "<tr><td align=right>" . $e->{"id"} . "</td>\n";
           print "<td colspan=4 >";
-          print "<span style=''white-space: nowrap; overflow:hidden; text-overflow:clip; max-width=100px'>\n";
+          print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
           print "$dispmak $dispbeer</span></td></tr>\n";
           print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td>" .
             "<td>$sty $alc% &nbsp;</td>\n";
           print $buttons;
           print "<td width=100%>&nbsp;</td>\n"; # Dirty trick to move buttons a bit left
           print "</tr>\n";
+          if ($seen{$beer}) {
+            print "<tr><td>&nbsp;</td><td> Seen <b>" . ($seen{$beer}). "</b> times ";
+            print "$lastseen{$beer} " if ($lastseen{$beer});
+            if ($ratecount{$beer}) {
+              my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
+              print " $ratecount{$beer} rat=<b>$avgrate</b>";
+            }
+            print "</td></tr>\n";
+          }
+
         } else {
           print "<tr><td align=right style='font-size: x-small'>" . $e->{"id"} . "</td>\n";
           #print "<td>&nbsp;</td>\n";
@@ -2436,6 +2448,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         } else {
           print units($pr, $vol, $alc, $bloodalc{$stamp});
           print "<br/> Seen " . ($seen{$beer}). " times. " if ($seen{$beer});
+          #print "last $lastseen{$beer}. " if ($lastseen{$beer});
           if ($ratecount{$beer}) {
             my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
             if ($ratecount{$beer} == 1 )  {
