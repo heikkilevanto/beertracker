@@ -286,11 +286,15 @@ while (<F>) {
   $restname = "$1$l" if ( $m  =~ /^(Restaurant,)/i );
   $thisloc = $l if $l;
   $seen{$l}++;
-  $seen{$m}++;
-  $seen{$b}++;
-  $seen{$s}++;
   $seen{$restname}++;
-  $lastseen{$b} = $ed;
+  if ( ( $b !~ /misc|mixed|pilsner/i ) &&
+       ( $m !~ /misc|mixed/i ) &&
+       ( $s !~ /misc|mixed/i ) ) {
+    $seen{$m}++;
+    $seen{$b}++;
+    $lastseen{$b} = $ed;
+    $seen{$s}++;
+  }
   if ($r && $b) {
     $ratesum{$b} += $r;
     $ratecount{$b}++;
@@ -1418,8 +1422,10 @@ if ( $op =~ /board(x?)/i ) {
         $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc
         $sty =~ s/.*Belg.*/Belg/i;
         $sty =~ s/.*Barley.*Wine.*/BW/i;
-        $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars   ### Remove this later
-        print STDERR "sty='$origsty' -> '$sty'   '$e->{'beer'}' -> '$beer'  '$e->{'maker'}' -> '$mak'\n";
+        $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars, in case we didn't get it above
+        print "<!-- sty='$origsty' -> '$sty'   '$e->{'beer'}' -> '$beer'  '$e->{'maker'}' -> '$mak' -->\n";
+        # Add a comment to show the simplifying process.
+        # If there are strange beers, take a 'view source' and look
         my $country = $e->{'country'} || "";
         my $sizes = $e->{"sizePrice"};
         my $buttons="";
@@ -1459,7 +1465,7 @@ if ( $op =~ /board(x?)/i ) {
           print "<td width=100%>&nbsp;</td>\n"; # Dirty trick to move buttons a bit left
           print "</tr>\n";
           if ($seen{$beer}) {
-            print "<tr><td>&nbsp;</td><td> Seen <b>" . ($seen{$beer}). "</b> times ";
+            print "<tr><td>&nbsp;</td><td colspan=3> Seen <b>" . ($seen{$beer}). "</b> times ";
             print "$lastseen{$beer} " if ($lastseen{$beer});
             if ($ratecount{$beer}) {
               my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
@@ -2642,6 +2648,7 @@ sub newmark {
   my $rest = shift || "";
   return "" if ( $rest =~ /^Restaurant/);
   return "" if ($seen{$v} && $seen{$v} != 1);
+  return "" if ( $v =~ /mixed|misc/i );  # We don't collect those in seen
   return " <i>new</i> ";
 }
 
