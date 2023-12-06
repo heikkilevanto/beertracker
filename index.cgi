@@ -883,7 +883,7 @@ print "<input name='a' value='$alc %' $sz2 placeholder='Alc' />\n";
 my $prc = $pr;
 $prc =~ s/(-?[0-9]+).*$/$1.-/;
 print "<input name='p' value='$prc' $sz2 placeholder='Price' /></td>\n";
-print "<td><select name='r' value='$rate' placeholder='Rating' />" .
+print "<td><select name='r' value='$rate' placeholder='Rating'>" .
   "<option value=''></option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
@@ -894,7 +894,7 @@ print "</select>\n";
 print "</td></tr>\n";
 print "<tr>";
 print " <td $c6><textarea name='c' cols='45' rows='3'
-  placeholder='$todaydrinks'/>$com</textarea></td>\n";
+  placeholder='$todaydrinks'>$com</textarea></td>\n";
 print "<td> <span onclick='showrows();' align=right>";
 print "^ &nbsp; &nbsp;</span>\n";
 print "</td></tr>\n";
@@ -1283,7 +1283,7 @@ if ( $op =~ /board(x?)/i ) {
   $locparam = $loc unless ($locparam); # can happen after posting
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
-  print "\n<form method='POST' accept-charset='UTF-8' style='display: inline; 'class='no-print' >\n";
+  print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
   print "Beer list for\n";
   print "<select onchange='document.location=\"$url?o=board&l=\" + this.value;' >\n";
   if (!$scrapers{$locparam}) { #Include the current location, even if no scraper
@@ -1306,7 +1306,7 @@ if ( $op =~ /board(x?)/i ) {
   } else {
     print "<a href=$url?o=boardx>Ext</a>\n";
   }
-  print "<p/>\n";
+  print "<p>\n";
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
     $locparam="Ølbaren"; # A good default
@@ -1326,7 +1326,7 @@ if ( $op =~ /board(x?)/i ) {
       if ($qry) {
       print "Filter:<b>$qry</b> " .
         "(<a href='$url?o=$op&l=$locparam'>Clear</a>) " .
-        "<p/>\n";
+        "<p>\n";
       }
       print "<table border=0 style='white-space: nowrap;'>\n";
       foreach $e ( @$beerlist )  {
@@ -1593,10 +1593,10 @@ if ( $op =~ /board(x?)/i ) {
         $ysum += $years{$y};
       }
     }
-    print "<a href='$url?maxl=-1&" . $q->query_string(). ">" .
-      "All</a> ($ysum)<p/>\n";
+    print "<a href='$url?maxl=-1&" . $q->query_string(). "'>" .
+      "All</a> ($ysum)<p>\n";
   } else {
-    print "<br/>That was the whole list<p/>\n" unless ($yrlim);
+    print "<br/>That was the whole list<p>\n" unless ($yrlim);
   }
   exit(); # All done
 
@@ -1703,7 +1703,6 @@ if ( $op =~ /board(x?)/i ) {
         print "<tr><td align=right>$prday&nbsp;</td>" .
           "<td align=right>$alcday&nbsp;</td>" .
           "<td>&nbsp; = per week</td></tr>\n";
-        print "</pre>";
         $sofar = "";
       }
       %sum = ();
@@ -1965,12 +1964,12 @@ if ( $op =~ /board(x?)/i ) {
   print aboutlink("Bugtracker", "https://github.com/heikkilevanto/beertracker/issues");
   print aboutlink("Ratebeer", "https://www.ratebeer.com");
   print aboutlink("Untappd", "https://untappd.com");
-  print "</ul><p/>\n";
+  print "</ul><p>\n";
   print "Some of my favourite bars and breweries<ul>";
   for my $k ( sort keys(%links) ) {
     print aboutlink($k, $links{$k});
   }
-  print "</ul><p/>\n";
+  print "</ul><p>\n";
   print "<hr/>";
   if ($tz) {
     print "Your time zone is: $tz<br>\n";
@@ -1988,22 +1987,22 @@ if ( $op =~ /board(x?)/i ) {
   print "Of course you can just enter the number of centiliters <br/>\n";
   print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
 
-  print "<p/>\n";
+  print "<p>\n";
   print "For a new box wine (or booze bottle, etc), enter the price as negative.<br/>\n";
   print "When using wine for cooking, or for guests, enter a negative volume. That <br/>\n";
   print "gets subtracted from the box without affecting your stats.<br/>\n";
 
-  print "<p/><hr/>\n";
+  print "<p><hr/>\n";
   print "<b>Debug info </b><br/>\n";
-  print "&nbsp; <a href=$url?o=Datafile&maxl=30>Tail of the data file</a><br/>\n";
-  print "&nbsp; <a href=$url?o=Datafile>Download the whole data file</a><br/>\n";
-  print "&nbsp; <a href=$url?o=geo>Geolocation summary</a><br/>\n";
+  print "&nbsp; <a href='$url?o=Datafile&maxl=30'>Tail of the data file</a><br/>\n";
+  print "&nbsp; <a href='$url?o=Datafile'>Download the whole data file</a><br/>\n";
+  print "&nbsp; <a href='$url?o=geo'>Geolocation summary</a><br/>\n";
   exit();
 
 } elsif ( $op eq "Price" ) {
 ###################
 # Price-volume table
-print "<br/><b>Prices</b><p/>\n";
+print "<br/><b>Prices</b><p>\n";
 my @volumes = ( 20, 25, 30, 33, 40, 50, 100 );
 print "<table border=1>\n";
 print "<tr>\n";
@@ -2045,7 +2044,7 @@ print "</table>\n";
 #####################
 # Geolocation debug
   if (!$qry) {  # no location, list them all
-    print "<hr><b>Geolocations</b><p/>\n";
+    print "<hr><b>Geolocations</b><p>\n";
     print "<table>\n";
     print "<tr><td>Latitude</td><td>Longitude</td><td>Location</td></tr>\n";
     # TODO Sort by geo coords instead of name
@@ -2056,16 +2055,16 @@ print "</table>\n";
       print "<td><a href='$url?o=geo&q=$k' >$k</a></td>";
       print "</tr>\n";
     }
-    print "<table>\n";
+    print "</table>\n";
   } else { # loc given, list all occurrences of that location
     my $i = scalar( @lines );
     print "<hr/>Geolocation for <b>$qry</b> &nbsp;";
-    print "<a href=$url?o=geo>Back</a>";
-    print "<p/>\n";
+    print "<a href='$url?o=geo'>Back</a>";
+    print "<p>\n";
     my (undef,undef,$defloc) = geo($geolocations{$qry});
-    print "Default geo: $defloc <p/>\n" if ($defloc);
+    print "Default geo: $defloc <p>\n" if ($defloc);
     print "<table>\n";
-    print "<tr><td>Latitude</td><td>Longitude</td><td>Distance</d></tr>\n";
+    print "<tr><td>Latitude</td><td>Longitude</td><td>Distance</td></tr>\n";
     while ( $i-- > 0 ){
       ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
 $com, $geo ) =
@@ -2150,10 +2149,10 @@ $com, $geo ) =
       $fld = $loc;
       $line = "<td>" . filt($loc,"b","","full") .
         "<span class='no-print'> ".
-        "&nbsp; " . loclink($loc, "Www") . "  " . glink($loc, "G") . "</span>" .
-        "</td>" .
+        "&nbsp; " . loclink($loc, "Www") . "\n  " . glink($loc, "G") . "</span>" .
+        "</td>\n" .
         "<td>$wday $effdate ($seen{$loc}) <br class='no-wide'/>" .
-        lst("Location",$mak,"i") . ": " . lst($op,$beer) . "</td>";
+        lst("Location",$mak,"i") . ": \n" . lst($op,$beer) . "</td>";
 
     } elsif ( $op eq "Brewery" ) {
       next if ( $mak =~ /^wine/i );
@@ -2161,38 +2160,38 @@ $com, $geo ) =
       next if ( $mak =~ /^restaurant/i );
       $fld = $mak;
       $mak =~ s"/"/<br/>"; # Split collab brews on two lines
-      $line = "<td>" . filt($mak,"b","","full") . "<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>" .
-      "<td>$wday $effdate " . lst($op,$loc) . " ($seen{$fld}) " .  # $mak before cleaning
-            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]") . "  " . lst("full",$beer,"b")  ."</td>";
+      $line = "<td>" . filt($mak,"b","","full") . "\n<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>\n" .
+      "<td>$wday $effdate " . lst($op,$loc) . "\n ($seen{$fld}) " .  # $mak before cleaning
+            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]") . " \n " . lst("full",$beer,"b")  ."</td>";
 
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b","","full") . "&nbsp; ($seen{$beer}) &nbsp;" . glink($mak,"G") ."</td>" .
+      $line = "<td>" . filt($beer,"b","","full") . "&nbsp; ($seen{$beer}) &nbsp;\n" . glink($mak,"G") ."</td>" .
             "<td>$wday $effdate ".
-            lst($op,$loc) .  " <br class='no-wide'/> " .
-            lst($op,$sty,"","[$sty]"). " " . unit($alc,'%') .
+            lst($op,$loc) .  "\n <br class='no-wide'/> " .
+            lst($op,$sty,"","[$sty]"). "\n " . unit($alc,'%') .
             lst($op,$mak,"i") . "&nbsp;</td>";
 
     } elsif ( $op eq "Wine" ) {
       next unless ( $mak =~ /^wine, *(.*)$/i );
       $fld = $beer;
       my $stylename = $1;
-      $line = "<td>" . filt($beer,"b","","full")  . "&nbsp; $stylename &nbsp;" . glink($beer, "G") . "</td>" .
+      $line = "<td>" . filt($beer,"b","","full")  . "&nbsp; $stylename &nbsp;\n" . glink($beer, "G") . "</td>\n" .
             "<td>$wday $effdate ".
-            lst($op,$loc) . " ($seen{$beer}) " .
+            lst($op,$loc) . "\n ($seen{$beer})\n " .
             "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). "</td>";
 
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze, *(.*)$/i );
       $fld = $beer;
       my $stylename = $1;
-      $line = "<td>" .filt($beer,"b","","full") . "&nbsp;" . glink($beer, "G") ."</td>" .
+      $line = "<td>" .filt($beer,"b","","full") . "\n&nbsp;" . glink($beer, "G") ."</td>\n" .
             "<td>$wday $effdate ".
-            lst($op,$loc) ." ($seen{$beer}) " .
-            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). " " . unit($alc,'%') .
+            lst($op,$loc) ."\n ($seen{$beer}) " .
+            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). " " . unit($alc,'%') . "\n" .
               lst($op, $mak,"i", $stylename) . "</td>";
 
     } elsif ( $op eq "Restaurant" ) {
@@ -2205,8 +2204,8 @@ $com, $geo ) =
       my $restname = "Restaurant,$loc";
       my $rpr = "";
       $rpr = "&nbsp; $pr kr" if ($pr && $pr >0) ;
-      $line = "<td>" . filt($loc,"b","","full") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> ".
-              "$rstyle  &nbsp;" . glink("Restaurant $loc") . "</td>" .
+      $line = "<td>" . filt($loc,"b","","full") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> \n ".
+              "$rstyle  &nbsp;\n" . glink("Restaurant $loc") . "</td>\n" .
               "<td><i>$beer</i>". " $rpr <br class='no-wide'/> " .
               "$wday $effdate $ratestr</td>";
 
@@ -2216,9 +2215,9 @@ $com, $geo ) =
       next if ( $mak =~ /^restaurant/i );
       next if ( $sty =~ /^misc/i );
       $fld = $sty;
-      $line = "<td>" . filt("[$sty]","b","","full") . " ($seen{$sty})" . "</td><td>$wday $effdate " .
+      $line = "<td>" . filt("[$sty]","b","","full") . " ($seen{$sty})" . "</td><td>$wday $effdate \n" .
             lst("Beer",$loc,"i") .
-            " <br class='no-wide'/> " . lst($op,$mak,"i") . ": " . lst("full",$beer,"b") . "</td>";
+            "\n <br class='no-wide'/> " . lst($op,$mak,"i") . ": \n" . lst("full",$beer,"b") . "</td>";
     } else {
       print "<!-- unknown shortlist '$op' -->\n";
       last;
@@ -2233,11 +2232,11 @@ $com, $geo ) =
   if ($sortlist) {
     @displines = ();
     for $k ( sort { "\U$a" cmp "\U$b" } keys(%lineseen) ) {
-      print "<tr>$lineseen{$k}</tr>\n";
+      print "<tr>\n$lineseen{$k}</tr>\n";
     }
   } else {
     foreach my $dl (@displines) {
-      print "<tr>$dl</tr>\n";
+      print "<tr>\n$dl</tr>\n";
     }
   }
   print "</table>\n";
@@ -2255,7 +2254,7 @@ $com, $geo ) =
     }
   }
   print "<a href='$url?maxl=-1&" . $q->query_string() . "'>" .
-    "All</a> ($ysum)<p/>\n" if($ysum);
+    "All</a> ($ysum)<br/>\n" if($ysum);
 
   exit();
 }
@@ -2274,16 +2273,16 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   print "<br/>"if ($qry || $qrylim);
   print "<span class='no-print'>\n";
   print "Filter ";
-  print "<a href='$url?q=" . uri_escape_utf8($qry) . "&y=" . uri_escape_utf8($yrlim) .
+  print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&y=" . uri_escape_utf8($yrlim) .
       "&f=r' >Ratings</a>\n";
-  print "<a href='$url?q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
+  print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
       "&f=c' >Comments</a>\n";
   print " Show ";
-  print "<a href='$url?q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
+  print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
       "&f=x' >Extra info</a><br/>\n";
   if ($qrylim) {
     for ( my $i = 0; $i < 11; $i++) {
-      print "<a href='$url?q=" . uri_escape_utf8($qry) . "&f=r$i' >$i</a> &nbsp;";
+      print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&f=r$i' >$i</a> &nbsp;";
     }
   }
   print "</span>\n";
@@ -2425,7 +2424,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     }
     $anchor = $stamp || "";
     $anchor =~ s/[^0-9]//g;
-    print "\n<a id='$anchor'/>\n";
+    print "\n<a id='$anchor'></a>\n";
     print "<br class='no-print'/>$time " . filt($mak,"i") . newmark($mak) .
             " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br class='no-wide'/>\n";
@@ -2549,13 +2548,13 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     }
     $anchor = "#".$anchor if ($anchor);
     $ysum = $ysum || "";
-    print "<a href='$url?maxl=-1$anchor' >All</a> ($ysum)<p/>\n";
+    print "<a href='$url?maxl=-1$anchor' >All</a> ($ysum)<p>\n";
   } else {
-    print "<br/>That was the whole list<p/>\n" unless ($yrlim);
+    print "<br/>That was the whole list<p>\n" unless ($yrlim);
   }
   my $rsum = 0;
   my $rcnt = 0;
-  print "<p/>Ratings:<br/>\n";
+  print "<p>Ratings:<br/>\n";
   for (my $i = 0; $i<11; $i++) {
     $rsum += $ratecounts[$i] * $i;
     $rcnt += $ratecounts[$i];
