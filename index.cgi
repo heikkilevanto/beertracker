@@ -417,7 +417,7 @@ while (<F>) {
     $monthprices{$calmon} += abs($p);
   }
   $lastmonthday = $1 if ( $ed =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-  $drinktypes{$ed} .= "$a $v $s $m;" if ($a > 0 && $v > 0);
+  $drinktypes{$ed} .= "$a $v $s $m : $l ;" if ($a > 0 && $v > 0);
 } # line loop
 
 if ( ! $todaydrinks ) { # not today
@@ -711,7 +711,7 @@ if ( !@lines && ! $op ) {
 # Javascript trickery. Most of the logic is on the server side, but a few
 # things have to be done in the browser.
 
-# If fielfs should clear when clicked on
+# If fields should clear when clicked on
 # Easier to use on my phone. Can be disabled with the Clr checkbox.
 
 my $script = <<'SCRIPTEND';
@@ -1097,9 +1097,11 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
        "0xdbb83b", "misc|mix|random",
        );
     if ( $drinktypes{$date} ) {
+      my $lastloc = "";
       foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
         my $color = "";
-        my ($alc, $vol, $type) =  $dt =~ /^([0-9.]+) ([0-9]+) (.*)/;
+        my ($alc, $vol, $type, $loc) =  $dt =~ /^([0-9.]+) ([0-9]+) ([^:]*) : (.*)/;
+        $lastloc = $loc unless ($lastloc);
         next unless ( $type );
         my $drinks = $alc * $vol / $onedrink;
         for ( my $i = 0; $i < scalar(@drinkcolors) && !$color ; $i+=2) {
@@ -1112,9 +1114,16 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
           print STDERR "No color (on $date) for  '$dt' \n";
           $color = "0xffffff" ;
         }
+        if ( $lastloc ne $loc  &&  $startoff - $endoff < 100 ) {
+          my $lw = $totdrinks + 0.1;
+          $lw += 0.1 unless ($bigimg eq "B");
+          $drinkline .= "$lw 0xffffff ";
+          $lastloc = $loc;
+          $ndrinks++;
+        }
         $drinkline .= "$totdrinks $color ";
-        $totdrinks -= $drinks;
         $ndrinks ++;
+        $totdrinks -= $drinks;
         last if ($totdrinks <= 0 ); #defensive coding, have seen it happen once
       }
     }
@@ -1138,15 +1147,15 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     my $xtic = $oneweek;
     my $pointsize = "";
     my $fillstyle = "fill solid border linecolor \"#003000\"";
-    if ( $startoff - $endoff > 400 ) {
+    if ( ( $startoff - $endoff > 400  && $bigimg eq "B" ) ||
+         ( $startoff - $endoff > 80 ) ) {
       $fillstyle = "fill solid noborder";
-      $xformat="\"%b\\n%y\"";  # Jul 19
       #$xformat="\"%Y\"";  # 2019
-      #$xtic = $oneday * 365.24 ;
       if ( $startoff - $endoff > 1200 ) {
         $xtic = $onemonth * 12;
-      } else {
-        $xtic = $onemonth * 3;
+        $xformat="\"%b\\n%y\"";  # Jul 19
+      } elsif ( $startoff - $endoff > 80 ) {
+        $xtic = $onemonth ;
       }
       $pointsize = "set pointsize 0.2\n" ;
     } elsif ( $startoff - $endoff > 120 ) {
@@ -1213,7 +1222,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
               "using 1:3 with line lc \"dark-violet\" lw 3 axes x1y2 title \" 30d $lastavg\", " .  # avg30
                 # smooth csplines
           "\"$plotfile\" " .
-              "using 1:6 with points pointtype 3 lc \"dark-violet\" axes x1y2 notitle, " .  # future tail
+              "using 1:6 with points pointtype 5 lc \"dark-violet\" axes x1y2 notitle, " .  # future tail
           "\"$plotfile\" " .
               "using 1:5 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
           "";
