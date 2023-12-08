@@ -2291,20 +2291,20 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   print "\n<!-- Full list -->\n ";
   my $filts = splitfilter($qry);
-  print "<hr/>Filter:<b>$yrlim $filts</b> (<a href='$url'>Clear</a>)" if ($qry || $qrylim || $yrlim);
-  print " -".$qrylim if ($qrylim);
+  print "<hr/>Filter: \n";
+  print " -$qrylim " if ($qrylim);
+  print "(<a href='$url'>Clear</a>) <b>$yrlim $filts</b>" if ($qry || $qrylim || $yrlim);
   print " &nbsp; \n";
   print "<br/>" . searchform() . "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) .
     filt($qry, "", "Short", "short")  ."\n" if ($qry);
 
-  print "<br/>"if ($qry || $qrylim);
+  #print "<br/>"if ($qry || $qrylim);
   print "<span class='no-print'>\n";
-  print "Filter ";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&y=" . uri_escape_utf8($yrlim) .
       "&f=r' >Ratings</a>\n";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
       "&f=c' >Comments</a>\n";
-  print " Show ";
+  print " &nbsp; Show: ";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
       "&f=x' >Extra info</a><br/>\n";
   if ($qrylim) {
