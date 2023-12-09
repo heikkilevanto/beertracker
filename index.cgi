@@ -1144,6 +1144,11 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     if ($startoff > 365) {
       $xformat = "\"%d\\n%b\\n%y\"";  # 14 Jul 20
     }
+    my $weekline = "\"$plotfile\" " .
+              "using 1:4 with line lc \"#00dd10\" axes x1y2 title \"wk $lastwk\", " ;
+    if ( $startoff - $endoff > 100 ) {
+      $weekline = "";
+    }
     my $xtic = $oneweek;
     my $pointsize = "";
     my $fillstyle = "fill solid border linecolor \"#003000\"";
@@ -1216,13 +1221,12 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
           "\"$plotfile\" using 1:39:40 with boxes lc rgbcolor variable axes x1y2 notitle, " .
           "\"$plotfile\" using 1:41:42 with boxes lc rgbcolor variable axes x1y2 notitle, " .
 
+          "$weekline " .
           "\"$plotfile\" " .
-              "using 1:4 with line lc \"white\" axes x1y2 title \"wk $lastwk\", " .
-          "\"$plotfile\" " .
-              "using 1:3 with line lc \"dark-violet\" lw 3 axes x1y2 title \" 30d $lastavg\", " .  # avg30
+              "using 1:3 with line lc \"#FfFfFf\" lw 3 axes x1y2 title \" 30d $lastavg\", " .  # avg30
                 # smooth csplines
           "\"$plotfile\" " .
-              "using 1:6 with points pointtype 5 lc \"dark-violet\" axes x1y2 notitle, " .  # future tail
+              "using 1:6 with points pointtype 7 lc \"#E0E0E0\" axes x1y2 notitle, " .  # future tail
           "\"$plotfile\" " .
               "using 1:5 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
           "";
