@@ -1078,44 +1078,16 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     my $totdrinks = $tot;
     my $drinkline = "";
     my $ndrinks = 0;
-    my @drinkcolors = (   # color, pattern. First match counts, so order matters
-       "0xe2aaaa", "wine[, ]+white",
-       "0x801414", "wine[, ]+red",
-       "0x4f1717", "wine[, ]+port",
-       "0xaa7e7e", "wine",
-       "0xf2f21f", "Pilsner|Lager|Keller|Bock|Helles|IPL",
-       "0xe5bc27", "Classic|dunkel|shcwarz",
-       "0xd1d1b5", "smoke|rauch|sc?h?lenkerla",
-       "0x230606", "stout|port|imp",
-       "0x1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
-       "0x47ccc5", "booze|sc?h?nap+s|whisky",
-       "0x47cc7a", "cider",
-       "0xe8e8a7", "weiss|wit|wheat",
-       "0xc1c10b", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
-       "0xd8d80f", "Pale Ale|PA",
-       "0xb7930e", "Old|Brown|Red|Dark|Ale|Belgian|IDA",   # Any kind of ales (after Pale Ale)
-       "0xdbb83b", "misc|mix|random",
-       );
     if ( $drinktypes{$date} ) {
       my $lastloc = "";
       foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
-        my $color = "";
         my ($alc, $vol, $type, $loc) =  $dt =~ /^([0-9.]+) ([0-9]+) ([^:]*) : (.*)/;
         $lastloc = $loc unless ($lastloc);
         next unless ( $type );
+        my $color = beercolor($type,"0x",$date,$dt);
         my $drinks = $alc * $vol / $onedrink;
-        for ( my $i = 0; $i < scalar(@drinkcolors) && !$color ; $i+=2) {
-          my $pat = $drinkcolors[$i+1];
-          if ( $type =~ /$pat/i ) {
-            $color = $drinkcolors[$i] ;
-          }
-        }
-        if (!$color) {
-          print STDERR "No color (on $date) for  '$dt' \n";
-          $color = "0xffffff" ;
-        }
         if ( $lastloc ne $loc  &&  $startoff - $endoff < 100 ) {
-          my $lw = $totdrinks + 0.1;
+          my $lw = $totdrinks + 0.1; # White line for location change
           $lw += 0.1 unless ($bigimg eq "B");
           $drinkline .= "$lw 0xffffff ";
           $lastloc = $loc;
@@ -1466,9 +1438,10 @@ if ( $op =~ /board(x?)/i ) {
           $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
           $buttons .= "</form></td>\n";
         }
+        my $beercolor = beercolor($origsty,"#", "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
         if ($extraboard) {
           $dispmak .= ":" if ($dispmak);
-          print "<tr><td align=right>" . $e->{"id"} . "</td>\n";
+          print "<tr><td align=righ style='background-color:$beercolor'>" . $e->{"id"} . "</td>\n";
           print "<td colspan=4 >";
           print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
           print "$dispmak $dispbeer</span></td></tr>\n";
@@ -1488,7 +1461,7 @@ if ( $op =~ /board(x?)/i ) {
           }
 
         } else {
-          print "<tr><td align=right style='font-size: x-small'>" . $e->{"id"} . "</td>\n";
+          print "<tr><td align=right style='background-color:$beercolor'>" . $e->{"id"} . "</td>\n";
           #print "<td>&nbsp;</td>\n";
           print "$buttons\n";
           #print "<td style='max-width:100%; overflow:hidden;text-overflow:fade;' >$dispbeer $alc% $dispmak</td>\n";
@@ -2892,4 +2865,39 @@ sub datestr {
   }
   my $dstr = strftime ($form, localtime($usetime + $delta *60*60*24));
   return $dstr;
+}
+
+# Helper to assign a color for a beer
+sub beercolor {
+  my $type = shift;
+  my $prefix = shift || "0x";
+  my $date = shift; # for error logging
+  my $line = shift;
+
+  my @drinkcolors = (   # color, pattern. First match counts, so order matters
+      "e2aaaa", "wine[, ]+white",
+      "801414", "wine[, ]+red",
+      "4f1717", "wine[, ]+port",
+      "aa7e7e", "wine",
+      "f2f21f", "Pilsner|Lager|Keller|Bock|Helles|IPL",
+      "e5bc27", "Classic|dunkel|shcwarz|vienna",
+      "d1d1b5", "smoke|rauch|sc?h?lenkerla",
+      "230606", "stout|port",  # imp?`
+      "1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
+      "47ccc5", "booze|sc?h?nap+s|whisky",
+      "47cc7a", "cider",
+      "e8e8a7", "weiss|wit|wheat|weizen",
+      "c1c10b", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
+      "d8d80f", "Pale Ale|PA",
+      "b7930e", "Old|Brown|Red|Dark|Ale|Belgian|IDA",   # Any kind of ales (after Pale Ale)
+      "dbb83b", "misc|mix|random",
+      );
+      for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
+        my $pat = $drinkcolors[$i+1];
+        if ( $type =~ /$pat/i ) {
+          return $prefix.$drinkcolors[$i] ;
+        }
+      }
+      print STDERR "No color (on $date) for  '$line' \n";
+      return $prefix."9400d3" ;   # dark-violet, aggressive pink
 }
