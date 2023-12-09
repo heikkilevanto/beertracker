@@ -1863,20 +1863,25 @@ if ( $op =~ /board(x?)/i ) {
   if ($bigimg) {
     $imgsz = "640,480";
   }
+  my $white = "textcolor \"white\" ";
   my $cmd = "" .
        "set term png small size $imgsz \n".
        "set out \"$pngfile\" \n".
        "set yrange [0:] \n" .
-       "set mxtics 1\n".
-       "set ytics 1\n".
-       "set mytics 2\n".
+       "set xtics $white\n".
+       "set mxtics 1 \n".
+       "set ytics 1 $white\n".
+       "set mytics 2 \n".
        "set link y2 via y*7 inverse y/7\n".
-       "set y2tics 7\n".
+       "set y2tics 7 $white\n".
        "set grid xtics ytics\n".
        "set xdata time \n".
        "set timefmt \"%b\" \n".
        "set format x \"%b\"\n" .
-       "set key right top horizontal \n " .
+       "set key right top horizontal textcolor \"white\" \n " .
+       "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
+          "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
+       "set border linecolor \"white\" \n" .
        "plot ";
   my $lw = 2;
   my $lc = 1;
