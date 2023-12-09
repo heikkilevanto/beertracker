@@ -2262,6 +2262,7 @@ $com, $geo ) =
 
   exit();
 }
+
 ########################
 # Regular list, on its own, or after graph and/or beer board
 if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
@@ -2433,7 +2434,11 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
             " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br class='no-wide'/>\n";
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
-      print filt("[$sty]") . newmark($sty) . " "   if ($sty);
+      if ($sty) {
+        my $beercolor = beercolor("$sty $mak","#", "$date", "[$sty $mak] : $beer" );
+        my $tag="span style='background-color:$beercolor'";
+        print filt("[$sty]",$tag) . newmark($sty) . " "   ;
+      }
       if ($sty || $pr || $alc) {
         if ( $qrylim ne "x" ) {
           print units($pr, $vol, $alc);
@@ -2600,7 +2605,10 @@ sub filt {
   $op = "o=$op&" if ($op);
   my $param = $f;
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
-  my $link = "<a href='$url?$op"."q=".uri_escape_utf8($param) ."'><$tag>$dsp</$tag></a>";
+  my $endtag = $tag;
+  $endtag =~ s/ .*//; # skip attributes
+  my $link = "<a href='$url?$op"."q=".uri_escape_utf8($param) ."'>" .
+    "<$tag>$dsp</$endtag></a>";
   return $link;
 }
 
