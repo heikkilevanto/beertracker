@@ -1362,53 +1362,8 @@ if ( $op =~ /board(x?)/i ) {
         $beer =~ s/'//g; # So just drop them
         $sty =~ s/'//g;
         my $origsty = $sty ;
-        $sty =~ s/\b(Beer|Style)\b//i; # Stop words
-        $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
-        $sty =~ s/\s+/ /g;
-        if ( $sty =~ /(\WPA|Pale Ale)/i ) {
-          $sty =~ s/.*(America|US)/APA/i;
-          $sty =~ s/.*(Belg).*/BelPA/i;
-          $sty =~ s/.*(Hazy|Haze|New England|NE).*/NEPA/i;
-          $sty =~ s/.*(Pale Ale).*/PA/i;
-        } elsif ( $sty =~ /(IPA|India)/i ) {
-          $sty =~ s/.*Session.*/SIPA/i;
-          $sty =~ s/.*(Black).*/BIPA/i;
-          $sty =~ s/.*(Double|Triple).*(New England|NE).*/DNE/i;
-          $sty =~ s/.*(Double|Dipa).*/DIPA/i;
-          $sty =~ s/.*Wheat.*/WIPA/i;
-          $sty =~ s/.*(IPA).*(New England|NE|Hazy).*/NEIPA/i;  # Avoid matching DNE above
-          $sty =~ s/.*(New England|NE|Hazy).*(IPA).*/NEIPA/i;
-          $sty =~ s/.*(New Zealand|NZ).*/NZ/i;
-          $sty =~ s/.*(West Coast|WC).*/WC/i;
-          $sty =~ s/.*(America|US).*/AIPA/i;
-        }
-        $sty =~ s/India Lager/IL/i;
-        $sty =~ s/Pale Lager/Lag/i;
-        $sty =~ s/^Keller.*/Kel/i;
-        $sty =~ s/.*(Pilsner|Pilsener).*/Pils/i;
-        $sty =~ s/.*Hefe.*/Hefe/i;
-        $sty =~ s/.*Wit.*/Wit/i;
-        $sty =~ s/.*Dunkel.*/Dunk/i;
-        $sty =~ s/.*Weizenbock.*/Wbock/i;
-        $sty =~ s/.*Doppelbock.*/Dbock/i;
-        $sty =~ s/.*[^DW]Bock.*/Bock/i;
-        $sty =~ s/.*(Smoke|Rauch).*/Smoke/i;
-        $sty =~ s/.*(Lambic|Sour) *(\w+).*/$1/i;   # Lambic Fruit - Fruit
-        $sty =~ s/.*Berliner.*/Berl/i;
-        $sty =~ s/.*(Imperial).*/Imp/i;
-        $sty =~ s/.*(Stout).*/Stout/i;
-        $sty =~ s/.*(Porter).*/Port/i;
-        $sty =~ s/.*Farm.*/Farm/i;
-        $sty =~ s/.*Saison.*/Saison/i;
-        $sty =~ s/.*(Double|Dubbel).*/Dub/i;
-        $sty =~ s/.*(Triple|Tripel|Tripple).*/Trip/i;
-        $sty =~ s/.*(Quadruple|Quadrupel).*/Quad/i;
-        $sty =~ s/.*(Blond|Brown|Strong).*/$1/i;
-        $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc
-        $sty =~ s/.*Belg.*/Belg/i;
-        $sty =~ s/.*Barley.*Wine.*/BW/i;
-        $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars, in case we didn't get it above
-        print "<!-- sty='$origsty' -> '$sty'   '$e->{'beer'}' -> '$beer'  '$e->{'maker'}' -> '$mak' -->\n";
+        $sty = shortbeerstyle($sty);
+        print "<!-- sty='$origsty' -> '$sty'\n'$e->{'beer'}' -> '$beer'\n'$e->{'maker'}' -> '$mak' -->\n";
         # Add a comment to show the simplifying process.
         # If there are strange beers, take a 'view source' and look
         my $country = $e->{'country'} || "";
@@ -2276,7 +2231,6 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   print "<br/>" . searchform() . "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) .
     filt($qry, "", "Short", "short")  ."\n" if ($qry);
 
-  #print "<br/>"if ($qry || $qrylim);
   print "<span class='no-print'>\n";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&y=" . uri_escape_utf8($yrlim) .
       "&f=r' >Ratings</a>\n";
@@ -2417,6 +2371,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         print "Geo: $gg $tdist $guess<br/>\n" if ($gg || $guess || $tdist);
       }
     }
+    # The beer entry itself
     if ( $date ne $effdate ) {
       $time = "($time)";
     }
@@ -2437,7 +2392,9 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       if ($sty) {
         my $beercolor = beercolor("$sty $mak","#", "$date", "[$sty $mak] : $beer" );
         my $tag="span style='background-color:$beercolor'";
+        $sty = shortbeerstyle($sty) if ( $qrylim ne "x" );
         print filt("[$sty]",$tag) . newmark($sty) . " "   ;
+
       }
       if ($sty || $pr || $alc) {
         if ( $qrylim ne "x" ) {
@@ -2908,4 +2865,57 @@ sub beercolor {
       }
       print STDERR "No color (on $date) for  '$line' \n";
       return $prefix."9400d3" ;   # dark-violet, aggressive pink
+}
+
+
+# Helper to shorten a beer style
+sub shortbeerstyle{
+  my $sty = shift;
+  $sty =~ s/\b(Beer|Style)\b//i; # Stop words
+  $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
+  $sty =~ s/\s+/ /g;
+  if ( $sty =~ /(\WPA|Pale Ale)/i ) {
+    $sty =~ s/.*(America|US)/APA/i;
+    $sty =~ s/.*(Belg).*/BelPA/i;
+    $sty =~ s/.*(Hazy|Haze|New England|NE).*/NEPA/i;
+    $sty =~ s/.*(Pale Ale).*/PA/i;
+  } elsif ( $sty =~ /(IPA|India)/i ) {
+    $sty =~ s/.*Session.*/SIPA/i;
+    $sty =~ s/.*(Black).*/BIPA/i;
+    $sty =~ s/.*(Double|Triple).*(New England|NE).*/DNE/i;
+    $sty =~ s/.*(Double|Dipa).*/DIPA/i;
+    $sty =~ s/.*Wheat.*/WIPA/i;
+    $sty =~ s/.*(IPA).*(New England|NE|Hazy).*/NEIPA/i;  # Avoid matching DNE above
+    $sty =~ s/.*(New England|NE|Hazy).*(IPA).*/NEIPA/i;
+    $sty =~ s/.*(New Zealand|NZ).*/NZ/i;
+    $sty =~ s/.*(West Coast|WC).*/WC/i;
+    $sty =~ s/.*(America|US).*/AIPA/i;
+  }
+  $sty =~ s/India Lager/IL/i;
+  $sty =~ s/Pale Lager/Lag/i;
+  $sty =~ s/^Keller.*/Kel/i;
+  $sty =~ s/.*(Pilsner|Pilsener).*/Pils/i;
+  $sty =~ s/.*Hefe.*/Hefe/i;
+  $sty =~ s/.*Wit.*/Wit/i;
+  $sty =~ s/.*Dunkel.*/Dunk/i;
+  $sty =~ s/.*Weizenbock.*/Wbock/i;
+  $sty =~ s/.*Doppelbock.*/Dbock/i;
+  $sty =~ s/.*[^DW]Bock.*/Bock/i;
+  $sty =~ s/.*(Smoke|Rauch).*/Smoke/i;
+  $sty =~ s/.*(Lambic|Sour) *(\w+).*/$1/i;   # Lambic Fruit - Fruit
+  $sty =~ s/.*Berliner.*/Berl/i;
+  $sty =~ s/.*(Imperial).*/Imp/i;
+  $sty =~ s/.*(Stout).*/Stout/i;
+  $sty =~ s/.*(Porter).*/Port/i;
+  $sty =~ s/.*Farm.*/Farm/i;
+  $sty =~ s/.*Saison.*/Saison/i;
+  $sty =~ s/.*(Double|Dubbel).*/Dub/i;
+  $sty =~ s/.*(Triple|Tripel|Tripple).*/Trip/i;
+  $sty =~ s/.*(Quadruple|Quadrupel).*/Quad/i;
+  $sty =~ s/.*(Blond|Brown|Strong).*/$1/i;
+  $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc
+  $sty =~ s/.*Belg.*/Belg/i;
+  $sty =~ s/.*Barley.*Wine.*/BW/i;
+  $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars, in case we didn't get it above
+  return $sty;
 }
