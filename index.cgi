@@ -29,7 +29,7 @@ $q->charset( "UTF-8" );
 
 ####################
 # Constants and setup
-my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android/ );
+my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
 
 # Constants
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
