@@ -124,7 +124,7 @@ my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" 
 my $yrlim = param("y"); # Filter by year
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
-my $maxlines = param("maxl") || "$yrlim$yrlim" || "25";  # negative = unlimited
+my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
    # Defaults to 25, unless we have a year limit, in which case defaults to something huge.
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
@@ -1400,10 +1400,10 @@ if ( $op =~ /board(x?)/i ) {
           $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
           $buttons .= "</form></td>\n";
         }
-        my $beercolor = beercolor($origsty,"#", "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
+        my $beerstyle = beercolorstyle($origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
         if ($extraboard) {
           $dispmak .= ":" if ($dispmak);
-          print "<tr><td align=righ style='background-color:$beercolor;color:$bgcolor;'>" . $e->{"id"} . "</td>\n";
+          print "<tr><td align=righ $beerstyle>" . $e->{"id"} . "</td>\n";
           print "<td colspan=4 >";
           print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
           print "$dispmak $dispbeer</span></td></tr>\n";
@@ -1423,7 +1423,7 @@ if ( $op =~ /board(x?)/i ) {
           }
 
         } else {
-          print "<tr><td align=right style='background-color:$beercolor;color:$bgcolor'>" . $e->{"id"} . "</td>\n";
+          print "<tr><td align=right $beerstyle>" . $e->{"id"} . "</td>\n";
           #print "<td>&nbsp;</td>\n";
           print "$buttons\n";
           #print "<td style='max-width:100%; overflow:hidden;text-overflow:fade;' >$dispbeer $alc% $dispmak</td>\n";
@@ -2402,8 +2402,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       "<br class='no-wide'/>\n";
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       if ($sty) {
-        my $beercolor = beercolor("$sty $mak","#", "$date", "[$sty $mak] : $beer" );
-        my $tag="span style='background-color:$beercolor;color:$bgcolor'";
+        my $beerstyle = beercolorstyle("$sty $mak", "$date", "[$sty $mak] : $beer" );
+        my $tag="span $beerstyle";
         $sty = shortbeerstyle($sty) if ( $qrylim ne "x" );
         print filt("[$sty]",$tag) . newmark($sty) . " "   ;
 
@@ -2879,55 +2879,69 @@ sub beercolor {
       return $prefix."9400d3" ;   # dark-violet, aggressive pink
 }
 
+sub beercolorstyle {
+  my $type = shift;
+  my $date = shift; # for error logging
+  my $line = shift;
+  my $bkg= beercolor($type,"#",$date,$line);
+  my $col = $bgcolor;
+  if ($bkg lt "#111111") {  # looks only at red component, but works
+    $col = "#ffffff";
+  }
+  return "style='background-color:$bkg;color:$col;'";
+}
 
 # Helper to shorten a beer style
 sub shortbeerstyle{
   my $sty = shift;
   $sty =~ s/\b(Beer|Style)\b//i; # Stop words
   $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
-  $sty =~ s/\s+/ /g;
+  $sty =~ s/\s+/ /g;  # multiple spaces etc
   if ( $sty =~ /(\WPA|Pale Ale)/i ) {
-    $sty =~ s/.*(America|US)/APA/i;
-    $sty =~ s/.*(Belg).*/BelPA/i;
-    $sty =~ s/.*(Hazy|Haze|New England|NE).*/NEPA/i;
-    $sty =~ s/.*(Pale Ale).*/PA/i;
-  } elsif ( $sty =~ /(IPA|India)/i ) {
-    $sty =~ s/.*Session.*/SIPA/i;
-    $sty =~ s/.*(Black).*/BIPA/i;
-    $sty =~ s/.*(Double|Triple).*(New England|NE).*/DNE/i;
-    $sty =~ s/.*(Double|Dipa).*/DIPA/i;
-    $sty =~ s/.*Wheat.*/WIPA/i;
-    $sty =~ s/.*(IPA).*(New England|NE|Hazy).*/NEIPA/i;  # Avoid matching DNE above
-    $sty =~ s/.*(New England|NE|Hazy).*(IPA).*/NEIPA/i;
-    $sty =~ s/.*(New Zealand|NZ).*/NZ/i;
-    $sty =~ s/.*(West Coast|WC).*/WC/i;
-    $sty =~ s/.*(America|US).*/AIPA/i;
+    return "APA"   if ( $sty =~ /America|US/i );
+    return "BelPA" if ( $sty =~ /Belg/i );
+    return "NEPA"  if ( $sty =~ /Hazy|Haze|New England|NE/i);
+    return "PA";
   }
-  $sty =~ s/India Lager/IL/i;
-  $sty =~ s/Pale Lager/Lag/i;
-  $sty =~ s/^Keller.*/Kel/i;
-  $sty =~ s/.*(Pilsner|Pilsener).*/Pils/i;
-  $sty =~ s/.*Hefe.*/Hefe/i;
-  $sty =~ s/.*Wit.*/Wit/i;
-  $sty =~ s/.*Dunkel.*/Dunk/i;
-  $sty =~ s/.*Weizenbock.*/Wbock/i;
-  $sty =~ s/.*Doppelbock.*/Dbock/i;
-  $sty =~ s/.*[^DW]Bock.*/Bock/i;
-  $sty =~ s/.*(Smoke|Rauch).*/Smoke/i;
+  if ( $sty =~ /(IPA|India)/i ) {
+    return "SIPA" if ( $sty =~ /Session/i);
+    return "BIPA" if ( $sty =~ /Black/i);
+    return "DNE"  if ( $sty =~ /(Double|Triple).*(New England|NE)/i);
+    return "DIPA" if ( $sty =~ /Double|Dipa/i);
+    return "WIPA" if ( $sty =~ /Wheat/i);
+    return "NEIPA" if ( $sty =~ /New England|NE|Hazy/i);
+    return "NZIPA" if ( $sty =~ /New Zealand|NZ/i);
+    return "WC"   if ( $sty =~ /West Coast|WC/i);
+    return "AIPA" if ( $sty =~ /America|US/i);
+    return "IPA";
+  }
+  return "IL"   if ( $sty =~ /India Lager/i);
+  return "Lag"  if ( $sty =~ /Pale Lager/i);
+  return "Kel"  if ( $sty =~ /^Keller.*/i);
+  return "Pils" if ( $sty =~ /.*(Pilsner|Pilsener).*/i);
+  return "Hefe" if ( $sty =~ /.*Hefe.*/i);
+  return "Wit"  if ( $sty =~ /.*Wit.*/i);
+  return "Dunk" if ( $sty =~ /.*Dunkel.*/i);
+  return "Wbock" if ( $sty =~ /.*Weizenbock.*/i);
+  return "Dbock" if ( $sty =~ /.*Doppelbock.*/i);
+  return "Bock" if ( $sty =~ /.*[^DW]Bock.*/i);
+  return "Smoke" if ( $sty =~ /.*(Smoke|Rauch).*/i);
+  return "Berl" if ( $sty =~ /.*Berliner.*/i);
+  return "Imp"  if ( $sty =~ /.*(Imperial).*/i);
+  return "Stout" if ( $sty =~ /.*(Stout).*/i);
+  return "Port"  if ( $sty =~ /.*(Porter).*/i);
+  return "Farm" if ( $sty =~ /.*Farm.*/i);
+  return "Saison" if ( $sty =~ /.*Saison.*/i);
+  return "Dubl" if ( $sty =~ /.*(Double|Dubbel).*/i);
+  return "Trip" if ( $sty =~ /.*(Triple|Tripel|Tripple).*/i);
+  return "Quad" if ( $sty =~ /.*(Quadruple|Quadrupel).*/i);
+  return "Blond" if ( $sty =~ /Blond/i);
+  return "Brown" if ( $sty =~ /Brown/i);
+  return "Strong" if ( $sty =~ /Strong/i);
+  return "Belg" if ( $sty =~ /.*Belg.*/i);
+  return "BW"   if ( $sty =~ /.*Barley.*Wine.*/i);
   $sty =~ s/.*(Lambic|Sour) *(\w+).*/$1/i;   # Lambic Fruit - Fruit
-  $sty =~ s/.*Berliner.*/Berl/i;
-  $sty =~ s/.*(Imperial).*/Imp/i;
-  $sty =~ s/.*(Stout).*/Stout/i;
-  $sty =~ s/.*(Porter).*/Port/i;
-  $sty =~ s/.*Farm.*/Farm/i;
-  $sty =~ s/.*Saison.*/Saison/i;
-  $sty =~ s/.*(Double|Dubbel).*/Dub/i;
-  $sty =~ s/.*(Triple|Tripel|Tripple).*/Trip/i;
-  $sty =~ s/.*(Quadruple|Quadrupel).*/Quad/i;
-  $sty =~ s/.*(Blond|Brown|Strong).*/$1/i;
-  $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc
-  $sty =~ s/.*Belg.*/Belg/i;
-  $sty =~ s/.*Barley.*Wine.*/BW/i;
+  $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc # ###
   $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars, in case we didn't get it above
   return $sty;
 }
