@@ -983,9 +983,9 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   my $date;
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
-  my $legend = "# Date  WkDay WkEnd  Sum30  Sum7  Zeromark  Future";
+  my $legend = "# Date  Drinks  Sum30  Sum7  Zeromark  Future  Drink Color Drink Color ...";
   print F "$legend \n".
-    "#Plot $startdate ($startoff) to $enddate ($endoff) \n";
+    "# Plot $startdate ($startoff) to $enddate ($endoff) \n";
   my $sum30 = 0.0;
   my @month;
   my @week;
@@ -1036,8 +1036,9 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
       $zero = 0.1 + ($zerodays % 7) * 0.35 ; # makes the 7th mark nicely on 2.0d
       $zerodays ++; # Move the subsequent zero markers higher up
     }
-    if ( $ndays <=0 ) {
-      $zero = "NaN"; # no zero mark for current or next date, it isn't over yet
+    if ( $ndays <=0  || # no zero mark for current or next date, it isn't over yet
+         $startoff - $endoff > 400 ) {  # nor for graphs that are over a year, can't see them anyway
+      $zero = "NaN";
     }
     if ( $ndays <=0 && $sum30 > 0.1 && $endoff < -13) {
       # Display future numbers in table form, if asking for 2 weeks ahead
@@ -1111,12 +1112,16 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     }
 
     #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
-    print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" if ($zerodays >= 0);
-    $havedata = 1;
+    if ($zerodays >= 0) {
+      print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" ;
+      $havedata = 1;
+    }
   }
   print F "$legend \n";
   close(F);
-  if ($havedata) {
+  if (!$havedata) {
+    print "No data for $startdate ($startoff) to $enddate ($endoff) \n";
+  } else {
     my $xformat = "\"%d\\n%b\"";  # 14 Jul
     if ($startoff > 365) {
       $xformat = "\"%d\\n%b\\n%y\"";  # 14 Jul 20
@@ -1246,10 +1251,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   print " <a href='$url?o=Graph$bigimg-90'>3m</a> \n";
   print " <a href='$url?o=Graph$bigimg-180'>6m</a> \n";
   print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
-  if (scalar(@lines)>500) {
-    my $all = scalar(@lines); # can't be more days than we have entries
-    print " <a href='$url?o=Graph$bigimg-$all'>All</a> \n"; # graph will trunc
-  }
+  print " <a href='$url?o=Graph$bigimg-3650'>All</a> \n";  # The system isn't 10 years old
 
   my $zs = $startoff + int($len/2);
   my $ze = $endoff - int($len/2);
