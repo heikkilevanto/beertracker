@@ -1403,7 +1403,7 @@ if ( $op =~ /board(x?)/i ) {
         my $beercolor = beercolor($origsty,"#", "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
         if ($extraboard) {
           $dispmak .= ":" if ($dispmak);
-          print "<tr><td align=righ style='background-color:$beercolor'>" . $e->{"id"} . "</td>\n";
+          print "<tr><td align=righ style='background-color:$beercolor;color:$bgcolor;'>" . $e->{"id"} . "</td>\n";
           print "<td colspan=4 >";
           print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
           print "$dispmak $dispbeer</span></td></tr>\n";
@@ -1423,7 +1423,7 @@ if ( $op =~ /board(x?)/i ) {
           }
 
         } else {
-          print "<tr><td align=right style='background-color:$beercolor'>" . $e->{"id"} . "</td>\n";
+          print "<tr><td align=right style='background-color:$beercolor;color:$bgcolor'>" . $e->{"id"} . "</td>\n";
           #print "<td>&nbsp;</td>\n";
           print "$buttons\n";
           #print "<td style='max-width:100%; overflow:hidden;text-overflow:fade;' >$dispbeer $alc% $dispmak</td>\n";
@@ -2403,7 +2403,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       if ($sty) {
         my $beercolor = beercolor("$sty $mak","#", "$date", "[$sty $mak] : $beer" );
-        my $tag="span style='background-color:$beercolor'";
+        my $tag="span style='background-color:$beercolor;color:$bgcolor'";
         $sty = shortbeerstyle($sty) if ( $qrylim ne "x" );
         print filt("[$sty]",$tag) . newmark($sty) . " "   ;
 
@@ -2859,7 +2859,7 @@ sub beercolor {
       "f2f21f", "Pilsner|Lager|Keller|Bock|Helles|IPL",
       "e5bc27", "Classic|dunkel|shcwarz|vienna",
       "d1d1b5", "smoke|rauch|sc?h?lenkerla",
-      "230606", "stout|port",  # imp?`
+      "0f0101", "stout|port",  # imp?`
       "1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
       "47ccc5", "booze|sc?h?nap+s|whisky",
       "47cc7a", "cider",
