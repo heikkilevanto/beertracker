@@ -39,11 +39,16 @@ my $datafile = "";
 my $plotfile = "";
 my $cmdfile = "";
 my $pngfile = "";
+my $username = ($q->remote_user()||"");
+
+# Sudo mode, normally commented out
+#$username = "dennis" if ( $username eq "heikki" );  # Fake user to see one with less data
+
 if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
-  $datafile = $datadir . $q->remote_user() . ".data";
-  $plotfile = $datadir . $q->remote_user() . ".plot";
-  $cmdfile = $datadir . $q->remote_user() . ".cmd";
-  $pngfile = $datadir . $q->remote_user() . ".png";
+  $datafile = $datadir . $username . ".data";
+  $plotfile = $datadir . $username . ".plot";
+  $cmdfile = $datadir . $username . ".cmd";
+  $pngfile = $datadir . $username . ".png";
 } else {
   error ("Bad username\n");
 }
