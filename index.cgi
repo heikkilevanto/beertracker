@@ -1173,13 +1173,18 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
         "set style $fillstyle \n" .
         "set boxwidth 0.7 relative \n" .
         "set key left top horizontal textcolor \"white\" \n" .
-        "set grid xtics y2tics  linewidth 0.1 linecolor 4 \n".
+        "set grid xtics y2tics  linewidth 0.1 linecolor \"white\" \n".
         "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
           "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
+        "set arrow from \"$startdate\", 35 to \"$enddate\", 35 nohead linewidth 0.1 linecolor \"white\" \n" .
+        "set arrow from \"$startdate\", 70 to \"$enddate\", 70 nohead linewidth 0.1 linecolor \"white\" \n" .
+        "set arrow from \"$startdate\", 105 to \"$enddate\", 105 nohead linewidth 0.1 linecolor \"white\" \n" .
+        "set arrow from \"$startdate\", 140 to \"$enddate\", 140 nohead linewidth 0.1 linecolor \"white\" \n" .
         $weekends .
         "plot " .
               # note the order of plotting, later ones get on top
               # so we plot weekdays, avg line, zeroes
+
           "\"$plotfile\" using 1:2 with boxes lc \"white\" axes x1y2 notitle ," .
              # This will normally not show at all, the individual drink segments wil override it
              # May be removed in the near future.
