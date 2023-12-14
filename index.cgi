@@ -1309,7 +1309,7 @@ if ( $op =~ /board(x?)/i ) {
     print loclink($locparam,"www"," ");
   }
   print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'>PA</a>) "
-    if ($qry ne "IPA" && $scrapers{$locparam});
+    if ($qry ne "PA" );
   if ($extraboard) {
     print "<a href='$url?o=board'>Plain</a>\n";
   } else {
