@@ -16,8 +16,8 @@ name the same way, so be correct there. It is handy for picking up the strength
 and price of beer, etc.
 
 The system is optimized for filing things as you drink, but you can enter data
-after the fact. In that case, put in the date and time in the two first input
-fields, as YYYY-MM-DD HH:MM.
+after the fact. In that case, click on the little ^ to get more fields visible,
+and put in the date and time in the two first input fields, as YYYY-MM-DD HH:MM
 
 Most of the time, if you have drunk that beer before, it is easy to find the beer
 in the list, and just click on the `copy` buttons. They come in predefined sizes of
@@ -34,10 +34,13 @@ selected from the "show" pull-down in the input form.
 ---
 
 ## Input fields
-The first part of the screen is the put area, where you can enter what beers
+The first part of the screen is the input area, where you can enter what beers
 you drink. Most of the fields start with default values. When you click on one,
 the value disappears, making it easier to type in a new value, especially on
 a phone.
+
+The first three input fields are normally not visible. There is a little
+up-arrow next to the comment box, clicking on that will show the fields.
 
 ### Date
 Usually you can leave this empty, the system defaults to the current date. If
@@ -52,9 +55,16 @@ should, it takes the system time. (but see timezones under tips and tricks)
 Since drinking often continues past midnight, the system counts times up to
 08 next morning as belonging to the day before.
 
+### Geo Coordinates
+Automagically filled in by the browser, these show your current location. If
+you don't want the system to use the location, put a simple X in there. Otherwise
+it will try to autofill it again.
+
 ### Location
-Where you had your beer. Used for various lists. Defaults to the same place as
-the previous beer.
+Where you had your beer. Used for various lists. Guesses from the geo coordinates
+when possible. That failing, defaults to the same location as the previous beer.
+If you know you are not in that location, you can prefix it with a dot, so the
+system will not remember wrong geo coordinates for the place.
 
 ### Style
 The style of the beer. There are no predefined styles, you will have to enter
@@ -104,8 +114,8 @@ in the full list.
 
 Before you type anything in the box, it is showing three lines of statistics:
 * How many "standard" drinks you have had today, and how much you paid for them.
-If you didn't have any today, it shows the date when you last had, and the values
-for that date.
+If you didn't have any today, it shows the weekday when you last had, and the
+values for that date.
 * Same for the last week, up to and including today. Also shows the average
 "standard" drinks per day, and how many days without any.
 * Same for the calendar month.
@@ -121,6 +131,11 @@ Clears all input fields, in case you want to enter something completely differen
 ### Show pull-down
 This is the main menu, where you can choose what to show under the input form.
 See below.
+
+### Quick link
+There is a simple "G" that is a quick link to showing the graph (see below).
+When the graph is shown, the link changes to "B" to show the beer board of the
+current location, or if not known, of my favourite place, Ølbaren.
 
 ---
 
@@ -150,14 +165,14 @@ typing error.
 The "Show" menu allows you to choose what gets shown under the input form.
 
 ### Full list
-This is the default. It shows a list of beers you have had, most recent first.
-There are many ways to filter that list.
+It shows a list of beers you have had, most recent first. There are many ways
+to filter that list.
 
 At the top of the list are some links to filter the list:
 * Ratings - Shows only the beer entries where you have filled in a rating
 * Comments - Shows only the beers that you have commented on
-* Links - Shows some extra links for each beer
-* Print - Hides the input form, so you can take a screen print of more beers
+There is also a link to show Extra Info for each beer. Ratings, when last seen,
+and such.
 
 The list itself is divided into days, and those can be divided into locations,
 if you have been drinking at different places.
@@ -169,15 +184,25 @@ that cause the list to be filtered so that only that beer or brewery is shown.
 That makes it easier to see what you have thought about the beer, or what else
 the brewery has made.
 
-The second line has the beer style (also a link to filter the list), and a few
-numbers:
+Next comes a number of small facts about the beer. They are on a line of their
+own when seen on a phone, or appended to the first line on a wider computer
+screen.
+* Style. This is solor-coded to match the graph (see below). It is also a link
+to filter the list by this style.
 * Price
 * Volume
 * Alc
 * "Standard drinks"
+* Blood alc (only if showing Extra Info). This is a rough estimate, based on
+some formulas I found on the net, and my own body weight.
 
 The next line has the rating you have given the beer, and comments, if you
 entered any.
+
+If you asked to show Extra Info, it will be on the next lines. These include
+how many times the system has seen the beer, how many ratings we have for it,
+and the average of them, as well as the geo location for that entry (mostly
+for debugging the geo stuff)
 
 The last line has a link for editing the entry - that puts all the values in
 the input fileds above, where you can correct mistakes. (See above.)
@@ -189,23 +214,22 @@ That is by far the easiest way to enter data.
 At the end of each day or location there will be summaries on how much you have
 drank there.
 
-### Short list
-Gives you a list of days, where you have been drinking, and how much.
-
 ### Graph
-Shows a graph of your drinking. Time is on the X-axis, and on Y is the number
-of drinks:
-* The grey bars represent weekdays, and the blue bars are weekends. This
-is to make it a bit easier to follow the days.
-* For days with no drinks, there is a green dot in the bottom.
-* There is a purple line that is a floating average of the past 30 days, with
+Shows a graph of your drinking. Time is on the X-axis, with different background
+color for weekend (Fri, Sat, and Sun). On Y is the number of drinks:
+
+* Each drink is a little bar of its own. Color coded to indicate the beer style.
+* Each change of location is indicated by a thin white line
+* For days with no drinks, there is a green dot in the bottom. For consecutive
+days, the dot moves a bit higher, up to 7 days.
+* There is a white line that is a floating average of the past 30 days, with
 higher weights for the more recent days.
-* There is a black line that shows the (arithmetic) average for the last 7
+* There is a green line that shows the (arithmetic) average for the last 7
 days, including today.
 
 Under the graph are navigation buttons:
 * "<<" and ">>" move the graph earlier and later in time
-* "Month", "Year", and "All" adjsut how long time is shown in the graph
+* "Month", "3m", "6m", "Year", and "All" adjsut how long time is shown in the graph
 * [-] and [+] fine tune the zoom factor
 
 Clicking on the graph itself zooms it to double the size. Clicking again zooms
@@ -214,65 +238,110 @@ back.
 Under the graph is the usual full list. Since we have calculated the floating
 averages for the graph, they are shown in the list for each day too.
 
-### Location
+### Beer Board
+This is a list of beers available on the current location (or Ølbaren, if no
+list available for that location). There is a pull-down for selecting the location
+out of the few I have scripted access to. Next to that is a link to change the
+list from the simple format to a more extended one.
+
+In the simple form, each beer is on a line of its own. The lines can get wider
+than your phone screen, you can scroll sideways to read the rest. The important
+details are in the beginning of the line.
+* Tap number. Color coded for beer style
+* Two buttons for entering the beer into the system. One for a small beer, the
+other for a large one. Usually 25 and 40 cl, but can vary depending on what sizes
+the beer is served.
+* Alc percentage
+* Beer name
+* Brewer
+* Country
+* Style (simplified)
+
+If you selected the Extended display, each beer takes up a few lines. Where we
+have it, there will be a line telling how many times we have seen that beer
+before, when was the last time, how many ratings and their average, compressed
+into something like "3 rat=6.3"
+
+Before the beer board is always the graph (see bove), and under it the display
+continues as the full list (see above).
+
+### Stats
+Shows some statistics for each day, month, or year. On top is a line with links
+to each statistic. WHen selected from the menu, this starts as the monthly
+statistic.
+
+#### Days
+Shows a line for each day with
+* Date and weekday
+* How many drinks
+* How much money
+* Highest blood alc for the day
+* Locations where I have been that day, in reverse order.
+
+Consecutive days with no drinks are compressed in one line like "... (3 days)..."
+
+#### Months
+This shows a graph of average daily consumption for each month. Each year is
+plotted with a different color. The most recent years are plotted with thicker
+lines.
+
+Underneath is the same data in a table form. For each month we have average
+drinks per day and week, and amount of money spent. For the current month there
+is also a projection where we might end at the same speed.
+
+There are also averages for wach calendar month, and averages and sums for
+each year.
+
+#### Years
+This shows in a table form where I have spent most money for each year, with the
+biggest spending locations first. The list shows also the number of drinks at
+the location. The sorting defaults to money, but can be changed to number of
+drinks.
+
+### Small lists
+There are a number of "small" lists. The main menu only has the Beer List, but
+from that it is easy to navigate to the other ones. All the lists default to
+chronological order with the most recent first, but can be sorted alphabetically.
+
+There is also a search box that filters only the lines matching what ever you
+enter there.
+
+#### Location
 Shows a list of the most recent watering holes you have visited. For each there
 is
 * Name of the place. Clicking on this gets you to the full list, filtered by
 that location.
-* Link to their beer list, if known to the system
+* Link to the beer board of the location, if known to the system
+* Link to the bars web page, if known to the system
 * Link to a google search of the place name
 * Last time you visited, and how many visits the system knows about
 * The last beer you drank there: Brewery and name. These are links that filter
 the location list by that beer or brewery.
 
-At the top there is a link to sort the list alphabetically, instead of most
-recent first.
-
-
-### Brewery
+#### Brewery
 Shows the most recent breweries you have been enjoying, with about the same data
 as for the location list, except that it lists where you had the beer last.
 The list excludes all "special" breweries that have a comma in their names.
 
-### Beer
+#### Beer
 Lists the beers you have had. On the left is the beer name with a count how many
 of them you have had, and on the right side when and where you had it last, and
 the style, alcohol, and brewery of the beer. Also this list excludes the "special"
 breweries, so it only shows things that really are beers.
 
-### Wine and Booze
+#### Wine and Booze
 This shows all the "beers" that have a special brewery that starts with "Wine"
 or "Booze" and a comma, for example "Wine, Red" or "Booze, Vodka". Otherwise
 this is much like the beer list.
 
-### Restaurant
+#### Restaurant
 Shows a list of the "special breweries" that start with "Restaurant" and a comma.
 For each it shows the style, what you had (comes from the beer name), when you
 visited last, and how much did you spend - if you entered that in the price field.
+Also the rating of the place if you entered one the last time.
 
-### Style
+#### Style
 Lists all beer styles known to the system, when and where you last had one.
-
-### Months
-Shows monthly statistics. Shows a graph from January to December, with different
-colored lines for each year. Plots the average alcohol intake per day, in
-"standard drinks".
-
-Under the graph, the same data is in a table form. For each month there is the
-number of drinks, and how much money you have spent.
-
-### Years
-Shows statistics for each year you have used the system. For each year there
-is a list of the most frequented locations, and how much money you have spent
-there, and how many "standard" drinks you have had there. For the current year
-there is also a projection how the year might look like if it continues the same
-speed. This is a wild guess based on some unreliable statistics, probably wildly
-off for the first year you use the system.
-
-### Datafile
-Allows you to retrieve all your raw data, just as it is stored in the system.
-It is in plain text, you can save the page as a text file, and probably import
-it to a spreadsheet or something. Use the back button to get back.
 
 ### About
 Contains the copyright message, and all kind of useful details I didn't know
@@ -281,6 +350,8 @@ where else to put.
 * Links to RateBeer and Untappd, as well as some of my favourite watering holes
 * Information on what time zone the system thinks you are in
 * Summary of the abbreviations for various volumes
+* Debug info, including a download of the whole data file or just the tail of it.
+
 
 ---
 
