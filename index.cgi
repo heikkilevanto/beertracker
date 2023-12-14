@@ -2424,28 +2424,9 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
           print units($pr, $vol, $alc);
         } else {
           print units($pr, $vol, $alc, $bloodalc{$stamp});
-          print "<br/> Seen " . ($seen{$beer}). " times. " if ($seen{$beer});
-          #print "last $lastseen{$beer}. " if ($lastseen{$beer});
-          if ($ratecount{$beer}) {
-            my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
-            if ($ratecount{$beer} == 1 )  {
-              print " One rating: <b>$avgrate</b> ";
-            } else {
-              print " Avg of <b>$ratecount{$beer}</b> ratings: <b>$avgrate</b>";
-            }
-          }
-        }
-        print "<br/>\n" ;
-        if ( $qrylim eq "x" && $geo ) {
-          my (undef, undef, $gg) = geo($geo);
-          my $dist = "";
-          $dist = geodist( $geolocations{$loc}, $geo);
-          my ($guess,$gdist) = guessloc($gg,$loc);
-          $guess = " <b>($guess " . unit($gdist,"m"). " ?)</b> " if ($guess);
-          print "Geo: $gg $guess <br/>\n";
-
         }
       }
+      print "<br/>\n" ;
       if ($rate || $com) {
         print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
         print " <b>'$rate'-$ratings[$rate]</b>" if ($rate);
@@ -2454,6 +2435,28 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         print "<br/>\n";
       }
       $ratecounts[$rate] ++ if ($rate);
+      if ( $qrylim eq "x" ) {
+        print "Seen " . ($seen{$beer}). " times. " if ($seen{$beer});
+        #print "last $lastseen{$beer}. " if ($lastseen{$beer});
+        if ($ratecount{$beer}) {
+          my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
+          if ($ratecount{$beer} == 1 )  {
+            print " One rating: <b>$avgrate</b> ";
+          } else {
+            print " Avg of <b>$ratecount{$beer}</b> ratings: <b>$avgrate</b>";
+          }
+        }
+        if ( $geo ) {
+          my (undef, undef, $gg) = geo($geo);
+          my $dist = "";
+          $dist = geodist( $geolocations{$loc}, $geo);
+          my ($guess,$gdist) = guessloc($gg,$loc);
+          $guess = " <b>($guess " . unit($gdist,"m"). " ?)</b> " if ($guess);
+          print "Geo: $gg $guess\n";
+        }
+        print "<br>\n";
+      }
+
     }
 
     my %vols;     # guess sizes for small/large beers
