@@ -2142,8 +2142,10 @@ $com, $geo ) =
       next if ( $mak =~ /^restaurant/i );
       $fld = $mak;
       $mak =~ s"/"/<br/>"; # Split collab brews on two lines
+      my $seentimes = "";
+      $seentimes = "($seen{$fld})" if ($seen{$fld} );
       $line = "<td>" . filt($mak,"b","","full") . "\n<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>\n" .
-      "<td>$wday $effdate " . lst($op,$loc) . "\n ($seen{$fld}) " .  # $mak before cleaning
+      "<td>$wday $effdate " . lst($op,$loc) . "\n $seentimes " .
             "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]") . " \n " . lst("full",$beer,"b")  ."</td>";
 
     } elsif ( $op eq "Beer" ) {
@@ -2151,7 +2153,9 @@ $com, $geo ) =
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
       $fld = $beer;
-      $line = "<td>" . filt($beer,"b","","full") . "&nbsp; ($seen{$beer}) &nbsp;\n" . glink($mak,"G") ."</td>" .
+      my $seentimes = "";
+      $seentimes = "($seen{$beer})" if ($seen{$beer} );
+      $line = "<td>" . filt($beer,"b","","full") . "&nbsp; $seentimes &nbsp;\n" . glink($mak,"G") ."</td>" .
             "<td>$wday $effdate ".
             lst($op,$loc) .  "\n <br class='no-wide'/> " .
             lst($op,$sty,"","[$sty]"). "\n " . unit($alc,'%') .
@@ -2161,18 +2165,22 @@ $com, $geo ) =
       next unless ( $mak =~ /^wine, *(.*)$/i );
       $fld = $beer;
       my $stylename = $1;
+      my $seentimes = "";
+      $seentimes = "($seen{$beer})" if ($seen{$beer} );
       $line = "<td>" . filt($beer,"b","","full")  . "&nbsp; $stylename &nbsp;\n" . glink($beer, "G") . "</td>\n" .
             "<td>$wday $effdate ".
-            lst($op,$loc) . "\n ($seen{$beer})\n " .
+            lst($op,$loc) . "\n $seentimes \n" .
             "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). "</td>";
 
     } elsif ( $op eq "Booze" ) {
       next unless ( $mak =~ /^booze, *(.*)$/i );
       $fld = $beer;
+      my $seentimes = "";
+      $seentimes = "($seen{$beer})" if ($seen{$beer} );
       my $stylename = $1;
       $line = "<td>" .filt($beer,"b","","full") . "\n&nbsp;" . glink($beer, "G") ."</td>\n" .
             "<td>$wday $effdate ".
-            lst($op,$loc) ."\n ($seen{$beer}) " .
+            lst($op,$loc) ."\n $seentimes " .
             "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). " " . unit($alc,'%') . "\n" .
               lst($op, $mak,"i", $stylename) . "</td>";
 
@@ -2197,7 +2205,9 @@ $com, $geo ) =
       next if ( $mak =~ /^restaurant/i );
       next if ( $sty =~ /^misc/i );
       $fld = $sty;
-      $line = "<td>" . filt("[$sty]","b","","full") . " ($seen{$sty})" . "</td><td>$wday $effdate \n" .
+      my $seentimes = "";
+      $seentimes = "($seen{$sty})" if ($seen{$sty} );
+      $line = "<td>" . filt("[$sty]","b","","full") . " $seentimes" . "</td><td>$wday $effdate \n" .
             lst("Beer",$loc,"i") .
             "\n <br class='no-wide'/> " . lst($op,$mak,"i") . ": \n" . lst("full",$beer,"b") . "</td>";
     } else {
