@@ -129,6 +129,12 @@ my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
 
+# Disable geo
+if ($loc =~ /^\./ ) {  # starts with a dot
+  $geo = "X";
+  $loc =~ s/^\.//; # remove the dot
+}
+
 # Default sizes
 my $defaultvol = 40;
 if ( $mak =~ /^Wine,/i ) {
