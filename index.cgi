@@ -2889,7 +2889,7 @@ sub beercolor {
       "f2f21f", "Pilsner|Lager|Keller|Bock|Helles|IPL",
       "e5bc27", "Classic|dunkel|shcwarz|vienna",
       "d1d1b5", "smoke|rauch|sc?h?lenkerla",
-      "0f0101", "stout|port",  # imp?`
+      "0f0101", "stout|port",  # imp comes later
       "1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
       "47ccc5", "booze|sc?h?nap+s|whisky",
       "47cc7a", "cider",
@@ -2897,6 +2897,7 @@ sub beercolor {
       "c1c10b", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
       "d8d80f", "Pale Ale|PA",
       "b7930e", "Old|Brown|Red|Dark|Ale|Belgian|IDA",   # Any kind of ales (after Pale Ale)
+      "0f0101", "Imp",
       "dbb83b", "misc|mix|random",
       );
       for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
