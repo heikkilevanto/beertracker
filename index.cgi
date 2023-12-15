@@ -380,7 +380,7 @@ while (<F>) {
     my $drtime = $1 + $2/60 if ( $t =~ / (\d\d):(\d\d)/ );   # time in fractional hours
     if ($drtime < $balctime ) { $drtime += 24; } # past midnight
     my $timediff = $drtime - $balctime;
-    $alcinbody -= $bodyweight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
+    $alcinbody -= $bodyweight * $burnrate * $timediff;
     if ($alcinbody < 0) { $alcinbody = 0; }
     $balctime = $drtime;
     $alcinbody += $a * $v / $onedrink * 12 ; # grams of alc in body
@@ -392,6 +392,7 @@ while (<F>) {
     #print STDERR "$t     b:" . sprintf("%8.2f %8.2f",$ba,$bloodalc{$ed}). " \n"  if ($t=~/2023-04-26/) ; # ###
     #print STDERR "$ed '$effdate' : $alcinbody ba= $ba\n" if ( $t =~ /2023-04-2/ );
   }
+
   # Liter prices
   if ( $v && $p>0 && $m !~ /,/ ) {  # Skip all wines, boozes and such
     my $litp = sprintf("%04d", $p / $v * 100 );
@@ -1940,21 +1941,23 @@ if ( $op =~ /board(x?)/i ) {
   print "Copyright 2016-2023 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
   print "It is Open Source.\n";
-  print "<br/>To get started, look at the " .
-    aboutlink("documentation", "https://github.com/heikkilevanto/beertracker/blob/master/manual.md", "nop");
   print "<hr/>";
 
-  print "Some links I may find useful: <ul>";
+  print "Beertracker on GitHub: <ul>";
   print aboutlink("GitHub","https://github.com/heikkilevanto/beertracker");
   print aboutlink("Bugtracker", "https://github.com/heikkilevanto/beertracker/issues");
-  print aboutlink("Ratebeer", "https://www.ratebeer.com");
-  print aboutlink("Untappd", "https://untappd.com");
+  print aboutlink("User manual", "https://github.com/heikkilevanto/beertracker/blob/master/manual.md" );
   print "</ul><p>\n";
   print "Some of my favourite bars and breweries<ul>";
   for my $k ( sort keys(%links) ) {
     print aboutlink($k, $links{$k});
   }
   print "</ul><p>\n";
+  print "Other useful links: <ul>";
+  print aboutlink("Ratebeer", "https://www.ratebeer.com");
+  print aboutlink("Untappd", "https://untappd.com");
+  print "</ul><p>\n";
+
   print "<hr/>";
   if ($tz) {
     print "Your time zone is: $tz<br>\n";
