@@ -96,6 +96,11 @@ $currency{"e"} = 7.5;
 $currency{"usd"} = 6.3;  # Varies bit over time
 #$currency{"\$"} = 6.3;  # € and $ don't work, get filtered away in param
 
+
+my $bodyweight;  # in kg, for blood alc calculations
+$bodyweight = 120 if ( $username eq "heikki" );
+$bodyweight =  83 if ( $username eq "dennis" );
+
 ###################
 # Input Parameters - data file fields are the same order
 # from when POSTing a new beer entry
@@ -370,17 +375,16 @@ while (<F>) {
     $balctime = 0; # Time of the last drink
   }
   # Blood alcohol
-  if ($a && $v && $p>=0  ) {
-    my $weight = 120; # kg, approx
+  if ($bodyweight && $a && $v && $p>=0  ) {
     my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
     my $drtime = $1 + $2/60 if ( $t =~ / (\d\d):(\d\d)/ );   # time in fractional hours
     if ($drtime < $balctime ) { $drtime += 24; } # past midnight
     my $timediff = $drtime - $balctime;
-    $alcinbody -= $weight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
+    $alcinbody -= $bodyweight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
     if ($alcinbody < 0) { $alcinbody = 0; }
     $balctime = $drtime;
     $alcinbody += $a * $v / $onedrink * 12 ; # grams of alc in body
-    my $ba = $alcinbody / ( $weight * .68 ); # non-fat weight
+    my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
     if ( $ba > ( $bloodalc{$ed} || 0 ) ) {
       $bloodalc{$ed} = $ba;
     }
@@ -403,14 +407,13 @@ while (<F>) {
         $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$ed}); # max of the day
         # TODO - This replicates the calculations above, move to a helper func
         my $curtime = datestr("%H:%M",0,1);
-        my $weight = 120; # kg, approx
         my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
         my $drtime = $1 + $2/60 if ( $curtime =~ /(\d\d):(\d\d)/ );   # time in fractional hours
         if ($drtime < $balctime ) { $drtime += 24; } # past midnight
         my $timediff = $drtime - $balctime;
-        my $curalc = $alcinbody - $weight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
+        my $curalc = $alcinbody - $bodyweight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
         if ($curalc < 0) { $curalc = 0; }
-        my $ba = $curalc / ( $weight * .68 ); # non-fat weight
+        my $ba = $curalc / ( $bodyweight * .68 ); # non-fat weight
         $todaydrinks .= sprintf(" - %0.2f‰",$ba);
            # if ( $bloodalc{$ed} - $ba > 0.01 );
       }
