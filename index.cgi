@@ -401,10 +401,11 @@ while (<F>) {
 
   $lastdatesum += ( $a * $v ) if ($a && $v && $p>=0); # neg price means whole box
   $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
-  if ( $effdate eq "$wd; $ed" ) { # today
+  if ( $effdate eq "$wd; $ed" ) { # Today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
       $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
-      if ($bloodalc{$ed}) {
+      if ($bloodalc{$ed}) { # Calculate the blood alc at the current time.
+        # TODO - Is this necessary?
         $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$ed}); # max of the day
         # TODO - This replicates the calculations above, move to a helper func
         my $curtime = datestr("%H:%M",0,1);
@@ -630,15 +631,25 @@ if ( $q->request_method eq "POST" ) {
       or error ("Could not open $datafile for writing");
     while (<BF>) {
       my ( $stp, undef) = split( / *; */ );
+      if ( $stamp && $stp =~ /^\d+/ &&  # real line
+           $sub eq "Save" && # Not deleting it
+           "x$stamp" lt "x$stp") {  # Right Place to insert the line
+        # Note the "x" trick, to force pure string comparision
+        print F "$stamp; $effdate; $line \n";
+        $stamp = ""; # do not write it again
+      }
       if ( $stp ne $edit ) {
         print F $_;
       } else { # found the line
         print F "#" . $_ ;  # comment the original line out
-        if ( $sub eq "Save" ) {
-          print F "$stamp; $effdate; $line \n";
-        }
+        #if ( $sub eq "Save" ) {
+        #  print F "$stamp; $effdate; $line \n";
+        #}
         $edit = "XXX"; # Do not delete another line, even if same timestamp
       }
+    }
+    if ($stamp && $sub eq "Save") {  # have not saved it yet
+      print F "$stamp; $effdate; $line \n";  # (happens when editing latest entry)
     }
     close F
       or error("Error closing $datafile: $!");
