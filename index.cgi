@@ -613,7 +613,6 @@ if ( $q->request_method eq "POST" ) {
   (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
   if ( $lasttimestamp gt $stamp ) {
-    print STDERR "Saving '$stamp', last='$lasttimestamp' e=$edit s='$sub' \n";
     $sub = "Save"; # force this to be an updating save, so the record goes into its right place
   }
 
@@ -2898,6 +2897,7 @@ sub beercolor {
   my $line = shift;
 
   my @drinkcolors = (   # color, pattern. First match counts, so order matters
+      "003000", "restaurant", # regular bg color, no highlight
       "e2aaaa", "wine[, ]+white",
       "801414", "wine[, ]+red",
       "4f1717", "wine[, ]+port",
