@@ -1118,7 +1118,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
         my $color = beercolor($type,"0x",$date,$dt);
         my $drinks = $alc * $vol / $onedrink;
         if ( $lastloc ne $loc  &&  $startoff - $endoff < 100 ) {
-          my $lw = $totdrinks + 0.1; # White line for location change
+          my $lw = $totdrinks + 0.2; # White line for location change
           $lw += 0.1 unless ($bigimg eq "B");
           $drinkline .= "$lw 0xffffff ";
           $lastloc = $loc;
