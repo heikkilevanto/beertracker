@@ -238,7 +238,7 @@ my $thisloc = "";
 my $lastdatesum = 0.0;
 my $lastdatemsum = 0;
 my $lasteffdate = "";
-my $todaydrinks = "";
+my $todaydrinks = "";  # For a hint in the comment box
 my $copylocation = 0;  # should the copy button copy location too
 my $thisdate = "";
 my $lastwday = "";
@@ -480,6 +480,15 @@ if ( $q->request_method eq "POST" ) {
   # the same name.
   if ( !$origstamp) { # New record, process date and time if entered
     #print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
+    if ($date || $time ) {  # Entering after the fact, possibly at a different location
+      $geo = "";   # Do not remember the suspicious location
+    }
+    if ( $geo ){
+      my  ($guess, $dist) = guessloc($geo);
+      if ($guess =~ /Home/i ) {
+        $geo = ""; # If editing at home, do not trust the coords for other locations
+      } # (we already know where home is)
+    }
     if ($date =~ /^L$/i ) { # 'L' for last date
       if ( $lastline =~ /(^[0-9-]+) +(\d+):(\d+)/ ) {
         $date = $1;
@@ -494,7 +503,6 @@ if ( $q->request_method eq "POST" ) {
           }
           $time = sprintf("%02d:%02d", $hr,$min);
           $loc = ""; # Fall back to last values
-          $geo = "";
         }
       }
     } # date 'L'
@@ -513,6 +521,7 @@ if ( $q->request_method eq "POST" ) {
     if ( $time =~ /^(\d+:\d+)$/i ) { # Convert 'P' or 'PM' to 24h
       $time = "$1:" . datestr("%S", 0,1); # Get seconds from current time
     }   # That keeps timestamps somewhat different, even if adding several entries in the same minute
+
     # Default to current date and time
     $date = $date || datestr( "%F", 0, 1);
     $time = $time || datestr( "%T", 0, 1);
