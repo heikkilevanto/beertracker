@@ -621,7 +621,7 @@ if ( $q->request_method eq "POST" ) {
   }
   (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
-  if ( $lasttimestamp gt $stamp ) {
+  if ( $lasttimestamp gt $stamp && $sub ne "Delete" ) {
     $sub = "Save"; # force this to be an updating save, so the record goes into its right place
   }
 
@@ -655,9 +655,6 @@ if ( $q->request_method eq "POST" ) {
         print F $_;
       } else { # found the line
         print F "#" . $_ ;  # comment the original line out
-        #if ( $sub eq "Save" ) {
-        #  print F "$stamp; $effdate; $line \n";
-        #}
         $edit = "XXX"; # Do not delete another line, even if same timestamp
       }
     }
