@@ -817,8 +817,10 @@ $script .= "var origloc=\" $loc\"; \n";
 
 $script .= <<'SCRIPTEND';
   var geoloc = "";
+
   function savelocation (myposition) {
     geoloc = myposition.coords.latitude + " " + myposition.coords.longitude;
+    //alert("Got location " + myposition.coords.latitude + " " + myposition.coords.longitude);
     if ( ! document.getElementById("editrec") ) { // if editing, keep as is.
       var el = document.getElementsByName("g");
       if (el) {
@@ -859,6 +861,7 @@ $script .= <<'SCRIPTEND';
     console.log("GeoError" );
     console.log(err);
   }
+
   function getlocation () {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(savelocation,geoerror);
@@ -868,9 +871,10 @@ $script .= <<'SCRIPTEND';
   }
 
   // Get the location in the beginning, when ever window gets focus
-  document.onload = getlocation();
   window.addEventListener('focus', getlocation);
-  //setInterval(getlocation, 60*1000);
+  // Do not use document.onload(), or a timer. FF on Android does not like
+  // often-repeated location requests, and will disallow location for the page
+  // see #272
 
 SCRIPTEND
 # Might be nice to get the date and time to update automagically.
@@ -2054,6 +2058,7 @@ print "</table>\n";
 # Geolocation debug
   if (!$qry) {  # no location, list them all
     print "<hr><b>Geolocations</b><p>\n";
+    print "<input name='g' value='?'><br/>\n"; # gets filled with current coords
     print "<table>\n";
     print "<tr><td>Latitude</td><td>Longitude</td><td>Location</td></tr>\n";
     # TODO Sort by geo coords instead of name
