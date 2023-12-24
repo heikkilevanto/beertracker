@@ -2056,20 +2056,52 @@ print "</table>\n";
 } elsif ( $op eq "geo" ) {
 #####################
 # Geolocation debug
-  if (!$qry) {  # no location, list them all
+  if (!$qry || $qry =~ /^ *[0-9 .]+ *$/ ) {  # numerical query
     print "<hr><b>Geolocations</b><p>\n";
-    print "<input name='g' value='?'><br/>\n"; # gets filled with current coords
+    if ($qry) {
+      my ($guess, $gdist) = guessloc($qry);
+      if ($gdist < 2 ) {
+        print "Geo $qry seems to be $guess <br/>\n";
+      } else {
+        print "Geo $qry looks like $guess at $gdist m<br/>\n";
+      }
+    }
+    #print "<input name='g' value='$qry'><br/>\n"; # gets filled with current coords
+
     print "<table>\n";
-    print "<tr><td>Latitude</td><td>Longitude</td><td>Location</td></tr>\n";
-    # TODO Sort by geo coords instead of name
-    foreach my $k (sort(keys(%geolocations))) {
+    print "<tr><td>Latitude</td><td>Longitude</td>";
+    print "<td>dist</td>" if ($qry);
+    print "<td>Location</td></tr>\n";
+    my %geodist;
+    foreach my $k (keys(%geolocations)) {
+      if ($qry) {
+        my $d = geodist($qry, $geolocations{$k});
+        $d = sprintf("%09d",$d);
+        $geodist{$k} = "$d $k";
+      } else {
+        $geodist{$k} = $k;
+      }
+    }
+
+    foreach my $k (sort { $geodist{$a} cmp $geodist{$b}} (keys(%geolocations))) {
       print "<tr>\n";
       my ($la,$lo, $g) = geo( $geolocations{$k} );
-      print "<td>$la</td><td>$lo</td>";
-      print "<td><a href='$url?o=geo&q=$k' >$k</a></td>";
+      my $u = "m";
+      my ($dist) = $geodist{$k} =~ /^[ 0]*(\d+)/;
+      if ( !$dist ) {
+        $u ="";
+      } elsif ( $dist > 9999 ) {
+        $dist = int($dist / 1000) ;
+        $u = "km";
+      }
+      print "<td><a href=$url?o=geo&q=$la+$lo>$la</a></td>\n";
+      print "<td>$lo</td>\n";
+      print "<td>" . unit($dist,$u). "</td>\n" if ($qry);
+      print "<td><a href='$url?o=geo&q=$k' >$k</a></td>\n";
       print "</tr>\n";
     }
     print "</table>\n";
+
   } else { # loc given, list all occurrences of that location
     my $i = scalar( @lines );
     print "<hr/>Geolocation for <b>$qry</b> &nbsp;";
@@ -2078,7 +2110,7 @@ print "</table>\n";
     my (undef,undef,$defloc) = geo($geolocations{$qry});
     print "Default geo: $defloc <p>\n" if ($defloc);
     print "<table>\n";
-    print "<tr><td>Latitude</td><td>Longitude</td><td>Distance</td></tr>\n";
+    print "<tr><td>Latitude</td><td>Longitude</td><td>Dist</td></tr>\n";
     while ( $i-- > 0 ){
       ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
 $com, $geo ) =
@@ -2098,14 +2130,13 @@ $com, $geo ) =
       }
       print "<tr>\n";
       print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
-      print "<td align='right'><a href='$url?e=$stamp' >$ddist</a></td>";
+      print "<td align='right'>$ddist</td>";
+      print "<td><a href='$url?e=$stamp' >$stamp</a> ";
       if ($guess) {
-        print "<td>(<b>$guess $gdist ?)</b></td>\n" ;
-      } else {
-        print "<td>$stamp</td>\n";
+        print "<br>(<b>$guess $gdist ?)</b>\n" ;
+        print STDERR "Suspicious Geo: '$loc' looks like '$guess'  for '$g' at '$stamp' \n";
       }
-      # TODO Make a link to edit the record, or to clear the coords
-      # TODO Sort the list by geo coords or distance. Deduplicate
+      print "</td>\n";
       print "</tr>\n";
     }
     print "</table>\n";
