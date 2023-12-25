@@ -1287,7 +1287,8 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     }
     print "<a href='$url?o=Graph$bigimg-$startoff-$newend'>&gt;</a>\n"; # '>'
   }
-  print " &nbsp; <a href='$url?o=Graph$bigimg'>Month</a>\n";
+  print " &nbsp; <a href='$url?o=Graph$bigimg-14'>2w</a>\n";
+  print " <a href='$url?o=Graph$bigimg'>Month</a>\n";
   print " <a href='$url?o=Graph$bigimg-90'>3m</a> \n";
   print " <a href='$url?o=Graph$bigimg-180'>6m</a> \n";
   print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
