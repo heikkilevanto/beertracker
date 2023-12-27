@@ -941,9 +941,7 @@ print "</td></tr>\n";
 print "<tr>";
 print " <td $c6><textarea name='c' cols='45' rows='3'
   placeholder='$todaydrinks'>$com</textarea></td>\n";
-print "<td> <span onclick='showrows();' align=right>";
-print "^ &nbsp; &nbsp;</span>\n";
-print "</td></tr>\n";
+print "</tr>\n";
 if ( $edit && $foundline ) {
   print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
   print "&nbsp;<span align=right>Clr ";
@@ -972,6 +970,7 @@ if ( $edit && $foundline ) {
   } else {
     print " &nbsp; <a href='$url?o=board'>B</a>\n";
   }
+  print "&nbsp; <span onclick='showrows();' align=right>^  &nbsp;</span>";
   print "</td></tr>\n";
 }
 print "</table>\n";
