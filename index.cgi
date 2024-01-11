@@ -1172,8 +1172,8 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
          ( $startoff - $endoff > 80 ) ) {
       $fillstyle = "fill solid noborder";
       #$xformat="\"%Y\"";  # 2019
-      if ( $startoff - $endoff > 1200 ) {
-        $xtic = $onemonth * 12;
+      if ( $startoff - $endoff > 700 ) {
+        $xtic = $onemonth * 4;
         $xformat="\"%b\\n%y\"";  # Jul 19
       } elsif ( $startoff - $endoff > 80 ) {
         $xtic = $onemonth ;
@@ -1291,6 +1291,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   print " <a href='$url?o=Graph$bigimg-90'>3m</a> \n";
   print " <a href='$url?o=Graph$bigimg-180'>6m</a> \n";
   print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
+  print " <a href='$url?o=Graph$bigimg-730'>2y</a> \n";
   print " <a href='$url?o=Graph$bigimg-3650'>All</a> \n";  # The system isn't 10 years old
 
   my $zs = $startoff + int($len/2);
