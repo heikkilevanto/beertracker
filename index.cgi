@@ -1890,6 +1890,7 @@ if ( $op =~ /board(x?)/i ) {
     if ( $y eq $lasty && $yprice[$lasty] ) {
       $pr = $yprice[$lasty] / $ydays[$lasty] * 365;
       $pr = unit(sprintf("%5.0f", ($pr+500)/1000), "kkr") ;
+      $pr =~ s/^ *//;  # Remove leading space
       $t .= "<br/>~$pr";
     }
     $t .= "</td>\n";
