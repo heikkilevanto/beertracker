@@ -2487,6 +2487,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
             " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br class='no-wide'/>\n";
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
+      my $origsty = $sty || "???";
       if ($sty) {
         my $beerstyle = beercolorstyle("$sty $mak", "$date", "[$sty $mak] : $beer" );
         my $tag="span $beerstyle";
@@ -2559,7 +2560,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     print "<input type='hidden' name='m' value='$mak' />\n";
     print "<input type='hidden' name='b' value='$beer' />\n";
     print "<input type='hidden' name='v' value='' />\n";
-    print "<input type='hidden' name='s' value='$sty' />\n";
+    print "<input type='hidden' name='s' value='$origsty' />\n";
     print "<input type='hidden' name='a' value='$alc' />\n";
     print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation);
     print "<input type='hidden' name='g' id='geo' value='' />\n";
