@@ -2008,8 +2008,8 @@ if ( $op =~ /board(x?)/i ) {
 
   print "<p><hr/>\n";
   print "<b>Debug info </b><br/>\n";
-  print "&nbsp; <a href='$url?o=Datafile&maxl=30'>Tail of the data file</a><br/>\n";
-  print "&nbsp; <a href='$url?o=Datafile'>Download the whole data file</a><br/>\n";
+  print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' >Tail of the data file</a><br/>\n";
+  print "&nbsp; <a href='$url?o=Datafile'  target='_blank' >Download the whole data file</a><br/>\n";
   print "&nbsp; <a href='$url?o=geo'>Geolocation summary</a><br/>\n";
   exit();
 
