@@ -1807,6 +1807,7 @@ if ( $op =~ /board(x?)/i ) {
     my $nextm = "$lasty-02";
     if ( ! $monthdrinks{$nextm} ) {
       $monthdrinks{$nextm} = $monthdrinks{$lastym} / $dayofmonth * 30;
+      $monthprices{$nextm} = 0;
     }
   }
   foreach $m ( 1 .. 12 ) {
@@ -1841,13 +1842,16 @@ if ( $op =~ /board(x?)/i ) {
       my $dw = $1 if ($d=~/([0-9.]+)/);
       $dw = $dw || 0;
       $dw = unit(int($dw *7 +0.5), "/w");
-      $t .= "<td align=right>$d<br/>$dw<br/>$p";
-      if ($calm eq $lastym && $monthprices{$calm} ) {
-        $p = "";
-        $p = int($monthprices{$calm} / $dayofmonth * 30);
-        $t .= "<br/>~$p";
+      $t .= "<td align=right>";
+      if ( $p ) { # Skips the fake Feb
+        $t .= "$d<br/>$dw<br/>$p";
+        if ($calm eq $lastym && $monthprices{$calm} ) {
+          $p = "";
+          $p = int($monthprices{$calm} / $dayofmonth * 30);
+          $t .= "<br/>~$p";
+        }
+        $mprice += $p;
       }
-      $mprice += $p if ($p);
       $t .= "</td>\n";
       if ($y == $lasty ) { # First column is special for projections
         print F "NaN ";
@@ -1931,7 +1935,7 @@ if ( $op =~ /board(x?)/i ) {
   # Column legends again
   $t .="<tr><td>&nbsp;</td>\n";
   foreach $y ( reverse($firsty .. $lasty) ) {
-    $t .= "<td align='right'><b>&nbsp;$y</b></td>";
+    $t .= "<td align='right'><b style='color:$yearcolors[$y]'>&nbsp;$y</b></td>";
   }
   $t .= "<td align='right'><b>&nbsp;Avg</b></td>";
   $t .= "</tr>\n";
@@ -1964,10 +1968,10 @@ if ( $op =~ /board(x?)/i ) {
   my $lw = 2;
   my $yy = $firsty;
   for ( my $i = $lasty - $firsty +3; $i > 2; $i--) {
+    $lw++ if ( $yy == $lasty );
     $cmd .= "\"$plotfile\" " .
             "using 1:$i with line lc \"$yearcolors[$yy]\" lw $lw notitle , " ;
     $lw+= 0.33;
-    $lw++ if ( $yy == $lasty );
     $yy++;
   }
   # Finish by plotting low/high projections for current month
