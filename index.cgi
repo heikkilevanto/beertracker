@@ -719,6 +719,8 @@ print "<style rel='stylesheet'>\n";
 print '@media screen {';
 print "  * { background-color: $bgcolor; color: #FFFFFF; }\n";
 print "  * { font-size: small; }\n";
+print "  a { color: #666666; }\n";  # Almost invisible grey. Applies only to the
+           # underline, if the content is in a span of its own.
 print "}\n";
 print '@media screen and (max-width: 700px){';
 print "  .only-wide, .only-wide * { display: none !important; }\n";
@@ -947,7 +949,7 @@ if ( $edit && $foundline ) {
   print "&nbsp;<span align=right>Clr ";
   print "<input type='checkbox' checked=clearonclick onclick='clearonclick=this.checked;'/></span></td>\n";
   print "<td>";
-  print "<a href='$url' >cancel</a>";
+  print "<a href='$url' ><span>cancel</span></a>";
   print "&nbsp;<input type='submit' name='submit' value='Delete'/></td></tr>\n";
 } else {
   print "<tr><td><input type='submit' name='submit' value='Record'/>\n";
@@ -966,9 +968,9 @@ if ( $edit && $foundline ) {
   print "<option value='o=Price&q=$qry' >Prices</option>\n";
   print "</select>\n";
   if ( $op && $op !~ /graph/i ) {
-    print " &nbsp; <a href='$url'>G</a>\n";
+    print " &nbsp; <a href='$url'><b>G</b></a>\n";
   } else {
-    print " &nbsp; <a href='$url?o=board'>B</a>\n";
+    print " &nbsp; <a href='$url?o=board'><b>B</b></a>\n";
   }
   print "&nbsp; <span onclick='showrows();' align=right>^  &nbsp;</span>";
   print "</td></tr>\n";
@@ -1268,7 +1270,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   my $len = $startoff - $endoff;
   my $es = $startoff + $len;
   my $ee = $endoff + $len;
-  print "<a href='$url?o=Graph$bigimg-$es-$ee'>&lt;&lt;</a> &nbsp; \n"; # '<<'
+  print "<a href='$url?o=Graph$bigimg-$es-$ee'><span>&lt;&lt;</span></a> &nbsp; \n"; # '<<'
   my $ls = $startoff - $len;
   my $le = $endoff - $len;
   if ($le < 0 ) {
@@ -1276,7 +1278,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     $le = 0;
   }
   if ($endoff>0) {
-    print "<a href='$url?o=Graph$bigimg-$ls-$le'>&gt;&gt;</a>\n"; # '>>'
+    print "<a href='$url?o=Graph$bigimg-$ls-$le'><span>&gt;&gt;</span></a>\n"; # '>>'
   } else { # at today, '>' plots a zero-tail
     my $newend = $endoff;
     if ($newend > -3) {
@@ -1284,15 +1286,15 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     } else {
       $newend = $newend - 7;
     }
-    print "<a href='$url?o=Graph$bigimg-$startoff-$newend'>&gt;</a>\n"; # '>'
+    print "<a href='$url?o=Graph$bigimg-$startoff-$newend'><span>&gt;</span></a>\n"; # '>'
   }
-  print " &nbsp; <a href='$url?o=Graph$bigimg-14'>2w</a>\n";
-  print " <a href='$url?o=Graph$bigimg'>Month</a>\n";
-  print " <a href='$url?o=Graph$bigimg-90'>3m</a> \n";
-  print " <a href='$url?o=Graph$bigimg-180'>6m</a> \n";
-  print " <a href='$url?o=Graph$bigimg-365'>Year</a> \n";
-  print " <a href='$url?o=Graph$bigimg-730'>2y</a> \n";
-  print " <a href='$url?o=Graph$bigimg-3650'>All</a> \n";  # The system isn't 10 years old
+  print " &nbsp; <a href='$url?o=Graph$bigimg-14'><span>2w</span></a>\n";
+  print " <a href='$url?o=Graph$bigimg'><span>Month</span></a>\n";
+  print " <a href='$url?o=Graph$bigimg-90'><span>3m</span></a> \n";
+  print " <a href='$url?o=Graph$bigimg-180'><span>6m</span></a> \n";
+  print " <a href='$url?o=Graph$bigimg-365'><span>Year</span></a> \n";
+  print " <a href='$url?o=Graph$bigimg-730'><span>2y</span></a> \n";
+  print " <a href='$url?o=Graph$bigimg-3650'><span>All</span></a> \n";  # The system isn't 10 years old
 
   my $zs = $startoff + int($len/2);
   my $ze = $endoff - int($len/2);
@@ -1300,10 +1302,10 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     $zs -= $ze;
     $ze = 0 ;
   }
-  print " &nbsp; <a href='$url?o=Graph$bigimg-$zs-$ze'>[ - ]</a>\n";
+  print " &nbsp; <a href='$url?o=Graph$bigimg-$zs-$ze'><span>[ - ]</span></a>\n";
   my $is = $startoff - int($len/4);
   my $ie = $endoff + int($len/4);
-  print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'>[ + ]</a>\n";
+  print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'><span>[ + ]</span></a>\n";
   print "<br/>\n";
   print "</div>\n";
   if ( $futable ){
@@ -1338,12 +1340,12 @@ if ( $op =~ /board(x?)/i ) {
   if ($links{$locparam} ) {
     print loclink($locparam,"www"," ");
   }
-  print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'>PA</a>) "
+  print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'><span>PA</span></a>) "
     if ($qry ne "PA" );
   if ($extraboard) {
-    print "<a href='$url?o=board'>Plain</a>\n";
+    print "<a href='$url?o=board'><span>Plain</span></a>\n";
   } else {
-    print "<a href='$url?o=boardx'>Ext</a>\n";
+    print "<a href='$url?o=boardx'><span>Ext</span></a>\n";
   }
   print "<p>\n";
   if (!$scrapers{$locparam}) {
@@ -1364,7 +1366,7 @@ if ( $op =~ /board(x?)/i ) {
       my $nbeers = 0;
       if ($qry) {
       print "Filter:<b>$qry</b> " .
-        "(<a href='$url?o=$op&l=$locparam'>Clear</a>) " .
+        "(<a href='$url?o=$op&l=$locparam'><span>Clear</span></a>) " .
         "<p>\n";
       }
       print "<table border=0 style='white-space: nowrap;'>\n";
@@ -1500,12 +1502,12 @@ if ( $op =~ /board(x?)/i ) {
   my $month = "";
   print "<hr/>Other stats: \n";
   print "<a href='$url?o=short'><b>Days</b></a>&nbsp;\n";
-  print "<a href='$url?o=Months'>Months</a>&nbsp;\n";
-  print "<a href='$url?o=Years'>Years</a>&nbsp;\n";
+  print "<a href='$url?o=Months'><span>Months</span></a>&nbsp;\n";
+  print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
   print "<hr/>\n";
   my $filts = splitfilter($qry);
-  print "<hr/>Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'>Clear</a>)" .
-    "&nbsp;(<a href='$url?q=$qry'>Full</a>)<br/>" if ($qry||$yrlim);
+  print "<hr/>Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'><span>Clear</span></a>)" .
+    "&nbsp;(<a href='$url?q=$qry'><span>Full</span></a>)<br/>" if ($qry||$yrlim);
   print searchform(). "<hr/>" if $qry;
   while ( $i > 0 ) {
     $i--;
@@ -1596,7 +1598,7 @@ if ( $op =~ /board(x?)/i ) {
     my  $ysum ;
     if ( scalar(keys(%years)) > 1 ) {
       for $y ( reverse sort(keys(%years)) ) {
-        print "<a href='$url?o=short&y=$y&q=".uri_escape_utf8($qry)."'>$y</a> ($years{$y})<br/>\n" ;
+        print "<a href='$url?o=short&y=$y&q=".uri_escape_utf8($qry)."'><span>$y</span></a> ($years{$y})<br/>\n" ;
         $ysum += $years{$y};
       }
     }
@@ -1623,17 +1625,17 @@ if ( $op =~ /board(x?)/i ) {
     $sofar = "";
   }
   print "<hr/>Other stats: \n";
-  print "<a href='$url?o=short'>Days</a>&nbsp;\n";
-  print "<a href='$url?o=Months'>Months</a>&nbsp;\n";
+  print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
+  print "<a href='$url?o=Months'><span>Months</span></a>&nbsp;\n";
   print "<a href='$url?o=Years'><b>Years</b></a>&nbsp;\n";
   print "<hr/>\n";
   my $nlines = param("maxl") || 10;
   if ($sortdr) {
     print "Sorting by drinks (<a href='$url?o=Years&q=" . uri_escape_utf8($qry) .
-       "' class='no-print'>Sort by money</a>)\n";
+       "' class='no-print'><span>Sort by money</span></a>)\n";
   } else {
     print "Sorting by money (<a href='$url?o=YearsD&q=" . uri_escape_utf8($qry) .
-       "' class='no-print'>Sort by drinks</a>)\n";
+       "' class='no-print'><span>Sort by drinks</span></a>)\n";
   }
   print "<table border=1>\n";
   my $i = scalar( @lines );
@@ -1665,7 +1667,7 @@ if ( $op =~ /board(x?)/i ) {
         }
         my $yrlink = $thisyear;
         if (!$qry) {
-          $yrlink = "<a href='$url?o=$op&q=$thisyear&maxl=20'>$thisyear</a>";
+          $yrlink = "<a href='$url?o=$op&q=$thisyear&maxl=20'><span>$thisyear</span></a>";
         }
         print "<tr><td colspan='3'><br/>Year <b>$yrlink</b> $sofar</td></tr>\n";
         my @kl;
@@ -1734,12 +1736,12 @@ if ( $op =~ /board(x?)/i ) {
   print "</table>\n";
   print "Show ";
   for $top ( 5, 10, 20, 50, 100, 999999 ) {
-    print  "&nbsp; <a href='$url?o=$op&q=" . uri_escape($qry) . "&maxl=$top'>Top-$top</a>\n";
+    print  "&nbsp; <a href='$url?o=$op&q=" . uri_escape($qry) . "&maxl=$top'><span>Top-$top</span></a>\n";
   }
   if ($qry) {
-    my $prev = "<a href=$url?o=Years&q=" . ($qry - 1) . "&maxl=" . param('maxl') .">Prev</a> \n";
-    my $all = "<a href=$url?o=Years&&maxl=" . param('maxl') .">All</a> \n";
-    my $next = "<a href=$url?o=Years&q=" . ($qry + 1) . "&maxl=" . param('maxl') .">Next</a> \n";
+    my $prev = "<a href=$url?o=Years&q=" . ($qry - 1) . "&maxl=" . param('maxl') ."><span>Prev</span></a> \n";
+    my $all = "<a href=$url?o=Years&&maxl=" . param('maxl') ."><span>All</span></a> \n";
+    my $next = "<a href=$url?o=Years&q=" . ($qry + 1) . "&maxl=" . param('maxl') ."><span>Next</span></a> \n";
     print "<br/> $prev &nbsp; $all &nbsp; $next \n";
   }
   print  "<hr/>\n";
@@ -1757,9 +1759,9 @@ if ( $op =~ /board(x?)/i ) {
     exit(); # Never mind missing footers
   }
   print "<hr/>Other stats: \n";
-  print "<a href='$url?o=short'>Days</a>&nbsp;\n";
+  print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
   print "<a href='$url?o=Months'><b>Months</b></a>&nbsp;\n";
-  print "<a href='$url?o=Years'>Years</a>&nbsp;\n";
+  print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
   print "<hr/>\n";
 
   my $firsty=$1;
@@ -2040,9 +2042,9 @@ if ( $op =~ /board(x?)/i ) {
 
   print "<p><hr/>\n";
   print "<b>Debug info </b><br/>\n";
-  print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' >Tail of the data file</a><br/>\n";
-  print "&nbsp; <a href='$url?o=Datafile'  target='_blank' >Download the whole data file</a><br/>\n";
-  print "&nbsp; <a href='$url?o=geo'>Geolocation summary</a><br/>\n";
+  print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' ><span>Tail of the data file</span></a><br/>\n";
+  print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
+  print "&nbsp; <a href='$url?o=geo'><span>Geolocation summary</span></a><br/>\n";
   exit();
 
 } elsif ( $op eq "Price" ) {
@@ -2127,10 +2129,10 @@ print "</table>\n";
         $dist = int($dist / 1000) ;
         $u = "km";
       }
-      print "<td><a href=$url?o=geo&q=$la+$lo>$la</a></td>\n";
+      print "<td><a href=$url?o=geo&q=$la+$lo><span>$la</span></a></td>\n";
       print "<td>$lo</td>\n";
       print "<td>" . unit($dist,$u). "</td>\n" if ($qry);
-      print "<td><a href='$url?o=geo&q=$k' >$k</a></td>\n";
+      print "<td><a href='$url?o=geo&q=$k' ><span>$k</span></a></td>\n";
       print "</tr>\n";
     }
     print "</table>\n";
@@ -2138,7 +2140,7 @@ print "</table>\n";
   } else { # loc given, list all occurrences of that location
     my $i = scalar( @lines );
     print "<hr/>Geolocation for <b>$qry</b> &nbsp;";
-    print "<a href='$url?o=geo'>Back</a>";
+    print "<a href='$url?o=geo'><span>Back</span></a>";
     print "<p>\n";
     my (undef,undef,$defloc) = geo($geolocations{$qry});
     print "Default geo: $defloc <p>\n" if ($defloc);
@@ -2164,7 +2166,7 @@ $com, $geo ) =
       print "<tr>\n";
       print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
       print "<td align='right'>$ddist</td>";
-      print "<td><a href='$url?e=$stamp' >$stamp</a> ";
+      print "<td><a href='$url?e=$stamp' ><span>$stamp</span></a> ";
       if ($guess) {
         print "<br>(<b>$guess $gdist ?)</b>\n" ;
         print STDERR "Suspicious Geo: '$loc' looks like '$guess'  for '$g' at '$stamp' \n";
@@ -2183,24 +2185,24 @@ $com, $geo ) =
 
 #######################
 # various lists (beer, location, etc)
-  print "<hr/><a href='$url'><b>$op</b> list</a>\n";
+  print "<hr/><a href='$url'><span><b>$op</b> list</span></a>\n";
   print "<div class='no-print'>\n";
   if ( !$sortlist) {
-    print "(<a href='$url?o=$op&sort=1' >sort</a>) <br/>\n";
+    print "(<a href='$url?o=$op&sort=1' ><span>sort</span></a>) <br/>\n";
   } else {
-    print "(<a href='$url?o=$op'>Recent</a>) <br/>\n";
+    print "(<a href='$url?o=$op'><span>Recent</span></a>) <br/>\n";
   }
   my $filts = splitfilter($qry);
   print "Filter: $filts " .
-     "(<a href='$url?o=$op'>clear</a>) <br/>" if $qry;
-  print "Filter: <a href='$url?y=$yrlim'>$yrlim</a> " .
-     "(<a href='$url?o=$op'>clear</a>) <br/>" if $yrlim;
+     "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $qry;
+  print "Filter: <a href='$url?y=$yrlim'><span>$yrlim</span></a> " .
+     "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
   print searchform();
   print "Other lists: " ;
   my @ops = ( "Location", "Brewery", "Beer",
       "Wine", "Booze", "Restaurant", "Style");
   for my $l ( @ops ) {
-    print "<a href='$url?o=$l'>$l</a> &nbsp;\n";
+    print "<a href='$url?o=$l'><span>$l</span></a> &nbsp;\n";
   }
   print "</div>\n";
   my $i = scalar( @lines );
@@ -2336,8 +2338,7 @@ $com, $geo ) =
   if ( scalar(keys(%years)) > 1 ) {
     print "More: <br/>\n";
     for $y ( reverse sort(keys(%years)) ) {
-      print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) .
-         "'>$y</a><br/>\n" ;
+      print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) . "'><span>$y</span></a><br/>\n" ;
       $ysum += $years{$y};
     }
   }
@@ -2355,22 +2356,22 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   my $filts = splitfilter($qry);
   print "<hr/>Filter: \n";
   print " -$qrylim " if ($qrylim);
-  print "(<a href='$url'>Clear</a>) <b>$yrlim $filts</b>" if ($qry || $qrylim || $yrlim);
+  print "(<a href='$url'><span>Clear</span></a>) <b>$yrlim $filts</b>" if ($qry || $qrylim || $yrlim);
   print " &nbsp; \n";
   print "<br/>" . searchform() . "<br/>" . glink($qry) . " " . rblink($qry) . " " . utlink($qry) .
     filt($qry, "", "Short", "short")  ."\n" if ($qry);
 
   print "<span class='no-print'>\n";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&y=" . uri_escape_utf8($yrlim) .
-      "&f=r' >Ratings</a>\n";
+      "&f=r' ><span>Ratings</span></a>\n";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
-      "&f=c' >Comments</a>\n";
+      "&f=c' ><span>Comments</span></a>\n";
   print " &nbsp; Show: ";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
-      "&f=x' >Extra info</a><br/>\n";
+      "&f=x' ><span>Extra info<span></a><br/>\n";
   if ($qrylim) {
     for ( my $i = 0; $i < 11; $i++) {
-      print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&f=r$i' >$i</a> &nbsp;";
+      print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&f=r$i' ><span>$i</span></a> &nbsp;";
     }
   }
   print "</span>\n";
@@ -2585,7 +2586,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       $vols{40} = 1;
     }
     print "<form method='POST' style='display: inline;' class='no-print' >\n";
-    print "<a href='$url?e=" . uri_escape_utf8($stamp) ."' >Edit</a> \n";
+    print "<a href='$url?e=" . uri_escape_utf8($stamp) ."' ><span>Edit</span></a> \n";
 
     # Copy values
     print "<input type='hidden' name='m' value='$mak' />\n";
@@ -2648,7 +2649,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     }
     $anchor = "#".$anchor if ($anchor);
     $ysum = $ysum || "";
-    print "<a href='$url?maxl=-1$anchor' >All</a> ($ysum)<p>\n";
+    print "<a href='$url?maxl=-1$anchor' ><span>All</span></a> ($ysum)<p>\n";
   } else {
     print "<br/>That was the whole list<p>\n" unless ($yrlim);
   }
@@ -2689,7 +2690,7 @@ sub param {
 # Helper to make a filter link
 sub filt {
   my $f = shift; # filter term
-  my $tag = shift || "nop";
+  my $tag = shift || "span";
   my $dsp = shift || $f;
   my $op = shift || $op || "";
   $op = "o=$op&" if ($op);
@@ -2708,7 +2709,7 @@ sub splitfilter {
   my $f = shift || "";  # current filter term
   my $ret = "";
   for my $w ( split ( /\W+/, $f) ) {
-    $ret .= "<a href='$url?o=$op&q=".uri_escape_utf8($w)."'>$w</a> ";
+    $ret .= "<a href='$url?o=$op&q=".uri_escape_utf8($w)."'><span>$w</span></a> ";
   }
   return $ret;
 }
@@ -2755,10 +2756,10 @@ sub loclink {
   my $scrape = shift || "List";
   my $lnk = "";
   if (defined($scrapers{$loc}) && $scrape ne " ") {
-    $lnk .= " &nbsp; <i><a href='$url?o=board&l=$loc'>$scrape</a></i>" ;
+    $lnk .= " &nbsp; <i><a href='$url?o=board&l=$loc'><span>$scrape</span></a></i>" ;
   }
   if (defined($links{$loc}) && $www ne " ") {
-    $lnk .= " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' >$www</a></i>" ;
+    $lnk .= " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' ><span>$www</span></a></i>" ;
   }
   return $lnk
 }
@@ -2789,7 +2790,7 @@ sub glink {
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
   my $lnk = "&nbsp;<i>(<a href='https://www.google.com/search?q=" .
-    uri_escape($qry) . "' target='_blank' class='no-print'>$txt</a>)</i>\n";
+    uri_escape($qry) . "' target='_blank' class='no-print'><span>$txt</span></a>)</i>\n";
   return $lnk;
 }
 
@@ -2800,7 +2801,7 @@ sub rblink {
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
   my $lnk = "<i>(<a href='https://www.ratebeer.com/search?q=" . uri_escape($qry) .
-    "' target='_blank' class='no-print'>$txt</a>)</i>\n";
+    "' target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
   return $lnk;
 }
 # Helper to make a Untappd search link
@@ -2810,7 +2811,7 @@ sub utlink {
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
   my $lnk = "<i>(<a href='https://untappd.com/search?q=" . uri_escape($qry) .
-    "' target='_blank' class='no-print'>$txt</a>)</i>\n";
+    "' target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
   return $lnk;
 }
 
