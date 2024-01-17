@@ -2524,7 +2524,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         my $beerstyle = beercolorstyle("$sty $mak", "$date", "[$sty $mak] : $beer" );
         my $tag="span $beerstyle";
         $sty = shortbeerstyle($sty) if ( $qrylim ne "x" );
-        print filt("[$sty]",$tag) . newmark($sty) . " "   ;
+        print filt("$sty",$tag) . newmark($sty) . " "   ;
 
       }
       if ($sty || $pr || $alc) {
@@ -2698,7 +2698,11 @@ sub filt {
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
   my $endtag = $tag;
   $endtag =~ s/ .*//; # skip attributes
-  my $link = "<a href='$url?$op"."q=".uri_escape_utf8($param) ."'>" .
+  my $style = "";
+  if ( $tag =~ /background-color:([^;]+);/ ) { #make the link underline disappear
+    $style = "style='color:$1'";
+  }
+  my $link = "<a href='$url?$op"."q=".uri_escape_utf8($param) ."' $style>" .
     "<$tag>$dsp</$endtag></a>";
   return $link;
 }
