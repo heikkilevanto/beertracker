@@ -1853,6 +1853,7 @@ if ( $op =~ /board(x?)/i ) {
   $max = sprintf("%3.1f", $max);
   print F "\n";
   print F "$cur $min\n";
+  print F "$cur $avg\n";
   print F "$cur $max\n";
   close(F);
   $t .= "<tr><td>Avg</td>\n";
@@ -1938,14 +1939,14 @@ if ( $op =~ /board(x?)/i ) {
   for ( my $i = $lasty - $firsty +3; $i > 2; $i--) {
     $cmd .= "\"$plotfile\" " .
             "using 1:$i with line lc $lc lw $lw title \" $yy\", " ;
-    $lw+= 0.5;
+    $lw+= 0.33;
     $lc++;
     $yy++;
   }
   # Finish by plotting low/high projections for current month
   $lc--;
   $cmd .= "\"$plotfile\" " .
-            "using 1:2 with points pt 1 lc $lc lw 1 notitle," ;
+            "using 1:2 with points pt 6 lc $lc lw 3 notitle," ;
   $cmd .= "\n";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
