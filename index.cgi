@@ -1776,8 +1776,29 @@ if ( $op =~ /board(x?)/i ) {
   $t .="<tr><td>&nbsp;</td>\n";
   my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+  my @yearcolors;
+  my $y = $lasty;
+  $yearcolors[$y--] = "#FF0000";  # current year, in bright red
+  $yearcolors[$y--] = "#800000";  # current year, in bright red
+  $yearcolors[$y--] = "#00F0F0";  # Cyan
+  $yearcolors[$y--] = "#00C0C0";
+  $yearcolors[$y--] = "#008080";
+  $yearcolors[$y--] = "#00FF00";  # Green
+  $yearcolors[$y--] = "#00C000";
+  $yearcolors[$y--] = "#008000";
+  $yearcolors[$y--] = "#FFFF00";  # yellow
+  $yearcolors[$y--] = "#C0C000";
+  $yearcolors[$y--] = "#808000";
+  $yearcolors[$y--] = "#C000C0";  # purple 2014 # not yet visible in 2024
+  $yearcolors[$y--] = "#800080";
+  $yearcolors[$y--] = "#400040";
+  while ( $y > $firsty -2 ) {
+    $yearcolors[$y--] = "#808080";  # The rest in some kind of grey
+  }
+  # Anything after this will be white by default
+  # Should work for a few years
   foreach $y ( reverse($firsty .. $lasty) ) {
-    $t .= "<td align='right'><b>&nbsp;$y</b></td>";
+    $t .= "<td align='right' ><b style='color:$yearcolors[$y]'>&nbsp;$y</b></td>";
   }
   $t .= "<td align='right'><b>&nbsp;Avg</b></td>";
   $t .= "</tr>\n";
@@ -1934,19 +1955,17 @@ if ( $op =~ /board(x?)/i ) {
        "set border linecolor \"white\" \n" .
        "plot ";
   my $lw = 2;
-  my $lc = 1;
-  my $yy = $firsty-2000;
+  my $yy = $firsty;
   for ( my $i = $lasty - $firsty +3; $i > 2; $i--) {
     $cmd .= "\"$plotfile\" " .
-            "using 1:$i with line lc $lc lw $lw title \" $yy\", " ;
+            "using 1:$i with line lc \"$yearcolors[$yy]\" lw $lw notitle , " ;
     $lw+= 0.33;
-    $lc++;
+    $lw++ if ( $yy == $lasty );
     $yy++;
   }
   # Finish by plotting low/high projections for current month
-  $lc--;
   $cmd .= "\"$plotfile\" " .
-            "using 1:2 with points pt 6 lc $lc lw 3 notitle," ;
+            "using 1:2 with points pt 6 lc \"$yearcolors[$lasty]\" lw 3 notitle," ;
   $cmd .= "\n";
   open C, ">$cmdfile"
       or error ("Could not open $plotfile for writing");
