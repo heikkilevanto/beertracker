@@ -2486,8 +2486,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     print "<br class='no-print'/>$time " . filt($mak,"i") . newmark($mak) .
             " : " . filt($beer,"b") . newmark($beer, $mak) .
       "<br class='no-wide'/>\n";
+    my $origsty = $sty || "???";
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
-      my $origsty = $sty || "???";
       if ($sty) {
         my $beerstyle = beercolorstyle("$sty $mak", "$date", "[$sty $mak] : $beer" );
         my $tag="span $beerstyle";
