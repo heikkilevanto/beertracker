@@ -1802,6 +1802,13 @@ if ( $op =~ /board(x?)/i ) {
   }
   $t .= "<td align='right'><b>&nbsp;Avg</b></td>";
   $t .= "</tr>\n";
+  # If in January, extend to Feb, so we see the beginning of the line
+  if ( datestr("%m",0) eq "01" ) {
+    my $nextm = "$lasty-02";
+    if ( ! $monthdrinks{$nextm} ) {
+      $monthdrinks{$nextm} = $monthdrinks{$lastym} / $dayofmonth * 30;
+    }
+  }
   foreach $m ( 1 .. 12 ) {
     $t .= "<tr><td><b>$months[$m]</b></td>\n";
     print F "$months[$m] ";
