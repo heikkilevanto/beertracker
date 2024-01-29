@@ -488,6 +488,7 @@ if ( $q->request_method eq "POST" ) {
       if ($guess =~ /Home/i ) {
         $geo = ""; # If editing at home, do not trust the coords for other locations
       } # (we already know where home is)
+      # TODO Sanity check, #279
     }
     if ($date =~ /^L$/i ) { # 'L' for last date
       if ( $lastline =~ /(^[0-9-]+) +(\d+):(\d+)/ ) {
@@ -2993,7 +2994,7 @@ sub beercolor {
       "e8e8a7", "weiss|wit|wheat|weizen",
       "c1c10b", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
       "d8d80f", "Pale Ale|PA",
-      "b7930e", "Old|Brown|Red|Dark|Ale|Belgian|IDA",   # Any kind of ales (after Pale Ale)
+      "b7930e", "Old|Brown|Red|Dark|Ale|Belgian||Tripel|Dubbel|IDA",   # Any kind of ales (after Pale Ale)
       "0f0101", "Imp",
       "dbb83b", "misc|mix|random",
       );
