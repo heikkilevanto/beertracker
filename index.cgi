@@ -485,10 +485,16 @@ if ( $q->request_method eq "POST" ) {
     }
     if ( $geo ){
       my  ($guess, $dist) = guessloc($geo);
-      if ($guess =~ /Home/i ) {
+      if ($guess =~ /XHome/i ) {
         $geo = ""; # If editing at home, do not trust the coords for other locations
       } # (we already know where home is)
-      # TODO Sanity check, #279
+      # Sanity check
+      if ( $loc && $guess  # We have location name, and geo guess
+         && $geolocations{$loc} # And we know the geo for the location
+         && $loc !~ /$guess/i ) { # And they differ
+        print STDERR "Refusing to store '$geo' for '$loc', it is closer to '$guess' \n";
+        $geo = "";  # Ignore the suspect geo coords
+      }
     }
     if ($date =~ /^L$/i ) { # 'L' for last date
       if ( $lastline =~ /(^[0-9-]+) +(\d+):(\d+)/ ) {
