@@ -2650,7 +2650,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     if ( scalar(keys(%years)) > 1 ) {
       for $y ( reverse sort(keys(%years)) ) {
         print "<a href='$url?y=$y&q=" . uri_escape($qry) .
-            "'>$y</a> ($years{$y})<br/>\n" ;  # TODO - Skips some ??!!
+            "'><span>$y</span></a> ($years{$y})<br/>\n" ;  # TODO - Skips some ??!!
         $ysum += $years{$y};
       }
     }
