@@ -759,9 +759,7 @@ if ( !@lines && ! $op ) {
 # If fields should clear when clicked on
 # Easier to use on my phone. Can be disabled with the Clr checkbox.
 
-my $script = <<'SCRIPTEND';
-  var clearonclick = true; // Clear inputs when clicked
-SCRIPTEND
+my $script = "";
 
 # Debug div to see debug output on my phone
 $script .= <<'SCRIPTEND';
@@ -896,7 +894,7 @@ print "<script>\n$script</script>\n";
 #############################
 # Main input form
 print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
-my $clr = "Onclick='if (clearonclick) {value=\"\";}'";
+my $clr = "Onfocus='select();'";
 my $c2 = "colspan='2'";
 my $c3 = "colspan='3'";
 my $c4 = "colspan='4'";
@@ -952,12 +950,11 @@ print " <td $c6><textarea name='c' cols='45' rows='3'
   placeholder='$todaydrinks'>$com</textarea></td>\n";
 print "</tr>\n";
 if ( $edit && $foundline ) {
-  print "<tr><td><input type='submit' name='submit' value='Save'/>&nbsp;&nbsp;";
-  print "&nbsp;<span align=right>Clr ";
-  print "<input type='checkbox' checked=clearonclick onclick='clearonclick=this.checked;'/></span></td>\n";
-  print "<td>";
-  print "<a href='$url' ><span>cancel</span></a>";
-  print "&nbsp;<input type='submit' name='submit' value='Delete'/></td></tr>\n";
+  print "<tr>\n";
+  print "<td><input type='submit' name='submit' value='Save'/>&nbsp;</td>";
+  print "<td><a href='$url' ><span>cancel</span></a>";
+  print "&nbsp;&nbsp;&nbsp;<input type='submit' name='submit' value='Delete'/></td>";
+  print "</tr>\n";
 } else {
   print "<tr><td><input type='submit' name='submit' value='Record'/>\n";
   print "&nbsp;<input type='button' value='clear' onclick='getlocation();clearinputs()'/></td>\n";
