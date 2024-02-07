@@ -121,8 +121,8 @@ my $rate= param("r");  # rating, 0=worst, 10=best
 my $com = param("c");  # Comments
 my $geo = param("g");  # Geolocation old: "[55.6531712/12.5042688]" new "55.6531712 12.5042688"
   # The rest are not in the data file
-my $date = param("d"); # Date, if entered. Overrides stamp and effdate.
-my $time = param("t"); # Time, if entered.
+my $date = param("d",1); # Date, if entered. Overrides stamp and effdate. Keep leading space for logic
+my $time = param("t",1); # Time, if entered.
 my $del = param("x");  # delete/update last entry
 my $qry = param("q");  # filter query, greps the list
 my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info
@@ -480,21 +480,25 @@ if ( $q->request_method eq "POST" ) {
   # the same name.
   if ( !$origstamp) { # New record, process date and time if entered
     #print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
-    if ($date || $time ) {  # Entering after the fact, possibly at a different location
+    if (($date =~ /^\d/ || $time =~ /^\d/ )  # Entering after the fact, possibly at a different location
+        && ( $geo =~ /^ / )) {  # And geo is autofilled
       $geo = "";   # Do not remember the suspicious location
     }
-    if ( $geo ){
+    if ( $geo ) { # Sanity check, do not accept conflicting locations
       my  ($guess, $dist) = guessloc($geo);
-      if ($guess =~ /XHome/i ) {
-        $geo = ""; # If editing at home, do not trust the coords for other locations
-      } # (we already know where home is)
-      # Sanity check
       if ( $loc && $guess  # We have location name, and geo guess
          && $geolocations{$loc} # And we know the geo for the location
          && $loc !~ /$guess/i ) { # And they differ
         print STDERR "Refusing to store '$geo' for '$loc', it is closer to '$guess' \n";
         $geo = "";  # Ignore the suspect geo coords
       }
+    }
+    if ( $sub eq "Save" ) {
+      $date = trim($date);
+      $time = trim($time);
+    } else {
+      $date = "" if ( $date =~ /^ / );
+      $time = "" if ( $time =~ /^ / );
     }
     if ($date =~ /^L$/i ) { # 'L' for last date
       if ( $lastline =~ /(^[0-9-]+) +(\d+):(\d+)/ ) {
@@ -538,8 +542,7 @@ if ( $q->request_method eq "POST" ) {
       $effdate = $1;
       $stamp .= "; $2";
     }
-    #$lasttimestamp =~ s/\d\d$//;  # XXX Trick to make the bug easier to reproduce
-    if (  $stamp =~ /^$lasttimestamp/ ) {
+    if (  $stamp =~ /^$lasttimestamp/ ) { # trying to create a duplicate
       if ( $stamp =~ /^(.*:)(\d\d)(;.*)$/ ) {
         my $sec = $2;
         $sec++;  # increment the seconds, even past 59.
@@ -694,11 +697,6 @@ if ($foundline) {  # can be undef, if a new data file
       split( / *; */, $foundline );   # do not copy geo
   }
 (undef, undef, $geo ) = geo($geo);
-if ( ! $edit ) { # not editing, do not default rates and comments from last beer
-  $rate = "";
-  $com = "";
-  $geo = "";  # And no geolocation
-}
 
 
 ########################
@@ -756,8 +754,6 @@ if ( !@lines && ! $op ) {
 # Javascript trickery. Most of the logic is on the server side, but a few
 # things have to be done in the browser.
 
-# If fields should clear when clicked on
-# Easier to use on my phone. Can be disabled with the Clr checkbox.
 
 my $script = "";
 
@@ -780,6 +776,11 @@ $script .= <<'SCRIPTEND';
       if ( inputs[i].type == "text" )
         inputs[i].value = "";
     }
+    var r = document.getElementById("r");
+    r.value = "";
+    var c = document.getElementById("c");
+    c.value = "";
+
   };
 SCRIPTEND
 
@@ -791,9 +792,9 @@ $script .= <<'SCRIPTEND';
     var rows = [ "td1", "td2", "td3"];
     for (i=0; i<rows.length; i++) {
       var r = document.getElementById(rows[i]);
-      console.log("Unhiding " + i + ":" + rows[i], r);
+      //console.log("Unhiding " + i + ":" + rows[i], r);
       if (r) {
-        r.hidden = false;
+        r.hidden = ! r.hidden;
       }
     }
   }
@@ -826,9 +827,9 @@ $script .= <<'SCRIPTEND';
   var geoloc = "";
 
   function savelocation (myposition) {
-    geoloc = myposition.coords.latitude + " " + myposition.coords.longitude;
-    //alert("Got location " + myposition.coords.latitude + " " + myposition.coords.longitude);
-    if ( ! document.getElementById("editrec") ) { // if editing, keep as is.
+    geoloc = " " + myposition.coords.latitude + " " + myposition.coords.longitude;
+    var gf = document.getElementById("geo");
+    if ( ! gf.value.match( /^\d/ )) { // empty, or starts with a space
       var el = document.getElementsByName("g");
       if (el) {
         for ( i=0; i<el.length; i++) {
@@ -852,7 +853,7 @@ $script .= <<'SCRIPTEND';
             bestloc = geolocations[i].name;
           }
         }
-        // console.log("Best match: " + bestloc + " at " + bestdist );
+        console.log("Best match: " + bestloc + " at " + bestdist );
 
         if (bestloc) {
           loc.value = " " + bestloc + " [" + bestdist + "m]";
@@ -894,7 +895,7 @@ print "<script>\n$script</script>\n";
 #############################
 # Main input form
 print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
-my $clr = "Onfocus='select();'";
+my $clr = "Onfocus='value=value.trim();select();'";
 my $c2 = "colspan='2'";
 my $c3 = "colspan='3'";
 my $c4 = "colspan='4'";
@@ -905,24 +906,28 @@ my $sz2n = "size='3'";
 my $sz2 = "$sz2n $clr";
 my $sz3n = "size='8'";
 my $sz3 = "$sz3n $clr";
-my $hidden = "hidden";
+my $hidden = "";
 print "<table style='width:100%; max-width:500px' >";
-if ( $edit && $foundline ) {
-  # Still produces lot of warnings if editing a non-existing record, all values
-  # are undefined. Should not happen anyway.
-  print "<tr><td $c2><b>Editing record '$edit'</b> ".
-      "<input name='e' type='hidden' value='$edit' id='editrec' /></td></tr>\n";
-  print "<tr><td><input name='st' value='$stamp' $sz1n placeholder='Stamp' /></td>\n";
-  print "<td><input name='wd' value='$wday' $sz2n placeholder='wday' />\n";
-  print "<input name='ed' value='$effdate' $sz3n placeholder='Eff' /></td></tr>\n";
-  $hidden = "";  # show the geoloc
+my $editstamp;
+if ($edit) {
+  print "<tr><td $c2><b>Record '$edit'</b></td></tr>\n";
+  $editstamp = $edit;
+  ($date,$time) = $edit =~ /^([0-9-]+) ([0-9]+:[0-9]+:[0-9]+)/ ;
 } else {
-  # fields to enter date and time
-  print "<tr><td id='td1' hidden><input name='d' value='' $sz1n placeholder='" . datestr ("%F") . "' /></td>\n";
-  print "<td id='td2' hidden><input name='t' value='' $sz3n placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
-  $loc = " " . $loc; # Mark it as uncertain
+  $editstamp = $lasttimestamp;
+  ($date,$time) = $lasttimestamp =~ /^([0-9-]+) ([0-9]+:[0-9]+)/ ;
+  $geo = " $geo"; # Allow more recent geolocations
+  $hidden = "hidden"; # Hide the geo and date fields for normal use
 }
-# Geolocation
+$date = " $date"; # Detect if editing them´
+$time = " $time";
+print "<tr><td><input name='e' type='hidden' value='$editstamp' id='editrec' />\n";
+print "</td></tr>\n";
+print "<tr><td id='td1' $hidden ><input name='d' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
+print "<td id='td2' $hidden ><input name='t' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
+$loc = " " . $loc; # Mark it as uncertain
+
+  # Geolocation
 print "<tr><td id='td3' $hidden $c2><input name='g' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
 
 print "<tr><td><input name='l' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
@@ -936,29 +941,44 @@ print "<input name='a' value='$alc %' $sz2 placeholder='Alc' />\n";
 my $prc = $pr;
 $prc =~ s/(-?[0-9]+).*$/$1.-/;
 print "<input name='p' value='$prc' $sz2 placeholder='Price' /></td>\n";
-print "<td><select name='r' value='$rate' placeholder='Rating'>" .
-  "<option value=''></option>\n";
+print "<td><select name='r' id='r' value='$rate' placeholder='Rating' style='width:4.5em;'>" .
+  "<option value=''>Rate</option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
   print " selected='selected'" if ( $ro eq $rate );
   print  ">$ro $ratings[$ro]</option>\n";
 }
 print "</select>\n";
+if ( $op && $op !~ /graph/i ) {
+  print " &nbsp; <a href='$url'><b>G</b></a>\n";
+} else {
+  print " &nbsp; <a href='$url?o=board'><b>B</b></a>\n";
+}
+print "&nbsp; <span onclick='showrows();' align=right>^  &nbsp;</span>";
 print "</td></tr>\n";
 print "<tr>";
-print " <td $c6><textarea name='c' cols='45' rows='3'
+print " <td $c6><textarea name='c' cols='45' rows='3' id='c'
   placeholder='$todaydrinks'>$com</textarea></td>\n";
 print "</tr>\n";
-if ( $edit && $foundline ) {
+if ( 0 && $edit && $foundline ) {
   print "<tr>\n";
   print "<td><input type='submit' name='submit' value='Save'/>&nbsp;</td>";
   print "<td><a href='$url' ><span>cancel</span></a>";
   print "&nbsp;&nbsp;&nbsp;<input type='submit' name='submit' value='Delete'/></td>";
   print "</tr>\n";
 } else {
-  print "<tr><td><input type='submit' name='submit' value='Record'/>\n";
-  print "&nbsp;<input type='button' value='clear' onclick='getlocation();clearinputs()'/></td>\n";
-  print "<td><select name='ops' " .
+  print "<tr><td>\n";
+  print "<input type='submit' name='submit' value='Record'/>\n";
+  print " <input type='submit' name='submit' value='Save'/>\n";
+  if ($edit) {
+    print " <input type='submit' name='submit' value='Del'/>\n";
+    print "</td><td>\n";
+    print "<a href='$url' ><span>cancel</span></a>";
+  } else {
+    print "</td><td>\n";
+    print " <input type='button' value='Clr' onclick='getlocation();clearinputs()'/>\n";
+  }
+  print " <select name='ops' style='width:4.5em;' " .
               "onchange='document.location=\"$url?\"+this.value;' >";
   print "<option value='' >Show</option>\n";
   print "<option value='o=full&q=$qry' >Full List</option>\n";
@@ -971,12 +991,6 @@ if ( $edit && $foundline ) {
   print "<option value='o=About&q=$qry' >About</option>\n";
   print "<option value='o=Price&q=$qry' >Prices</option>\n";
   print "</select>\n";
-  if ( $op && $op !~ /graph/i ) {
-    print " &nbsp; <a href='$url'><b>G</b></a>\n";
-  } else {
-    print " &nbsp; <a href='$url?o=board'><b>B</b></a>\n";
-  }
-  print "&nbsp; <span onclick='showrows();' align=right>^  &nbsp;</span>";
   print "</td></tr>\n";
 }
 print "</table>\n";
@@ -2702,15 +2716,24 @@ exit();
 
 ############################################
 
-# Helper to sanitize input data
-sub param {
-  my $tag = shift;
-  my $val = $q->param($tag) || "";
-  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
+# Helper to trim leading and trailing spaces
+sub trim {
+  $val = shift;
   $val =~ s/^ +//; # Trim leading spaces
   $val =~ s/ +$//; # and trailing
   return $val;
 }
+
+# Helper to sanitize input data
+sub param {
+  my $tag = shift;
+  my $keepspaces = shift || 1;
+  my $val = $q->param($tag) || "";
+  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
+  $val = trim($val) unless ( $keepspaces );
+  return $val;
+}
+
 
 # Helper to make a filter link
 sub filt {
