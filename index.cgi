@@ -1422,22 +1422,21 @@ if ( $op =~ /board(x?)/i ) {
         # If there are strange beers, take a 'view source' and look
         my $country = $e->{'country'} || "";
         my $sizes = $e->{"sizePrice"};
+        my $hiddenbuttons = "";
+          $hiddenbuttons .= "<input type='hidden' name='m' value='$mak' />\n" ;
+          $hiddenbuttons .= "<input type='hidden' name='b' value='$beer' />\n" ;
+          $hiddenbuttons .= "<input type='hidden' name='s' value='$origsty' />\n" ;
+          $hiddenbuttons .= "<input type='hidden' name='a' value='$alc' />\n" ;
+          $hiddenbuttons .= "<input type='hidden' name='l' value='$loc' />\n" ;
+          $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
         my $buttons="";
         foreach $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
           $vol = $sp->{"vol"};
           $pr = $sp->{"price"};
           $buttons .= "<td align=right><form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
-          $buttons .= "<input type='hidden' name='m' value='$mak' />\n" ;
-          $buttons .= "<input type='hidden' name='b' value='$beer' />\n" ;
-          $buttons .= "<input type='hidden' name='s' value='$origsty' />\n" ;
-          $buttons .= "<input type='hidden' name='a' value='$alc' />\n" ;
-          $buttons .= "<input type='hidden' name='l' value='$loc' />\n" ;
+          $buttons .= $hiddenbuttons;
           $buttons .= "<input type='hidden' name='v' value='$vol' />\n" ;
           $buttons .= "<input type='hidden' name='p' value='$pr' />\n" ;
-          #$buttons .= "<input type='hidden' name='g' value='' />\n" ;  # will be set by the geo func
-            # No geo here, we have enough coords for the places we have lists for
-            # Goes wrong when messing with the code at home
-          $buttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
           my $lbl;
           if ($extraboard) {
             $lbl = "$vol: $pr.-";
@@ -1450,7 +1449,20 @@ if ( $op =~ /board(x?)/i ) {
         my $beerstyle = beercolorstyle($origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
         if ($extraboard) {
           $dispmak .= ":" if ($dispmak);
-          print "<tr><td align=righ $beerstyle>" . $e->{"id"} . "</td>\n";
+          #print "<tr>"<td align=righ $beerstyle>" . $e->{"id"} . "</td>\n";
+          print "<tr><td align=right>";
+          print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+          print "$hiddenbuttons";
+          print "<input type='hidden' name='v' value='T' />\n" ;  # taster
+          print "<input type='hidden' name='p' value='X' />\n" ;  # at no cost
+          my $id = $e->{"id"};
+          my $butstyle = $beerstyle;
+          $butstyle =~ s/;'/;width:100%;'/;
+          print "<input type='submit' name='submit' value='$id' $butstyle/> \n";
+          print "</form>\n";
+          #. $e->{"id"} .
+          print "</td>\n";
+
           print "<td colspan=4 >";
           print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
           print "$dispmak $dispbeer</span></td></tr>\n";
@@ -1470,10 +1482,19 @@ if ( $op =~ /board(x?)/i ) {
           }
 
         } else {
-          print "<tr><td align=right $beerstyle>" . $e->{"id"} . "</td>\n";
-          #print "<td>&nbsp;</td>\n";
+          print "<tr><td align=right>";
+          print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+          print "$hiddenbuttons";
+          print "<input type='hidden' name='v' value='T' />\n" ;  # taster
+          print "<input type='hidden' name='p' value='X' />\n" ;  # at no cost
+          my $id = $e->{"id"};
+          my $butstyle = $beerstyle;
+          $butstyle =~ s/;'/;width:100%;'/;
+          print "<input type='submit' name='submit' value='$id' $butstyle/> \n";
+          print "</form>\n";
+          #. $e->{"id"} .
+          print "</td>\n";
           print "$buttons\n";
-          #print "<td style='max-width:100%; overflow:hidden;text-overflow:fade;' >$dispbeer $alc% $dispmak</td>\n";
           print "<td style='font-size: x-small;' align=right>$alc</td>\n";
           print "<td>$dispbeer $dispmak ($country) $sty</td>\n";
           print "</tr>\n";
