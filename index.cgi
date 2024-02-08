@@ -917,6 +917,8 @@ if ($devversion) {
     print "Which is older than the prod version <br/>";
     print "Prod modified '$proddate'   (git pull?) <br>\n";
   }
+  # Would be nice to get git branch and log tail
+  # But git is anal about file/dir ownerships
   print "<hr>\n";
 }
 
