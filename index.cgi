@@ -14,6 +14,7 @@
 # Modules and UTF-8 stuff
 use POSIX qw(strftime localtime locale_h);
 use JSON;
+use Cwd qw(cwd);
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use locale; # The data file can contain locale overrides
@@ -30,6 +31,17 @@ $q->charset( "UTF-8" );
 ####################
 # Constants and setup
 my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
+my $workdir = cwd();
+my $devversion = 0;  # Changes a few details if on the development version
+$devversion = 1 if ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ );
+$devversion = 1 if ( $workdir =~ /-dev/ );
+
+# Background color. Normally a dark green (matching the "racing green" at Øb),
+# but with experimental versions of the script, a dark blue, to indicate that
+# I am not running the real thing.
+
+my $bgcolor = "#003000";
+$bgcolor = "#003050" if ( $devversion );
 
 # Constants
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
@@ -711,14 +723,15 @@ print $q->header(
   -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
 print "<!DOCTYPE html>\n";
 print "<html><head>\n";
-print "<title>Beer</title>\n";
+if ($devversion) {
+  print "<title>Beer-DEV</title>\n";
+  print "<link rel='shortcut icon' href='beer-dev.png'/>\n";
+} else {
+  print "<title>Beer</title>\n";
+  print "<link rel='shortcut icon' href='beer.png'/>\n";
+}
 print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
 print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
-# Background color. Normally a dark green (matching the "racing green" at Øb),
-# but with experimental versions of the script, a dark blue, to indicate that
-# I am not running the real thing.
-my $bgcolor = "#003000";
-$bgcolor = "#003050" unless ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ );
 # Style sheet - included right in the HTML headers
 print "<style rel='stylesheet'>\n";
 print '@media screen {';
@@ -739,7 +752,6 @@ print "  .no-print, .no-print * { display: none !important; }\n";
 print "  .no-wide, .no-wide * { display: none !important; }\n";
 print "}\n";
 print "</style>\n";
-print "<link rel='shortcut icon' href='beer.png'/>\n";
 print "</head>\n";
 print "<body>\n";
 print "\n<!-- Read " . scalar(@lines). " lines from $datafile -->\n\n" ;
@@ -885,15 +897,29 @@ $script .= <<'SCRIPTEND';
   // see #272
 
 SCRIPTEND
-# Might be nice to get the date and time to update automagically.
-# Not important, we just use server side time and the TZ trick.
-
 
 print "<script>\n$script</script>\n";
 
 
+
 #############################
 # Main input form
+if ($devversion) {
+  print "\n<b>Dev version!</b><br>\n";
+  my @devstat = stat("index.cgi");
+  my $devmod = $devstat[9];
+  my $devdate = strftime("%F %R", localtime($devmod) );
+  print "Script modified '$devdate' <br>\n";
+  my @prodstat = stat("../beertracker/index.cgi");
+  my $prodmod = $prodstat[9];
+  if ( $prodmod > $devmod ) {
+    my $proddate = strftime("%F %R", localtime($prodmod) );
+    print "Which is older than the prod version <br/>";
+    print "Prod modified '$proddate' <br>\n";
+  }
+  print "<hr>\n";
+}
+
 print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
 my $clr = "Onfocus='value=value.trim();select();'";
 my $c2 = "colspan='2'";
