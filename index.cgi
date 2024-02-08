@@ -33,7 +33,7 @@ $q->charset( "UTF-8" );
 my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
 my $workdir = cwd();
 my $devversion = 0;  # Changes a few details if on the development version
-$devversion = 1 if ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ );
+$devversion = 1 unless ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ );
 $devversion = 1 if ( $workdir =~ /-dev/ );
 
 # Background color. Normally a dark green (matching the "racing green" at Øb),
