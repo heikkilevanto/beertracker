@@ -10,7 +10,7 @@
 
 #<Directory /home/heikki/proj/beertracker/>
 
-<Directory /var/www/html/beertracker/>
+<DirectoryMatch /var/www/html/beertracker(-dev)?/>
     AllowOverride All
     Options +FollowSymLinks +ExecCGI
 
@@ -22,22 +22,22 @@
     Require valid-user
 
 
-</Directory>
+</DirectoryMatch>
 
 # Hide most of the data directory, but not the graphs we build there
-<Directory /var/www/html/beertracker/beerdata>
+<DirectoryMatch /var/www/html/beertracker(-dev)?/beerdata>
    Deny from All
   <FilesMatch "\.png$">
     Allow from All
   </FilesMatch>
-</Directory>
+</DirectoryMatch>
 
 # Hide the .git directory too, although it is available at github
-<Directory /var/www/html/beertracker/.git>
+<DirectoryMatch /var/www/html/beertracker(-dev)?/.git>
    Deny from All
-</Directory>
+</DirectoryMatch>
 
 # Hide the scripts directory
-<Directory /var/www/html/beertracker/scripts>
+<DirectoryMatch /var/www/html/beertracker(-dev)?/scripts>
    Deny from All
-</Directory>
+</DirectoryMatch>
