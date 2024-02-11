@@ -3059,15 +3059,17 @@ sub beercolor {
       "801414", "wine[, ]+red",
       "4f1717", "wine[, ]+port",
       "aa7e7e", "wine",
-      "f2f21f", "Pilsner|Lager|Keller|Bock|Helles|IPL",
+      "f2f21f", "Pils|Lager|Keller|Bock|Helles|IPL",
       "e5bc27", "Classic|dunkel|shcwarz|vienna",
-      "d1d1b5", "smoke|rauch|sc?h?lenkerla",
+      "adaa9d", "smoke|rauch|sc?h?lenkerla",
       "0f0101", "stout|port",  # imp comes later
       "1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
       "47ccc5", "booze|sc?h?nap+s|whisky",
       "47cc7a", "cider",
-      "e8e8a7", "weiss|wit|wheat|weizen",
-      "c1c10b", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
+      "eaeac7", "weiss|wit|wheat|weizen",
+      "66592c", "Black IPA|BIPA",
+      "d6d639", "NEIPA|New England",
+      "c1b50b", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
       "d8d80f", "Pale Ale|PA",
       "b7930e", "Old|Brown|Red|Dark|Ale|Belgian||Tripel|Dubbel|IDA",   # Any kind of ales (after Pale Ale)
       "0f0101", "Imp",
@@ -3122,7 +3124,7 @@ sub shortbeerstyle{
   return "IL"   if ( $sty =~ /India Lager/i);
   return "Lag"  if ( $sty =~ /Pale Lager/i);
   return "Kel"  if ( $sty =~ /^Keller.*/i);
-  return "Pils" if ( $sty =~ /.*(Pilsner|Pilsener).*/i);
+  return "Pils" if ( $sty =~ /.*(Pils).*/i);
   return "Hefe" if ( $sty =~ /.*Hefe.*/i);
   return "Wit"  if ( $sty =~ /.*Wit.*/i);
   return "Dunk" if ( $sty =~ /.*Dunkel.*/i);
