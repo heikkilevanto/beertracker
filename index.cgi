@@ -3056,7 +3056,7 @@ sub beercolor {
 
   my @drinkcolors = (   # color, pattern. First match counts, so order matters
       "003000", "restaurant", # regular bg color, no highlight
-      "e2aaaa", "wine[, ]+white",
+      "eac4a6", "wine[, ]+white",
       "801414", "wine[, ]+red",
       "4f1717", "wine[, ]+port",
       "aa7e7e", "wine",
