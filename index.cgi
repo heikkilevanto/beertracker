@@ -643,6 +643,7 @@ if ( $q->request_method eq "POST" ) {
   }
   (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
+  $line = trim($line); # Remove leading spaces from fields
   if ( $lasttimestamp gt $stamp && $sub ne "Delete" ) {
     $sub = "Save"; # force this to be an updating save, so the record goes into its right place
   }
@@ -2750,6 +2751,7 @@ sub trim {
   $val = shift;
   $val =~ s/^ +//; # Trim leading spaces
   $val =~ s/ +$//; # and trailing
+  $val =~ s/\s+/ /g; # and repeated spaces in the middle
   return $val;
 }
 
