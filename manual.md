@@ -10,10 +10,9 @@ nice graphs.
 ## Getting started
 When you start, the database is empty. You need to enter all details on the first
 beers. Your browser will remember some of those values and suggest them to you.
-If you leave values empty (just click on any field, it clears), the program will
-try to make a guess from your history. This only works if you spell the beer
-name the same way, so be correct there. It is handy for picking up the strength
-and price of beer, etc.
+If you leave values empty, the program will try to make a guess from your history.
+This only works if you spell the beer name the same way, so be correct there.
+It is handy for picking up the strength and price of beer, etc.
 
 The system is optimized for filing things as you drink, but you can enter data
 after the fact. In that case, click on the little ^ to get more fields visible,
@@ -40,7 +39,7 @@ the value disappears, making it easier to type in a new value, especially on
 a phone.
 
 The first three input fields are normally not visible. There is a little
-up-arrow next to the comment box, clicking on that will show the fields.
+up-arrow next to the rate pull-down, clicking on that will show the fields.
 
 ### Date
 Usually you can leave this empty, the system defaults to the current date. If
@@ -103,10 +102,16 @@ are some shortcuts, you can add 'EUR' or 'USD' to the end of the amount, and
 the system will convert to DKK using some fixed rates. (Sorry, the € and $
 symbols don't work. Maybe some day)
 
-### Rating
+### Rate
 A pull-down menu where you can choose how well you liked the beer, on a scale
 from "0 - Undrinkable" to "10 - I'm in love". Later you can see how you liked
 different beers, so you can choose one you like.
+
+### Quick link
+There is a simple "G" that is a quick link to showing the graph (see below).
+When the graph is shown, the link changes to "B" to show the beer board of the
+current location, or if not known, of my favourite place, Ølbaren. There is also
+the little '^' to make the date, time, and geo fields visible.
 
 ### Comments
 Here you can write any descriptions or comments about the beer. These are shown
@@ -125,17 +130,18 @@ This button enters the beed into the system. it also fills some of the input
 fields for the next one, assuming that you might have one more of the same
 kind.
 
-### Clear Button
+### Save Button
+Updates the current record. Usually the last beer you enterd. Useful if you want
+to correct the price, or add a rating or a comment. You can edit older entries
+by clicking on the "Edit" link next to them.
+
+### Clr Button
 Clears all input fields, in case you want to enter something completely different.
 
 ### Show pull-down
 This is the main menu, where you can choose what to show under the input form.
 See below.
 
-### Quick link
-There is a simple "G" that is a quick link to showing the graph (see below).
-When the graph is shown, the link changes to "B" to show the beer board of the
-current location, or if not known, of my favourite place, Ølbaren.
 
 ---
 
@@ -144,20 +150,10 @@ The input form is also used for editing old records. In that case there are
 a few small differences:
 * At the top there is a text telling which record you are editing. The records
 are identified by their timestamps.
-* Instead of the date and time, there are three fields: Timestamp, Weekday,
-and effective date - this is normally the same as t he timestamp, except late
-night, when it is the previous day, so late Friday night drinks count on that
-Friday, even past midnight.
 * The regular input fields are as before, but filled in with the values from
 the record.
-* The buttons are different. There is no "Record" button
-* Instead, there is a "Save" button that saves your changes
-* And a "Cancel" link that discards them
-* And a "Delete" button that deletes your record.
-* There is also a checkbox marked 'Clr'. By default it starts checked, which
-means that most of the fields are cleared as soon as you click on them. If you
-uncheck the box, the fields will not clear. This is handy for editing a small
-typing error.
+* There is a 'Del' button for deleting the record, and a 'Cancel' link to get
+out of the edit mode.
 
 ---
 
@@ -229,7 +225,8 @@ days, including today.
 
 Under the graph are navigation buttons:
 * "<<" and ">>" move the graph earlier and later in time
-* "Month", "3m", "6m", "Year", and "All" adjsut how long time is shown in the graph
+* "2w", "Month", "3m", "6m", "Year", "2y", and "All" adjsut how long time is
+shown in the graph
 * [-] and [+] fine tune the zoom factor
 
 Clicking on the graph itself zooms it to double the size. Clicking again zooms
@@ -267,7 +264,7 @@ continues as the full list (see above).
 
 ### Stats
 Shows some statistics for each day, month, or year. On top is a line with links
-to each statistic. WHen selected from the menu, this starts as the monthly
+to each statistic. When selected from the menu, this starts as the monthly
 statistic.
 
 #### Days
@@ -331,7 +328,7 @@ breweries, so it only shows things that really are beers.
 
 #### Wine and Booze
 This shows all the "beers" that have a special brewery that starts with "Wine"
-or "Booze" and a comma, for example "Wine, Red" or "Booze, Vodka". Otherwise
+or "Booze" and a comma, for example `Wine, Red` or `Booze, Whisky`. Otherwise
 this is much like the beer list.
 
 #### Restaurant
@@ -361,18 +358,18 @@ where else to put.
 have a comma in the name, for example `Booze, whisky`, or `Wine, Red`. These can
 be shown in separate booze and wine lists. I try to put wine styles in the style
 field, but it is small, so most of the stuff needs to go in the comments.
-* I file restaurants the same way, for example "Restaurant, Thai". I fill in the
+* I file restaurants the same way, for example `Restaurant, Thai`. I fill in the
 whole price of the evening, for one person. But no alcohol or volume, those I
-should have filed separately. In the comments I write what I ate and drunk, some
+should have filed separately. In the comments I write what I ate and drank, some
 comments about prices, or what ever else comes to mind.
 * There is a small list of pre-defined beer sizes. The 'About' page will show
 you the current list. If traveling in the US, you can give the size as `12 oz`
 and it will be converted into 36 cl.
-* The time defaults to the time on the server. But you can enter a fake brewery
-line like 'tz,Copenhagen' to change your time zone. It gets remembered until you
+* The time defaults to the time on the server. But you can enter a fake "brewery"
+line like `tz,Copenhagen` to change your time zone. It gets remembered until you
 set it again. To clear it, just set a new with 'tz,'
 * If you buy a box wine, enter its price as negative. That way, the system
-knows it is a box wine, and makes a comment on it, like "(B17:300)". Enter your
+knows it is a box wine, and makes a comment on it, like `(B17:300)`. Enter your
 drinks as usual, and see the volume in the box comment go down. If you use wine
 for cooking, for guests, enter the volume as negative, that way the box volume
 will go down, but it will not be counted against you.
