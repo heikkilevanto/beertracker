@@ -912,10 +912,11 @@ if ($devversion) {
   print "Script modified '$devdate' <br>\n";
   my @prodstat = stat("../beertracker/index.cgi");
   my $prodmod = $prodstat[9];
-  if ( $prodmod > $devmod ) {
+  if ( $prodmod - $devmod > 1800) {  # Allow half an hour for last push/pull
     my $proddate = strftime("%F %R", localtime($prodmod) );
     print "Which is older than the prod version <br/>";
     print "Prod modified '$proddate' (git pull?) <br>\n";
+    print "d='$devmod' p='$prodmod' <br>\n";
   }
   # Would be nice to get git branch and log tail
   # But git is anal about file/dir ownerships
