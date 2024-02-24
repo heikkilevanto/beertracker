@@ -496,7 +496,7 @@ if ( $q->request_method eq "POST" ) {
         && ( $geo =~ /^ / )) {  # And geo is autofilled
       $geo = "";   # Do not remember the suspicious location
     }
-    if ( $geo ) { # Sanity check, do not accept conflicting locations
+    if ( $geo =~ / *\d+/) { # Sanity check, do not accept conflicting locations
       my  ($guess, $dist) = guessloc($geo);
       if ( $loc && $guess  # We have location name, and geo guess
          && $geolocations{$loc} # And we know the geo for the location
@@ -504,6 +504,8 @@ if ( $q->request_method eq "POST" ) {
         print STDERR "Refusing to store '$geo' for '$loc', it is closer to '$guess' \n";
         $geo = "";  # Ignore the suspect geo coords
       }
+    } else {
+      $geo = "";
     }
     if ( $sub eq "Save" ) {
       $date = trim($date);
@@ -554,7 +556,7 @@ if ( $q->request_method eq "POST" ) {
       $effdate = $1;
       $stamp .= "; $2";
     }
-    if (  $stamp =~ /^$lasttimestamp/ ) { # trying to create a duplicate
+    if (  $stamp =~ /^$lasttimestamp/ && $sub eq "Record" ) { # trying to create a duplicate
       if ( $stamp =~ /^(.*:)(\d\d)(;.*)$/ ) {
         my $sec = $2;
         $sec++;  # increment the seconds, even past 59.
@@ -707,10 +709,9 @@ my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
     split( / *; */, $lastline );
 if ($foundline) {  # can be undef, if a new data file
   ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo) =
-      split( / *; */, $foundline );   # do not copy geo
-  }
-(undef, undef, $geo ) = geo($geo);
-
+      split( / *; */, $foundline );
+  $geo = ""; # do not keep geo
+}
 
 ########################
 # HTML head
@@ -830,7 +831,9 @@ SCRIPTEND
 $script .= "var geolocations = [ \n";
 for my $k (keys(%geolocations) ) {
   my ($lat,$lon, undef) = geo($geolocations{$k});
-  $script .= " { name: '$k', lat: $lat, lon: $lon }, \n";
+  if ( $lat && $lon ) {  # defensive coding
+    $script .= " { name: '$k', lat: $lat, lon: $lon }, \n";
+  }
 }
 $script .= " ]; \n";
 
@@ -842,7 +845,8 @@ $script .= <<'SCRIPTEND';
   function savelocation (myposition) {
     geoloc = " " + myposition.coords.latitude + " " + myposition.coords.longitude;
     var gf = document.getElementById("geo");
-    if ( ! gf.value.match( /^\d/ )) { // empty, or starts with a space
+    console.log ("Geo field: '" + gf.value + "'" );
+    if ( ! gf.value ||  gf.value.match( /^ / )) { // empty, or starts with a space
       var el = document.getElementsByName("g");
       if (el) {
         for ( i=0; i<el.length; i++) {
@@ -943,6 +947,9 @@ if ($edit) {
   print "<tr><td $c2><b>Record '$edit'</b></td></tr>\n";
   $editstamp = $edit;
   ($date,$time) = $edit =~ /^([0-9-]+) ([0-9]+:[0-9]+:[0-9]+)/ ;
+  if (!$geo) {
+    $geo = "x";  # Prevent autofilling current geo
+  }
 } else {
   $editstamp = $lasttimestamp;
   ($date,$time) = $lasttimestamp =~ /^([0-9-]+) ([0-9]+:[0-9]+)/ ;
@@ -2976,7 +2983,7 @@ sub error {
 # returns ( lat, long, string ), or "" if not valid coord
 sub geo {
   my $g = shift;
-  return ("","","") unless ($g);
+  return ("","","") unless ($g =~ /^ *\d+/ );
   $g =~ s/\[([-0-9.]+)\/([-0-9.]+)\]/$1 $2/ ;  # Old format geo string
   my ($la,$lo) = $g =~ /([0-9.-]+) ([0-9.-]+)/;
   return ($la,$lo,$g) if ($lo);
@@ -3011,7 +3018,7 @@ sub guessloc {
   my $guess = "";
   foreach my $k ( sort(keys(%geolocations)) ) {
     my $d = geodist( $g, $geolocations{$k} );
-    if ( $d < $dist ) {
+    if ( $d && $d < $dist ) {
       $dist = $d;
       $guess = $k;
       $guess =~ s/ *$//;
