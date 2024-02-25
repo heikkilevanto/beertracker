@@ -1229,7 +1229,11 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
          ( $startoff - $endoff > 80 ) ) {
       $fillstyle = "fill solid noborder";
       #$xformat="\"%Y\"";  # 2019
-      if ( $startoff - $endoff > 700 ) {
+      if ( $startoff - $endoff > 365*5 ) {
+        $xtic = $onemonth * 12;
+        $xformat="\"%y\"";  # Jul 19
+      }
+      elsif ( $startoff - $endoff > 365*2 ) {
         $xtic = $onemonth * 4;
         $xformat="\"%b\\n%y\"";  # Jul 19
       } elsif ( $startoff - $endoff > 80 ) {
