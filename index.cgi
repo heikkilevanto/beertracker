@@ -1217,7 +1217,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
     my $weekline = "";
     my $plotweekline = "\"$plotfile\" " .
-              "using 1:4 with linespoints lc \"#00dd10\" axes x1y2 title \"wk $lastwk\", " ;
+              "using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"wk $lastwk\", " ;
     my $xtic = 1;
     my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
     my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
