@@ -1090,7 +1090,8 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   my $oneday = 24 * 60 * 60 ; # in seconds
   my $threedays = 3 * $oneday;
   my $oneweek = 7 * $oneday ;
-  my $onemonth = 365.24 * $oneday / 12;
+  my $oneyear = 365.24 * $oneday;
+  my $onemonth = $oneyear / 12;
   my $numberofdays=7;
   while ( $ndays > $endoff) {
     $ndays--;
@@ -1230,7 +1231,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
       $fillstyle = "fill solid noborder";
       #$xformat="\"%Y\"";  # 2019
       if ( $startoff - $endoff > 365*5 ) {
-        $xtic = $onemonth * 12;
+        $xtic = $oneyear;
         $xformat="\"%y\"";  # Jul 19
       }
       elsif ( $startoff - $endoff > 365*2 ) {
@@ -1264,7 +1265,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
         "set border linecolor \"white\" \n" .
         "set ytics 7 $white \n" .
         "set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
-        "set xtics \"2015-11-01\", $xtic out $white \n" .  # Happens to be sunday, and first of month
+        "set xtics \"2007-01-01\", $xtic out $white \n" .  # Happens to be sunday, and first of year/month
         "set style $fillstyle \n" .
         "set boxwidth 0.7 relative \n" .
         "set key left top horizontal textcolor \"white\" \n" .
