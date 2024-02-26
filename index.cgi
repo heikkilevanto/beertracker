@@ -1198,8 +1198,8 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
       }
     }
     print STDERR "Many ($ndrinks) drink entries on $date \n"
-      if ( $ndrinks >= 18 ) ;
-    while ( $ndrinks++ < 18 ) {
+      if ( $ndrinks >= 20 ) ;
+    while ( $ndrinks++ < 20 ) {
       $drinkline .= "0 0xffffff ";
     }
 
@@ -1214,82 +1214,47 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   if (!$havedata) {
     print "No data for $startdate ($startoff) to $enddate ($endoff) \n";
   } else {
-    my $xformat = "\"%d\\n%b\"";  # 14 Jul
-    if ($startoff > 365) {
-      $xformat = "\"%d\\n%b\\n%y\"";  # 14 Jul 20
-    }
-    my $weekline = "\"$plotfile\" " .
-              "using 1:4 with line lc \"#00dd10\" axes x1y2 title \"wk $lastwk\", " ;
-    if ( $startoff - $endoff > 100 ) {
-      $weekline = "";
-    }
+    my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
+    my $weekline = "";
+    my $plotweekline = "\"$plotfile\" " .
+              "using 1:4 with linespoints lc \"#00dd10\" axes x1y2 title \"wk $lastwk\", " ;
     my $xtic = 1;
+    my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
+    my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
+    my @xmonth = ( $onemonth, "\"%b\\n%y\"" ); # Jan 24
+    my @xweek = ( $oneweek, "\"%d\\n%b\"" ); # 15 Jan
     my $pointsize = "";
-    my $fillstyle = "error"; # "fill solid border linecolor \"#003000\""; # Small gap around each drink
+    my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
+    my $fillstyleborder = "fill solid border linecolor \"#003000\""; # Small gap around each drink
+    my $imgsz;
     if ( $bigimg eq "B" ) {  # Big image
+      $imgsz = "640,480";
       if ( $startoff - $endoff > 365*4 ) {  # "all"
-        $fillstyle = "fill solid noborder";  # no gaps between drinks or days
-        $xtic = $oneyear;
-        $xformat="\"%y\"";  # 19
+        ( $xtic, $xformat ) = @xyear;
       } elsif ( $startoff - $endoff > 400 ) { # "2y"
-        $fillstyle = "fill solid noborder";
-        $xtic = $oneyear /4;
-        $xformat="\"%b\\n%y\"";
-      } elsif ( $startoff - $endoff > 120 ) { # "6m"
-        $fillstyle = "fill solid noborder";
-        $xtic = $onemonth;
-        $xformat="\"%b\\n%y\"";
+        ( $xtic, $xformat ) = @xquart;
+      } elsif ( $startoff - $endoff > 120 ) { # "y", "6m"
+        ( $xtic, $xformat ) = @xmonth;
       } else { # 3m, m, 2w
-        $xtic = $oneweek;
-        $fillstyle = "fill solid border linecolor \"#003000\""; # Small gap around each drink
+        ( $xtic, $xformat ) = @xweek;
+        $weekline = $plotweekline;
+        $fillstyle = $fillstyleborder;
       }
     } else { # Small image
       $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
+      $imgsz = "320,250";  # Works on my Fairphone, and Dennis' iPhone
       if ( $startoff - $endoff > 365*4 ) {  # "all"
-        $fillstyle = "fill solid noborder";  # no gaps between drinks or days
-        $xtic = $oneyear;
-        $xformat="\"%y\"";  # 19
+        ( $xtic, $xformat ) = @xyear;
       } elsif ( $startoff - $endoff > 360 ) { # "2y", "y"
-        $fillstyle = "fill solid noborder";
-        $xtic = $oneyear / 4;
-        $xformat="\"%b\\n%y\"";
+        ( $xtic, $xformat ) = @xquart;
       } elsif ( $startoff - $endoff > 80 ) { # "6m", "3m"
-        $fillstyle = "fill solid noborder";
-        $xtic = $onemonth;
-        $xformat="\"%b\\n%y\"";
+        ( $xtic, $xformat ) = @xmonth;
+        $weekline = $plotweekline;
       } else { # "m", "2w"
-        $fillstyle = "fill solid noborder";
-        $fillstyle = "fill solid border linecolor \"#003000\""; # Small gap around each drink
-        $xtic = $oneweek;
-        $xformat="\"%b\\n%y\"";
+        ( $xtic, $xformat ) = @xweek;
+        $fillstyle = $fillstyleborder;
+        $weekline = $plotweekline;
       }
-    }
-if (0) {
-    if ( ( $startoff - $endoff > 400  && $bigimg eq "B" ) ||
-         ( $startoff - $endoff > 80 ) ) {
-      $fillstyle = "fill solid noborder";
-      #$xformat="\"%Y\"";  # 2019
-      if ( $startoff - $endoff > 365*5 ) { # all
-        $xtic = $oneyear;
-        $xformat="\"%y\"";  # Jul 19
-      }
-      elsif ( $startoff - $endoff > 365*2 ) {
-        $xtic = $onemonth * 3;
-        $xformat="\"%b\\n%y\"";  # Jul 19
-      } elsif ( $startoff - $endoff > 120 ) {
-        $xtic = $onemonth ;
-      }
-      $pointsize = "set pointsize 0.2\n" ;
-    } elsif ( $startoff - $endoff > 120 ) {
-      $fillstyle = "fill solid noborder";
-      $xformat="\"%b\\n%y\"";  # Jul 19
-      $xtic = $onemonth;
-      $pointsize = "set pointsize 0.5\n" ;
-    }
-}
-    my $imgsz = "320,250";  # Works on my fairphone
-    if ($bigimg eq "B") {
-      $imgsz = "640,480";
     }
     my $white = "textcolor \"white\" ";
     my $cmd = "" .
@@ -1321,10 +1286,6 @@ if (0) {
               # note the order of plotting, later ones get on top
               # so we plot weekdays, avg line, zeroes
 
-          "\"$plotfile\" using 1:2 with boxes lc \"white\" axes x1y2 notitle ," .
-             # This will normally not show at all, the individual drink segments wil override it
-             # May be removed in the near future.
-
           "\"$plotfile\" using 1:7:8 with boxes lc rgbcolor variable axes x1y2 notitle, " .
           "\"$plotfile\" using 1:9:10 with boxes lc rgbcolor variable axes x1y2 notitle, " .
           "\"$plotfile\" using 1:11:12 with boxes lc rgbcolor variable axes x1y2 notitle, " .
@@ -1343,6 +1304,8 @@ if (0) {
           "\"$plotfile\" using 1:37:38 with boxes lc rgbcolor variable axes x1y2 notitle, " .
           "\"$plotfile\" using 1:39:40 with boxes lc rgbcolor variable axes x1y2 notitle, " .
           "\"$plotfile\" using 1:41:42 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:43:44 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+          "\"$plotfile\" using 1:45:46 with boxes lc rgbcolor variable axes x1y2 notitle, " .
 
           "$weekline " .
           "\"$plotfile\" " .
