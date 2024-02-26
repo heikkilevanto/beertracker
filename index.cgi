@@ -1223,21 +1223,60 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     if ( $startoff - $endoff > 100 ) {
       $weekline = "";
     }
-    my $xtic = $oneweek;
+    my $xtic = 1;
     my $pointsize = "";
-    my $fillstyle = "fill solid border linecolor \"#003000\"";
+    my $fillstyle = "error"; # "fill solid border linecolor \"#003000\""; # Small gap around each drink
+    if ( $bigimg eq "B" ) {  # Big image
+      if ( $startoff - $endoff > 365*4 ) {  # "all"
+        $fillstyle = "fill solid noborder";  # no gaps between drinks or days
+        $xtic = $oneyear;
+        $xformat="\"%y\"";  # 19
+      } elsif ( $startoff - $endoff > 400 ) { # "2y"
+        $fillstyle = "fill solid noborder";
+        $xtic = $oneyear /4;
+        $xformat="\"%b\\n%y\"";
+      } elsif ( $startoff - $endoff > 120 ) { # "6m"
+        $fillstyle = "fill solid noborder";
+        $xtic = $onemonth;
+        $xformat="\"%b\\n%y\"";
+      } else { # 3m, m, 2w
+        $xtic = $oneweek;
+        $fillstyle = "fill solid border linecolor \"#003000\""; # Small gap around each drink
+      }
+    } else { # Small image
+      $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
+      if ( $startoff - $endoff > 365*4 ) {  # "all"
+        $fillstyle = "fill solid noborder";  # no gaps between drinks or days
+        $xtic = $oneyear;
+        $xformat="\"%y\"";  # 19
+      } elsif ( $startoff - $endoff > 360 ) { # "2y", "y"
+        $fillstyle = "fill solid noborder";
+        $xtic = $oneyear / 4;
+        $xformat="\"%b\\n%y\"";
+      } elsif ( $startoff - $endoff > 80 ) { # "6m", "3m"
+        $fillstyle = "fill solid noborder";
+        $xtic = $onemonth;
+        $xformat="\"%b\\n%y\"";
+      } else { # "m", "2w"
+        $fillstyle = "fill solid noborder";
+        $fillstyle = "fill solid border linecolor \"#003000\""; # Small gap around each drink
+        $xtic = $oneweek;
+        $xformat="\"%b\\n%y\"";
+      }
+    }
+if (0) {
     if ( ( $startoff - $endoff > 400  && $bigimg eq "B" ) ||
          ( $startoff - $endoff > 80 ) ) {
       $fillstyle = "fill solid noborder";
       #$xformat="\"%Y\"";  # 2019
-      if ( $startoff - $endoff > 365*5 ) {
+      if ( $startoff - $endoff > 365*5 ) { # all
         $xtic = $oneyear;
         $xformat="\"%y\"";  # Jul 19
       }
       elsif ( $startoff - $endoff > 365*2 ) {
-        $xtic = $onemonth * 4;
+        $xtic = $onemonth * 3;
         $xformat="\"%b\\n%y\"";  # Jul 19
-      } elsif ( $startoff - $endoff > 80 ) {
+      } elsif ( $startoff - $endoff > 120 ) {
         $xtic = $onemonth ;
       }
       $pointsize = "set pointsize 0.2\n" ;
@@ -1247,6 +1286,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
       $xtic = $onemonth;
       $pointsize = "set pointsize 0.5\n" ;
     }
+}
     my $imgsz = "320,250";  # Works on my fairphone
     if ($bigimg eq "B") {
       $imgsz = "640,480";
