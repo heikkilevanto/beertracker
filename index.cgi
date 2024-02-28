@@ -986,12 +986,13 @@ for my $ro (0 .. scalar(@ratings)-1) {
   print  ">$ro $ratings[$ro]</option>\n";
 }
 print "</select>\n";
+print  " &nbsp; &nbsp; &nbsp;";
 if ( $op && $op !~ /graph/i ) {
-  print " &nbsp; <a href='$url'><b>G</b></a>\n";
+  print "<a href='$url'><b>G</b></a>\n";
 } else {
-  print " &nbsp; <a href='$url?o=board'><b>B</b></a>\n";
+  print "<a href='$url?o=board'><b>B</b></a>\n";
 }
-print "&nbsp; <span onclick='showrows();' align=right>^  &nbsp;</span>";
+print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
 print "</td></tr>\n";
 print "<tr>";
 print " <td $c6><textarea name='c' cols='45' rows='3' id='c'
