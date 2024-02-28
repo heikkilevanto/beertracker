@@ -2637,14 +2637,23 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
           } else {
             print " Avg of <b>$ratecount{$beer}</b> ratings: <b>$avgrate</b>";
           }
+          print "<br>\n";
         }
         if ( $geo ) {
           my (undef, undef, $gg) = geo($geo);
+          print "Geo: $gg ";
           my $dist = "";
           $dist = geodist( $geolocations{$loc}, $geo);
-          my ($guess,$gdist) = guessloc($gg,$loc);
-          $guess = " <b>($guess " . unit($gdist,"m"). " ?)</b> " if ($guess);
-          print "Geo: $gg $guess\n";
+          my ($guess,$gdist) = guessloc($gg);
+          if ( $guess eq $loc ) {
+            print " $guess ";
+          } else {
+            print " <b>$guess ??? </b>  ";
+          }
+          if ( $gdist > 0 ) {
+            print " (" . unit($gdist,"m"). ")";
+          }
+
         }
         print "<br>\n";
       }
@@ -2991,7 +3000,7 @@ sub error {
 # returns ( lat, long, string ), or "" if not valid coord
 sub geo {
   my $g = shift;
-  return ("","","") unless ($g =~ /^ *\d+/ );
+  return ("","","") unless ($g =~ /^ *\[?\d+/ );
   $g =~ s/\[([-0-9.]+)\/([-0-9.]+)\]/$1 $2/ ;  # Old format geo string
   my ($la,$lo) = $g =~ /([0-9.-]+) ([0-9.-]+)/;
   return ($la,$lo,$g) if ($lo);
