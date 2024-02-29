@@ -2654,9 +2654,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
           if ( $gdist > 0 ) {
             print " (" . unit($gdist,"m"). ")";
           }
-
+          print "<br>\n";
         }
-        print "<br>\n";
       }
 
     }
