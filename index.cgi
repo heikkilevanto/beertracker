@@ -633,7 +633,7 @@ if ( $q->request_method eq "POST" ) {
     $alc = "";
     $pr = "";
   }
-  if ($pr < 0 ) {  # Negative price means buying a box
+  if ($pr && $pr < 0 ) {  # Negative price means buying a box
     $boxno++;
     $com =~ s/\(B\d+:\d+\) *$//;
     $com .= " (B$boxno:$vol)";
