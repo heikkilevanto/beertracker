@@ -2610,7 +2610,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         my $tag="span $beerstyle";
         $sty = shortbeerstyle($sty) if ( $qrylim ne "x" );
         print filt("$sty",$tag) . newmark($sty) . " "   ;
-
+        print "<br>\n" if ( $qrylim eq "x" );
       }
       if ($sty || $pr || $alc) {
         if ( $qrylim ne "x" ) {
@@ -2638,8 +2638,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
           } else {
             print " Avg of <b>$ratecount{$beer}</b> ratings: <b>$avgrate</b>";
           }
-          print "<br>\n";
         }
+        print "<br>\n";
         if ( $geo ) {
           my (undef, undef, $gg) = geo($geo);
           print "Geo: $gg ";
