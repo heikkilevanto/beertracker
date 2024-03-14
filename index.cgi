@@ -2952,9 +2952,9 @@ sub error {
 
 # Helper to validate and split a geolocation string
 # Takes one string, in either new or old format
-# returns ( lat, long, string ), or "" if not valid coord
+# returns ( lat, long, string ), or all "" if not valid coord
 sub geo {
-  my $g = shift;
+  my $g = shift || "";
   return ("","","") unless ($g =~ /^ *\[?\d+/ );
   $g =~ s/\[([-0-9.]+)\/([-0-9.]+)\]/$1 $2/ ;  # Old format geo string
   my ($la,$lo) = $g =~ /([0-9.-]+) ([0-9.-]+)/;
