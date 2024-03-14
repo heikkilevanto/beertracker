@@ -274,9 +274,6 @@ my $tz = "";
 my %daydsums; # Sum of drinks for each date   # TODO Sum these up here (See #142)
 my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
 my %years;  # Keep track which years we have seen, for the "more" links
-my $boxno = 1; # Box number, from a comment like (B17:240)
-my $boxvol = ""; # Remaining volume in the box
-my $boxline = ""; # Values for the 'box' beer ('B' or 'B17');
 my %geolocations; # Latest known geoloc for each location name
 $geolocations{"Home "} =   "[55.6588/12.0825]";  # Special case for FF.
 $geolocations{"Home  "} =  "[55.6531712/12.5042688]";  # Chrome
@@ -364,19 +361,6 @@ while (<F>) {
     # TODO: Later we may start taking averages, or collect a few data points for each
   } # Let's see how precise it seems to be
   $c = "" unless ($c);
-  if ($c =~ /\(B(\d+):\d+\)/ ) {
-    my $bn = $1;
-    if ($bn > $boxno) {
-      $boxno = $bn;
-    }
-    if ($beer =~ /^B(\d*)$/i) {
-      my $curbox = $1 || $bn;
-      if ( $curbox eq $bn ) {  # Same (or default) box
-        $boxline = $lastline;
-        #print STDERR "Found box '$beer' line: '$boxline'\n";
-      }
-    }
-  }
   if ( $thisdate ne "$wd; $ed" ) { # new date
     $lastdatesum = 0.0;
     $lastdatemsum = 0;
@@ -411,7 +395,7 @@ while (<F>) {
     $literprices{$litp} ++;
   }
 
-  $lastdatesum += ( $a * $v ) if ($a && $v && $p>=0); # neg price means whole box
+  $lastdatesum += ( $a * $v ) if ($a && $v);
   $lastdatemsum += $1 if ( $p =~ /(\d+)/ );
   if ( $effdate eq "$wd; $ed" ) { # Today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
@@ -463,14 +447,6 @@ if ( ! $todaydrinks ) { # not today
     # since the entry must be pretty close to the end of the month. Showing
     # zeroes for the current month would be no fun.
   }
-}
-if ($boxline) {
-  $lastline = $boxline;  # Found the line corresponding to a box wine
-    ( undef, undef, undef, $loc, $mak, $beer,
-      undef, $sty, $alc, undef, undef, undef, undef) =
-         split( / *; */, $boxline );   # Copy values over
-  $pr=0; # Already paid
-  ($defaultvol) = $volumes{'G'} =~ /^(\d+)/;
 }
 
 
@@ -577,10 +553,10 @@ if ( $q->request_method eq "POST" ) {
   my $priceguess = "";
   my $i = scalar( @lines )-1;
   while ( $i > 0 && $beer
-    && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' || !$boxvol)) {
+    && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' )) {
     ( undef, undef, undef,
       $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr,
-      undef, $icom, undef) =
+      undef, undef, undef) =
        split( / *; */, $lines[$i] );
     if ( !$priceguess &&    # Guess a price
          uc($iloc) eq uc($loc) &&   # if same location and volume
@@ -597,12 +573,6 @@ if ( $q->request_method eq "POST" ) {
         $pr  = $ipr if $pr eq "";
       }
       $vol = $ivol unless $vol;
-      if ( ! $boxvol && $com !~ /\(B\d+:\d+\)/) {
-        if ( $icom =~ /\(B(\d+): *(\d*) *\) *$/i ) {
-          $boxno = $1;
-          $boxvol = $2;
-        }
-      }
     }
     $i--;
   }
@@ -623,25 +593,16 @@ if ( $q->request_method eq "POST" ) {
   } else {
     $pr = price($pr);
   }
-  if (!$vol || $vol < 0 ) { # Neg vol means not consumed (by me).
+  if (!$vol || $vol < 0 ) {
     $pr = "";
     $alc = "";
+    $vol = "";
   }
   $alc = number($alc);
   if ($mak =~ /tz,/i ) {
     $vol = "";
     $alc = "";
     $pr = "";
-  }
-  if ($pr && $pr < 0 ) {  # Negative price means buying a box
-    $boxno++;
-    $com =~ s/\(B\d+:\d+\) *$//;
-    $com .= " (B$boxno:$vol)";
-  }
-  if ( $boxvol ) {
-    $boxvol -= abs($vol);
-    $com =~ s/\(B\d+:\d+\) *$//;
-    $com .= " (B$boxno:$boxvol)";
   }
   (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
@@ -2121,9 +2082,6 @@ if ( $op =~ /board(x?)/i ) {
   print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
 
   print "<p>\n";
-  print "For a new box wine (or booze bottle, etc), enter the price as negative.<br/>\n";
-  print "When using wine for cooking, or for guests, enter a negative volume. That <br/>\n";
-  print "gets subtracted from the box without affecting your stats.<br/>\n";
 
   print "<p><hr/>\n";
   print "<b>Debug info </b><br/>\n";
@@ -2689,9 +2647,6 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     print "<input type='hidden' name='a' value='$alc' />\n";
     print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation);
     print "<input type='hidden' name='g' id='geo' value='' />\n";
-    if ($pr && $pr <0) { # If it is a box, assume price of zero
-      print "<input type='hidden' name='p' value='X' />\n"
-    }
 
     foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
       # The sort order defaults to numerical, but if that fails, takes
