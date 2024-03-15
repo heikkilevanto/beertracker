@@ -1344,8 +1344,8 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
 
 #############
 # Beer board (list) for the location. Scraped from their website
-if ( $op =~ /board(x?)/i ) {
-  my $extraboard = $1;  # show all kind of extra info
+if ( $op =~ /board(\d*)/i ) {
+  my $extraboard = $1 || -1;  # show all kind of extra info for this tap
   $locparam = $loc unless ($locparam); # can happen after posting
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
@@ -1367,11 +1367,6 @@ if ( $op =~ /board(x?)/i ) {
   }
   print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'><span>PA</span></a>) "
     if ($qry ne "PA" );
-  if ($extraboard) {
-    print "<a href='$url?o=board'><span>Plain</span></a>\n";
-  } else {
-    print "<a href='$url?o=boardx'><span>Ext</span></a>\n";
-  }
   print "<p>\n";
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
@@ -1397,6 +1392,7 @@ if ( $op =~ /board(x?)/i ) {
       print "<table border=0 style='white-space: nowrap;'>\n";
       foreach $e ( @$beerlist )  {
         $nbeers++;
+        my $id = $e->{"id"} || 0;
         $mak = $e->{"maker"} || "" ;
         $beer = $e->{"beer"} || "" ;
         $sty = $e->{"type"} || "";
@@ -1427,11 +1423,7 @@ if ( $op =~ /board(x?)/i ) {
           $mak = "Schlenkerla";
           $dispmak = filt($mak, "i", $mak,"board&l=$locparam");
         }
-        #my $dispbeer .= filt($beer, "b", substr($beer,0,44), "board&l=$loc");
         my $dispbeer .= filt($beer, "b", $beer, "board&l=$loc");
-        #if ( length($disp) + length($sty) < 55 && $disp !~ /$sty/ ) {
-        #  $disp .= " " .$sty;
-        #}
 
         $mak =~ s/'//g; # Apostrophes break the input form below
         $beer =~ s/'//g; # So just drop them
@@ -1454,66 +1446,60 @@ if ( $op =~ /board(x?)/i ) {
         foreach $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
           $vol = $sp->{"vol"};
           $pr = $sp->{"price"};
-          $buttons .= "<td align=right><form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+          my $lbl;
+          if ($extraboard == $id) {
+            $lbl = "$vol cl: $pr.-";
+          } else {
+            $lbl = "$pr.-";
+            $buttons .= "<td>";
+          }
+          $buttons .= "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
           $buttons .= $hiddenbuttons;
           $buttons .= "<input type='hidden' name='v' value='$vol' />\n" ;
           $buttons .= "<input type='hidden' name='p' value='$pr' />\n" ;
-          my $lbl;
-          if ($extraboard) {
-            $lbl = "$vol: $pr.-";
-          } else {
-            $lbl = "$pr.-";
-          }
           $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
-          $buttons .= "</form></td>\n";
+          $buttons .= "</form>\n";
+          $buttons .= "</td>\n" if ($extraboard != $id);
         }
         my $beerstyle = beercolorstyle($origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
-        if ($extraboard) {
-          $dispmak .= ":" if ($dispmak);
-          #print "<tr>"<td align=righ $beerstyle>" . $e->{"id"} . "</td>\n";
-          print "<tr><td align=right>";
-          print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
-          print "$hiddenbuttons";
-          print "<input type='hidden' name='v' value='T' />\n" ;  # taster
-          print "<input type='hidden' name='p' value='X' />\n" ;  # at no cost
-          my $id = $e->{"id"};
-          my $butstyle = $beerstyle;
-          $butstyle =~ s/;'/;width:100%;'/;
-          print "<input type='submit' name='submit' value='$id' $butstyle/> \n";
-          print "</form>\n";
-          #. $e->{"id"} .
+
+        if ($extraboard == $id ) { # More detailed view
+          $mak .= ":" if ($mak);
+          print "<tr><td colspan=5><hr></td></tr>\n";
+          print "<tr><td $beerstyle>";
+          print "<a href='$url?o=board'><span width=100% $beerstyle>$id</span></a> ";
           print "</td>\n";
 
           print "<td colspan=4 >";
           print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
-          print "$dispmak $dispbeer</span></td></tr>\n";
-          print "<tr><td style='font-size: xx-small'>&nbsp;&nbsp;$country</td>" .
-            "<td>$sty $alc% &nbsp;</td>\n";
-          print $buttons;
-          print "<td width=100%>&nbsp;</td>\n"; # Dirty trick to move buttons a bit left
-          print "</tr>\n";
-          if ($seen{$beer}) {
-            print "<tr><td>&nbsp;</td><td colspan=3> Seen <b>" . ($seen{$beer}). "</b> times ";
-            print "$lastseen{$beer} " if ($lastseen{$beer});
-            if ($ratecount{$beer}) {
-              my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
-              print " $ratecount{$beer} rat=<b>$avgrate</b>";
-            }
-            print "</td></tr>\n";
-          }
-
-        } else {
-          print "<tr><td align=right>";
+          print "$mak $dispbeer <span style='font-size: x-small;'>($country)</span></span></td></tr>\n";
+          print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
           print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
           print "$hiddenbuttons";
           print "<input type='hidden' name='v' value='T' />\n" ;  # taster
           print "<input type='hidden' name='p' value='X' />\n" ;  # at no cost
-          my $id = $e->{"id"};
-          my $butstyle = $beerstyle;
-          $butstyle =~ s/;'/;width:100%;'/;
-          print "<input type='submit' name='submit' value='$id' $butstyle/> \n";
+          print "<input type='submit' name='submit' value='Taster' /> \n";
           print "</form>\n";
-          #. $e->{"id"} .
+          print "</td></tr>\n";
+          print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
+          if ($seen{$beer}) {
+            print "<tr><td>&nbsp;</td><td colspan=4> Seen <b>" . ($seen{$beer}). "</b> times. ";
+            print "Last: $lastseen{$beer} " if ($lastseen{$beer});
+            print "</td></tr>\n";
+            if ($ratecount{$beer}) {
+              my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
+              print "<tr><td>&nbsp;</td><td colspan=4>";
+              my $ratings = "rating";
+              $ratings .= "s" if ($ratecount{$beer} > 1 );
+              print "$ratecount{$beer} $ratings <b>$avgrate</b>: ";
+              print $ratings[$avgrate];
+            print "</td></tr>\n";
+            }
+          }
+          print "<tr><td colspan=5><hr></td></tr>\n";
+        } else { # Plain view
+          print "<tr><td align=right $beerstyle>";
+          print "<a href='$url?o=board$id'><span width=100% $beerstyle>$id</span></a> ";
           print "</td>\n";
           print "$buttons\n";
           print "<td style='font-size: x-small;' align=right>$alc</td>\n";
