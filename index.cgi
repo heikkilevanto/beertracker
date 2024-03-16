@@ -1344,7 +1344,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
 
 #############
 # Beer board (list) for the location. Scraped from their website
-if ( $op =~ /board(\d*)/i ) {
+if ( $op =~ /board(-?\d*)/i ) {
   my $extraboard = $1 || -1;  # show all kind of extra info for this tap
   $locparam = $loc unless ($locparam); # can happen after posting
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
@@ -1369,6 +1369,7 @@ if ( $op =~ /board(\d*)/i ) {
     if ($qry ne "PA" );
 
   print "<a href=$url?o=board&f=f><i>(Reload)</i></a>\n";
+  print "<a href=$url?o=board-2><i>(all)</i></a>\n";
 
   print "<p>\n";
   if (!$scrapers{$locparam}) {
@@ -1423,7 +1424,7 @@ if ( $op =~ /board(\d*)/i ) {
       if ( $qry ) {
         next unless ( $sty =~ /$qry/ );
       }
-      if ( $extraboard <0 && $mak eq $oldmak && $beer eq $oldbeer ) {
+      if ( $extraboard == -1 && $mak eq $oldmak && $beer eq $oldbeer ) {
         $extraboard = $id; # Default to expanding the beer currently in the input fields
       }
       my $dispmak = $mak;
@@ -1470,7 +1471,7 @@ if ( $op =~ /board(\d*)/i ) {
         $vol = $sp->{"vol"};
         $pr = $sp->{"price"};
         my $lbl;
-        if ($extraboard == $id) {
+        if ($extraboard == $id || $extraboard == -2) {
           $lbl = "$vol cl: $pr.-";
         } else {
           $lbl = "$pr.-";
@@ -1482,11 +1483,11 @@ if ( $op =~ /board(\d*)/i ) {
         $buttons .= "<input type='hidden' name='p' value='$pr' />\n" ;
         $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
         $buttons .= "</form>\n";
-        $buttons .= "</td>\n" if ($extraboard != $id);
+        $buttons .= "</td>\n" if ($extraboard != $id && $extraboard != -2);
       }
       my $beerstyle = beercolorstyle($origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
 
-      if ($extraboard == $id ) { # More detailed view
+      if ($extraboard == $id  || $extraboard == -2) { # More detailed view
         $mak .= ":" if ($mak);
         print "<tr><td colspan=5><hr></td></tr>\n";
         print "<tr><td $beerstyle>";
@@ -1519,7 +1520,7 @@ if ( $op =~ /board(\d*)/i ) {
           print "</td></tr>\n";
           }
         }
-        print "<tr><td colspan=5><hr></td></tr>\n";
+        print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
       } else { # Plain view
         print "<tr><td align=right $beerstyle>";
         print "<a href='$url?o=board$id'><span width=100% $beerstyle>$id</span></a> ";
