@@ -995,7 +995,7 @@ if ( 0 && $edit && $foundline ) {
 print "</table>\n";
 print "</form>\n";
 
-print "<div id='debug' hidden ><hr/>Debug<br/></div>\n";
+print "<div id='debug' hidden ><hr/>Debug<br/></div>\n"; # for javascript debugging
 if ( !$op) {
   $op = "Graph";  # Default to showing the graph
 } # also on mobile devices
@@ -1408,6 +1408,8 @@ if ( $op =~ /board(\d*)/i ) {
       "(<a href='$url?o=$op&l=$locparam'><span>Clear</span></a>) " .
       "<p>\n";
     }
+    my $oldmak = $mak; # Remember the maker and beer
+    my $oldbeer = $beer;
     print "<table border=0 style='white-space: nowrap;'>\n";
     foreach $e ( @$beerlist )  {
       $nbeers++;
@@ -1421,7 +1423,9 @@ if ( $op =~ /board(\d*)/i ) {
       if ( $qry ) {
         next unless ( $sty =~ /$qry/ );
       }
-
+      if ( $extraboard <0 && $mak eq $oldmak && $beer eq $oldbeer ) {
+        $extraboard = $id; # Default to expanding the beer currently in the input fields
+      }
       my $dispmak = $mak;
       $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu)\b//ig; #stop words
       $dispmak =~ s/.*(Schneider).*/$1/i;
