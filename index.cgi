@@ -611,7 +611,7 @@ if ( $q->request_method eq "POST" ) {
     $sub = "Save"; # force this to be an updating save, so the record goes into its right place
   }
 
-  if ( $sub eq "Record" || $sub =~ /^Copy/ || $sub =~ /^Rest/ || $sub =~ /^ *\d+/ ) {
+  if ( $sub ne "Save" && $sub ne "Del" ) { # Regular append
     if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
         open F, ">>$datafile"
           or error ("Could not open $datafile for appending");
