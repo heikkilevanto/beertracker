@@ -32,7 +32,7 @@ $q->charset( "UTF-8" );
 # Constants and setup
 my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
 my $workdir = cwd();
-my $devversion = 0;  # Changes a few details if on the development version
+my $devversion = 0;  # Changes a few display details if on the development version
 $devversion = 1 unless ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ );
 $devversion = 1 if ( $workdir =~ /-dev/ );
 
@@ -1371,148 +1371,147 @@ if ( $op =~ /board(\d*)/i ) {
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
     $locparam="Ølbaren"; # A good default
-  } ;
-  {
-    my $script = $scriptdir . $scrapers{$locparam};
-    my $json = `perl $script`;
-    chomp($json);
-    if (! $json) {
-      print "Sorry, could not get the list from $locparam<br/>\n";
+  }
+
+  my $script = $scriptdir . $scrapers{$locparam};
+  my $json = `perl $script`;
+  chomp($json);1
+  if (! $json) {
+    print "Sorry, could not get the list from $locparam<br/>\n";
+    print "<!-- Error running " . $scrapers{$locparam} . ". \n";
+    print "Result: '$json'\n -->\n";
+  }else {
+    #print "<!--\nPage:\n$json\n-->\n";  # for debugging
+    my $beerlist = JSON->new->utf8->decode($json);
+    my $nbeers = 0;
+    if ($qry) {
+    print "Filter:<b>$qry</b> " .
+      "(<a href='$url?o=$op&l=$locparam'><span>Clear</span></a>) " .
+      "<p>\n";
+    }
+    print "<table border=0 style='white-space: nowrap;'>\n";
+    foreach $e ( @$beerlist )  {
+      $nbeers++;
+      my $id = $e->{"id"} || 0;
+      $mak = $e->{"maker"} || "" ;
+      $beer = $e->{"beer"} || "" ;
+      $sty = $e->{"type"} || "";
+      $loc = $locparam;
+      $alc = $e->{"alc"} || "";
+      $alc = sprintf("%4.1f",$alc) if ($alc);
+      if ( $qry ) {
+        next unless ( $sty =~ /$qry/ );
+      }
+
+      my $dispmak = $mak;
+      $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu)\b//ig; #stop words
+      $dispmak =~ s/.*(Schneider).*/$1/i;
+      $dispmak =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
+      $dispmak =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
+      $dispmak =~ s/^ +//;
+      $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
+      $dispmak =~ s/[ -].*$// ; # first word
+      if ( $beer =~ /$dispmak/ || !$mak) {
+        $dispmak = ""; # Same word in the beer, don't repeat
+      } else {
+        $dispmak = filt($mak, "i", $dispmak,"board&l=$locparam");
+      }
+      $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
+      $beer =~ s/.*(Hopfenweisse).*/$1/;
+      $beer =~ s/.*(Ungespundet).*/$1/;
+      if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
+        $mak = "Schlenkerla";
+        $dispmak = filt($mak, "i", $mak,"board&l=$locparam");
+      }
+      my $dispbeer .= filt($beer, "b", $beer, "board&l=$loc");
+
+      $mak =~ s/'//g; # Apostrophes break the input form below
+      $beer =~ s/'//g; # So just drop them
+      $sty =~ s/'//g;
+      my $origsty = $sty ;
+      $sty = shortbeerstyle($sty);
+      print "<!-- sty='$origsty' -> '$sty'\n'$e->{'beer'}' -> '$beer'\n'$e->{'maker'}' -> '$mak' -->\n";
+      # Add a comment to show the simplifying process.
+      # If there are strange beers, take a 'view source' and look
+      my $country = $e->{'country'} || "";
+      my $sizes = $e->{"sizePrice"};
+      my $hiddenbuttons = "";
+        $hiddenbuttons .= "<input type='hidden' name='m' value='$mak' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='b' value='$beer' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='s' value='$origsty' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='a' value='$alc' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='l' value='$loc' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
+      my $buttons="";
+      foreach $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
+        $vol = $sp->{"vol"};
+        $pr = $sp->{"price"};
+        my $lbl;
+        if ($extraboard == $id) {
+          $lbl = "$vol cl: $pr.-";
+        } else {
+          $lbl = "$pr.-";
+          $buttons .= "<td>";
+        }
+        $buttons .= "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+        $buttons .= $hiddenbuttons;
+        $buttons .= "<input type='hidden' name='v' value='$vol' />\n" ;
+        $buttons .= "<input type='hidden' name='p' value='$pr' />\n" ;
+        $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
+        $buttons .= "</form>\n";
+        $buttons .= "</td>\n" if ($extraboard != $id);
+      }
+      my $beerstyle = beercolorstyle($origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
+
+      if ($extraboard == $id ) { # More detailed view
+        $mak .= ":" if ($mak);
+        print "<tr><td colspan=5><hr></td></tr>\n";
+        print "<tr><td $beerstyle>";
+        print "<a href='$url?o=board'><span width=100% $beerstyle>$id</span></a> ";
+        print "</td>\n";
+
+        print "<td colspan=4 >";
+        print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
+        print "$mak $dispbeer <span style='font-size: x-small;'>($country)</span></span></td></tr>\n";
+        print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
+        print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+        print "$hiddenbuttons";
+        print "<input type='hidden' name='v' value='T' />\n" ;  # taster
+        print "<input type='hidden' name='p' value='X' />\n" ;  # at no cost
+        print "<input type='submit' name='submit' value='Taster' /> \n";
+        print "</form>\n";
+        print "</td></tr>\n";
+        print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
+        if ($seen{$beer}) {
+          print "<tr><td>&nbsp;</td><td colspan=4> Seen <b>" . ($seen{$beer}). "</b> times. ";
+          print "Last: $lastseen{$beer} " if ($lastseen{$beer});
+          print "</td></tr>\n";
+          if ($ratecount{$beer}) {
+            my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
+            print "<tr><td>&nbsp;</td><td colspan=4>";
+            my $rating = "rating";
+            $rating .= "s" if ($ratecount{$beer} > 1 );
+            print "$ratecount{$beer} $rating <b>$avgrate</b>: ";
+            print $ratings[$avgrate];
+          print "</td></tr>\n";
+          }
+        }
+        print "<tr><td colspan=5><hr></td></tr>\n";
+      } else { # Plain view
+        print "<tr><td align=right $beerstyle>";
+        print "<a href='$url?o=board$id'><span width=100% $beerstyle>$id</span></a> ";
+        print "</td>\n";
+        print "$buttons\n";
+        print "<td style='font-size: x-small;' align=right>$alc</td>\n";
+        print "<td>$dispbeer $dispmak ($country) $sty</td>\n";
+        print "</tr>\n";
+      }
+    } # beer loop
+    print "</table>\n";
+    if (! $nbeers ) {
+      print "Sorry, got no beers from $locparam\n";
       print "<!-- Error running " . $scrapers{$locparam} . ". \n";
       print "Result: '$json'\n -->\n";
-    }else {
-      #print "<!--\nPage:\n$json\n-->\n";  # for debugging
-      my $beerlist = JSON->new->utf8->decode($json);
-      my $nbeers = 0;
-      if ($qry) {
-      print "Filter:<b>$qry</b> " .
-        "(<a href='$url?o=$op&l=$locparam'><span>Clear</span></a>) " .
-        "<p>\n";
-      }
-      print "<table border=0 style='white-space: nowrap;'>\n";
-      foreach $e ( @$beerlist )  {
-        $nbeers++;
-        my $id = $e->{"id"} || 0;
-        $mak = $e->{"maker"} || "" ;
-        $beer = $e->{"beer"} || "" ;
-        $sty = $e->{"type"} || "";
-        $loc = $locparam;
-        $alc = $e->{"alc"} || "";
-        $alc = sprintf("%4.1f",$alc) if ($alc);
-        if ( $qry ) {
-          next unless ( $sty =~ /$qry/ );
-        }
-
-        my $dispmak = $mak;
-        $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu)\b//ig; #stop words
-        $dispmak =~ s/.*(Schneider).*/$1/i;
-        $dispmak =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
-        $dispmak =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
-        $dispmak =~ s/^ +//;
-        $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
-        $dispmak =~ s/[ -].*$// ; # first word
-        if ( $beer =~ /$dispmak/ || !$mak) {
-          $dispmak = ""; # Same word in the beer, don't repeat
-        } else {
-          $dispmak = filt($mak, "i", $dispmak,"board&l=$locparam");
-        }
-        $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
-        $beer =~ s/.*(Hopfenweisse).*/$1/;
-        $beer =~ s/.*(Ungespundet).*/$1/;
-        if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
-          $mak = "Schlenkerla";
-          $dispmak = filt($mak, "i", $mak,"board&l=$locparam");
-        }
-        my $dispbeer .= filt($beer, "b", $beer, "board&l=$loc");
-
-        $mak =~ s/'//g; # Apostrophes break the input form below
-        $beer =~ s/'//g; # So just drop them
-        $sty =~ s/'//g;
-        my $origsty = $sty ;
-        $sty = shortbeerstyle($sty);
-        print "<!-- sty='$origsty' -> '$sty'\n'$e->{'beer'}' -> '$beer'\n'$e->{'maker'}' -> '$mak' -->\n";
-        # Add a comment to show the simplifying process.
-        # If there are strange beers, take a 'view source' and look
-        my $country = $e->{'country'} || "";
-        my $sizes = $e->{"sizePrice"};
-        my $hiddenbuttons = "";
-          $hiddenbuttons .= "<input type='hidden' name='m' value='$mak' />\n" ;
-          $hiddenbuttons .= "<input type='hidden' name='b' value='$beer' />\n" ;
-          $hiddenbuttons .= "<input type='hidden' name='s' value='$origsty' />\n" ;
-          $hiddenbuttons .= "<input type='hidden' name='a' value='$alc' />\n" ;
-          $hiddenbuttons .= "<input type='hidden' name='l' value='$loc' />\n" ;
-          $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
-        my $buttons="";
-        foreach $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
-          $vol = $sp->{"vol"};
-          $pr = $sp->{"price"};
-          my $lbl;
-          if ($extraboard == $id) {
-            $lbl = "$vol cl: $pr.-";
-          } else {
-            $lbl = "$pr.-";
-            $buttons .= "<td>";
-          }
-          $buttons .= "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
-          $buttons .= $hiddenbuttons;
-          $buttons .= "<input type='hidden' name='v' value='$vol' />\n" ;
-          $buttons .= "<input type='hidden' name='p' value='$pr' />\n" ;
-          $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
-          $buttons .= "</form>\n";
-          $buttons .= "</td>\n" if ($extraboard != $id);
-        }
-        my $beerstyle = beercolorstyle($origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
-
-        if ($extraboard == $id ) { # More detailed view
-          $mak .= ":" if ($mak);
-          print "<tr><td colspan=5><hr></td></tr>\n";
-          print "<tr><td $beerstyle>";
-          print "<a href='$url?o=board'><span width=100% $beerstyle>$id</span></a> ";
-          print "</td>\n";
-
-          print "<td colspan=4 >";
-          print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
-          print "$mak $dispbeer <span style='font-size: x-small;'>($country)</span></span></td></tr>\n";
-          print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
-          print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
-          print "$hiddenbuttons";
-          print "<input type='hidden' name='v' value='T' />\n" ;  # taster
-          print "<input type='hidden' name='p' value='X' />\n" ;  # at no cost
-          print "<input type='submit' name='submit' value='Taster' /> \n";
-          print "</form>\n";
-          print "</td></tr>\n";
-          print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
-          if ($seen{$beer}) {
-            print "<tr><td>&nbsp;</td><td colspan=4> Seen <b>" . ($seen{$beer}). "</b> times. ";
-            print "Last: $lastseen{$beer} " if ($lastseen{$beer});
-            print "</td></tr>\n";
-            if ($ratecount{$beer}) {
-              my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
-              print "<tr><td>&nbsp;</td><td colspan=4>";
-              my $ratings = "rating";
-              $ratings .= "s" if ($ratecount{$beer} > 1 );
-              print "$ratecount{$beer} $ratings <b>$avgrate</b>: ";
-              print $ratings[$avgrate];
-            print "</td></tr>\n";
-            }
-          }
-          print "<tr><td colspan=5><hr></td></tr>\n";
-        } else { # Plain view
-          print "<tr><td align=right $beerstyle>";
-          print "<a href='$url?o=board$id'><span width=100% $beerstyle>$id</span></a> ";
-          print "</td>\n";
-          print "$buttons\n";
-          print "<td style='font-size: x-small;' align=right>$alc</td>\n";
-          print "<td>$dispbeer $dispmak ($country) $sty</td>\n";
-          print "</tr>\n";
-        }
-      } # beer loop
-      print "</table>\n";
-      if (! $nbeers ) {
-        print "Sorry, got no beers from $locparam\n";
-        print "<!-- Error running " . $scrapers{$locparam} . ". \n";
-        print "Result: '$json'\n -->\n";
-      }
     }
   }
   # Keep $qry, so we filter the big list too
