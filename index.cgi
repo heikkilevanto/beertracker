@@ -137,7 +137,7 @@ my $date = param("d",1); # Date, if entered. Overrides stamp and effdate. Keep l
 my $time = param("t",1); # Time, if entered.
 my $del = param("x");  # delete/update last entry
 my $qry = param("q");  # filter query, greps the list
-my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info
+my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info, "f" for forcing refresh of board
 my $yrlim = param("y"); # Filter by year
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $edit= param("e");  # Record to edit
@@ -1367,6 +1367,9 @@ if ( $op =~ /board(\d*)/i ) {
   }
   print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'><span>PA</span></a>) "
     if ($qry ne "PA" );
+
+  print "<a href=$url?o=board&f=f><i>(Reload)</i></a>\n";
+
   print "<p>\n";
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
@@ -1374,13 +1377,29 @@ if ( $op =~ /board(\d*)/i ) {
   }
 
   my $script = $scriptdir . $scrapers{$locparam};
-  my $json = `perl $script`;
-  chomp($json);1
+  my $cachefile = $datadir . $scrapers{$locparam};
+  $cachefile =~ s/\.pl/.cache/;
+  my $json = "";
+  my $cacheage = (-M $cachefile) * 24 * 60 ; # in minutes
+  if ( -f $cachefile && $cacheage < 20 && -s $cachefile > 256 && $qrylim ne "f" ) {
+    open CF, $cachefile or error ("Could not open $cachefile for reading");
+    while ( <CF> ) {
+      $json .= $_ ;
+    }
+    close CF;
+  }
+  if ( !$json ){
+    $json = `perl $script`;
+  }
   if (! $json) {
     print "Sorry, could not get the list from $locparam<br/>\n";
     print "<!-- Error running " . $scrapers{$locparam} . ". \n";
     print "Result: '$json'\n -->\n";
   }else {
+    open CF, ">$cachefile" or error( "Could not open $cachefile for writing");
+    print CF $json;
+    close CF;
+    chomp($json);
     #print "<!--\nPage:\n$json\n-->\n";  # for debugging
     my $beerlist = JSON->new->utf8->decode($json);
     my $nbeers = 0;
@@ -2929,7 +2948,7 @@ sub units {
 # Helper to make an error message
 sub error {
   my $msg = shift;
-  print $q->header("Content-type: text/plain");
+  print $q->header("Content-type: text/plain\n\n");
   print "ERROR\n";
   print $msg;
   exit();
