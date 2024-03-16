@@ -1491,7 +1491,11 @@ if ( $op =~ /board(-?\d*)/i ) {
         $mak .= ":" if ($mak);
         print "<tr><td colspan=5><hr></td></tr>\n";
         print "<tr><td $beerstyle>";
-        print "<a href='$url?o=board'><span width=100% $beerstyle>$id</span></a> ";
+        my $linkid = $id;
+        if ($extraboard == $id) {
+          $linkid = "-3";  # Force no expansion
+        }
+        print "<a href='$url?o=board$linkid'><span width=100% $beerstyle>$id</span></a> ";
         print "</td>\n";
 
         print "<td colspan=4 >";
