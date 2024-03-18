@@ -10,8 +10,10 @@
 
 
 
-###################
+################################
 # Modules and UTF-8 stuff
+################################
+
 use POSIX qw(strftime localtime locale_h);
 use JSON;
 use Cwd qw(cwd);
@@ -28,8 +30,11 @@ use CGI qw( -utf8 );
 my $q = CGI->new;
 $q->charset( "UTF-8" );
 
-####################
+
+################################
 # Constants and setup
+################################
+
 my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
 my $workdir = cwd();
 my $devversion = 0;  # Changes a few display details if on the development version
@@ -39,7 +44,6 @@ $devversion = 1 if ( $workdir =~ /-dev/ );
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.
-
 my $bgcolor = "#003000";
 $bgcolor = "#003050" if ( $devversion );
 
@@ -106,14 +110,16 @@ $currency{"e"} = 7.5;
 $currency{"usd"} = 6.3;  # Varies bit over time
 #$currency{"\$"} = 6.3;  # € and $ don't work, get filtered away in param
 
-
 my $bodyweight;  # in kg, for blood alc calculations
 $bodyweight = 120 if ( $username eq "heikki" );
 $bodyweight =  83 if ( $username eq "dennis" );
 
-###################
+
+################################
 # Input Parameters - data file fields are the same order
 # from when POSTing a new beer entry
+################################
+
 my $stamp = param("st");
 my $origstamp = $stamp; # Remember if we had a stamp from the input, indicating editing
 my $wday = param("wd");  # weekday
@@ -198,9 +204,11 @@ if ( ! $effdate ) { # Effective date can be the day before
   $effdate = "$wday; $effdate";
 }
 
-#######################
+
+################################
 # Dump of the data file
 # Needs to be done before the HTML head, since we output text/plain
+################################
 
 if ( $op eq "Datafile" ) {
   print $q->header(
@@ -235,10 +243,13 @@ if ( $op eq "Datafile" ) {
   exit();
 }
 
-##############################
+
+################################
 # Read the file
 # Remembers the last line for defaults, and collects all kind of stats
 # to be used later.
+################################
+
 open F, "<$datafile"
   or error("Could not open $datafile for reading: $!".
      "<br/>Probably the user hasn't been set up yet" );
@@ -456,9 +467,12 @@ $todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
   " $monthprices{$calmon} kr."
   if ($calmon);
 
+
 ################################
 # POST data into the file
 # Try to guess missing values from last entries
+################################
+
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
   my $sub = $q->param("submit") || "";
@@ -517,7 +531,7 @@ if ( $q->request_method eq "POST" ) {
     if ( $time =~ /^(\d+):(\d+)(:\d+)? *(p)/i ) { # Convert 'P' or 'PM' to 24h
       $time = sprintf( "%02d:%02d%s", $1+12, $2, $3);
     }
-    if ( $time =~ /^(\d+:\d+)$/i ) { # Convert 'P' or 'PM' to 24h
+    if ( $time =~ /^(\d+:\d+)$/i ) { # Add seconds if not there
       $time = "$1:" . datestr("%S", 0,1); # Get seconds from current time
     }   # That keeps timestamps somewhat different, even if adding several entries in the same minute
 
@@ -651,19 +665,15 @@ if ( $q->request_method eq "POST" ) {
       or error("Error closing $bakfile: $!");
   }
   # Redirect to the same script, without the POST, so we see the results
-  if ($sub =~ /^Rest/i ) {
-    my ($recid) =  $stamp =~ /^([0-9-: ]+);/ ;
-    print $q->redirect( "$url?e=" . uri_escape_utf8($recid) );
-    # Get into edit mode for the just-inserted restaurant record
-  } else {
-    print $q->redirect( "$url?o=$op" );
-    # Usually just show the page
-  }
+  print $q->redirect( "$url?o=$op" );
   exit();
 }
 
-############################
+
+################################
 # Get new values from the file we ingested earlier
+################################
+
 my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
     split( / *; */, $lastline );
 if ($foundline) {  # can be undef, if a new data file
@@ -672,8 +682,11 @@ if ($foundline) {  # can be undef, if a new data file
   $geo = ""; # do not keep geo
 }
 
-########################
+
+################################
 # HTML head
+################################
+
 print $q->header(
   -type => "text/html;charset=UTF-8",
   -Cache_Control => "no-cache, no-store, must-revalidate",
@@ -717,16 +730,20 @@ print "</head>\n";
 print "<body>\n";
 print "\n<!-- Read " . scalar(@lines). " lines from $datafile -->\n\n" ;
 
-################
+
+################################
 # Default new users to the about page
+################################
+
 if ( !@lines && ! $op ) {
   $op = "About";
 }
 
-######################
+
+################################
 # Javascript trickery. Most of the logic is on the server side, but a few
 # things have to be done in the browser.
-
+################################
 
 my $script = "";
 
@@ -740,7 +757,6 @@ $script .= <<'SCRIPTEND';
     }
   }
 SCRIPTEND
-
 
 $script .= <<'SCRIPTEND';
   function clearinputs() {  // Clear all inputs, used by the 'clear' button
@@ -865,9 +881,10 @@ SCRIPTEND
 print "<script>\n$script</script>\n";
 
 
-
-#############################
+################################
 # Main input form
+################################
+
 if ($devversion) {
   print "\n<b>Dev version!</b><br>\n";
   my @devstat = stat("index.cgi");
@@ -996,10 +1013,12 @@ print "</form>\n";
 print "<div id='debug' hidden ><hr/>Debug<br/></div>\n"; # for javascript debugging
 if ( !$op) {
   $op = "Graph";  # Default to showing the graph
-} # also on mobile devices
+}
 
-##############
+
+################################
 # Graph
+################################
 
 my %averages; # floating average by effdate
 if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~ /Board/i)) { # make a graph (only if data)
@@ -1306,6 +1325,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
       system ("gnuplot $cmdfile ");
     } # havedata
   } # Have to plot
+
   print "<hr/>\n";
   if ($bigimg eq "B") {
     print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
@@ -1363,8 +1383,11 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
 
 
 
-#############
-# Beer board (list) for the location. Scraped from their website
+################################
+# Beer board (list) for the location.
+# Scraped from their website
+################################
+
 if ( $op =~ /board(-?\d*)/i ) {
   my $extraboard = $1 || -1;  # show all kind of extra info for this tap
   $locparam = $loc unless ($locparam); # can happen after posting
@@ -1568,8 +1591,10 @@ if ( $op =~ /board(-?\d*)/i ) {
 } # Board
 
 
-########################
-# short list, one line per day
+################################
+# short list, aka daily statistics
+################################
+
 } elsif ( $op eq "short" ) {
   my $i = scalar( @lines );
   my $entry = "";
@@ -1690,8 +1715,10 @@ if ( $op =~ /board(-?\d*)/i ) {
   exit(); # All done
 
 
-#######################
+################################
 # Annual summary
+################################
+
 } elsif ( $op =~ /Years(d?)/i ) {
   my $sortdr = $1;
   my %sum;
@@ -1828,8 +1855,12 @@ if ( $op =~ /board(-?\d*)/i ) {
 
   exit();
 
-############################+
-# Monthly statistics from %monthdrinks and %monthprices
+
+################################
+# Monthly statistics
+# from %monthdrinks and %monthprices
+################################
+
 } elsif ( $op =~ /Months([BS])?/ ) {
   my $defbig = $mobile ? "S" : "B";
   my $bigimg = $1 || $defbig;
@@ -1861,7 +1892,7 @@ if ( $op =~ /board(-?\d*)/i ) {
   my @yearcolors;
   my $y = $lasty;
   $yearcolors[$y--] = "#FF0000";  # current year, in bright red
-  $yearcolors[$y--] = "#800000";  # current year, in bright red
+  $yearcolors[$y--] = "#800000";  # Prev year, in darker red
   $yearcolors[$y--] = "#00F0F0";  # Cyan
   $yearcolors[$y--] = "#00C0C0";
   $yearcolors[$y--] = "#008080";
@@ -2073,8 +2104,11 @@ if ( $op =~ /board(-?\d*)/i ) {
   print $t;  # The table we built above
   exit();
 
-#############################
+
+################################
 # About page
+################################
+
 } elsif ( $op eq "About" ) {
 
   print "<hr/><h2>Beertracker</h2>\n";
@@ -2126,9 +2160,12 @@ if ( $op =~ /board(-?\d*)/i ) {
   print "&nbsp; <a href='$url?o=geo'><span>Geolocation summary</span></a><br/>\n";
   exit();
 
-} elsif ( $op eq "Price" ) {
-###################
+
+################################
 # Price-volume table
+################################
+
+} elsif ( $op eq "Price" ) {
 print "<br/><b>Prices</b><p>\n";
 my @volumes = ( 20, 25, 30, 33, 40, 50, 100 );
 print "<table border=1>\n";
@@ -2167,9 +2204,11 @@ for my $v ( @volumes ) {
 print "</table>\n";
 
 
-} elsif ( $op eq "geo" ) {
-#####################
+################################
 # Geolocation debug
+################################
+
+} elsif ( $op eq "geo" ) {
   if (!$qry || $qry =~ /^ *[0-9 .]+ *$/ ) {  # numerical query
     print "<hr><b>Geolocations</b><p>\n";
     if ($qry) {
@@ -2260,10 +2299,12 @@ $com, $geo ) =
 } elsif ( $op eq "full" ) {
   # Ignore for now, we print the full list later.
 
-} elsif ( $op ) {
 
-#######################
+################################
 # various lists (beer, location, etc)
+################################
+
+} elsif ( $op ) {
   print "<hr/><a href='$url'><span><b>$op</b> list</span></a>\n";
   print "<div class='no-print'>\n";
   if ( !$sortlist) {
@@ -2427,8 +2468,11 @@ $com, $geo ) =
   exit();
 }
 
-########################
+
+################################
 # Regular list, on its own, or after graph and/or beer board
+################################
+
 if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   print "\n<!-- Full list -->\n ";
@@ -2759,7 +2803,10 @@ print "</body></html>\n";
 
 exit();
 
-############################################
+
+################################
+# Various small helpers
+################################
 
 # Helper to trim leading and trailing spaces
 sub trim {
@@ -3165,7 +3212,7 @@ sub shortbeerstyle{
   return "Belg" if ( $sty =~ /.*Belg.*/i);
   return "BW"   if ( $sty =~ /.*Barley.*Wine.*/i);
   $sty =~ s/.*(Lambic|Sour) *(\w+).*/$1/i;   # Lambic Fruit - Fruit
-  $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc # ###
+  $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc
   $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars, in case we didn't get it above
   return $sty;
 }
