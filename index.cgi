@@ -1351,7 +1351,7 @@ if ( $op =~ /board(-?\d*)/i ) {
   print "<hr/>\n"; # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
   print "Beer list \n";
-  print "<select onchange='document.location=\"$url?o=board&l=\" + this.value;' style='width:5em;'>\n";
+  print "<select onchange='document.location=\"$url?o=board&l=\" + this.value;' style='width:5.5em;'>\n";
   if (!$scrapers{$locparam}) { #Include the current location, even if no scraper
     $scrapers{$locparam} = ""; #that way, the pulldown looks reasonable
   }
