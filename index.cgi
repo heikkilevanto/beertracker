@@ -50,7 +50,6 @@ my $scriptdir = "./scripts/";  # screen scraping scripts
 my $datafile = "";
 my $plotfile = "";
 my $cmdfile = "";
-my $pngfile = "";
 my $username = ($q->remote_user()||"");
 
 # Sudo mode, normally commented out
@@ -60,7 +59,6 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
   $datafile = $datadir . $username . ".data";
   $plotfile = $datadir . $username . ".plot";
   $cmdfile = $datadir . $username . ".cmd";
-  $pngfile = $datadir . $username . ".png";
 } else {
   error ("Bad username\n");
 }
@@ -1012,8 +1010,24 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   my $startdate = datestr ("%F", -$startoff );
   my $enddate = datestr( "%F", -$endoff);
   my $havedata = 0;
-  #print STDERR "Origin dates to $startoff $startdate - $endoff $enddate  - f= $allfirstdate\n";
-  while ( $startdate lt $allfirstdate) { # Normalized limits to where we have data
+
+  # Delete old cached pngs
+  my $datafileage = -M $datafile;
+  if ( $datafileage > 1 ) {  # kill anything over a day old, even if data is older
+    $datafileage = 1;  # Helps to keep the directory clean
+  }
+  my $pfilemask = $plotfile;
+  $pfilemask =~ s/.plot$/-*.png/;
+  my @pfiles = glob($pfilemask);
+  foreach my $pf ( @pfiles ) {
+    my $pfage = -M $pf;
+    if ( $pfage > $datafileage ) {
+      unlink ($pf) or error ("Could not unlink $pf");
+    }
+  }
+
+  # Normalize limits to where we have data
+  while ( $startdate lt $allfirstdate) {
     $startoff --;
     $startdate = datestr ("%F", -$startoff );
     if ($endoff >= 0 ) {
@@ -1022,275 +1036,282 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     }
   }
   #print STDERR "Rolled dates to $startoff $startdate - $endoff $enddate  - f= $allfirstdate\n";
-  print "\n<!-- " . $op . " $startdate to $enddate -->\n";
-  my %sums; # drink sums by (eff) date
-  my $futable = ""; # Table to display the 'future' values
-  for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
-       split( / *; */, $lines[$i] );
-    next if ( $mak =~ /^restaurant/i );
-    $pr = 0 unless ( $pr =~/^-?[0-9]+$/i);
-    $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol && $pr >= 0 );
-  }
-  my $ndays = $startoff+35; # to get enough material for the running average
-  my $date;
-  open F, ">$plotfile"
-      or error ("Could not open $plotfile for writing");
-  my $legend = "# Date  Drinks  Sum30  Sum7  Zeromark  Future  Drink Color Drink Color ...";
-  print F "$legend \n".
-    "# Plot $startdate ($startoff) to $enddate ($endoff) \n";
-  my $sum30 = 0.0;
-  my @month;
-  my @week;
-  my $wkday;
-  my $zerodays = -1;
-  my $fut = "NAN";
-  my $lastavg = ""; # Last floating average we have seen
-  my $lastwk = "";
-  my $weekends; # Code to draw background on weekend days
-  my $wkendtag = 2;  # 1 is reserved for global bk
-  my $oneday = 24 * 60 * 60 ; # in seconds
-  my $threedays = 3 * $oneday;
-  my $oneweek = 7 * $oneday ;
-  my $oneyear = 365.24 * $oneday;
-  my $onemonth = $oneyear / 12;
-  my $numberofdays=7;
-  while ( $ndays > $endoff) {
-    $ndays--;
-    $rawdate = datestr("%F:%u", -$ndays);
-    ($date,$wkday) = split(':',$rawdate);
-    my $tot = ( $sums{$date} || 0 ) / $onedrink ;
-    @month = ( @month, $tot);
-    shift @month if scalar(@month)>=30;
-    @week = ( @week, $tot);
-    shift @week if scalar(@week)>7;
-    $sum30 = 0.0;
-    my $sumw = 0.0;
-    for ( my $i = 0; $i < scalar(@month); $i++) {
-      my $w = $i+1 ;  #+1 to avoid zeroes
-      $sum30 += $month[$i] * $w;
-      $sumw += $w;
-    }
-    my $sumweek = 0.0;
-    my $cntweek = 0;
-    foreach my $t ( @week ) {
-      $sumweek += $t;
-      $cntweek++;
-    }
-    #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
-    #print "<!-- $date [" . join(', ', @week). "] = $sumweek " . $sumweek/$cntweek . "-->\n";
-    my $daystartsum = ( $sum30 - $tot *(scalar(@month)+1) ) / $sumw; # The avg excluding today
-    $sum30 = $sum30 / $sumw;
-    $sumweek = $sumweek / $cntweek;
-    $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
-    my $zero = "NAN";
-    if ($tot > 0.4 ) { # one small mild beer still gets a zero mark
-      $zerodays = 0;
-    } elsif ($zerodays >= 0) { # have seen a real $tot
-      $zero = 0.1 + ($zerodays % 7) * 0.35 ; # makes the 7th mark nicely on 2.0d
-      $zerodays ++; # Move the subsequent zero markers higher up
-    }
-    if ( $ndays <=0  || # no zero mark for current or next date, it isn't over yet
-         $startoff - $endoff > 400 ) {  # nor for graphs that are over a year, can't see them anyway
-      $zero = "NaN";
-    }
-    if ( $ndays <=0 && $sum30 > 0.1 && $endoff < -13) {
-      # Display future numbers in table form, if asking for 2 weeks ahead
-      my $weekday = ( "Mon", "Tue", "Wed", "Thu", "<b>Fri</b>", "<b>Sat</b>", "<b>Sun</b>" ) [$wkday-1];
-      $futable .= "<tr><td>&nbsp;$weekday&nbsp;</td><td>&nbsp;$date&nbsp;</td>";
-      $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sum30,$sum30*7) . "</td>";
-      $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sumweek, $sumweek*7) ."</td>" if ($sumweek > 0.1);
-      $futable .= "</tr>\n";
-    }
-    if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
-      if ($bigimg eq "B") {
-        $lastavg = sprintf("(%2.1f/d %0.0f/w)", $sum30, $sum30*7) if ($sum30 > 0);
-        $lastwk = sprintf("(%2.1f/d %0.0f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
-      } else {
-        $lastavg = sprintf("%2.1f %0.0f", $sum30, $sum30*7) if ($sum30 > 0);
-        $lastwk = sprintf("%2.1f %0.0f", $sumweek, $sumweek*7) if ($sumweek > 0);
-      }
-    }
-    if ( $ndays == 0 ){  # Plot the start of the day
-      if ( $tot ) {
-        $fut= $daystartsum; # with a '+' if some beers today
-      } else {
-        $zero = $daystartsum; # And with a zero mark, if not
-      }
-    }
-    if ( $ndays == -1 ) { # Break the week avg line to indicate future
-                          # (none of the others plot at this time)
-      print F "$date NaN NaN  NaN NaN  NaN Nan \n";
-    }
-    if ( $ndays <0 ) {
-      $fut = $sum30;
-      $fut = "NaN" if ($fut < 0.1); # Hide (almost)zeroes
-      $sum30="NaN"; # No avg for next date, but yes for current
-      if (!$sumweek) { # Don't plot zero weeksums
-        $sumweek = "NaN";
-      }
-    }
-    if ( $wkday == 6 ) {
-      $weekends .= "set object $wkendtag rect at \"$date\",50 " .
-         "size $threedays,200 behind  fc rgbcolor \"#005000\"  fillstyle solid noborder \n";
-      $wkendtag++;
-    }
-    my $totdrinks = $tot;
-    my $drinkline = "";
-    my $ndrinks = 0;
-    if ( $drinktypes{$date} ) {
-      my $lastloc = "";
-      foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
-        my ($alc, $vol, $type, $loc) =  $dt =~ /^([0-9.]+) ([0-9]+) ([^:]*) : (.*)/;
-        $lastloc = $loc unless ($lastloc);
-        next unless ( $type );
-        my $color = beercolor($type,"0x",$date,$dt);
-        my $drinks = $alc * $vol / $onedrink;
-        if ( $lastloc ne $loc  &&  $startoff - $endoff < 100 ) {
-          my $lw = $totdrinks + 0.2; # White line for location change
-          $lw += 0.1 unless ($bigimg eq "B");
-          $drinkline .= "$lw 0xffffff ";
-          $lastloc = $loc;
-          $ndrinks++;
-        }
-        $drinkline .= "$totdrinks $color ";
-        $ndrinks ++;
-        $totdrinks -= $drinks;
-        last if ($totdrinks <= 0 ); #defensive coding, have seen it happen once
-      }
-    }
-    print STDERR "Many ($ndrinks) drink entries on $date \n"
-      if ( $ndrinks >= 20 ) ;
-    while ( $ndrinks++ < 20 ) {
-      $drinkline .= "0 0xffffff ";
-    }
 
-    #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
-    if ($zerodays >= 0) {
-      print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" ;
-      $havedata = 1;
-    }
-  }
-  print F "$legend \n";
-  close(F);
-  if (!$havedata) {
-    print "No data for $startdate ($startoff) to $enddate ($endoff) \n";
-  } else {
-    my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
-    my $weekline = "";
-    my $plotweekline = "\"$plotfile\" " .
-              "using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"wk $lastwk\", " ;
-    my $xtic = 1;
-    my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
-    my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
-    my @xmonth = ( $onemonth, "\"%b\\n%y\"" ); # Jan 24
-    my @xweek = ( $oneweek, "\"%d\\n%b\"" ); # 15 Jan
-    my $pointsize = "";
-    my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
-    my $fillstyleborder = "fill solid border linecolor \"#003000\""; # Small gap around each drink
-    my $imgsz;
-    if ( $bigimg eq "B" ) {  # Big image
-      $imgsz = "640,480";
-      if ( $startoff - $endoff > 365*4 ) {  # "all"
-        ( $xtic, $xformat ) = @xyear;
-      } elsif ( $startoff - $endoff > 400 ) { # "2y"
-        ( $xtic, $xformat ) = @xquart;
-      } elsif ( $startoff - $endoff > 120 ) { # "y", "6m"
-        ( $xtic, $xformat ) = @xmonth;
-      } else { # 3m, m, 2w
-        ( $xtic, $xformat ) = @xweek;
-        $weekline = $plotweekline;
-        $fillstyle = $fillstyleborder;
-      }
-    } else { # Small image
-      $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
-      $imgsz = "320,250";  # Works on my Fairphone, and Dennis' iPhone
-      if ( $startoff - $endoff > 365*4 ) {  # "all"
-        ( $xtic, $xformat ) = @xyear;
-      } elsif ( $startoff - $endoff > 360 ) { # "2y", "y"
-        ( $xtic, $xformat ) = @xquart;
-      } elsif ( $startoff - $endoff > 80 ) { # "6m", "3m"
-        ( $xtic, $xformat ) = @xmonth;
-        $weekline = $plotweekline;
-      } else { # "m", "2w"
-        ( $xtic, $xformat ) = @xweek;
-        $fillstyle = $fillstyleborder;
-        $weekline = $plotweekline;
-      }
-    }
-    my $white = "textcolor \"white\" ";
-    my $cmd = "" .
-        "set term png small size $imgsz \n".
-        $pointsize .
-        "set out \"$pngfile\" \n".
-        "set xdata time \n".
-        "set timefmt \"%Y-%m-%d\" \n".
-        "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
-        "set y2range [ -.5 : ] \n" .
-        "set format x $xformat \n" .
-        "set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
-        "set border linecolor \"white\" \n" .
-        "set ytics 7 $white \n" .
-        "set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
-        "set xtics \"2007-01-01\", $xtic out $white \n" .  # Happens to be sunday, and first of year/month
-        "set style $fillstyle \n" .
-        "set boxwidth 0.7 relative \n" .
-        "set key left top horizontal textcolor \"white\" \n" .
-        "set grid xtics y2tics  linewidth 0.1 linecolor \"white\" \n".
-        "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
-          "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
-        "set arrow from \"$startdate\", 35 to \"$enddate\", 35 nohead linewidth 0.1 linecolor \"white\" \n" .
-        "set arrow from \"$startdate\", 70 to \"$enddate\", 70 nohead linewidth 0.1 linecolor \"white\" \n" .
-        "set arrow from \"$startdate\", 105 to \"$enddate\", 105 nohead linewidth 0.1 linecolor \"white\" \n" .
-        "set arrow from \"$startdate\", 140 to \"$enddate\", 140 nohead linewidth 0.1 linecolor \"white\" \n" .
-        $weekends .
-        "plot " .
-              # note the order of plotting, later ones get on top
-              # so we plot weekdays, avg line, zeroes
+  my $pngfile = $plotfile;
+  $pngfile =~ s/.plot$/-$startdate-$enddate-$bigimg.png/;
 
-          "\"$plotfile\" using 1:7:8 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:9:10 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:11:12 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:13:14 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:15:16 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:17:18 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:19:20 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:21:22 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:23:24 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:25:26 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:27:28 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:29:30 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:31:32 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:33:34 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:35:36 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:37:38 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:39:40 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:41:42 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:43:44 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-          "\"$plotfile\" using 1:45:46 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+  if (  -r $pngfile ) { # Have a cached file
+    print "\n<!-- Cached $op $pngfile -->\n";
+  } else { # Have to plot a new one
 
-          "$weekline " .
-          "\"$plotfile\" " .
-              "using 1:3 with line lc \"#FfFfFf\" lw 3 axes x1y2 title \" 30d $lastavg\", " .  # avg30
-                # smooth csplines
-          "\"$plotfile\" " .
-              "using 1:6 with points pointtype 7 lc \"#E0E0E0\" axes x1y2 notitle, " .  # future tail
-          "\"$plotfile\" " .
-              "using 1:5 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
-          "";
-    open C, ">$cmdfile"
+    my %sums; # drink sums by (eff) date
+    my $futable = ""; # Table to display the 'future' values
+    for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
+      ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
+        split( / *; */, $lines[$i] );
+      next if ( $mak =~ /^restaurant/i );
+      $pr = 0 unless ( $pr =~/^-?[0-9]+$/i);
+      $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol && $pr >= 0 );
+    }
+    my $ndays = $startoff+35; # to get enough material for the running average
+    my $date;
+    open F, ">$plotfile"
         or error ("Could not open $plotfile for writing");
-    print C $cmd;
-    close(C);
-    system ("gnuplot $cmdfile ");
-    print "<hr/>\n";
-    if ($bigimg eq "B") {
-      print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
-    } else {
-      #print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" style=\"max-width: 100%;\" /></a><br/>\n";
-      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" /></a><br/>\n";
+    my $legend = "# Date  Drinks  Sum30  Sum7  Zeromark  Future  Drink Color Drink Color ...";
+    print F "$legend \n".
+      "# Plot $startdate ($startoff) to $enddate ($endoff) \n";
+    my $sum30 = 0.0;
+    my @month;
+    my @week;
+    my $wkday;
+    my $zerodays = -1;
+    my $fut = "NAN";
+    my $lastavg = ""; # Last floating average we have seen
+    my $lastwk = "";
+    my $weekends; # Code to draw background on weekend days
+    my $wkendtag = 2;  # 1 is reserved for global bk
+    my $oneday = 24 * 60 * 60 ; # in seconds
+    my $threedays = 3 * $oneday;
+    my $oneweek = 7 * $oneday ;
+    my $oneyear = 365.24 * $oneday;
+    my $onemonth = $oneyear / 12;
+    my $numberofdays=7;
+    while ( $ndays > $endoff) {
+      $ndays--;
+      $rawdate = datestr("%F:%u", -$ndays);
+      ($date,$wkday) = split(':',$rawdate);
+      my $tot = ( $sums{$date} || 0 ) / $onedrink ;
+      @month = ( @month, $tot);
+      shift @month if scalar(@month)>=30;
+      @week = ( @week, $tot);
+      shift @week if scalar(@week)>7;
+      $sum30 = 0.0;
+      my $sumw = 0.0;
+      for ( my $i = 0; $i < scalar(@month); $i++) {
+        my $w = $i+1 ;  #+1 to avoid zeroes
+        $sum30 += $month[$i] * $w;
+        $sumw += $w;
+      }
+      my $sumweek = 0.0;
+      my $cntweek = 0;
+      foreach my $t ( @week ) {
+        $sumweek += $t;
+        $cntweek++;
+      }
+      #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
+      #print "<!-- $date [" . join(', ', @week). "] = $sumweek " . $sumweek/$cntweek . "-->\n";
+      my $daystartsum = ( $sum30 - $tot *(scalar(@month)+1) ) / $sumw; # The avg excluding today
+      $sum30 = $sum30 / $sumw;
+      $sumweek = $sumweek / $cntweek;
+      $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
+      my $zero = "NAN";
+      if ($tot > 0.4 ) { # one small mild beer still gets a zero mark
+        $zerodays = 0;
+      } elsif ($zerodays >= 0) { # have seen a real $tot
+        $zero = 0.1 + ($zerodays % 7) * 0.35 ; # makes the 7th mark nicely on 2.0d
+        $zerodays ++; # Move the subsequent zero markers higher up
+      }
+      if ( $ndays <=0  || # no zero mark for current or next date, it isn't over yet
+          $startoff - $endoff > 400 ) {  # nor for graphs that are over a year, can't see them anyway
+        $zero = "NaN";
+      }
+      if ( $ndays <=0 && $sum30 > 0.1 && $endoff < -13) {
+        # Display future numbers in table form, if asking for 2 weeks ahead
+        my $weekday = ( "Mon", "Tue", "Wed", "Thu", "<b>Fri</b>", "<b>Sat</b>", "<b>Sun</b>" ) [$wkday-1];
+        $futable .= "<tr><td>&nbsp;$weekday&nbsp;</td><td>&nbsp;$date&nbsp;</td>";
+        $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sum30,$sum30*7) . "</td>";
+        $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sumweek, $sumweek*7) ."</td>" if ($sumweek > 0.1);
+        $futable .= "</tr>\n";
+      }
+      if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
+        if ($bigimg eq "B") {
+          $lastavg = sprintf("(%2.1f/d %0.0f/w)", $sum30, $sum30*7) if ($sum30 > 0);
+          $lastwk = sprintf("(%2.1f/d %0.0f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
+        } else {
+          $lastavg = sprintf("%2.1f %0.0f", $sum30, $sum30*7) if ($sum30 > 0);
+          $lastwk = sprintf("%2.1f %0.0f", $sumweek, $sumweek*7) if ($sumweek > 0);
+        }
+      }
+      if ( $ndays == 0 ){  # Plot the start of the day
+        if ( $tot ) {
+          $fut= $daystartsum; # with a '+' if some beers today
+        } else {
+          $zero = $daystartsum; # And with a zero mark, if not
+        }
+      }
+      if ( $ndays == -1 ) { # Break the week avg line to indicate future
+                            # (none of the others plot at this time)
+        print F "$date NaN NaN  NaN NaN  NaN Nan \n";
+      }
+      if ( $ndays <0 ) {
+        $fut = $sum30;
+        $fut = "NaN" if ($fut < 0.1); # Hide (almost)zeroes
+        $sum30="NaN"; # No avg for next date, but yes for current
+        if (!$sumweek) { # Don't plot zero weeksums
+          $sumweek = "NaN";
+        }
+      }
+      if ( $wkday == 6 ) {
+        $weekends .= "set object $wkendtag rect at \"$date\",50 " .
+          "size $threedays,200 behind  fc rgbcolor \"#005000\"  fillstyle solid noborder \n";
+        $wkendtag++;
+      }
+      my $totdrinks = $tot;
+      my $drinkline = "";
+      my $ndrinks = 0;
+      if ( $drinktypes{$date} ) {
+        my $lastloc = "";
+        foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
+          my ($alc, $vol, $type, $loc) =  $dt =~ /^([0-9.]+) ([0-9]+) ([^:]*) : (.*)/;
+          $lastloc = $loc unless ($lastloc);
+          next unless ( $type );
+          my $color = beercolor($type,"0x",$date,$dt);
+          my $drinks = $alc * $vol / $onedrink;
+          if ( $lastloc ne $loc  &&  $startoff - $endoff < 100 ) {
+            my $lw = $totdrinks + 0.2; # White line for location change
+            $lw += 0.1 unless ($bigimg eq "B");
+            $drinkline .= "$lw 0xffffff ";
+            $lastloc = $loc;
+            $ndrinks++;
+          }
+          $drinkline .= "$totdrinks $color ";
+          $ndrinks ++;
+          $totdrinks -= $drinks;
+          last if ($totdrinks <= 0 ); #defensive coding, have seen it happen once
+        }
+      }
+      print STDERR "Many ($ndrinks) drink entries on $date \n"
+        if ( $ndrinks >= 20 ) ;
+      while ( $ndrinks++ < 20 ) {
+        $drinkline .= "0 0x0 ";
+      }
+
+      #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
+      if ($zerodays >= 0) {
+        print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" ;
+        $havedata = 1;
+      }
     }
-  } # havedata
+    print F "$legend \n";
+    close(F);
+    if (!$havedata) {
+      print "No data for $startdate ($startoff) to $enddate ($endoff) \n";
+    } else {
+      my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
+      my $weekline = "";
+      my $plotweekline = "\"$plotfile\" " .
+                "using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"wk $lastwk\", " ;
+      my $xtic = 1;
+      my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
+      my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
+      my @xmonth = ( $onemonth, "\"%b\\n%y\"" ); # Jan 24
+      my @xweek = ( $oneweek, "\"%d\\n%b\"" ); # 15 Jan
+      my $pointsize = "";
+      my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
+      my $fillstyleborder = "fill solid border linecolor \"#003000\""; # Small gap around each drink
+      my $imgsz;
+      if ( $bigimg eq "B" ) {  # Big image
+        $imgsz = "640,480";
+        if ( $startoff - $endoff > 365*4 ) {  # "all"
+          ( $xtic, $xformat ) = @xyear;
+        } elsif ( $startoff - $endoff > 400 ) { # "2y"
+          ( $xtic, $xformat ) = @xquart;
+        } elsif ( $startoff - $endoff > 120 ) { # "y", "6m"
+          ( $xtic, $xformat ) = @xmonth;
+        } else { # 3m, m, 2w
+          ( $xtic, $xformat ) = @xweek;
+          $weekline = $plotweekline;
+          $fillstyle = $fillstyleborder;
+        }
+      } else { # Small image
+        $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
+        $imgsz = "320,250";  # Works on my Fairphone, and Dennis' iPhone
+        if ( $startoff - $endoff > 365*4 ) {  # "all"
+          ( $xtic, $xformat ) = @xyear;
+        } elsif ( $startoff - $endoff > 360 ) { # "2y", "y"
+          ( $xtic, $xformat ) = @xquart;
+        } elsif ( $startoff - $endoff > 80 ) { # "6m", "3m"
+          ( $xtic, $xformat ) = @xmonth;
+          $weekline = $plotweekline;
+        } else { # "m", "2w"
+          ( $xtic, $xformat ) = @xweek;
+          $fillstyle = $fillstyleborder;
+          $weekline = $plotweekline;
+        }
+      }
+      my $white = "textcolor \"white\" ";
+      my $cmd = "" .
+          "set term png small size $imgsz \n".
+          $pointsize .
+          "set out \"$pngfile\" \n".
+          "set xdata time \n".
+          "set timefmt \"%Y-%m-%d\" \n".
+          "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
+          "set y2range [ -.5 : ] \n" .
+          "set format x $xformat \n" .
+          "set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
+          "set border linecolor \"white\" \n" .
+          "set ytics 7 $white \n" .
+          "set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
+          "set xtics \"2007-01-01\", $xtic out $white \n" .  # Happens to be sunday, and first of year/month
+          "set style $fillstyle \n" .
+          "set boxwidth 0.7 relative \n" .
+          "set key left top horizontal textcolor \"white\" \n" .
+          "set grid xtics y2tics  linewidth 0.1 linecolor \"white\" \n".
+          "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
+            "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
+          "set arrow from \"$startdate\", 35 to \"$enddate\", 35 nohead linewidth 0.1 linecolor \"white\" \n" .
+          "set arrow from \"$startdate\", 70 to \"$enddate\", 70 nohead linewidth 0.1 linecolor \"white\" \n" .
+          "set arrow from \"$startdate\", 105 to \"$enddate\", 105 nohead linewidth 0.1 linecolor \"white\" \n" .
+          "set arrow from \"$startdate\", 140 to \"$enddate\", 140 nohead linewidth 0.1 linecolor \"white\" \n" .
+          $weekends .
+          "plot " .
+                # note the order of plotting, later ones get on top
+                # so we plot weekdays, avg line, zeroes
+
+            "\"$plotfile\" using 1:7:8 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:9:10 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:11:12 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:13:14 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:15:16 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:17:18 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:19:20 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:21:22 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:23:24 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:25:26 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:27:28 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:29:30 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:31:32 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:33:34 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:35:36 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:37:38 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:39:40 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:41:42 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:43:44 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+            "\"$plotfile\" using 1:45:46 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+
+            "$weekline " .
+            "\"$plotfile\" " .
+                "using 1:3 with line lc \"#FfFfFf\" lw 3 axes x1y2 title \" 30d $lastavg\", " .  # avg30
+                  # smooth csplines
+            "\"$plotfile\" " .
+                "using 1:6 with points pointtype 7 lc \"#E0E0E0\" axes x1y2 notitle, " .  # future tail
+            "\"$plotfile\" " .
+                "using 1:5 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
+            "";
+      open C, ">$cmdfile"
+          or error ("Could not open $plotfile for writing");
+      print C $cmd;
+      close(C);
+      system ("gnuplot $cmdfile ");
+    } # havedata
+  } # Have to plot
+  print "<hr/>\n";
+  if ($bigimg eq "B") {
+    print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
+  } else {
+    print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" /></a><br/>\n";
+  }
   print "<div class='no-print'>\n";
   my $len = $startoff - $endoff;
   my $es = $startoff + $len;
