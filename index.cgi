@@ -2094,7 +2094,9 @@ if ( $op =~ /board(-?\d*)/i ) {
   print "Of course you can just enter the number of centiliters <br/>\n";
   print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
 
-  print "<p>\n";
+  print "<p><hr>\n";
+  print "This site uses no cookies, and collects on personally identifiable information<p>\n";
+
 
   print "<p><hr/>\n";
   print "<b>Debug info </b><br/>\n";
