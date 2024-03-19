@@ -664,8 +664,20 @@ if ( $q->request_method eq "POST" ) {
     close BF
       or error("Error closing $bakfile: $!");
   }
+
+  # Clear the cached files from the data dir
+  foreach my $pf ( glob($datadir."*") ) {
+    next if ( $pf =~ /\.data$/ );
+    if ( $pf =~ /\/$username.*png/ ||   # All png files for this user
+         -M $pf > 1 ) {  # And any file older than a day
+      unlink ($pf)
+        or print STDERR "Could not unlink $pf \n";
+      }
+  }
+
   # Redirect to the same script, without the POST, so we see the results
   print $q->redirect( "$url?o=$op" );
+
   exit();
 }
 
@@ -1029,21 +1041,6 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   my $startdate = datestr ("%F", -$startoff );
   my $enddate = datestr( "%F", -$endoff);
   my $havedata = 0;
-
-  # Delete old cached pngs
-  my $datafileage = -M $datafile;
-  if ( $datafileage > 1 ) {  # kill anything over a day old, even if data is older
-    $datafileage = 1;  # Helps to keep the directory clean
-  }
-  my $pfilemask = $plotfile;
-  $pfilemask =~ s/.plot$/-*.png/;
-  my @pfiles = glob($pfilemask);
-  foreach my $pf ( @pfiles ) {
-    my $pfage = -M $pf;
-    if ( $pfage > $datafileage ) {
-      unlink ($pf) or error ("Could not unlink $pf");
-    }
-  }
 
   # Normalize limits to where we have data
   while ( $startdate lt $allfirstdate) {
