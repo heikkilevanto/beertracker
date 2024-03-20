@@ -606,9 +606,8 @@ if ( $q->request_method eq "POST" ) {
     $pr = price($pr);
   }
   if (!$vol || $vol < 0 ) {
-    $pr = "";
-    $alc = "";
-    $vol = "";
+    $alc = "";  # Clear alc if no vol
+    $vol = "";  # But keep the price for restaurants etc
   }
   $alc = number($alc);
   if ($mak =~ /tz,/i ) {
