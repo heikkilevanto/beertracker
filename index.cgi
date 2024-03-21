@@ -942,6 +942,7 @@ if ($edit) {
   ($date,$time) = $lasttimestamp =~ /^([0-9-]+) ([0-9]+:[0-9]+)/ ;
   $geo = " $geo"; # Allow more recent geolocations
   $hidden = "hidden"; # Hide the geo and date fields for normal use
+  $loc = " " . $loc; # Mark it as uncertain
 }
 $date = " $date"; # Detect if editing them´
 $time = " $time";
@@ -949,7 +950,6 @@ print "<tr><td><input name='e' type='hidden' value='$editstamp' id='editrec' />\
 print "</td></tr>\n";
 print "<tr><td id='td1' $hidden ><input name='d' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
 print "<td id='td2' $hidden ><input name='t' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
-$loc = " " . $loc; # Mark it as uncertain
 
   # Geolocation
 print "<tr><td id='td3' $hidden $c2><input name='g' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
