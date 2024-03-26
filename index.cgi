@@ -845,13 +845,13 @@ $script .= <<'SCRIPTEND';
       if ( locval.startsWith(" ")) {
         const R = 6371e3; // earth radius in meters
         var latcorr = Math.cos(myposition.coords.latitude * Math.PI/180);
-        var bestdist = 200;  // max acceptable distance
+        var bestdist = 20;  // max acceptable distance
         var bestloc = "";
         for (var i in geolocations) {
           var dlat = (myposition.coords.latitude - geolocations[i].lat) * Math.PI / 180 * latcorr;
           var dlon = (myposition.coords.longitude - geolocations[i].lon) * Math.PI / 180;
           var dist = Math.round(Math.sqrt((dlat * dlat) + (dlon * dlon)) * R);
-          if ( dist < bestdist ) { // actually, dist squared, but sorts as well
+          if ( dist < bestdist ) {
             bestdist = dist;
             bestloc = geolocations[i].name;
           }
