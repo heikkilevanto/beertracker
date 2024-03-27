@@ -561,6 +561,9 @@ if ( $q->request_method eq "POST" ) {
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $vol = $1 if ( $1 );
   }
+  if ( $sub eq "Save" && $loc =~ /^ / ) {   # Editing, and location is a geo guess
+    $loc = $thisloc; # Ignore that guess, fall back to the latest location # See #301
+  }
   # Try to guess missing values from previous lines
   my $priceguess = "";
   my $i = scalar( @lines )-1;
@@ -644,7 +647,7 @@ if ( $q->request_method eq "POST" ) {
       if ( $stamp && $stp =~ /^\d+/ &&  # real line
            $sub eq "Save" && # Not deleting it
            "x$stamp" lt "x$stp") {  # Right Place to insert the line
-        # Note the "x" trick, to force pure string comparision
+           # Note the "x" trick, to force pure string comparision
         print F "$stamp; $effdate; $line \n";
         $stamp = ""; # do not write it again
       }
