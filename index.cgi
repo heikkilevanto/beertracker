@@ -1452,8 +1452,10 @@ if ( $op =~ /board(-?\d*)/i ) {
       "(<a href='$url?o=$op&l=$locparam'><span>Clear</span></a>) " .
       "<p>\n";
     }
-    my $oldmak = $mak; # Remember the maker and beer
-    my $oldbeer = $beer;
+    my $oldbeer = "$mak : $beer";  # Remember current beer for opening
+    $oldbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
+    $oldbeer =~ s/[^a-z0-9]//ig; # and all non-ascii characters
+
     print "<table border=0 style='white-space: nowrap;'>\n";
     foreach $e ( @$beerlist )  {
       $nbeers++;
@@ -1467,7 +1469,11 @@ if ( $op =~ /board(-?\d*)/i ) {
       if ( $qry ) {
         next unless ( $sty =~ /$qry/ );
       }
-      if ( $extraboard == -1 && $mak eq $oldmak && $beer eq $oldbeer ) {
+
+      my $thisbeer = "$mak : $beer";  # Remember current beer for opening
+      $thisbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
+      $thisbeer =~ s/[^a-z0-9]//gi; # and all non-ascii characters
+      if ( $extraboard == -1 && $thisbeer eq $oldbeer ) {
         $extraboard = $id; # Default to expanding the beer currently in the input fields
       }
       my $dispmak = $mak;
