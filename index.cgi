@@ -672,7 +672,7 @@ if ( $q->request_method eq "POST" ) {
   foreach my $pf ( glob($datadir."*") ) {
     next if ( $pf =~ /\.data$/ );
     if ( $pf =~ /\/$username.*png/ ||   # All png files for this user
-         -M $pf > 1 ) {  # And any file older than a day
+         -M $pf > 7 ) {  # And any file older than a week
       unlink ($pf)
         or print STDERR "Could not unlink $pf \n";
       }
@@ -819,7 +819,7 @@ SCRIPTEND
 # locations on my desktop machine)
 
 $script .= "var geolocations = [ \n";
-for my $k (keys(%geolocations) ) {
+for my $k (sort keys(%geolocations) ) {
   my ($lat,$lon, undef) = geo($geolocations{$k});
   if ( $lat && $lon ) {  # defensive coding
     $script .= " { name: '$k', lat: $lat, lon: $lon }, \n";
