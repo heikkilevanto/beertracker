@@ -561,8 +561,9 @@ if ( $q->request_method eq "POST" ) {
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $vol = $1 if ( $1 );
   }
-  if ( $sub eq "Save" && $loc =~ /^ / ) {   # Editing, and location is a geo guess
+  if ( $sub eq "Save" && $loc =~ /^ /  ) {   # Saving on default values
     $loc = $thisloc; # Ignore that guess, fall back to the latest location # See #301
+    $geo = ""; # Drop the geo coords, we don't want to mix $thisloc and random coords
   }
   # Try to guess missing values from previous lines
   my $priceguess = "";
