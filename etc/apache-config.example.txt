@@ -11,18 +11,22 @@
 #<Directory /home/heikki/proj/beertracker/>
 
 <DirectoryMatch /var/www/html/beertracker(-dev)?/>
-    AllowOverride All
-    Options +FollowSymLinks +ExecCGI
+   AllowOverride All
+   Options +FollowSymLinks +ExecCGI
 
-    AddHandler cgi-script .cgi
+   AddHandler cgi-script .cgi
 
-    AuthUserFile /var/www/html/beertracker/.htpasswd
-    AuthName "Please Enter Password"
-    AuthType Basic
-    Require valid-user
-
-
+   AuthUserFile /var/www/html/beertracker/.htpasswd
+   AuthName "Please Enter Password"
+   AuthType Basic
+   Require valid-user
 </DirectoryMatch>
+
+# Tell the browser check image age every time - our graphs tend to be alive
+# Needs a2enmod headers
+<FilesMatch ".png$">
+  Header set Cache-Control "no-cache"
+</FilesMatch>
 
 # Hide most of the data directory, but not the graphs we build there
 <DirectoryMatch /var/www/html/beertracker(-dev)?/beerdata>
