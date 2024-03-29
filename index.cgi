@@ -615,7 +615,10 @@ if ( $q->request_method eq "POST" ) {
   (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
   $line = trim($line); # Remove leading spaces from fields
-  if ( $lasttimestamp gt $stamp && $sub ne "Delete" ) {
+  if ( $sub eq "Record" ) {  # Want to create a new record
+    $edit = ""; # so don't edit the current one
+  }
+  if ( $lasttimestamp gt $stamp && $sub ne "Del" ) {
     $sub = "Save"; # force this to be an updating save, so the record goes into its right place
   }
 
