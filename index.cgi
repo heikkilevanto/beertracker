@@ -2565,7 +2565,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       $lastloc = "";
     }
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
-      print "<br/><b>$wday $date </b>" . filt($loc,"b") . newmark($loc) . loclink($loc);
+      print "<br/><b>$wday $effdate </b>" . filt($loc,"b") . newmark($loc) . loclink($loc);
       print "<br/>\n" ;
       if ( $qrylim eq "x") {
         my ( undef, undef, $gg) = geo($geolocations{$loc});
