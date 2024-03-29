@@ -295,7 +295,6 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
 my $alcinbody = 0; # Grams of alc inside my body
 my $balctime = 0; # Time of the last drink
 my %bloodalc; # max blood alc for each day, and current bloodalc for each line
-my %literprices; # Liter prices we have seen
 my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated
 while (<F>) {
   chomp();
@@ -396,12 +395,6 @@ while (<F>) {
     $bloodalc{$t} = $ba;  # indexed by the whole timestamp
     #print STDERR "$t     b:" . sprintf("%8.2f %8.2f",$ba,$bloodalc{$ed}). " \n"  if ($t=~/2023-04-26/) ; # ###
     #print STDERR "$ed '$effdate' : $alcinbody ba= $ba\n" if ( $t =~ /2023-04-2/ );
-  }
-
-  # Liter prices
-  if ( $v && $p>0 && $m !~ /,/ ) {  # Skip all wines, boozes and such
-    my $litp = sprintf("%04d", $p / $v * 100 );
-    $literprices{$litp} ++;
   }
 
   $lastdatesum += ( $a * $v ) if ($a && $v);
@@ -1018,7 +1011,6 @@ if ( 0 && $edit && $foundline ) {
   print "<option value='o=Beer&q=$qry' >Beers</option>\n";
     # The Beer list has links to locations, wines, and other such lists
   print "<option value='o=About&q=$qry' >About</option>\n";
-  print "<option value='o=Price&q=$qry' >Prices</option>\n";
   print "</select>\n";
   print "</td></tr>\n";
 }
@@ -2167,48 +2159,6 @@ if ( $op =~ /board(-?\d*)/i ) {
   exit();
 
 
-################################
-# Price-volume table
-################################
-
-} elsif ( $op eq "Price" ) {
-print "<br/><b>Prices</b><p>\n";
-my @volumes = ( 20, 25, 30, 33, 40, 50, 100 );
-print "<table border=1>\n";
-print "<tr>\n";
-for my $v ( @volumes ) {
-  print "<td>&nbsp;<b>". unit($v,"cl"). "</b>&nbsp;</td>\n";
-}
-print "</tr>";
-my $lastp = 0;
-for my $p ( sort(keys(%literprices)) ) {
-  if ( $literprices{$p} > 5 &&  # Seen a few times
-       $p > 49 &&   # and not ridiculous low
-       $p - $lastp > 4 ) {    # and not too close to last one
-    $lastp = $p;
-    print "<tr>";
-    for my $v ( @volumes ) {
-      my $a = sprintf( "%4d", $v * $p / 100 + 0.5 ) ;
-      print "<td align=right>";
-      if ( $p % 50 == 0 ) {
-        print "<br/>";
-      }
-      if ( $v == 40 || $v == 25) {
-          print "<b>$a</b>";
-        } else {
-          print "$a";
-        }
-      print "</td>\n";
-    }
-    print "</tr>\n";
-  }
-}
-print "<tr>\n";
-for my $v ( @volumes ) {
-  print "<td><b>". unit($v,"cl"). "</b></td>\n";
-}
-print "</table>\n";
-
 
 ################################
 # Geolocation debug
@@ -2644,9 +2594,10 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     $anchor = $stamp || "";
     $anchor =~ s/[^0-9]//g;
     print "\n<a id='$anchor'></a>\n";
-    print "<br class='no-print'/>$time " . filt($mak,"i") . newmark($mak) .
+    print "<br class='no-print'/><span style='white-space: nowrap'> " .
+           "$time " . filt($mak,"i") . newmark($mak) .
             " : " . filt($beer,"b") . newmark($beer, $mak) .
-      "<br class='no-wide'/>\n";
+      "</span> <br class='no-wide'/>\n";
     my $origsty = $sty || "???";
     if ( $sty || $pr || $vol || $alc || $rate || $com ) {
       if ($sty) {
@@ -3022,6 +2973,10 @@ sub units {
   if ( $alc && $vol && $pr >= 0) {
     my $dr = sprintf("%1.2f", ($alc * $vol) / $onedrink );
     $s .= unit($dr, "d");
+  }
+  if ( $pr && $vol && $bloodalc ) {  # bloodalc indicates we have the extended list
+    my $lpr = int($pr / $vol * 100);
+    $s .= unit($lpr, "kr/l");
   }
   if ($bloodalc) {
     $s .= unit( sprintf("%0.2f",$bloodalc), "‰");
