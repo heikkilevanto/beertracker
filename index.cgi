@@ -675,7 +675,8 @@ if ( $q->request_method eq "POST" ) {
   }
 
   # Redirect to the same script, without the POST, so we see the results
-  print $q->redirect( "$url?o=$op" );
+  # But keep $op and $qry (maybe also filters?)
+  print $q->redirect( "$url?o=$op&q=$qry" );
 
   exit();
 }
@@ -946,7 +947,10 @@ if ($edit) {
 }
 $date = " $date"; # Detect if editing them´
 $time = " $time";
-print "<tr><td><input name='e' type='hidden' value='$editstamp' id='editrec' />\n";
+print "<tr><td>\n";
+print "<input name='e' type='hidden' value='$editstamp' id='editrec' />\n";
+print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
+print "<input name='q' type='hidden' value='$qry' id='editrec' />\n";
 print "</td></tr>\n";
 print "<tr><td id='td1' $hidden ><input name='d' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
 print "<td id='td2' $hidden ><input name='t' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
@@ -2219,13 +2223,12 @@ if ( $op =~ /board(-?\d*)/i ) {
     print "<a href='$url?o=geo'><span>Back</span></a>";
     print "<p>\n";
     my (undef,undef,$defloc) = geo($geolocations{$qry});
-    print "Default geo: $defloc <p>\n" if ($defloc);
+    print "$qry is at: $defloc <p>\n" if ($defloc);
     print "<table>\n";
     print "<tr><td>Latitude</td><td>Longitude</td><td>Dist</td></tr>\n";
     while ( $i-- > 0 ){
-      ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
-$com, $geo ) =
-       split( / *; */, $lines[$i] );
+      ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr,
+        $rate, $com, $geo ) =  split( / *; */, $lines[$i] );
       next unless $geo;
       next unless ($loc eq $qry);
       my ($la, $lo, $g) = geo($geo);
@@ -2677,7 +2680,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       $vols{40} = 1;
     }
     print "<form method='POST' style='display: inline;' class='no-print' >\n";
-    print "<a href='$url?e=" . uri_escape_utf8($stamp) ."' ><span>Edit</span></a> \n";
+    print "<a href='$url?o=$op&q=$qry&e=" . uri_escape_utf8($stamp) ."' ><span>Edit</span></a> \n";
 
     # Copy values
     print "<input type='hidden' name='m' value='$mak' />\n";
@@ -2687,6 +2690,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     print "<input type='hidden' name='a' value='$alc' />\n";
     print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation);
     print "<input type='hidden' name='g' id='geo' value='' />\n";
+    print "<input type='hidden' name='o' value='$op' />\n";  # Stay on page
+    print "<input type='hidden' name='q' value='$qry' />\n";
 
     foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
       # The sort order defaults to numerical, but if that fails, takes
