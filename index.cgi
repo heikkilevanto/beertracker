@@ -2178,7 +2178,6 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "Geo $qry looks like $guess at $gdist m<br/>\n";
       }
     }
-    #print "<input name='g' value='$qry'><br/>\n"; # gets filled with current coords
 
     print "<table>\n";
     print "<tr><td>Latitude</td><td>Longitude</td>";
@@ -2243,7 +2242,7 @@ $com, $geo ) =
       print "<tr>\n";
       print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
       print "<td align='right'>$ddist</td>";
-      print "<td><a href='$url?e=$stamp' ><span>$stamp</span></a> ";
+      print "<td><a href='$url?o=$op&q=$qry&e=$stamp' ><span>$stamp</span></a> ";
       if ($guess) {
         print "<br>(<b>$guess $gdist ?)</b>\n" ;
         print STDERR "Suspicious Geo: '$loc' looks like '$guess'  for '$g' at '$stamp' \n";
