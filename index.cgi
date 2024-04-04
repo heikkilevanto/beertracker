@@ -3096,7 +3096,7 @@ sub beercolor {
       "f2f21f", "Pils|Lager|Keller|Bock|Helles|IPL",
       "e5bc27", "Classic|dunkel|shcwarz|vienna",
       "adaa9d", "smoke|rauch|sc?h?lenkerla",
-      "0f0101", "stout|port",  # imp comes later
+      "350f07", "stout|port",  # imp comes later
       "1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
       "47ccc5", "booze|sc?h?nap+s|whisky",
       "47cc7a", "cider",
@@ -3106,7 +3106,7 @@ sub beercolor {
       "c1b50b", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
       "d8d80f", "Pale Ale|PA",
       "b7930e", "Old|Brown|Red|Dark|Ale|Belgian||Tripel|Dubbel|IDA",   # Any kind of ales (after Pale Ale)
-      "0f0101", "Imp",
+      "350f07", "Imp",
       "dbb83b", "misc|mix|random",
       );
       for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
@@ -3125,8 +3125,9 @@ sub beercolorstyle {
   my $line = shift;
   my $bkg= beercolor($type,"#",$date,$line);
   my $col = $bgcolor;
-  if ($bkg lt "#111111") {  # looks only at red component, but works
-    $col = "#ffffff";
+  my $lum = ( hex($1) + hex($2) + hex($3) ) /3  if ($bkg =~ /^#?(..)(..)(..)/i );
+  if ($lum < 64) {  # If a fairly dark color
+    $col = "#ffffff"; # put white text on it
   }
   return "style='background-color:$bkg;color:$col;'";
 }
