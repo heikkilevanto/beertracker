@@ -3098,12 +3098,12 @@ sub beercolor {
       "adaa9d", "smoke|rauch|sc?h?lenkerla",
       "350f07", "stout|port",  # imp comes later
       "1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
-      "47ccc5", "booze|sc?h?nap+s|whisky",
-      "47cc7a", "cider",
+      "8cf2ed", "booze|sc?h?nap+s|whisky",
+      "e07e1d", "cider",
       "eaeac7", "weiss|wit|wheat|weizen",
       "66592c", "Black IPA|BIPA",
-      "d6d639", "NEIPA|New England",
-      "c1b50b", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
+      "9ec91e", "NEIPA|New England",
+      "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
       "d8d80f", "Pale Ale|PA",
       "b7930e", "Old|Brown|Red|Dark|Ale|Belgian||Tripel|Dubbel|IDA",   # Any kind of ales (after Pale Ale)
       "350f07", "Imp",
