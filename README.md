@@ -21,7 +21,7 @@ release it under GPL, in case someone else finds this interesting. The system
 can handle multiple accounts, so if you ask nicely (and if I know you already)
 I may give you one to play with. A few of my friends have tried the system,
 on and off, but they all have given up at some point. Most people don't have
-the disciplne to note down every beer they drink.
+the discipline to note down every beer they drink.
 
 Version 1.0 was released in Feb-2016. It works, and I am using it myself. Of
 course there is a small list of features I will want to add some day "real
