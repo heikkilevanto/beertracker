@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Heikki's simple beer tracker
+# Heikki's beer tracker
 #
 # Keeps beer drinking history in a flat text file.
 #
@@ -10,9 +10,9 @@
 
 
 
-################################
+################################################################################
 # Modules and UTF-8 stuff
-################################
+################################################################################
 
 use POSIX qw(strftime localtime locale_h);
 use JSON;
@@ -31,9 +31,9 @@ my $q = CGI->new;
 $q->charset( "UTF-8" );
 
 
-################################
+################################################################################
 # Constants and setup
-################################
+################################################################################
 
 my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
 my $workdir = cwd();
@@ -115,10 +115,10 @@ $bodyweight = 120 if ( $username eq "heikki" );
 $bodyweight =  83 if ( $username eq "dennis" );
 
 
-################################
+################################################################################
 # Input Parameters - data file fields are the same order
 # from when POSTing a new beer entry
-################################
+################################################################################
 
 my $stamp = param("st");
 my $origstamp = $stamp; # Remember if we had a stamp from the input, indicating editing
@@ -205,10 +205,10 @@ if ( ! $effdate ) { # Effective date can be the day before
 }
 
 
-################################
+################################################################################
 # Dump of the data file
 # Needs to be done before the HTML head, since we output text/plain
-################################
+################################################################################
 
 if ( $op eq "Datafile" ) {
   print $q->header(
@@ -241,14 +241,14 @@ if ( $op eq "Datafile" ) {
   }
   close(F);
   exit();
-}
+} # Dump of data file
 
 
-################################
+################################################################################
 # Read the file
 # Remembers the last line for defaults, and collects all kind of stats
 # to be used later.
-################################
+################################################################################
 
 open F, "<$datafile"
   or error("Could not open $datafile for reading: $!".
@@ -451,7 +451,6 @@ if ( ! $todaydrinks ) { # not today
   }
 }
 
-
 # Remember some values to display in the comment box when no comment to show
 $weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
 $todaydrinks .= "\nWeek: $weeksum $weekmsum kr. " . (7 - scalar( keys(%weekdates) ) ) . "z";
@@ -461,10 +460,10 @@ $todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
   if ($calmon);
 
 
-################################
+################################################################################
 # POST data into the file
 # Try to guess missing values from last entries
-################################
+################################################################################
 
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
@@ -679,12 +678,12 @@ if ( $q->request_method eq "POST" ) {
   print $q->redirect( "$url?o=$op&q=$qry" );
 
   exit();
-}
+} # POST data
 
 
-################################
+################################################################################
 # Get new values from the file we ingested earlier
-################################
+################################################################################
 
 my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
     split( / *; */, $lastline );
@@ -695,9 +694,9 @@ if ($foundline) {  # can be undef, if a new data file
 }
 
 
-################################
+################################################################################
 # HTML head
-################################
+################################################################################
 
 print $q->header(
   -type => "text/html;charset=UTF-8",
@@ -743,19 +742,19 @@ print "<body>\n";
 print "\n<!-- Read " . scalar(@lines). " lines from $datafile -->\n\n" ;
 
 
-################################
+################################################################################
 # Default new users to the about page
-################################
+################################################################################
 
 if ( !@lines && ! $op ) {
   $op = "About";
 }
 
 
-################################
+################################################################################
 # Javascript trickery. Most of the logic is on the server side, but a few
 # things have to be done in the browser.
-################################
+################################################################################
 
 my $script = "";
 
@@ -893,9 +892,9 @@ SCRIPTEND
 print "<script>\n$script</script>\n";
 
 
-################################
+################################################################################
 # Main input form
-################################
+################################################################################
 
 if ($devversion) {
   print "\n<b>Dev version!</b><br>\n";
@@ -1030,11 +1029,12 @@ if ( !$op) {
 }
 
 
-################################
+################################################################################
 # Graph
-################################
+################################################################################
 
-my %averages; # floating average by effdate
+my %averages; # floating average by effdate (used also in the full list below
+
 if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~ /Board/i)) { # make a graph (only if data)
   my $defbig = $mobile ? "S" : "B";
   my $bigimg = $1 || $defbig;
@@ -1382,10 +1382,10 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
 
 
 
-################################
+################################################################################
 # Beer board (list) for the location.
 # Scraped from their website
-################################
+################################################################################
 
 if ( $op =~ /board(-?\d*)/i ) {
   my $extraboard = $1 || -1;  # show all kind of extra info for this tap
@@ -1596,9 +1596,9 @@ if ( $op =~ /board(-?\d*)/i ) {
 } # Board
 
 
-################################
+################################################################################
 # short list, aka daily statistics
-################################
+################################################################################
 
 } elsif ( $op eq "short" ) {
   my $i = scalar( @lines );
@@ -1718,13 +1718,13 @@ if ( $op =~ /board(-?\d*)/i ) {
     print "<br/>That was the whole list<p>\n" unless ($yrlim);
   }
   exit(); # All done
+} # Short list
 
-
-################################
+################################################################################
 # Annual summary
-################################
+################################################################################
 
-} elsif ( $op =~ /Years(d?)/i ) {
+elsif ( $op =~ /Years(d?)/i ) {
   my $sortdr = $1;
   my %sum;
   my %alc;
@@ -1859,14 +1859,14 @@ if ( $op =~ /board(-?\d*)/i ) {
   print  "<hr/>\n";
 
   exit();
+} # Annual stats
 
-
-################################
+################################################################################
 # Monthly statistics
 # from %monthdrinks and %monthprices
-################################
+################################################################################
 
-} elsif ( $op =~ /Months([BS])?/ ) {
+elsif ( $op =~ /Months([BS])?/ ) {
   my $defbig = $mobile ? "S" : "B";
   my $bigimg = $1 || $defbig;
   $bigimg =~ s/S//i ;
@@ -2108,13 +2108,13 @@ if ( $op =~ /board(-?\d*)/i ) {
   }
   print $t;  # The table we built above
   exit();
+} # Monthly stats
 
-
-################################
+################################################################################
 # About page
-################################
+################################################################################
 
-} elsif ( $op eq "About" ) {
+elsif ( $op eq "About" ) {
 
   print "<hr/><h2>Beertracker</h2>\n";
   print "Copyright 2016-2024 Heikki Levanto. <br/>";
@@ -2164,14 +2164,14 @@ if ( $op =~ /board(-?\d*)/i ) {
   print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
   print "&nbsp; <a href='$url?o=geo'><span>Geolocation summary</span></a><br/>\n";
   exit();
+} # About
 
 
-
-################################
+################################################################################
 # Geolocation debug
-################################
+################################################################################
 
-} elsif ( $op eq "geo" ) {
+elsif ( $op eq "geo" ) {
   if (!$qry || $qry =~ /^ *[0-9 .]+ *$/ ) {  # numerical query
     print "<hr><b>Geolocations</b><p>\n";
     if ($qry) {
@@ -2255,17 +2255,17 @@ if ( $op =~ /board(-?\d*)/i ) {
     }
     print "</table>\n";
   }
+}  # Geo debug
 
-
-} elsif ( $op eq "full" ) {
+elsif ( $op eq "full" ) {
   # Ignore for now, we print the full list later.
+}
 
-
-################################
+################################################################################
 # various lists (beer, location, etc)
-################################
+################################################################################
 
-} elsif ( $op ) {
+elsif ( $op ) {
   print "<hr/><a href='$url'><span><b>$op</b> list</span></a>\n";
   print "<div class='no-print'>\n";
   if ( !$sortlist) {
@@ -2427,12 +2427,12 @@ $com, $geo ) =
     "All</a> ($ysum)<br/>\n" if($ysum);
 
   exit();
-}
+}  # Lists
 
 
-################################
+################################################################################
 # Regular list, on its own, or after graph and/or beer board
-################################
+################################################################################
 
 if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
@@ -2761,7 +2761,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     "</b><br/>\n";
     print "<br/>\n";
   }
-}
+} # Full
 
 # HTML footer
 print "</body></html>\n";
@@ -2769,9 +2769,9 @@ print "</body></html>\n";
 exit();
 
 
-################################
+################################################################################
 # Various small helpers
-################################
+################################################################################
 
 # Helper to trim leading and trailing spaces
 sub trim {
