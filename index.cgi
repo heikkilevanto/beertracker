@@ -2586,7 +2586,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         print "Geo: $gg $tdist $guess<br/>\n" if ($gg || $guess || $tdist);
       }
     }
-    # The beer entry itself
+    # The beer entry itself ##############
     if ( $date ne $effdate ) {
       $time = "($time)";
     }
@@ -2652,9 +2652,9 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
           } else {
             print " <b>$guess ??? </b>  ";
           }
-          if ( $gdist > 0 ) {
+          #if ( $gdist > 0 ) {
             print " (" . unit($gdist,"m"). ")";
-          }
+          #}
           print "<br>\n";
         }
       }
