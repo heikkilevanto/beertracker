@@ -1870,17 +1870,19 @@ elsif ( $op =~ /Months([BS])?/ ) {
   my $defbig = $mobile ? "S" : "B";
   my $bigimg = $1 || $defbig;
   $bigimg =~ s/S//i ;
-  if ( $allfirstdate !~ /^(\d\d\d\d)/ ) {
-    print "Oops, no year from allfirstdate '$allfirstdate' <br/>\n";
-    exit(); # Never mind missing footers
-  }
   print "<hr/>Other stats: \n";
   print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
   print "<a href='$url?o=Months'><b>Months</b></a>&nbsp;\n";
   print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
   print "<hr/>\n";
 
+  if ( $allfirstdate !~ /^(\d\d\d\d)/ ) {
+    print "Oops, no year from allfirstdate '$allfirstdate' <br/>\n";
+    exit(); # Never mind missing footers
+  }
   my $firsty=$1;
+  my $pngfile = $plotfile;
+  $pngfile =~ s/\.plot/-stat.png/;
   my $lasty = datestr("%Y",0);
   my $lastym = datestr("%Y-%m",0);
   my $dayofmonth = datestr("%d");
@@ -1889,11 +1891,6 @@ elsif ( $op =~ /Months([BS])?/ ) {
   my @ydays;
   my @ydrinks;
   my @yprice;
-  my $t = "";
-    $t .= "<br/><table border=1 >\n";
-  $t .="<tr><td>&nbsp;</td>\n";
-  my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
   my @yearcolors;
   my $y = $lasty;
   $yearcolors[$y--] = "#FF0000";  # current year, in bright red
@@ -1915,6 +1912,11 @@ elsif ( $op =~ /Months([BS])?/ ) {
   }
   # Anything after this will be white by default
   # Should work for a few years
+  my $t = "";
+    $t .= "<br/><table border=1 >\n";
+  $t .="<tr><td>&nbsp;</td>\n";
+  my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
   foreach $y ( reverse($firsty .. $lasty) ) {
     $t .= "<td align='right' ><b style='color:$yearcolors[$y]'>&nbsp;$y</b></td>";
   }
