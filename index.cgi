@@ -1922,7 +1922,6 @@ elsif ( $op =~ /Months([BS])?/ ) {
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
   my @plotlines; # data lines for plotting
   my $plotyear = 2001;
-  #$firsty = 2022; # ### While developing
   foreach $y ( reverse($firsty .. $lasty) ) {
     $t .= "<td align='right' ><b style='color:$yearcolors[$y]'>&nbsp;$y</b></td>";
   }
@@ -2011,17 +2010,16 @@ elsif ( $op =~ /Months([BS])?/ ) {
   }
   print F sort(@plotlines);
   # Projections
-  my $curmonth = datestr("%m",0);
-  my $cur = $months[$curmonth];
+  my $cur = datestr("%m",0);
   $curmonth = datestr("%Y-%m",0);
   $d = ($monthdrinks{$curmonth}||0) / $onedrink ;
   my $min = sprintf("%3.1f", $d / 30);  # for whole month
   my $avg = $d / $dayofmonth;
   my $max = 2 * $avg - $min;
   $max = sprintf("%3.1f", $max);
-  #print F "\n";
-  #print F "2001-$cur $min\n";
-  #print F "2001-$cur $max\n";
+  print F "\n";
+  print F "2001-$cur $min\n";
+  print F "2001-$cur $max\n";
   close(F);
   $t .= "<tr><td>Avg</td>\n";
   my $granddr = 0;
@@ -2081,6 +2079,7 @@ elsif ( $op =~ /Months([BS])?/ ) {
     $imgsz = "640,480";
   }
   my $white = "textcolor \"white\" ";
+  my $firstm = $lastm+1;
   my $cmd = "" .
        "set term png small size $imgsz \n".
        "set out \"$pngfile\" \n".
@@ -2096,15 +2095,17 @@ elsif ( $op =~ /Months([BS])?/ ) {
        "set timefmt \"%Y-%m\" \n".
        "set format x \"%b\"\n" .
        #"set format x \"%b\"\n" .
-       "set xrange [\"2000-" . ($lastm+1) . "\" : ] \n " .
+       "set xrange [\"2000-$firstm\" : ] \n " .
        "set key right top horizontal textcolor \"white\" \n " .
        "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
           "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
        "set border linecolor \"white\" \n" .
+       "set arrow from \"2000-$firstm\", 5 to \"2001-$lastm\", 5 nohead linewidth 0.1 linecolor \"white\" \n" .
+       "set arrow from \"2000-$firstm\", 10 to \"2001-$lastm\", 10 nohead linewidth 0.1 linecolor \"white\" \n" .
        "plot ";
   my $lw = 2;
   my $yy = $firsty;
-  for ( my $i = 2*($lasty - $firsty) +3; $i > 2; $i -= 2) {
+  for ( my $i = 2*($lasty - $firsty) +3; $i > 2; $i -= 2) { # i is the column in plot file
     $lw++ if ( $yy == $lasty );
     my $col = "$yearcolors[$yy]";
     $cmd .= "\"$plotfile\" " .
