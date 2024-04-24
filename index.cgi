@@ -1884,8 +1884,10 @@ elsif ( $op =~ /Months([BS])?/ ) {
   my $pngfile = $plotfile;
   $pngfile =~ s/\.plot/-stat.png/;
   my $lasty = datestr("%Y",0);
-  my $lastym = datestr("%Y-%m",0);
+  my $lastm = datestr("%m",0);
+  my $lastym = "$lasty-$lastm";
   my $dayofmonth = datestr("%d");
+
   open F, ">$plotfile"
       or error ("Could not open $plotfile for writing");
   my @ydays;
@@ -1917,6 +1919,8 @@ elsif ( $op =~ /Months([BS])?/ ) {
   $t .="<tr><td>&nbsp;</td>\n";
   my @months = ( "", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
+  my @plotlines; # data lines for plotting
+  my $plotyear = 2001;
   foreach $y ( reverse($firsty .. $lasty) ) {
     $t .= "<td align='right' ><b style='color:$yearcolors[$y]'>&nbsp;$y</b></td>";
   }
@@ -1931,13 +1935,14 @@ elsif ( $op =~ /Months([BS])?/ ) {
     }
   }
   foreach $m ( 1 .. 12 ) {
+    my $plotline;
     $t .= "<tr><td><b>$months[$m]</b></td>\n";
-    print F "$months[$m] ";
+    $plotline = sprintf("%4d-%02d ", $plotyear, $m );
+    $plotyear-- if ( $m == $lastm );
     my $mdrinks = 0;
     my $mprice = 0;
     my $mcount = 0;
     foreach $y ( reverse($firsty .. $lasty) ) {
-      #print "<td>$y - $m </td>\n";
       my $calm = sprintf("%d-%02d",$y,$m);
       my $d="";
       my $dd;
@@ -1974,12 +1979,12 @@ elsif ( $op =~ /Months([BS])?/ ) {
       }
       $t .= "</td>\n";
       if ($y == $lasty ) { # First column is special for projections
-        print F "NaN ";
+        $plotline .= "NaN ";
       }
       if ( !$d ) { # Don't plot after the current month,
-        print F "NaN ";  # not known yet
+        $plotline .=  "NaN ";  # not known yet
       } else {
-        print F "$dd ";
+        $plotline .=  "$dd ";
       }
     }
     if ( $mcount) {
@@ -1992,8 +1997,10 @@ elsif ( $op =~ /Months([BS])?/ ) {
         "<br/>&nbsp;$mprice</td>\n";
    }
     $t .= "</tr>";
-    print F "\n";
+    $plotline .=  "\n";
+    push (@plotlines, $plotline);
   }
+  print F sort(@plotlines);
   # Projections
   my $curmonth = datestr("%m",0);
   my $cur = $months[$curmonth];
@@ -2003,10 +2010,9 @@ elsif ( $op =~ /Months([BS])?/ ) {
   my $avg = $d / $dayofmonth;
   my $max = 2 * $avg - $min;
   $max = sprintf("%3.1f", $max);
-  print F "\n";
-  print F "$cur $min\n";
-  #print F "$cur $avg\n";
-  print F "$cur $max\n";
+  #print F "\n";
+  #print F "2001-$cur $min\n";
+  #print F "2001-$cur $max\n";
   close(F);
   $t .= "<tr><td>Avg</td>\n";
   my $granddr = 0;
@@ -2078,8 +2084,10 @@ elsif ( $op =~ /Months([BS])?/ ) {
        "set y2tics 7 $white\n".
        "set grid xtics ytics\n".
        "set xdata time \n".
-       "set timefmt \"%b\" \n".
+       "set timefmt \"%Y-%m\" \n".
        "set format x \"%b\"\n" .
+       #"set format x \"%b\"\n" .
+       "set xrange [\"2000-" . ($lastm+1) . "\" : ] \n " .
        "set key right top horizontal textcolor \"white\" \n " .
        "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
           "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
