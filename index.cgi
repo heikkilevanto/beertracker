@@ -2024,6 +2024,7 @@ elsif ( $op =~ /Months([BS])?/ ) {
   $t .= "<tr><td>Avg</td>\n";
   my $granddr = 0;
   my $granddays = 0;
+  my $grandprice = 0;
   foreach $y ( reverse($firsty .. $lasty) ) {
     my $d = "";
     my $dw = "";
@@ -2034,14 +2035,17 @@ elsif ( $op =~ /Months([BS])?/ ) {
       $dw = $1 if ($d=~/([0-9.]+)/);
       $dw = unit(int($dw*7+0.5), "/w");
       $d = unit($d, "/d");
+      $p = int(30*$yprice[$y]/$ydays[$y]+0.5);
+      $grandprice += $yprice[$y];
     }
-    $t .= "<td align=right>$d<br/>$dw</td>\n";
+    $t .= "<td align=right>$d<br/>$dw<br/>$p</td>\n";
   }
   my $d = sprintf("%3.1f", $granddr / $granddays / $onedrink) ;
   my $dw = $1 if ($d=~/([0-9.]+)/);
   $dw = unit(int($dw*7+0.5), "/w");
   $d = unit($d, "/d");
-  $t .= "<td align=right>$d<br/>$dw</td>\n";
+  $p = int (30 * $grandprice / $granddays + 0.5);
+  $t .= "<td align=right>$d<br/>$dw<br>$p</td>\n";
   $t .= "</tr>\n";
 
   $t .= "<tr><td>Sum</td>\n";
@@ -2102,6 +2106,7 @@ elsif ( $op =~ /Months([BS])?/ ) {
        "set border linecolor \"white\" \n" .
        "set arrow from \"2000-$firstm\", 5 to \"2001-$lastm\", 5 nohead linewidth 0.1 linecolor \"white\" \n" .
        "set arrow from \"2000-$firstm\", 10 to \"2001-$lastm\", 10 nohead linewidth 0.1 linecolor \"white\" \n" .
+       "set arrow from \"2001-01\", 0 to \"2001-01\", 10 nohead linewidth 0.1 linecolor \"white\" \n" .
        "plot ";
   my $lw = 2;
   my $yy = $firsty;
@@ -2109,10 +2114,10 @@ elsif ( $op =~ /Months([BS])?/ ) {
     $lw++ if ( $yy == $lasty );
     my $col = "$yearcolors[$yy]";
     $cmd .= "\"$plotfile\" " .
-            "using 1:$i with line lc \"$col\" lw $lw notitle , " ;
+            "using 1:$i with line lc \"$col\" lw $lw notitle smooth cspline, " ;
     my $j = $i +1;
     $cmd .= "\"$plotfile\" " .
-            "using 1:$j with line lc \"$col\" lw $lw notitle , " ;
+            "using 1:$j with line lc \"$col\" lw $lw notitle smooth cspline, " ;
     $lw+= 0.33;
     $yy++;
   }
