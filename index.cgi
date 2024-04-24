@@ -1894,7 +1894,8 @@ elsif ( $op =~ /Months([BS])?/ ) {
   my @ydrinks;
   my @yprice;
   my @yearcolors;
-  my $y = $lasty;
+  my $y = $lasty+1;
+  $yearcolors[$y--] = "#FFFFFF";  # Next year, not really used
   $yearcolors[$y--] = "#FF0000";  # current year, in bright red
   $yearcolors[$y--] = "#800000";  # Prev year, in darker red
   $yearcolors[$y--] = "#00F0F0";  # Cyan
@@ -1921,27 +1922,29 @@ elsif ( $op =~ /Months([BS])?/ ) {
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec");
   my @plotlines; # data lines for plotting
   my $plotyear = 2001;
+  #$firsty = 2022; # ### While developing
   foreach $y ( reverse($firsty .. $lasty) ) {
     $t .= "<td align='right' ><b style='color:$yearcolors[$y]'>&nbsp;$y</b></td>";
   }
   $t .= "<td align='right'><b>&nbsp;Avg</b></td>";
   $t .= "</tr>\n";
   # If in January, extend to Feb, so we see the beginning of the line
-  if ( datestr("%m",0) eq "01" ) {
-    my $nextm = "$lasty-02";
-    if ( ! $monthdrinks{$nextm} ) {
-      $monthdrinks{$nextm} = $monthdrinks{$lastym} / $dayofmonth * 30;
-      $monthprices{$nextm} = 0;
-    }
-  }
+#  if ( datestr("%m",0) eq "01" ) {
+#    my $nextm = "$lasty-02";
+#    if ( ! $monthdrinks{$nextm} ) {
+#      $monthdrinks{$nextm} = $monthdrinks{$lastym} / $dayofmonth * 30;
+#      $monthprices{$nextm} = 0;
+#    }
+#  }
   foreach $m ( 1 .. 12 ) {
     my $plotline;
     $t .= "<tr><td><b>$months[$m]</b></td>\n";
+    $plotyear-- if ( $m == $lastm+1 );
     $plotline = sprintf("%4d-%02d ", $plotyear, $m );
-    $plotyear-- if ( $m == $lastm );
     my $mdrinks = 0;
     my $mprice = 0;
     my $mcount = 0;
+    my $prevdd = "NaN";
     foreach $y ( reverse($firsty .. $lasty) ) {
       my $calm = sprintf("%d-%02d",$y,$m);
       my $d="";
@@ -1979,13 +1982,19 @@ elsif ( $op =~ /Months([BS])?/ ) {
       }
       $t .= "</td>\n";
       if ($y == $lasty ) { # First column is special for projections
-        $plotline .= "NaN ";
+        $plotline .= "NaN  ";
       }
-      if ( !$d ) { # Don't plot after the current month,
-        $plotline .=  "NaN ";  # not known yet
+      $dd = "NaN" unless ($d);  # unknown value
+      if ( $plotyear == 2001 ) {  # After current month
+        if ( $m == 1 ) {
+          $plotline .=  "$dd $prevdd  ";
+        } else {
+          $plotline .=  "$dd NaN  ";
+        }
       } else {
-        $plotline .=  "$dd ";
+        $plotline .=  "NaN $dd  ";
       }
+      $prevdd = $dd;
     }
     if ( $mcount) {
       $mdrinks = sprintf("%3.1f", $mdrinks/$mcount);
@@ -2095,10 +2104,14 @@ elsif ( $op =~ /Months([BS])?/ ) {
        "plot ";
   my $lw = 2;
   my $yy = $firsty;
-  for ( my $i = $lasty - $firsty +3; $i > 2; $i--) {
+  for ( my $i = 2*($lasty - $firsty) +3; $i > 2; $i -= 2) {
     $lw++ if ( $yy == $lasty );
+    my $col = "$yearcolors[$yy]";
     $cmd .= "\"$plotfile\" " .
-            "using 1:$i with line lc \"$yearcolors[$yy]\" lw $lw notitle , " ;
+            "using 1:$i with line lc \"$col\" lw $lw notitle , " ;
+    my $j = $i +1;
+    $cmd .= "\"$plotfile\" " .
+            "using 1:$j with line lc \"$col\" lw $lw notitle , " ;
     $lw+= 0.33;
     $yy++;
   }
