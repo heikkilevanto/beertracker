@@ -1458,6 +1458,7 @@ if ( $op =~ /board(-?\d*)/i ) {
     $oldbeer =~ s/[^a-z0-9]//ig; # and all non-ascii characters
 
     print "<table border=0 style='white-space: nowrap;'>\n";
+    my $previd  = 0;
     foreach $e ( @$beerlist )  {
       $nbeers++;
       my $id = $e->{"id"} || 0;
@@ -1471,6 +1472,10 @@ if ( $op =~ /board(-?\d*)/i ) {
         next unless ( $sty =~ /$qry/ );
       }
 
+      if ( $id != $previd +1 ) {
+        my $missing = $previd +1 ;
+        print "<tr><td align=right>$missing</td><td align=right>. . .</td></tr>\n";
+      }
       my $thisbeer = "$mak : $beer";  # Remember current beer for opening
       $thisbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
       $thisbeer =~ s/[^a-z0-9]//gi; # and all non-ascii characters
@@ -1584,6 +1589,7 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "<td>$dispbeer $dispmak ($country) $sty</td>\n";
         print "</tr>\n";
       }
+      $previd = $id;
     } # beer loop
     print "</table>\n";
     if (! $nbeers ) {
