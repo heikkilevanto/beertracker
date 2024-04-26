@@ -1425,6 +1425,7 @@ if ( $op =~ /board(-?\d*)/i ) {
   my $cachefile = $datadir . $scrapers{$locparam};
   $cachefile =~ s/\.pl/.cache/;
   my $json = "";
+  my $loaded = 0;
   my $cacheage = (-M $cachefile) * 24 * 60 ; # in minutes
   if ( -f $cachefile && $cacheage < 20 && -s $cachefile > 256 && $qrylim ne "f" ) {
     open CF, $cachefile or error ("Could not open $cachefile for reading");
@@ -1435,15 +1436,18 @@ if ( $op =~ /board(-?\d*)/i ) {
   }
   if ( !$json ){
     $json = `perl $script`;
+    $loaded = 1;
   }
   if (! $json) {
     print "Sorry, could not get the list from $locparam<br/>\n";
     print "<!-- Error running " . $scrapers{$locparam} . ". \n";
     print "Result: '$json'\n -->\n";
   }else {
-    open CF, ">$cachefile" or error( "Could not open $cachefile for writing");
-    print CF $json;
-    close CF;
+    if ($loaded) {
+      open CF, ">$cachefile" or error( "Could not open $cachefile for writing");
+      print CF $json;
+      close CF;
+    }
     chomp($json);
     #print "<!--\nPage:\n$json\n-->\n";  # for debugging
     my $beerlist = JSON->new->utf8->decode($json);
