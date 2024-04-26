@@ -102,6 +102,7 @@ $shortnames{"Ølsnedkeren"} = "Øls";
 $shortnames{"Hooked, Vesterbro"} = "Hooked Vbro";
 $shortnames{"Hooked, Nørrebro"} = "Hooked Nbro";
 $shortnames{"Dennis Place"} = "Dennis";
+$shortnames{"Væskebalancen"} = "VB";
 
 # currency conversions
 my %currency;
@@ -1643,8 +1644,8 @@ if ( $op =~ /board(-?\d*)/i ) {
         $entry .= " " . unit($daydrinks,"d") . " " . unit($daymsum,"kr");
         $entry .= " " . unit(sprintf("%0.2f",$bloodalc{$lastdate}), "‰")
           if ( ( $bloodalc{$lastdate} || 0 ) > 0.01 );
-        print "$entry";
-        print "$places<br/>\n";
+        print "<span style='white-space: nowrap'>$entry";
+        print "$places</span><br/>\n";
         $maxlines--;
         last if ($maxlines == 0); # if negative, will go for ever
       }
@@ -1664,9 +1665,9 @@ if ( $op =~ /board(-?\d*)/i ) {
         } while ( $zerodate gt $effdate );
         $ndays-=3;
         if ( $ndays == 1 ) {
-          print "... (1 day) ...<br/>\n";
+          print ". . . <br/>\n";
         } elsif ( $ndays > 1) {
-          print "... ($ndays days) ...<br/>\n";
+          print ". . . ($ndays days) . . .<br/>\n";
         }
       }
       my $thismonth = substr($effdate,0,7); #yyyy-mm
@@ -1675,7 +1676,7 @@ if ( $op =~ /board(-?\d*)/i ) {
         $bold = "b";
         $month = $thismonth;
       }
-      $wday = "<b>$wday</b>" if ($wday eq "Fri");
+      $wday = "<b>$wday</b>" if ($wday =~ /Fri|Sat|Sun/);  # mark wkends
       $entry = filt($effdate, $bold) . " " . $wday ;
       $places = "";
       $lastdate = $effdate;
@@ -1691,6 +1692,7 @@ if ( $op =~ /board(-?\d*)/i ) {
         my $s = $shortnames{$k};
         $loc =~ s/$k/$s/i;
       }
+      $loc =~ s/ place$//i;  # Dorthes Place => Dorthes
       $loc =~ s/ /&nbsp;/gi;   # Prevent names breaking in the middle
       if ( $places !~ /$loc/ ) {
         $places .= " " . filt($full, "", $loc, "short");
@@ -2790,7 +2792,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     "</b><br/>\n";
     print "<br/>\n";
   }
-} # Full
+} # Full list
 
 # HTML footer
 print "</body></html>\n";
