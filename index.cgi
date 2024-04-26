@@ -2114,11 +2114,11 @@ elsif ( $op =~ /Months([BS])?/ ) {
     $lw++ if ( $yy == $lasty );
     my $col = "$yearcolors[$yy]";
     $cmd .= "\"$plotfile\" " .
-            "using 1:$i with line lc \"$col\" lw $lw notitle smooth cspline, " ;
+            "using 1:$i with line lc \"$col\" lw $lw notitle , " ;
     my $j = $i +1;
     $cmd .= "\"$plotfile\" " .
-            "using 1:$j with line lc \"$col\" lw $lw notitle smooth cspline, " ;
-    $lw+= 0.33;
+            "using 1:$j with line lc \"$col\" lw $lw notitle , " ;
+    $lw+= 0.25;
     $yy++;
   }
   # Finish by plotting low/high projections for current month
