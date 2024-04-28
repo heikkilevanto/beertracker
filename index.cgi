@@ -676,7 +676,7 @@ if ( $q->request_method eq "POST" ) {
 
   # Redirect to the same script, without the POST, so we see the results
   # But keep $op and $qry (maybe also filters?)
-  print $q->redirect( "$url?o=$op&q=$qry" );
+  print $q->redirect( "$url?o=$op&q=$qry#here" );
 
   exit();
 } # POST data
@@ -1554,7 +1554,7 @@ if ( $op =~ /board(-?\d*)/i ) {
         if ($extraboard == $id) {
           $linkid = "-3";  # Force no expansion
         }
-        print "<a href='$url?o=board$linkid'><span width=100% $beerstyle>$id</span></a> ";
+        print "<a href='$url?o=board$linkid'><span width=100% $beerstyle id='here'>$id</span></a> ";
         print "</td>\n";
 
         print "<td colspan=4 >";
