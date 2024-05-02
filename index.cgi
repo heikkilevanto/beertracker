@@ -3124,17 +3124,19 @@ sub datestr {
 
 
 # Helper to produce a "Seen" line
+# TODO: Shorten the line. See #315
 sub seenline {
   my $beer = shift;
   my $seenline = "";
   $seenline = "Seen <b>" . ($seen{$beer}). "</b> times: " if ($seen{$beer});
   my $nseen = 0;
   my %mentioned;
+  return $seenline unless ($lastseen{$beer});  # defensive coding
   foreach my $ls ( reverse(split(' ',$lastseen{$beer} ) ) ) {
     $ls =~ s/-\d\d$// if ( $nseen > 2 );  # drop the day
     $ls =~ s/-\d\d$// if ( $nseen > 8); # and the month
     if ( ! $mentioned{$ls} ){
-      $seenline .= " $ls";
+      $seenline .= "$ls ";
       $nseen++;
       $mentioned{$ls}++; # Don't show this date again
       $ls =~ s/-\d\d$//;
