@@ -1570,27 +1570,8 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "</td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
         if ($seen{$beer}) {
-          print "<tr><td>&nbsp;</td><td colspan=4> Seen <b>" . ($seen{$beer}). "</b> times: ";
-          #print "Last: $lastseen{$beer} " if ($lastseen{$beer});
-          if ($lastseen{$beer}) {
-            my $seenline = "";
-            my $nseen = 0;
-            my %mentioned;
-            foreach my $ls ( reverse(split(' ',$lastseen{$beer} ) ) ) {
-              $ls =~ s/-\d\d$// if ( $nseen > 2 );  # drop the day
-              $ls =~ s/-\d\d$// if ( $nseen > 8); # and the month
-              if ( ! $mentioned{$ls} ){
-                $seenline .= " $ls";
-                $nseen++;
-                $mentioned{$ls}++; # Don't show this date again
-                $ls =~ s/-\d\d$//;
-                $mentioned{$ls}++; # Nor this month
-                $ls =~ s/-\d\d$//;
-                $mentioned{$ls}++; # Nor this year
-              }
-            }
-            print $seenline;
-          }
+          my $seenline = seenline ($beer);
+          print "<tr><td>&nbsp;</td><td colspan=4> $seenline";
           print "</td></tr>\n";
           if ($ratecount{$beer}) {
             my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
@@ -2691,17 +2672,17 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       }
       $ratecounts[$rate] ++ if ($rate);
       if ( $qrylim eq "x" ) {
-        print "Seen " . ($seen{$beer}). " times. " if ($seen{$beer});
-        #print "last $lastseen{$beer}. " if ($lastseen{$beer});
         if ($ratecount{$beer}) {
           my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
           if ($ratecount{$beer} == 1 )  {
             print " One rating: <b>$avgrate</b> ";
           } else {
-            print " Avg of <b>$ratecount{$beer}</b> ratings: <b>$avgrate</b>";
+            print " Avg of <b>$ratecount{$beer}</b> ratings: <b>$avgrate</b><br>";
           }
         }
-        print "<br>\n";
+        print "<span style='white-space: nowrap'>";
+        print seenline($beer);
+        print "</span><br>\n";
         if ( $geo ) {
           my (undef, undef, $gg) = geo($geo);
           print "Geo: $gg ";
@@ -3140,6 +3121,31 @@ sub datestr {
   my $dstr = strftime ($form, localtime($usetime + $delta *60*60*24));
   return $dstr;
 }
+
+
+# Helper to produce a "Seen" line
+sub seenline {
+  my $beer = shift;
+  my $seenline = "";
+  $seenline = "Seen <b>" . ($seen{$beer}). "</b> times: " if ($seen{$beer});
+  my $nseen = 0;
+  my %mentioned;
+  foreach my $ls ( reverse(split(' ',$lastseen{$beer} ) ) ) {
+    $ls =~ s/-\d\d$// if ( $nseen > 2 );  # drop the day
+    $ls =~ s/-\d\d$// if ( $nseen > 8); # and the month
+    if ( ! $mentioned{$ls} ){
+      $seenline .= " $ls";
+      $nseen++;
+      $mentioned{$ls}++; # Don't show this date again
+      $ls =~ s/-\d\d$//;
+      $mentioned{$ls}++; # Nor this month
+      $ls =~ s/-\d\d$//;
+      $mentioned{$ls}++; # Nor this year
+    }
+  }
+  return $seenline;
+}
+
 
 # Helper to assign a color for a beer
 sub beercolor {
