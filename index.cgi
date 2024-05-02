@@ -326,7 +326,7 @@ while (<F>) {
        ( $s !~ /misc|mixed/i ) ) {
     $seen{$m}++;
     $seen{$b}++;
-    $lastseen{$b} = $ed;
+    $lastseen{$b} .= "$ed ";
     $seen{$s}++;
   }
   if ($r && $b) {
@@ -1570,8 +1570,27 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "</td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
         if ($seen{$beer}) {
-          print "<tr><td>&nbsp;</td><td colspan=4> Seen <b>" . ($seen{$beer}). "</b> times. ";
-          print "Last: $lastseen{$beer} " if ($lastseen{$beer});
+          print "<tr><td>&nbsp;</td><td colspan=4> Seen <b>" . ($seen{$beer}). "</b> times: ";
+          #print "Last: $lastseen{$beer} " if ($lastseen{$beer});
+          if ($lastseen{$beer}) {
+            my $seenline = "";
+            my $nseen = 0;
+            my %mentioned;
+            foreach my $ls ( reverse(split(' ',$lastseen{$beer} ) ) ) {
+              $ls =~ s/-\d\d$// if ( $nseen > 2 );  # drop the day
+              $ls =~ s/-\d\d$// if ( $nseen > 8); # and the month
+              if ( ! $mentioned{$ls} ){
+                $seenline .= " $ls";
+                $nseen++;
+                $mentioned{$ls}++; # Don't show this date again
+                $ls =~ s/-\d\d$//;
+                $mentioned{$ls}++; # Nor this month
+                $ls =~ s/-\d\d$//;
+                $mentioned{$ls}++; # Nor this year
+              }
+            }
+            print $seenline;
+          }
           print "</td></tr>\n";
           if ($ratecount{$beer}) {
             my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
