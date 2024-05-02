@@ -2669,7 +2669,8 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       if ($sty) {
         my $beerstyle = beercolorstyle("$sty $mak", "$date", "[$sty $mak] : $beer" );
         my $tag="span $beerstyle";
-        my $ssty = shortbeerstyle($sty) if ( $qrylim ne "x" );
+        my $ssty = $sty;
+        $ssty = shortbeerstyle($sty) if ( $qrylim ne "x" );
         print filt("$ssty",$tag) . newmark($sty) . " "   ;
         print "<br>\n" if ( $qrylim eq "x" );
       }
