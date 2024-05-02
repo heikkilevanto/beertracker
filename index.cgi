@@ -321,17 +321,19 @@ while (<F>) {
   $thisloc = $l if $l;
   $seen{$l}++;
   $seen{$restname}++;
-  if ( ( $b !~ /misc|mixed|pilsner/i ) &&
+  my $seenkey = "$m:$b";
+  if ( ( $b !~ /misc|mixed/i ) &&
        ( $m !~ /misc|mixed/i ) &&
        ( $s !~ /misc|mixed/i ) ) {
     $seen{$m}++;
     $seen{$b}++;
-    $lastseen{$b} .= "$ed ";
     $seen{$s}++;
+    $lastseen{$seenkey} .= "$ed ";
+    $seen{$seenkey}++;
   }
   if ($r && $b) {
-    $ratesum{$b} += $r;
-    $ratecount{$b}++;
+    $ratesum{$seenkey} += $r;
+    $ratecount{$seenkey}++;
   }
   if ( ! $edit || ($edit eq $t) ) {
     $foundline = $_; # Remember the last line, or the one we have edited
@@ -1472,6 +1474,7 @@ if ( $op =~ /board(-?\d*)/i ) {
       $loc = $locparam;
       $alc = $e->{"alc"} || "";
       $alc = sprintf("%4.1f",$alc) if ($alc);
+      my $seenkey = "$mak:$beer";
       if ( $qry ) {
         next unless ( $sty =~ /$qry/ );
       }
@@ -1570,15 +1573,15 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "</td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
         if ($seen{$beer}) {
-          my $seenline = seenline ($beer);
+          my $seenline = seenline ($mak, $beer);
           print "<tr><td>&nbsp;</td><td colspan=4> $seenline";
           print "</td></tr>\n";
-          if ($ratecount{$beer}) {
-            my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
+          if ($ratecount{$seenkey}) {
+            my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
             print "<tr><td>&nbsp;</td><td colspan=4>";
             my $rating = "rating";
-            $rating .= "s" if ($ratecount{$beer} > 1 );
-            print "$ratecount{$beer} $rating <b>$avgrate</b>: ";
+            $rating .= "s" if ($ratecount{$seenkey} > 1 );
+            print "$ratecount{$seenkey} $rating <b>$avgrate</b>: ";
             print $ratings[$avgrate];
           print "</td></tr>\n";
           }
@@ -2672,16 +2675,17 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       }
       $ratecounts[$rate] ++ if ($rate);
       if ( $qrylim eq "x" ) {
-        if ($ratecount{$beer}) {
-          my $avgrate = sprintf("%3.1f", $ratesum{$beer}/$ratecount{$beer});
-          if ($ratecount{$beer} == 1 )  {
+        my $seenkey = "$mak:$beer";
+        if ($ratecount{$seenkey}) {
+          my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
+          if ($ratecount{$seenkey} == 1 )  {
             print " One rating: <b>$avgrate</b> ";
           } else {
-            print " Avg of <b>$ratecount{$beer}</b> ratings: <b>$avgrate</b><br>";
+            print " Avg of <b>$ratecount{$seenkey}</b> ratings: <b>$avgrate</b><br>";
           }
         }
         print "<span style='white-space: nowrap'>";
-        print seenline($beer);
+        print seenline($mak, $beer);
         print "</span><br>\n";
         if ( $geo ) {
           my (undef, undef, $gg) = geo($geo);
@@ -3126,13 +3130,15 @@ sub datestr {
 # Helper to produce a "Seen" line
 # TODO: Shorten the line. See #315
 sub seenline {
+  my $maker = shift;
   my $beer = shift;
+  my $seenkey = "$maker:$beer";
   my $seenline = "";
-  $seenline = "Seen <b>" . ($seen{$beer}). "</b> times: " if ($seen{$beer});
+  $seenline = "Seen <b>" . ($seen{$seenkey}). "</b> times: " if ($seen{$seenkey});
   my $nseen = 0;
   my %mentioned;
-  return $seenline unless ($lastseen{$beer});  # defensive coding
-  foreach my $ls ( reverse(split(' ',$lastseen{$beer} ) ) ) {
+  return $seenline unless ($lastseen{$seenkey});  # defensive coding
+  foreach my $ls ( reverse(split(' ',$lastseen{$seenkey} ) ) ) {
     $ls =~ s/-\d\d$// if ( $nseen > 2 );  # drop the day
     $ls =~ s/-\d\d$// if ( $nseen > 8); # and the month
     if ( ! $mentioned{$ls} ){
