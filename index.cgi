@@ -1589,7 +1589,7 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
       } else { # Plain view
         print "<tr><td align=right $beerstyle>";
-        print "<a href='$url?o=board$id'><span width=100% $beerstyle>$id</span></a> ";
+        print "<a href='$url?o=board$id#here'><span width=100% $beerstyle>$id</span></a> ";
         print "</td>\n";
         print "$buttons\n";
         print "<td style='font-size: x-small;' align=right>$alc</td>\n";
