@@ -3208,7 +3208,7 @@ sub beercolorstyle {
 }
 
 # Helper to shorten a beer style
-sub shortbeerstyle{
+sub shortbeerstyle {
   my $sty = shift;
   $sty =~ s/\b(Beer|Style)\b//i; # Stop words
   $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
@@ -3260,4 +3260,14 @@ sub shortbeerstyle{
   $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc
   $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars, in case we didn't get it above
   return $sty;
+}
+
+# Helper to split a data line into a hash
+sub splitline {
+  my $line = shift;
+  my %v;
+  ( $v{"stamp"}, $v{"wday"}, $v{"effdate"}, $v{"loc"}, $v{"mak"}, $v{"beer"},
+    ${"vol"}, $v{"sty"}, $v{"alc"}, $v{"pr"}, $v{"rate"}, $v{"com"}, $v{"geo"})
+      = split( / *; */, $line );
+  return %v;
 }
