@@ -19,15 +19,16 @@ Outline
 Although this is a personal project to scratch my own itch, I might as well
 release it under GPL, in case someone else finds this interesting. The system
 can handle multiple accounts, so if you ask nicely (and if I know you already)
-I may give you one to play with. A few of my friends have tried the system,
-on and off, but they all have given up at some point. Most people don't have
-the discipline to note down every beer they drink.
+I may give you one to play with. A few of my friends have tried the system.
+Most never got started at all. None of them have managed to use it for very
+long. It takes a lot of  discipline to note down every beer you drink. I guess
+I can only do it because I enjoy working with the code as well.
 
 Version 1.0 was released in Feb-2016. It works, and I am using it myself. Of
 course there is a small list of features I will want to add some day "real
 soon now".
 
-As of June 2021, we are at version 1.3, and I am still using this to track
+As of May 2024, we are at version 1.4, and I am still using this to track
 (almost?) all the beers I drink.
 
 ## Installation
