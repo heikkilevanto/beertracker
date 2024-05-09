@@ -1975,7 +1975,11 @@ elsif ( $op =~ /Months([BS])?/ ) {
           $ydays[$y] += $dayofmonth - 30;
         } else {
           $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
-          $d = unit($dd,"/d");
+          if ( $dd < 10 ) {
+            $d = unit($dd,"/d"); #  "9.3/d"
+          } else {
+            $d = $dd; # but "10.3", no room for the /d
+          }
         }
         $mdrinks += $dd;
         $mcount++;
