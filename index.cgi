@@ -1572,19 +1572,19 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "</form>\n";
         print "</td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
-        if ($seen{$beer}) {
-          my $seenline = seenline ($mak, $beer);
-          print "<tr><td>&nbsp;</td><td colspan=4> $seenline";
+        my $seenline = seenline ($mak, $beer);
+        if ($seenline) {
+          print "<tr><td>&nbsp;</td><td colspan=4> '$seenline'";
           print "</td></tr>\n";
-          if ($ratecount{$seenkey}) {
-            my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
-            print "<tr><td>&nbsp;</td><td colspan=4>";
-            my $rating = "rating";
-            $rating .= "s" if ($ratecount{$seenkey} > 1 );
-            print "$ratecount{$seenkey} $rating <b>$avgrate</b>: ";
-            print $ratings[$avgrate];
-          print "</td></tr>\n";
-          }
+        }
+        if ($ratecount{$seenkey}) {
+          my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
+          print "<tr><td>&nbsp;</td><td colspan=4>";
+          my $rating = "rating";
+          $rating .= "s" if ($ratecount{$seenkey} > 1 );
+          print "$ratecount{$seenkey} $rating <b>$avgrate</b>: ";
+          print $ratings[$avgrate];
+        print "</td></tr>\n";
         }
         print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
       } else { # Plain view
