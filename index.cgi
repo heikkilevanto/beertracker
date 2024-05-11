@@ -1573,7 +1573,7 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
         my $seenline = seenline ($mak, $beer);
         if ($seenline) {
-          print "<tr><td>&nbsp;</td><td colspan=4> '$seenline'";
+          print "<tr><td>&nbsp;</td><td colspan=4> $seenline";
           print "</td></tr>\n";
         }
         if ($ratecount{$seenkey}) {
@@ -3131,28 +3131,50 @@ sub datestr {
 
 
 # Helper to produce a "Seen" line
-# TODO: Shorten the line. See #315
 sub seenline {
   my $maker = shift;
   my $beer = shift;
   my $seenkey = "$maker:$beer";
   my $seenline = "";
   $seenline = "Seen <b>" . ($seen{$seenkey}). "</b> times: " if ($seen{$seenkey});
-  my $nseen = 0;
-  my %mentioned;
+  my $prefix = "";
+  my $detail="";
+  my $detailpattern = "";
+  my $nmonths = 0;
+  my $nyears = 0;
   return $seenline unless ($lastseen{$seenkey});  # defensive coding
   foreach my $ls ( reverse(split(' ',$lastseen{$seenkey} ) ) ) {
-    $ls =~ s/-\d\d$// if ( $nseen > 2 );  # drop the day
-    $ls =~ s/-\d\d$// if ( $nseen > 8); # and the month
-    if ( ! $mentioned{$ls} ){
-      $seenline .= "$ls ";
-      $nseen++;
-      $mentioned{$ls}++; # Don't show this date again
-      $ls =~ s/-\d\d$//;
-      $mentioned{$ls}++; # Nor this month
-      $ls =~ s/-\d\d$//;
-      $mentioned{$ls}++; # Nor this year
+    my $comma = ",";
+    if ( ! $prefix || $ls !~ /^$prefix/ ) {
+      if ( $nmonths++ < 2 ) {
+        ($prefix) = $ls =~ /^(\d+-\d+)/ ;  # yyyy-mm
+        $detailpattern = "(\\d\\d)\$";
+      } elsif ( $nyears++ < 1 ) {
+        ($prefix) = $ls =~ /^(\d+)/ ;  # yyyy
+        $detailpattern = "(\\d\\d)-\\d\\d\$";
+      } else {
+        ($prefix) = $ls =~ /^(\d+)/ ;  # yyyy
+        $detailpattern = "";
+      }
+      $comma = ":" ;
+      $seenline .= " <b>$prefix</b>";
     }
+    next unless ($detailpattern);
+    my ($det) = $ls =~ /$detailpattern/ ;
+    next if ($det eq $detail);
+    $detail = $det;
+    $seenline .= $comma . "$det";
+#    $ls =~ s/-\d\d$// if ( $nseen > 2 );  # drop the day
+#    $ls =~ s/-\d\d$// if ( $nseen > 8); # and the month
+#    if ( ! $mentioned{$ls} ){
+#      $seenline .= "$ls ";
+#      $nseen++;
+#      $mentioned{$ls}++; # Don't show this date again
+#      $ls =~ s/-\d\d$//;
+#      $mentioned{$ls}++; # Nor this month
+#      $ls =~ s/-\d\d$//;
+#      $mentioned{$ls}++; # Nor this year
+#    }
   }
   return $seenline;
 }
