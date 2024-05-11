@@ -1550,7 +1550,6 @@ if ( $op =~ /board(-?\d*)/i ) {
       my $beerstyle = beercolorstyle($origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
 
       if ($extraboard == $id  || $extraboard == -2) { # More detailed view
-        $mak .= ":" if ($mak);
         print "<tr><td colspan=5><hr></td></tr>\n";
         print "<tr><td $beerstyle>";
         my $linkid = $id;
@@ -1562,7 +1561,7 @@ if ( $op =~ /board(-?\d*)/i ) {
 
         print "<td colspan=4 >";
         print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
-        print "$mak $dispbeer <span style='font-size: x-small;'>($country)</span></span></td></tr>\n";
+        print "$mak: $dispbeer <span style='font-size: x-small;'>($country)</span></span></td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
         print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
         print "$hiddenbuttons";
