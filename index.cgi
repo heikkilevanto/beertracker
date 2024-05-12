@@ -3152,10 +3152,11 @@ sub seenline {
   my $detailpattern = "";
   my $nmonths = 0;
   my $nyears = 0;
-  return $seenline unless ($lastseen{$seenkey});  # defensive coding
-  foreach my $ls ( reverse(split(' ',$lastseen{$seenkey} ) ) ) {
+  my $lastseenline = $lastseen{$seenkey} || "";
+  foreach my $ls ( reverse(split(' ', $lastseenline ) ) ) {
     my $comma = ",";
     if ( ! $prefix || $ls !~ /^$prefix/ ) {
+      $comma = ":" ;
       if ( $nmonths++ < 2 ) {
         ($prefix) = $ls =~ /^(\d+-\d+)/ ;  # yyyy-mm
         $detailpattern = "(\\d\\d)\$";
@@ -3163,28 +3164,16 @@ sub seenline {
         ($prefix) = $ls =~ /^(\d+)/ ;  # yyyy
         $detailpattern = "(\\d\\d)-\\d\\d\$";
       } else {
-        ($prefix) = $ls =~ /^(\d+)/ ;  # yyyy
-        $detailpattern = "";
+        $prefix = "20";
+        $detailpattern = "^20(\\d\\d)";
+        $comma = "";
       }
-      $comma = ":" ;
       $seenline .= " <b>$prefix</b>";
     }
-    next unless ($detailpattern);
     my ($det) = $ls =~ /$detailpattern/ ;
     next if ($det eq $detail);
     $detail = $det;
     $seenline .= $comma . "$det";
-#    $ls =~ s/-\d\d$// if ( $nseen > 2 );  # drop the day
-#    $ls =~ s/-\d\d$// if ( $nseen > 8); # and the month
-#    if ( ! $mentioned{$ls} ){
-#      $seenline .= "$ls ";
-#      $nseen++;
-#      $mentioned{$ls}++; # Don't show this date again
-#      $ls =~ s/-\d\d$//;
-#      $mentioned{$ls}++; # Nor this month
-#      $ls =~ s/-\d\d$//;
-#      $mentioned{$ls}++; # Nor this year
-#    }
   }
   return $seenline;
 }
