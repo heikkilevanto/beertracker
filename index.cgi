@@ -321,7 +321,7 @@ while (<F>) {
   $thisloc = $l if $l;
   $seen{$l}++;
   $seen{$restname}++;
-  my $seenkey = "$m:$b";
+  my $seenkey = seenkey($m,$b);
   if ( ( $b !~ /misc|mixed/i ) &&
        ( $m !~ /misc|mixed/i ) &&
        ( $s !~ /misc|mixed/i ) ) {
@@ -1474,7 +1474,7 @@ if ( $op =~ /board(-?\d*)/i ) {
       $loc = $locparam;
       $alc = $e->{"alc"} || "";
       $alc = sprintf("%4.1f",$alc) if ($alc);
-      my $seenkey = "$mak:$beer";
+      my $seenkey = seenkey($mak,$beer);
       if ( $qry ) {
         next unless ( $sty =~ /$qry/ );
       }
@@ -2678,7 +2678,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       }
       $ratecounts[$rate] ++ if ($rate);
       if ( $qrylim eq "x" ) {
-        my $seenkey = "$mak:$beer";
+        my $seenkey = seenkey($mak,$beer);
         if ($ratecount{$seenkey}) {
           my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
           if ($ratecount{$seenkey} == 1 )  {
@@ -3129,12 +3129,20 @@ sub datestr {
   return $dstr;
 }
 
+# Helper to make a seenkey, an index to %lastseen and %seen
+# Normalizes the names a bit, to catch some misspellings etc
+sub seenkey {
+  my $maker = shift || "";
+  my $beer = shift || "";
+  my $key = lc("$maker:$beer");
+  return $key;
+}
 
 # Helper to produce a "Seen" line
 sub seenline {
   my $maker = shift;
   my $beer = shift;
-  my $seenkey = "$maker:$beer";
+  my $seenkey = seenkey($maker,$beer);
   my $seenline = "";
   $seenline = "Seen <b>" . ($seen{$seenkey}). "</b> times: " if ($seen{$seenkey});
   my $prefix = "";
