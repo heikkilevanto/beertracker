@@ -3135,6 +3135,8 @@ sub seenkey {
   my $maker = shift || "";
   my $beer = shift || "";
   my $key = lc("$maker:$beer");
+  $key =~ s/&amp;/&/g;
+  $key =~ s/[^a-zåæø0-9:]//gi;  # Skip all special characters and spaces
   return $key;
 }
 
