@@ -9,6 +9,56 @@
 #
 
 
+################################################################################
+# Overview
+################################################################################
+#
+# The code consists of one very long main function that produces whatever
+# output we need, and a small number of helpers. (Ought to be refactored
+# in version 2). Sections are delimited by comment blocks like above.
+#
+
+# Sections of the main function:
+# - Init and setup
+#   - Modules and UTF-8 stuff
+#   - Constants and setup
+#
+# - Early processing
+#   - Input Parameters - data file fields are the same order
+#   - Dump of the data file
+#   - Read the data file
+#   - POST data into the file
+#   - HTML head
+#   - Javascript trickery for the browser-side stuff
+#
+# - Various sections of the output page. Mostly conditional on $op
+#   - Main input form, always there
+#   - Graph. There for some selected $ops: graph, board
+#   - Beer board (list) for the location.
+#   - Short list, aka daily statistics
+#   - Annual summary
+#   - Monthly statistics
+#   - About page
+#   - Geolocation debug
+#   - various lists (beer, wine, booze, location, resturant, etc)
+#   - Regular full list. Shown by itself, or after graph, board
+
+# Helper functions. These can be grouped into
+# - String manipulation (trim)
+# - Input parameter normalizing
+# - Stuff for the main list filters
+# - Making a NEW marker for things not seen before
+# - Making various links
+# - Prices. Normalizing, currency conversions
+# - Displaying units
+# - Error handling
+# - Geo coordinate stuff
+# - Formatting dates
+# - Producing the "last seen" line
+# - Color coding and shortening beer styles
+
+
+
 
 ################################################################################
 # Modules and UTF-8 stuff
@@ -17,11 +67,14 @@
 use POSIX qw(strftime localtime locale_h);
 use JSON;
 use Cwd qw(cwd);
+
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+
 use locale; # The data file can contain locale overrides
 setlocale(LC_COLLATE, "da_DK.utf8"); # but dk is the default
 setlocale(LC_CTYPE, "da_DK.utf8");
+
 use open ':encoding(UTF-8)';  # Data files are in utf-8
 binmode STDOUT, ":utf8"; # Stdout only. Not STDIN, the CGI module handles that
 
@@ -79,7 +132,6 @@ $links{"Ølbaren"} = "http://oelbaren.dk/oel/";
 $links{"Ølsnedkeren"} = "https://www.olsnedkeren.dk/";
 $links{"Fermentoren"} = "http://fermentoren.com/index";
 $links{"Dry and Bitter"} = "https://www.dryandbitter.com/collections/beer/";
-   # Used to be http://www.dryandbitter.com/products.php, changed in Dec-2020
 #$links{"Dudes"} = "http://www.dudes.bar"; # R.I.P Dec 2018
 $links{"Taphouse"} = "http://www.taphouse.dk/";
 $links{"Slowburn"} = "https://slowburn.coop/";
@@ -396,8 +448,6 @@ while (<F>) {
       $bloodalc{$ed} = $ba;
     }
     $bloodalc{$t} = $ba;  # indexed by the whole timestamp
-    #print STDERR "$t     b:" . sprintf("%8.2f %8.2f",$ba,$bloodalc{$ed}). " \n"  if ($t=~/2023-04-26/) ; # ###
-    #print STDERR "$ed '$effdate' : $alcinbody ba= $ba\n" if ( $t =~ /2023-04-2/ );
   }
 
   $lastdatesum += ( $a * $v ) if ($a && $v);
@@ -1207,7 +1257,6 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
         $drinkline .= "0 0x0 ";
       }
 
-      #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
       if ($zerodays >= 0) {
         print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" ;
         $havedata = 1;
@@ -1610,7 +1659,7 @@ if ( $op =~ /board(-?\d*)/i ) {
 
 
 ################################################################################
-# short list, aka daily statistics
+# Short list, aka daily statistics
 ################################################################################
 
 } elsif ( $op eq "short" ) {
