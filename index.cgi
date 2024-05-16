@@ -824,15 +824,19 @@ SCRIPTEND
 
 $script .= <<'SCRIPTEND';
   function clearinputs() {  // Clear all inputs, used by the 'clear' button
-    var inputs = document.getElementsByTagName('input');
+    var inputs = document.getElementsByTagName('input');  // all regular input fields
     for (var i = 0; i < inputs.length; i++ ) {
       if ( inputs[i].type == "text" )
         inputs[i].value = "";
     }
-    var r = document.getElementById("r");
+    var r = document.getElementById("r"); // and rating
     r.value = "";
-    var c = document.getElementById("c");
+    var c = document.getElementById("c"); // and comment
     c.value = "";
+
+    // Hide the 'save' button, we are about to create a new entry
+    var save = document.getElementById("save");
+    save.hidden = true;  //
 
   };
 SCRIPTEND
@@ -1043,19 +1047,21 @@ print " <td $c6><textarea name='c' cols='45' rows='3' id='c'
 print "</tr>\n";
 if ( 0 && $edit && $foundline ) {
   print "<tr>\n";
-  print "<td><input type='submit' name='submit' value='Save'/>&nbsp;</td>";
+  print "<td><input type='submit' name='submit' value='Save' />&nbsp;</td>";
   print "<td><a href='$url' ><span>cancel</span></a>";
   print "&nbsp;&nbsp;&nbsp;<input type='submit' name='submit' value='Delete'/></td>";
   print "</tr>\n";
 } else {
   print "<tr><td>\n";
-  print "<input type='submit' name='submit' value='Record'/>\n";
-  print " <input type='submit' name='submit' value='Save'/>\n";
   if ($edit) {
+    #print "<input type='submit' name='submit' value='Record'/>\n";
+    print " <input type='submit' name='submit' value='Save' id='save' />\n";
     print " <input type='submit' name='submit' value='Del'/>\n";
-    print "</td><td>\n";
     print "<a href='$url' ><span>cancel</span></a>";
+    print "</td><td>\n";
   } else {
+    print "<input type='submit' name='submit' value='Record'/>\n";
+    print " <input type='submit' name='submit' value='Save' id='save' />\n";
     print "</td><td>\n";
     print " <input type='button' value='Clr' onclick='getlocation();clearinputs()'/>\n";
   }
