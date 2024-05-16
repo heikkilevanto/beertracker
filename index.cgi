@@ -1045,40 +1045,33 @@ print "<tr>";
 print " <td $c6><textarea name='c' cols='45' rows='3' id='c'
   placeholder='$todaydrinks'>$com</textarea></td>\n";
 print "</tr>\n";
-if ( 0 && $edit && $foundline ) {
-  print "<tr>\n";
-  print "<td><input type='submit' name='submit' value='Save' />&nbsp;</td>";
-  print "<td><a href='$url' ><span>cancel</span></a>";
-  print "&nbsp;&nbsp;&nbsp;<input type='submit' name='submit' value='Delete'/></td>";
-  print "</tr>\n";
+
+print "<tr><td>\n";  # Buttons
+if ($edit) {
+  print " <input type='submit' name='submit' value='Save' id='save' />\n";
+  print " <input type='submit' name='submit' value='Del'/>\n";
+  print "<a href='$url' ><span>cancel</span></a>";
+  print "</td><td>\n";
 } else {
-  print "<tr><td>\n";
-  if ($edit) {
-    #print "<input type='submit' name='submit' value='Record'/>\n";
-    print " <input type='submit' name='submit' value='Save' id='save' />\n";
-    print " <input type='submit' name='submit' value='Del'/>\n";
-    print "<a href='$url' ><span>cancel</span></a>";
-    print "</td><td>\n";
-  } else {
-    print "<input type='submit' name='submit' value='Record'/>\n";
-    print " <input type='submit' name='submit' value='Save' id='save' />\n";
-    print "</td><td>\n";
-    print " <input type='button' value='Clr' onclick='getlocation();clearinputs()'/>\n";
-  }
-  print " <select name='ops' style='width:4.5em;' " .
-              "onchange='document.location=\"$url?\"+this.value;' >";
-  print "<option value='' >Show</option>\n";
-  print "<option value='o=full&q=$qry' >Full List</option>\n";
-  print "<option value='o=Graph&q=$qry' >Graph</option>\n";
-  print "<option value='o=board&q=$qry' >Beer Board</option>\n";
-  print "<option value='o=Months&q=$qry' >Stats</option>\n";
-    # All the stats pages link to each other
-  print "<option value='o=Beer&q=$qry' >Beers</option>\n";
-    # The Beer list has links to locations, wines, and other such lists
-  print "<option value='o=About&q=$qry' >About</option>\n";
-  print "</select>\n";
-  print "</td></tr>\n";
+  print "<input type='submit' name='submit' value='Record'/>\n";
+  print " <input type='submit' name='submit' value='Save' id='save' />\n";
+  print "</td><td>\n";
+  print " <input type='button' value='Clr' onclick='getlocation();clearinputs()'/>\n";
 }
+print " <select name='ops' style='width:4.5em;' " .
+            "onchange='document.location=\"$url?\"+this.value;' >";
+print "<option value='' >Show</option>\n";
+print "<option value='o=full&q=$qry' >Full List</option>\n";
+print "<option value='o=Graph&q=$qry' >Graph</option>\n";
+print "<option value='o=board&q=$qry' >Beer Board</option>\n";
+print "<option value='o=Months&q=$qry' >Stats</option>\n";
+  # All the stats pages link to each other
+print "<option value='o=Beer&q=$qry' >Beers</option>\n";
+  # The Beer list has links to locations, wines, and other such lists
+print "<option value='o=About' >About</option>\n";
+print "</select>\n";
+print "</td></tr>\n";
+
 print "</table>\n";
 print "</form>\n";
 
