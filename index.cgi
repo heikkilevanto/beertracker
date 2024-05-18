@@ -3098,7 +3098,7 @@ sub units {
 # Helper to make an error message
 sub error {
   my $msg = shift;
-  #print $q->header("Content-type: text/plain\n\n");
+  print "\n\n";  # Works if have sent headers or not
   print "<hr/>\n";
   print "ERROR   <br/>\n";
   print $msg;
