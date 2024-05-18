@@ -9,6 +9,56 @@
 #
 
 
+################################################################################
+# Overview
+################################################################################
+#
+# The code consists of one very long main function that produces whatever
+# output we need, and a small number of helpers. (Ought to be refactored
+# in version 2). Sections are delimited by comment blocks like above.
+#
+
+# Sections of the main function:
+# - Init and setup
+#   - Modules and UTF-8 stuff
+#   - Constants and setup
+#
+# - Early processing
+#   - Input Parameters - data file fields are the same order
+#   - Dump of the data file
+#   - Read the data file
+#   - POST data into the file
+#   - HTML head
+#   - Javascript trickery for the browser-side stuff
+#
+# - Various sections of the output page. Mostly conditional on $op
+#   - Main input form, always there
+#   - Graph. There for some selected $ops: graph, board
+#   - Beer board (list) for the location.
+#   - Short list, aka daily statistics
+#   - Annual summary
+#   - Monthly statistics
+#   - About page
+#   - Geolocation debug
+#   - various lists (beer, wine, booze, location, resturant, etc)
+#   - Regular full list. Shown by itself, or after graph, board
+
+# Helper functions. These can be grouped into
+# - String manipulation (trim)
+# - Input parameter normalizing
+# - Stuff for the main list filters
+# - Making a NEW marker for things not seen before
+# - Making various links
+# - Prices. Normalizing, currency conversions
+# - Displaying units
+# - Error handling
+# - Geo coordinate stuff
+# - Formatting dates
+# - Producing the "last seen" line
+# - Color coding and shortening beer styles
+
+
+
 
 ################################################################################
 # Modules and UTF-8 stuff
@@ -17,11 +67,14 @@
 use POSIX qw(strftime localtime locale_h);
 use JSON;
 use Cwd qw(cwd);
+
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+
 use locale; # The data file can contain locale overrides
 setlocale(LC_COLLATE, "da_DK.utf8"); # but dk is the default
 setlocale(LC_CTYPE, "da_DK.utf8");
+
 use open ':encoding(UTF-8)';  # Data files are in utf-8
 binmode STDOUT, ":utf8"; # Stdout only. Not STDIN, the CGI module handles that
 
@@ -79,7 +132,6 @@ $links{"Ølbaren"} = "http://oelbaren.dk/oel/";
 $links{"Ølsnedkeren"} = "https://www.olsnedkeren.dk/";
 $links{"Fermentoren"} = "http://fermentoren.com/index";
 $links{"Dry and Bitter"} = "https://www.dryandbitter.com/collections/beer/";
-   # Used to be http://www.dryandbitter.com/products.php, changed in Dec-2020
 #$links{"Dudes"} = "http://www.dudes.bar"; # R.I.P Dec 2018
 $links{"Taphouse"} = "http://www.taphouse.dk/";
 $links{"Slowburn"} = "https://slowburn.coop/";
@@ -321,7 +373,7 @@ while (<F>) {
   $thisloc = $l if $l;
   $seen{$l}++;
   $seen{$restname}++;
-  my $seenkey = "$m:$b";
+  my $seenkey = seenkey($m,$b);
   if ( ( $b !~ /misc|mixed/i ) &&
        ( $m !~ /misc|mixed/i ) &&
        ( $s !~ /misc|mixed/i ) ) {
@@ -396,8 +448,6 @@ while (<F>) {
       $bloodalc{$ed} = $ba;
     }
     $bloodalc{$t} = $ba;  # indexed by the whole timestamp
-    #print STDERR "$t     b:" . sprintf("%8.2f %8.2f",$ba,$bloodalc{$ed}). " \n"  if ($t=~/2023-04-26/) ; # ###
-    #print STDERR "$ed '$effdate' : $alcinbody ba= $ba\n" if ( $t =~ /2023-04-2/ );
   }
 
   $lastdatesum += ( $a * $v ) if ($a && $v);
@@ -774,15 +824,19 @@ SCRIPTEND
 
 $script .= <<'SCRIPTEND';
   function clearinputs() {  // Clear all inputs, used by the 'clear' button
-    var inputs = document.getElementsByTagName('input');
+    var inputs = document.getElementsByTagName('input');  // all regular input fields
     for (var i = 0; i < inputs.length; i++ ) {
       if ( inputs[i].type == "text" )
         inputs[i].value = "";
     }
-    var r = document.getElementById("r");
+    var r = document.getElementById("r"); // and rating
     r.value = "";
-    var c = document.getElementById("c");
+    var c = document.getElementById("c"); // and comment
     c.value = "";
+
+    // Hide the 'save' button, we are about to create a new entry
+    var save = document.getElementById("save");
+    save.hidden = true;  //
 
   };
 SCRIPTEND
@@ -991,38 +1045,33 @@ print "<tr>";
 print " <td $c6><textarea name='c' cols='45' rows='3' id='c'
   placeholder='$todaydrinks'>$com</textarea></td>\n";
 print "</tr>\n";
-if ( 0 && $edit && $foundline ) {
-  print "<tr>\n";
-  print "<td><input type='submit' name='submit' value='Save'/>&nbsp;</td>";
-  print "<td><a href='$url' ><span>cancel</span></a>";
-  print "&nbsp;&nbsp;&nbsp;<input type='submit' name='submit' value='Delete'/></td>";
-  print "</tr>\n";
+
+print "<tr><td>\n";  # Buttons
+if ($edit) {
+  print " <input type='submit' name='submit' value='Save' id='save' />\n";
+  print " <input type='submit' name='submit' value='Del'/>\n";
+  print "<a href='$url' ><span>cancel</span></a>";
+  print "</td><td>\n";
 } else {
-  print "<tr><td>\n";
   print "<input type='submit' name='submit' value='Record'/>\n";
-  print " <input type='submit' name='submit' value='Save'/>\n";
-  if ($edit) {
-    print " <input type='submit' name='submit' value='Del'/>\n";
-    print "</td><td>\n";
-    print "<a href='$url' ><span>cancel</span></a>";
-  } else {
-    print "</td><td>\n";
-    print " <input type='button' value='Clr' onclick='getlocation();clearinputs()'/>\n";
-  }
-  print " <select name='ops' style='width:4.5em;' " .
-              "onchange='document.location=\"$url?\"+this.value;' >";
-  print "<option value='' >Show</option>\n";
-  print "<option value='o=full&q=$qry' >Full List</option>\n";
-  print "<option value='o=Graph&q=$qry' >Graph</option>\n";
-  print "<option value='o=board&q=$qry' >Beer Board</option>\n";
-  print "<option value='o=Months&q=$qry' >Stats</option>\n";
-    # All the stats pages link to each other
-  print "<option value='o=Beer&q=$qry' >Beers</option>\n";
-    # The Beer list has links to locations, wines, and other such lists
-  print "<option value='o=About&q=$qry' >About</option>\n";
-  print "</select>\n";
-  print "</td></tr>\n";
+  print " <input type='submit' name='submit' value='Save' id='save' />\n";
+  print "</td><td>\n";
+  print " <input type='button' value='Clr' onclick='getlocation();clearinputs()'/>\n";
 }
+print " <select name='ops' style='width:4.5em;' " .
+            "onchange='document.location=\"$url?\"+this.value;' >";
+print "<option value='' >Show</option>\n";
+print "<option value='o=full&q=$qry' >Full List</option>\n";
+print "<option value='o=Graph&q=$qry' >Graph</option>\n";
+print "<option value='o=board&q=$qry' >Beer Board</option>\n";
+print "<option value='o=Months&q=$qry' >Stats</option>\n";
+  # All the stats pages link to each other
+print "<option value='o=Beer&q=$qry' >Beers</option>\n";
+  # The Beer list has links to locations, wines, and other such lists
+print "<option value='o=About' >About</option>\n";
+print "</select>\n";
+print "</td></tr>\n";
+
 print "</table>\n";
 print "</form>\n";
 
@@ -1207,7 +1256,6 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
         $drinkline .= "0 0x0 ";
       }
 
-      #print "$ndays: $date / $wkday -  $tot $wkend z: $zero $zerodays m=$sum30 w=$sumweek f=$fut <br/>"; ###
       if ($zerodays >= 0) {
         print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" ;
         $havedata = 1;
@@ -1474,7 +1522,7 @@ if ( $op =~ /board(-?\d*)/i ) {
       $loc = $locparam;
       $alc = $e->{"alc"} || "";
       $alc = sprintf("%4.1f",$alc) if ($alc);
-      my $seenkey = "$mak:$beer";
+      my $seenkey = seenkey($mak,$beer);
       if ( $qry ) {
         next unless ( $sty =~ /$qry/ );
       }
@@ -1550,7 +1598,6 @@ if ( $op =~ /board(-?\d*)/i ) {
       my $beerstyle = beercolorstyle($origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
 
       if ($extraboard == $id  || $extraboard == -2) { # More detailed view
-        $mak .= ":" if ($mak);
         print "<tr><td colspan=5><hr></td></tr>\n";
         print "<tr><td $beerstyle>";
         my $linkid = $id;
@@ -1562,7 +1609,7 @@ if ( $op =~ /board(-?\d*)/i ) {
 
         print "<td colspan=4 >";
         print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
-        print "$mak $dispbeer <span style='font-size: x-small;'>($country)</span></span></td></tr>\n";
+        print "$mak: $dispbeer <span style='font-size: x-small;'>($country)</span></span></td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
         print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
         print "$hiddenbuttons";
@@ -1572,19 +1619,19 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "</form>\n";
         print "</td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
-        if ($seen{$beer}) {
-          my $seenline = seenline ($mak, $beer);
+        my $seenline = seenline ($mak, $beer);
+        if ($seenline) {
           print "<tr><td>&nbsp;</td><td colspan=4> $seenline";
           print "</td></tr>\n";
-          if ($ratecount{$seenkey}) {
-            my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
-            print "<tr><td>&nbsp;</td><td colspan=4>";
-            my $rating = "rating";
-            $rating .= "s" if ($ratecount{$seenkey} > 1 );
-            print "$ratecount{$seenkey} $rating <b>$avgrate</b>: ";
-            print $ratings[$avgrate];
-          print "</td></tr>\n";
-          }
+        }
+        if ($ratecount{$seenkey}) {
+          my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
+          print "<tr><td>&nbsp;</td><td colspan=4>";
+          my $rating = "rating";
+          $rating .= "s" if ($ratecount{$seenkey} > 1 );
+          print "$ratecount{$seenkey} $rating <b>$avgrate</b>: ";
+          print $ratings[$avgrate];
+        print "</td></tr>\n";
         }
         print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
       } else { # Plain view
@@ -1611,7 +1658,7 @@ if ( $op =~ /board(-?\d*)/i ) {
 
 
 ################################################################################
-# short list, aka daily statistics
+# Short list, aka daily statistics
 ################################################################################
 
 } elsif ( $op eq "short" ) {
@@ -1975,7 +2022,11 @@ elsif ( $op =~ /Months([BS])?/ ) {
           $ydays[$y] += $dayofmonth - 30;
         } else {
           $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
-          $d = unit($dd,"/d");
+          if ( $dd < 10 ) {
+            $d = unit($dd,"/d"); #  "9.3/d"
+          } else {
+            $d = $dd; # but "10.3", no room for the /d
+          }
         }
         $mdrinks += $dd;
         $mcount++;
@@ -2675,7 +2726,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       }
       $ratecounts[$rate] ++ if ($rate);
       if ( $qrylim eq "x" ) {
-        my $seenkey = "$mak:$beer";
+        my $seenkey = seenkey($mak,$beer);
         if ($ratecount{$seenkey}) {
           my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
           if ($ratecount{$seenkey} == 1 )  {
@@ -3126,30 +3177,51 @@ sub datestr {
   return $dstr;
 }
 
+# Helper to make a seenkey, an index to %lastseen and %seen
+# Normalizes the names a bit, to catch some misspellings etc
+sub seenkey {
+  my $maker = shift || "";
+  my $beer = shift || "";
+  my $key = lc("$maker:$beer");
+  $key =~ s/&amp;/&/g;
+  $key =~ s/[^a-zåæø0-9:]//gi;  # Skip all special characters and spaces
+  return $key;
+}
 
 # Helper to produce a "Seen" line
-# TODO: Shorten the line. See #315
 sub seenline {
   my $maker = shift;
   my $beer = shift;
-  my $seenkey = "$maker:$beer";
+  my $seenkey = seenkey($maker,$beer);
   my $seenline = "";
   $seenline = "Seen <b>" . ($seen{$seenkey}). "</b> times: " if ($seen{$seenkey});
-  my $nseen = 0;
-  my %mentioned;
-  return $seenline unless ($lastseen{$seenkey});  # defensive coding
-  foreach my $ls ( reverse(split(' ',$lastseen{$seenkey} ) ) ) {
-    $ls =~ s/-\d\d$// if ( $nseen > 2 );  # drop the day
-    $ls =~ s/-\d\d$// if ( $nseen > 8); # and the month
-    if ( ! $mentioned{$ls} ){
-      $seenline .= "$ls ";
-      $nseen++;
-      $mentioned{$ls}++; # Don't show this date again
-      $ls =~ s/-\d\d$//;
-      $mentioned{$ls}++; # Nor this month
-      $ls =~ s/-\d\d$//;
-      $mentioned{$ls}++; # Nor this year
+  my $prefix = "";
+  my $detail="";
+  my $detailpattern = "";
+  my $nmonths = 0;
+  my $nyears = 0;
+  my $lastseenline = $lastseen{$seenkey} || "";
+  foreach my $ls ( reverse(split(' ', $lastseenline ) ) ) {
+    my $comma = ",";
+    if ( ! $prefix || $ls !~ /^$prefix/ ) {
+      $comma = ":" ;
+      if ( $nmonths++ < 2 ) {
+        ($prefix) = $ls =~ /^(\d+-\d+)/ ;  # yyyy-mm
+        $detailpattern = "(\\d\\d)\$";
+      } elsif ( $nyears++ < 1 ) {
+        ($prefix) = $ls =~ /^(\d+)/ ;  # yyyy
+        $detailpattern = "(\\d\\d)-\\d\\d\$";
+      } else {
+        $prefix = "20";
+        $detailpattern = "^20(\\d\\d)";
+        $comma = "";
+      }
+      $seenline .= " <b>$prefix</b>";
     }
+    my ($det) = $ls =~ /$detailpattern/ ;
+    next if ($det eq $detail);
+    $detail = $det;
+    $seenline .= $comma . "$det";
   }
   return $seenline;
 }
