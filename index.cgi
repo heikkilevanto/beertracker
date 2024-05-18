@@ -568,7 +568,7 @@ if ( $q->request_method eq "POST" ) {
     ( undef, undef, undef,
       $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr,
       undef, undef, undef) =
-       split( / *; */, $lines[$i] );
+       linevalues( $lines[$i] );
     if ( !$priceguess &&    # Guess a price
          uc($iloc) eq uc($loc) &&   # if same location and volume
          $vol eq $ivol ) { # even if different beer, good fallback
@@ -642,7 +642,7 @@ if ( $q->request_method eq "POST" ) {
     open F, ">$datafile"
       or error ("Could not open $datafile for writing");
     while (<BF>) {
-      my ( $stp, undef) = split( / *; */ );
+      my ( $stp, undef) = linevalues( $_ );
       if ( $stamp && $stp =~ /^\d+/ &&  # real line
            $sub eq "Save" && # Not deleting it
            "x$stamp" lt "x$stp") {  # Right Place to insert the line
@@ -689,10 +689,10 @@ if ( $q->request_method eq "POST" ) {
 ################################################################################
 
 my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
-    split( / *; */, $lastline );
+    linevalues( $lastline );
 if ($foundline) {  # can be undef, if a new data file
   ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo) =
-      split( / *; */, $foundline );
+      linevalues($foundline);
   $geo = ""; # do not keep geo
 }
 
@@ -1069,7 +1069,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     my $futable = ""; # Table to display the 'future' values
     for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
       ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
-        split( / *; */, $lines[$i] );
+        linevalues( $lines[$i] );
       next if ( $mak =~ /^restaurant/i );
       $pr = 0 unless ( $pr =~/^-?[0-9]+$/i);
       $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol && $pr >= 0 );
@@ -1638,7 +1638,7 @@ if ( $op =~ /board(-?\d*)/i ) {
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i == 0 );
     next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ || $i == 0 );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer,
-      $vol, $sty, $alc, $pr, $rate, $com, $geo ) = split( / *; */, $lines[$i] );
+      $vol, $sty, $alc, $pr, $rate, $com, $geo ) = linevalues( $lines[$i] );
     if ( $i == 0 ) {
       $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
@@ -1770,7 +1770,7 @@ elsif ( $op =~ /Years(d?)/i ) {
     $i--;
     #print "$thisyear $i: $lines[$i]<br/>\n";
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
-      split( / *; */, $lines[$i] );
+      linevalues( $lines[$i] );
     $y = substr($effdate,0,4);
     #print "  y=$y, ty=$thisyear <br/>\n";
     next if ($mak =~ /restaurant/i );
@@ -2272,7 +2272,7 @@ elsif ( $op eq "geo" ) {
     print "<tr><td>Latitude</td><td>Longitude</td><td>Dist</td></tr>\n";
     while ( $i-- > 0 ){
       ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr,
-        $rate, $com, $geo ) =  split( / *; */, $lines[$i] );
+        $rate, $com, $geo ) =  linevalues( $lines[$i] );
       next unless $geo;
       next unless ($loc eq $qry);
       my ($la, $lo, $g) = geo($geo);
@@ -2346,7 +2346,7 @@ elsif ( $op ) {
     next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
 $com, $geo ) =
-       split( / *; */, $lines[$i] );
+       linevalues( $lines[$i] );
     next if ( $mak =~ /tz,/ );
     $fld = "";
 
@@ -2528,7 +2528,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
     next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ );
     ( $stamp, $wday, $effdate, $loc, $mak, $beer,
-      $vol, $sty, $alc, $pr, $rate, $com, $geo ) = split( / *; */, $lines[$i] );
+      $vol, $sty, $alc, $pr, $rate, $com, $geo ) = linevalues( $lines[$i] );
     next if ( $qrylim eq "c" && (! $com || $com =~ /^ *\(/ ) );
       # Skip also comments like "(4 EUR)"
     if ( $qrylim =~ /^r(\d*)/ ){  # any rating
@@ -3271,3 +3271,16 @@ sub splitline {
       = split( / *; */, $line );
   return %v;
 }
+
+# Helper to return the values as if in the old split
+# In the end this should be killed, and the hash values used everywhere
+sub linevalues {
+  my $line = shift;
+  my %v = splitline($line);
+  my @values =   ( $v{"stamp"}, $v{"wday"}, $v{"effdate"}, $v{"loc"}, $v{"mak"}, $v{"beer"},
+    ${"vol"}, $v{"sty"}, $v{"alc"}, $v{"pr"}, $v{"rate"}, $v{"com"}, $v{"geo"});
+  #my $str = join("; ", @values);
+  #print STDERR "linevalues: '$str' \n";
+  return @values;
+}
+
