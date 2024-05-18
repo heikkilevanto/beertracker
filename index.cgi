@@ -167,6 +167,11 @@ my $bodyweight;  # in kg, for blood alc calculations
 $bodyweight = 120 if ( $username eq "heikki" );
 $bodyweight =  83 if ( $username eq "dennis" );
 
+# Data line types
+my %datalinetypes;
+$datalinetypes{""} = "stamp; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # old type
+$datalinetypes{"Beer"} = "stamp; type; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # beer
+
 
 ################################################################################
 # Input Parameters - data file fields are the same order
@@ -3341,32 +3346,19 @@ sub shortbeerstyle {
 # Split a data line into a hash
 sub splitline {
   my $line = shift;
-  # Data line types - TODO Move these to the beginning of the file
-  my %datalinetypes;
-  $datalinetypes{""} = "stamp; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # old type
-  $datalinetypes{"B"} = "stamp; type; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # beer
   my $linetype = "";
-  $linetype = $1 if ($line =~ /^[^;]+ *; *([a-z]) *;/i) ;
+  $linetype = $1 if ($line =~ /^[^;]+ *; *([a-z]+) *;/i) ;
+  $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)//i; # If we match a weekday, we have an old-format line with no type
   my %v;
-  if (! $linetype ) { # old format line
-    ( $v{"stamp"}, $v{"wday"}, $v{"effdate"}, $v{"loc"}, $v{"mak"}, $v{"beer"},
-      ${"vol"}, $v{"sty"}, $v{"alc"}, $v{"pr"}, $v{"rate"}, $v{"com"}, $v{"geo"})
-        = split( / *; */, $line );
-    $v{"type"} = ""; #indicates an old type record
-  } else {
-    #print STDERR "Got type '$linetype' from $line\n";
-    my $fieldnamelist = $datalinetypes{$linetype} || "";
-    #print "<hr/>Field names for '$linetype': '$fieldnamelist' <p/>";
-    if ( $fieldnamelist ) {
-      my @fnames = split(/ *; */, $fieldnamelist);
-      my @data = split(/ *; */, $line);
-      for ( my $i = 0; $fnames[$i]; $i++ ) {
-        $v{$fnames[$i]} = $data[$i] || "";
-        print STDERR "field $i: $fnames[$i]: '$v{$fnames[$i]}' <br/>\n";
-      }
-    } else {
-      error "Unknown line type '$linetype' in $line";
+  my $fieldnamelist = $datalinetypes{$linetype} || "";
+  if ( $fieldnamelist ) {
+    my @fnames = split(/ *; */, $fieldnamelist);
+    my @data = split(/ *; */, $line);
+    for ( my $i = 0; $fnames[$i]; $i++ ) {
+      $v{$fnames[$i]} = $data[$i] || "";
     }
+  } else {
+    error "Unknown line type '$linetype' in $line";
   }
   return %v;
 }
@@ -3377,7 +3369,7 @@ sub linevalues {
   my $line = shift;
   my %v = splitline($line);
   my @values =   ( $v{"stamp"}, $v{"wday"}, $v{"effdate"}, $v{"loc"}, $v{"mak"}, $v{"beer"},
-    ${"vol"}, $v{"sty"}, $v{"alc"}, $v{"pr"}, $v{"rate"}, $v{"com"}, $v{"geo"});
+    $v{"vol"}, $v{"sty"}, $v{"alc"}, $v{"pr"}, $v{"rate"}, $v{"com"}, $v{"geo"});
   #my $str = join("; ", @values);
   #print STDERR "linevalues: '$str' \n";
   return @values;
