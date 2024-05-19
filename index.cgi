@@ -169,7 +169,7 @@ $bodyweight =  83 if ( $username eq "dennis" );
 
 # Data line types
 my %datalinetypes;
-$datalinetypes{""} = "stamp; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # old type
+$datalinetypes{"Old"} = "stamp; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # old type
 $datalinetypes{"Beer"} = "stamp; type; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # beer
 
 
@@ -3348,7 +3348,7 @@ sub splitline {
   my $line = shift;
   my $linetype = "";
   $linetype = $1 if ($line =~ /^[^;]+ *; *([a-z]+) *;/i) ;
-  $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)//i; # If we match a weekday, we have an old-format line with no type
+  $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/Old/i; # If we match a weekday, we have an old-format line with no type
   my %v;
   my $fieldnamelist = $datalinetypes{$linetype} || "";
   if ( $fieldnamelist ) {
@@ -3360,6 +3360,7 @@ sub splitline {
   } else {
     error "Unknown line type '$linetype' in $line";
   }
+  $v{"type"} = "" unless ( $v{"type"} );  # Make sure we have a type for old lines as well
   return %v;
 }
 
