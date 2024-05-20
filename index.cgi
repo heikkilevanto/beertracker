@@ -169,8 +169,8 @@ $bodyweight =  83 if ( $username eq "dennis" );
 
 # Data line types - These define the field names on the data line for that type
 my %datalinetypes;
-$datalinetypes{"Old"} = "stamp; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # old type
-$datalinetypes{"Beer"} = "stamp; type; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo";
+$datalinetypes{"Old"} = ["stamp", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"]; # old type
+$datalinetypes{"Beer"} = ["stamp", "type", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"];
 
 
 ################################################################################
@@ -447,7 +447,7 @@ while (<F>) {
   # Blood alcohol
   if ($bodyweight && $rec{'alcvol'}  ) {
     my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
-    my $drtime = $1 + $2/60 if ( $rec{"stamp"} =~ / (\d\d):(\d\d)/ );   # time in fractional hours
+    my $drtime = $1 + $2/60 if ( $rec{'stamp'} =~ / (\d\d):(\d\d)/ );   # time in fractional hours
     if ($drtime < $balctime ) { $drtime += 24; } # past midnight
     my $timediff = $drtime - $balctime;
     $alcinbody -= $bodyweight * $burnrate * $timediff;
@@ -463,7 +463,7 @@ while (<F>) {
 
   $lastdatesum += $rec{'alcvol'} ;
   $lastdatemsum += $rec{'pr'};
-  if ( $effdate eq $rec{'effdate'} ) { # Today
+  if ( $effdate eq $rec{'effdate'} ) { # Actually today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
       $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
       if ($bloodalc{$rec{'effdate'}}) { # Calculate the blood alc at the current time.
@@ -3361,9 +3361,9 @@ sub splitline {
   $v{"type"} = $linetype; # Likely to be overwritten below, this is just in case (Old)
   my $fieldnamelist = $datalinetypes{$linetype} || "";
   if ( $fieldnamelist ) {
-    my @fnames = split(/ *; */, $fieldnamelist);
-    for ( my $i = 0; $fnames[$i]; $i++ ) {
-      $v{$fnames[$i]} = $datafields[$i] || "";
+    my @fnames = @{$fieldnamelist};
+    for ( my $i = 0; $fieldnamelist->[$i]; $i++ ) {
+      $v{$fieldnamelist->[$i]} = $datafields[$i] || "";
     }
   } else {
     error "Unknown line type '$linetype' in $line";
@@ -3381,7 +3381,7 @@ sub splitline {
 }
 
 # Helper to return the values as if in the old split
-# In the end this should be killed, and the hash values used everywhere
+# TODO: In the end this should be killed, and the hash values used everywhere
 sub linevalues {
   my $line = shift;
   my %v = splitline($line);
