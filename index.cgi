@@ -462,7 +462,7 @@ while (<F>) {
   }
 
   $lastdatesum += $rec{'alcvol'} ;
-  $lastdatemsum += $1 if ( $rec{'pr'} =~ /(\d+)/ );
+  $lastdatemsum += $rec{'pr'};
   if ( $effdate eq $rec{'effdate'} ) { # Today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
       $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
@@ -481,14 +481,14 @@ while (<F>) {
         $todaydrinks .= sprintf(" - %0.2f‰",$ba);
       }
   }
-  if ( $rec{'effdate'} gt $weekago && $rec{'pr'} >= 0 ) {
+  if ( $rec{'effdate'} gt $weekago ) {
     $weeksum += $rec{'alcvol'};
-    $weekmsum += $rec{'pr'};
+    $weekmsum += abs($rec{'pr'});
     $weekdates{$rec{'effdate'}}++;
   }
   if ( $rec{'effdate'} =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
     $calmon = $1;
-    $monthdrinks{$calmon} += $rec{'alcvol'} if ( $rec{'pr'} >= 0);
+    $monthdrinks{$calmon} += $rec{'alcvol'};
     $monthprices{$calmon} += abs($rec{'pr'}); # negative prices for buying box wines
   }
   $lastmonthday = $1 if ( $rec{'effdate'} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
