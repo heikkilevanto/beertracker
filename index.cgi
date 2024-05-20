@@ -167,7 +167,7 @@ my $bodyweight;  # in kg, for blood alc calculations
 $bodyweight = 120 if ( $username eq "heikki" );
 $bodyweight =  83 if ( $username eq "dennis" );
 
-# Data line types
+# Data line types - These define the field names on the data line for that type
 my %datalinetypes;
 $datalinetypes{"Old"} = "stamp; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # old type
 $datalinetypes{"Beer"} = "stamp; type; wday; effdate; loc; mak; beer; vol; sty; alc; pr; rate; com; geo"; # beer
@@ -293,6 +293,7 @@ if ( $op eq "Datafile" ) {
   }
   print "# Date Time; Weekday; Effective-date; Location; Brewery; Beer; Vol; " .
     "Style; Alc; Price; Rating; Comment; GeoCoords\n";
+  # TODO - Print a header for each line type
   while (<F>) {
     chomp();
     print "$_ \n" unless ($skip-- >0);
@@ -358,8 +359,8 @@ while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
   next unless $_; # skip empty lines
-
-  my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c, $g ) = split( / *; */ );
+  my ( $t, $wd, $ed, $l, $m, $b, $v, $s, $a, $p, $r, $c, $g ) =
+    linevalues ( $_ );
   next unless $wd; # We can get silly comment lines, Bom mark, etc
   push @lines, $_; # collect them all
   if (!$allfirstdate) {
@@ -3346,21 +3347,21 @@ sub shortbeerstyle {
 # Split a data line into a hash
 sub splitline {
   my $line = shift;
-  my $linetype = "";
-  $linetype = $1 if ($line =~ /^[^;]+ *; *([a-z]+) *;/i) ;
-  $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/Old/i; # If we match a weekday, we have an old-format line with no type
+  my @datafields = split(/ *; */, $line);
+  my $linetype = $datafields[1]; # This is either the type, or the weekday for old format lines
   my %v;
+  return %v unless ($linetype); # Can be an empty line, BOM mark, or other funny stuff
+  $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/Old/i; # If we match a weekday, we have an old-format line with no type
+  $v{"type"} = $linetype; # Likely to be overwritten below, this is just in case (Old)
   my $fieldnamelist = $datalinetypes{$linetype} || "";
   if ( $fieldnamelist ) {
     my @fnames = split(/ *; */, $fieldnamelist);
-    my @data = split(/ *; */, $line);
     for ( my $i = 0; $fnames[$i]; $i++ ) {
-      $v{$fnames[$i]} = $data[$i] || "";
+      $v{$fnames[$i]} = $datafields[$i] || "";
     }
   } else {
     error "Unknown line type '$linetype' in $line";
   }
-  $v{"type"} = "" unless ( $v{"type"} );  # Make sure we have a type for old lines as well
   return %v;
 }
 
