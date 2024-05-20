@@ -435,10 +435,10 @@ while (<F>) {
   } # Let's see how precise it seems to be
   $c = "" unless ($c);
 
-  if ( $thisdate ne "$rec{'wday'}; $rec{'effdate'}" ) { # new date
+  if ( $thisdate ne $rec{'effdate'} ) { # new date
     $lastdatesum = 0.0;
     $lastdatemsum = 0;
-    $thisdate = "$rec{'wday'}; $rec{'effdate'}";
+    $thisdate = $rec{'effdate'};
     $lasteffdate = $rec{'effdate'};
     $lastwday = $rec{'wday'};
     $alcinbody = 0; # Blood alcohol
@@ -463,7 +463,7 @@ while (<F>) {
 
   $lastdatesum += $rec{'alcvol'} ;
   $lastdatemsum += $1 if ( $rec{'pr'} =~ /(\d+)/ );
-  if ( $effdate eq "$rec{'wday'}; $rec{'effdate'}" ) { # Today
+  if ( $effdate eq $rec{'effdate'} ) { # Today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
       $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
       if ($bloodalc{$rec{'effdate'}}) { # Calculate the blood alc at the current time.
