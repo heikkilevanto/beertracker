@@ -178,6 +178,7 @@ $datalinetypes{"Beer"} = ["stamp", "type", "wday", "effdate", "loc", "mak", "bee
 # from when POSTing a new beer entry
 ################################################################################
 
+# TODO - form these into a record type, so as not to have so many global variables
 my $stamp = param("st");
 my $origstamp = $stamp; # Remember if we had a stamp from the input, indicating editing
 my $wday = param("wd");  # weekday
@@ -1674,7 +1675,6 @@ if ( $op =~ /board(-?\d*)/i ) {
 ################################################################################
 
 } elsif ( $op eq "short" ) {
-  my $i = scalar( @lines );
   my $entry = "";
   my $places = "";
   my $lastdate = "";
@@ -1692,25 +1692,25 @@ if ( $op =~ /board(-?\d*)/i ) {
   print "<hr/>Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'><span>Clear</span></a>)" .
     "&nbsp;(<a href='$url?q=$qry'><span>Full</span></a>)<br/>" if ($qry||$yrlim);
   print searchform(). "<hr/>" if $qry;
+  my $i = scalar( @records );
   while ( $i > 0 ) {
     $i--;
-    next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i || $i == 0 );
-    next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ || $i == 0 );
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer,
-      $vol, $sty, $alc, $pr, $rate, $com, $geo ) = linevalues( $lines[$i] );
+    my $rec = $records[$i];  # it is a reference
+    next unless ( !$qry || $rec->{rawline} =~ /\b$qry\b/i || $i == 0 );
+    next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ || $i == 0 );
     if ( $i == 0 ) {
       $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
-        $entry = filt($effdate, "") . " " . $wday ;
-        $daysum += ( $alc * $vol ) if ($alc && $vol && $pr && $pr >= 0);
-        $daymsum += abs($pr);
-        if ( $places !~ /$loc/ ) {
-          $places .= " " . filt($loc, "", $loc, "short");
-          $locseen{$loc} = 1;
+        $entry = filt($rec->{effdate}, "") . " " . $rec->{wday} ;
+        $daysum += $rec->{alcvol};
+        $daymsum += $rec->{pr} if ( $rec->{pr} > 0 );
+        if ( $places !~ /$rec->{loc}/ ) {
+          $places .= " " . filt($rec->{loc}, "", $rec->{loc}, "short");
+          $locseen{$rec->{loc}} = 1;
         }
       }
     }
-    if ( $lastdate ne $effdate ) {
+    if ( $lastdate ne $rec->{effdate} ) {
       if ( $entry ) {
         my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
         $entry .= " " . unit($daydrinks,"d") . " " . unit($daymsum,"kr");
@@ -1732,9 +1732,9 @@ if ( $op =~ /board(-?\d*)/i ) {
           $ndays++;  # that seems to work even without $lastdate, takes today!
           if ($yrlim && $zerodate !~ /$yrlim/) {
             $ndays = 0;
-            $zerodate = $effdate; # force the loop to end
+            $zerodate = $rec->{effdate}; # force the loop to end
           }
-        } while ( $zerodate gt $effdate );
+        } while ( $zerodate gt $rec->{effdate} );
         $ndays-=3;
         if ( $ndays == 1 ) {
           print ". . . <br/>\n";
@@ -1742,38 +1742,39 @@ if ( $op =~ /board(-?\d*)/i ) {
           print ". . . ($ndays days) . . .<br/>\n";
         }
       }
-      my $thismonth = substr($effdate,0,7); #yyyy-mm
+      my $thismonth = substr($rec->{effdate},0,7); #yyyy-mm
       my $bold = "";
       if ( $thismonth ne $month ) {
         $bold = "b";
         $month = $thismonth;
       }
+      my $wday = $rec->{wday};
       $wday = "<b>$wday</b>" if ($wday =~ /Fri|Sat|Sun/);  # mark wkends
-      $entry = filt($effdate, $bold) . " " . $wday ;
+      $entry = filt($rec->{effdate}, $bold) . " " . $wday ;
       $places = "";
-      $lastdate = $effdate;
+      $lastdate = $rec->{effdate};
       $lastloc = "";
       $daysum = 0.0;
       $daymsum = 0.0;
     }
-    next if ($mak =~ /restaurant/i );
-    if ( $lastloc ne $loc ) {
-      # Abbreviate some names
-      my $full=$loc;
-      for my $k ( keys(%shortnames) ) {
+    next if ($rec->{mak} =~ /restaurant/i );
+    if ( $lastloc ne $rec->{loc} ) {
+      # Abbreviate some location names
+      my $sloc=$rec->{loc};
+      for my $k ( keys(%shortnames) ) {  # TODO - no need to scan
         my $s = $shortnames{$k};
-        $loc =~ s/$k/$s/i;
+        $sloc =~ s/$k/$s/i;
       }
-      $loc =~ s/ place$//i;  # Dorthes Place => Dorthes
-      $loc =~ s/ /&nbsp;/gi;   # Prevent names breaking in the middle
-      if ( $places !~ /$loc/ ) {
-        $places .= " " . filt($full, "", $loc, "short");
-        $locseen{$loc} = 1;
+      $sloc =~ s/ place$//i;  # Dorthes Place => Dorthes
+      $sloc =~ s/ /&nbsp;/gi;   # Prevent names breaking in the middle
+      if ( $places !~ /$sloc/ ) {
+        $places .= " " . filt($rec->{loc}, "", $sloc, "short");
+        $locseen{$rec->{loc}} = 1;
         }
-      $lastloc = $loc;
+      $lastloc = $sloc;
     }
-    $daysum += ( $alc * $vol ) if ($alc && $vol && $pr =~ /^\d+$/) ;
-    $daymsum += abs($pr) if ($pr =~ /^\d+$/);
+    $daysum += $rec->{'alcvol'};
+    $daymsum += $rec->{pr} if ( $rec->{pr} > 0 );
   }
 
   print "<hr/>\n";
@@ -2902,6 +2903,8 @@ sub param {
 }
 
 
+# $places .= " " . filt($rec->{loc}, "", $sloc, "short");
+
 # Helper to make a filter link
 sub filt {
   my $f = shift; # filter term
@@ -3359,6 +3362,7 @@ sub splitline {
   return %v unless ($linetype); # Can be an empty line, BOM mark, or other funny stuff
   $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/Old/i; # If we match a weekday, we have an old-format line with no type
   $v{"type"} = $linetype; # Likely to be overwritten below, this is just in case (Old)
+  $v{"rawline"} = $line; # for filtering
   my $fieldnamelist = $datalinetypes{$linetype} || "";
   if ( $fieldnamelist ) {
     my @fnames = @{$fieldnamelist};
