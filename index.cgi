@@ -1828,9 +1828,6 @@ elsif ( $op =~ /Years(d?)/i ) {
   my $i = scalar( @records );
   while ( $i > 0 ) {
     $i--;
-    #print "$thisyear $i: $lines[$i]<br/>\n";
-    #( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
-    #  linevalues( $lines[$i] );
     my $rec = $records[$i];
     my $loc = $rec->{loc};
     $y = substr($rec->{effdate},0,4);
@@ -2322,7 +2319,6 @@ elsif ( $op eq "geo" ) {
     print "</table>\n";
 
   } else { # loc given, list all occurrences of that location
-    my $i = scalar( @lines );
     print "<hr/>Geolocation for <b>$qry</b> &nbsp;";
     print "<a href='$url?o=geo'><span>Back</span></a>";
     print "<p>\n";
@@ -2330,12 +2326,12 @@ elsif ( $op eq "geo" ) {
     print "$qry is at: $defloc <p>\n" if ($defloc);
     print "<table>\n";
     print "<tr><td>Latitude</td><td>Longitude</td><td>Dist</td></tr>\n";
+    my $i = scalar( @records );
     while ( $i-- > 0 ){
-      ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr,
-        $rate, $com, $geo ) =  linevalues( $lines[$i] );
-      next unless $geo;
-      next unless ($loc eq $qry);
-      my ($la, $lo, $g) = geo($geo);
+      my $rec = $records[$i];
+      next unless $rec->{geo};
+      next unless ($rec->{loc} eq $qry);
+      my ($la, $lo, $g) = geo($rec->{geo});
       next unless ($lo);
       my $dist = geodist($defloc,$g);
       my $ddist = unit($dist,"m");
@@ -2349,7 +2345,7 @@ elsif ( $op eq "geo" ) {
       print "<tr>\n";
       print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
       print "<td align='right'>$ddist</td>";
-      print "<td><a href='$url?o=$op&q=$qry&e=$stamp' ><span>$stamp</span></a> ";
+      print "<td><a href='$url?o=$op&q=$qry&e=$stamp' ><span>$rec->{stamp}</span></a> ";
       if ($guess) {
         print "<br>(<b>$guess $gdist ?)</b>\n" ;
         print STDERR "Suspicious Geo: '$loc' looks like '$guess'  for '$g' at '$stamp' \n";
