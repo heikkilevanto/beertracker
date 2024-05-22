@@ -622,28 +622,25 @@ if ( $q->request_method eq "POST" ) {
   }
   # Try to guess missing values from previous lines
   my $priceguess = "";
-  my $i = scalar( @lines )-1;
+  my $i = scalar( @records )-1;
   while ( $i > 0 && $beer
     && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' )) {
-    ( undef, undef, undef,
-      $iloc, $imak, $ibeer, $ivol, $isty, $ialc, $ipr,
-      undef, undef, undef) =
-       linevalues( $lines[$i] );
+    my $irec = $records[$i];
     if ( !$priceguess &&    # Guess a price
-         uc($iloc) eq uc($loc) &&   # if same location and volume
-         $vol eq $ivol ) { # even if different beer, good fallback
-      $priceguess = $ipr;
+         uc($irec->{loc}) eq uc($loc) &&   # if same location and volume
+         $irec->{vol} eq $vol ) { # even if different beer, good fallback
+      $priceguess = $irec->{pr};
     }
-    if ( uc($beer) eq uc($ibeer) ) { # Same beer, copy values over if not set
-      $beer = $ibeer; # with proper case letters
-      $mak = $imak unless $mak;
-      $sty = $isty unless $sty;
-      $alc = $ialc unless $alc;
-      if ( $vol eq $ivol && $ipr=~/^ *[0-9.]+ *$/) {
+    if ( uc($beer) eq uc($irec->{beer}) ) { # Same beer, copy values over if not set
+      $beer = $irec->{beer}; # with proper case letters
+      $mak = $irec->{mak} unless $mak;
+      $sty = $irec->{sty} unless $sty;
+      $alc = $irec->{alc} unless $alc;
+      if ( $vol eq $irec->{vol} && $irec->{pr} =~/^ *[0-9.]+ *$/) {
         # take price only from same volume, and only if numerical
-        $pr  = $ipr if $pr eq "";
+        $pr  = $irec->{pr} if $pr eq "";
       }
-      $vol = $ivol unless $vol;
+      $vol = $irec->{vol} unless $vol;
     }
     $i--;
   }
