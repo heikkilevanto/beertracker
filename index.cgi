@@ -1131,8 +1131,6 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     my $futable = ""; # Table to display the 'future' values
     for ( my $i = 0; $i < scalar(@records); $i++ ) { # calculate sums
       my $rec = $records[$i];
-      #( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
-      #  linevalues( $lines[$i] );
       next if ( $rec->{mak} =~ /^restaurant/i );
       $sums{$rec->{effdate}} += $rec->{alcvol};
     }
@@ -2386,7 +2384,6 @@ elsif ( $op ) {
     print "<a href='$url?o=$l'><span>$l</span></a> &nbsp;\n";
   }
   print "</div>\n";
-  my $i = scalar( @lines );
   my $fld;
   my $line;
   my @displines;
@@ -2396,99 +2393,103 @@ elsif ( $op ) {
   print "&nbsp;<br/><table style='background-color: #00600;' >\n";
   # For some reason this sets a color between the cells, not within them.
   # which is ok, makes it easier to see what is what.
+  my $i = scalar( @records );
   while ( $i > 0 ) {
     $i--;
-    next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
-    next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ );
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate,
-$com, $geo ) =
-       linevalues( $lines[$i] );
-    next if ( $mak =~ /tz,/ );
+    my $rec = $records[$i];
+    next unless ( !$qry || $rec->{rawline} =~ /\b$qry\b/i );
+    next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
+    next if ( $rec->{mak} =~ /tz,/ );
     $fld = "";
 
     if ( $op eq "Location" ) {
-      $fld = $loc;
-      $line = "<td>" . filt($loc,"b","","full") .
+      $fld = $rec->{loc};
+      $line = "<td>" . filt($fld,"b","","full") .
         "<span class='no-print'> ".
-        "&nbsp; " . loclink($loc, "Www") . "\n  " . glink($loc, "G") . "</span>" .
+        "&nbsp; " . loclink($fld, "Www") . "\n  " . glink($fld, "G") . "</span>" .
         "</td>\n" .
-        "<td>$wday $effdate ($seen{$loc}) <br class='no-wide'/>" .
-        lst("Location",$mak,"i") . ": \n" . lst($op,$beer) . "</td>";
+        "<td>$rec->{wday} $rec->{effdate} ($seen{$fld}) <br class='no-wide'/>" .
+        lst("Location",$rec->{mak},"i") . ": \n" . lst($op,$rec->{beer}) . "</td>";
 
     } elsif ( $op eq "Brewery" ) {
-      next if ( $mak =~ /^wine/i );
-      next if ( $mak =~ /^booze/i );
-      next if ( $mak =~ /^restaurant/i );
+      next if ( $rec->{mak} =~ /^wine/i );  # TODO - Get line types right
+      next if ( $rec->{mak} =~ /^booze/i );
+      next if ( $rec->{mak} =~ /^restaurant/i );
+      my $mak = $rec->{mak};
       $fld = $mak;
-      $mak =~ s"/"/<br/>"; # Split collab brews on two lines
+      $mak =~ s"/+"/<br/>&nbsp;"; # Split collab brews on two lines
       my $seentimes = "";
       $seentimes = "($seen{$fld})" if ($seen{$fld} );
-      $line = "<td>" . filt($mak,"b","","full") . "\n<br/ class='no-wide'>&nbsp;&nbsp;" . glink($mak) . "</td>\n" .
-      "<td>$wday $effdate " . lst($op,$loc) . "\n $seentimes " .
-            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]") . " \n " . lst("full",$beer,"b")  ."</td>";
+      $line = "<td>" . filt($mak,"b","","full") . "\n<br/ class='no-wide'>&nbsp;&nbsp;" . glink($fld) . "</td>\n" .
+      "<td>$rec->{wday} $rec->{effdate} " . lst($op,$rec->{loc}) . "\n $seentimes " .
+            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]") . " \n " . lst("full",$rec->{beer},"b")  ."</td>";
 
     } elsif ( $op eq "Beer" ) {
       next if ( $mak =~ /^wine/i );
       next if ( $mak =~ /^booze/i );
       next if ( $mak =~ /^restaurant/i );
+      my $beer = $rec->{beer};
       $fld = $beer;
+      $beer =~ s"(/|%2F)+"<br/>&nbsp;"gi if ( length($beer) > 25 ); # Split long lines
+      $beer =~ s"\("<br/>&nbsp("gi if ( length($beer) > 25 ); # Split long lines
       my $seentimes = "";
-      $seentimes = "($seen{$beer})" if ($seen{$beer} );
-      $line = "<td>" . filt($beer,"b","","full") . "&nbsp; $seentimes &nbsp;\n" . glink($mak,"G") ."</td>" .
-            "<td>$wday $effdate ".
-            lst($op,$loc) .  "\n <br class='no-wide'/> " .
-            lst($op,$sty,"","[$sty]"). "\n " . unit($alc,'%') .
-            lst($op,$mak,"i") . "&nbsp;</td>";
+      $seentimes = "($seen{$fld})" if ($seen{$fld} );
+      $line = "<td>" . filt($fld,"b",$beer,"full") . "&nbsp; $seentimes &nbsp;\n" . glink($rec->{mak},"G") ."</td>" .
+            "<td>$rec->{wday} $rec->{effdate} ".
+            lst($op,$rec->{loc}) .  "\n <br class='no-wide'/> " .
+            lst($op,$rec->{sty},"","[$rec->{sty}]"). "\n " . unit($rec->{$alc},'%') .
+            lst($op,$rec->{mak},"i") . "&nbsp;</td>";
 
     } elsif ( $op eq "Wine" ) {
-      next unless ( $mak =~ /^wine, *(.*)$/i );
-      $fld = $beer;
+      next unless ( $rec->{mak} =~ /^wine, *(.*)$/i );
       my $stylename = $1;
+      my $beer = $rec->{beer};
+      $fld = $beer;
+      next if ( $beer =~ /^Misc/i );
       my $seentimes = "";
       $seentimes = "($seen{$beer})" if ($seen{$beer} );
       $line = "<td>" . filt($beer,"b","","full")  . "&nbsp; $stylename &nbsp;\n" . glink($beer, "G") . "</td>\n" .
-            "<td>$wday $effdate ".
-            lst($op,$loc) . "\n $seentimes \n" .
-            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). "</td>";
+            "<td>$rec->{wday} $rec->{effdate} ".
+            lst($op,$rec->{loc}) . "\n $seentimes \n" .
+            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]"). "</td>";
 
     } elsif ( $op eq "Booze" ) {
-      next unless ( $mak =~ /^booze, *(.*)$/i );
+      next unless ( $rec->{mak} =~ /^booze, *(.*)$/i );
+      my $stylename = $1;
+      my $beer = $rec->{beer};
       $fld = $beer;
       my $seentimes = "";
       $seentimes = "($seen{$beer})" if ($seen{$beer} );
-      my $stylename = $1;
       $line = "<td>" .filt($beer,"b","","full") . "\n&nbsp;" . glink($beer, "G") ."</td>\n" .
-            "<td>$wday $effdate ".
-            lst($op,$loc) ."\n $seentimes " .
-            "<br class='no-wide'/> " . lst($op,$sty,"","[$sty]"). " " . unit($alc,'%') . "\n" .
-              lst($op, $mak,"i", $stylename) . "</td>";
+            "<td>$rec->{wday} $rec->{effdate} ".
+            lst($op,$rec->{loc}) ."\n $seentimes " .
+            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]"). " " . unit($rec->{alc},'%') . "\n" .
+              lst($op, $rec->{mak},"i", $stylename) . "</td>";
 
     } elsif ( $op eq "Restaurant" ) {
-      next unless ( $mak =~ /^restaurant,? *(.*)$/i );
-      my $rstyle="";  # op,qry,tag,dsp
+      next unless ( $rec->{mak} =~ /^restaurant,? *(.*)$/i );
+      my $rstyle="";
       if ( $1 ) { $rstyle = lst($op, "Restaurant, $1", "", $1); }
-      $fld = "$loc";
+      $fld = "$rec->{loc}";
       my $ratestr = "";
-      $ratestr = "$rate: <b>$ratings[$rate]</b>" if $rate;
-      my $restname = "Restaurant,$loc";
+      $ratestr = "$rec->{rate}: <b>$ratings[$rec->{rate}]</b>" if $rec->{rate};  # TODO - Make a helper for this
+      my $restname = "Restaurant,$rec->{loc}";
       my $rpr = "";
-      $rpr = "&nbsp; $pr kr" if ($pr && $pr >0) ;
-      $line = "<td>" . filt($loc,"b","","full") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> \n ".
-              "$rstyle  &nbsp;\n" . glink("Restaurant $loc") . "</td>\n" .
-              "<td><i>$beer</i>". " $rpr <br class='no-wide'/> " .
-              "$wday $effdate $ratestr</td>";
+      $rpr = "&nbsp; $rec->{pr} kr" if ($rec->{pr} && $rec->{pr} >0) ;
+      $line = "<td>" . filt($rec->{loc},"b","","full") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> \n ".
+              "$rstyle  &nbsp;\n" . glink("Restaurant $rec->{loc}") . "</td>\n" .
+              "<td><i>$rec->{beer}</i>". " $rpr <br class='no-wide'/> " .
+              "$rec->{wday} $rec->{effdate} $ratestr</td>";
 
     } elsif ( $op eq "Style" ) {
-      next if ( $mak =~ /^wine/i );
-      next if ( $mak =~ /^booze/i );
-      next if ( $mak =~ /^restaurant/i );
-      next if ( $sty =~ /^misc/i );
+      next if ( $rec->{mak} =~ /^(wine|booze|restaurant|misc)/i );
+      my $sty = $rec->{sty};
       $fld = $sty;
       my $seentimes = "";
       $seentimes = "($seen{$sty})" if ($seen{$sty} );
-      $line = "<td>" . filt("[$sty]","b","","full") . " $seentimes" . "</td><td>$wday $effdate \n" .
-            lst("Beer",$loc,"i") .
-            "\n <br class='no-wide'/> " . lst($op,$mak,"i") . ": \n" . lst("full",$beer,"b") . "</td>";
+      $line = "<td>" . filt("[$sty]","b","","full") . " $seentimes" . "</td><td>$rec->{wday} $rec->{effdate} \n" .
+            lst("Beer",$rec->{loc},"") .
+            "\n <br class='no-wide'/> " . lst($op,$rec->{mak},"i") . ": \n" . lst("full",$rec->{beer},"b") . "</td>";
     } else {
       print "<!-- unknown shortlist '$op' -->\n";
       last;
