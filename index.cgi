@@ -323,7 +323,6 @@ my $todaydrinks = "";  # For a hint in the comment box
 my $copylocation = 0;  # should the copy button copy location too
 my $thisdate = "";
 my $lastwday = "";
-my @lines; # All data lines, unparsed  - TODO: Get rid of this at some point
 my @records; # All data records, parsed
 my %seen; # Count how many times various names seen before (for NEW marks)
 my %lastseen; # Last time I have seen a given beer
@@ -365,7 +364,6 @@ while (<F>) {
   my %rec = splitline( $_ );
   next unless $rec{'type'};
   push (@records, \%rec);  # reference to %rec
-  push @lines, $_; # collect them all  # TODO - At some point we can drop this!
 
   if (!$allfirstdate) {
     $allfirstdate=$rec{'effdate'};
