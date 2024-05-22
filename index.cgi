@@ -314,7 +314,7 @@ open F, "<$datafile"
   or error("Could not open $datafile for reading: $!".
      "<br/>Probably the user hasn't been set up yet" );
 my $foundline = "";
-my $lastline = "";
+my $foundrec = {};
 my $thisloc = "";
 my $lastdatesum = 0.0;
 my $lastdatemsum = 0;
@@ -396,8 +396,8 @@ while (<F>) {
   }
   if ( ! $edit || ($edit eq $rec{'stamp'} ) ) { # TODO - Remember %rec instead
     $foundline = $_; # Remember the last line, or the one we have edited
+    $foundrec = \%rec;
   }
-  $lastline = $_;
 
   # TODO make TZ its own line type
   if ( $rec{'mak'}  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone (optional spaces)
@@ -555,20 +555,20 @@ if ( $q->request_method eq "POST" ) {
       $time = "" if ( $time =~ /^ / );
     }
     if ($date =~ /^L$/i ) { # 'L' for last date
-      if ( $lastline =~ /(^[0-9-]+) +(\d+):(\d+)/ ) {
-        $date = $1;
-        if (! $time ){ # Guess a time
-          my $hr = $2;
-          my $min = $3;
-          $min += 5;  # 5 min past the previous looks right
-          if ($min > 59 ) {
-            $min -= 60;
-            $hr++;
-            $hr -= 24 if ($hr >= 24);
-          }
-          $time = sprintf("%02d:%02d", $hr,$min);
-          $loc = ""; # Fall back to last values
+      my $lastrec = $records[ scalar(@records)-1 ];
+      $date = $lastrec->{date} || datestr();
+      if (! $time && $lastrec->{time} =~ /^ *(\d\d):(\d\d)/ ){ # Guess a time
+        my $hr = $1;
+        my $min = $2;
+        $min += 5;  # 5 min past the previous looks right
+        if ($min > 59 ) {
+          $min -= 60;
+          $hr++;
+          $hr -= 24 if ($hr >= 24);
+          # TODO - Increment date as well
         }
+        $time = sprintf("%02d:%02d", $hr,$min);
+        $loc = ""; # Fall back to last values
       }
     } # date 'L'
     if ( $date =~ /^Y$/i ) { # 'Y' for yesterday
@@ -742,8 +742,6 @@ if ( $q->request_method eq "POST" ) {
 # Get new values from the file we ingested earlier
 ################################################################################
 
-my ( $laststamp, undef, undef, $lastloc, $lastbeer, undef ) =
-    linevalues( $lastline );
 if ($foundline) {  # can be undef, if a new data file
   ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo) =
       linevalues($foundline);
