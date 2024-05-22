@@ -802,14 +802,14 @@ print "}\n";
 print "</style>\n";
 print "</head>\n";
 print "<body>\n";
-print "\n<!-- Read " . scalar(@lines). " lines from $datafile -->\n\n" ;
+print "\n<!-- Read " . scalar(@records). " lines from $datafile -->\n\n" ;
 
 
 ################################################################################
 # Default new users to the about page
 ################################################################################
 
-if ( !@lines && ! $op ) {
+if ( !@records && ! $op ) {
   $op = "About";
 }
 
@@ -1129,12 +1129,12 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
 
     my %sums; # drink sums by (eff) date
     my $futable = ""; # Table to display the 'future' values
-    for ( my $i = 0; $i < scalar(@lines); $i++ ) { # calculate sums
-      ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
-        linevalues( $lines[$i] );
-      next if ( $mak =~ /^restaurant/i );
-      $pr = 0 unless ( $pr =~/^-?[0-9]+$/i);
-      $sums{$effdate} = ($sums{$effdate} || 0 ) + $alc * $vol if ( $alc && $vol && $pr >= 0 );
+    for ( my $i = 0; $i < scalar(@records); $i++ ) { # calculate sums
+      my $rec = $records[$i];
+      #( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
+      #  linevalues( $lines[$i] );
+      next if ( $rec->{mak} =~ /^restaurant/i );
+      $sums{$rec->{effdate}} += $rec->{alcvol};
     }
     my $ndays = $startoff+35; # to get enough material for the running average
     my $date;
