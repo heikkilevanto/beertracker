@@ -1124,7 +1124,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   $pngfile =~ s/.plot$/-$startdate-$enddate-$bigimg.png/;
 
   if (  -r $pngfile ) { # Have a cached file
-    print "\n<!-- Cached $op $pngfile -->\n";
+    print "\n<!-- Cached graph op='$op' $pngfile -->\n";
   } else { # Have to plot a new one
 
     my %sums; # drink sums by (eff) date
@@ -1825,27 +1825,25 @@ elsif ( $op =~ /Years(d?)/i ) {
        "' class='no-print'><span>Sort by drinks</span></a>)\n";
   }
   print "<table border=1>\n";
-  my $i = scalar( @lines );
+  my $i = scalar( @records );
   while ( $i > 0 ) {
     $i--;
     #print "$thisyear $i: $lines[$i]<br/>\n";
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
-      linevalues( $lines[$i] );
-    $y = substr($effdate,0,4);
+    #( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo ) =
+    #  linevalues( $lines[$i] );
+    my $rec = $records[$i];
+    my $loc = $rec->{loc};
+    $y = substr($rec->{effdate},0,4);
     #print "  y=$y, ty=$thisyear <br/>\n";
-    next if ($mak =~ /restaurant/i );
+    next if ($rec->{mak} =~ /restaurant/i );
 
     if ($i == 0) { # count also the last line
       $thisyear = $y unless ($thisyear);
       $y = "END";
-      $pr = number($pr);
-      $alc = number($alc);
-      $vol = number($vol);
-      $sum{$loc} = ( $sum{$loc} || 0 ) + abs($pr);
-      $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol && $pr>=0);
-      $ysum += abs($pr) if ($pr);
-      $yalc += $alc * $vol if ($alc && $vol && $pr>=0);
-      #print "$i: $loc: $mak:  " . $sum{$loc} . " " . $alc{$loc} . "<br/>\n";
+      $sum{$loc} += abs($rec->{pr});
+      $alc{$loc} += $rec->{alcvol};
+      $ysum += abs($rec->{pr});
+      $yalc += $rec->{alcvol};
     }
     if ( $y ne $thisyear ) {
       if ($thisyear && (!$qry || $thisyear == $qry) ) {
@@ -1908,13 +1906,11 @@ elsif ( $op =~ /Years(d?)/i ) {
       $thisyear = $y;
       last if ($y eq "END");
     } # new year
-    $pr = number($pr);
-    $alc = number($alc);
-    $vol = number($vol);
-    $sum{$loc} = ( $sum{$loc} || 0.1 / ($i+1) ) + abs($pr) ;  # $i keeps sort order
-    $alc{$loc} = ( $alc{$loc} || 0 ) + ( $alc * $vol ) if ($alc && $vol && $pr >= 0);
-    $ysum += abs($pr);
-    $yalc += $alc * $vol if ($alc && $vol && $pr>=0);
+    $sum{$loc} = 0.1 / ($i+1) unless $sum{$loc}; # $i keeps sort order
+    $sum{$loc} += abs($rec->{pr}) ;
+    $alc{$loc} += $rec->{alcvol};
+    $ysum += abs($rec->{pr});
+    $yalc += $rec->{alcvol};
     #print "$i: $effdate $loc: $mak:  $pr:" . $sum{$loc} . "kr  " .$alc * $vol .":" . $alc{$loc} . " <br/>\n" ;
     #if ($loc =~ /Home/i) {
     #  print "$i: $effdate $loc: $mak:  p=$pr: " . $sum{$loc} . "kr  a=" .$alc * $vol .": " . $alc{$loc} . " <br/>\n" ;
