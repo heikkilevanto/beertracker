@@ -2561,11 +2561,13 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     }
   }
   print "</span>\n";
-  my $i = scalar( @lines );
+  my $i = scalar( @records );
   my $todaydate = datestr("%F");
-  if ($averages{$todaydate} && $lines[$i-1] !~ /$todaydate/) {
+  if ($averages{$todaydate} && $records[$i-1]->{rawline} !~ /$todaydate/) {
     # We have an average from the graph for today, but the last entry is not
     # for today, so we have a zero day. Display the average
+    # TODO - Should that not be effdate?
+    # TODO - Do we need this at all?
     print "<hr/>\n";
     print "<b>". datestr("%a %F"). "</b> (a=$averages{$todaydate}) <br/>\n";
   }
@@ -2582,32 +2584,21 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   $maxlines = $i*10 if ($maxlines <0); # neg means all of them
   while ( $i > 0 ) {  # Usually we exit at end-of-day
     $i--;
-    next unless ( !$qry || $lines[$i] =~ /\b$qry\b/i );
-    next unless ( !$yrlim || $lines[$i] =~ /^$yrlim/ );
-    ( $stamp, $wday, $effdate, $loc, $mak, $beer,
-      $vol, $sty, $alc, $pr, $rate, $com, $geo ) = linevalues( $lines[$i] );
-    next if ( $qrylim eq "c" && (! $com || $com =~ /^ *\(/ ) );
+    my $rec = $records[$i];
+    next unless ( !$qry || $rec->{rawline} =~ /\b$qry\b/i );  # TODO - Make a helper for these two tests
+    next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
+    next if ( $qrylim eq "c" && (! $rec->{com} || $rec->{com} =~ /^ *\(/ ) );
       # Skip also comments like "(4 EUR)"
     if ( $qrylim =~ /^r(\d*)/ ){  # any rating
       my $rlim = $1 || "";
-      next if ( !$rlim && !$rate); # l=r: Skip all that don't have a rating
-      next if ( $rlim && $rate ne $rlim );  # filter on "r7" or such
+      next if ( !$rlim && !$rec->{rate}); # l=r: Skip all that don't have a rating
+      next if ( $rlim && $rec->{rate} ne $rlim );  # filter on "r7" or such
       }
     $maxlines--;
-    #last if ($maxlines == 0); # if negative, will go for ever
 
-    $origpr = $pr;
-    $pr = number($pr);
-    $alc = number($alc);
-    $vol = number($vol);
-    my $date = "";
-    my $time = "";
-    if ( $stamp =~ /(^[0-9-]+) (\d\d?:\d\d?):/ ) {
-      $date = $1;
-      $time = $2;
-    }
+    $origpr = $rec->{pr};
 
-    my $dateloc = "$effdate : $loc";
+    my $dateloc = "$rec->{effdate} : $rec->{loc}";
 
     if ( $dateloc ne $lastloc && ! $qry) { # summary of loc and maybe date
       print "\n";
@@ -2618,7 +2609,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       if ( $locdrinks > 0.1) {
         print "<br/>$lastwday ";
         print "$lastloc2: " . unit($locdrinks,"d"). unit($locmsum, "kr"). "\n";
-        if ($averages{$lastdate} && $locdrinks eq $daydrinks && $lastdate ne $effdate) {
+        if ($averages{$lastdate} && $locdrinks eq $daydrinks && $lastdate ne $rec->{effdate}) {
           print " (a=" . unit($averages{$lastdate},"d"). " )\n";
           if ($bloodalc{$lastdate}) {
             print " ". unit(sprintf("%0.2f",$bloodalc{$lastdate}), "‰");
@@ -2637,14 +2628,13 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         print "<input type='hidden' name='a' value='x' />\n";
         print "<input type='hidden' name='p' value='$locmsum kr' />\n";
         print "<input type='hidden' name='g' value='' />\n";
-        $rtype =~ s/^Restaurant, //;
         print "<input type='submit' name='submit' value='Rest'
                     style='display: inline; font-size: x-small' />\n";
         print "</form>\n";
         print "<br/>\n";
       }
       # day summary
-      if ($lastdate ne $effdate ) {
+      if ($lastdate ne $rec->{effdate} ) {
         if ( $locdrinks ne $daydrinks) {
           print " <b>$lastwday</b>: ". unit($daydrinks,"d"). unit($daymsum,"kr");
           if ($averages{$lastdate}) {
@@ -2658,7 +2648,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         $daydsum = 0.0;
         $daymsum = 0;
         if ($maxlines <= 0) {
-          $maxlines = 0; # signal that there is more data to come
+          $maxlines = 0; # signal that we need a "more" link
           last;
         }
       }
@@ -2666,15 +2656,15 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       $locmsum = 0;
       $loccnt = 0;
     }
-    if ( $lastdate ne $effdate ) { # New date
+    if ( $lastdate ne $rec->{effdate} ) { # New date
       print "<hr/>\n" ;
       $lastloc = "";
     }
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
-      print "<br/><b>$wday $effdate </b>" . filt($loc,"b") . newmark($loc) . loclink($loc);
+      print "<br/><b>$rec->{wday} $rec->{effdate} </b>" . filt($rec->{loc},"b") . newmark($rec->{loc}) . loclink($rec->{loc});
       print "<br/>\n" ;
       if ( $qrylim eq "x") {
-        my ( undef, undef, $gg) = geo($geolocations{$loc});
+        my ( undef, undef, $gg) = geo($geolocations{$rec->{loc}});
         my $tdist = geodist($geo, $gg);
         if ( $tdist && $tdist > 1 ) {
           $tdist = "<b>".unit($tdist,"m"). "</b>";
@@ -2688,51 +2678,52 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       }
     }
     # The beer entry itself ##############
-    if ( $date ne $effdate ) {
+    my $time = $rec->{time};
+    if ( $rec->{date} ne $rec->{effdate} ) {
       $time = "($time)";
     }
     if ( !( $mak  =~ /^Restaurant,/i ) ) { # don't count rest lines
-      $daydsum += ( $alc * $vol ) if ($alc && $vol && $pr >= 0) ;
-      $daymsum += abs($pr) if ($pr) ;
-      $locdsum += ( $alc * $vol ) if ($alc && $vol && $pr >= 0) ;
-      $locmsum += abs($pr) if ($pr) ;
+      $daydsum += $rec->{alcvol};
+      $daymsum += abs($rec->{pr});
+      $locdsum += $rec->{alcvol};
+      $locmsum += abs($rec->{pr}) ;
       $loccnt++;
     }
-    $anchor = $stamp || "";
+    $anchor = $rec->{stamp} || "";
     $anchor =~ s/[^0-9]//g;
     print "\n<a id='$anchor'></a>\n";
     print "<br class='no-print'/><span style='white-space: nowrap'> " .
-           "$time " . filt($mak,"i") . newmark($mak) .
-            " : " . filt($beer,"b") . newmark($beer, $mak) .
+           "$time " . filt($rec->{mak},"i") . newmark($rec->{mak}) .
+            " : " . filt($rec->{beer},"b") . newmark($rec->{beer}, $rec->{mak}) .
       "</span> <br class='no-wide'/>\n";
-    my $origsty = $sty || "???";
-    if ( $sty || $pr || $vol || $alc || $rate || $com ) {
-      if ($sty) {
-        my $beerstyle = beercolorstyle("$sty $mak", "$date", "[$sty $mak] : $beer" );
+    my $origsty = $rec->{sty} || "???";
+    if ( $rec->{sty} || $rec->{pr} || $rec->{vol} || $rec->{alc} || $rec->{rate} || $rec->{com} ) {
+      if ($rec->{sty}) {
+        my $beerstyle = beercolorstyle("$rec->{sty} $rec->{mak}", "$rec->{date}", "[$rec->{sty} $rec->{mak}] : $rec->{beer}" );
         my $tag="span $beerstyle";
-        my $ssty = $sty;
+        my $ssty = $rec->{sty};
         $ssty = shortbeerstyle($sty) if ( $qrylim ne "x" );
-        print filt("$ssty",$tag) . newmark($sty) . " "   ;
+        print filt("$ssty",$tag) . newmark($rec->{sty}) . " "   ;
         print "<br>\n" if ( $qrylim eq "x" );
       }
-      if ($sty || $pr || $alc) {
+      if ($rec->{sty} || $rec->{pr} || $rec->{alc}) {
         if ( $qrylim ne "x" ) {
-          print units($pr, $vol, $alc);
+          print units($rec->{pr}, $rec->{vol}, $rec->{alc});
         } else {
-          print units($pr, $vol, $alc, $bloodalc{$stamp});
+          print units($rec->{pr}, $rec->{vol}, $rec->{alc}, $bloodalc{$rec->{stamp}});
         }
       }
       print "<br/>\n" ;
-      if ($rate || $com) {
+      if ($rec->{rate} || $rec->{com}) {
         print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
-        print " <b>'$rate'-$ratings[$rate]</b>" if ($rate);
-        print ": " if ($rate && $com);
-        print "<i>$com</i>" if ($com);
+        print " <b>'$rec->{rate}'-$ratings[$rec->{rate}]</b>" if ($rec->{rate});
+        print ": " if ($rec->{rate} && $rec->{com});
+        print "<i>$rec->{com}</i>" if ($rec->{com});
         print "<br/>\n";
       }
-      $ratecounts[$rate] ++ if ($rate);
+      $ratecounts[$rec->{rate}] ++ if ($rec->{rate});
       if ( $qrylim eq "x" ) {
-        my $seenkey = seenkey($mak,$beer);
+        my $seenkey = seenkey($rec->{mak},$rec->{beer});
         if ($ratecount{$seenkey}) {
           my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
           if ($ratecount{$seenkey} == 1 )  {
@@ -2742,22 +2733,20 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
           }
         }
         print "<span style='white-space: nowrap'>";
-        print seenline($mak, $beer);
+        print seenline($rec->{mak}, $rec->{beer});
         print "</span><br>\n";
-        if ( $geo ) {
-          my (undef, undef, $gg) = geo($geo);
+        if ( $rec->{geo} ) {
+          my (undef, undef, $gg) = geo($rec->{geo});
           print "Geo: $gg ";
           my $dist = "";
-          $dist = geodist( $geolocations{$loc}, $geo);
+          $dist = geodist( $geolocations{$rec->{loc}}, $rec->{geo});
           my ($guess,$gdist) = guessloc($gg);
-          if ( $guess eq $loc ) {
+          if ( $guess eq $rec->{loc} ) {
             print " $guess ";
           } else {
             print " <b>$guess ??? </b>  ";
           }
-          #if ( $gdist > 0 ) {
             print " (" . unit($gdist,"m"). ")";
-          #}
           print "<br>\n";
         }
       }
@@ -2765,17 +2754,17 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     }
 
     my %vols;     # guess sizes for small/large beers
-    $vols{$vol} = 1 if ($vol);
-    if ( $mak  =~ /^Restaurant,/i ) {
+    $vols{$rec->{vol}} = 1 if ($rec->{vol});
+    if ( $rec->{mak}  =~ /^Restaurant,/i ) {
       $vols{"R"} = 1;
-    } elsif ( $mak  =~ /^tz,/i ) {
+    } elsif ( $rec->{mak}  =~ /^tz,/i ) {
       %vols=();
-    } elsif ( $mak  =~ /^Wine,/i ) {
+    } elsif ( $rec->{mak}  =~ /^Wine,/i ) {
       $vols{12} = 1;
-      $vols{16} = 1;
+      $vols{16} = 1 unless ( $rec->{vol} == 15 );
       $vols{37} = 1;
       $vols{75} = 1;
-    } elsif ( $mak  =~ /^Booze,/i ) {
+    } elsif ( $rec->{mak}  =~ /^Booze,/i ) {
       $vols{2} = 1;
       $vols{4} = 1;
     } else { # Default to beer, usual sizes in craft beer world
@@ -2783,15 +2772,15 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       $vols{40} = 1;
     }
     print "<form method='POST' style='display: inline;' class='no-print' >\n";
-    print "<a href='$url?o=$op&q=$qry&e=" . uri_escape_utf8($stamp) ."' ><span>Edit</span></a> \n";
+    print "<a href='$url?o=$op&q=$qry&e=" . uri_escape_utf8($rec->{stamp}) ."' ><span>Edit</span></a> \n";
 
     # Copy values
-    print "<input type='hidden' name='m' value='$mak' />\n";
-    print "<input type='hidden' name='b' value='$beer' />\n";
+    print "<input type='hidden' name='m' value='$rec->{mak}' />\n";
+    print "<input type='hidden' name='b' value='$rec->{beer}' />\n";
     print "<input type='hidden' name='v' value='' />\n";
     print "<input type='hidden' name='s' value='$origsty' />\n";
-    print "<input type='hidden' name='a' value='$alc' />\n";
-    print "<input type='hidden' name='l' value='$loc' />\n" if ( $copylocation);
+    print "<input type='hidden' name='a' value='$rec->{alc}' />\n";
+    print "<input type='hidden' name='l' value='$rec->{loc}' />\n" if ( $copylocation);
     print "<input type='hidden' name='g' id='geo' value='' />\n";
     print "<input type='hidden' name='o' value='$op' />\n";  # Stay on page
     print "<input type='hidden' name='q' value='$qry' />\n";
@@ -2804,16 +2793,16 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     }
     if ( $qrylim eq "x" ) {
       print "<br/>";
-      print glink("$mak $beer", "Google") . "&nbsp;\n";
-      print rblink("$mak $beer", "RateBeer") . "&nbsp;\n";
-      print utlink("$mak $beer", "Untappd") . "&nbsp;\n";
+      print glink("$rec->{mak} $rec->{beer}", "Google") . "&nbsp;\n";
+      print rblink("$rec->{mak} $rec->{beer}", "RateBeer") . "&nbsp;\n";
+      print utlink("$rec->{mak} $rec->{beer}", "Untappd") . "&nbsp;\n";
     }
     print"<br/>\n";
     print "</form>\n";
     $lastloc = $dateloc;
-    $lastloc2 = $loc;
-    $lastdate = $effdate;
-    $lastwday = $wday;
+    $lastloc2 = $rec->{loc};
+    $lastdate = $rec->{effdate};
+    $lastwday = $rec->{wday};
   } # line loop
 
   if ( ! $qry) { # final summary
@@ -3075,6 +3064,7 @@ sub unit {
 
 # helper to display the units string
 # price, alc, vol, drinks
+# TODO - Take a whole $rec instead of individual values
 sub units {
   my $pr = shift;
   my $vol = shift;
@@ -3277,6 +3267,7 @@ sub beercolor {
 }
 
 sub beercolorstyle {
+  # TODO - Take a whole $rec as one param
   my $type = shift;
   my $date = shift; # for error logging
   my $line = shift;
@@ -3370,6 +3361,7 @@ sub splitline {
   $v{'vol'} = number( $v{'vol'} );
   $v{'pr'} = price( $v{'pr'} );
   # Precalculate some things we often need
+  ( $v{'date'}, $v{'year'}, $v{'time'} ) = $v{'stamp'} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
   $v{'seenkey'} = seenkey($v{"mak"},$v{"beer"});
   my $alcvol = $v{'alc'} * $v{'vol'} || 0 ;
   $alcvol = 0 if ( $v{'pr'} < 0  );  # skip box wines
