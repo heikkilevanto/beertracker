@@ -367,7 +367,6 @@ while (<F>) {
 
   if (!$allfirstdate) {
     $allfirstdate=$rec{'effdate'};
-    # TODO Clear daydsums and daymsums for every date from $ed to today
   }
   $lasttimestamp = $rec{'stamp'};
   if ( /$qry/ ) {
@@ -697,15 +696,15 @@ if ( $q->request_method eq "POST" ) {
     open F, ">$datafile"
       or error ("Could not open $datafile for writing");
     while (<BF>) {
-      my ( $stp, undef) = linevalues( $_ );
-      if ( $stamp && $stp =~ /^\d+/ &&  # real line
+      my ( $stp ) = $_ =~ /^([^;]*)/ ; # Just take the timestamp (or comment, or whatever)
+      if ( $stamp && $stp && $stp =~ /^\d+/ &&  # real line
            $sub eq "Save" && # Not deleting it
            "x$stamp" lt "x$stp") {  # Right Place to insert the line
            # Note the "x" trick, to force pure string comparision
         print F "$stamp; $effdate; $line \n";
         $stamp = ""; # do not write it again
       }
-      if ( $stp ne $edit ) {
+      if ( !$stp || $stp ne $edit ) {
         print F $_;
       } else { # found the line
         print F "#" . $_ ;  # comment the original line out
@@ -3337,8 +3336,9 @@ sub splitline {
   my $line = shift;
   my @datafields = split(/ *; */, $line);
   my $linetype = $datafields[1]; # This is either the type, or the weekday for old format lines
-  my %v;
+  my %v;  # ... or some silly comment
   return %v unless ($linetype); # Can be an empty line, BOM mark, or other funny stuff
+  return %v if ( $line =~/^#/ ); # skip comment lines
   $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/Old/i; # If we match a weekday, we have an old-format line with no type
   $v{"type"} = $linetype; # Likely to be overwritten below, this is just in case (Old)
   $v{"rawline"} = $line; # for filtering
