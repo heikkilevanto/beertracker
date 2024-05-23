@@ -63,7 +63,7 @@
 ################################################################################
 # Modules and UTF-8 stuff
 ################################################################################
-
+use strict;
 use POSIX qw(strftime localtime locale_h);
 use JSON;
 use Cwd qw(cwd);
@@ -201,6 +201,9 @@ my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
 # the POST routine reads its own input parameters
 
+# Other globals
+my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated
+  # Passed from reading to graph
 
 
 ################################################################################
@@ -292,7 +295,6 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
 my $alcinbody = 0; # Grams of alc inside my body
 my $balctime = 0; # Time of the last drink
 my %bloodalc; # max blood alc for each day, and current bloodalc for each line
-my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated
 my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
 while (<F>) {
@@ -312,12 +314,11 @@ while (<F>) {
   } # TODO - Do we need these to depend on $qry ?
 
   my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
-  $m = $m || "";
   $restname = $1.$rec{'loc'} if ( $rec{'mak'}  =~ /^(Restaurant,)/i );
   $thisloc = $rec{'loc'} || "";
   $seen{$thisloc}++;
   $seen{$restname}++;
-  my $seenkey = seenkey($m,$b);
+  my $seenkey = seenkey($rec{'mak'},$rec{'beer'});
   if ( ( $rec{'beer'} !~ /misc|mixed/i ) &&
        ( $rec{'mak'} !~ /misc|mixed/i ) &&
        ( $rec{'sty'} !~ /misc|mixed/i ) ) {
@@ -341,7 +342,7 @@ while (<F>) {
     if (!$tz || $tz eq "X") {
       $ENV{"TZ"} = "/etc/localtime";  # clear it
     } else {
-      foreach $zonedir ( "/usr/share/zoneinfo", "/usr/share/zoneinfo/Europe",
+      foreach my $zonedir ( "/usr/share/zoneinfo", "/usr/share/zoneinfo/Europe",
         "/usr/share/zoneinfo/US") {
         my $zonefile = "$zonedir/$tz";
         if ( -f $zonefile ) {
@@ -363,7 +364,6 @@ while (<F>) {
     $geolocations{$rec{'loc'}} = $geocoord if ($geocoord); # Save the last seen location
     # TODO: Later we may start taking averages, or collect a few data points for each
   } # Let's see how precise it seems to be
-  $c = "" unless ($c);
 
   if ( $thisdate ne $rec{'effdate'} ) { # new date
     $lastdatesum = 0.0;
@@ -504,7 +504,7 @@ if ( $q->request_method eq "POST" ) {
   }
   my $volunit = uc(substr($vol,0,1)); # S or L or such
   if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
-    $actvol = $1;
+    my $actvol = $1;
     $vol =~s/$volunit/$actvol/i;
   }
   if ($half) {
@@ -1069,6 +1069,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   my $startdate = datestr ("%F", -$startoff );
   my $enddate = datestr( "%F", -$endoff);
   my $havedata = 0;
+  my $futable = ""; # Table to display the 'future' values
 
   # Normalize limits to where we have data
   while ( $startdate lt $allfirstdate) {
@@ -1089,7 +1090,6 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
   } else { # Have to plot a new one
 
     my %sums; # drink sums by (eff) date
-    my $futable = ""; # Table to display the 'future' values
     for ( my $i = 0; $i < scalar(@records); $i++ ) { # calculate sums
       my $rec = $records[$i];
       next if ( $rec->{mak} =~ /^restaurant/i );
@@ -1120,7 +1120,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
     my $numberofdays=7;
     while ( $ndays > $endoff) {
       $ndays--;
-      $rawdate = datestr("%F:%u", -$ndays);
+      my $rawdate = datestr("%F:%u", -$ndays);
       ($date,$wkday) = split(':',$rawdate);
       my $tot = ( $sums{$date} || 0 ) / $onedrink ;
       @month = ( @month, $tot);
@@ -1204,7 +1204,7 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
       if ( $drinktypes{$date} ) {
         my $lastloc = "";
         foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
-          my ($alcvol, $type, $loc) =  $dt =~ /^([0-9.]+) ([0-9]+) ([^:]*) : (.*)/;
+          my ($alcvol, $type, $loc) =  $dt =~ /^([0-9.]+) ([^:]*) : (.*)/;
           $lastloc = $loc unless ($lastloc);
           next unless ( $type );
           my $color = beercolor($type,"0x",$date,$dt);
@@ -1412,7 +1412,8 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
 
 if ( $op =~ /board(-?\d*)/i ) {
   my $extraboard = $1 || -1;  # show all kind of extra info for this tap
-  $locparam = $loc unless ($locparam); # can happen after posting
+  my $locparam = $foundrec->{loc} || "";
+  #$locparam = $loc unless ($locparam); # can happen after posting
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
@@ -1479,20 +1480,20 @@ if ( $op =~ /board(-?\d*)/i ) {
       "(<a href='$url?o=$op&l=$locparam'><span>Clear</span></a>) " .
       "<p>\n";
     }
-    my $oldbeer = "$mak : $beer";  # Remember current beer for opening
+    my $oldbeer = "$foundrec->{mak} : $foundrec->{beer}";  # Remember current beer for opening
     $oldbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
     $oldbeer =~ s/[^a-z0-9]//ig; # and all non-ascii characters
 
     print "<table border=0 style='white-space: nowrap;'>\n";
     my $previd  = 0;
-    foreach $e ( @$beerlist )  {
+    foreach my $e ( @$beerlist )  {
       $nbeers++;
       my $id = $e->{"id"} || 0;
-      $mak = $e->{"maker"} || "" ;
-      $beer = $e->{"beer"} || "" ;
-      $sty = $e->{"type"} || "";
+      my $mak = $e->{"maker"} || "" ;
+      my $beer = $e->{"beer"} || "" ;
+      my $sty = $e->{"type"} || "";
       $loc = $locparam;
-      $alc = $e->{"alc"} || "";
+      my $alc = $e->{"alc"} || "";
       $alc = sprintf("%4.1f",$alc) if ($alc);
       my $seenkey = seenkey($mak,$beer);
       if ( $qry ) {
@@ -1549,9 +1550,9 @@ if ( $op =~ /board(-?\d*)/i ) {
         $hiddenbuttons .= "<input type='hidden' name='l' value='$loc' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
       my $buttons="";
-      foreach $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
-        $vol = $sp->{"vol"};
-        $pr = $sp->{"price"};
+      foreach my $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
+        my $vol = $sp->{"vol"};
+        my $pr = $sp->{"price"};
         my $lbl;
         if ($extraboard == $id || $extraboard == -2) {
           $lbl = "$vol cl: $pr.-";
@@ -1741,7 +1742,7 @@ if ( $op =~ /board(-?\d*)/i ) {
     print "More: <br/>\n";
     my  $ysum ;
     if ( scalar(keys(%years)) > 1 ) {
-      for $y ( reverse sort(keys(%years)) ) {
+      for my $y ( reverse sort(keys(%years)) ) {
         print "<a href='$url?o=short&y=$y&q=".uri_escape_utf8($qry)."'><span>$y</span></a> ($years{$y})<br/>\n" ;
         $ysum += $years{$y};
       }
@@ -1817,7 +1818,7 @@ elsif ( $op =~ /Years(d?)/i ) {
         } else {
           @kl = sort { $sum{$b} <=> $sum{$a} }  keys %sum;
         }
-        $k = 0;
+        my $k = 0;
         while ( $k < $nlines && $kl[$k] ) {
           my $loc = $kl[$k];
           my $alc = unit(sprintf("%5.0f", $alc{$loc} / $onedrink),"d");
@@ -1874,7 +1875,7 @@ elsif ( $op =~ /Years(d?)/i ) {
   }
   print "</table>\n";
   print "Show ";
-  for $top ( 5, 10, 20, 50, 100, 999999 ) {
+  for my $top ( 5, 10, 20, 50, 100, 999999 ) {
     print  "&nbsp; <a href='$url?o=$op&q=" . uri_escape($qry) . "&maxl=$top'><span>Top-$top</span></a>\n";
   }
   if ($qry) {
@@ -1962,7 +1963,7 @@ elsif ( $op =~ /Months([BS])?/ ) {
 #      $monthprices{$nextm} = 0;
 #    }
 #  }
-  foreach $m ( 1 .. 12 ) {
+  foreach my $m ( 1 .. 12 ) {
     my $plotline;
     $t .= "<tr><td><b>$months[$m]</b></td>\n";
     $plotyear-- if ( $m == $lastm+1 );
@@ -2042,8 +2043,8 @@ elsif ( $op =~ /Months([BS])?/ ) {
   print F sort(@plotlines);
   # Projections
   my $cur = datestr("%m",0);
-  $curmonth = datestr("%Y-%m",0);
-  $d = ($monthdrinks{$curmonth}||0) / $onedrink ;
+  my $curmonth = datestr("%Y-%m",0);
+  my $d = ($monthdrinks{$curmonth}||0) / $onedrink ;
   my $min = sprintf("%3.1f", $d / 30);  # for whole month
   my $avg = $d / $dayofmonth;
   my $max = 2 * $avg - $min;
@@ -2056,6 +2057,7 @@ elsif ( $op =~ /Months([BS])?/ ) {
   my $granddr = 0;
   my $granddays = 0;
   my $grandprice = 0;
+  my $p;
   foreach $y ( reverse($firsty .. $lasty) ) {
     my $d = "";
     my $dw = "";
@@ -2071,7 +2073,7 @@ elsif ( $op =~ /Months([BS])?/ ) {
     }
     $t .= "<td align=right>$d<br/>$dw<br/>$p</td>\n";
   }
-  my $d = sprintf("%3.1f", $granddr / $granddays / $onedrink) ;
+  $d = sprintf("%3.1f", $granddr / $granddays / $onedrink) ;
   my $dw = $1 if ($d=~/([0-9.]+)/);
   $dw = unit(int($dw*7+0.5), "/w");
   $d = unit($d, "/d");
@@ -2304,10 +2306,10 @@ elsif ( $op eq "geo" ) {
       print "<tr>\n";
       print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
       print "<td align='right'>$ddist</td>";
-      print "<td><a href='$url?o=$op&q=$qry&e=$stamp' ><span>$rec->{stamp}</span></a> ";
+      print "<td><a href='$url?o=$op&q=$qry&e=$rec->{stamp}' ><span>$rec->{stamp}</span></a> ";
       if ($guess) {
         print "<br>(<b>$guess $gdist ?)</b>\n" ;
-        print STDERR "Suspicious Geo: '$loc' looks like '$guess'  for '$g' at '$stamp' \n";
+        print STDERR "Suspicious Geo: '$loc' looks like '$guess'  for '$g' at '$rec->{stamp}' \n";
       }
       print "</td>\n";
       print "</tr>\n";
@@ -2459,7 +2461,7 @@ elsif ( $op ) {
   }
   if ($sortlist) {
     @displines = ();
-    for $k ( sort { "\U$a" cmp "\U$b" } keys(%lineseen) ) {
+    for my $k ( sort { "\U$a" cmp "\U$b" } keys(%lineseen) ) {
       print "<tr>\n$lineseen{$k}</tr>\n";
     }
   } else {
@@ -2475,7 +2477,7 @@ elsif ( $op ) {
   my  $ysum ;
   if ( scalar(keys(%years)) > 1 ) {
     print "More: <br/>\n";
-    for $y ( reverse sort(keys(%years)) ) {
+    for my $y ( reverse sort(keys(%years)) ) {
       print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) . "'><span>$y</span></a><br/>\n" ;
       $ysum += $years{$y};
     }
@@ -2537,6 +2539,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   my $locdsum = 0.0;
   my $locmsum = 0;
   my $origpr = "";
+  my $anchor;
   $maxlines = $i*10 if ($maxlines <0); # neg means all of them
   while ( $i > 0 ) {  # Usually we exit at end-of-day
     $i--;
@@ -2782,7 +2785,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     print "More: <br/>\n";
     my  $ysum;
     if ( scalar(keys(%years)) > 1 ) {
-      for $y ( reverse sort(keys(%years)) ) {
+      for my $y ( reverse sort(keys(%years)) ) {
         print "<a href='$url?y=$y&q=" . uri_escape($qry) .
             "'><span>$y</span></a> ($years{$y})<br/>\n" ;  # TODO - Skips some ??!!
         $ysum += $years{$y};
@@ -2823,7 +2826,7 @@ exit();
 
 # Helper to trim leading and trailing spaces
 sub trim {
-  $val = shift;
+  my $val = shift;
   $val =~ s/^ +//; # Trim leading spaces
   $val =~ s/ +$//; # and trailing
   $val =~ s/\s+/ /g; # and repeated spaces in the middle
@@ -3311,7 +3314,7 @@ sub splitline {
       $v{$fieldnamelist->[$i]} = $datafields[$i] || "";
     }
   } else {
-    error "Unknown line type '$linetype' in $line";
+    error ("Unknown line type '$linetype' in $line");
   }
   # Normalize some common fields
   $v{'alc'} = number( $v{'alc'} );
