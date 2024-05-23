@@ -313,7 +313,6 @@ if ( $op eq "Datafile" ) {
 open F, "<$datafile"
   or error("Could not open $datafile for reading: $!".
      "<br/>Probably the user hasn't been set up yet" );
-my $foundline = "";
 my $foundrec = {};
 my $thisloc = "";
 my $lastdatesum = 0.0;
@@ -330,7 +329,6 @@ my %ratesum; # sum of ratings for every beer
 my %ratecount; # count of ratings for every beer, for averaging
 my %restaurants; # maps location name to restaurant types
 my $allfirstdate = "";
-my $lasttimestamp = "";
 my %monthdrinks; # total drinks for each calendar month
 my %monthprices; # total money spent. Indexed with "yyyy-mm"
 my $weekago = datestr("%F", -7);
@@ -368,12 +366,10 @@ while (<F>) {
   if (!$allfirstdate) {
     $allfirstdate=$rec{'effdate'};
   }
-  $lasttimestamp = $rec{'stamp'};
-  if ( /$qry/ ) {
-    if ( $rec{'effdate'} =~ /^(\d+)/ ) {
-      $years{$1}++;
-    }
-  }
+  if ( /$qry/ ) {  # Total counts for different years
+    $years{ $rec{'year'} }++;
+  } # TODO - Do we need these to depend on $qry ?
+
   my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
   $m = $m || "";
   $restname = $1.$rec{'loc'} if ( $rec{'mak'}  =~ /^(Restaurant,)/i );
@@ -394,8 +390,7 @@ while (<F>) {
     $ratesum{$rec{'seenkey'}} += $rec{'rate'};
     $ratecount{$rec{'seenkey'}} ++;
   }
-  if ( ! $edit || ($edit eq $rec{'stamp'} ) ) { # TODO - Remember %rec instead
-    $foundline = $_; # Remember the last line, or the one we have edited
+  if ( ! $edit || ($edit eq $rec{'stamp'} ) ) {
     $foundrec = \%rec;
   }
 
@@ -537,6 +532,8 @@ if ( !$op) {
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
   my $sub = $q->param("submit") || "";
+  my $lastrec = $records[ scalar(@records)-1 ];
+  my $lasttimestamp = $lastrec->{stamp};
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
   if ( !$origstamp) { # New record, process date and time if entered
@@ -564,7 +561,6 @@ if ( $q->request_method eq "POST" ) {
       $time = "" if ( $time =~ /^ / );
     }
     if ($date =~ /^L$/i ) { # 'L' for last date
-      my $lastrec = $records[ scalar(@records)-1 ];
       $date = $lastrec->{date} || datestr();
       if (! $time && $lastrec->{time} =~ /^ *(\d\d):(\d\d)/ ){ # Guess a time
         my $hr = $1;
@@ -3352,13 +3348,4 @@ sub splitline {
   return %v;
 }
 
-# Helper to return the values as if in the old split
-# TODO: In the end this should be killed, and the hash values used everywhere
-sub linevalues {
-  my $line = shift;
-  my %v = splitline($line);
-  my @values =   ( $v{"stamp"}, $v{"wday"}, $v{"effdate"}, $v{"loc"}, $v{"mak"}, $v{"beer"},
-    $v{"vol"}, $v{"sty"}, $v{"alc"}, $v{"pr"}, $v{"rate"}, $v{"com"}, $v{"geo"});
-  return @values;
-}
 
