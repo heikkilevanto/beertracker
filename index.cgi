@@ -520,6 +520,15 @@ $todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
   if ($calmon);
 
 
+# Default new users to the about page, we have nothing else to show
+if ( !$op) {
+  if ( !@records ) {
+    $op = "About";
+  } else {
+    $op = "Graph";  # Default to showing the graph
+  }
+}
+
 ################################################################################
 # POST data into the file
 # Try to guess missing values from last entries
@@ -738,15 +747,6 @@ if ( $q->request_method eq "POST" ) {
 } # POST data
 
 
-################################################################################
-# Get new values from the file we ingested earlier
-################################################################################
-
-if ($foundline) {  # can be undef, if a new data file
-  ( $stamp, $wday, $effdate, $loc, $mak, $beer, $vol, $sty, $alc, $pr, $rate, $com, $geo) =
-      linevalues($foundline);
-  $geo = ""; # do not keep geo
-}
 
 
 ################################################################################
@@ -797,13 +797,7 @@ print "<body>\n";
 print "\n<!-- Read " . scalar(@records). " lines from $datafile -->\n\n" ;
 
 
-################################################################################
-# Default new users to the about page
-################################################################################
 
-if ( !@records && ! $op ) {
-  $op = "About";
-}
 
 
 ################################################################################
@@ -974,6 +968,7 @@ if ($devversion) {
   print "<hr>\n";
 }
 
+
 print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
 my $clr = "Onfocus='value=value.trim();select();'";
 my $c2 = "colspan='2'";
@@ -988,28 +983,28 @@ my $sz3n = "size='8'";
 my $sz3 = "$sz3n $clr";
 my $hidden = "";
 print "<table style='width:100%; max-width:500px' >";
-my $editstamp;
+# Preprocess some fields
+# TODO These should be "my" variables when getting rid of the globals
+# Note that $foundrec can be undef if we have no data at all (or edit url messed with)
+# That produces some warnings, but does not harm much
+$geo = $foundrec->{geo};  # These fields may need adjustment before use
+$loc = $foundrec->{loc};
+$date = " $foundrec->{date}"; # Leading space marks as uncertain
+$time = " $foundrec->{time}";
+my $prc = "$foundrec->{pr}.-";
 if ($edit) {
   print "<tr><td $c2><b>Record '$edit'</b></td></tr>\n";
-  $editstamp = $edit;
   ($date,$time) = $edit =~ /^([0-9-]+) ([0-9]+:[0-9]+:[0-9]+)/ ;
   if (!$geo) {
     $geo = "x";  # Prevent autofilling current geo
   }
 } else {
-  $editstamp = $lasttimestamp;
-  if ( $lasttimestamp =~ /^([0-9-]+) ([0-9]+:[0-9]+)/ ) {
-   $date = $1;
-   $time = $2;
-  }
   $geo = " $geo"; # Allow more recent geolocations
   $hidden = "hidden"; # Hide the geo and date fields for normal use
-  $loc = " " . $loc; # Mark it as uncertain
+  $loc = " $loc"; # Mark it as uncertain
 }
-$date = " $date"; # Detect if editing them´
-$time = " $time";
 print "<tr><td>\n";
-print "<input name='e' type='hidden' value='$editstamp' id='editrec' />\n";
+print "<input name='e' type='hidden' value='$foundrec->{stamp}' id='editrec' />\n";
 print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
 print "<input name='q' type='hidden' value='$qry' id='editrec' />\n";
 print "</td></tr>\n";
@@ -1020,17 +1015,15 @@ print "<td id='td2' $hidden ><input name='t' value='$time' $sz3 placeholder='" .
 print "<tr><td id='td3' $hidden $c2><input name='g' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
 
 print "<tr><td><input name='l' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
-print "<td><input name='s' value='$sty' $sz1 placeholder='Style'/></td></tr>\n";
+print "<td><input name='s' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td></tr>\n";
 print "<tr><td>
-  <input name='m' value='$mak' $sz1 placeholder='Brewery'/></td>\n";
+  <input name='m' value='$foundrec->{mak}' $sz1 placeholder='Brewery'/></td>\n";
 print "<td>
-  <input name='b' value='$beer' $sz1 placeholder='Beer'/></td></tr>\n";
-print "<tr><td><input name='v' value='$vol cl' $sz2 placeholder='Vol' />\n";
-print "<input name='a' value='$alc %' $sz2 placeholder='Alc' />\n";
-my $prc = $pr;
-$prc =~ s/(-?[0-9]+).*$/$1.-/;
+  <input name='b' value='$foundrec->{beer}' $sz1 placeholder='Beer'/></td></tr>\n";
+print "<tr><td><input name='v' value='$foundrec->{vol} cl' $sz2 placeholder='Vol' />\n";
+print "<input name='a' value='$foundrec->{alc} %' $sz2 placeholder='Alc' />\n";
 print "<input name='p' value='$prc' $sz2 placeholder='Price' /></td>\n";
-print "<td><select name='r' id='r' value='$rate' placeholder='Rating' style='width:4.5em;'>" .
+print "<td><select name='r' id='r' value='$foundrec->{rate}' placeholder='Rating' style='width:4.5em;'>" .
   "<option value=''>Rate</option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
@@ -1048,14 +1041,14 @@ print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
 print "</td></tr>\n";
 print "<tr>";
 print " <td $c6><textarea name='c' cols='45' rows='3' id='c'
-  placeholder='$todaydrinks'>$com</textarea></td>\n";
+  placeholder='$todaydrinks'>$foundrec->{com}</textarea></td>\n";
 print "</tr>\n";
 
 print "<tr><td>\n";  # Buttons
 if ($edit) {
   print " <input type='submit' name='submit' value='Save' id='save' />\n";
   print " <input type='submit' name='submit' value='Del'/>\n";
-  print "<a href='$url' ><span>cancel</span></a>";
+  print "<a href='$url?o=$op' ><span>cancel</span></a>";
   print "</td><td>\n";
 } else {
   print "<input type='submit' name='submit' value='Record'/>\n";
@@ -1081,9 +1074,6 @@ print "</table>\n";
 print "</form>\n";
 
 print "<div id='debug' hidden ><hr/>Debug<br/></div>\n"; # for javascript debugging
-if ( !$op) {
-  $op = "Graph";  # Default to showing the graph
-}
 
 
 ################################################################################
