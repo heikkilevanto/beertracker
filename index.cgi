@@ -189,8 +189,7 @@ $datalinetypes{"Beer"} = ["stamp", "type", "wday", "effdate", "loc", "mak", "bee
 #
 ################################################################################
 
-# the POST routine reads its own input parameters
-
+# These are used is so many places that it is OK to have them as globals
 my $edit= param("e");  # Record to edit
 my $qry = param("q");  # filter query, greps the list
 my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info, "f" for forcing refresh of board
@@ -200,19 +199,8 @@ my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
    # Defaults to 25, unless we have a year limit, in which case defaults to something huge.
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
+# the POST routine reads its own input parameters
 
-
-
-
-# Both $stamp and $effdate may get rewritten every time we see a tz line in the file
-#if (!$origstamp) { # but $origstamp stays, telling us we can overwrite $stamp
-#  $stamp = datestr( "%F %T", 0,1 ); # no offset, actual time
-#}
-#if ( ! $effdate ) { # Effective date can be the day before
-#  $effdate = datestr( "%a; %F", -0.3, 1); # effdate changes at 08
-#} else {
-#  $effdate = "$wday; $effdate";
-#}
 
 
 ################################################################################
@@ -362,10 +350,6 @@ while (<F>) {
         }
       }
     }
-    #if ( ! $origstamp ) { # Recalculate $stamp and effdate, unless given as inputs
-    #  $stamp = datestr( "%F %T", 0, 1); # times in the new timezone
-    #  $effdate = datestr( "%a; %F", -0.3, 1);
-    #}
     next;
   } # tz
 
@@ -438,8 +422,7 @@ while (<F>) {
     $monthprices{$calmon} += abs($rec{'pr'}); # negative prices for buying box wines
   }
   $lastmonthday = $1 if ( $rec{'effdate'} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-  $drinktypes{$rec{'effdate'}} .= "$rec{'alc'} $rec{'vol'} $rec{'sty'} $rec{'mak'} : $rec{'loc'} ;" if ($rec{'alcvol'} > 0);
-  # TODO - Use the 'alcvol' here and in plotting
+  $drinktypes{$rec{'effdate'}} .= "$rec{'alcvol'} $rec{'sty'} $rec{'mak'} : $rec{'loc'} ;" if ($rec{'alcvol'} > 0);
 } # line loop
 
 if ( ! $todaydrinks ) { # not today
@@ -452,7 +435,7 @@ if ( ! $todaydrinks ) { # not today
   my $today = datestr("%F");
   if ( $calmon && $today =~ /$calmon-(\d\d)/ ) {
     $lastmonthday = $1;
-    # TODO - When today is in the next month, it shows prev month up to the last
+    # When today is in the next month, it shows prev month up to the last
     # entry date, not to end of the month. I can live with that for now, esp
     # since the entry must be pretty close to the end of the month. Showing
     # zeroes for the current month would be no fun.
@@ -505,7 +488,8 @@ if ( $q->request_method eq "POST" ) {
   my $date = param("d",1); # Date, if entered. Overrides stamp and effdate. Keep leading space for logic
   my $time = param("t",1); # Time, if entered.
   my $del = param("x");  # delete/update last entry
-  # Default sizes
+
+  # Adjust size
   my $defaultvol = 40;
   if ( $mak =~ /^Wine,/i ) {
       $defaultvol = 16;
@@ -514,13 +498,11 @@ if ( $q->request_method eq "POST" ) {
     } elsif ( $mak =~ /,/i ) {
       $defaultvol = ""; # for restaurants, time zones, and other strange stuff
     }
-
   my $half;  # Volumes can be prefixed with 'h' for half measures.
   if ( $vol =~ s/^(H)(.+)$/$2/i ) {
     $half = $1;
   }
-
-  my $volunit = uc(substr($vol,0,1));
+  my $volunit = uc(substr($vol,0,1)); # S or L or such
   if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
     $actvol = $1;
     $vol =~s/$volunit/$actvol/i;
@@ -531,7 +513,6 @@ if ( $q->request_method eq "POST" ) {
   if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
     $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
   }
-
 
   my $lastrec = $records[ scalar(@records)-1 ];
   my $lasttimestamp = $lastrec->{stamp};
@@ -548,7 +529,7 @@ if ( $q->request_method eq "POST" ) {
       if ( $loc && $guess  # We have location name, and geo guess
          && $geolocations{$loc} # And we know the geo for the location
          && $loc !~ /$guess/i ) { # And they differ
-        print STDERR "Refusing to store '$geo' for '$loc', it is closer to '$guess' \n";
+        print STDERR "Refusing to store geo '$geo' for '$loc', it is closer to '$guess' \n";
         $geo = "";  # Ignore the suspect geo coords
       }
     } else {
@@ -676,6 +657,8 @@ if ( $q->request_method eq "POST" ) {
   }
   (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
   my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
+  # TODO - Make a record, and convert to a line. Will work for many types of lines, later
+
   $line = trim($line); # Remove leading spaces from fields
   if ( $sub eq "Record" ) {  # Want to create a new record
     $edit = ""; # so don't edit the current one
@@ -711,7 +694,7 @@ if ( $q->request_method eq "POST" ) {
         $stamp = ""; # do not write it again
       }
       if ( !$stp || $stp ne $edit ) {
-        print F $_;
+        print F $_; # just copy the line
       } else { # found the line
         print F "#" . $_ ;  # comment the original line out
         $edit = "XXX"; # Do not delete another line, even if same timestamp
@@ -981,13 +964,12 @@ my $sz3 = "$sz3n $clr";
 my $hidden = "";
 print "<table style='width:100%; max-width:500px' >";
 # Preprocess some fields
-# TODO These should be "my" variables when getting rid of the globals
 # Note that $foundrec can be undef if we have no data at all (or edit url messed with)
 # That produces some warnings, but does not harm much
-$geo = $foundrec->{geo};  # These fields may need adjustment before use
-$loc = $foundrec->{loc};
-$date = " $foundrec->{date}"; # Leading space marks as uncertain
-$time = " $foundrec->{time}";
+my $geo = $foundrec->{geo};  # These fields may need adjustment before use
+my $loc = $foundrec->{loc};
+my $date = " $foundrec->{date}"; # Leading space marks as uncertain
+my $time = " $foundrec->{time}";
 my $prc = "$foundrec->{pr}.-";
 if ($edit) {
   print "<tr><td $c2><b>Record '$edit'</b></td></tr>\n";
@@ -1222,11 +1204,11 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
       if ( $drinktypes{$date} ) {
         my $lastloc = "";
         foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
-          my ($alc, $vol, $type, $loc) =  $dt =~ /^([0-9.]+) ([0-9]+) ([^:]*) : (.*)/;
+          my ($alcvol, $type, $loc) =  $dt =~ /^([0-9.]+) ([0-9]+) ([^:]*) : (.*)/;
           $lastloc = $loc unless ($lastloc);
           next unless ( $type );
           my $color = beercolor($type,"0x",$date,$dt);
-          my $drinks = $alc * $vol / $onedrink;
+          my $drinks = $alcvol / $onedrink;
           if ( $lastloc ne $loc  &&  $startoff - $endoff < 100 ) {
             my $lw = $totdrinks + 0.2; # White line for location change
             $lw += 0.1 unless ($bigimg eq "B");
@@ -2368,7 +2350,6 @@ elsif ( $op ) {
   my @displines;
   my %lineseen;
   my $anchor="";
-  my $odd = 1;
   print "&nbsp;<br/><table style='background-color: #00600;' >\n";
   # For some reason this sets a color between the cells, not within them.
   # which is ok, makes it easier to see what is what.
