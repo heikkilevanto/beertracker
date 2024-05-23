@@ -126,6 +126,17 @@ my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect",
 "I'm in love" );
 
+my %volumes = ( # Comment is displayed on the About page
+  'T' => " 2 Taster, sizes vary, always small",
+  'G' => "16 Glass of wine - 12 in places, at home 16 is more realistic",
+  'S' => "25 Small, usually 25",
+  'M' => "33 Medium, typically a bottle beer",
+  'L' => "40 Large, 40cl in most places I frequent",
+  'C' => "44 A can of 44 cl",
+  'W' => "75 Bottle of wine",
+  'B' => "75 Bottle of wine",
+);
+
 # Links to beer lists at the most common locations and breweries
 my %links;
 $links{"Ølbaren"} = "http://oelbaren.dk/oel/";
@@ -174,94 +185,34 @@ $datalinetypes{"Beer"} = ["stamp", "type", "wday", "effdate", "loc", "mak", "bee
 
 
 ################################################################################
-# Input Parameters - data file fields are the same order
-# from when POSTing a new beer entry
+# Input Parameters
+#
 ################################################################################
 
-# TODO - form these into a record type, so as not to have so many global variables
-my $stamp = param("st");
-my $origstamp = $stamp; # Remember if we had a stamp from the input, indicating editing
-my $wday = param("wd");  # weekday
-my $effdate = param("ed");  # effective date. Drinks after midnight count as night before
-my $loc = param("l");  # location
-$loc =~ s/ *\[.*$//; # Drop the distance from geolocation
-my $locparam = $loc; # Actual parameter, without being clever
-my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
-my $beer= param("b");  # beer
-my $vol = param("v");  # volume, in cl
-my $sty = param("s");  # style
-my $alc = param("a");  # alc, in %vol, up to 1 decimal
-my $pr  = param("p");  # price, DKK
-my $rate= param("r");  # rating, 0=worst, 10=best
-my $com = param("c");  # Comments
-my $geo = param("g");  # Geolocation old: "[55.6531712/12.5042688]" new "55.6531712 12.5042688"
-  # The rest are not in the data file
-my $date = param("d",1); # Date, if entered. Overrides stamp and effdate. Keep leading space for logic
-my $time = param("t",1); # Time, if entered.
-my $del = param("x");  # delete/update last entry
+# the POST routine reads its own input parameters
+
+my $edit= param("e");  # Record to edit
 my $qry = param("q");  # filter query, greps the list
 my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info, "f" for forcing refresh of board
 my $yrlim = param("y"); # Filter by year
 my $op  = param("o");  # operation, to list breweries, locations, etc
-my $edit= param("e");  # Record to edit
 my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
    # Defaults to 25, unless we have a year limit, in which case defaults to something huge.
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
 
-# Disable geo
-if ($loc =~ /^\./ ) {  # starts with a dot
-  $geo = "X";
-  $loc =~ s/^\.//; # remove the dot
-}
 
-# Default sizes
-my $defaultvol = 40;
-if ( $mak =~ /^Wine,/i ) {
-  $defaultvol = 16;
-} elsif ( $mak =~ /Booze,/i ) {
-  $defaultvol = 4;
-} elsif ( $mak =~ /,/i ) {
-  $defaultvol = ""; # for restaurants, time zones, and other strange stuff
-}
 
-my %volumes = ( # Comment is displayed on the About page
-   'T' => " 2 Taster, sizes vary, always small",
-   'G' => "16 Glass of wine - 12 in places, at home 16 is more realistic",
-   'S' => "25 Small, usually 25",
-   'M' => "33 Medium, typically a bottle beer",
-   'L' => "40 Large, 40cl in most places I frequent",
-   'C' => "44 A can of 44 cl",
-   'W' => "75 Bottle of wine",
-   'B' => "75 Bottle of wine",
-);
-
-my $half;  # Volumes can be prefixed with 'h' for half measures.
-if ( $vol =~ s/^(H)(.+)$/$2/i ) {
-  $half = $1;
-}
-
-my $volunit = uc(substr($vol,0,1));
-if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
-  $actvol = $1;
-  $vol =~s/$volunit/$actvol/i;
-}
-if ($half) {
-  $vol = int($vol / 2) ;
-}
-if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
-  $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
-}
 
 # Both $stamp and $effdate may get rewritten every time we see a tz line in the file
-if (!$origstamp) { # but $origstamp stays, telling us we can overwrite $stamp
-  $stamp = datestr( "%F %T", 0,1 ); # no offset, actual time
-}
-if ( ! $effdate ) { # Effective date can be the day before
-  $effdate = datestr( "%a; %F", -0.3, 1); # effdate changes at 08
-} else {
-  $effdate = "$wday; $effdate";
-}
+#if (!$origstamp) { # but $origstamp stays, telling us we can overwrite $stamp
+#  $stamp = datestr( "%F %T", 0,1 ); # no offset, actual time
+#}
+#if ( ! $effdate ) { # Effective date can be the day before
+#  $effdate = datestr( "%a; %F", -0.3, 1); # effdate changes at 08
+#} else {
+#  $effdate = "$wday; $effdate";
+#}
 
 
 ################################################################################
@@ -354,6 +305,8 @@ my $alcinbody = 0; # Grams of alc inside my body
 my $balctime = 0; # Time of the last drink
 my %bloodalc; # max blood alc for each day, and current bloodalc for each line
 my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated
+my $efftoday = datestr( "%F", -0.3, 1); #  today's date
+
 while (<F>) {
   chomp();
   s/#.*$//;  # remove comments
@@ -409,10 +362,10 @@ while (<F>) {
         }
       }
     }
-    if ( ! $origstamp ) { # Recalculate $stamp and effdate, unless given as inputs
-      $stamp = datestr( "%F %T", 0, 1); # times in the new timezone
-      $effdate = datestr( "%a; %F", -0.3, 1);
-    }
+    #if ( ! $origstamp ) { # Recalculate $stamp and effdate, unless given as inputs
+    #  $stamp = datestr( "%F %T", 0, 1); # times in the new timezone
+    #  $effdate = datestr( "%a; %F", -0.3, 1);
+    #}
     next;
   } # tz
 
@@ -456,7 +409,7 @@ while (<F>) {
 
   $lastdatesum += $rec{'alcvol'} ;
   $lastdatemsum += $rec{'pr'};
-  if ( $effdate eq $rec{'effdate'} ) { # Actually today
+  if ( $efftoday eq $rec{'effdate'} ) { # Actually today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
       $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
       if ($bloodalc{$rec{'effdate'}}) { # Calculate the blood alc at the current time.
@@ -532,6 +485,54 @@ if ( !$op) {
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
   my $sub = $q->param("submit") || "";
+
+  # Input parameters, only used here in POST
+  my $stamp = param("st");
+  my $origstamp = $stamp; # Remember if we had a stamp from the input, indicating editing
+  my $effdate = param("ed");  # effective date. Drinks after midnight count as night before
+  my $loc = param("l");  # location
+  $loc =~ s/ *\[.*$//; # Drop the distance from geolocation
+  my $locparam = $loc; # Actual parameter, without being clever
+  my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
+  my $beer= param("b");  # beer
+  my $vol = param("v");  # volume, in cl
+  my $sty = param("s");  # style
+  my $alc = param("a");  # alc, in %vol, up to 1 decimal
+  my $pr  = param("p");  # price, DKK
+  my $rate= param("r");  # rating, 0=worst, 10=best
+  my $com = param("c");  # Comments
+  my $geo = param("g");  # Geolocation old: "[55.6531712/12.5042688]" new "55.6531712 12.5042688"
+  my $date = param("d",1); # Date, if entered. Overrides stamp and effdate. Keep leading space for logic
+  my $time = param("t",1); # Time, if entered.
+  my $del = param("x");  # delete/update last entry
+  # Default sizes
+  my $defaultvol = 40;
+  if ( $mak =~ /^Wine,/i ) {
+      $defaultvol = 16;
+    } elsif ( $mak =~ /Booze,/i ) {
+      $defaultvol = 4;
+    } elsif ( $mak =~ /,/i ) {
+      $defaultvol = ""; # for restaurants, time zones, and other strange stuff
+    }
+
+  my $half;  # Volumes can be prefixed with 'h' for half measures.
+  if ( $vol =~ s/^(H)(.+)$/$2/i ) {
+    $half = $1;
+  }
+
+  my $volunit = uc(substr($vol,0,1));
+  if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
+    $actvol = $1;
+    $vol =~s/$volunit/$actvol/i;
+  }
+  if ($half) {
+    $vol = int($vol / 2) ;
+  }
+  if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
+    $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
+  }
+
+
   my $lastrec = $records[ scalar(@records)-1 ];
   my $lasttimestamp = $lastrec->{stamp};
   # Check for missing values in the input, copy from the most recent beer with
@@ -872,7 +873,7 @@ for my $k (sort keys(%geolocations) ) {
 }
 $script .= " ]; \n";
 
-$script .= "var origloc=\" $loc\"; \n";
+$script .= "var origloc=\" $foundrec->{loc}\"; \n";
 
 $script .= <<'SCRIPTEND';
   var geoloc = "";
@@ -1023,7 +1024,7 @@ print "<td><select name='r' id='r' value='$foundrec->{rate}' placeholder='Rating
   "<option value=''>Rate</option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
-  print " selected='selected'" if ( $ro eq $rate );
+  print " selected='selected'" if ( $ro eq $foundrec->{rate} );
   print  ">$ro $ratings[$ro]</option>\n";
 }
 print "</select>\n";
@@ -2390,9 +2391,7 @@ elsif ( $op ) {
         lst("Location",$rec->{mak},"i") . ": \n" . lst($op,$rec->{beer}) . "</td>";
 
     } elsif ( $op eq "Brewery" ) {
-      next if ( $rec->{mak} =~ /^wine/i );  # TODO - Get line types right
-      next if ( $rec->{mak} =~ /^booze/i );
-      next if ( $rec->{mak} =~ /^restaurant/i );
+      next if ( $rec->{mak} =~ /^wine|booze|restaurant/i );  # TODO - Get line types right
       my $mak = $rec->{mak};
       $fld = $mak;
       $mak =~ s"/+"/<br/>&nbsp;"; # Split collab brews on two lines
@@ -2403,9 +2402,7 @@ elsif ( $op ) {
             "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]") . " \n " . lst("full",$rec->{beer},"b")  ."</td>";
 
     } elsif ( $op eq "Beer" ) {
-      next if ( $mak =~ /^wine/i );
-      next if ( $mak =~ /^booze/i );
-      next if ( $mak =~ /^restaurant/i );
+      next if ( $rec->{mak} =~ /^wine|booze|restaurant/i );
       my $beer = $rec->{beer};
       $fld = $beer;
       $beer =~ s"(/|%2F)+"<br/>&nbsp;"gi if ( length($beer) > 25 ); # Split long lines
@@ -2415,7 +2412,7 @@ elsif ( $op ) {
       $line = "<td>" . filt($fld,"b",$beer,"full") . "&nbsp; $seentimes &nbsp;\n" . glink($rec->{mak},"G") ."</td>" .
             "<td>$rec->{wday} $rec->{effdate} ".
             lst($op,$rec->{loc}) .  "\n <br class='no-wide'/> " .
-            lst($op,$rec->{sty},"","[$rec->{sty}]"). "\n " . unit($rec->{$alc},'%') .
+            lst($op,$rec->{sty},"","[$rec->{sty}]"). "\n " . unit($rec->{alc},'%') .
             lst($op,$rec->{mak},"i") . "&nbsp;</td>";
 
     } elsif ( $op eq "Wine" ) {
@@ -2660,7 +2657,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     if ( $rec->{date} ne $rec->{effdate} ) {
       $time = "($time)";
     }
-    if ( !( $mak  =~ /^Restaurant,/i ) ) { # don't count rest lines
+    if ( !( $rec->{mak}  =~ /^Restaurant,/i ) ) { # don't count rest lines
       $daydsum += $rec->{alcvol};
       $daymsum += abs($rec->{pr});
       $locdsum += $rec->{alcvol};
@@ -2680,7 +2677,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         my $beerstyle = beercolorstyle("$rec->{sty} $rec->{mak}", "$rec->{date}", "[$rec->{sty} $rec->{mak}] : $rec->{beer}" );
         my $tag="span $beerstyle";
         my $ssty = $rec->{sty};
-        $ssty = shortbeerstyle($sty) if ( $qrylim ne "x" );
+        $ssty = shortbeerstyle($rec->{sty}) if ( $qrylim ne "x" );
         print filt("$ssty",$tag) . newmark($rec->{sty}) . " "   ;
         print "<br>\n" if ( $qrylim eq "x" );
       }
@@ -2793,7 +2790,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       }
       # day summary: if nonzero and diff from daysummary and end of day
     if ( abs ( $daydrinks > 0.1 ) && abs ( $daydrinks - $locdrinks ) > 0.1 &&
-         $lastdate ne $effdate ) {
+         $lastdate ne $efftoday ) {
       print " <b>$lastwday</b>: $daydrinks d, $daymsum kr\n";
       }
       print "<br/>";
