@@ -302,42 +302,42 @@ while (<F>) {
   s/#.*$//;  # remove comments
   next unless $_; # skip empty lines
 
-  my %rec = splitline( $_ );
-  next unless $rec{'type'};
-  push (@records, \%rec);  # reference to %rec
+  my $rec = splitline( $_ );
+  next unless $rec->{type};
+  push (@records, $rec);  # reference to %rec
 
   if (!$allfirstdate) {
-    $allfirstdate=$rec{'effdate'};
+    $allfirstdate=$rec->{effdate};
   }
   if ( /$qry/ ) {  # Total counts for different years
-    $years{ $rec{'year'} }++;
+    $years{ $rec->{year} }++;
   } # TODO - Do we need these to depend on $qry ?
 
   my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
-  $restname = $1.$rec{'loc'} if ( $rec{'mak'}  =~ /^(Restaurant,)/i );
-  $thisloc = $rec{'loc'} || "";
+  $restname = $1.$rec->{loc} if ( $rec->{mak}  =~ /^(Restaurant,)/i );
+  $thisloc = $rec->{loc} || "";
   $seen{$thisloc}++;
   $seen{$restname}++;
-  my $seenkey = seenkey($rec{'mak'},$rec{'beer'});
-  if ( ( $rec{'beer'} !~ /misc|mixed/i ) &&
-       ( $rec{'mak'} !~ /misc|mixed/i ) &&
-       ( $rec{'sty'} !~ /misc|mixed/i ) ) {
-    $seen{$rec{'mak'}}++;
-    $seen{$rec{'beer'}}++;
-    $seen{$rec{'sty'}}++;
-    $lastseen{$rec{'seenkey'}} .= "$rec{'effdate'} ";
-    $seen{$rec{'seenkey'}}++;
+  my $seenkey = seenkey($rec->{mak},$rec->{beer});
+  if ( ( $rec->{beer} !~ /misc|mixed/i ) &&
+       ( $rec->{mak} !~ /misc|mixed/i ) &&
+       ( $rec->{sty} !~ /misc|mixed/i ) ) {
+    $seen{$rec->{mak}}++;
+    $seen{$rec->{beer}}++;
+    $seen{$rec->{sty}}++;
+    $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
+    $seen{$rec->{seenkey}}++;
   }
-  if ($rec{'rate'} && $rec{'beer'}) {
-    $ratesum{$rec{'seenkey'}} += $rec{'rate'};
-    $ratecount{$rec{'seenkey'}} ++;
+  if ($rec->{rate} && $rec->{beer}) {
+    $ratesum{$rec->{seenkey}} += $rec->{rate};
+    $ratecount{$rec->{seenkey}} ++;
   }
-  if ( ! $edit || ($edit eq $rec{'stamp'} ) ) {
-    $foundrec = \%rec;
+  if ( ! $edit || ($edit eq $rec->{stamp} ) ) {
+    $foundrec = $rec;
   }
 
   # TODO make TZ its own line type
-  if ( $rec{'mak'}  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone (optional spaces)
+  if ( $rec->{mak}  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone (optional spaces)
     $tz = $1;
     if (!$tz || $tz eq "X") {
       $ENV{"TZ"} = "/etc/localtime";  # clear it
@@ -354,51 +354,51 @@ while (<F>) {
     next;
   } # tz
 
-  if ( ( $rec{'mak'}  =~ /^Restaurant,/i ) ) {
-    $restaurants{$rec{'loc'}} = $rec{'mak'}; # Remember style
+  if ( ( $rec->{mak}  =~ /^Restaurant,/i ) ) {
+    $restaurants{$rec->{loc}} = $rec->{mak}; # Remember style
     next; # do not sum restaurant lines, drinks filed separately
   }
-  if ($rec{'loc'} && $rec{'geo'} ) {
+  if ($rec->{loc} && $rec->{geo} ) {
     my $geocoord;
-    (undef, undef, $geocoord) = geo($rec{'geo'});
-    $geolocations{$rec{'loc'}} = $geocoord if ($geocoord); # Save the last seen location
+    (undef, undef, $geocoord) = geo($rec->{geo});
+    $geolocations{$rec->{loc}} = $geocoord if ($geocoord); # Save the last seen location
     # TODO: Later we may start taking averages, or collect a few data points for each
   } # Let's see how precise it seems to be
 
-  if ( $thisdate ne $rec{'effdate'} ) { # new date
+  if ( $thisdate ne $rec->{effdate} ) { # new date
     $lastdatesum = 0.0;
     $lastdatemsum = 0;
-    $thisdate = $rec{'effdate'};
-    $lasteffdate = $rec{'effdate'};
-    $lastwday = $rec{'wday'};
+    $thisdate = $rec->{effdate};
+    $lasteffdate = $rec->{effdate};
+    $lastwday = $rec->{wday};
     $alcinbody = 0; # Blood alcohol
     $balctime = 0; # Time of the last drink
   }
   # Blood alcohol
-  if ($bodyweight && $rec{'alcvol'}  ) {
+  if ($bodyweight && $rec->{alcvol}  ) {
     my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
-    my $drtime = $1 + $2/60 if ( $rec{'stamp'} =~ / (\d\d):(\d\d)/ );   # time in fractional hours
+    my $drtime = $1 + $2/60 if ( $rec->{stamp} =~ / (\d\d):(\d\d)/ );   # time in fractional hours
     if ($drtime < $balctime ) { $drtime += 24; } # past midnight
     my $timediff = $drtime - $balctime;
     $alcinbody -= $bodyweight * $burnrate * $timediff;
     if ($alcinbody < 0) { $alcinbody = 0; }
     $balctime = $drtime;
-    $alcinbody += $rec{'alcvol'} / $onedrink * 12 ; # grams of alc in body
+    $alcinbody += $rec->{alcvol} / $onedrink * 12 ; # grams of alc in body
     my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-    if ( $ba > ( $bloodalc{$rec{'effdate'}} || 0 ) ) {
-      $bloodalc{$rec{'effdate'}} = $ba;
+    if ( $ba > ( $bloodalc{$rec->{effdate}} || 0 ) ) {
+      $bloodalc{$rec->{effdate}} = $ba;
     }
-    $bloodalc{$rec{'stamp'}} = $ba;  # indexed by the whole timestamp
+    $bloodalc{$rec->{stamp}} = $ba;  # indexed by the whole timestamp
   }
 
-  $lastdatesum += $rec{'alcvol'} ;
-  $lastdatemsum += $rec{'pr'};
-  if ( $efftoday eq $rec{'effdate'} ) { # Actually today
+  $lastdatesum += $rec->{alcvol} ;
+  $lastdatemsum += $rec->{pr};
+  if ( $efftoday eq $rec->{effdate} ) { # Actually today
       $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
       $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
-      if ($bloodalc{$rec{'effdate'}}) { # Calculate the blood alc at the current time.
+      if ($bloodalc{$rec->{effdate}}) { # Calculate the blood alc at the current time.
         # TODO - Only needed to show at the end of the day in ext full list
-        $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$rec{'effdate'}}); # max of the day
+        $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$rec->{effdate}}); # max of the day
         # TODO - This replicates the calculations above, move to a helper func
         my $curtime = datestr("%H:%M",0,1);
         my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
@@ -411,18 +411,18 @@ while (<F>) {
         $todaydrinks .= sprintf(" - %0.2f‰",$ba);
       }
   }
-  if ( $rec{'effdate'} gt $weekago ) {
-    $weeksum += $rec{'alcvol'};
-    $weekmsum += abs($rec{'pr'});
-    $weekdates{$rec{'effdate'}}++;
+  if ( $rec->{effdate} gt $weekago ) {
+    $weeksum += $rec->{alcvol};
+    $weekmsum += abs($rec->{pr});
+    $weekdates{$rec->{effdate}}++;
   }
-  if ( $rec{'effdate'} =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
+  if ( $rec->{effdate} =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
     $calmon = $1;
-    $monthdrinks{$calmon} += $rec{'alcvol'};
-    $monthprices{$calmon} += abs($rec{'pr'}); # negative prices for buying box wines
+    $monthdrinks{$calmon} += $rec->{alcvol};
+    $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
   }
-  $lastmonthday = $1 if ( $rec{'effdate'} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-  $drinktypes{$rec{'effdate'}} .= "$rec{'alcvol'} $rec{'sty'} $rec{'mak'} : $rec{'loc'} ;" if ($rec{'alcvol'} > 0);
+  $lastmonthday = $1 if ( $rec->{effdate} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
+  $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $rec->{sty} $rec->{mak} : $rec->{loc} ;" if ($rec->{alcvol} > 0);
 } # line loop
 
 if ( ! $todaydrinks ) { # not today
@@ -3300,33 +3300,33 @@ sub shortbeerstyle {
 sub splitline {
   my $line = shift;
   my @datafields = split(/ *; */, $line);
-  my $linetype = $datafields[1]; # This is either the type, or the weekday for old format lines
-  my %v;  # ... or some silly comment
-  return %v unless ($linetype); # Can be an empty line, BOM mark, or other funny stuff
-  return %v if ( $line =~/^#/ ); # skip comment lines
+  my $linetype = $datafields[1]; # This is either the type, or the weekday for old format lines (or comment)
+  my $v = {};
+  return $v unless ($linetype); # Can be an empty line, BOM mark, or other funny stuff
+  return $v if ( $line =~/^#/ ); # skip comment lines
   $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/Old/i; # If we match a weekday, we have an old-format line with no type
-  $v{"type"} = $linetype; # Likely to be overwritten below, this is just in case (Old)
-  $v{"rawline"} = $line; # for filtering
+  $v->{type} = $linetype; # Likely to be overwritten below, this is just in case (Old)
+  $v->{rawline} = $line; # for filtering
   my $fieldnamelist = $datalinetypes{$linetype} || "";
   if ( $fieldnamelist ) {
     my @fnames = @{$fieldnamelist};
     for ( my $i = 0; $fieldnamelist->[$i]; $i++ ) {
-      $v{$fieldnamelist->[$i]} = $datafields[$i] || "";
+      $v->{$fieldnamelist->[$i]} = $datafields[$i] || "";
     }
   } else {
     error ("Unknown line type '$linetype' in $line");
   }
   # Normalize some common fields
-  $v{'alc'} = number( $v{'alc'} );
-  $v{'vol'} = number( $v{'vol'} );
-  $v{'pr'} = price( $v{'pr'} );
+  $v->{alc} = number( $v->{alc} );
+  $v->{vol} = number( $v->{vol} );
+  $v->{pr} = price( $v->{pr} );
   # Precalculate some things we often need
-  ( $v{'date'}, $v{'year'}, $v{'time'} ) = $v{'stamp'} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
-  $v{'seenkey'} = seenkey($v{"mak"},$v{"beer"});
-  my $alcvol = $v{'alc'} * $v{'vol'} || 0 ;
-  $alcvol = 0 if ( $v{'pr'} < 0  );  # skip box wines
-  $v{'alcvol'} = $alcvol;
-  return %v;
+  ( $v->{date}, $v->{year}, $v->{time} ) = $v->{stamp} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
+  $v->{seenkey} = seenkey($v->{mak},$v->{beer});
+  my $alcvol = $v->{alc} * $v->{vol} || 0 ;
+  $alcvol = 0 if ( $v->{pr} < 0  );  # skip box wines
+  $v->{alcvol} = $alcvol;
+  return $v;
 }
 
 
