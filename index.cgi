@@ -201,9 +201,20 @@ my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $url = $q->url;
 # the POST routine reads its own input parameters
 
-# Other globals
-my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated
-  # Passed from reading to graph
+# Other globals. Set up when reading the file, and used in some other places
+my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated. For the graph
+
+
+# Geolocations. Set up when reading the file, passed to the javascript
+my %geolocations; # Latest known geoloc for each location name
+$geolocations{"Home "} =   "[55.6588/12.0825]";  # Special case for FF.
+$geolocations{"Home  "} =  "[55.6531712/12.5042688]";  # Chrome
+$geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
+  # My desktop machine gets the coordinates wrong. FF says Somewhere in Roskilde
+  # Fjord, Chrome says in Valby...
+  # Note also the trailing space(s), to distinguish from the ordinary 'Home'
+  # That gets filtered away before saving.
+  # (This could be saved in each users config, if we had such)
 
 
 ################################################################################
@@ -283,15 +294,6 @@ my $tz = "";
 my %daydsums; # Sum of drinks for each date   # TODO Sum these up here (See #142)
 my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
 my %years;  # Keep track which years we have seen, for the "more" links
-my %geolocations; # Latest known geoloc for each location name
-$geolocations{"Home "} =   "[55.6588/12.0825]";  # Special case for FF.
-$geolocations{"Home  "} =  "[55.6531712/12.5042688]";  # Chrome
-$geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
-  # My desktop machine gets the coordinates wrong. FF says Somewhere in Roskilde
-  # Fjord, Chrome says in Valby...
-  # Note also the trailing space(s), to distinguish from the ordinary 'Home'
-  # That gets filtered away before saving.
-  # (This could be saved in each users config, if we had such)
 my $alcinbody = 0; # Grams of alc inside my body
 my $balctime = 0; # Time of the last drink
 my %bloodalc; # max blood alc for each day, and current bloodalc for each line
