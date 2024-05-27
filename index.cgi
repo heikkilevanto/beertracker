@@ -24,7 +24,6 @@
 #   - Constants and setup
 #
 # - Early processing
-#   - Input Parameters - data file fields are the same order
 #   - Dump of the data file
 #   - Read the data file
 #   - POST data into the file
@@ -472,12 +471,9 @@ if ( $q->request_method eq "POST" ) {
   my $sub = $q->param("submit") || "";
 
   # Input parameters, only used here in POST
+  my $rec = {};
   my $stamp = param("st");
-  my $origstamp = $stamp; # Remember if we had a stamp from the input, indicating editing
-  my $effdate = param("ed");  # effective date. Drinks after midnight count as night before
   my $loc = param("l");  # location
-  $loc =~ s/ *\[.*$//; # Drop the distance from geolocation
-  my $locparam = $loc; # Actual parameter, without being clever
   my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
   my $beer= param("b");  # beer
   my $vol = param("v");  # volume, in cl
@@ -489,7 +485,11 @@ if ( $q->request_method eq "POST" ) {
   my $geo = param("g");  # Geolocation old: "[55.6531712/12.5042688]" new "55.6531712 12.5042688"
   my $date = param("d",1); # Date, if entered. Overrides stamp and effdate. Keep leading space for logic
   my $time = param("t",1); # Time, if entered.
-  my $del = param("x");  # delete/update last entry
+
+  my $effdate; # effective date. Drinks after midnight count as night before
+
+  # Clean the location
+  $loc =~ s/ *\[.*$//; # Drop the distance from geolocation
 
   # Adjust size
   my $defaultvol = 40;
@@ -520,7 +520,7 @@ if ( $q->request_method eq "POST" ) {
   my $lasttimestamp = $lastrec->{stamp};
   # Check for missing values in the input, copy from the most recent beer with
   # the same name.
-  if ( !$origstamp) { # New record, process date and time if entered
+  if ( !$stamp) { # New record, process date and time if entered
     #print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
     if (($date =~ /^\d/ || $time =~ /^\d/ )  # Entering after the fact, possibly at a different location
         && ( $geo =~ /^ / )) {  # And geo is autofilled
@@ -557,7 +557,7 @@ if ( $q->request_method eq "POST" ) {
           # TODO - Increment date as well
         }
         $time = sprintf("%02d:%02d", $hr,$min);
-        $loc = ""; # Fall back to last values
+        $loc = $foundrec->{loc}; # Fall back to last values
       }
     } # date 'L'
     if ( $date =~ /^Y$/i ) { # 'Y' for yesterday
@@ -597,13 +597,13 @@ if ( $q->request_method eq "POST" ) {
     #print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate' L='$lasttimestamp'\n";
   }
   if ( $mak !~ /tz,/i ) {
-    $loc = $thisloc unless $loc;  # Always default to the last location, except for tz lines
+    $loc = $foundrec->{loc} unless $loc;  # Always default to the last location, except for tz lines
   }
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $vol = $1 if ( $1 );
   }
   if ( $sub eq "Save" && $loc =~ /^ /  ) {   # Saving on default values
-    $loc = $thisloc; # Ignore that guess, fall back to the latest location # See #301
+    $loc = $foundrec->{loc}; # Ignore that guess, fall back to the latest location # See #301
     $geo = ""; # Drop the geo coords, we don't want to mix $thisloc and random coords
   }
   # Try to guess missing values from previous lines
@@ -1415,7 +1415,6 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
 if ( $op =~ /board(-?\d*)/i ) {
   my $extraboard = $1 || -1;  # show all kind of extra info for this tap
   my $locparam = $foundrec->{loc} || "";
-  #$locparam = $loc unless ($locparam); # can happen after posting
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
