@@ -471,22 +471,24 @@ if ( $q->request_method eq "POST" ) {
   my $sub = $q->param("submit") || "";
 
   # Input parameters, only used here in POST
-  my $rec = {};
-  my $stamp = param("st");
-  my $loc = param("l");  # location
-  my $mak = param("m");  # brewery (maker) (or "wine, red", or "restaurant, thai"
-  my $beer= param("b");  # beer
-  my $vol = param("v");  # volume, in cl
-  my $sty = param("s");  # style
-  my $alc = param("a");  # alc, in %vol, up to 1 decimal
-  my $pr  = param("p");  # price, DKK
-  my $rate= param("r");  # rating, 0=worst, 10=best
-  my $com = param("c");  # Comments
-  my $geo = param("g");  # Geolocation old: "[55.6531712/12.5042688]" new "55.6531712 12.5042688"
-  my $date = param("d",1); # Date, if entered. Overrides stamp and effdate. Keep leading space for logic
-  my $time = param("t",1); # Time, if entered.
+  my $rec = inputrecord();  # Get an approximation of a record from the params
+  my $edit = param("edit");
+  my $loc = param("loc");  # location
+  my $mak = param("mak");  # brewery (maker) (or "wine, red", or "restaurant, thai"
+  my $beer= param("beer");  # beer
+  my $vol = param("vol");  # volume, in cl
+  my $sty = param("sty");  # style
+  my $alc = param("alc");  # alc, in %vol, up to 1 decimal
+  my $pr  = param("pr");  # price, DKK
+  my $rate= param("rate");  # rating, 0=worst, 10=best
+  my $com = param("com");  # Comments
+  my $geo = param("geo");  # Geolocation old: "[55.6531712/12.5042688]" new "55.6531712 12.5042688"
+  my $date = param("date"); # Date, if entered. Overrides stamp and effdate. Keep leading space for logic
+  my $time = param("time"); # Time, if entered.
 
   my $effdate; # effective date. Drinks after midnight count as night before
+  my $stamp = $edit . "; Mon"; # TODO
+  $effdate = $date;  # TODO - Do these right when getting so far
 
   # Clean the location
   $loc =~ s/ *\[.*$//; # Drop the distance from geolocation
@@ -807,9 +809,9 @@ $script .= <<'SCRIPTEND';
       if ( inputs[i].type == "text" )
         inputs[i].value = "";
     }
-    var r = document.getElementById("r"); // and rating
+    var r = document.getElementById("rate"); // and rating
     r.value = "";
-    var c = document.getElementById("c"); // and comment
+    var c = document.getElementById("com"); // and comment
     c.value = "";
 
     // Hide the 'save' button, we are about to create a new entry
@@ -823,7 +825,6 @@ SCRIPTEND
 # and geolocation
 $script .= <<'SCRIPTEND';
   function showrows() {
-    console.log("Unhiding...");
     var rows = [ "td1", "td2", "td3"];
     for (i=0; i<rows.length; i++) {
       var r = document.getElementById(rows[i]);
@@ -868,7 +869,7 @@ $script .= <<'SCRIPTEND';
     var gf = document.getElementById("geo");
     console.log ("Geo field: '" + gf.value + "'" );
     if ( ! gf.value ||  gf.value.match( /^ / )) { // empty, or starts with a space
-      var el = document.getElementsByName("g");
+      var el = document.getElementsByName("geo");
       if (el) {
         for ( i=0; i<el.length; i++) {
           el[i].value=geoloc;
@@ -985,26 +986,26 @@ if ($edit) {
   $loc = " $loc"; # Mark it as uncertain
 }
 print "<tr><td>\n";
-print "<input name='e' type='hidden' value='$foundrec->{stamp}' id='editrec' />\n";
+print "<input name='edit' type='hidden' value='$foundrec->{stamp}' id='editrec' />\n";
 print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
 print "<input name='q' type='hidden' value='$qry' id='editrec' />\n";
 print "</td></tr>\n";
-print "<tr><td id='td1' $hidden ><input name='d' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
-print "<td id='td2' $hidden ><input name='t' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
+print "<tr><td id='td1' $hidden ><input name='date' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
+print "<td id='td2' $hidden ><input name='time' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
 
   # Geolocation
-print "<tr><td id='td3' $hidden $c2><input name='g' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
+print "<tr><td id='td3' $hidden $c2><input name='geo' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
 
-print "<tr><td><input name='l' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
-print "<td><input name='s' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td></tr>\n";
+print "<tr><td><input name='loc' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
+print "<td><input name='sty' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td></tr>\n";
 print "<tr><td>
-  <input name='m' value='$foundrec->{mak}' $sz1 placeholder='Brewery'/></td>\n";
+  <input name='mak' value='$foundrec->{mak}' $sz1 placeholder='Brewery'/></td>\n";
 print "<td>
-  <input name='b' value='$foundrec->{beer}' $sz1 placeholder='Beer'/></td></tr>\n";
-print "<tr><td><input name='v' value='$foundrec->{vol} cl' $sz2 placeholder='Vol' />\n";
-print "<input name='a' value='$foundrec->{alc} %' $sz2 placeholder='Alc' />\n";
-print "<input name='p' value='$prc' $sz2 placeholder='Price' /></td>\n";
-print "<td><select name='r' id='r' value='$foundrec->{rate}' placeholder='Rating' style='width:4.5em;'>" .
+  <input name='beer' value='$foundrec->{beer}' $sz1 placeholder='Beer'/></td></tr>\n";
+print "<tr><td><input name='vol' value='$foundrec->{vol} cl' $sz2 placeholder='Vol' />\n";
+print "<input name='alc' value='$foundrec->{alc} %' $sz2 placeholder='Alc' />\n";
+print "<input name='pr' value='$prc' $sz2 placeholder='Price' /></td>\n";
+print "<td><select name='rate' id='r' value='$foundrec->{rate}' placeholder='Rating' style='width:4.5em;'>" .
   "<option value=''>Rate</option>\n";
 for my $ro (0 .. scalar(@ratings)-1) {
   print "<option value='$ro'" ;
@@ -1021,7 +1022,7 @@ if ( $op && $op !~ /graph/i ) {
 print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
 print "</td></tr>\n";
 print "<tr>";
-print " <td $c6><textarea name='c' cols='45' rows='3' id='c'
+print " <td $c6><textarea name='com' cols='45' rows='3' id='c'
   placeholder='$todaydrinks'>$foundrec->{com}</textarea></td>\n";
 print "</tr>\n";
 
@@ -1037,7 +1038,7 @@ if ($edit) {
   print "</td><td>\n";
   print " <input type='button' value='Clr' onclick='getlocation();clearinputs()'/>\n";
 }
-print " <select name='ops' style='width:4.5em;' " .
+print " <select  style='width:4.5em;' " .
             "onchange='document.location=\"$url?\"+this.value;' >";
 print "<option value='' >Show</option>\n";
 print "<option value='o=full&q=$qry' >Full List</option>\n";
@@ -1544,11 +1545,11 @@ if ( $op =~ /board(-?\d*)/i ) {
       my $country = $e->{'country'} || "";
       my $sizes = $e->{"sizePrice"};
       my $hiddenbuttons = "";
-        $hiddenbuttons .= "<input type='hidden' name='m' value='$mak' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='b' value='$beer' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='s' value='$origsty' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='a' value='$alc' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='l' value='$loc' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='mak' value='$mak' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='beer' value='$beer' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='sty' value='$origsty' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='alc' value='$alc' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='loc' value='$loc' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
       my $buttons="";
       foreach my $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
@@ -1563,8 +1564,8 @@ if ( $op =~ /board(-?\d*)/i ) {
         }
         $buttons .= "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
         $buttons .= $hiddenbuttons;
-        $buttons .= "<input type='hidden' name='v' value='$vol' />\n" ;
-        $buttons .= "<input type='hidden' name='p' value='$pr' />\n" ;
+        $buttons .= "<input type='hidden' name='vol' value='$vol' />\n" ;
+        $buttons .= "<input type='hidden' name='pr' value='$pr' />\n" ;
         $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
         $buttons .= "</form>\n";
         $buttons .= "</td>\n" if ($extraboard != $id && $extraboard != -2);
@@ -1587,8 +1588,8 @@ if ( $op =~ /board(-?\d*)/i ) {
         print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
         print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
         print "$hiddenbuttons";
-        print "<input type='hidden' name='v' value='T' />\n" ;  # taster
-        print "<input type='hidden' name='p' value='X' />\n" ;  # at no cost
+        print "<input type='hidden' name='vol' value='T' />\n" ;  # taster
+        print "<input type='hidden' name='pr' value='X' />\n" ;  # at no cost
         print "<input type='submit' name='submit' value='Taster' /> \n";
         print "</form>\n";
         print "</td></tr>\n";
@@ -2578,16 +2579,16 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
         } # fl avg on loc line, if not going to print a day summary line
         # Restaurant copy button
         print "<form method='POST' style='display: inline;' class='no-print'>\n";
-        print "<input type='hidden' name='l' value='$lastloc2' />\n";
+        print "<input type='hidden' name='loc' value='$lastloc2' />\n";
         my $rtype = $restaurants{$lastloc2} || "Restaurant, unspecified";
-        print "<input type='hidden' name='m' value='$rtype' />\n";
+        print "<input type='hidden' name='mak' value='$rtype' />\n";
         $rtype =~ s/Restaurant, //;
-        print "<input type='hidden' name='b' value='Food and Drink' />\n";
-        print "<input type='hidden' name='v' value='x' />\n";
-        print "<input type='hidden' name='s' value='$rtype' />\n";
-        print "<input type='hidden' name='a' value='x' />\n";
-        print "<input type='hidden' name='p' value='$locmsum kr' />\n";
-        print "<input type='hidden' name='g' value='' />\n";
+        print "<input type='hidden' name='beer' value='Food and Drink' />\n";
+        print "<input type='hidden' name='vol' value='x' />\n";
+        print "<input type='hidden' name='sty' value='$rtype' />\n";
+        print "<input type='hidden' name='alc' value='x' />\n";
+        print "<input type='hidden' name='pr' value='$locmsum kr' />\n";
+        print "<input type='hidden' name='geo' value='' />\n";
         print "<input type='submit' name='submit' value='Rest'
                     style='display: inline; font-size: x-small' />\n";
         print "</form>\n";
@@ -2735,13 +2736,13 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
     print "<a href='$url?o=$op&q=$qry&e=" . uri_escape_utf8($rec->{stamp}) ."' ><span>Edit</span></a> \n";
 
     # Copy values
-    print "<input type='hidden' name='m' value='$rec->{mak}' />\n";
-    print "<input type='hidden' name='b' value='$rec->{beer}' />\n";
-    print "<input type='hidden' name='v' value='' />\n";
-    print "<input type='hidden' name='s' value='$origsty' />\n";
-    print "<input type='hidden' name='a' value='$rec->{alc}' />\n";
-    print "<input type='hidden' name='l' value='$rec->{loc}' />\n" if ( $copylocation);
-    print "<input type='hidden' name='g' id='geo' value='' />\n";
+    print "<input type='hidden' name='mak' value='$rec->{mak}' />\n";
+    print "<input type='hidden' name='beer' value='$rec->{beer}' />\n";
+    print "<input type='hidden' name='vol' value='' />\n";
+    print "<input type='hidden' name='sty' value='$origsty' />\n";
+    print "<input type='hidden' name='alc' value='$rec->{alc}' />\n";
+    print "<input type='hidden' name='loc' value='$rec->{loc}' />\n" if ( $copylocation);
+    print "<input type='hidden' name='geo' id='geo' value='' />\n";
     print "<input type='hidden' name='o' value='$op' />\n";  # Stay on page
     print "<input type='hidden' name='q' value='$qry' />\n";
 
@@ -2837,10 +2838,8 @@ sub trim {
 # Helper to sanitize input data
 sub param {
   my $tag = shift;
-  my $keepspaces = shift || 1;
   my $val = $q->param($tag) || "";
   $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
-  $val = trim($val) unless ( $keepspaces );
   return $val;
 }
 
@@ -2882,8 +2881,8 @@ sub splitfilter {
 sub searchform {
   my $r = "" .
     "<form method=GET accept-charset='UTF-8'> " .
-    "<input type=hidden name=o value=$op />\n" .
-    "<input type=text name=q />  \n " .
+    "<input type=hidden name='o' value=$op />\n" .
+    "<input type=text name='q' />  \n " .
     "<input type=submit value='Search'/> \n " .
     "</form> \n" .
     "";
@@ -3331,3 +3330,11 @@ sub splitline {
 }
 
 
+# Convert input parameters into a rough estimation of a record
+sub inputrecord {
+  my @pnames = $q->param;
+  foreach my $p ( @pnames ) {
+    my $pv = $q->param($p);
+    print STDERR "param '$p' : '$pv'\n";
+  }
+}
