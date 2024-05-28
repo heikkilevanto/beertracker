@@ -177,34 +177,6 @@ my $bodyweight;  # in kg, for blood alc calculations
 $bodyweight = 120 if ( $username eq "heikki" );
 $bodyweight =  83 if ( $username eq "dennis" );
 
-# Data line types - These define the field names on the data line for that type
-my %datalinetypes;
-$datalinetypes{"Old"} = ["stamp", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"]; # old type
-$datalinetypes{"Beer"} = ["stamp", "type", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"];
-# Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
-# TODO - Create types for wine, booze, restaurant, tz, and others
-
-################################################################################
-# Input Parameters
-#
-################################################################################
-
-# These are used is so many places that it is OK to have them as globals
-my $edit= param("e");  # Record to edit
-my $qry = param("q");  # filter query, greps the list
-my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info, "f" for forcing refresh of board
-my $yrlim = param("y"); # Filter by year
-my $op  = param("o");  # operation, to list breweries, locations, etc
-my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
-   # Defaults to 25, unless we have a year limit, in which case defaults to something huge.
-my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
-my $url = $q->url;
-# the POST routine reads its own input parameters
-
-# Other globals. Set up when reading the file, and used in some other places
-my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated. For the graph
-
-
 # Geolocations. Set up when reading the file, passed to the javascript
 my %geolocations; # Latest known geoloc for each location name
 $geolocations{"Home "} =   "[55.6588/12.0825]";  # Special case for FF.
@@ -216,13 +188,124 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
   # That gets filtered away before saving.
   # (This could be saved in each users config, if we had such)
 
+# Data line types - These define the field names on the data line for that type
+my %datalinetypes;
+$datalinetypes{"Old"} = ["stamp", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"]; # old type
+$datalinetypes{"Beer"} = ["stamp", "type", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"];
+# Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
+# TODO - Create types for wine, booze, restaurant, tz, and others
+
+################################################################################
+# Input Parameters
+################################################################################
+# These are used is so many places that it is OK to have them as globals
+# TODO - Check if all are used, after refactoring
+my $edit= param("e");  # Record to edit
+my $qry = param("q");  # filter query, greps the list
+my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info, "f" for forcing refresh of board
+my $yrlim = param("y"); # Filter by year
+my $op  = param("o");  # operation, to list breweries, locations, etc
+my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
+   # Defaults to 25, unless we have a year limit, in which case defaults to something huge.
+my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
+my $url = $q->url;
+# the POST routine reads its own input parameters
+
+################################################################################
+# Global variables
+# Mostly from reading the file, used in various places
+################################################################################
+# TODO - Check these
+my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated. For the graph
+my $efftoday = datestr( "%F", -0.3, 1); #  today's date
+my $foundrec = {};  # The record we found, either the last one or one defined by edit param
+my @records; # All data records, parsed
+my %seen; # Count how many times various names seen before (for NEW marks)
+my $todaydrinks = "";  # For a hint in the comment box
+my %ratesum; # sum of ratings for every beer
+my %ratecount; # count of ratings for every beer, for averaging
+my %restaurants; # maps location name to restaurant types
+my $allfirstdate = "";
+my %years;  # Keep track which years we have seen, for the "more" links
+my %bloodalc; # max blood alc for each day, and current bloodalc for each line
+my %lastseen; # Last time I have seen a given beer
+my %monthdrinks; # total drinks for each calendar month
+my %monthprices; # total money spent. Indexed with "yyyy-mm"
+my $tz = "";
+my $copylocation = 0;  # should the copy button copy location too. TODO - Remove this, we use geo location for everything now
+my %averages; # floating average by effdate. Calculated in graph, used in extended full list
+my $starttime = "";  # For the datestr helper
+
+
+
+################################################################################
+# Main program
+################################################################################
+# TODO - Much is still in one continuous script
+
+if ( $op eq "Datafile" ) {  # Must be done before sending HTML headers
+  dumpdatafile(); # Never returns
+}
+readdatafile();
+
+# Default new users to the about page, we have nothing else to show
+if ( !$op) {
+  if ( !@records ) {
+    $op = "About";
+  } else {
+    $op = "Graph";  # Default to showing the graph
+  }
+}
+
+if ( $q->request_method eq "POST" ) {
+  postdata(); # Never returns, forwards back to the script to display the data
+}
+
+htmlhead(); # Ok, now we can commit to making a HTML page
+javascript(); # with some javascript trickery in it
+
+# The input form is at the top of every page
+inputform();
+
+# We display a graph for some pages, but only if we have data
+if ( $op =~ /^Graph/i || $op =~ /Board/i) {
+  graph();
+}
+if ( $op =~ /Board/i ) {
+  beerboard();
+}
+if ( $op =~ /Years(d?)/i ) {
+  yearsummary($1); # $1 indicates sort order
+}
+if ( $op =~ /short/i ) {
+  shortlist();
+}
+if ( $op =~ /Months([BS])?/ ) {
+  monthstat($1);
+}
+if ( $op eq "About" ) {
+  about();
+}
+if ( $op eq "geo" ) {
+  geodebug();
+}
+if ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
+  lists();
+}
+if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
+  fulllist();
+}
+
+htmlfooter();
+exit();  # The rest should be subs only
+
+# End of main
 
 ################################################################################
 # Dump of the data file
 # Needs to be done before the HTML head, since we output text/plain
 ################################################################################
-
-if ( $op eq "Datafile" ) {
+sub dumpdatafile {
   print $q->header(
     -type => "text/plain;charset=UTF-8",
     -Cache_Control => "no-cache, no-store, must-revalidate",
@@ -260,207 +343,186 @@ if ( $op eq "Datafile" ) {
 ################################################################################
 # Read the file
 # Remembers the last line for defaults, and collects all kind of stats
-# to be used later.
+# to be used later, in some global variables
 ################################################################################
 
-open F, "<$datafile"
-  or error("Could not open $datafile for reading: $!".
-     "<br/>Probably the user hasn't been set up yet" );
-my $foundrec = {};
-my $thisloc = "";
-my $lastdatesum = 0.0;
-my $lastdatemsum = 0;
-my $lasteffdate = "";
-my $todaydrinks = "";  # For a hint in the comment box
-my $copylocation = 0;  # should the copy button copy location too
-my $thisdate = "";
-my $lastwday = "";
-my @records; # All data records, parsed
-my %seen; # Count how many times various names seen before (for NEW marks)
-my %lastseen; # Last time I have seen a given beer
-my %ratesum; # sum of ratings for every beer
-my %ratecount; # count of ratings for every beer, for averaging
-my %restaurants; # maps location name to restaurant types
-my $allfirstdate = "";
-my %monthdrinks; # total drinks for each calendar month
-my %monthprices; # total money spent. Indexed with "yyyy-mm"
-my $weekago = datestr("%F", -7);
-my $weeksum = 0;
-my $weekmsum = 0;
-my %weekdates; # count the dates within last week where we have an entry
-my $calmon; # YYYY-MM for montly stats
-my $lastmonthday = "";
-my $tz = "";
-my %daydsums; # Sum of drinks for each date   # TODO Sum these up here (See #142)
-my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
-my %years;  # Keep track which years we have seen, for the "more" links
-my $alcinbody = 0; # Grams of alc inside my body
-my $balctime = 0; # Time of the last drink
-my %bloodalc; # max blood alc for each day, and current bloodalc for each line
-my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
-while (<F>) {
-  chomp();
-  s/#.*$//;  # remove comments
-  next unless $_; # skip empty lines
+sub readdatafile {
+  my $thisdate = "";
+  my $weekago = datestr("%F", -7);
+  my $thisloc = "";
+  my $lastdatesum = 0.0;
+  my $lastdatemsum = 0;
+  my $lasteffdate = "";
+  my $lastwday = "";
+  my $weeksum = 0;
+  my $weekmsum = 0;
+  my %weekdates; # count the dates within last week where we have an entry
+  my $calmon; # YYYY-MM for montly stats
+  my $lastmonthday = "";
+  my %daydsums; # Sum of drinks for each date   # TODO Sum these up here (See #142)
+  my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
+  my $alcinbody = 0; # Grams of alc inside my body
+  my $balctime = 0; # Time of the last drink
 
-  my $rec = splitline( $_ );
-  next unless $rec->{type};
-  push (@records, $rec);  # reference to %rec
+  open F, "<$datafile"
+    or error("Could not open $datafile for reading: $!".
+      "<br/>Probably the user hasn't been set up yet" );
 
-  if (!$allfirstdate) {
-    $allfirstdate=$rec->{effdate};
-  }
-  if ( /$qry/ ) {  # Total counts for different years
-    $years{ $rec->{year} }++;
-  } # TODO - Do we need these to depend on $qry ?
+  while (<F>) {
+    chomp();
+    s/#.*$//;  # remove comments
+    next unless $_; # skip empty lines
 
-  my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
-  $restname = $1.$rec->{loc} if ( $rec->{mak}  =~ /^(Restaurant,)/i );
-  $thisloc = $rec->{loc} || "";
-  $seen{$thisloc}++;
-  $seen{$restname}++;
-  my $seenkey = seenkey($rec->{mak},$rec->{beer});
-  if ( ( $rec->{beer} !~ /misc|mixed/i ) &&
-       ( $rec->{mak} !~ /misc|mixed/i ) &&
-       ( $rec->{sty} !~ /misc|mixed/i ) ) {
-    $seen{$rec->{mak}}++;
-    $seen{$rec->{beer}}++;
-    $seen{$rec->{sty}}++;
-    $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
-    $seen{$rec->{seenkey}}++;
-  }
-  if ($rec->{rate} && $rec->{beer}) {
-    $ratesum{$rec->{seenkey}} += $rec->{rate};
-    $ratecount{$rec->{seenkey}} ++;
-  }
-  if ( ! $edit || ($edit eq $rec->{stamp} ) ) {
-    $foundrec = $rec;
-  }
+    my $rec = splitline( $_ );
+    next unless $rec->{type};
+    push (@records, $rec);  # reference to %rec
 
-  # TODO make TZ its own line type
-  if ( $rec->{mak}  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone (optional spaces)
-    $tz = $1;
-    if (!$tz || $tz eq "X") {
-      $ENV{"TZ"} = "/etc/localtime";  # clear it
-    } else {
-      foreach my $zonedir ( "/usr/share/zoneinfo", "/usr/share/zoneinfo/Europe",
-        "/usr/share/zoneinfo/US") {
-        my $zonefile = "$zonedir/$tz";
-        if ( -f $zonefile ) {
-          $ENV{"TZ"} = $zonefile;
-          last;
+    if (!$allfirstdate) {
+      $allfirstdate=$rec->{effdate};
+    }
+    if ( /$qry/ ) {  # Total counts for different years
+      $years{ $rec->{year} }++;
+    } # TODO - Do we need these to depend on $qry ?
+
+    my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
+    $restname = $1.$rec->{loc} if ( $rec->{mak}  =~ /^(Restaurant,)/i );
+    $thisloc = $rec->{loc} || "";
+    $seen{$thisloc}++;
+    $seen{$restname}++;
+    my $seenkey = seenkey($rec->{mak},$rec->{beer});
+    if ( ( $rec->{beer} !~ /misc|mixed/i ) &&
+        ( $rec->{mak} !~ /misc|mixed/i ) &&
+        ( $rec->{sty} !~ /misc|mixed/i ) ) {
+      $seen{$rec->{mak}}++;
+      $seen{$rec->{beer}}++;
+      $seen{$rec->{sty}}++;
+      $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
+      $seen{$rec->{seenkey}}++;
+    }
+    if ($rec->{rate} && $rec->{beer}) {
+      $ratesum{$rec->{seenkey}} += $rec->{rate};
+      $ratecount{$rec->{seenkey}} ++;
+    }
+    if ( ! $edit || ($edit eq $rec->{stamp} ) ) {
+      $foundrec = $rec;
+    }
+
+    # TODO make TZ its own line type
+    if ( $rec->{mak}  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone (optional spaces)
+      $tz = $1;
+      if (!$tz || $tz eq "X") {
+        $ENV{"TZ"} = "/etc/localtime";  # clear it
+      } else {
+        foreach my $zonedir ( "/usr/share/zoneinfo", "/usr/share/zoneinfo/Europe",
+          "/usr/share/zoneinfo/US") {
+          my $zonefile = "$zonedir/$tz";
+          if ( -f $zonefile ) {
+            $ENV{"TZ"} = $zonefile;
+            last;
+          }
         }
       }
+      next;
+    } # tz
+
+    if ( ( $rec->{mak}  =~ /^Restaurant,/i ) ) {
+      $restaurants{$rec->{loc}} = $rec->{mak}; # Remember style
+      next; # do not sum restaurant lines, drinks filed separately
     }
-    next;
-  } # tz
+    if ($rec->{loc} && $rec->{geo} ) {
+      my $geocoord;
+      (undef, undef, $geocoord) = geo($rec->{geo});
+      $geolocations{$rec->{loc}} = $geocoord if ($geocoord); # Save the last seen location
+      # TODO: Later we may start taking averages, or collect a few data points for each
+    } # Let's see how precise it seems to be
 
-  if ( ( $rec->{mak}  =~ /^Restaurant,/i ) ) {
-    $restaurants{$rec->{loc}} = $rec->{mak}; # Remember style
-    next; # do not sum restaurant lines, drinks filed separately
-  }
-  if ($rec->{loc} && $rec->{geo} ) {
-    my $geocoord;
-    (undef, undef, $geocoord) = geo($rec->{geo});
-    $geolocations{$rec->{loc}} = $geocoord if ($geocoord); # Save the last seen location
-    # TODO: Later we may start taking averages, or collect a few data points for each
-  } # Let's see how precise it seems to be
-
-  if ( $thisdate ne $rec->{effdate} ) { # new date
-    $lastdatesum = 0.0;
-    $lastdatemsum = 0;
-    $thisdate = $rec->{effdate};
-    $lasteffdate = $rec->{effdate};
-    $lastwday = $rec->{wday};
-    $alcinbody = 0; # Blood alcohol
-    $balctime = 0; # Time of the last drink
-  }
-  # Blood alcohol
-  if ($bodyweight && $rec->{alcvol}  ) {
-    my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
-    my $drtime = $1 + $2/60 if ( $rec->{stamp} =~ / (\d\d):(\d\d)/ );   # time in fractional hours
-    if ($drtime < $balctime ) { $drtime += 24; } # past midnight
-    my $timediff = $drtime - $balctime;
-    $alcinbody -= $bodyweight * $burnrate * $timediff;
-    if ($alcinbody < 0) { $alcinbody = 0; }
-    $balctime = $drtime;
-    $alcinbody += $rec->{alcvol} / $onedrink * 12 ; # grams of alc in body
-    my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-    if ( $ba > ( $bloodalc{$rec->{effdate}} || 0 ) ) {
-      $bloodalc{$rec->{effdate}} = $ba;
+    if ( $thisdate ne $rec->{effdate} ) { # new date
+      $lastdatesum = 0.0;
+      $lastdatemsum = 0;
+      $thisdate = $rec->{effdate};
+      $lasteffdate = $rec->{effdate};
+      $lastwday = $rec->{wday};
+      $alcinbody = 0; # Blood alcohol
+      $balctime = 0; # Time of the last drink
     }
-    $bloodalc{$rec->{stamp}} = $ba;  # indexed by the whole timestamp
-  }
-
-  $lastdatesum += $rec->{alcvol} ;
-  $lastdatemsum += $rec->{pr};
-  if ( $efftoday eq $rec->{effdate} ) { # Actually today
-      $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
-      $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
-      if ($bloodalc{$rec->{effdate}}) { # Calculate the blood alc at the current time.
-        # TODO - Only needed to show at the end of the day in ext full list
-        $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$rec->{effdate}}); # max of the day
-        # TODO - This replicates the calculations above, move to a helper func
-        my $curtime = datestr("%H:%M",0,1);
-        my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
-        my $drtime = $1 + $2/60 if ( $curtime =~ /(\d\d):(\d\d)/ );   # time in fractional hours
-        if ($drtime < $balctime ) { $drtime += 24; } # past midnight
-        my $timediff = $drtime - $balctime;
-        my $curalc = $alcinbody - $bodyweight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
-        if ($curalc < 0) { $curalc = 0; }
-        my $ba = $curalc / ( $bodyweight * .68 ); # non-fat weight
-        $todaydrinks .= sprintf(" - %0.2f‰",$ba);
+    # Blood alcohol
+    if ($bodyweight && $rec->{alcvol}  ) {
+      my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
+      my $drtime = $1 + $2/60 if ( $rec->{stamp} =~ / (\d\d):(\d\d)/ );   # time in fractional hours
+      if ($drtime < $balctime ) { $drtime += 24; } # past midnight
+      my $timediff = $drtime - $balctime;
+      $alcinbody -= $bodyweight * $burnrate * $timediff;
+      if ($alcinbody < 0) { $alcinbody = 0; }
+      $balctime = $drtime;
+      $alcinbody += $rec->{alcvol} / $onedrink * 12 ; # grams of alc in body
+      my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+      if ( $ba > ( $bloodalc{$rec->{effdate}} || 0 ) ) {
+        $bloodalc{$rec->{effdate}} = $ba;
       }
-  }
-  if ( $rec->{effdate} gt $weekago ) {
-    $weeksum += $rec->{alcvol};
-    $weekmsum += abs($rec->{pr});
-    $weekdates{$rec->{effdate}}++;
-  }
-  if ( $rec->{effdate} =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
-    $calmon = $1;
-    $monthdrinks{$calmon} += $rec->{alcvol};
-    $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
-  }
-  $lastmonthday = $1 if ( $rec->{effdate} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-  $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $rec->{sty} $rec->{mak} : $rec->{loc} ;" if ($rec->{alcvol} > 0);
-} # line loop
+      $bloodalc{$rec->{stamp}} = $ba;  # indexed by the whole timestamp
+    }
 
-if ( ! $todaydrinks ) { # not today
-  $todaydrinks = "($lastwday: " .
-    sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr ";
-  $todaydrinks .=  sprintf("%4.2f‰",($bloodalc{$lasteffdate}))
-    if ($lasteffdate && $bloodalc{$lasteffdate});
-  $todaydrinks .= ")" ;
-  $copylocation = 1;
-  my $today = datestr("%F");
-  if ( $calmon && $today =~ /$calmon-(\d\d)/ ) {
-    $lastmonthday = $1;
-    # When today is in the next month, it shows prev month up to the last
-    # entry date, not to end of the month. I can live with that for now, esp
-    # since the entry must be pretty close to the end of the month. Showing
-    # zeroes for the current month would be no fun.
+    $lastdatesum += $rec->{alcvol} ;
+    $lastdatemsum += $rec->{pr};
+    if ( $efftoday eq $rec->{effdate} ) { # Actually today
+        $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
+        $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
+        if ($bloodalc{$rec->{effdate}}) { # Calculate the blood alc at the current time.
+          # TODO - Only needed to show at the end of the day in ext full list
+          $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$rec->{effdate}}); # max of the day
+          # TODO - This replicates the calculations above, move to a helper func
+          my $curtime = datestr("%H:%M",0,1);
+          my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
+          my $drtime = $1 + $2/60 if ( $curtime =~ /(\d\d):(\d\d)/ );   # time in fractional hours
+          if ($drtime < $balctime ) { $drtime += 24; } # past midnight
+          my $timediff = $drtime - $balctime;
+          my $curalc = $alcinbody - $bodyweight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
+          if ($curalc < 0) { $curalc = 0; }
+          my $ba = $curalc / ( $bodyweight * .68 ); # non-fat weight
+          $todaydrinks .= sprintf(" - %0.2f‰",$ba);
+        }
+    }
+    if ( $rec->{effdate} gt $weekago ) {
+      $weeksum += $rec->{alcvol};
+      $weekmsum += abs($rec->{pr});
+      $weekdates{$rec->{effdate}}++;
+    }
+    if ( $rec->{effdate} =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
+      $calmon = $1;
+      $monthdrinks{$calmon} += $rec->{alcvol};
+      $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
+    }
+    $lastmonthday = $1 if ( $rec->{effdate} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
+    $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $rec->{sty} $rec->{mak} : $rec->{loc} ;" if ($rec->{alcvol} > 0);
+  } # line loop
+
+  if ( ! $todaydrinks ) { # not today
+    $todaydrinks = "($lastwday: " .
+      sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr ";
+    $todaydrinks .=  sprintf("%4.2f‰",($bloodalc{$lasteffdate}))
+      if ($lasteffdate && $bloodalc{$lasteffdate});
+    $todaydrinks .= ")" ;
+    $copylocation = 1;
+    my $today = datestr("%F");
+    if ( $calmon && $today =~ /$calmon-(\d\d)/ ) {
+      $lastmonthday = $1;
+      # When today is in the next month, it shows prev month up to the last
+      # entry date, not to end of the month. I can live with that for now, esp
+      # since the entry must be pretty close to the end of the month. Showing
+      # zeroes for the current month would be no fun.
+    }
   }
-}
 
-# Remember some values to display in the comment box when no comment to show
-$weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
-$todaydrinks .= "\nWeek: $weeksum $weekmsum kr. " . (7 - scalar( keys(%weekdates) ) ) . "z";
-$todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
-       $monthdrinks{$calmon}/$onedrink, $monthdrinks{$calmon}/$onedrink/$lastmonthday).
-  " $monthprices{$calmon} kr."
-  if ($calmon);
+  # Remember some values to display in the comment box when no comment to show
+  $weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
+  $todaydrinks .= "\nWeek: $weeksum $weekmsum kr. " . (7 - scalar( keys(%weekdates) ) ) . "z";
+  $todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
+        $monthdrinks{$calmon}/$onedrink, $monthdrinks{$calmon}/$onedrink/$lastmonthday).
+    " $monthprices{$calmon} kr."
+    if ($calmon);
+} # readdatafile
 
-
-# Default new users to the about page, we have nothing else to show
-if ( !$op) {
-  if ( !@records ) {
-    $op = "About";
-  } else {
-    $op = "Graph";  # Default to showing the graph
-  }
-}
 
 ################################################################################
 # POST data into the file
@@ -468,7 +530,7 @@ if ( !$op) {
 ################################################################################
 
 # Helper to convert input parameters into a rough estimation of a record
-# Just takes all names parameters into rec. There will be some extras, and
+# Just takes all named parameters into rec. There will be some extras, and
 # likely important things missing
 sub inputrecord {
   my $rec = {};
@@ -640,7 +702,7 @@ sub guessvalues {
 
 ########################
 # POST itself
-if ( $q->request_method eq "POST" ) {
+sub postdata {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
   my $sub = $q->param("submit") || "";
 
@@ -784,49 +846,56 @@ if ( $q->request_method eq "POST" ) {
 # HTML head
 ################################################################################
 
-print $q->header(
-  -type => "text/html;charset=UTF-8",
-  -Cache_Control => "no-cache, no-store, must-revalidate",
-  -Pragma => "no-cache",
-  -Expires => "0",
-  -X_beertracker => "This beertracker is my hobby project. It is open source",
-  -X_author => "Heikki Levanto",
-  -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
-print "<!DOCTYPE html>\n";
-print "<html><head>\n";
-if ($devversion) {
-  print "<title>Beer-DEV</title>\n";
-  print "<link rel='shortcut icon' href='beer-dev.png'/>\n";
-} else {
-  print "<title>Beer</title>\n";
-  print "<link rel='shortcut icon' href='beer.png'/>\n";
-}
-print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
-print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
-# Style sheet - included right in the HTML headers
-print "<style rel='stylesheet'>\n";
-print '@media screen {';
-print "  * { background-color: $bgcolor; color: #FFFFFF; }\n";
-print "  * { font-size: small; }\n";
-print "  a { color: #666666; }\n";  # Almost invisible grey. Applies only to the
-           # underline, if the content is in a span of its own.
-print "}\n";
-print '@media screen and (max-width: 700px){';
-print "  .only-wide, .only-wide * { display: none !important; }\n";
-print "}\n";
-print '@media screen and (min-width: 700px){';
-print "  .no-wide, .no-wide * { display: none !important; }\n";
-print "}\n";
-print '@media print{';
-print "  * { font-size: xx-small; }\n";
-print "  .no-print, .no-print * { display: none !important; }\n";
-print "  .no-wide, .no-wide * { display: none !important; }\n";
-print "}\n";
-print "</style>\n";
-print "</head>\n";
-print "<body>\n";
-print "\n<!-- Read " . scalar(@records). " lines from $datafile -->\n\n" ;
+sub htmlhead {
+  print $q->header(
+    -type => "text/html;charset=UTF-8",
+    -Cache_Control => "no-cache, no-store, must-revalidate",
+    -Pragma => "no-cache",
+    -Expires => "0",
+    -X_beertracker => "This beertracker is my hobby project. It is open source",
+    -X_author => "Heikki Levanto",
+    -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
+  print "<!DOCTYPE html>\n";
+  print "<html><head>\n";
+  if ($devversion) {
+    print "<title>Beer-DEV</title>\n";
+    print "<link rel='shortcut icon' href='beer-dev.png'/>\n";
+  } else {
+    print "<title>Beer</title>\n";
+    print "<link rel='shortcut icon' href='beer.png'/>\n";
+  }
+  print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
+  print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
+  # Style sheet - included right in the HTML headers
+  print "<style rel='stylesheet'>\n";
+  print '@media screen {';
+  print "  * { background-color: $bgcolor; color: #FFFFFF; }\n";
+  print "  * { font-size: small; }\n";
+  print "  a { color: #666666; }\n";  # Almost invisible grey. Applies only to the
+            # underline, if the content is in a span of its own.
+  print "}\n";
+  print '@media screen and (max-width: 700px){';
+  print "  .only-wide, .only-wide * { display: none !important; }\n";
+  print "}\n";
+  print '@media screen and (min-width: 700px){';
+  print "  .no-wide, .no-wide * { display: none !important; }\n";
+  print "}\n";
+  print '@media print{';
+  print "  * { font-size: xx-small; }\n";
+  print "  .no-print, .no-print * { display: none !important; }\n";
+  print "  .no-wide, .no-wide * { display: none !important; }\n";
+  print "}\n";
+  print "</style>\n";
+  print "</head>\n";
+  print "<body>\n";
+  print "\n<!-- Read " . scalar(@records). " records from $datafile -->\n\n" ;
+} # htmlhead
 
+
+# HTML footer
+sub htmlfooter {
+  print "</body></html>\n";
+}
 
 
 
@@ -835,624 +904,625 @@ print "\n<!-- Read " . scalar(@records). " lines from $datafile -->\n\n" ;
 # Javascript trickery. Most of the logic is on the server side, but a few
 # things have to be done in the browser.
 ################################################################################
+sub javascript {
+  my $script = "";
 
-my $script = "";
-
-# Debug div to see debug output on my phone
-$script .= <<'SCRIPTEND';
-  function db(msg) {
-    var d = document.getElementById("debug");
-    if (d) {
-      d.hidden = false;
-      d.innerHTML += msg + "<br/>";
-    }
-  }
-SCRIPTEND
-
-$script .= <<'SCRIPTEND';
-  function clearinputs() {  // Clear all inputs, used by the 'clear' button
-    var inputs = document.getElementsByTagName('input');  // all regular input fields
-    for (var i = 0; i < inputs.length; i++ ) {
-      if ( inputs[i].type == "text" )
-        inputs[i].value = "";
-    }
-    var r = document.getElementById("rate"); // and rating
-    r.value = "";
-    var c = document.getElementById("com"); // and comment
-    c.value = "";
-
-    // Hide the 'save' button, we are about to create a new entry
-    var save = document.getElementById("save");
-    save.hidden = true;  //
-
-  };
-SCRIPTEND
-
-# Simple script to show the normally hidden lines for entering date, time,
-# and geolocation
-$script .= <<'SCRIPTEND';
-  function showrows() {
-    var rows = [ "td1", "td2", "td3"];
-    for (i=0; i<rows.length; i++) {
-      var r = document.getElementById(rows[i]);
-      //console.log("Unhiding " + i + ":" + rows[i], r);
-      if (r) {
-        r.hidden = ! r.hidden;
+  # Debug div to see debug output on my phone
+  $script .= <<'SCRIPTEND';
+    function db(msg) {
+      var d = document.getElementById("debug");
+      if (d) {
+        d.hidden = false;
+        d.innerHTML += msg + "<br/>";
       }
-    }
-  }
+    };
 SCRIPTEND
 
-# A simple two-liner to redirect to a new page from the 'Show' menu when
-# that changes
-$script .= <<'SCRIPTEND';
-  var changeop = function(to) {
-    document.location = to;
-  }
+  $script .= <<'SCRIPTEND';
+    function clearinputs() {  // Clear all inputs, used by the 'clear' button
+      var inputs = document.getElementsByTagName('input');  // all regular input fields
+      for (var i = 0; i < inputs.length; i++ ) {
+        if ( inputs[i].type == "text" )
+          inputs[i].value = "";
+      }
+      var r = document.getElementById("rate"); // and rating
+      r.value = "";
+      var c = document.getElementById("com"); // and comment
+      c.value = "";
 
+      // Hide the 'save' button, we are about to create a new entry
+      var save = document.getElementById("save");
+      save.hidden = true;  //
+
+    };
 SCRIPTEND
 
-# Try to get the geolocation. Async function, to wait for the user to give
-# permission (for good, we hope)
-# (Note, on FF I needed to uninstall the geoclue package before I could get
-# locations on my desktop machine)
-
-$script .= "var geolocations = [ \n";
-for my $k (sort keys(%geolocations) ) {
-  my ($lat,$lon, undef) = geo($geolocations{$k});
-  if ( $lat && $lon ) {  # defensive coding
-    $script .= " { name: '$k', lat: $lat, lon: $lon }, \n";
-  }
-}
-$script .= " ]; \n";
-
-$script .= "var origloc=\" $foundrec->{loc}\"; \n";
-
-$script .= <<'SCRIPTEND';
-  var geoloc = "";
-
-  function savelocation (myposition) {
-    geoloc = " " + myposition.coords.latitude + " " + myposition.coords.longitude;
-    var gf = document.getElementById("geo");
-    console.log ("Geo field: '" + gf.value + "'" );
-    if ( ! gf.value ||  gf.value.match( /^ / )) { // empty, or starts with a space
-      var el = document.getElementsByName("geo");
-      if (el) {
-        for ( i=0; i<el.length; i++) {
-          el[i].value=geoloc;
+  # Simple script to show the normally hidden lines for entering date, time,
+  # and geolocation
+  $script .= <<'SCRIPTEND';
+    function showrows() {
+      var rows = [ "td1", "td2", "td3"];
+      for (i=0; i<rows.length; i++) {
+        var r = document.getElementById(rows[i]);
+        //console.log("Unhiding " + i + ":" + rows[i], r);
+        if (r) {
+          r.hidden = ! r.hidden;
         }
       }
-      console.log("Saved the location " + geoloc + " in " + el.length + " inputs");
-      var loc = document.getElementById("loc");
-      var locval = loc.value + " ";
-      if ( locval.startsWith(" ")) {
-        const R = 6371e3; // earth radius in meters
-        var latcorr = Math.cos(myposition.coords.latitude * Math.PI/180);
-        var bestdist = 20;  // max acceptable distance
-        var bestloc = "";
-        for (var i in geolocations) {
-          var dlat = (myposition.coords.latitude - geolocations[i].lat) * Math.PI / 180 * latcorr;
-          var dlon = (myposition.coords.longitude - geolocations[i].lon) * Math.PI / 180;
-          var dist = Math.round(Math.sqrt((dlat * dlat) + (dlon * dlon)) * R);
-          if ( dist < bestdist ) {
-            bestdist = dist;
-            bestloc = geolocations[i].name;
+    };
+SCRIPTEND
+
+  # A simple two-liner to redirect to a new page from the 'Show' menu when
+  # that changes
+  $script .= <<'SCRIPTEND';
+    var changeop = function(to) {
+      document.location = to;
+    };
+SCRIPTEND
+
+  # Try to get the geolocation. Async function, to wait for the user to give
+  # permission (for good, we hope)
+  # (Note, on FF I needed to uninstall the geoclue package before I could get
+  # locations on my desktop machine)
+
+  $script .= "var geolocations = [ \n";
+  for my $k (sort keys(%geolocations) ) {
+    my ($lat,$lon, undef) = geo($geolocations{$k});
+    if ( $lat && $lon ) {  # defensive coding
+      $script .= " { name: '$k', lat: $lat, lon: $lon }, \n";
+    }
+  }
+  $script .= " ]; \n";
+
+  $script .= "var origloc=\" $foundrec->{loc}\"; \n";
+
+  $script .= <<'SCRIPTEND';
+    var geoloc = "";
+
+    function savelocation (myposition) {
+      geoloc = " " + myposition.coords.latitude + " " + myposition.coords.longitude;
+      var gf = document.getElementById("geo");
+      console.log ("Geo field: '" + gf.value + "'" );
+      if ( ! gf.value ||  gf.value.match( /^ / )) { // empty, or starts with a space
+        var el = document.getElementsByName("geo");
+        if (el) {
+          for ( i=0; i<el.length; i++) {
+            el[i].value=geoloc;
           }
         }
-        console.log("Best match: " + bestloc + " at " + bestdist );
+        console.log("Saved the location " + geoloc + " in " + el.length + " inputs");
+        var loc = document.getElementById("loc");
+        var locval = loc.value + " ";
+        if ( locval.startsWith(" ")) {
+          const R = 6371e3; // earth radius in meters
+          var latcorr = Math.cos(myposition.coords.latitude * Math.PI/180);
+          var bestdist = 20;  // max acceptable distance
+          var bestloc = "";
+          for (var i in geolocations) {
+            var dlat = (myposition.coords.latitude - geolocations[i].lat) * Math.PI / 180 * latcorr;
+            var dlon = (myposition.coords.longitude - geolocations[i].lon) * Math.PI / 180;
+            var dist = Math.round(Math.sqrt((dlat * dlat) + (dlon * dlon)) * R);
+            if ( dist < bestdist ) {
+              bestdist = dist;
+              bestloc = geolocations[i].name;
+            }
+          }
+          console.log("Best match: " + bestloc + " at " + bestdist );
 
-        if (bestloc) {
-          loc.value = " " + bestloc + " [" + bestdist + "m]";
-        } else {
-          loc.value = origloc;
+          if (bestloc) {
+            loc.value = " " + bestloc + " [" + bestdist + "m]";
+          } else {
+            loc.value = origloc;
+          }
+
         }
-
       }
     }
-  }
 
-  function geoerror(err) {
-    console.log("GeoError" );
-    console.log(err);
-  }
+    function geoerror(err) {
+      console.log("GeoError" );
+      console.log(err);
+    }
 
-  function getlocation () {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(savelocation,geoerror);
-      } else {
-        console.log("No geoloc support");
-      }
-  }
+    function getlocation () {
+      if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(savelocation,geoerror);
+        } else {
+          console.log("No geoloc support");
+        }
+    }
 
-  // Get the location in the beginning, when ever window gets focus
-  window.addEventListener('focus', getlocation);
-  // Do not use document.onload(), or a timer. FF on Android does not like
-  // often-repeated location requests, and will disallow location for the page
-  // see #272
+    // Get the location in the beginning, when ever window gets focus
+    window.addEventListener('focus', getlocation);
+    // Do not use document.onload(), or a timer. FF on Android does not like
+    // often-repeated location requests, and will disallow location for the page
+    // see #272
 
 SCRIPTEND
 
-print "<script>\n$script</script>\n";
-
+  print "<script>\n$script</script>\n";
+}
 
 ################################################################################
 # Main input form
 ################################################################################
 
-if ($devversion) {
-  print "\n<b>Dev version!</b><br>\n";
-  my @devstat = stat("index.cgi");
-  my $devmod = $devstat[9];
-  my $devdate = strftime("%F %R", localtime($devmod) );
-  print "Script modified '$devdate' <br>\n";
-  my @prodstat = stat("../beertracker/index.cgi");
-  my $prodmod = $prodstat[9];
-  if ( $prodmod - $devmod > 1800) {  # Allow half an hour for last push/pull
-    my $proddate = strftime("%F %R", localtime($prodmod) );
-    print "Which is older than the prod version <br/>";
-    print "Prod modified '$proddate' (git pull?) <br>\n";
-    print "d='$devmod' p='$prodmod' <br>\n";
+sub inputform {
+  if ($devversion) {
+    print "\n<b>Dev version!</b><br>\n";
+    my @devstat = stat("index.cgi");
+    my $devmod = $devstat[9];
+    my $devdate = strftime("%F %R", localtime($devmod) );
+    print "Script modified '$devdate' <br>\n";
+    my @prodstat = stat("../beertracker/index.cgi");
+    my $prodmod = $prodstat[9];
+    if ( $prodmod - $devmod > 1800) {  # Allow half an hour for last push/pull
+      my $proddate = strftime("%F %R", localtime($prodmod) );
+      print "Which is older than the prod version <br/>";
+      print "Prod modified '$proddate' (git pull?) <br>\n";
+      print "d='$devmod' p='$prodmod' <br>\n";
+    }
+    # Would be nice to get git branch and log tail
+    # But git is anal about file/dir ownerships
+    print "<hr>\n";
   }
-  # Would be nice to get git branch and log tail
-  # But git is anal about file/dir ownerships
-  print "<hr>\n";
-}
 
 
-print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
-my $clr = "Onfocus='value=value.trim();select();'";
-my $c2 = "colspan='2'";
-my $c3 = "colspan='3'";
-my $c4 = "colspan='4'";
-my $c6 = "colspan='8'";
-my $sz1n = "size='15'";
-my $sz1 = "$sz1n $clr";
-my $sz2n = "size='3'";
-my $sz2 = "$sz2n $clr";
-my $sz3n = "size='8'";
-my $sz3 = "$sz3n $clr";
-my $hidden = "";
-print "<table style='width:100%; max-width:500px' >";
-# Preprocess some fields
-# Note that $foundrec can be undef if we have no data at all (or edit url messed with)
-# That produces some warnings, but does not harm much
-my $geo = $foundrec->{geo};  # These fields may need adjustment before use
-my $loc = $foundrec->{loc};
-my $date = " $foundrec->{date}"; # Leading space marks as uncertain
-my $time = " $foundrec->{time}";
-my $prc = "$foundrec->{pr}.-";
-if ($edit) {
-  print "<tr><td $c2><b>Record '$edit'</b></td></tr>\n";
-  ($date,$time) = $edit =~ /^([0-9-]+) ([0-9]+:[0-9]+:[0-9]+)/ ;
-  if (!$geo) {
-    $geo = "x";  # Prevent autofilling current geo
+  print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
+  my $clr = "Onfocus='value=value.trim();select();'";
+  my $c2 = "colspan='2'";
+  my $c3 = "colspan='3'";
+  my $c4 = "colspan='4'";
+  my $c6 = "colspan='8'";
+  my $sz1n = "size='15'";
+  my $sz1 = "$sz1n $clr";
+  my $sz2n = "size='3'";
+  my $sz2 = "$sz2n $clr";
+  my $sz3n = "size='8'";
+  my $sz3 = "$sz3n $clr";
+  my $hidden = "";
+  print "<table style='width:100%; max-width:500px' >";
+  # Preprocess some fields
+  # Note that $foundrec can be undef if we have no data at all (or edit url messed with)
+  # That produces some warnings, but does not harm much
+  my $geo = $foundrec->{geo};  # These fields may need adjustment before use
+  my $loc = $foundrec->{loc};
+  my $date = " $foundrec->{date}"; # Leading space marks as uncertain
+  my $time = " $foundrec->{time}";
+  my $prc = "$foundrec->{pr}.-";
+  if ($edit) {
+    print "<tr><td $c2><b>Record '$edit'</b></td></tr>\n";
+    ($date,$time) = $edit =~ /^([0-9-]+) ([0-9]+:[0-9]+:[0-9]+)/ ;
+    if (!$geo) {
+      $geo = "x";  # Prevent autofilling current geo
+    }
+  } else {
+    $geo = " $geo"; # Allow more recent geolocations
+    $hidden = "hidden"; # Hide the geo and date fields for normal use
+    $loc = " $loc"; # Mark it as uncertain
   }
-} else {
-  $geo = " $geo"; # Allow more recent geolocations
-  $hidden = "hidden"; # Hide the geo and date fields for normal use
-  $loc = " $loc"; # Mark it as uncertain
+  print "<tr><td>\n";
+  print "<input name='edit' type='hidden' value='$foundrec->{stamp}' id='editrec' />\n";
+  print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
+  print "<input name='q' type='hidden' value='$qry' id='editrec' />\n";
+  print "</td></tr>\n";
+  print "<tr><td id='td1' $hidden ><input name='date' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
+  print "<td id='td2' $hidden ><input name='time' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
+
+    # Geolocation
+  print "<tr><td id='td3' $hidden $c2><input name='geo' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
+
+  print "<tr><td><input name='loc' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
+  print "<td><input name='sty' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td></tr>\n";
+  print "<tr><td>
+    <input name='mak' value='$foundrec->{mak}' $sz1 placeholder='Brewery'/></td>\n";
+  print "<td>
+    <input name='beer' value='$foundrec->{beer}' $sz1 placeholder='Beer'/></td></tr>\n";
+  print "<tr><td><input name='vol' value='$foundrec->{vol} cl' $sz2 placeholder='Vol' />\n";
+  print "<input name='alc' value='$foundrec->{alc} %' $sz2 placeholder='Alc' />\n";
+  print "<input name='pr' value='$prc' $sz2 placeholder='Price' /></td>\n";
+  print "<td><select name='rate' id='rate' value='$foundrec->{rate}' placeholder='Rating' style='width:4.5em;'>" .
+    "<option value=''>Rate</option>\n";
+  for my $ro (0 .. scalar(@ratings)-1) {
+    print "<option value='$ro'" ;
+    print " selected='selected'" if ( $ro eq $foundrec->{rate} );
+    print  ">$ro $ratings[$ro]</option>\n";
+  }
+  print "</select>\n";
+  print  " &nbsp; &nbsp; &nbsp;";
+  if ( $op && $op !~ /graph/i ) {
+    print "<a href='$url'><b>G</b></a>\n";
+  } else {
+    print "<a href='$url?o=board'><b>B</b></a>\n";
+  }
+  print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
+  print "</td></tr>\n";
+  print "<tr>";
+  print " <td $c6><textarea name='com' cols='45' rows='3' id='com'
+    placeholder='$todaydrinks'>$foundrec->{com}</textarea></td>\n";
+  print "</tr>\n";
+
+  print "<tr><td>\n";  # Buttons
+  if ($edit) {
+    print " <input type='submit' name='submit' value='Save' id='save' />\n";
+    print " <input type='submit' name='submit' value='Del'/>\n";
+    print "<a href='$url?o=$op' ><span>cancel</span></a>";
+    print "</td><td>\n";
+  } else {
+    print "<input type='submit' name='submit' value='Record'/>\n";
+    print " <input type='submit' name='submit' value='Save' id='save' />\n";
+    print "</td><td>\n";
+    print " <input type='button' value='Clr' onclick='getlocation();clearinputs()'/>\n";
+  }
+  print " <select  style='width:4.5em;' " .
+              "onchange='document.location=\"$url?\"+this.value;' >";
+  print "<option value='' >Show</option>\n";
+  print "<option value='o=full&q=$qry' >Full List</option>\n";
+  print "<option value='o=Graph&q=$qry' >Graph</option>\n";
+  print "<option value='o=board&q=$qry' >Beer Board</option>\n";
+  print "<option value='o=Months&q=$qry' >Stats</option>\n";
+    # All the stats pages link to each other
+  print "<option value='o=Beer&q=$qry' >Beers</option>\n";
+    # The Beer list has links to locations, wines, and other such lists
+  print "<option value='o=About' >About</option>\n";
+  print "</select>\n";
+  print "</td></tr>\n";
+
+  print "</table>\n";
+  print "</form>\n";
+
+  print "<div id='debug' hidden ><hr/>Debug<br/></div>\n"; # for javascript debugging
 }
-print "<tr><td>\n";
-print "<input name='edit' type='hidden' value='$foundrec->{stamp}' id='editrec' />\n";
-print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
-print "<input name='q' type='hidden' value='$qry' id='editrec' />\n";
-print "</td></tr>\n";
-print "<tr><td id='td1' $hidden ><input name='date' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
-print "<td id='td2' $hidden ><input name='time' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
-
-  # Geolocation
-print "<tr><td id='td3' $hidden $c2><input name='geo' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
-
-print "<tr><td><input name='loc' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
-print "<td><input name='sty' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td></tr>\n";
-print "<tr><td>
-  <input name='mak' value='$foundrec->{mak}' $sz1 placeholder='Brewery'/></td>\n";
-print "<td>
-  <input name='beer' value='$foundrec->{beer}' $sz1 placeholder='Beer'/></td></tr>\n";
-print "<tr><td><input name='vol' value='$foundrec->{vol} cl' $sz2 placeholder='Vol' />\n";
-print "<input name='alc' value='$foundrec->{alc} %' $sz2 placeholder='Alc' />\n";
-print "<input name='pr' value='$prc' $sz2 placeholder='Price' /></td>\n";
-print "<td><select name='rate' id='r' value='$foundrec->{rate}' placeholder='Rating' style='width:4.5em;'>" .
-  "<option value=''>Rate</option>\n";
-for my $ro (0 .. scalar(@ratings)-1) {
-  print "<option value='$ro'" ;
-  print " selected='selected'" if ( $ro eq $foundrec->{rate} );
-  print  ">$ro $ratings[$ro]</option>\n";
-}
-print "</select>\n";
-print  " &nbsp; &nbsp; &nbsp;";
-if ( $op && $op !~ /graph/i ) {
-  print "<a href='$url'><b>G</b></a>\n";
-} else {
-  print "<a href='$url?o=board'><b>B</b></a>\n";
-}
-print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
-print "</td></tr>\n";
-print "<tr>";
-print " <td $c6><textarea name='com' cols='45' rows='3' id='c'
-  placeholder='$todaydrinks'>$foundrec->{com}</textarea></td>\n";
-print "</tr>\n";
-
-print "<tr><td>\n";  # Buttons
-if ($edit) {
-  print " <input type='submit' name='submit' value='Save' id='save' />\n";
-  print " <input type='submit' name='submit' value='Del'/>\n";
-  print "<a href='$url?o=$op' ><span>cancel</span></a>";
-  print "</td><td>\n";
-} else {
-  print "<input type='submit' name='submit' value='Record'/>\n";
-  print " <input type='submit' name='submit' value='Save' id='save' />\n";
-  print "</td><td>\n";
-  print " <input type='button' value='Clr' onclick='getlocation();clearinputs()'/>\n";
-}
-print " <select  style='width:4.5em;' " .
-            "onchange='document.location=\"$url?\"+this.value;' >";
-print "<option value='' >Show</option>\n";
-print "<option value='o=full&q=$qry' >Full List</option>\n";
-print "<option value='o=Graph&q=$qry' >Graph</option>\n";
-print "<option value='o=board&q=$qry' >Beer Board</option>\n";
-print "<option value='o=Months&q=$qry' >Stats</option>\n";
-  # All the stats pages link to each other
-print "<option value='o=Beer&q=$qry' >Beers</option>\n";
-  # The Beer list has links to locations, wines, and other such lists
-print "<option value='o=About' >About</option>\n";
-print "</select>\n";
-print "</td></tr>\n";
-
-print "</table>\n";
-print "</form>\n";
-
-print "<div id='debug' hidden ><hr/>Debug<br/></div>\n"; # for javascript debugging
-
 
 ################################################################################
 # Graph
 ################################################################################
 
-my %averages; # floating average by effdate (used also in the full list below
+sub graph {
+  if ( $allfirstdate && # Have data
+       ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~ /Board/i)) {
+    my $defbig = $mobile ? "S" : "B";
+    my $bigimg = $1 || $defbig;
+    my $startoff = $2 || 30; # days ago
+    my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
+    my $startdate = datestr ("%F", -$startoff );
+    my $enddate = datestr( "%F", -$endoff);
+    my $havedata = 0;
+    my $futable = ""; # Table to display the 'future' values
 
-if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~ /Board/i)) { # make a graph (only if data)
-  my $defbig = $mobile ? "S" : "B";
-  my $bigimg = $1 || $defbig;
-  my $startoff = $2 || 30; # days ago
-  my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
-  my $startdate = datestr ("%F", -$startoff );
-  my $enddate = datestr( "%F", -$endoff);
-  my $havedata = 0;
-  my $futable = ""; # Table to display the 'future' values
-
-  # Normalize limits to where we have data
-  while ( $startdate lt $allfirstdate) {
-    $startoff --;
-    $startdate = datestr ("%F", -$startoff );
-    if ($endoff >= 0 ) {
-      $endoff --;
-      $enddate = datestr( "%F", -$endoff);
-    }
-  }
-  #print STDERR "Rolled dates to $startoff $startdate - $endoff $enddate  - f= $allfirstdate\n";
-
-  my $pngfile = $plotfile;
-  $pngfile =~ s/.plot$/-$startdate-$enddate-$bigimg.png/;
-
-  if (  -r $pngfile ) { # Have a cached file
-    print "\n<!-- Cached graph op='$op' $pngfile -->\n";
-  } else { # Have to plot a new one
-
-    my %sums; # drink sums by (eff) date
-    for ( my $i = 0; $i < scalar(@records); $i++ ) { # calculate sums
-      my $rec = $records[$i];
-      next if ( $rec->{mak} =~ /^restaurant/i );
-      $sums{$rec->{effdate}} += $rec->{alcvol};
-    }
-    my $ndays = $startoff+35; # to get enough material for the running average
-    my $date;
-    open F, ">$plotfile"
-        or error ("Could not open $plotfile for writing");
-    my $legend = "# Date  Drinks  Sum30  Sum7  Zeromark  Future  Drink Color Drink Color ...";
-    print F "$legend \n".
-      "# Plot $startdate ($startoff) to $enddate ($endoff) \n";
-    my $sum30 = 0.0;
-    my @month;
-    my @week;
-    my $wkday;
-    my $zerodays = -1;
-    my $fut = "NAN";
-    my $lastavg = ""; # Last floating average we have seen
-    my $lastwk = "";
-    my $weekends; # Code to draw background on weekend days
-    my $wkendtag = 2;  # 1 is reserved for global bk
-    my $oneday = 24 * 60 * 60 ; # in seconds
-    my $threedays = 3 * $oneday;
-    my $oneweek = 7 * $oneday ;
-    my $oneyear = 365.24 * $oneday;
-    my $onemonth = $oneyear / 12;
-    my $numberofdays=7;
-    while ( $ndays > $endoff) {
-      $ndays--;
-      my $rawdate = datestr("%F:%u", -$ndays);
-      ($date,$wkday) = split(':',$rawdate);
-      my $tot = ( $sums{$date} || 0 ) / $onedrink ;
-      @month = ( @month, $tot);
-      shift @month if scalar(@month)>=30;
-      @week = ( @week, $tot);
-      shift @week if scalar(@week)>7;
-      $sum30 = 0.0;
-      my $sumw = 0.0;
-      for ( my $i = 0; $i < scalar(@month); $i++) {
-        my $w = $i+1 ;  #+1 to avoid zeroes
-        $sum30 += $month[$i] * $w;
-        $sumw += $w;
-      }
-      my $sumweek = 0.0;
-      my $cntweek = 0;
-      foreach my $t ( @week ) {
-        $sumweek += $t;
-        $cntweek++;
-      }
-      #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
-      #print "<!-- $date [" . join(', ', @week). "] = $sumweek " . $sumweek/$cntweek . "-->\n";
-      my $daystartsum = ( $sum30 - $tot *(scalar(@month)+1) ) / $sumw; # The avg excluding today
-      $sum30 = $sum30 / $sumw;
-      $sumweek = $sumweek / $cntweek;
-      $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
-      my $zero = "NAN";
-      if ($tot > 0.4 ) { # one small mild beer still gets a zero mark
-        $zerodays = 0;
-      } elsif ($zerodays >= 0) { # have seen a real $tot
-        $zero = 0.1 + ($zerodays % 7) * 0.35 ; # makes the 7th mark nicely on 2.0d
-        $zerodays ++; # Move the subsequent zero markers higher up
-      }
-      if ( $ndays <=0  || # no zero mark for current or next date, it isn't over yet
-          $startoff - $endoff > 400 ) {  # nor for graphs that are over a year, can't see them anyway
-        $zero = "NaN";
-      }
-      if ( $ndays <=0 && $sum30 > 0.1 && $endoff < -13) {
-        # Display future numbers in table form, if asking for 2 weeks ahead
-        my $weekday = ( "Mon", "Tue", "Wed", "Thu", "<b>Fri</b>", "<b>Sat</b>", "<b>Sun</b>" ) [$wkday-1];
-        $futable .= "<tr><td>&nbsp;$weekday&nbsp;</td><td>&nbsp;$date&nbsp;</td>";
-        $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sum30,$sum30*7) . "</td>";
-        $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sumweek, $sumweek*7) ."</td>" if ($sumweek > 0.1);
-        $futable .= "</tr>\n";
-      }
-      if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
-        if ($bigimg eq "B") {
-          $lastavg = sprintf("(%2.1f/d %0.0f/w)", $sum30, $sum30*7) if ($sum30 > 0);
-          $lastwk = sprintf("(%2.1f/d %0.0f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
-        } else {
-          $lastavg = sprintf("%2.1f %0.0f", $sum30, $sum30*7) if ($sum30 > 0);
-          $lastwk = sprintf("%2.1f %0.0f", $sumweek, $sumweek*7) if ($sumweek > 0);
-        }
-      }
-      if ( $ndays == 0 ){  # Plot the start of the day
-        if ( $tot ) {
-          $fut= $daystartsum; # with a '+' if some beers today
-        } else {
-          $zero = $daystartsum; # And with a zero mark, if not
-        }
-      }
-      if ( $ndays == -1 ) { # Break the week avg line to indicate future
-                            # (none of the others plot at this time)
-        print F "$date NaN NaN  NaN NaN  NaN Nan \n";
-      }
-      if ( $ndays <0 ) {
-        $fut = $sum30;
-        $fut = "NaN" if ($fut < 0.1); # Hide (almost)zeroes
-        $sum30="NaN"; # No avg for next date, but yes for current
-        if (!$sumweek) { # Don't plot zero weeksums
-          $sumweek = "NaN";
-        }
-      }
-      if ( $wkday == 6 ) {
-        $weekends .= "set object $wkendtag rect at \"$date\",50 " .
-          "size $threedays,200 behind  fc rgbcolor \"#005000\"  fillstyle solid noborder \n";
-        $wkendtag++;
-      }
-      my $totdrinks = $tot;
-      my $drinkline = "";
-      my $ndrinks = 0;
-      if ( $drinktypes{$date} ) {
-        my $lastloc = "";
-        foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
-          my ($alcvol, $type, $loc) =  $dt =~ /^([0-9.]+) ([^:]*) : (.*)/;
-          $lastloc = $loc unless ($lastloc);
-          next unless ( $type );
-          my $color = beercolor($type,"0x",$date,$dt);
-          my $drinks = $alcvol / $onedrink;
-          if ( $lastloc ne $loc  &&  $startoff - $endoff < 100 ) {
-            my $lw = $totdrinks + 0.2; # White line for location change
-            $lw += 0.1 unless ($bigimg eq "B");
-            $drinkline .= "$lw 0xffffff ";
-            $lastloc = $loc;
-            $ndrinks++;
-          }
-          $drinkline .= "$totdrinks $color ";
-          $ndrinks ++;
-          $totdrinks -= $drinks;
-          last if ($totdrinks <= 0 ); #defensive coding, have seen it happen once
-        }
-      }
-      print STDERR "Many ($ndrinks) drink entries on $date \n"
-        if ( $ndrinks >= 20 ) ;
-      while ( $ndrinks++ < 20 ) {
-        $drinkline .= "0 0x0 ";
-      }
-
-      if ($zerodays >= 0) {
-        print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" ;
-        $havedata = 1;
+    # Normalize limits to where we have data
+    while ( $startdate lt $allfirstdate) {
+      $startoff --;
+      $startdate = datestr ("%F", -$startoff );
+      if ($endoff >= 0 ) {
+        $endoff --;
+        $enddate = datestr( "%F", -$endoff);
       }
     }
-    print F "$legend \n";
-    close(F);
-    if (!$havedata) {
-      print "No data for $startdate ($startoff) to $enddate ($endoff) \n";
-    } else {
-      my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
-      my $weekline = "";
-      my $plotweekline = "\"$plotfile\" " .
-                "using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"wk $lastwk\", " ;
-      my $xtic = 1;
-      my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
-      my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
-      my @xmonth = ( $onemonth, "\"%b\\n%y\"" ); # Jan 24
-      my @xweek = ( $oneweek, "\"%d\\n%b\"" ); # 15 Jan
-      my $pointsize = "";
-      my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
-      my $fillstyleborder = "fill solid border linecolor \"#003000\""; # Small gap around each drink
-      my $imgsz;
-      if ( $bigimg eq "B" ) {  # Big image
-        $imgsz = "640,480";
-        if ( $startoff - $endoff > 365*4 ) {  # "all"
-          ( $xtic, $xformat ) = @xyear;
-        } elsif ( $startoff - $endoff > 400 ) { # "2y"
-          ( $xtic, $xformat ) = @xquart;
-        } elsif ( $startoff - $endoff > 120 ) { # "y", "6m"
-          ( $xtic, $xformat ) = @xmonth;
-        } else { # 3m, m, 2w
-          ( $xtic, $xformat ) = @xweek;
-          $weekline = $plotweekline;
-          $fillstyle = $fillstyleborder;
-        }
-      } else { # Small image
-        $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
-        $imgsz = "320,250";  # Works on my Fairphone, and Dennis' iPhone
-        if ( $startoff - $endoff > 365*4 ) {  # "all"
-          ( $xtic, $xformat ) = @xyear;
-        } elsif ( $startoff - $endoff > 360 ) { # "2y", "y"
-          ( $xtic, $xformat ) = @xquart;
-        } elsif ( $startoff - $endoff > 80 ) { # "6m", "3m"
-          ( $xtic, $xformat ) = @xmonth;
-          $weekline = $plotweekline;
-        } else { # "m", "2w"
-          ( $xtic, $xformat ) = @xweek;
-          $fillstyle = $fillstyleborder;
-          $weekline = $plotweekline;
-        }
+    #print STDERR "Rolled dates to $startoff $startdate - $endoff $enddate  - f= $allfirstdate\n";
+
+    my $pngfile = $plotfile;
+    $pngfile =~ s/.plot$/-$startdate-$enddate-$bigimg.png/;
+
+    if (  -r $pngfile ) { # Have a cached file
+      print "\n<!-- Cached graph op='$op' $pngfile -->\n";
+    } else { # Have to plot a new one
+
+      my %sums; # drink sums by (eff) date
+      for ( my $i = 0; $i < scalar(@records); $i++ ) { # calculate sums
+        my $rec = $records[$i];
+        next if ( $rec->{mak} =~ /^restaurant/i );
+        $sums{$rec->{effdate}} += $rec->{alcvol};
       }
-      my $white = "textcolor \"white\" ";
-      my $cmd = "" .
-          "set term png small size $imgsz \n".
-          $pointsize .
-          "set out \"$pngfile\" \n".
-          "set xdata time \n".
-          "set timefmt \"%Y-%m-%d\" \n".
-          "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
-          "set y2range [ -.5 : ] \n" .
-          "set format x $xformat \n" .
-          "set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
-          "set border linecolor \"white\" \n" .
-          "set ytics 7 $white \n" .
-          "set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
-          "set xtics \"2007-01-01\", $xtic out $white \n" .  # Happens to be sunday, and first of year/month
-          "set style $fillstyle \n" .
-          "set boxwidth 0.7 relative \n" .
-          "set key left top horizontal textcolor \"white\" \n" .
-          "set grid xtics y2tics  linewidth 0.1 linecolor \"white\" \n".
-          "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
-            "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
-          "set arrow from \"$startdate\", 35 to \"$enddate\", 35 nohead linewidth 0.1 linecolor \"white\" \n" .
-          "set arrow from \"$startdate\", 70 to \"$enddate\", 70 nohead linewidth 0.1 linecolor \"white\" \n" .
-          "set arrow from \"$startdate\", 105 to \"$enddate\", 105 nohead linewidth 0.1 linecolor \"white\" \n" .
-          "set arrow from \"$startdate\", 140 to \"$enddate\", 140 nohead linewidth 0.1 linecolor \"white\" \n" .
-          $weekends .
-          "plot " .
-                # note the order of plotting, later ones get on top
-                # so we plot weekdays, avg line, zeroes
-
-            "\"$plotfile\" using 1:7:8 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:9:10 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:11:12 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:13:14 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:15:16 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:17:18 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:19:20 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:21:22 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:23:24 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:25:26 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:27:28 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:29:30 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:31:32 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:33:34 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:35:36 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:37:38 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:39:40 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:41:42 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:43:44 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-            "\"$plotfile\" using 1:45:46 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-
-            "$weekline " .
-            "\"$plotfile\" " .
-                "using 1:3 with line lc \"#FfFfFf\" lw 3 axes x1y2 title \" 30d $lastavg\", " .  # avg30
-                  # smooth csplines
-            "\"$plotfile\" " .
-                "using 1:6 with points pointtype 7 lc \"#E0E0E0\" axes x1y2 notitle, " .  # future tail
-            "\"$plotfile\" " .
-                "using 1:5 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
-            "";
-      open C, ">$cmdfile"
+      my $ndays = $startoff+35; # to get enough material for the running average
+      my $date;
+      open F, ">$plotfile"
           or error ("Could not open $plotfile for writing");
-      print C $cmd;
-      close(C);
-      system ("gnuplot $cmdfile ");
-    } # havedata
-  } # Have to plot
+      my $legend = "# Date  Drinks  Sum30  Sum7  Zeromark  Future  Drink Color Drink Color ...";
+      print F "$legend \n".
+        "# Plot $startdate ($startoff) to $enddate ($endoff) \n";
+      my $sum30 = 0.0;
+      my @month;
+      my @week;
+      my $wkday;
+      my $zerodays = -1;
+      my $fut = "NAN";
+      my $lastavg = ""; # Last floating average we have seen
+      my $lastwk = "";
+      my $weekends; # Code to draw background on weekend days
+      my $wkendtag = 2;  # 1 is reserved for global bk
+      my $oneday = 24 * 60 * 60 ; # in seconds
+      my $threedays = 3 * $oneday;
+      my $oneweek = 7 * $oneday ;
+      my $oneyear = 365.24 * $oneday;
+      my $onemonth = $oneyear / 12;
+      my $numberofdays=7;
+      while ( $ndays > $endoff) {
+        $ndays--;
+        my $rawdate = datestr("%F:%u", -$ndays);
+        ($date,$wkday) = split(':',$rawdate);
+        my $tot = ( $sums{$date} || 0 ) / $onedrink ;
+        @month = ( @month, $tot);
+        shift @month if scalar(@month)>=30;
+        @week = ( @week, $tot);
+        shift @week if scalar(@week)>7;
+        $sum30 = 0.0;
+        my $sumw = 0.0;
+        for ( my $i = 0; $i < scalar(@month); $i++) {
+          my $w = $i+1 ;  #+1 to avoid zeroes
+          $sum30 += $month[$i] * $w;
+          $sumw += $w;
+        }
+        my $sumweek = 0.0;
+        my $cntweek = 0;
+        foreach my $t ( @week ) {
+          $sumweek += $t;
+          $cntweek++;
+        }
+        #print "<!-- $date " . join(', ', @month). " $sum30 " . $sum30/$sumw . "-->\n";
+        #print "<!-- $date [" . join(', ', @week). "] = $sumweek " . $sumweek/$cntweek . "-->\n";
+        my $daystartsum = ( $sum30 - $tot *(scalar(@month)+1) ) / $sumw; # The avg excluding today
+        $sum30 = $sum30 / $sumw;
+        $sumweek = $sumweek / $cntweek;
+        $averages{$date} = sprintf("%1.2f",$sum30); # Save it for the long list
+        my $zero = "NAN";
+        if ($tot > 0.4 ) { # one small mild beer still gets a zero mark
+          $zerodays = 0;
+        } elsif ($zerodays >= 0) { # have seen a real $tot
+          $zero = 0.1 + ($zerodays % 7) * 0.35 ; # makes the 7th mark nicely on 2.0d
+          $zerodays ++; # Move the subsequent zero markers higher up
+        }
+        if ( $ndays <=0  || # no zero mark for current or next date, it isn't over yet
+            $startoff - $endoff > 400 ) {  # nor for graphs that are over a year, can't see them anyway
+          $zero = "NaN";
+        }
+        if ( $ndays <=0 && $sum30 > 0.1 && $endoff < -13) {
+          # Display future numbers in table form, if asking for 2 weeks ahead
+          my $weekday = ( "Mon", "Tue", "Wed", "Thu", "<b>Fri</b>", "<b>Sat</b>", "<b>Sun</b>" ) [$wkday-1];
+          $futable .= "<tr><td>&nbsp;$weekday&nbsp;</td><td>&nbsp;$date&nbsp;</td>";
+          $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sum30,$sum30*7) . "</td>";
+          $futable .= "<td align=right>&nbsp;" . sprintf("%3.1f %3.1f",$sumweek, $sumweek*7) ."</td>" if ($sumweek > 0.1);
+          $futable .= "</tr>\n";
+        }
+        if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
+          if ($bigimg eq "B") {
+            $lastavg = sprintf("(%2.1f/d %0.0f/w)", $sum30, $sum30*7) if ($sum30 > 0);
+            $lastwk = sprintf("(%2.1f/d %0.0f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
+          } else {
+            $lastavg = sprintf("%2.1f %0.0f", $sum30, $sum30*7) if ($sum30 > 0);
+            $lastwk = sprintf("%2.1f %0.0f", $sumweek, $sumweek*7) if ($sumweek > 0);
+          }
+        }
+        if ( $ndays == 0 ){  # Plot the start of the day
+          if ( $tot ) {
+            $fut= $daystartsum; # with a '+' if some beers today
+          } else {
+            $zero = $daystartsum; # And with a zero mark, if not
+          }
+        }
+        if ( $ndays == -1 ) { # Break the week avg line to indicate future
+                              # (none of the others plot at this time)
+          print F "$date NaN NaN  NaN NaN  NaN Nan \n";
+        }
+        if ( $ndays <0 ) {
+          $fut = $sum30;
+          $fut = "NaN" if ($fut < 0.1); # Hide (almost)zeroes
+          $sum30="NaN"; # No avg for next date, but yes for current
+          if (!$sumweek) { # Don't plot zero weeksums
+            $sumweek = "NaN";
+          }
+        }
+        if ( $wkday == 6 ) {
+          $weekends .= "set object $wkendtag rect at \"$date\",50 " .
+            "size $threedays,200 behind  fc rgbcolor \"#005000\"  fillstyle solid noborder \n";
+          $wkendtag++;
+        }
+        my $totdrinks = $tot;
+        my $drinkline = "";
+        my $ndrinks = 0;
+        if ( $drinktypes{$date} ) {
+          my $lastloc = "";
+          foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
+            my ($alcvol, $type, $loc) =  $dt =~ /^([0-9.]+) ([^:]*) : (.*)/;
+            $lastloc = $loc unless ($lastloc);
+            next unless ( $type );
+            my $color = beercolor($type,"0x",$date,$dt);
+            my $drinks = $alcvol / $onedrink;
+            if ( $lastloc ne $loc  &&  $startoff - $endoff < 100 ) {
+              my $lw = $totdrinks + 0.2; # White line for location change
+              $lw += 0.1 unless ($bigimg eq "B");
+              $drinkline .= "$lw 0xffffff ";
+              $lastloc = $loc;
+              $ndrinks++;
+            }
+            $drinkline .= "$totdrinks $color ";
+            $ndrinks ++;
+            $totdrinks -= $drinks;
+            last if ($totdrinks <= 0 ); #defensive coding, have seen it happen once
+          }
+        }
+        print STDERR "Many ($ndrinks) drink entries on $date \n"
+          if ( $ndrinks >= 20 ) ;
+        while ( $ndrinks++ < 20 ) {
+          $drinkline .= "0 0x0 ";
+        }
 
-  print "<hr/>\n";
-  if ($bigimg eq "B") {
-    print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
-  } else {
-    print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" /></a><br/>\n";
-  }
-  print "<div class='no-print'>\n";
-  my $len = $startoff - $endoff;
-  my $es = $startoff + $len;
-  my $ee = $endoff + $len;
-  print "<a href='$url?o=Graph$bigimg-$es-$ee'><span>&lt;&lt;</span></a> &nbsp; \n"; # '<<'
-  my $ls = $startoff - $len;
-  my $le = $endoff - $len;
-  if ($le < 0 ) {
-    $ls += $ls;
-    $le = 0;
-  }
-  if ($endoff>0) {
-    print "<a href='$url?o=Graph$bigimg-$ls-$le'><span>&gt;&gt;</span></a>\n"; # '>>'
-  } else { # at today, '>' plots a zero-tail
-    my $newend = $endoff;
-    if ($newend > -3) {
-      $newend = -7;
+        if ($zerodays >= 0) {
+          print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" ;
+          $havedata = 1;
+        }
+      }
+      print F "$legend \n";
+      close(F);
+      if (!$havedata) {
+        print "No data for $startdate ($startoff) to $enddate ($endoff) \n";
+      } else {
+        my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
+        my $weekline = "";
+        my $plotweekline = "\"$plotfile\" " .
+                  "using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"wk $lastwk\", " ;
+        my $xtic = 1;
+        my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
+        my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
+        my @xmonth = ( $onemonth, "\"%b\\n%y\"" ); # Jan 24
+        my @xweek = ( $oneweek, "\"%d\\n%b\"" ); # 15 Jan
+        my $pointsize = "";
+        my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
+        my $fillstyleborder = "fill solid border linecolor \"#003000\""; # Small gap around each drink
+        my $imgsz;
+        if ( $bigimg eq "B" ) {  # Big image
+          $imgsz = "640,480";
+          if ( $startoff - $endoff > 365*4 ) {  # "all"
+            ( $xtic, $xformat ) = @xyear;
+          } elsif ( $startoff - $endoff > 400 ) { # "2y"
+            ( $xtic, $xformat ) = @xquart;
+          } elsif ( $startoff - $endoff > 120 ) { # "y", "6m"
+            ( $xtic, $xformat ) = @xmonth;
+          } else { # 3m, m, 2w
+            ( $xtic, $xformat ) = @xweek;
+            $weekline = $plotweekline;
+            $fillstyle = $fillstyleborder;
+          }
+        } else { # Small image
+          $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
+          $imgsz = "320,250";  # Works on my Fairphone, and Dennis' iPhone
+          if ( $startoff - $endoff > 365*4 ) {  # "all"
+            ( $xtic, $xformat ) = @xyear;
+          } elsif ( $startoff - $endoff > 360 ) { # "2y", "y"
+            ( $xtic, $xformat ) = @xquart;
+          } elsif ( $startoff - $endoff > 80 ) { # "6m", "3m"
+            ( $xtic, $xformat ) = @xmonth;
+            $weekline = $plotweekline;
+          } else { # "m", "2w"
+            ( $xtic, $xformat ) = @xweek;
+            $fillstyle = $fillstyleborder;
+            $weekline = $plotweekline;
+          }
+        }
+        my $white = "textcolor \"white\" ";
+        my $cmd = "" .
+            "set term png small size $imgsz \n".
+            $pointsize .
+            "set out \"$pngfile\" \n".
+            "set xdata time \n".
+            "set timefmt \"%Y-%m-%d\" \n".
+            "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
+            "set y2range [ -.5 : ] \n" .
+            "set format x $xformat \n" .
+            "set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
+            "set border linecolor \"white\" \n" .
+            "set ytics 7 $white \n" .
+            "set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
+            "set xtics \"2007-01-01\", $xtic out $white \n" .  # Happens to be sunday, and first of year/month
+            "set style $fillstyle \n" .
+            "set boxwidth 0.7 relative \n" .
+            "set key left top horizontal textcolor \"white\" \n" .
+            "set grid xtics y2tics  linewidth 0.1 linecolor \"white\" \n".
+            "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
+              "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
+            "set arrow from \"$startdate\", 35 to \"$enddate\", 35 nohead linewidth 0.1 linecolor \"white\" \n" .
+            "set arrow from \"$startdate\", 70 to \"$enddate\", 70 nohead linewidth 0.1 linecolor \"white\" \n" .
+            "set arrow from \"$startdate\", 105 to \"$enddate\", 105 nohead linewidth 0.1 linecolor \"white\" \n" .
+            "set arrow from \"$startdate\", 140 to \"$enddate\", 140 nohead linewidth 0.1 linecolor \"white\" \n" .
+            $weekends .
+            "plot " .
+                  # note the order of plotting, later ones get on top
+                  # so we plot weekdays, avg line, zeroes
+
+              "\"$plotfile\" using 1:7:8 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:9:10 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:11:12 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:13:14 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:15:16 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:17:18 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:19:20 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:21:22 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:23:24 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:25:26 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:27:28 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:29:30 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:31:32 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:33:34 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:35:36 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:37:38 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:39:40 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:41:42 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:43:44 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:45:46 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+
+              "$weekline " .
+              "\"$plotfile\" " .
+                  "using 1:3 with line lc \"#FfFfFf\" lw 3 axes x1y2 title \" 30d $lastavg\", " .  # avg30
+                    # smooth csplines
+              "\"$plotfile\" " .
+                  "using 1:6 with points pointtype 7 lc \"#E0E0E0\" axes x1y2 notitle, " .  # future tail
+              "\"$plotfile\" " .
+                  "using 1:5 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
+              "";
+        open C, ">$cmdfile"
+            or error ("Could not open $plotfile for writing");
+        print C $cmd;
+        close(C);
+        system ("gnuplot $cmdfile ");
+      } # havedata
+    } # Have to plot
+
+    print "<hr/>\n";
+    if ($bigimg eq "B") {
+      print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
     } else {
-      $newend = $newend - 7;
+      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" /></a><br/>\n";
     }
-    print "<a href='$url?o=Graph$bigimg-$startoff-$newend'><span>&gt;</span></a>\n"; # '>'
-  }
-  print " &nbsp; <a href='$url?o=Graph$bigimg-14'><span>2w</span></a>\n";
-  print " <a href='$url?o=Graph$bigimg'><span>Month</span></a>\n";
-  print " <a href='$url?o=Graph$bigimg-90'><span>3m</span></a> \n";
-  print " <a href='$url?o=Graph$bigimg-180'><span>6m</span></a> \n";
-  print " <a href='$url?o=Graph$bigimg-365'><span>Year</span></a> \n";
-  print " <a href='$url?o=Graph$bigimg-730'><span>2y</span></a> \n";
-  print " <a href='$url?o=Graph$bigimg-3650'><span>All</span></a> \n";  # The system isn't 10 years old
+    print "<div class='no-print'>\n";
+    my $len = $startoff - $endoff;
+    my $es = $startoff + $len;
+    my $ee = $endoff + $len;
+    print "<a href='$url?o=Graph$bigimg-$es-$ee'><span>&lt;&lt;</span></a> &nbsp; \n"; # '<<'
+    my $ls = $startoff - $len;
+    my $le = $endoff - $len;
+    if ($le < 0 ) {
+      $ls += $ls;
+      $le = 0;
+    }
+    if ($endoff>0) {
+      print "<a href='$url?o=Graph$bigimg-$ls-$le'><span>&gt;&gt;</span></a>\n"; # '>>'
+    } else { # at today, '>' plots a zero-tail
+      my $newend = $endoff;
+      if ($newend > -3) {
+        $newend = -7;
+      } else {
+        $newend = $newend - 7;
+      }
+      print "<a href='$url?o=Graph$bigimg-$startoff-$newend'><span>&gt;</span></a>\n"; # '>'
+    }
+    print " &nbsp; <a href='$url?o=Graph$bigimg-14'><span>2w</span></a>\n";
+    print " <a href='$url?o=Graph$bigimg'><span>Month</span></a>\n";
+    print " <a href='$url?o=Graph$bigimg-90'><span>3m</span></a> \n";
+    print " <a href='$url?o=Graph$bigimg-180'><span>6m</span></a> \n";
+    print " <a href='$url?o=Graph$bigimg-365'><span>Year</span></a> \n";
+    print " <a href='$url?o=Graph$bigimg-730'><span>2y</span></a> \n";
+    print " <a href='$url?o=Graph$bigimg-3650'><span>All</span></a> \n";  # The system isn't 10 years old
 
-  my $zs = $startoff + int($len/2);
-  my $ze = $endoff - int($len/2);
-  if ( $ze < 0 ) {
-    $zs -= $ze;
-    $ze = 0 ;
-  }
-  print " &nbsp; <a href='$url?o=Graph$bigimg-$zs-$ze'><span>[ - ]</span></a>\n";
-  my $is = $startoff - int($len/4);
-  my $ie = $endoff + int($len/4);
-  print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'><span>[ + ]</span></a>\n";
-  print "<br/>\n";
-  print "</div>\n";
-  if ( $futable ){
-    print "<hr/><table border=1>";
-    print "<tr><td colspan=2><b>Projected</b></td>";
-    print "<td>Avg</td><td>Week</td></tr>\n";
-    print "$futable</table><hr/>\n";
-  }
-
+    my $zs = $startoff + int($len/2);
+    my $ze = $endoff - int($len/2);
+    if ( $ze < 0 ) {
+      $zs -= $ze;
+      $ze = 0 ;
+    }
+    print " &nbsp; <a href='$url?o=Graph$bigimg-$zs-$ze'><span>[ - ]</span></a>\n";
+    my $is = $startoff - int($len/4);
+    my $ie = $endoff + int($len/4);
+    print " &nbsp; <a href='$url?o=Graph$bigimg-$is-$ie'><span>[ + ]</span></a>\n";
+    print "<br/>\n";
+    print "</div>\n";
+    if ( $futable ){
+      print "<hr/><table border=1>";
+      print "<tr><td colspan=2><b>Projected</b></td>";
+      print "<td>Avg</td><td>Week</td></tr>\n";
+      print "$futable</table><hr/>\n";
+    }
+  } # have data
+} # graph
 
 
 ################################################################################
@@ -1460,8 +1530,11 @@ if ( $allfirstdate && $op && ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~
 # Scraped from their website
 ################################################################################
 
-if ( $op =~ /board(-?\d*)/i ) {
-  my $extraboard = $1 || -1;  # show all kind of extra info for this tap
+sub beerboard {
+  my $extraboard = -1; # Which of the entries to open, or -1 for all, -2 for none
+  if ( $op =~ /board(-?\d+)/i ) {
+    $extraboard = $1;
+    }
   my $locparam = $foundrec->{loc} || "";
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
@@ -1541,7 +1614,7 @@ if ( $op =~ /board(-?\d*)/i ) {
       my $mak = $e->{"maker"} || "" ;
       my $beer = $e->{"beer"} || "" ;
       my $sty = $e->{"type"} || "";
-      $loc = $locparam;
+      my $loc = $locparam;
       my $alc = $e->{"alc"} || "";
       $alc = sprintf("%4.1f",$alc) if ($alc);
       my $seenkey = seenkey($mak,$beer);
@@ -1676,14 +1749,13 @@ if ( $op =~ /board(-?\d*)/i ) {
   }
   # Keep $qry, so we filter the big list too
   $qry = "" if ($qry =~ /PA/i );   # But not 'PA', it is only for the board
-} # Board
-
+} # beerboard
 
 ################################################################################
 # Short list, aka daily statistics
 ################################################################################
 
-} elsif ( $op eq "short" ) {
+sub shortlist{
   my $entry = "";
   my $places = "";
   my $lastdate = "";
@@ -1801,15 +1873,14 @@ if ( $op =~ /board(-?\d*)/i ) {
   } else {
     print "<br/>That was the whole list<p>\n" unless ($yrlim);
   }
-  exit(); # All done
 } # Short list
 
 ################################################################################
 # Annual summary
 ################################################################################
 
-elsif ( $op =~ /Years(d?)/i ) {
-  my $sortdr = $1;
+sub yearsummary {
+  my $sortdr = shift;
   my %sum;
   my %alc;
   my $ysum = 0;
@@ -1934,18 +2005,16 @@ elsif ( $op =~ /Years(d?)/i ) {
     print "<br/> $prev &nbsp; $all &nbsp; $next \n";
   }
   print  "<hr/>\n";
-
-  exit();
-} # Annual stats
+} # yearsummary
 
 ################################################################################
 # Monthly statistics
 # from %monthdrinks and %monthprices
 ################################################################################
 
-elsif ( $op =~ /Months([BS])?/ ) {
+sub monthstat {
   my $defbig = $mobile ? "S" : "B";
-  my $bigimg = $1 || $defbig;
+  my $bigimg = shift || $defbig;
   $bigimg =~ s/S//i ;
   print "<hr/>Other stats: \n";
   print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
@@ -2225,8 +2294,7 @@ elsif ( $op =~ /Months([BS])?/ ) {
 # About page
 ################################################################################
 
-elsif ( $op eq "About" ) {
-
+sub about {
   print "<hr/><h2>Beertracker</h2>\n";
   print "Copyright 2016-2024 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
@@ -2282,7 +2350,7 @@ elsif ( $op eq "About" ) {
 # Geolocation debug
 ################################################################################
 
-elsif ( $op eq "geo" ) {
+sub geodebug {
   if (!$qry || $qry =~ /^ *[0-9 .]+ *$/ ) {  # numerical query
     print "<hr><b>Geolocations</b><p>\n";
     if ($qry) {
@@ -2358,7 +2426,7 @@ elsif ( $op eq "geo" ) {
       print "<td><a href='$url?o=$op&q=$qry&e=$rec->{stamp}' ><span>$rec->{stamp}</span></a> ";
       if ($guess) {
         print "<br>(<b>$guess $gdist ?)</b>\n" ;
-        print STDERR "Suspicious Geo: '$loc' looks like '$guess'  for '$g' at '$rec->{stamp}' \n";
+        print STDERR "Suspicious Geo: '$rec->{loc}' looks like '$guess'  for '$g' at '$rec->{stamp}' \n";
       }
       print "</td>\n";
       print "</tr>\n";
@@ -2367,15 +2435,11 @@ elsif ( $op eq "geo" ) {
   }
 }  # Geo debug
 
-elsif ( $op eq "full" ) {
-  # Ignore for now, we print the full list later.
-}
 
 ################################################################################
 # various lists (beer, location, etc)
 ################################################################################
-
-elsif ( $op ) {
+sub lists {
   print "<hr/><a href='$url'><span><b>$op</b> list</span></a>\n";
   print "<div class='no-print'>\n";
   if ( !$sortlist) {
@@ -2534,7 +2598,6 @@ elsif ( $op ) {
   print "<a href='$url?maxl=-1&" . $q->query_string() . "'>" .
     "All</a> ($ysum)<br/>\n" if($ysum);
 
-  exit();
 }  # Lists
 
 
@@ -2542,7 +2605,7 @@ elsif ( $op ) {
 # Regular list, on its own, or after graph and/or beer board
 ################################################################################
 
-if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
+sub fulllist {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   print "\n<!-- Full list -->\n ";
   my $filts = splitfilter($qry);
@@ -2673,13 +2736,13 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       print "<br/>\n" ;
       if ( $qrylim eq "x") {
         my ( undef, undef, $gg) = geo($geolocations{$rec->{loc}});
-        my $tdist = geodist($geo, $gg); # TODO - $rec->{geo} ??
+        my $tdist = geodist($rec->{geo}, $gg);
         if ( $tdist && $tdist > 1 ) {
           $tdist = "<b>".unit($tdist,"m"). "</b>";
         } else {
           $tdist = "";
         }
-        my ($guess, $gdist) = guessloc($gg,$loc);
+        my ($guess, $gdist) = guessloc($gg,$rec->{loc});
         $gdist = unit($gdist,"m");
         $guess = " <b>($guess $gdist?)</b> " if ($guess);
         print "Geo: $gg $tdist $guess<br/>\n" if ($gg || $guess || $tdist);
@@ -2863,10 +2926,6 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   }
 } # Full list
 
-# HTML footer
-print "</body></html>\n";
-
-exit();
 
 
 ################################################################################
@@ -2934,7 +2993,6 @@ sub searchform {
     "</form> \n" .
     "";
   return $r;
-
 }
 
 # Helper to print "(NEW)" in case we never seen the entry before
@@ -3014,6 +3072,7 @@ sub rblink {
     "' target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
   return $lnk;
 }
+
 # Helper to make a Untappd search link
 sub utlink {
   my $qry = shift;
@@ -3161,7 +3220,6 @@ sub guessloc {
 
 
 # Helper to get a date string, with optional delta (in days)
-my $starttime = "";
 
 sub datestr {
   my $form = shift || "%F %T";  # "YYYY-MM-DD hh:mm:ss"
