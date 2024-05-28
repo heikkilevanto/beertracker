@@ -466,216 +466,250 @@ if ( !$op) {
 # Try to guess missing values from last entries
 ################################################################################
 
+# Helper to convert input parameters into a rough estimation of a record
+# Just takes all names parameters into rec. There will be some extras, and
+# likely important things missing
+sub inputrecord {
+  my $rec = {};
+  my @pnames = $q->param;
+  foreach my $p ( @pnames ) {
+    my $pv = $q->param($p);
+    #print STDERR "param '$p' : '$pv'\n";
+    $rec->{$p} = "$pv";
+  }
+  return $rec;
+}
+
+# Helper to fix the time, date, effdate, and wkday in the record
+# Several special cases
+#  - Date "L" for one after the Last entry, 5 min later, same loc
+#  - Date "Y" for yesterday
+#  - Time as in 4pm, 16, 1630, 16:30, 16:30:45
+sub fixtimes {
+  my $rec = shift;
+  my $lastrec = shift; # the all last record in the file
+  my $sub = shift;
+  $rec->{time} = "" unless ( defined($rec->{time}) );
+  $rec->{date} = "" unless ( defined($rec->{date}) );
+  if ( $sub eq "Save" ) { # Keep the datetime from the form
+    $rec->{date} = trim($rec->{date});
+    $rec->{time} = trim($rec->{time});
+  } else { # Kill the datetime, unless explicitly entered
+    $rec->{date} = "" if ($rec->{date} && $rec->{date} =~ /^ / );
+    $rec->{time} = "" if ($rec->{time} && $rec->{time} =~ /^ / );
+  }
+
+  if ($rec->{date} && $rec->{date} =~ /^L$/i ) { # 'L' for last date
+    $rec->{date} = $lastrec->{date} || datestr();
+    if (! $rec->{time} && $lastrec->{time} =~ /^ *(\d\d):(\d\d)/ ){ # Guess a time
+      my $hr = $1;
+      my $min = $2;
+      $min += 5;  # 5 min past the previous looks right
+      if ($min > 59 ) {
+        $min -= 60;
+        $hr++;
+        $hr -= 24 if ($hr >= 24);
+        # TODO - Increment date as well
+      }
+      $rec->{time} = sprintf("%02d:%02d", $hr,$min);
+      $rec->{loc} = $foundrec->{loc}; # Assume same location
+    }
+  } # date 'L'
+  if ( $rec->{date} && $rec->{date} =~ /^Y$/i ) { # 'Y' for yesterday
+    $rec->{date} = datestr( "%F", -1, 1);
+  }
+  $rec->{time} = "" if ("$rec->{time}" !~ /^\d/); # Remove real bad times, default to now
+  $rec->{time} =~ s/^([0-9:]*p?).*/$1/i; # Remove AM markers (but not the p in pm)
+  $rec->{time} =~ s/^(\d\d?)(\d\d)(p?)/$1:$2$3/i; # expand 0130 to 01:30, keeping the p
+  if ( $rec->{time} =~ /^(\d\d?) *(p?)$/i ) { # default to full hrs
+    $rec->{time} = "$1:00$2";
+  }
+  if ( $rec->{time} =~ /^(\d+):(\d+)(:\d+)? *(p)/i ) { # Convert 'P' or 'PM' to 24h
+    $rec->{time} = sprintf( "%02d:%02d%s", $1+12, $2, $3);
+  }
+  if ( $rec->{time} =~ /^(\d+:\d+)$/i ) { # Add seconds if not there
+    $rec->{time} = "$1:" . datestr("%S", 0,1); # Get seconds from current time
+  }   # That keeps timestamps somewhat different, even if adding several entries in the same minute
+
+  # Default to current date and time
+  $rec->{date} = $rec->{date} || datestr( "%F", 0, 1);
+  $rec->{time} = $rec->{time} || datestr( "%T", 0, 1);
+  $rec->{stamp} = "$rec->{date} $rec->{time}";
+  my $effdatestr = `date "+%F;%a" -d "$rec->{date} $rec->{time} 8 hours ago"`;
+  if ( $effdatestr =~ /([0-9-]+) *;(\w+)/ ) {
+    $rec->{effdate} = $1;
+    $rec->{wday} = $2;
+  }
+  my $lasttimestamp = $lastrec->{stamp};
+  if (  $rec->{stamp} =~ /^$lasttimestamp/ && $sub eq "Record" ) { # trying to create a duplicate
+    if ( $rec->{stamp} =~ /^(.*:)(\d\d)(;.*)$/ ) {
+      my $sec = $2;
+      $sec++;  # increment the seconds, even past 59.
+      $rec->{stamp} = "$1$sec$3";
+    }
+    print STDERR "Oops, almost inserted a duplicate timestamp '$lasttimestamp'. ".
+      "Adjusted it to '$rec->{stamp}' \n";
+  }
+  #print STDERR "fixed s='$rec->{stamp}' d='$rec->{date}' t='$rec->{time}' e='$rec->{effdate}' w='$rec->{wday}' \n";
+} # fixtimes
+
+# Fix volume trickery
+sub fixvol {
+  my $rec = shift;
+  my $sub = shift;
+  if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
+    $rec->{vol} = $1;
+  }
+  my $half;  # Volumes can be prefixed with 'h' for half measures.
+  if ( $rec->{vol} =~ s/^(H)(.+)$/$2/i ) {
+    $half = $1;
+  }
+  my $volunit = uc(substr($rec->{vol},0,1)); # S or L or such
+  if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
+    my $actvol = $1;
+    $rec->{vol} =~s/$volunit/$actvol/i;
+  }
+  if ($half) {
+    $rec->{vol} = int($rec->{vol} / 2) ;
+  }
+  if ( $rec->{vol} =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
+    $rec->{vol} = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
+  }
+} # fixvol
+
+
+# Helper to guess missing values from previous lines
+sub guessvalues {
+  my $rec = shift;
+  my $priceguess = "";
+  my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
+  if ( $rec->{mak} =~ /^Wine,/i ) {
+      $defaultvol = 16;
+    } elsif ( $rec->{mak} =~ /Booze,/i ) {
+      $defaultvol = 4;
+    } elsif ( $rec->{mak} =~ /,/i ) {
+      $defaultvol = ""; # for restaurants, time zones, and other strange stuff
+    }
+  my $i = scalar( @records )-1;
+  while ( $i > 0 && $rec->{beer}
+    && ( !$rec->{mak} || !$rec->{vol} || !$rec->{sty} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
+    my $irec = $records[$i];
+    if ( !$priceguess &&    # Guess a price
+         $irec->{loc} && $rec->{loc} &&
+         uc($irec->{loc}) eq uc($rec->{loc}) &&   # if same location and volume
+         $irec->{vol} eq $rec->{vol} ) { # even if different beer, good fallback
+      $priceguess = $irec->{pr};
+    }
+    if ( uc($rec->{beer}) eq uc($irec->{beer}) ) { # Same beer, copy values over if not set
+      $rec->{beer} = $irec->{beer}; # with proper case letters
+      $rec->{mak} = $irec->{mak} unless $rec->{mak};
+      $rec->{sty} = $irec->{sty} unless $rec->{sty};
+      $rec->{alc} = $irec->{alc} unless $rec->{alc};
+      if ( $rec->{vol} eq $irec->{vol} && $irec->{pr} =~/^ *[0-9.]+ *$/) {
+        # take price only from same volume, and only if numerical
+        $rec->{pr}  = $irec->{pr} if $rec->{pr} eq "";
+      }
+      $rec->{vol} = $irec->{vol} unless $rec->{vol};
+    }
+    $i--;
+  }
+  $rec->{pr} = $priceguess if $rec->{pr} eq "";
+  if ( uc($rec->{vol}) eq "X" ) {  # 'X' is an explicit way to indicate a null value
+    $rec->{vol} = "";
+  } else {
+    $rec->{vol} = number($rec->{vol});
+    if ($rec->{vol}<=0) {
+      $rec->{vol} = $defaultvol;  # TODO - Can this ever happen ? Doesn't neg vol mean something?
+    }
+  }
+  my $curpr = curprice($rec->{pr});
+  if ($curpr) {
+    $rec->{com} =~ s/ *\[\d+\w+\] *$//i; # Remove old currency price comment "[12eur]"
+    $rec->{com} .= " [$rec->{pr}]";
+    $rec->{pr} = $curpr;
+  } else {
+    $rec->{pr} = price($rec->{pr});
+  }
+  if (!$rec->{vol} || $rec->{vol} < 0 ) {
+    $rec->{alc} = "";  # Clear alc if no vol
+    $rec->{vol} = "";  # But keep the price for restaurants etc
+  }
+  $rec->{alc} = number($rec->{alc});
+} # guessvalues
+
+########################
+# POST itself
 if ( $q->request_method eq "POST" ) {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
   my $sub = $q->param("submit") || "";
 
   # Input parameters, only used here in POST
   my $rec = inputrecord();  # Get an approximation of a record from the params
-  my $edit = param("edit");
-  my $loc = param("loc");  # location
-  my $mak = param("mak");  # brewery (maker) (or "wine, red", or "restaurant, thai"
-  my $beer= param("beer");  # beer
-  my $vol = param("vol");  # volume, in cl
-  my $sty = param("sty");  # style
-  my $alc = param("alc");  # alc, in %vol, up to 1 decimal
-  my $pr  = param("pr");  # price, DKK
-  my $rate= param("rate");  # rating, 0=worst, 10=best
-  my $com = param("com");  # Comments
-  my $geo = param("geo");  # Geolocation old: "[55.6531712/12.5042688]" new "55.6531712 12.5042688"
-  my $date = param("date"); # Date, if entered. Overrides stamp and effdate. Keep leading space for logic
-  my $time = param("time"); # Time, if entered.
+  nullfields($rec);
+  my $lastrec = $records[ scalar(@records)-1 ];
+  #dumprec($rec, "raw");
+  fixtimes($rec, $lastrec, $sub);
+  fixvol($rec, $sub);
+  guessvalues($rec);
 
-  my $effdate; # effective date. Drinks after midnight count as night before
-  my $stamp = $edit . "; Mon"; # TODO
-  $effdate = $date;  # TODO - Do these right when getting so far
+  my $lasttimestamp = $lastrec->{stamp};
 
   # Clean the location
-  $loc =~ s/ *\[.*$//; # Drop the distance from geolocation
-
-  # Adjust size
-  my $defaultvol = 40;
-  if ( $mak =~ /^Wine,/i ) {
-      $defaultvol = 16;
-    } elsif ( $mak =~ /Booze,/i ) {
-      $defaultvol = 4;
-    } elsif ( $mak =~ /,/i ) {
-      $defaultvol = ""; # for restaurants, time zones, and other strange stuff
-    }
-  my $half;  # Volumes can be prefixed with 'h' for half measures.
-  if ( $vol =~ s/^(H)(.+)$/$2/i ) {
-    $half = $1;
-  }
-  my $volunit = uc(substr($vol,0,1)); # S or L or such
-  if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
-    my $actvol = $1;
-    $vol =~s/$volunit/$actvol/i;
-  }
-  if ($half) {
-    $vol = int($vol / 2) ;
-  }
-  if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
-    $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
+  if ($rec->{loc}) {
+    $rec->{loc} =~ s/ *\[.*$//; # Drop the distance from geolocation
   }
 
-  my $lastrec = $records[ scalar(@records)-1 ];
-  my $lasttimestamp = $lastrec->{stamp};
-  # Check for missing values in the input, copy from the most recent beer with
-  # the same name.
-  if ( !$stamp) { # New record, process date and time if entered
-    #print STDERR "BEFOR D='$date' T='$time' S='$stamp' E='$effdate'\n";
-    if (($date =~ /^\d/ || $time =~ /^\d/ )  # Entering after the fact, possibly at a different location
-        && ( $geo =~ /^ / )) {  # And geo is autofilled
-      $geo = "";   # Do not remember the suspicious location
-    }
-    if ( $geo =~ / *\d+/) { # Sanity check, do not accept conflicting locations
-      my  ($guess, $dist) = guessloc($geo);
-      if ( $loc && $guess  # We have location name, and geo guess
-         && $geolocations{$loc} # And we know the geo for the location
-         && $loc !~ /$guess/i ) { # And they differ
-        print STDERR "Refusing to store geo '$geo' for '$loc', it is closer to '$guess' \n";
-        $geo = "";  # Ignore the suspect geo coords
-      }
-    } else {
-      $geo = "";
-    }
-    if ( $sub eq "Save" ) {
-      $date = trim($date);
-      $time = trim($time);
-    } else {
-      $date = "" if ( $date =~ /^ / );
-      $time = "" if ( $time =~ /^ / );
-    }
-    if ($date =~ /^L$/i ) { # 'L' for last date
-      $date = $lastrec->{date} || datestr();
-      if (! $time && $lastrec->{time} =~ /^ *(\d\d):(\d\d)/ ){ # Guess a time
-        my $hr = $1;
-        my $min = $2;
-        $min += 5;  # 5 min past the previous looks right
-        if ($min > 59 ) {
-          $min -= 60;
-          $hr++;
-          $hr -= 24 if ($hr >= 24);
-          # TODO - Increment date as well
-        }
-        $time = sprintf("%02d:%02d", $hr,$min);
-        $loc = $foundrec->{loc}; # Fall back to last values
-      }
-    } # date 'L'
-    if ( $date =~ /^Y$/i ) { # 'Y' for yesterday
-      $date = datestr( "%F", -1, 1);
-    }
-    $time = "" if ($time !~ /^\d/); # Remove real bad times, default to now
-    $time =~ s/^([0-9:]*p?).*/$1/i; # Remove AM markers (but not the p in pm)
-    $time =~ s/^(\d\d?)(\d\d)(p?)/$1:$2$3/i; # expand 0130 to 01:30, keeping the p
-    if ( $time =~ /^(\d\d?) *(p?)$/i ) { # default to full hrs
-      $time = "$1:00$2";
-    }
-    if ( $time =~ /^(\d+):(\d+)(:\d+)? *(p)/i ) { # Convert 'P' or 'PM' to 24h
-      $time = sprintf( "%02d:%02d%s", $1+12, $2, $3);
-    }
-    if ( $time =~ /^(\d+:\d+)$/i ) { # Add seconds if not there
-      $time = "$1:" . datestr("%S", 0,1); # Get seconds from current time
-    }   # That keeps timestamps somewhat different, even if adding several entries in the same minute
+  # Manually entered date/time indicate we are filling the data after the fact
+  # so do not trust the current geo coordinates
+  if ( $sub eq "Record"  &&
+      ($rec->{date} =~ /^\d/ || $rec->{time} =~ /^\d/ )
+      && ( $rec->{geo} =~ /^ / )) {  # And geo is autofilled
+    $rec->{geo} = "";   # Do not remember the suspicious location
+  }
 
-    # Default to current date and time
-    $date = $date || datestr( "%F", 0, 1);
-    $time = $time || datestr( "%T", 0, 1);
-    $stamp = "$date $time";
-    my $effdatestr = `date "+%F;%a" -d "$date $time 8 hours ago"`;
-    if ( $effdatestr =~ /([0-9-]+) *;(\w+)/ ) {
-      $effdate = $1;
-      $stamp .= "; $2";
-    }
-    if (  $stamp =~ /^$lasttimestamp/ && $sub eq "Record" ) { # trying to create a duplicate
-      if ( $stamp =~ /^(.*:)(\d\d)(;.*)$/ ) {
-        my $sec = $2;
-        $sec++;  # increment the seconds, even past 59.
-        $stamp = "$1$sec$3";
-      }
-      print STDERR "Oops, almost inserted a duplicate timestamp '$lasttimestamp'. ".
-        "Adjusted it to '$stamp' \n";
-    }
-    #print STDERR "AFTER D='$date' T='$time' S='$stamp' E='$effdate' L='$lasttimestamp'\n";
-  }
-  if ( $mak !~ /tz,/i ) {
-    $loc = $foundrec->{loc} unless $loc;  # Always default to the last location, except for tz lines
-  }
-  if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
-    $vol = $1 if ( $1 );
-  }
-  if ( $sub eq "Save" && $loc =~ /^ /  ) {   # Saving on default values
-    $loc = $foundrec->{loc}; # Ignore that guess, fall back to the latest location # See #301
-    $geo = ""; # Drop the geo coords, we don't want to mix $thisloc and random coords
-  }
-  # Try to guess missing values from previous lines
-  my $priceguess = "";
-  my $i = scalar( @records )-1;
-  while ( $i > 0 && $beer
-    && ( !$mak || !$vol || !$sty || !$alc || $pr eq '' )) {
-    my $irec = $records[$i];
-    if ( !$priceguess &&    # Guess a price
-         uc($irec->{loc}) eq uc($loc) &&   # if same location and volume
-         $irec->{vol} eq $vol ) { # even if different beer, good fallback
-      $priceguess = $irec->{pr};
-    }
-    if ( uc($beer) eq uc($irec->{beer}) ) { # Same beer, copy values over if not set
-      $beer = $irec->{beer}; # with proper case letters
-      $mak = $irec->{mak} unless $mak;
-      $sty = $irec->{sty} unless $sty;
-      $alc = $irec->{alc} unless $alc;
-      if ( $vol eq $irec->{vol} && $irec->{pr} =~/^ *[0-9.]+ *$/) {
-        # take price only from same volume, and only if numerical
-        $pr  = $irec->{pr} if $pr eq "";
-      }
-      $vol = $irec->{vol} unless $vol;
-    }
-    $i--;
-  }
-  $pr = $priceguess if $pr eq "";
-  if ( uc($vol) eq "X" ) {  # 'X' is an explicit way to indicate a null value
-    $vol = "";
-  } else {
-    $vol = number($vol);
-    if ($vol<=0) {
-      $vol = $defaultvol;
+  # Sanity check, do not accept conflicting locations
+  # Happens typically when entering data at home
+  if ( $rec->{geo} =~ / *\d+/) {
+    my  ($guess, $dist) = guessloc($rec->{geo});
+    if ( $rec->{loc} && $guess  # We have location name, and geo guess
+        && $geolocations{$rec->{loc}} # And we know the geo for the location
+        && $rec->{loc} !~ /$guess/i ) { # And they differ
+      print STDERR "Refusing to store geo '$rec->{geo}' for '$rec->{loc}', it is closer to '$guess' \n";
+      $rec->{geo} = "";  # Ignore the suspect geo coords
     }
   }
-  my $curpr = curprice($pr);
-  if ($curpr) {
-    $com =~ s/ *\[\d+\w+\] *$//i; # Remove old currency price comment "[12eur]"
-    $com .= " [$pr]";
-    $pr = $curpr;
-  } else {
-    $pr = price($pr);
-  }
-  if (!$vol || $vol < 0 ) {
-    $alc = "";  # Clear alc if no vol
-    $vol = "";  # But keep the price for restaurants etc
-  }
-  $alc = number($alc);
-  if ($mak =~ /tz,/i ) {
-    $vol = "";
-    $alc = "";
-    $pr = "";
-  }
-  (undef, undef, $geo)  = geo($geo);  # Skip bad ones, format right
-  my $line = "$loc; $mak; $beer; $vol; $sty; $alc; $pr; $rate; $com; $geo";
-  # TODO - Make a record, and convert to a line. Will work for many types of lines, later
 
-  $line = trim($line); # Remove leading spaces from fields
+  if ( $rec->{mak} !~ /tz,/i ) {
+    $rec->{loc} = $foundrec->{loc} unless $rec->{loc};  # Always default to the last location, except for tz lines
+  }
+  if ($rec->{mak} =~ /tz,/i ) { # tz lines should have no vol, alc, or price
+    $rec->{vol} = ""; # TODO - This won't be necessary once we have a line type for TZ
+    $rec->{alc} = "";
+    $rec->{pr} = "";
+  }
+  if ( $sub eq "Save" && $rec->{loc} =~ /^ /  ) {   # Saving and geo guessed loc
+    $rec->{loc} = $foundrec->{loc}; # Ignore that guess, fall back to the latest location # See #301
+    $rec->{geo} = ""; # Drop the geo coords, we don't want to mix $thisloc and random coords
+  }
+
+  (undef, undef, $rec->{geo})  = geo($rec->{geo});  # Skip bad ones, format right
+
+  #dumprec($rec, "final");
+  my $line = makeline($rec);
+  #print STDERR "e='$rec->{edit}' s='$sub' line: '$line' \n";
+
   if ( $sub eq "Record" ) {  # Want to create a new record
-    $edit = ""; # so don't edit the current one
+    $rec->{edit} = ""; # so don't edit the current one
   }
-  if ( $lasttimestamp gt $stamp && $sub ne "Del" ) {
+  if ( $lasttimestamp gt $rec->{stamp} && $sub ne "Del" ) {
     $sub = "Save"; # force this to be an updating save, so the record goes into its right place
   }
 
   if ( $sub ne "Save" && $sub ne "Del" ) { # Regular append
-    if ( $line =~ /[a-zA-Z0-9]/ ) { # has at leas something on it
+    if ( $line =~ /^[0-9]/ ) { # has at leas something on it
         open F, ">>$datafile"
           or error ("Could not open $datafile for appending");
-        print F "$stamp; $effdate; $line \n"
+        print F "$line\n"
           or error ("Could not write in $datafile");
         close(F)
           or error("Could not close data file");
@@ -690,22 +724,22 @@ if ( $q->request_method eq "POST" ) {
       or error ("Could not open $datafile for writing");
     while (<BF>) {
       my ( $stp ) = $_ =~ /^([^;]*)/ ; # Just take the timestamp (or comment, or whatever)
-      if ( $stamp && $stp && $stp =~ /^\d+/ &&  # real line
+      if ( $rec->{stamp} && $stp && $stp =~ /^\d+/ &&  # real line
            $sub eq "Save" && # Not deleting it
-           "x$stamp" lt "x$stp") {  # Right Place to insert the line
+           "x$rec->{stamp}" lt "x$stp") {  # Right Place to insert the line
            # Note the "x" trick, to force pure string comparision
-        print F "$stamp; $effdate; $line \n";
-        $stamp = ""; # do not write it again
+        print F "$line\n";
+        $rec->{stamp} = ""; # do not write it again
       }
-      if ( !$stp || $stp ne $edit ) {
+      if ( !$stp || $stp ne $rec->{edit} ) {
         print F $_; # just copy the line
       } else { # found the line
         print F "#" . $_ ;  # comment the original line out
         $edit = "XXX"; # Do not delete another line, even if same timestamp
       }
     }
-    if ($stamp && $sub eq "Save") {  # have not saved it yet
-      print F "$stamp; $effdate; $line \n";  # (happens when editing latest entry)
+    if ($rec->{stamp} && $sub eq "Save") {  # have not saved it yet
+      print F "$line \n";  # (happens when editing latest entry)
     }
     close F
       or error("Error closing $datafile: $!");
@@ -713,13 +747,14 @@ if ( $q->request_method eq "POST" ) {
       or error("Error closing $bakfile: $!");
   }
 
-  # Clear the cached files from the data dir
+  # Clear the cached files from the data dir.
+  # All graphs for this user can now be out of date
   foreach my $pf ( glob($datadir."*") ) {
     next if ( $pf =~ /\.data$/ );
     if ( $pf =~ /\/$username.*png/ ||   # All png files for this user
          -M $pf > 7 ) {  # And any file older than a week
       unlink ($pf)
-        or print STDERR "Could not unlink $pf \n";
+        or error ("Could not unlink $pf $!)";
       }
   }
 
@@ -2626,7 +2661,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
       print "<br/>\n" ;
       if ( $qrylim eq "x") {
         my ( undef, undef, $gg) = geo($geolocations{$rec->{loc}});
-        my $tdist = geodist($geo, $gg);
+        my $tdist = geodist($geo, $gg); # TODO - $rec->{geo} ??
         if ( $tdist && $tdist > 1 ) {
           $tdist = "<b>".unit($tdist,"m"). "</b>";
         } else {
@@ -3330,11 +3365,40 @@ sub splitline {
 }
 
 
-# Convert input parameters into a rough estimation of a record
-sub inputrecord {
-  my @pnames = $q->param;
-  foreach my $p ( @pnames ) {
-    my $pv = $q->param($p);
-    print STDERR "param '$p' : '$pv'\n";
+# Create a line out of a record
+sub makeline {
+  my $rec = shift;
+  my $linetype = $rec->{type} || "Old";
+  my $line = "";
+  my $fieldnamelistref = $datalinetypes{$linetype};
+  my @fieldnamelist = @{$fieldnamelistref};
+  for ( my $i = 0; $fieldnamelist[$i]; $i++ ) {
+    $line .=  $rec->{$fieldnamelist[$i]} || "";
+    $line .= "; ";
+    #print STDERR "$line \n";
   }
+  return trim($line);
+}
+
+# Make sure we have all fields defined, even as empty strings
+sub nullfields {
+  my $rec = shift;
+  my $linetype = $rec->{type} || "Old";
+  my $fieldnamelistref = $datalinetypes{$linetype};
+  my @fieldnamelist = @{$fieldnamelistref};
+  for ( my $i = 0; $fieldnamelist[$i]; $i++ ) { # TODO  drop the $i
+    $rec->{$fieldnamelist[$i]} = ""
+      unless defined($rec->{$fieldnamelist[$i]});
+  }
+}
+
+# Debug dump of record into STDERR
+sub dumprec {
+  my $rec = shift;
+  my $msg = shift;
+  print STDERR "$msg -- ";
+  for my $k ( sort(keys( %{$rec} ) ) )  {
+    print STDERR "$k:'$rec->{$k}'  ";
+  }
+  print STDERR "\n";
 }
