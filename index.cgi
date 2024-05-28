@@ -181,7 +181,8 @@ $bodyweight =  83 if ( $username eq "dennis" );
 my %datalinetypes;
 $datalinetypes{"Old"} = ["stamp", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"]; # old type
 $datalinetypes{"Beer"} = ["stamp", "type", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"];
-
+# Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
+# TODO - Create types for wine, booze, restaurant, tz, and others
 
 ################################################################################
 # Input Parameters
@@ -694,9 +695,19 @@ if ( $q->request_method eq "POST" ) {
 
   (undef, undef, $rec->{geo})  = geo($rec->{geo});  # Skip bad ones, format right
 
+  # Fix record type
+  if ( $rec->{mak} !~ /,/ ) {  # Regular beer line
+    $rec->{type} = "Beer"; # Save in new format
+  }
+  if ( $rec->{type} eq "Beer" && !$rec->{beer} ) { # Not a real line
+    $rec->{type} = "None";
+  }
+
+  $rec->{edit} = "" unless defined($rec->{edit});
+
   #dumprec($rec, "final");
   my $line = makeline($rec);
-  #print STDERR "e='$rec->{edit}' s='$sub' line: '$line' \n";
+  # print STDERR "e='$rec->{edit}' s='$sub' line: '$line' \n";
 
   if ( $sub eq "Record" ) {  # Want to create a new record
     $rec->{edit} = ""; # so don't edit the current one
@@ -705,6 +716,7 @@ if ( $q->request_method eq "POST" ) {
     $sub = "Save"; # force this to be an updating save, so the record goes into its right place
   }
 
+  # Finally, save the line in the file
   if ( $sub ne "Save" && $sub ne "Del" ) { # Regular append
     if ( $line =~ /^[0-9]/ ) { # has at leas something on it
         open F, ">>$datafile"
@@ -754,7 +766,7 @@ if ( $q->request_method eq "POST" ) {
     if ( $pf =~ /\/$username.*png/ ||   # All png files for this user
          -M $pf > 7 ) {  # And any file older than a week
       unlink ($pf)
-        or error ("Could not unlink $pf $!)";
+        or error ("Could not unlink $pf $!");
       }
   }
 
@@ -3370,6 +3382,7 @@ sub makeline {
   my $rec = shift;
   my $linetype = $rec->{type} || "Old";
   my $line = "";
+  return "" if ($linetype eq "None"); # Not worth saving
   my $fieldnamelistref = $datalinetypes{$linetype};
   my @fieldnamelist = @{$fieldnamelistref};
   for ( my $i = 0; $fieldnamelist[$i]; $i++ ) {
