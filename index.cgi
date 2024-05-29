@@ -663,7 +663,7 @@ sub fixtimes {
 sub fixvol {
   my $rec = shift;
   my $sub = shift;
-  return unless hasfield($rec,"vol"); # no vol to work with
+  return unless hasfield($rec->{type},"vol"); # no vol to work with
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $rec->{vol} = $1;
   }
@@ -691,7 +691,7 @@ sub guessvalues {
   my $rec = shift;
   my $priceguess = "";
   my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
-  if ( hasfield($rec,"mak") && $rec->{mak} =~ /^Wine,/i ) {
+  if ( hasfield($rec->{type},"mak") && $rec->{mak} =~ /^Wine,/i ) {
       $defaultvol = 16;
     } elsif ( $rec->{mak} =~ /Booze,/i ) {
       $defaultvol = 4;
@@ -1359,6 +1359,7 @@ sub graph {
       my %sums; # drink sums by (eff) date
       for ( my $i = 0; $i < scalar(@records); $i++ ) { # calculate sums
         my $rec = $records[$i];
+        nullallfields($rec);
         next if ( $rec->{mak} =~ /^restaurant/i );
         $sums{$rec->{effdate}} += $rec->{alcvol};
       }
@@ -2995,6 +2996,7 @@ sub fulllist {
     print "<a href='$url?o=$op&q=$qry&e=" . uri_escape_utf8($rec->{stamp}) ."' ><span>Edit</span></a> \n";
 
     # Copy values
+    print "<input type='hidden' name='type' value='$rec->{type}' />\n";
     print "<input type='hidden' name='mak' value='$rec->{mak}' />\n";
     print "<input type='hidden' name='beer' value='$rec->{beer}' />\n";
     print "<input type='hidden' name='vol' value='' />\n";
