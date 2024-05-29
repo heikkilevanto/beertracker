@@ -406,7 +406,8 @@ sub readdatafile {
     # TODO - Make sure we accept missing values for fields
 
     nullfields($rec);
-    # Guess types for "Old" records  # TODO
+
+    # Guess types for "Old" records  # TODO - Re-enable this when I can play with other real types
     #if ( $rec->{type} eq "Old") { #
     #  $rec->{type} = "Beer" if ($rec->{beer} && $rec->{mak} !~ /,/ );
     #}
@@ -419,15 +420,15 @@ sub readdatafile {
       $years{ $rec->{year} }++;
     } # TODO - Do we need these to depend on $qry ?
 
-    my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
-    $restname = $1.$rec->{loc} if ( $rec->{mak}  =~ /^(Restaurant,)/i );
-    $thisloc = $rec->{loc} || "";
-    $seen{$thisloc}++;
-    $seen{$restname}++;
+    if (hasfield($rec->{type},"loc")) {
+      $thisloc = $rec->{loc} || "";
+      $seen{$thisloc}++;
+    }
     my $seenkey = seenkey($rec->{mak},$rec->{beer});
-    if ( ( $rec->{beer} !~ /misc|mixed/i ) &&
-        ( $rec->{mak} !~ /misc|mixed/i ) &&
-        ( $rec->{sty} !~ /misc|mixed/i ) ) {
+    if ( $rec->{type} =~ /Beer|Old/ &&  # TODO proper wat to check this?
+         $rec->{beer} !~ /misc|mixed/i &&
+         $rec->{mak} !~ /misc|mixed/i  &&
+         $rec->{sty} !~ /misc|mixed/i  ) {
       $seen{$rec->{mak}}++;
       $seen{$rec->{beer}}++;
       $seen{$rec->{sty}}++;
@@ -443,8 +444,9 @@ sub readdatafile {
     }
 
     # TODO make TZ its own line type
-    if ( $rec->{mak}  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone (optional spaces)
-      $tz = $1;
+    if ( hasfield($rec->{type},"mak") &&
+         $rec->{mak}  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone (optional spaces)
+      $tz = $1;  # TODO - tz lines
       if (!$tz || $tz eq "X") {
         $ENV{"TZ"} = "/etc/localtime";  # clear it
       } else {
@@ -460,10 +462,16 @@ sub readdatafile {
       next;
     } # tz
 
-    if ( ( $rec->{mak}  =~ /^Restaurant,/i ) ) {
-      $restaurants{$rec->{loc}} = $rec->{mak}; # Remember style
-      next; # do not sum restaurant lines, drinks filed separately
-    }
+    if ( $rec->{type} eq "Old" ) {
+      my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
+      $restname = $1.$rec->{loc} if ( $rec->{mak}  =~ /^(Restaurant,)/i );
+      $seen{$restname}++;
+      if ( ( $rec->{mak}  =~ /^Restaurant,/i ) ) {
+        $restaurants{$rec->{loc}} = $rec->{mak}; # Remember style
+        next; # do not sum restaurant lines, drinks filed separately
+      }
+    } # TODO - restaurant lines ??
+
     if ($rec->{loc} && $rec->{geo} ) {
       my $geocoord;
       (undef, undef, $geocoord) = geo($rec->{geo});
@@ -655,6 +663,7 @@ sub fixtimes {
 sub fixvol {
   my $rec = shift;
   my $sub = shift;
+  return unless hasfield($rec,"vol"); # no vol to work with
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $rec->{vol} = $1;
   }
@@ -682,7 +691,7 @@ sub guessvalues {
   my $rec = shift;
   my $priceguess = "";
   my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
-  if ( $rec->{mak} =~ /^Wine,/i ) {
+  if ( hasfield($rec,"mak") && $rec->{mak} =~ /^Wine,/i ) {
       $defaultvol = 16;
     } elsif ( $rec->{mak} =~ /Booze,/i ) {
       $defaultvol = 4;
