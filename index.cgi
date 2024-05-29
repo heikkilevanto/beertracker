@@ -190,8 +190,33 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
 
 # Data line types - These define the field names on the data line for that type
 my %datalinetypes;
-$datalinetypes{"Old"} = ["stamp", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"]; # old type
-$datalinetypes{"Beer"} = ["stamp", "type", "wday", "effdate", "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo"];
+# The old style lines with no type.
+$datalinetypes{"Old"} = [
+  "stamp",  # Time stamp, as in "yyyy-mm-dd hh:mm:ss"
+  "wday",   # Weekday, "Mon" to "Sun"
+  "effdate",# Effective date "yyyy-mm-dd". Beers after midnight count as the night before. Changes at 08.
+  "loc",    # Location
+  "mak",    # Maker, or brewer
+  "beer",   # Name of the beer
+  "vol",    # Volume, in cl
+  "sty",    # Style of the beer
+  "alc",    # Alcohol percentage, with one decimal
+  "pr",     # Price in default currency, in my case DKK
+  "rate",   # Rating
+  "com",    # Comment
+  "geo"];   # Geo coordinates
+# A dedicated beer entry. Almost like above. But with a type, and added flavor
+$datalinetypes{"Beer"} = [
+  "stamp",
+  "type",   # Line type, always "Beer" for the Beer lines.
+  "wday", "effdate",
+  "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo",
+  "flavor"];# Taste of the beer, could be fruits, special hops, or type of barrel
+# A comment on a night out.
+$datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
+  "com",   # Any comments on the night
+  "people",# Who else was here
+  "rate", "geo" ];
 # Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
 # TODO - Create types for wine, booze, restaurant, tz, and others
 
@@ -376,7 +401,12 @@ sub readdatafile {
 
     my $rec = splitline( $_ );
     next unless $rec->{type};
-    push (@records, $rec);  # reference to %rec
+
+    # Guess types for "Old" records
+    if ( $rec->{type} eq "Old") { #
+      $rec->{type} = "Beer" if ($rec->{beer} && $rec->{mak} !~ /,/ );
+    }
+    push (@records, $rec);
 
     if (!$allfirstdate) {
       $allfirstdate=$rec->{effdate};
@@ -1070,7 +1100,7 @@ sub hidesection{
   my $section = shift;
   return "" if ( $foundrec->{type} eq $section );
   return "" if ( $foundrec->{type} eq "Old" );
-  # Show all sectrions for old records. Mostly for debugging, for real life
+  # Show all sections for old records. Mostly for debugging, for real life
   # just showing the Beer section would be sufficient, as all old records are
   # of the beer type
   return "hidden ";
@@ -1097,6 +1127,9 @@ sub inputform {
   }
 
 
+  # Make sure all fields are defined, for all possible record types
+  # so we can show them in input forms without worrying about undef
+  nullallfields($foundrec);
   print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
   my $clr = "Onfocus='value=value.trim();select();'";
   my $c2 = "colspan='2'";
@@ -1157,12 +1190,14 @@ sub inputform {
 
   # For type Beer.
   $hidden = hidesection("Beer");
-  print "<tr id='type-Beer-1' $hidden ><td>
-    <input name='mak' value='$foundrec->{mak}' $sz1 placeholder='Brewery'/></td>\n";
-  print "<td>
-    <input name='beer' value='$foundrec->{beer}' $sz1 placeholder='Beer'/></td></tr>\n";
-  print "<tr id='type-Beer-2' $hidden ><td><input name='sty' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td>\n";
-  print "<td>(Flavor)</td></tr>\n";
+  print "<tr id='type-Beer-1' $hidden >\n";
+  print "<td><input name='mak' value='$foundrec->{mak}' $sz1 placeholder='Brewery'/></td>\n";
+  print "<td><input name='beer' value='$foundrec->{beer}' $sz1 placeholder='Beer'/></td>\n";
+  print "</tr>\n";
+  print "<tr id='type-Beer-2' $hidden >\n";
+  print "<td><input name='sty' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td>\n";
+  print "<td><input name='flavor' value='$foundrec->{flavor}' $sz1 placeholder='Flavor' /></td>\n";
+  print "</tr>\n";
 
   # For type Wine.
   $hidden = hidesection("Wine");
@@ -3517,12 +3552,22 @@ sub makeline {
 # Make sure we have all fields defined, even as empty strings
 sub nullfields {
   my $rec = shift;
-  my $linetype = $rec->{type} || "Old";
+  my $linetype = shift || $rec->{type} || "Old";
   my $fieldnamelistref = $datalinetypes{$linetype};
   my @fieldnamelist = @{$fieldnamelistref};
   for ( my $i = 0; $fieldnamelist[$i]; $i++ ) { # TODO  drop the $i
     $rec->{$fieldnamelist[$i]} = ""
       unless defined($rec->{$fieldnamelist[$i]});
+  }
+}
+
+# Make sure we have all possible fields defined, for all types
+# otherwise the user changing record type would hit us with undefined values
+# in the input form
+sub nullallfields{
+  my $rec = shift;
+  for my $k ( keys(%datalinetypes) ) {
+    nullfields($rec, $k);
   }
 }
 
