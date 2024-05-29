@@ -216,7 +216,7 @@ $datalinetypes{"Beer"} = [
 $datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
   "com",   # Any comments on the night
   "people",# Who else was here
-  "rate", "geo" ];
+  "geo" ];
 # Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
 # TODO - Create types for wine, booze, restaurant, tz, and others
 
@@ -226,6 +226,7 @@ $datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
 # These are used is so many places that it is OK to have them as globals
 # TODO - Check if all are used, after refactoring
 my $edit= param("e");  # Record to edit
+my $type = param("type"); # Switch record type
 my $qry = param("q");  # filter query, greps the list
 my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info, "f" for forcing refresh of board
 my $yrlim = param("y"); # Filter by year
@@ -402,10 +403,13 @@ sub readdatafile {
     my $rec = splitline( $_ );
     next unless $rec->{type};
 
-    # Guess types for "Old" records
-    if ( $rec->{type} eq "Old") { #
-      $rec->{type} = "Beer" if ($rec->{beer} && $rec->{mak} !~ /,/ );
-    }
+    # TODO - Make sure we accept missing values for fields
+
+    nullfields($rec);
+    # Guess types for "Old" records  # TODO
+    #if ( $rec->{type} eq "Old") { #
+    #  $rec->{type} = "Beer" if ($rec->{beer} && $rec->{mak} !~ /,/ );
+    #}
     push (@records, $rec);
 
     if (!$allfirstdate) {
@@ -551,6 +555,7 @@ sub readdatafile {
         $monthdrinks{$calmon}/$onedrink, $monthdrinks{$calmon}/$onedrink/$lastmonthday).
     " $monthprices{$calmon} kr."
     if ($calmon);
+
 } # readdatafile
 
 
@@ -653,6 +658,7 @@ sub fixvol {
   if ( $sub =~ /Copy (\d+)/ ) {  # copy different volumes
     $rec->{vol} = $1;
   }
+  $rec->{vol} = "" unless ($rec->{vol});
   my $half;  # Volumes can be prefixed with 'h' for half measures.
   if ( $rec->{vol} =~ s/^(H)(.+)$/$2/i ) {
     $half = $1;
@@ -952,10 +958,16 @@ SCRIPTEND
         if ( inputs[i].type == "text" )
           inputs[i].value = "";
       }
-      var r = document.getElementById("rate"); // and rating
-      r.value = "";
-      var c = document.getElementById("com"); // and comment
-      c.value = "";
+      const ids = [ "rate", "com", "people" ];
+      for ( var i = 0; i < ids.length; i++) {
+        var r = document.getElementById(ids[i]);
+        if (r)
+          r.value = "";
+      };
+      //var r = document.getElementById("rate"); // and rating
+      //if (r) { r.value = ""; }
+      //var c = document.getElementById("com"); // and comment
+      //if (c.value = "";
 
       // Hide the 'save' button, we are about to create a new entry
       var save = document.getElementById("save");
@@ -968,7 +980,7 @@ SCRIPTEND
   # and geolocation
   $script .= <<'SCRIPTEND';
     function showrows() {
-      var rows = [ "td1", "td2", "td3"];
+      var rows = [ "td1", "td2"];
       for (i=0; i<rows.length; i++) {
         var r = document.getElementById(rows[i]);
         //console.log("Unhiding " + i + ":" + rows[i], r);
@@ -988,6 +1000,7 @@ SCRIPTEND
 SCRIPTEND
 
   # Show the fields for the current record type, and hide the rest
+  # TODO - Kill this
   $script .= <<'SCRIPTEND';
     var showrecordtype= function(current) {
       if (current == "Old" ) { current = "" }; // show all sections
@@ -1095,15 +1108,24 @@ SCRIPTEND
 # Main input form
 ################################################################################
 
-# Helper to return "hidden" or "" depending on the record type
-sub hidesection{
-  my $section = shift;
-  return "" if ( $foundrec->{type} eq $section );
-  return "" if ( $foundrec->{type} eq "Old" );
-  # Show all sections for old records. Mostly for debugging, for real life
-  # just showing the Beer section would be sufficient, as all old records are
-  # of the beer type
-  return "hidden ";
+# Helper to make an input field
+#  print "<td><input name='flavor' value='$foundrec->{flavor}' $sz1 placeholder='Flavor' /></td>\n";
+# Checks if this field should exist in $type kind of records. If not, returns ""
+sub inputfield {
+  my $fld = shift; # The field name
+  my $size = shift; # Size of the field, maybe other attributes to add to it
+  my $placeholder = shift;
+  $placeholder = "placeholder='$placeholder'" if ($placeholder);
+  my $tag = shift || "td";
+  my $value = shift || $foundrec->{$fld};
+  my $s = "";
+  if (hasfield($type,$fld)) {
+    $s .= "<$tag>" if ($tag);
+    $s .= "<input name='$fld' value='$value' $size $placeholder />";
+    $s .= "</$tag>" if ($tag);
+    $s .= "\n";
+  }
+  return $s;
 }
 
 sub inputform {
@@ -1129,7 +1151,18 @@ sub inputform {
 
   # Make sure all fields are defined, for all possible record types
   # so we can show them in input forms without worrying about undef
-  nullallfields($foundrec);
+  nullallfields($foundrec);  # TODO - Just nullfields($type) ?
+
+  # Make sure we always have $type
+  # and that it matched the record, if editing it
+  if ( !$type || $edit ) {
+    if ( $foundrec && $foundrec->{type} )  {
+      $type = $foundrec->{type};
+    } else {
+      $type = "Old";
+    }
+  }
+
   print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
   my $clr = "Onfocus='value=value.trim();select();'";
   my $c2 = "colspan='2'";
@@ -1170,74 +1203,76 @@ sub inputform {
   print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
   print "<input name='q' type='hidden' value='$qry' id='editrec' />\n";
   print "</td></tr>\n";
-  print "<tr><td id='td1' $hidden ><input name='date' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
-  print "<td id='td2' $hidden ><input name='time' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
+  print "<tr id='td1' $hidden >";
+  print "<td><input name='date' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
+  print "<td><input name='time' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td>\n";
+  print "</tr>\n";
 
   # Geolocation
-  print "<tr><td id='td3' $hidden $c2><input name='geo' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
+  print "<tr id='td2' $hidden ><td $c2>";
+  print inputfield("geo","size=30 $clr", "Geo", "nop", $geo );
+  print "</td></tr>\n";
 
   # Location and record type
-  print "<tr><td><input name='loc' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
+  print "<tr>\n";
+  print inputfield("loc","$sz1 id='loc'","Location", "", $loc);
 
-  print "<td><select name='type' onchange='showrecordtype(this.value)' >\n";
+  my $chg = "onchange='document.location=\"$url?type=\"+this.value' ";
+  $chg = "" if ($edit); # Don't move around while editing
+  print "<td><select name='type' $chg >\n";
   foreach my $t ( sort(keys(%datalinetypes)) ) {
     my $sel = "";
-    $sel = "selected='selected'" if ( $foundrec->{type} eq $t );
+    $sel = "selected='selected'" if ( $type eq $t );
     print "<option value='$t' $sel>$t</option>\n";
   }
-  print "</select></td>\n";
-  print "</tr>\n";
-
-  # For type Beer.
-  $hidden = hidesection("Beer");
-  print "<tr id='type-Beer-1' $hidden >\n";
-  print "<td><input name='mak' value='$foundrec->{mak}' $sz1 placeholder='Brewery'/></td>\n";
-  print "<td><input name='beer' value='$foundrec->{beer}' $sz1 placeholder='Beer'/></td>\n";
-  print "</tr>\n";
-  print "<tr id='type-Beer-2' $hidden >\n";
-  print "<td><input name='sty' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td>\n";
-  print "<td><input name='flavor' value='$foundrec->{flavor}' $sz1 placeholder='Flavor' /></td>\n";
-  print "</tr>\n";
-
-  # For type Wine.
-  $hidden = hidesection("Wine");
-  print "<tr id='type-Wine-1' $hidden><td>Wine stuff here</td></tr>\n";
-  print "<tr id='type-Wine-2' $hidden><td>More wine stuff</td></tr>\n";
-
-  # For type Booze
-  $hidden = hidesection("Booze");
-  print "<tr id='type-Booze-1' $hidden><td>Booze</td></tr>\n";
-
-  # For type Restaurant
-  $hidden = hidesection("Restaurant");
-  print "<tr id='type-Restaurant-1' $hidden><td>Restaurant stuff here</td></tr>\n";
-
-  # General stuff again: Vol, Alc and Price, as well as rating
-  print "<tr><td><input name='vol' value='$foundrec->{vol} cl' $sz2 placeholder='Vol' />\n";
-  print "<input name='alc' value='$foundrec->{alc} %' $sz2 placeholder='Alc' />\n";
-  print "<input name='pr' value='$prc' $sz2 placeholder='Price' /></td>\n";
-  print "<td><select name='rate' id='rate' value='$foundrec->{rate}' placeholder='Rating' style='width:4.5em;'>" .
-    "<option value=''>Rate</option>\n";
-  for my $ro (0 .. scalar(@ratings)-1) {
-    print "<option value='$ro'" ;
-    print " selected='selected'" if ( $ro eq $foundrec->{rate} );
-    print  ">$ro $ratings[$ro]</option>\n";
-  }
   print "</select>\n";
-  print  " &nbsp; &nbsp; &nbsp;";
-  if ( $op && $op !~ /graph/i ) {
-    print "<a href='$url'><b>G</b></a>\n";
-  } else {
-    print "<a href='$url?o=board'><b>B</b></a>\n";
-  }
   print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
   print "</td></tr>\n";
 
-  # Comments
-  print "<tr>";
-  print " <td $c6><textarea name='com' cols='45' rows='3' id='com'
-    placeholder='$todaydrinks'>$foundrec->{com}</textarea></td>\n";
+  # For type Beer.
+  print "<tr>\n";
+  print inputfield("mak", $sz1, "Brewery");
+  print inputfield("beer", $sz1, "Beer");
   print "</tr>\n";
+  print "<tr>\n";
+  print inputfield("sty", $sz1, "Style");
+  print inputfield("flavor", $sz1, "Flavor");
+  print "</tr>\n";
+
+  # General stuff again: Vol, Alc and Price, as well as rating
+  print "<tr><td>";
+  print inputfield("vol", $sz2, "Vol", "nop", "$foundrec->{vol} cl" );
+  print inputfield("alc", $sz2, "Alc", "nop", "$foundrec->{alc} %" );
+  print inputfield("pr",  $sz2, "Price", "nop", "$prc" );
+
+  print "<td>";
+  if (hasfield($type,'rate')) {
+    print "<select name='rate' id='rate' value='$foundrec->{rate}' placeholder='Rating' style='width:4.5em;'>\n";
+    print "<option value=''>Rate</option>\n";
+    for my $ro (0 .. scalar(@ratings)-1) {
+      print "<option value='$ro'" ;
+      print " selected='selected'" if ( $ro eq $foundrec->{rate} );
+      print  ">$ro $ratings[$ro]</option>\n";
+    }
+    print "</select>\n";
+  }
+  print "</td></tr>\n";
+
+  # For type Night: people
+  if (hasfield($type,'people')) {
+    print "<tr>";
+    print " <td $c6><textarea name='people' cols='45' rows='3' id='people'
+      placeholder='People'>$foundrec->{people}</textarea></td>\n";
+    print "</tr>\n";
+  }
+
+  # Comments
+  if (hasfield($type,'com')) {
+    print "<tr>";
+    print " <td $c6><textarea name='com' cols='45' rows='3' id='com'
+      placeholder='$todaydrinks'>$foundrec->{com}</textarea></td>\n";
+    print "</tr>\n";
+  }
 
   print "<tr><td>\n";  # Buttons
   if ($edit) {
@@ -1263,6 +1298,12 @@ sub inputform {
     # The Beer list has links to locations, wines, and other such lists
   print "<option value='o=About' >About</option>\n";
   print "</select>\n";
+  print  " &nbsp; &nbsp; &nbsp;";
+  if ( $op && $op !~ /graph/i ) {
+    print "<a href='$url'><b>G</b></a>\n";
+  } else {
+    print "<a href='$url?o=board'><b>B</b></a>\n";
+  }
   print "</td>";
   print "</tr>\n";
 
@@ -2763,6 +2804,7 @@ sub fulllist {
       next if ( !$rlim && !$rec->{rate}); # l=r: Skip all that don't have a rating
       next if ( $rlim && $rec->{rate} ne $rlim );  # filter on "r7" or such
       }
+    nullallfields($rec);  # Make sure we don't access undefined values, fills the log with warnings
     $maxlines--;
 
     $origpr = $rec->{pr};
@@ -3569,6 +3611,15 @@ sub nullallfields{
   for my $k ( keys(%datalinetypes) ) {
     nullfields($rec, $k);
   }
+}
+
+# Check if a given record type should have this field
+sub hasfield {
+  my $linetype = shift;
+  my $field = shift;
+  my $fieldnamelistref = $datalinetypes{$linetype};
+  my @fieldnamelist = @{$fieldnamelistref};
+  return grep( /$field/, @fieldnamelist );
 }
 
 # Debug dump of record into STDERR
