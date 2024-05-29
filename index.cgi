@@ -960,6 +960,27 @@ SCRIPTEND
     };
 SCRIPTEND
 
+  # Show the fields for the current record type, and hide the rest
+  $script .= <<'SCRIPTEND';
+    var showrecordtype= function(current) {
+      if (current == "Old" ) { current = "" }; // show all sections
+      var target = "type-" + current ;
+      var rows = document.getElementById("inputformtable").rows;
+      for ( var i = 0; i < rows.length-1; i++ ){
+        var row = rows[i];
+        var id = row.id;
+        if ( id.startsWith("type-") ) {
+          if (id && id.startsWith(target) ) {
+            row.hidden = false;
+          } else {
+            row.hidden = true;
+          }
+        }
+      } // i loop
+    };
+SCRIPTEND
+
+
   # Try to get the geolocation. Async function, to wait for the user to give
   # permission (for good, we hope)
   # (Note, on FF I needed to uninstall the geoclue package before I could get
@@ -1047,6 +1068,17 @@ SCRIPTEND
 # Main input form
 ################################################################################
 
+# Helper to return "hidden" or "" depending on the record type
+sub hidesection{
+  my $section = shift;
+  return "" if ( $foundrec->{type} eq $section );
+  return "" if ( $foundrec->{type} eq "Old" );
+  # Show all sectrions for old records. Mostly for debugging, for real life
+  # just showing the Beer section would be sufficient, as all old records are
+  # of the beer type
+  return "hidden ";
+}
+
 sub inputform {
   if ($devversion) {
     print "\n<b>Dev version!</b><br>\n";
@@ -1081,7 +1113,7 @@ sub inputform {
   my $sz3n = "size='8'";
   my $sz3 = "$sz3n $clr";
   my $hidden = "";
-  print "<table style='width:100%; max-width:500px' >";
+  print "<table style='width:100%; max-width:500px' id='inputformtable'>";
   # Preprocess some fields
   # Note that $foundrec can be undef if we have no data at all (or edit url messed with)
   # That produces some warnings, but does not harm much
@@ -1101,6 +1133,8 @@ sub inputform {
     $hidden = "hidden"; # Hide the geo and date fields for normal use
     $loc = " $loc"; # Mark it as uncertain
   }
+
+  # Date and time, usually hidden
   print "<tr><td>\n";
   print "<input name='edit' type='hidden' value='$foundrec->{stamp}' id='editrec' />\n";
   print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
@@ -1109,15 +1143,44 @@ sub inputform {
   print "<tr><td id='td1' $hidden ><input name='date' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
   print "<td id='td2' $hidden ><input name='time' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td></tr>\n";
 
-    # Geolocation
+  # Geolocation
   print "<tr><td id='td3' $hidden $c2><input name='geo' value='$geo' placeholder='geo' size='30' $clr id='geo'/></td></tr>\n";
 
+  # Location and record type
   print "<tr><td><input name='loc' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
-  print "<td><input name='sty' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td></tr>\n";
-  print "<tr><td>
+
+  print "<td><select name='rectype' onchange='showrecordtype(this.value)' >\n";
+  foreach my $t (  "Wine", "Beer", "Restaurant", "Booze", "Old" ) {  # Old maps to showing everything
+    my $sel = "";
+    $sel = "selected='selected'" if ( $foundrec->{type} eq $t );
+    print "<option value='$t' $sel>$t</option>\n";
+  }
+  print "</select></td>\n";
+  print "</tr>\n";
+
+  # For type Beer.
+  $hidden = hidesection("Beer");
+  print "<tr id='type-Beer-1' $hidden ><td>
     <input name='mak' value='$foundrec->{mak}' $sz1 placeholder='Brewery'/></td>\n";
   print "<td>
     <input name='beer' value='$foundrec->{beer}' $sz1 placeholder='Beer'/></td></tr>\n";
+  print "<tr id='type-Beer-2' $hidden ><td><input name='sty' value='$foundrec->{sty}' $sz1 placeholder='Style'/></td>\n";
+  print "<td>(Flavor)</td></tr>\n";
+
+  # For type Wine.
+  $hidden = hidesection("Wine");
+  print "<tr id='type-Wine-1' $hidden><td>Wine stuff here</td></tr>\n";
+  print "<tr id='type-Wine-2' $hidden><td>More wine stuff</td></tr>\n";
+
+  # For type Booze
+  $hidden = hidesection("Booze");
+  print "<tr id='type-Booze-1' $hidden><td>Booze</td></tr>\n";
+
+  # For type Restaurant
+  $hidden = hidesection("Restaurant");
+  print "<tr id='type-Restaurant-1' $hidden><td>Restaurant stuff here</td></tr>\n";
+
+  # General stuff again: Vol, Alc and Price, as well as rating
   print "<tr><td><input name='vol' value='$foundrec->{vol} cl' $sz2 placeholder='Vol' />\n";
   print "<input name='alc' value='$foundrec->{alc} %' $sz2 placeholder='Alc' />\n";
   print "<input name='pr' value='$prc' $sz2 placeholder='Price' /></td>\n";
@@ -1137,6 +1200,8 @@ sub inputform {
   }
   print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
   print "</td></tr>\n";
+
+  # Comments
   print "<tr>";
   print " <td $c6><textarea name='com' cols='45' rows='3' id='com'
     placeholder='$todaydrinks'>$foundrec->{com}</textarea></td>\n";
@@ -1166,7 +1231,8 @@ sub inputform {
     # The Beer list has links to locations, wines, and other such lists
   print "<option value='o=About' >About</option>\n";
   print "</select>\n";
-  print "</td></tr>\n";
+  print "</td>";
+  print "</tr>\n";
 
   print "</table>\n";
   print "</form>\n";
