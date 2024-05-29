@@ -758,9 +758,6 @@ sub postdata {
   (undef, undef, $rec->{geo})  = geo($rec->{geo});  # Skip bad ones, format right
 
   # Fix record type
-  if ( $rec->{mak} !~ /,/ ) {  # Regular beer line
-    $rec->{type} = "Beer"; # Save in new format
-  }
   if ( $rec->{type} eq "Beer" && !$rec->{beer} ) { # Not a real line
     $rec->{type} = "None";
   }
@@ -1149,8 +1146,8 @@ sub inputform {
   # Location and record type
   print "<tr><td><input name='loc' value='$loc' placeholder='Location' $sz1 id='loc' /></td>\n";
 
-  print "<td><select name='rectype' onchange='showrecordtype(this.value)' >\n";
-  foreach my $t (  "Wine", "Beer", "Restaurant", "Booze", "Old" ) {  # Old maps to showing everything
+  print "<td><select name='type' onchange='showrecordtype(this.value)' >\n";
+  foreach my $t ( sort(keys(%datalinetypes)) ) {
     my $sel = "";
     $sel = "selected='selected'" if ( $foundrec->{type} eq $t );
     print "<option value='$t' $sel>$t</option>\n";
