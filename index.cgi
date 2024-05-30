@@ -423,10 +423,17 @@ sub readdatafile {
 
     nullfields($rec);
 
-    # Guess types for "Old" records  # TODO - Re-enable this when I can play with other real types
+    # Convert "Old" records to better types if possible
     if ( $rec->{type} eq "Old") {
       if ($rec->{beer} && $rec->{mak} !~ /,/ ) {
         $rec->{type} = "Beer"
+      } elsif ( $rec->{mak} =~ /^Restaurant *, *(.*)/i ) {
+        $rec->{type} = "Restaurant";
+        $rec->{resttype} = $1;
+        $rec->{food} = $rec->{beer};
+        $rec->{beer} = "";
+        $rec->{mak} = "";
+        $rec->{sty} = "";
       }
     }
     push (@records, $rec);
@@ -1161,13 +1168,11 @@ sub inputform {
   # Make sure we always have $type
   # and that it matched the record, if editing it
   if ( !$type || $edit ) {
-    print STDERR "form: type='$type' edit='$edit' ";
     if ( $foundrec && $foundrec->{type} )  {
       $type = $foundrec->{type};
     } else {
       $type = "Old";
     }
-    print STDERR "type now '$type'\n";
   }
 
   print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
