@@ -1225,22 +1225,23 @@ sub inputform {
   # Geolocation
   print "<tr id='td2' $hidden ><td $c2>";
   print inputfield("geo", $sz4, "Geo", "nop", $geo );
-  print "</td></tr>\n";
-
-  # Location and record type
-  print "<tr>\n";
-  print inputfield("loc","$sz1 id='loc'","Location", "", $loc);
-
   my $chg = "onchange='document.location=\"$url?type=\"+this.value+\"&o=$op&q=$qry\"' ";
   # Disabling the field here is no good, when re-enabled, will not get transmitted !!??
   $chg = "" if ($edit); # Don't move around while editing
-  print "<td><select name='type' $chg style='width:4.5em;' id='type'>\n";
+  print "&nbsp;<select name='type' $chg style='width:4.5em;' id='type'>\n";
   foreach my $t ( sort(keys(%datalinetypes)) ) {
     my $sel = "";
     $sel = "selected='selected'" if ( $type eq $t );
     print "<option value='$t' $sel>$t</option>\n";
   }
   print "</select>\n";
+  print "</td></tr>\n";
+
+  # Location and record type
+  print "<tr>\n";
+  print inputfield("loc","$sz1 id='loc'","Location", "", $loc);
+
+  print "<td>($foundrec->{type})\n";
   print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
   print "</td></tr>\n";
 
