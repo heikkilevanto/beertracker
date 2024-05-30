@@ -216,6 +216,28 @@ $datalinetypes{"Beer"} = [
   "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo",
   "flavor"];# Taste of the beer, could be fruits, special hops, or type of barrel
 
+# Wine
+$datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
+  "winetype", # Red, White, Bubbly, etc
+  "maker", # brand or house
+  "name", # What it says on the label
+  "winestyle", # Can be grape (chardonnay) or region (rioja)
+  "country",
+  "region",
+  "vol", "alc", "pr", "rate", "com", "geo"];
+
+# Booze
+$datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
+  "btype",   # whisky, snaps
+  "maker", # brand or house
+  "name", # What it says on the label
+  "mixer", # name of coctail, or stuff used to dilute the booze
+  "country",
+  "region",
+  "vol", "alc",  # These are for the alcohol itself
+  "pr", "rate", "com", "geo"];
+
+
 # A comment on a night out.
 $datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
   "com",    # Any comments on the night
@@ -1241,7 +1263,7 @@ sub inputform {
   print "<tr>\n";
   print inputfield("loc","$sz1 id='loc'","Location", "", $loc);
 
-  print "<td>($foundrec->{type})\n";
+  print "<td>($type)\n";
   print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
   print "</td></tr>\n";
 
@@ -1254,6 +1276,41 @@ sub inputform {
   print inputfield("sty", $sz1, "Style");
   print inputfield("flavor", $sz1, "Flavor");
   print "</tr>\n";
+
+
+  # For type Wine and booze
+  print "<tr>\n";
+  print inputfield("winetype", $sz1, "Wine type");
+  print inputfield("btype", $sz1, "Type");
+  print inputfield("maker", $sz1, "Maker");
+  print "</tr><tr>\n";
+  print inputfield("name", $sz1, "Name");
+  print inputfield("winestyle", $sz1, "Style");
+  print inputfield("mixer", $sz1, "Mixer/Coctail");
+  print "</tr><tr>\n";
+  print inputfield("country", $sz1, "Country");
+  print inputfield("region", $sz1, "Region");
+  print "</tr>\n";
+# Wine
+
+my @foo = [
+  "winetype", # Red, White, Bubbly, etc
+  "maker", # brand or house
+  "name", # What it says on the label
+  "winestyle", # Can be grape (chardonnay) or region (rioja)
+  "country",
+  "region",
+  "vol", "alc", "pr", "rate", "com", "geo",
+  "btype",   # whisky, snaps
+  "maker", # brand or house
+  "name", # What it says on the label
+  "mixer", # name of coctail, or stuff used to dilute the booze
+  "country",
+  "region",
+  "vol", "alc",  # These are for the alcohol itself
+  "pr", "rate", "com", "geo"];
+
+
 
   # General stuff again: Vol, Alc and Price, as well as rating
   # Also restaurant type (instead of Alc and Vol)
@@ -3664,7 +3721,7 @@ sub hasfield {
      if (!$linetype || !$field);
   my $fieldnamelistref = $datalinetypes{$linetype};
   my @fieldnamelist = @{$fieldnamelistref};
-  return grep( /$field/, @fieldnamelist );
+  return grep( /^$field$/, @fieldnamelist );
 }
 
 # Debug dump of record into STDERR
