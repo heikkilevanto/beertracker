@@ -579,7 +579,7 @@ sub inputrecord {
   my @pnames = $q->param;
   foreach my $p ( @pnames ) {
     my $pv = $q->param($p);
-    # print STDERR "param: '$p' : '$pv'\n";
+    #print STDERR "param: '$p' : '$pv'\n";
     $rec->{$p} = "$pv";
   }
   return $rec;
@@ -972,10 +972,6 @@ SCRIPTEND
         if (r)
           r.value = "";
       };
-      //var r = document.getElementById("rate"); // and rating
-      //if (r) { r.value = ""; }
-      //var c = document.getElementById("com"); // and comment
-      //if (c.value = "";
 
       // Hide the 'save' button, we are about to create a new entry
       var save = document.getElementById("save");
@@ -1165,11 +1161,13 @@ sub inputform {
   # Make sure we always have $type
   # and that it matched the record, if editing it
   if ( !$type || $edit ) {
+    print STDERR "form: type='$type' edit='$edit' ";
     if ( $foundrec && $foundrec->{type} )  {
       $type = $foundrec->{type};
     } else {
       $type = "Old";
     }
+    print STDERR "type now '$type'\n";
   }
 
   print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
@@ -1228,9 +1226,10 @@ sub inputform {
   print "<tr>\n";
   print inputfield("loc","$sz1 id='loc'","Location", "", $loc);
 
-  my $chg = "onchange='document.location=\"$url?type=\"+this.value' ";
+  my $chg = "onchange='document.location=\"$url?type=\"+this.value+\"&o=$op&q=$qry\"' ";
+  # Disabling the field here is no good, when re-enabled, will not get transmitted !!??
   $chg = "" if ($edit); # Don't move around while editing
-  print "<td><select name='type' $chg style='width:4.5em;' >\n";
+  print "<td><select name='type' $chg style='width:4.5em;' id='type'>\n";
   foreach my $t ( sort(keys(%datalinetypes)) ) {
     my $sel = "";
     $sel = "selected='selected'" if ( $type eq $t );
@@ -3023,13 +3022,11 @@ sub fulllist {
     print "<a href='$url?o=$op&q=$qry&e=" . uri_escape_utf8($rec->{stamp}) ."' ><span>Edit</span></a> \n";
 
     # Copy values
-    print STDERR "\n";
     my $fieldnamelistref = $datalinetypes{$rec->{type}};
     my @fieldnamelist = @{$fieldnamelistref};
     foreach my $k ( @fieldnamelist ) {
       next if $k =~ /stamp|wday|effdate|loc|sty|vol|geo|rate|com|people|food/; # not these
       print "<input type='hidden' name='$k' value='$rec->{$k}' />\n";
-      #print STDERR "Copy fields: '$k' : $rec->{$k} \n";
     }
     print "<input type='hidden' name='sty' value='$origsty' />\n";
     print "<input type='hidden' name='geo' id='geo' value='' />\n"; # with the id
