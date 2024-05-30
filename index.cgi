@@ -443,26 +443,7 @@ sub readdatafile {
       $foundrec = $rec;
     }
 
-    # TODO make TZ its own line type
-    if ( hasfield($rec->{type},"mak") &&
-         $rec->{mak}  =~ /^tz *, *([^ ]*) *$/i ) { # New time zone (optional spaces)
-      $tz = $1;  # TODO - tz lines
-      if (!$tz || $tz eq "X") {
-        $ENV{"TZ"} = "/etc/localtime";  # clear it
-      } else {
-        foreach my $zonedir ( "/usr/share/zoneinfo", "/usr/share/zoneinfo/Europe",
-          "/usr/share/zoneinfo/US") {
-          my $zonefile = "$zonedir/$tz";
-          if ( -f $zonefile ) {
-            $ENV{"TZ"} = $zonefile;
-            last;
-          }
-        }
-      }
-      next;
-    } # tz
-
-    if ( $rec->{type} eq "Old" ) {
+   if ( $rec->{type} eq "Old" ) {
       my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
       $restname = $1.$rec->{loc} if ( $rec->{mak}  =~ /^(Restaurant,)/i );
       $seen{$restname}++;
@@ -691,13 +672,6 @@ sub guessvalues {
   my $rec = shift;
   my $priceguess = "";
   my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
-  if ( hasfield($rec->{type},"mak") && $rec->{mak} =~ /^Wine,/i ) {
-      $defaultvol = 16;
-    } elsif ( $rec->{mak} =~ /Booze,/i ) {
-      $defaultvol = 4;
-    } elsif ( $rec->{mak} =~ /,/i ) {
-      $defaultvol = ""; # for restaurants, time zones, and other strange stuff
-    }
   my $i = scalar( @records )-1;
   while ( $i > 0 && $rec->{beer}
     && ( !$rec->{mak} || !$rec->{vol} || !$rec->{sty} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
@@ -787,14 +761,8 @@ sub postdata {
     }
   }
 
-  if ( $rec->{mak} !~ /tz,/i ) {
-    $rec->{loc} = $foundrec->{loc} unless $rec->{loc};  # Always default to the last location, except for tz lines
-  }
-  if ($rec->{mak} =~ /tz,/i ) { # tz lines should have no vol, alc, or price
-    $rec->{vol} = ""; # TODO - This won't be necessary once we have a line type for TZ
-    $rec->{alc} = "";
-    $rec->{pr} = "";
-  }
+  # TODO - TZ
+
   if ( $sub eq "Save" && $rec->{loc} =~ /^ /  ) {   # Saving and geo guessed loc
     $rec->{loc} = $foundrec->{loc}; # Ignore that guess, fall back to the latest location # See #301
     $rec->{geo} = ""; # Drop the geo coords, we don't want to mix $thisloc and random coords
