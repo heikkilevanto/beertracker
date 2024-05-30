@@ -189,7 +189,9 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
   # (This could be saved in each users config, if we had such)
 
 # Data line types - These define the field names on the data line for that type
+# as well as which input fields will be visible.
 my %datalinetypes;
+# Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
 # The old style lines with no type.
 $datalinetypes{"Old"} = [
   "stamp",  # Time stamp, as in "yyyy-mm-dd hh:mm:ss"
@@ -205,6 +207,7 @@ $datalinetypes{"Old"} = [
   "rate",   # Rating
   "com",    # Comment
   "geo"];   # Geo coordinates
+
 # A dedicated beer entry. Almost like above. But with a type, and added flavor
 $datalinetypes{"Beer"} = [
   "stamp",
@@ -212,13 +215,26 @@ $datalinetypes{"Beer"} = [
   "wday", "effdate",
   "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo",
   "flavor"];# Taste of the beer, could be fruits, special hops, or type of barrel
+
 # A comment on a night out.
 $datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
-  "com",   # Any comments on the night
-  "people",# Who else was here
+  "com",    # Any comments on the night
+  "people", # Who else was here
   "geo" ];
-# Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
-# TODO - Create types for wine, booze, restaurant, tz, and others
+
+# Restaurants and bars
+$datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
+  "rate", "pr", # price for the night, per person
+  "resttype",  # Type of restaurant, "Thai"
+  "food",   # Food and drink
+  "people",
+  "com", "geo"];
+
+# TODO - Create types for wine, booze, tz, and others
+# To add a new record type, define it here
+# To add new input fields, mention them here, and add handling in the input form
+# You probably want to add specific display code to the full list, and other
+# places
 
 ################################################################################
 # Input Parameters
@@ -561,7 +577,7 @@ sub inputrecord {
   my @pnames = $q->param;
   foreach my $p ( @pnames ) {
     my $pv = $q->param($p);
-    #print STDERR "param '$p' : '$pv'\n";
+    print STDERR "param: '$p' : '$pv'\n";
     $rec->{$p} = "$pv";
   }
   return $rec;
@@ -696,12 +712,14 @@ sub guessvalues {
     $i--;
   }
   $rec->{pr} = $priceguess if $rec->{pr} eq "";
-  if ( uc($rec->{vol}) eq "X" ) {  # 'X' is an explicit way to indicate a null value
-    $rec->{vol} = "";
-  } else {
-    $rec->{vol} = number($rec->{vol});
-    if ($rec->{vol}<=0) {
-      $rec->{vol} = $defaultvol;  # TODO - Can this ever happen ? Doesn't neg vol mean something?
+  if (hasfield($rec->{type},"vol")) {
+    if ( uc($rec->{vol}) eq "X" ) {  # 'X' is an explicit way to indicate a null value
+      $rec->{vol} = "";
+    } else {
+      $rec->{vol} = number($rec->{vol});
+      if ($rec->{vol}<=0) {
+        $rec->{vol} = $defaultvol;  # TODO - Can this ever happen ? Doesn't neg vol mean something?
+      }
     }
   }
   my $curpr = curprice($rec->{pr});
@@ -727,9 +745,17 @@ sub postdata {
 
   # Input parameters, only used here in POST
   my $rec = inputrecord();  # Get an approximation of a record from the params
-  nullfields($rec);
+
+  # Fix record type.
+  $rec->{type} = "Old" unless $rec->{type};
+  if ( !$datalinetypes{$rec->{type} }) {
+    error("Trying to POST a record of unknown type: '$rec->{type}'");
+  }
+
+  nullfields($rec);  # set all undefined fields to "", to avoid warnings
   my $lastrec = $records[ scalar(@records)-1 ];
   #dumprec($rec, "raw");
+
   fixtimes($rec, $lastrec, $sub);
   fixvol($rec, $sub);
   guessvalues($rec);
@@ -935,7 +961,7 @@ SCRIPTEND
         if ( inputs[i].type == "text" )
           inputs[i].value = "";
       }
-      const ids = [ "rate", "com", "people" ];
+      const ids = [ "rate", "com" ];
       for ( var i = 0; i < ids.length; i++) {
         var r = document.getElementById(ids[i]);
         if (r)
@@ -1095,9 +1121,10 @@ sub inputfield {
   $placeholder = "placeholder='$placeholder'" if ($placeholder);
   my $tag = shift || "td";
   my $value = shift || $foundrec->{$fld};
+  my $colspan = shift || "";
   my $s = "";
   if (hasfield($type,$fld)) {
-    $s .= "<$tag>" if ($tag);
+    $s .= "<$tag $colspan>" if ($tag);
     $s .= "<input name='$fld' value='$value' $size $placeholder />";
     $s .= "</$tag>" if ($tag);
     $s .= "\n";
@@ -1152,6 +1179,8 @@ sub inputform {
   my $sz2 = "$sz2n $clr";
   my $sz3n = "size='8'";
   my $sz3 = "$sz3n $clr";
+  my $sz4n = "size='30'";
+  my $sz4 = "$sz4n $clr";
   my $hidden = "";
   print "<table style='width:100%; max-width:500px' id='inputformtable'>";
   # Preprocess some fields
@@ -1187,7 +1216,7 @@ sub inputform {
 
   # Geolocation
   print "<tr id='td2' $hidden ><td $c2>";
-  print inputfield("geo","size=30 $clr", "Geo", "nop", $geo );
+  print inputfield("geo", $sz4, "Geo", "nop", $geo );
   print "</td></tr>\n";
 
   # Location and record type
@@ -1196,7 +1225,7 @@ sub inputform {
 
   my $chg = "onchange='document.location=\"$url?type=\"+this.value' ";
   $chg = "" if ($edit); # Don't move around while editing
-  print "<td><select name='type' $chg >\n";
+  print "<td><select name='type' $chg style='width:4.5em;' >\n";
   foreach my $t ( sort(keys(%datalinetypes)) ) {
     my $sel = "";
     $sel = "selected='selected'" if ( $type eq $t );
@@ -1217,10 +1246,12 @@ sub inputform {
   print "</tr>\n";
 
   # General stuff again: Vol, Alc and Price, as well as rating
+  # Also restaurant type (instead of Alc and Vol)
   print "<tr><td>";
   print inputfield("vol", $sz2, "Vol", "nop", "$foundrec->{vol} cl" );
   print inputfield("alc", $sz2, "Alc", "nop", "$foundrec->{alc} %" );
   print inputfield("pr",  $sz2, "Price", "nop", "$prc" );
+  print inputfield("resttype",  $sz3, "Rest Type", "nop" );
 
   print "<td>";
   if (hasfield($type,'rate')) {
@@ -1235,11 +1266,17 @@ sub inputform {
   }
   print "</td></tr>\n";
 
-  # For type Night: people
+  # For type Restaurant: Food
+  if (hasfield($type,'food')) {
+    print "<tr>";
+    print inputfield("food", $sz4, "Food and Drink", "", "", $c2 );
+    print "</tr>\n";
+  }
+
+  # For types Night and Restaurant: people
   if (hasfield($type,'people')) {
     print "<tr>";
-    print " <td $c6><textarea name='people' cols='45' rows='3' id='people'
-      placeholder='People'>$foundrec->{people}</textarea></td>\n";
+    print inputfield("people", $sz4, "People", "", "", $c2 );
     print "</tr>\n";
   }
 
@@ -1782,6 +1819,7 @@ sub beerboard {
       my $country = $e->{'country'} || "";
       my $sizes = $e->{"sizePrice"};
       my $hiddenbuttons = "";
+        $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;  # always?
         $hiddenbuttons .= "<input type='hidden' name='mak' value='$mak' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='beer' value='$beer' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='sty' value='$origsty' />\n" ;
@@ -2807,14 +2845,12 @@ sub fulllist {
         } # fl avg on loc line, if not going to print a day summary line
         # Restaurant copy button
         print "<form method='POST' style='display: inline;' class='no-print'>\n";
-        print "<input type='hidden' name='loc' value='$lastloc2' />\n";
-        my $rtype = $restaurants{$lastloc2} || "Restaurant, unspecified";
-        print "<input type='hidden' name='mak' value='$rtype' />\n";
+        my $rtype = $restaurants{$lastloc2} || "";
         $rtype =~ s/Restaurant, //;
-        print "<input type='hidden' name='beer' value='Food and Drink' />\n";
-        print "<input type='hidden' name='vol' value='x' />\n";
-        print "<input type='hidden' name='sty' value='$rtype' />\n";
-        print "<input type='hidden' name='alc' value='x' />\n";
+        print "<input type='hidden' name='loc' value='$lastloc2' />\n";
+        print "<input type='hidden' name='type' value='Restaurant' />\n";
+        print "<input type='hidden' name='food' value='' />\n";
+        print "<input type='hidden' name='reststyle' value='$rtype' />\n";
         print "<input type='hidden' name='pr' value='$locmsum kr' />\n";
         print "<input type='hidden' name='geo' value='' />\n";
         print "<input type='submit' name='submit' value='Rest'
@@ -2866,11 +2902,14 @@ sub fulllist {
         print "Geo: $gg $tdist $guess<br/>\n" if ($gg || $guess || $tdist);
       }
     }
-    # The beer entry itself ##############
+
+    ###### The beer entry itself ##############
     my $time = $rec->{time};
     if ( $rec->{date} ne $rec->{effdate} ) {
       $time = "($time)";
     }
+    $time = $1 if ( $qrylim ne "x" && $time =~ /^(\d+:\d+)/ ); # Drop the seconds
+
     if ( !( $rec->{mak}  =~ /^Restaurant,/i ) ) { # don't count rest lines
       $daydsum += $rec->{alcvol};
       $daymsum += abs($rec->{pr});
@@ -2881,10 +2920,14 @@ sub fulllist {
     $anchor = $rec->{stamp} || "";
     $anchor =~ s/[^0-9]//g;
     print "\n<a id='$anchor'></a>\n";
+    my $disptype = "[$rec->{type}]"; # Show record type
+    $disptype = "" if ( $rec->{type} =~ /Beer|Restaurant/ );  # unless a well-known good type
     print "<br class='no-print'/><span style='white-space: nowrap'> " .
-           "$time " . filt($rec->{mak},"i") . newmark($rec->{mak}) .
-            " : " . filt($rec->{beer},"b") . newmark($rec->{beer}, $rec->{mak}) .
-      "</span> <br class='no-wide'/>\n";
+           "$time ";
+    print "Restaurant, $rec->{resttype} " if ($rec->{type} eq "Restaurant" );
+    print filt($rec->{mak},"i") . newmark($rec->{mak}) .
+            " : " . filt($rec->{beer},"b") . newmark($rec->{beer}, $rec->{mak});
+    print "</span> <br class='no-wide'/>\n";
     my $origsty = $rec->{sty} || "???";
     if ( $rec->{sty} || $rec->{pr} || $rec->{vol} || $rec->{alc} || $rec->{rate} || $rec->{com} ) {
       if ($rec->{sty}) {
@@ -2902,7 +2945,18 @@ sub fulllist {
           print units($rec->{pr}, $rec->{vol}, $rec->{alc}, $bloodalc{$rec->{stamp}});
         }
       }
+      print " $disptype\n";
       print "<br/>\n" ;
+      if ($rec->{food} && $qrylim eq "x" ) {
+        print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
+        print "$rec->{food}";
+        print "<br/>\n";
+      }
+      if ($rec->{people}) {
+        print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
+        print "$rec->{people}";
+        print "<br/>\n";
+      }
       if ($rec->{rate} || $rec->{com}) {
         print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
         print " <b>'$rec->{rate}'-$ratings[$rec->{rate}]</b>" if ($rec->{rate});
@@ -3596,6 +3650,8 @@ sub nullallfields{
 sub hasfield {
   my $linetype = shift;
   my $field = shift;
+  print STDERR "hasfield: bad params linetype='$linetype' field='$field' \n"
+     if (!$linetype || !$field);
   my $fieldnamelistref = $datalinetypes{$linetype};
   my @fieldnamelist = @{$fieldnamelistref};
   return grep( /$field/, @fieldnamelist );
