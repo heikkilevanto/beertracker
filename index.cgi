@@ -424,9 +424,11 @@ sub readdatafile {
     nullfields($rec);
 
     # Guess types for "Old" records  # TODO - Re-enable this when I can play with other real types
-    #if ( $rec->{type} eq "Old") { #
-    #  $rec->{type} = "Beer" if ($rec->{beer} && $rec->{mak} !~ /,/ );
-    #}
+    if ( $rec->{type} eq "Old") {
+      if ($rec->{beer} && $rec->{mak} !~ /,/ ) {
+        $rec->{type} = "Beer"
+      }
+    }
     push (@records, $rec);
 
     if (!$allfirstdate) {
@@ -577,7 +579,7 @@ sub inputrecord {
   my @pnames = $q->param;
   foreach my $p ( @pnames ) {
     my $pv = $q->param($p);
-    print STDERR "param: '$p' : '$pv'\n";
+    # print STDERR "param: '$p' : '$pv'\n";
     $rec->{$p} = "$pv";
   }
   return $rec;
@@ -765,6 +767,13 @@ sub postdata {
   # Clean the location
   if ($rec->{loc}) {
     $rec->{loc} =~ s/ *\[.*$//; # Drop the distance from geolocation
+  } else {
+    $rec->{loc} = $foundrec->{loc}; # default to previous loc
+  }
+
+  if ( $sub eq "Save" && $rec->{loc} =~ /^ /  ) {   # Saving and geo guessed loc
+    $rec->{loc} = $foundrec->{loc}; # Ignore that guess, fall back to the latest location # See #301
+    $rec->{geo} = ""; # Drop the geo coords, we don't want to mix $thisloc and random coords
   }
 
   # Manually entered date/time indicate we are filling the data after the fact
@@ -789,10 +798,6 @@ sub postdata {
 
   # TODO - TZ
 
-  if ( $sub eq "Save" && $rec->{loc} =~ /^ /  ) {   # Saving and geo guessed loc
-    $rec->{loc} = $foundrec->{loc}; # Ignore that guess, fall back to the latest location # See #301
-    $rec->{geo} = ""; # Drop the geo coords, we don't want to mix $thisloc and random coords
-  }
 
   (undef, undef, $rec->{geo})  = geo($rec->{geo});  # Skip bad ones, format right
 
@@ -2998,10 +3003,10 @@ sub fulllist {
 
     my %vols;     # guess sizes for small/large beers
     $vols{$rec->{vol}} = 1 if ($rec->{vol});
-    if ( $rec->{mak}  =~ /^Restaurant,/i ) {
+    if ( $rec->{mak}  =~ /^Restaurant,/i || $rec->{type} eq "Restaurant" ) {
       $vols{"R"} = 1;
-    } elsif ( $rec->{mak}  =~ /^tz,/i ) {
-      %vols=();
+    } elsif ( $rec->{type} =~ /Night/) {
+      %vols=(); # nothing to copy
     } elsif ( $rec->{mak}  =~ /^Wine,/i ) {
       $vols{12} = 1;
       $vols{16} = 1 unless ( $rec->{vol} == 15 );
@@ -3018,14 +3023,16 @@ sub fulllist {
     print "<a href='$url?o=$op&q=$qry&e=" . uri_escape_utf8($rec->{stamp}) ."' ><span>Edit</span></a> \n";
 
     # Copy values
-    print "<input type='hidden' name='type' value='$rec->{type}' />\n";
-    print "<input type='hidden' name='mak' value='$rec->{mak}' />\n";
-    print "<input type='hidden' name='beer' value='$rec->{beer}' />\n";
-    print "<input type='hidden' name='vol' value='' />\n";
+    print STDERR "\n";
+    my $fieldnamelistref = $datalinetypes{$rec->{type}};
+    my @fieldnamelist = @{$fieldnamelistref};
+    foreach my $k ( @fieldnamelist ) {
+      next if $k =~ /stamp|wday|effdate|loc|sty|vol|geo|rate|com|people|food/; # not these
+      print "<input type='hidden' name='$k' value='$rec->{$k}' />\n";
+      #print STDERR "Copy fields: '$k' : $rec->{$k} \n";
+    }
     print "<input type='hidden' name='sty' value='$origsty' />\n";
-    print "<input type='hidden' name='alc' value='$rec->{alc}' />\n";
-    print "<input type='hidden' name='loc' value='$rec->{loc}' />\n" if ( $copylocation);
-    print "<input type='hidden' name='geo' id='geo' value='' />\n";
+    print "<input type='hidden' name='geo' id='geo' value='' />\n"; # with the id
     print "<input type='hidden' name='o' value='$op' />\n";  # Stay on page
     print "<input type='hidden' name='q' value='$qry' />\n";
 
