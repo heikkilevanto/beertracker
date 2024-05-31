@@ -192,6 +192,7 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
 # as well as which input fields will be visible.
 my %datalinetypes;
 # Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
+
 # The old style lines with no type.
 $datalinetypes{"Old"} = [
   "stamp",  # Time stamp, as in "yyyy-mm-dd hh:mm:ss"
@@ -210,15 +211,15 @@ $datalinetypes{"Old"} = [
 
 # A dedicated beer entry. Almost like above. But with a type, and added flavor
 $datalinetypes{"Beer"} = [
-  "stamp",
-  "type",   # Line type, always "Beer" for the Beer lines.
-  "wday", "effdate",
-  "loc", "mak", "beer", "vol", "sty", "alc", "pr", "rate", "com", "geo",
-  "flavor"];# Taste of the beer, could be fruits, special hops, or type of barrel
+  "stamp", "type", "wday", "effdate", "loc",
+  "maker",  # Brewery
+  "name",   # Name of the beer
+  "vol", "sty", "alc", "pr", "rate", "com", "geo",
+  "flavor"]; # Taste of the beer, could be fruits, special hops, or type of barrel
 
 # Wine
 $datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
-  "winetype", # Red, White, Bubbly, etc
+  "subtype", # Red, White, Bubbly, etc
   "maker", # brand or house
   "name", # What it says on the label
   "winestyle", # Can be grape (chardonnay) or region (rioja)
@@ -226,9 +227,9 @@ $datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
   "region",
   "vol", "alc", "pr", "rate", "com", "geo"];
 
-# Booze
+# Booze. Also used for coctails
 $datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
-  "btype",   # whisky, snaps
+  "subtype",   # whisky, snaps
   "maker", # brand or house
   "name", # What it says on the label
   "mixer", # name of coctail, or stuff used to dilute the booze
@@ -246,8 +247,8 @@ $datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
 
 # Restaurants and bars
 $datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
+  "subtype",  # Type of restaurant, "Thai"
   "rate", "pr", # price for the night, per person
-  "resttype",  # Type of restaurant, "Thai"
   "food",   # Food and drink
   "people",
   "com", "geo"];
@@ -447,16 +448,29 @@ sub readdatafile {
 
     # Convert "Old" records to better types if possible
     if ( $rec->{type} eq "Old") {
-      if ($rec->{beer} && $rec->{mak} !~ /,/ ) {
-        $rec->{type} = "Beer"
+      next if ($rec->{mak} =~ /^Tz,/i); # Skip Time Zone lines, almost never used
+      if ($rec->{mak} !~ /,/ ) {
+        $rec->{type} = "Beer";
+        $rec->{maker} = $rec->{mak};
+        $rec->{name} = $rec->{beer};
+      } elsif ( $rec->{mak} =~ /^(Wine|Booze) *, *(.*)/i ) {
+        $rec->{type} = ucfirst($1);
+        $rec->{subtype} = $2;
+        $rec->{name} = $rec->{beer};
+      } elsif ( $rec->{mak} =~ /^Drink/i ) {
+        $rec->{type} = "Booze";
+        $rec->{name} = $rec->{beer};
       } elsif ( $rec->{mak} =~ /^Restaurant *, *(.*)/i ) {
         $rec->{type} = "Restaurant";
-        $rec->{resttype} = $1;
+        $rec->{subtype} = $1;
         $rec->{food} = $rec->{beer};
-        $rec->{beer} = "";
-        $rec->{mak} = "";
         $rec->{sty} = "";
+      } else {
+        print STDERR "Unconverted 'Old' line: $rec->{rawline} \n";
       }
+      $rec->{beer} = "";
+      $rec->{mak} = "";
+      nullfields($rec); # clear undefined fields again, we may have changed the type
     }
     push (@records, $rec);
 
@@ -471,17 +485,15 @@ sub readdatafile {
       $thisloc = $rec->{loc} || "";
       $seen{$thisloc}++;
     }
+
+    # Collect stats on what we have seen
     my $seenkey = seenkey($rec->{mak},$rec->{beer});
-    if ( $rec->{type} =~ /Beer|Old/ &&  # TODO proper wat to check this?
-         $rec->{beer} !~ /misc|mixed/i &&
-         $rec->{mak} !~ /misc|mixed/i  &&
-         $rec->{sty} !~ /misc|mixed/i  ) {
-      $seen{$rec->{mak}}++;
-      $seen{$rec->{beer}}++;
-      $seen{$rec->{sty}}++;
-      $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
-      $seen{$rec->{seenkey}}++;
-    }
+    $seen{$rec->{maker}}++;
+    $seen{$rec->{name}}++;
+    $seen{$rec->{sty}}++;
+    $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
+    $seen{$rec->{seenkey}}++;
+
     if ($rec->{rate} && $rec->{beer}) {
       $ratesum{$rec->{seenkey}} += $rec->{rate};
       $ratecount{$rec->{seenkey}} ++;
@@ -490,7 +502,7 @@ sub readdatafile {
       $foundrec = $rec;
     }
 
-   if ( $rec->{type} eq "Old" ) {
+   if ( $rec->{type} eq "Old" ) { # TODO
       my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
       $restname = $1.$rec->{loc} if ( $rec->{mak}  =~ /^(Restaurant,)/i );
       $seen{$restname}++;
@@ -1147,7 +1159,7 @@ SCRIPTEND
 sub inputfield {
   my $fld = shift; # The field name
   my $size = shift; # Size of the field, maybe other attributes to add to it
-  my $placeholder = shift;
+  my $placeholder = shift || ucfirst($fld);
   $placeholder = "placeholder='$placeholder'" if ($placeholder);
   my $tag = shift || "td";
   my $value = shift || $foundrec->{$fld};
@@ -1177,6 +1189,11 @@ sub inputform {
       print "Prod modified '$proddate' (git pull?) <br>\n";
       print "d='$devmod' p='$prodmod' <br>\n";
     }
+    print "<hr>\n";
+    print join("; ", @{$datalinetypes{$foundrec->{type}}});
+    print "<br>\n";
+    print $foundrec->{rawline};
+    print "<br>\n";
     # Would be nice to get git branch and log tail
     # But git is anal about file/dir ownerships
     print "<hr>\n";
@@ -1267,27 +1284,23 @@ sub inputform {
   print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
   print "</td></tr>\n";
 
-  # For type Beer.
+  # Maker and name, for most drinks
   print "<tr>\n";
-  print inputfield("mak", $sz1, "Brewery");
-  print inputfield("beer", $sz1, "Beer");
+  print inputfield("maker", $sz1);
+  print inputfield("name", $sz1);
   print "</tr>\n";
+
+  # (style or subtype) and (flavor or mixer), for many drinks
+  # Only one of each should exist in any record type
   print "<tr>\n";
   print inputfield("sty", $sz1, "Style");
-  print inputfield("flavor", $sz1, "Flavor");
+  print inputfield("subtype", $sz1);
+  print inputfield("flavor", $sz1);
   print "</tr>\n";
 
 
-  # For type Wine and booze
+  # Country and region, for wines and booze
   print "<tr>\n";
-  print inputfield("winetype", $sz1, "Wine type");
-  print inputfield("btype", $sz1, "Type");
-  print inputfield("maker", $sz1, "Maker");
-  print "</tr><tr>\n";
-  print inputfield("name", $sz1, "Name");
-  print inputfield("winestyle", $sz1, "Style");
-  print inputfield("mixer", $sz1, "Mixer/Coctail");
-  print "</tr><tr>\n";
   print inputfield("country", $sz1, "Country");
   print inputfield("region", $sz1, "Region");
   print "</tr>\n";
@@ -2977,7 +2990,7 @@ sub fulllist {
     }
     $time = $1 if ( $qrylim ne "x" && $time =~ /^(\d+:\d+)/ ); # Drop the seconds
 
-    if ( !( $rec->{mak}  =~ /^Restaurant,/i ) ) { # don't count rest lines
+    if ( !( $rec->{type}  eq "Restaurant" ) ) { # don't count rest lines
       $daydsum += $rec->{alcvol};
       $daymsum += abs($rec->{pr});
       $locdsum += $rec->{alcvol};
@@ -2987,15 +3000,23 @@ sub fulllist {
     $anchor = $rec->{stamp} || "";
     $anchor =~ s/[^0-9]//g;
     print "\n<a id='$anchor'></a>\n";
-    my $disptype = "[$rec->{type}]"; # Show record type
-    $disptype = "" if ( $rec->{type} =~ /Beer|Restaurant/ );  # unless a well-known good type
+    my $disptype = "$rec->{type}"; # Show record type
+    $disptype .= ", $rec->{subtype}" if ($rec->{subtype} && $rec->{subtype} !~ /misc|unspecified/);
+    if ( $rec->{type} eq "Beer" ){
+      $disptype = "" ;  # Beer is the default, no need to repeat on every line
+    } else {
+      $disptype = "[$disptype]:"; # but anything else should be seen
+    }
+
     print "<br class='no-print'/><span style='white-space: nowrap'> " .
            "$time ";
-    print "Restaurant, $rec->{resttype} " if ($rec->{type} eq "Restaurant" );
-    print filt($rec->{mak},"i") . newmark($rec->{mak}) .
-            " : " . filt($rec->{beer},"b") . newmark($rec->{beer}, $rec->{mak});
+    print " $disptype\n";
+
+    print filt($rec->{maker},"i") . newmark($rec->{maker}). ":" if ($rec->{maker});
+    print filt($rec->{name},"b") . newmark($rec->{name}, $rec->{maker});
+
     print "</span> <br class='no-wide'/>\n";
-    my $origsty = $rec->{sty} || "???";
+    my $origsty = $rec->{sty} || "???"; # TODO - wine and booze
     if ( $rec->{sty} || $rec->{pr} || $rec->{vol} || $rec->{alc} || $rec->{rate} || $rec->{com} ) {
       if ($rec->{sty}) {
         my $beerstyle = beercolorstyle("$rec->{sty} $rec->{mak}", "$rec->{date}", "[$rec->{sty} $rec->{mak}] : $rec->{beer}" );
@@ -3012,7 +3033,6 @@ sub fulllist {
           print units($rec->{pr}, $rec->{vol}, $rec->{alc}, $bloodalc{$rec->{stamp}});
         }
       }
-      print " $disptype\n";
       print "<br/>\n" ;
       if ($rec->{food} && $qrylim eq "x" ) {
         print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
@@ -3380,7 +3400,7 @@ sub units {
     unit($alc,'%');
   if ( $alc && $vol && $pr >= 0) {
     my $dr = sprintf("%1.2f", ($alc * $vol) / $onedrink );
-    $s .= unit($dr, "d");
+    $s .= unit($dr, "d") if ($dr > 0.1);
   }
   if ( $pr && $vol && $bloodalc ) {  # bloodalc indicates we have the extended list
     my $lpr = int($pr / $vol * 100);
@@ -3652,6 +3672,9 @@ sub splitline {
   $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/Old/i; # If we match a weekday, we have an old-format line with no type
   $v->{type} = $linetype; # Likely to be overwritten below, this is just in case (Old)
   $v->{rawline} = $line; # for filtering
+  $v->{name} = ""; # Default, make sure we always have something
+  $v->{maker} = "";
+  #$v->{maker} = "";
   my $fieldnamelist = $datalinetypes{$linetype} || "";
   if ( $fieldnamelist ) {
     my @fnames = @{$fieldnamelist};
