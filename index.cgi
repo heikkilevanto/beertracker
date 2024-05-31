@@ -487,7 +487,7 @@ sub readdatafile {
     }
 
     # Collect stats on what we have seen
-    my $seenkey = seenkey($rec->{mak},$rec->{beer});
+    my $seenkey = seenkey($rec->{maker},$rec->{name});
     $seen{$rec->{maker}}++;
     $seen{$rec->{name}}++;
     $seen{$rec->{sty}}++;
@@ -502,15 +502,14 @@ sub readdatafile {
       $foundrec = $rec;
     }
 
-   if ( $rec->{type} eq "Old" ) { # TODO
-      my $restname = ""; # Restaurants are like "Restaurant, Thai" in maker
-      $restname = $1.$rec->{loc} if ( $rec->{mak}  =~ /^(Restaurant,)/i );
+   if ( $rec->{type} eq "Restaurant" ) {
+      my $restname = "Restaurant," . $rec->{loc};
       $seen{$restname}++;
-      if ( ( $rec->{mak}  =~ /^Restaurant,/i ) ) {
-        $restaurants{$rec->{loc}} = $rec->{mak}; # Remember style
+      if ( ( $rec->{subtype} ) ) {
+        $restaurants{$rec->{loc}} = $rec->{subtype}; # Remember style
         next; # do not sum restaurant lines, drinks filed separately
       }
-    } # TODO - restaurant lines ??
+    }
 
     if ($rec->{loc} && $rec->{geo} ) {
       my $geocoord;
@@ -576,7 +575,8 @@ sub readdatafile {
       $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
     }
     $lastmonthday = $1 if ( $rec->{effdate} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-    $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $rec->{sty} $rec->{mak} : $rec->{loc} ;" if ($rec->{alcvol} > 0);
+    $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $rec->{sty} $rec->{maker} : $rec->{loc} ;"
+      if ($rec->{alcvol} > 0) ;
   } # line loop
 
   if ( ! $todaydrinks ) { # not today
@@ -620,7 +620,7 @@ sub inputrecord {
   my @pnames = $q->param;
   foreach my $p ( @pnames ) {
     my $pv = $q->param($p);
-    print STDERR "param: '$p' : '$pv'\n";
+    #print STDERR "param: '$p' : '$pv'\n";
     $rec->{$p} = "$pv";
   }
   return $rec;
@@ -732,8 +732,8 @@ sub guessvalues {
   my $priceguess = "";
   my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
   my $i = scalar( @records )-1;
-  while ( $i > 0 && $rec->{beer}
-    && ( !$rec->{mak} || !$rec->{vol} || !$rec->{sty} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
+  while ( $i > 0 && $rec->{name}
+    && ( !$rec->{maker} || !$rec->{vol} || !$rec->{sty} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
     my $irec = $records[$i];
     if ( !$priceguess &&    # Guess a price
          $irec->{loc} && $rec->{loc} &&
@@ -741,9 +741,9 @@ sub guessvalues {
          $irec->{vol} eq $rec->{vol} ) { # even if different beer, good fallback
       $priceguess = $irec->{pr};
     }
-    if ( uc($rec->{beer}) eq uc($irec->{beer}) ) { # Same beer, copy values over if not set
-      $rec->{beer} = $irec->{beer}; # with proper case letters
-      $rec->{mak} = $irec->{mak} unless $rec->{mak};
+    if ( uc($rec->{name}) eq uc($irec->{name}) ) { # Same beer, copy values over if not set
+      $rec->{name} = $irec->{name}; # with proper case letters
+      $rec->{maker} = $irec->{maker} unless $rec->{maker};
       $rec->{sty} = $irec->{sty} unless $rec->{sty};
       $rec->{alc} = $irec->{alc} unless $rec->{alc};
       if ( $rec->{vol} eq $irec->{vol} && $irec->{pr} =~/^ *[0-9.]+ *$/) {
@@ -1446,7 +1446,7 @@ sub graph {
       for ( my $i = 0; $i < scalar(@records); $i++ ) { # calculate sums
         my $rec = $records[$i];
         nullallfields($rec);
-        next if ( $rec->{mak} =~ /^restaurant/i );
+        next if ( $rec->{type} =~ /^Restaurant/i );
         $sums{$rec->{effdate}} += $rec->{alcvol};
       }
       my $ndays = $startoff+35; # to get enough material for the running average
@@ -1837,7 +1837,7 @@ sub beerboard {
       "(<a href='$url?o=$op&l=$locparam'><span>Clear</span></a>) " .
       "<p>\n";
     }
-    my $oldbeer = "$foundrec->{mak} : $foundrec->{beer}";  # Remember current beer for opening
+    my $oldbeer = "$foundrec->{maker} : $foundrec->{name}";  # Remember current beer for opening
     $oldbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
     $oldbeer =~ s/[^a-z0-9]//ig; # and all non-ascii characters
 
@@ -2074,7 +2074,7 @@ sub shortlist{
       $daysum = 0.0;
       $daymsum = 0.0;
     }
-    next if ($rec->{mak} =~ /restaurant/i );
+    next if ($rec->{type} eq "Restaurant" );
     if ( $lastloc ne $rec->{loc} ) {
       # Abbreviate some location names
       my $sloc=$rec->{loc};
@@ -2148,7 +2148,7 @@ sub yearsummary {
     my $loc = $rec->{loc};
     $y = substr($rec->{effdate},0,4);
     #print "  y=$y, ty=$thisyear <br/>\n";
-    next if ($rec->{mak} =~ /restaurant/i );
+    next if ($rec->{type} =~ "Restaurant" );
 
     if ($i == 0) { # count also the last line
       $thisyear = $y unless ($thisyear);
@@ -2710,7 +2710,7 @@ sub lists {
     my $rec = $records[$i];
     next unless ( !$qry || $rec->{rawline} =~ /\b$qry\b/i );
     next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
-    next if ( $rec->{mak} =~ /tz,/ );
+    next if ( $rec->{type} eq "Tz" );
     $fld = "";
 
     if ( $op eq "Location" ) {
@@ -2720,63 +2720,62 @@ sub lists {
         "&nbsp; " . loclink($fld, "Www") . "\n  " . glink($fld, "G") . "</span>" .
         "</td>\n" .
         "<td>$rec->{wday} $rec->{effdate} ($seen{$fld}) <br class='no-wide'/>" .
-        lst("Location",$rec->{mak},"i") . ": \n" . lst($op,$rec->{beer}) . "</td>";
+        lst("Location",$rec->{maker},"i") . ": \n" . lst($op,$rec->{name}) . "</td>";
 
     } elsif ( $op eq "Brewery" ) {
-      next if ( $rec->{mak} =~ /^wine|booze|restaurant/i );  # TODO - Get line types right
-      my $mak = $rec->{mak};
+      next unless ( $rec->{type} eq "Beer" );
+      my $mak = $rec->{maker};
       $fld = $mak;
       $mak =~ s"/+"/<br/>&nbsp;"; # Split collab brews on two lines
       my $seentimes = "";
       $seentimes = "($seen{$fld})" if ($seen{$fld} );
       $line = "<td>" . filt($mak,"b","","full") . "\n<br/ class='no-wide'>&nbsp;&nbsp;" . glink($fld) . "</td>\n" .
       "<td>$rec->{wday} $rec->{effdate} " . lst($op,$rec->{loc}) . "\n $seentimes " .
-            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]") . " \n " . lst("full",$rec->{beer},"b")  ."</td>";
+            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]") . " \n " . lst("full",$rec->{name},"b")  ."</td>";
 
     } elsif ( $op eq "Beer" ) {
-      next if ( $rec->{mak} =~ /^wine|booze|restaurant/i );
-      my $beer = $rec->{beer};
+      next if ( $rec->{type} ne "Beer" );
+      my $beer = $rec->{name};
       $fld = $beer;
       $beer =~ s"(/|%2F)+"<br/>&nbsp;"gi if ( length($beer) > 25 ); # Split long lines
       $beer =~ s"\("<br/>&nbsp("gi if ( length($beer) > 25 ); # Split long lines
       my $seentimes = "";
       $seentimes = "($seen{$fld})" if ($seen{$fld} );
-      $line = "<td>" . filt($fld,"b",$beer,"full") . "&nbsp; $seentimes &nbsp;\n" . glink($rec->{mak},"G") ."</td>" .
+      $line = "<td>" . filt($fld,"b",$beer,"full") . "&nbsp; $seentimes &nbsp;\n" . glink($rec->{maker},"G") ."</td>" .
             "<td>$rec->{wday} $rec->{effdate} ".
             lst($op,$rec->{loc}) .  "\n <br class='no-wide'/> " .
             lst($op,$rec->{sty},"","[$rec->{sty}]"). "\n " . unit($rec->{alc},'%') .
-            lst($op,$rec->{mak},"i") . "&nbsp;</td>";
+            lst($op,$rec->{maker},"i") . "&nbsp;</td>";
 
     } elsif ( $op eq "Wine" ) {
-      next unless ( $rec->{mak} =~ /^wine, *(.*)$/i );
-      my $stylename = $1;
-      my $beer = $rec->{beer};
-      $fld = $beer;
-      next if ( $beer =~ /^Misc/i );
+      next unless ( $rec->{type} eq "Wine" );
+      my $stylename = "$rec->{subtype} $rec->{maker} $rec->{region}";
+      my $wine = $rec->{name};
+      $fld = $wine;
+      next if ( $wine =~ /^Misc/i );
       my $seentimes = "";
-      $seentimes = "($seen{$beer})" if ($seen{$beer} );
-      $line = "<td>" . filt($beer,"b","","full")  . "&nbsp; $stylename &nbsp;\n" . glink($beer, "G") . "</td>\n" .
+      $seentimes = "($seen{$wine})" if ($seen{$wine} );
+      $line = "<td>" . filt($wine,"b","","full")  . "&nbsp; $stylename &nbsp;\n" . glink($wine, "G") . "</td>\n" .
             "<td>$rec->{wday} $rec->{effdate} ".
             lst($op,$rec->{loc}) . "\n $seentimes \n" .
             "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]"). "</td>";
 
     } elsif ( $op eq "Booze" ) {
-      next unless ( $rec->{mak} =~ /^booze, *(.*)$/i );
-      my $stylename = $1;
-      my $beer = $rec->{beer};
+      next unless ( $rec->{type} eq "Booze" );
+      my $stylename = $rec->{subtype};
+      my $beer = $rec->{name};
       $fld = $beer;
       my $seentimes = "";
       $seentimes = "($seen{$beer})" if ($seen{$beer} );
-      $line = "<td>" .filt($beer,"b","","full") . "\n&nbsp;" . glink($beer, "G") ."</td>\n" .
+      $line = "<td> $stylename, " .filt($beer,"b","","full") . "\n&nbsp;" . glink($beer, "G") ."</td>\n" .
             "<td>$rec->{wday} $rec->{effdate} ".
             lst($op,$rec->{loc}) ."\n $seentimes " .
-            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]"). " " . unit($rec->{alc},'%') . "\n" .
-              lst($op, $rec->{mak},"i", $stylename) . "</td>";
+            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]"). " " . unit($rec->{alc},'%') .
+            "</td>\n";
 
     } elsif ( $op eq "Restaurant" ) {
-      next unless ( $rec->{mak} =~ /^restaurant,? *(.*)$/i );
-      my $rstyle="";
-      if ( $1 ) { $rstyle = lst($op, "Restaurant, $1", "", $1); }
+      next unless ( $rec->{type} eq "Restaurant" );
+      my $rstyle= $rec->{subtype};
       $fld = "$rec->{loc}";
       my $ratestr = "";
       $ratestr = "$rec->{rate}: <b>$ratings[$rec->{rate}]</b>" if $rec->{rate};  # TODO - Make a helper for this
@@ -2785,18 +2784,19 @@ sub lists {
       $rpr = "&nbsp; $rec->{pr} kr" if ($rec->{pr} && $rec->{pr} >0) ;
       $line = "<td>" . filt($rec->{loc},"b","","full") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> \n ".
               "$rstyle  &nbsp;\n" . glink("Restaurant $rec->{loc}") . "</td>\n" .
-              "<td><i>$rec->{beer}</i>". " $rpr <br class='no-wide'/> " .
-              "$rec->{wday} $rec->{effdate} $ratestr</td>";
+              "<td>$rec->{wday} $rec->{effdate} <i>$rec->{food}</i>". " $rpr <br class='no-wide'/> " .
+              " $ratestr</td>";
 
     } elsif ( $op eq "Style" ) {
-      next if ( $rec->{mak} =~ /^(wine|booze|restaurant|misc)/i );
+      next unless ( $rec->{type} eq "Beer" );
       my $sty = $rec->{sty};
       $fld = $sty;
       my $seentimes = "";
       $seentimes = "($seen{$sty})" if ($seen{$sty} );
-      $line = "<td>" . filt("[$sty]","b","","full") . " $seentimes" . "</td><td>$rec->{wday} $rec->{effdate} \n" .
-            lst("Beer",$rec->{loc},"") .
-            "\n <br class='no-wide'/> " . lst($op,$rec->{mak},"i") . ": \n" . lst("full",$rec->{beer},"b") . "</td>";
+      $line = "<td>" . filt("[$sty]","b","","full") . " $seentimes" . "</td>" .
+              "<td>$rec->{wday} $rec->{effdate} \n" .
+              lst("Beer",$rec->{loc},"") .
+              "\n <br class='no-wide'/> " . lst($op,$rec->{maker},"i") . ": \n" . lst("full",$rec->{name},"b") . "</td>";
     } else {
       print "<!-- unknown shortlist '$op' -->\n";
       last;
@@ -3271,7 +3271,7 @@ sub lst {
   my $op = shift; # The kind of list
   my $qry = shift; # Optional query to filter the list
   my $tag = shift || "nop";
-  my $dsp = shift || $qry || $op;
+  my $dsp = shift || $qry || "???";
   $qry = "&q=" . uri_escape_utf8($qry) if $qry;
   $op = uri_escape_utf8($op);
   my $link = "<a href='$url?o=$op" . $qry ."' ><$tag>$dsp</$tag></a>";
@@ -3662,7 +3662,7 @@ sub shortbeerstyle {
 
 
 
-# Split a data line into a hash
+# Split a data line into a hash. Precalculate some fields
 sub splitline {
   my $line = shift;
   my @datafields = split(/ *; */, $line);
@@ -3675,7 +3675,7 @@ sub splitline {
   $v->{rawline} = $line; # for filtering
   $v->{name} = ""; # Default, make sure we always have something
   $v->{maker} = "";
-  #$v->{maker} = "";
+  $v->{sty} = "";
   my $fieldnamelist = $datalinetypes{$linetype} || "";
   if ( $fieldnamelist ) {
     my @fnames = @{$fieldnamelist};
