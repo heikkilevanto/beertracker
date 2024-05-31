@@ -620,7 +620,7 @@ sub inputrecord {
   my @pnames = $q->param;
   foreach my $p ( @pnames ) {
     my $pv = $q->param($p);
-    #print STDERR "param: '$p' : '$pv'\n";
+    print STDERR "param: '$p' : '$pv'\n";
     $rec->{$p} = "$pv";
   }
   return $rec;
@@ -790,14 +790,14 @@ sub postdata {
   my $rec = inputrecord();  # Get an approximation of a record from the params
 
   # Fix record type.
-  $rec->{type} = "Old" unless $rec->{type};
+  $rec->{type} = "None" unless $rec->{type};
   if ( !$datalinetypes{$rec->{type} }) {
     error("Trying to POST a record of unknown type: '$rec->{type}'");
   }
 
   nullfields($rec);  # set all undefined fields to "", to avoid warnings
   my $lastrec = $records[ scalar(@records)-1 ];
-  #dumprec($rec, "raw");
+  # dumprec($rec, "raw");
 
   fixtimes($rec, $lastrec, $sub);
   fixvol($rec, $sub);
@@ -843,7 +843,8 @@ sub postdata {
   (undef, undef, $rec->{geo})  = geo($rec->{geo});  # Skip bad ones, format right
 
   # Fix record type
-  if ( $rec->{type} eq "Beer" && !$rec->{beer} ) { # Not a real line
+  if ( $rec->{type} eq "Beer" && !$rec->{name} ) { # Not a real line
+    print STDERR "Not POSTing record. t='$rec->{type}' n=$rec->{name}' \n";
     $rec->{type} = "None";
   }
 
@@ -851,7 +852,7 @@ sub postdata {
 
   #dumprec($rec, "final");
   my $line = makeline($rec);
-  # print STDERR "e='$rec->{edit}' s='$sub' line: '$line' \n";
+  #print STDERR "Saving $line \n";
 
   if ( $sub eq "Record" ) {  # Want to create a new record
     $rec->{edit} = ""; # so don't edit the current one
@@ -1900,8 +1901,8 @@ sub beerboard {
       my $sizes = $e->{"sizePrice"};
       my $hiddenbuttons = "";
         $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;  # always?
-        $hiddenbuttons .= "<input type='hidden' name='mak' value='$mak' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='beer' value='$beer' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='maker' value='$mak' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='name' value='$beer' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='sty' value='$origsty' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='alc' value='$alc' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='loc' value='$loc' />\n" ;
