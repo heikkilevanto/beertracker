@@ -494,7 +494,7 @@ sub readdatafile {
     $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
     $seen{$rec->{seenkey}}++;
 
-    if ($rec->{rate} && $rec->{beer}) {
+    if ($rec->{rate} && $rec->{name}) {
       $ratesum{$rec->{seenkey}} += $rec->{rate};
       $ratecount{$rec->{seenkey}} ++;
     }
@@ -3015,12 +3015,13 @@ sub fulllist {
 
     print filt($rec->{maker},"i") . newmark($rec->{maker}). ":" if ($rec->{maker});
     print filt($rec->{name},"b") . newmark($rec->{name}, $rec->{maker});
+    print $rec->{food};
 
     print "</span> <br class='no-wide'/>\n";
     my $origsty = $rec->{sty} || "???"; # TODO - wine and booze
     if ( $rec->{sty} || $rec->{pr} || $rec->{vol} || $rec->{alc} || $rec->{rate} || $rec->{com} ) {
       if ($rec->{sty}) {
-        my $beerstyle = beercolorstyle("$rec->{sty} $rec->{mak}", "$rec->{date}", "[$rec->{sty} $rec->{mak}] : $rec->{beer}" );
+        my $beerstyle = beercolorstyle("$rec->{sty} $rec->{maker}", "$rec->{date}", "[$rec->{sty} $rec->{maker}] : $rec->{name}" );
         my $tag="span $beerstyle";
         my $ssty = $rec->{sty};
         $ssty = shortbeerstyle($rec->{sty}) if ( $qrylim ne "x" );
@@ -3054,7 +3055,7 @@ sub fulllist {
       }
       $ratecounts[$rec->{rate}] ++ if ($rec->{rate});
       if ( $qrylim eq "x" ) {
-        my $seenkey = seenkey($rec->{mak},$rec->{beer});
+        my $seenkey = seenkey($rec->{maker},$rec->{name});
         if ($ratecount{$seenkey}) {
           my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
           if ($ratecount{$seenkey} == 1 )  {
@@ -3064,7 +3065,7 @@ sub fulllist {
           }
         }
         print "<span style='white-space: nowrap'>";
-        print seenline($rec->{mak}, $rec->{beer});
+        print seenline($rec->{maker}, $rec->{name});
         print "</span><br>\n";
         if ( $rec->{geo} ) {
           my (undef, undef, $gg) = geo($rec->{geo});
@@ -3086,16 +3087,16 @@ sub fulllist {
 
     my %vols;     # guess sizes for small/large beers
     $vols{$rec->{vol}} = 1 if ($rec->{vol});
-    if ( $rec->{mak}  =~ /^Restaurant,/i || $rec->{type} eq "Restaurant" ) {
+    if ( $rec->{type} eq "Restaurant" ) {
       $vols{"R"} = 1;
     } elsif ( $rec->{type} =~ /Night/) {
       %vols=(); # nothing to copy
-    } elsif ( $rec->{mak}  =~ /^Wine,/i ) {
+    } elsif ( $rec->{type}  eq "Wine" ) {
       $vols{12} = 1;
       $vols{16} = 1 unless ( $rec->{vol} == 15 );
       $vols{37} = 1;
       $vols{75} = 1;
-    } elsif ( $rec->{mak}  =~ /^Booze,/i ) {
+    } elsif ( $rec->{type}  eq "Booze" ) {
       $vols{2} = 1;
       $vols{4} = 1;
     } else { # Default to beer, usual sizes in craft beer world
@@ -3125,9 +3126,9 @@ sub fulllist {
     }
     if ( $qrylim eq "x" ) {
       print "<br/>";
-      print glink("$rec->{mak} $rec->{beer}", "Google") . "&nbsp;\n";
-      print rblink("$rec->{mak} $rec->{beer}", "RateBeer") . "&nbsp;\n";
-      print utlink("$rec->{mak} $rec->{beer}", "Untappd") . "&nbsp;\n";
+      print glink("$rec->{maker} $rec->{name}", "Google") . "&nbsp;\n";
+      print rblink("$rec->{maker} $rec->{name}", "RateBeer") . "&nbsp;\n";
+      print utlink("$rec->{maker} $rec->{name}", "Untappd") . "&nbsp;\n";
     }
     print"<br/>\n";
     print "</form>\n";
@@ -3506,8 +3507,10 @@ sub datestr {
 # Normalizes the names a bit, to catch some misspellings etc
 sub seenkey {
   my $maker = shift || "";
-  my $beer = shift || "";
-  my $key = lc("$maker:$beer");
+  my $name = shift || "";
+  return "" if ( !$maker && !$name );
+  my $key = lc("$maker:$name");
+  return "" if ( $key =~ /misc|mixed/ );
   $key =~ s/&amp;/&/g;
   $key =~ s/[^a-zåæø0-9:]//gi;  # Skip all special characters and spaces
   return $key;
@@ -3518,6 +3521,7 @@ sub seenline {
   my $maker = shift;
   my $beer = shift;
   my $seenkey = seenkey($maker,$beer);
+  return "" unless ($seenkey);
   my $seenline = "";
   $seenline = "Seen <b>" . ($seen{$seenkey}). "</b> times: " if ($seen{$seenkey});
   my $prefix = "";
@@ -3691,7 +3695,7 @@ sub splitline {
   $v->{pr} = price( $v->{pr} );
   # Precalculate some things we often need
   ( $v->{date}, $v->{year}, $v->{time} ) = $v->{stamp} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
-  $v->{seenkey} = seenkey($v->{mak},$v->{beer});
+  $v->{seenkey} = seenkey($v->{maker},$v->{name});
   my $alcvol = $v->{alc} * $v->{vol} || 0 ;
   $alcvol = 0 if ( $v->{pr} < 0  );  # skip box wines
   $v->{alcvol} = $alcvol;
