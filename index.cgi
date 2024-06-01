@@ -1026,7 +1026,7 @@ SCRIPTEND
   # and geolocation
   $script .= <<'SCRIPTEND';
     function showrows() {
-      var rows = [ "td1", "td2"];
+      var rows = [ "td1", "td2", "td3"];
       for (i=0; i<rows.length; i++) {
         var r = document.getElementById(rows[i]);
         //console.log("Unhiding " + i + ":" + rows[i], r);
@@ -1190,11 +1190,6 @@ sub inputform {
       print "Prod modified '$proddate' (git pull?) <br>\n";
       print "d='$devmod' p='$prodmod' <br>\n";
     }
-    print "<hr>\n";
-    print join("; ", @{$datalinetypes{$foundrec->{type}}});
-    print "<br>\n";
-    print $foundrec->{rawline};
-    print "<br>\n";
     # Would be nice to get git branch and log tail
     # But git is anal about file/dir ownerships
     print "<hr>\n";
@@ -1252,13 +1247,11 @@ sub inputform {
   }
 
   # Date and time, usually hidden
-  print "<tr><td>\n";
+  print "<tr id='td1' $hidden ><td>";
   print "<input name='edit' type='hidden' value='$foundrec->{stamp}' id='editrec' />\n";
   print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
   print "<input name='q' type='hidden' value='$qry' id='editrec' />\n";
-  print "</td></tr>\n";
-  print "<tr id='td1' $hidden >";
-  print "<td><input name='date' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
+  print "<input name='date' value='$date' $sz1 placeholder='" . datestr ("%F") . "' /></td>\n";
   print "<td><input name='time' value='$time' $sz3 placeholder='" .  datestr ("%H:%M",0,1) . "' /></td>\n";
   print "</tr>\n";
 
@@ -1277,11 +1270,17 @@ sub inputform {
   print "</select>\n";
   print "</td></tr>\n";
 
+  # Actual location and record type, normally hidden
+  print "<tr id='td3' $hidden >";
+  print "<td>($foundrec->{loc})</td>\n";  # without the geo overwritring this
+  print "<td>($foundrec->{type})</td>\n" if ($foundrec->{type} ne $type);
+  print "</tr>\n";
+
   # Location and record type
   print "<tr>\n";
   print inputfield("loc","$sz1 id='loc'","Location", "", $loc);
 
-  print "<td>($type)\n";
+  print "<td>$type\n";
   print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
   print "</td></tr>\n";
 
@@ -3006,7 +3005,7 @@ sub fulllist {
     if ( $rec->{type} eq "Beer" ){
       $disptype = "" ;  # Beer is the default, no need to repeat on every line
     } else {
-      $disptype = "[$disptype]:"; # but anything else should be seen
+      $disptype = "[$disptype]: "; # but anything else should be seen
     }
 
     print "<br class='no-print'/><span style='white-space: nowrap'> " .
