@@ -209,32 +209,28 @@ $datalinetypes{"Old"} = [
   "com",    # Comment
   "geo"];   # Geo coordinates
 
-# A dedicated beer entry. Almost like above. But with a type, and added flavor
+# A dedicated beer entry. Almost like above. But with a type and subtype
 $datalinetypes{"Beer"} = [
   "stamp", "type", "wday", "effdate", "loc",
   "maker",  # Brewery
   "name",   # Name of the beer
-  "vol", "sty", "alc", "pr", "rate", "com", "geo",
-  "flavor"]; # Taste of the beer, could be fruits, special hops, or type of barrel
+  "vol", "style", "alc", "pr", "rate", "com", "geo",
+  "subtype"]; # Taste of the beer, could be fruits, special hops, or type of barrel
 
 # Wine
 $datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
   "subtype", # Red, White, Bubbly, etc
   "maker", # brand or house
   "name", # What it says on the label
-  "winestyle", # Can be grape (chardonnay) or region (rioja)
-  "country",
-  "region",
+  "style", # Can be grape (chardonnay) or country/region (rioja)
   "vol", "alc", "pr", "rate", "com", "geo"];
 
 # Booze. Also used for coctails
 $datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
   "subtype",   # whisky, snaps
   "maker", # brand or house
-  "name", # What it says on the label
-  "mixer", # name of coctail, or stuff used to dilute the booze
-  "country",
-  "region",
+  "name",  # What it says on the label
+  "style", # can be coctail, country/(region, or flavor
   "vol", "alc",  # These are for the alcohol itself
   "pr", "rate", "com", "geo"];
 
@@ -453,7 +449,7 @@ sub readdatafile {
         $rec->{type} = "Beer";
         $rec->{maker} = $rec->{mak};
         $rec->{name} = $rec->{beer};
-      } elsif ( $rec->{mak} =~ /^(Wine|Booze) *, *(.*)/i ) {
+      } elsif ( $rec->{mak} =~ /^(Wine|Booze)[ ,]*(.*)/i ) {
         $rec->{type} = ucfirst($1);
         $rec->{subtype} = $2;
         $rec->{name} = $rec->{beer};
@@ -1206,7 +1202,7 @@ sub inputform {
     if ( $foundrec && $foundrec->{type} )  {
       $type = $foundrec->{type};
     } else {
-      $type = "Old";
+      $type = "Old"; # Should not happen
     }
   }
 
@@ -1222,7 +1218,7 @@ sub inputform {
   my $sz2 = "$sz2n $clr";
   my $sz3n = "size='8'";
   my $sz3 = "$sz3n $clr";
-  my $sz4n = "size='30'";
+  my $sz4n = "size='20'";
   my $sz4 = "$sz4n $clr";
   my $hidden = "";
   print "<table style='width:100%; max-width:500px' id='inputformtable'>";
@@ -1263,6 +1259,7 @@ sub inputform {
   $chg = "" if ($edit); # Don't move around while editing
   print "&nbsp;<select name='type' $chg style='width:4.5em;' id='type'>\n";
   foreach my $t ( sort(keys(%datalinetypes)) ) {
+    next if ($t eq "Old");
     my $sel = "";
     $sel = "selected='selected'" if ( $type eq $t );
     print "<option value='$t' $sel>$t</option>\n";
@@ -1276,53 +1273,28 @@ sub inputform {
   print "<td>($foundrec->{type})</td>\n" if ($foundrec->{type} ne $type);
   print "</tr>\n";
 
-  # Location and record type
+  # Location
   print "<tr>\n";
   print inputfield("loc","$sz1 id='loc'","Location", "", $loc);
-
-  print "<td>$type\n";
+  print "<td>";
+  print "($foundrec->{loc})"; # without geo overwriting it.
+     # TODO - Make hidden, show only when setting geo
   print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
   print "</td></tr>\n";
+
+  # Type, subtype, and style (flavor, coctail, country/region, etc)
+  print "<td>$type \n";
+  print inputfield("subtype", $sz3, "", "nop");
+  print inputfield("style", $sz1, "Style");
+  print "</td>";
+
+  print "</tr>\n";
 
   # Maker and name, for most drinks
   print "<tr>\n";
   print inputfield("maker", $sz1);
   print inputfield("name", $sz1);
   print "</tr>\n";
-
-  # (style or subtype) and (flavor or mixer), for many drinks
-  # Only one of each should exist in any record type
-  print "<tr>\n";
-  print inputfield("sty", $sz1, "Style");
-  print inputfield("subtype", $sz1);
-  print inputfield("flavor", $sz1);
-  print "</tr>\n";
-
-
-  # Country and region, for wines and booze
-  print "<tr>\n";
-  print inputfield("country", $sz1, "Country");
-  print inputfield("region", $sz1, "Region");
-  print "</tr>\n";
-# Wine
-
-my @foo = [
-  "winetype", # Red, White, Bubbly, etc
-  "maker", # brand or house
-  "name", # What it says on the label
-  "winestyle", # Can be grape (chardonnay) or region (rioja)
-  "country",
-  "region",
-  "vol", "alc", "pr", "rate", "com", "geo",
-  "btype",   # whisky, snaps
-  "maker", # brand or house
-  "name", # What it says on the label
-  "mixer", # name of coctail, or stuff used to dilute the booze
-  "country",
-  "region",
-  "vol", "alc",  # These are for the alcohol itself
-  "pr", "rate", "com", "geo"];
-
 
 
   # General stuff again: Vol, Alc and Price, as well as rating
@@ -1331,7 +1303,6 @@ my @foo = [
   print inputfield("vol", $sz2, "Vol", "nop", "$foundrec->{vol} cl" );
   print inputfield("alc", $sz2, "Alc", "nop", "$foundrec->{alc} %" );
   print inputfield("pr",  $sz2, "Price", "nop", "$prc" );
-  print inputfield("resttype",  $sz3, "Rest Type", "nop" );
 
   print "<td>";
   if (hasfield($type,'rate')) {
