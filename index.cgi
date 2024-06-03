@@ -449,6 +449,7 @@ sub readdatafile {
         $rec->{type} = "Beer";
         $rec->{maker} = $rec->{mak};
         $rec->{name} = $rec->{beer};
+        $rec->{style} = $rec->{sty};
       } elsif ( $rec->{mak} =~ /^(Wine|Booze)[ ,]*(.*)/i ) {
         $rec->{type} = ucfirst($1);
         $rec->{subtype} = $2;
@@ -466,6 +467,7 @@ sub readdatafile {
       }
       $rec->{beer} = "";
       $rec->{mak} = "";
+      $rec->{sty} = "";
       nullfields($rec); # clear undefined fields again, we may have changed the type
     }
     push (@records, $rec);
@@ -486,7 +488,7 @@ sub readdatafile {
     my $seenkey = seenkey($rec->{maker},$rec->{name});
     $seen{$rec->{maker}}++;
     $seen{$rec->{name}}++;
-    $seen{$rec->{sty}}++;
+    $seen{$rec->{style}}++;
     $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
     $seen{$rec->{seenkey}}++;
 
@@ -571,7 +573,7 @@ sub readdatafile {
       $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
     }
     $lastmonthday = $1 if ( $rec->{effdate} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-    $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $rec->{sty} $rec->{maker} : $rec->{loc} ;"
+    $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $rec->{style} $rec->{maker} : $rec->{loc} ;"
       if ($rec->{alcvol} > 0) ;
   } # line loop
 
@@ -729,7 +731,7 @@ sub guessvalues {
   my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
   my $i = scalar( @records )-1;
   while ( $i > 0 && $rec->{name}
-    && ( !$rec->{maker} || !$rec->{vol} || !$rec->{sty} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
+    && ( !$rec->{maker} || !$rec->{vol} || !$rec->{style} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
     my $irec = $records[$i];
     if ( !$priceguess &&    # Guess a price
          $irec->{loc} && $rec->{loc} &&
@@ -740,7 +742,7 @@ sub guessvalues {
     if ( uc($rec->{name}) eq uc($irec->{name}) ) { # Same beer, copy values over if not set
       $rec->{name} = $irec->{name}; # with proper case letters
       $rec->{maker} = $irec->{maker} unless $rec->{maker};
-      $rec->{sty} = $irec->{sty} unless $rec->{sty};
+      $rec->{style} = $irec->{style} unless $rec->{style};
       $rec->{alc} = $irec->{alc} unless $rec->{alc};
       if ( $rec->{vol} eq $irec->{vol} && $irec->{pr} =~/^ *[0-9.]+ *$/) {
         # take price only from same volume, and only if numerical
@@ -1269,7 +1271,6 @@ sub inputform {
 
   # Actual location and record type, normally hidden
   print "<tr id='td3' $hidden >";
-  print "<td>($foundrec->{loc})</td>\n";  # without the geo overwritring this
   print "<td>($foundrec->{type})</td>\n" if ($foundrec->{type} ne $type);
   print "</tr>\n";
 
@@ -1740,12 +1741,12 @@ sub beerboard {
   if ( $op =~ /board(-?\d+)/i ) {
     $extraboard = $1;
     }
-  my $locparam = $foundrec->{loc} || "";
+  my $locparam = param("loc") || $foundrec->{loc} || "";
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
   print "Beer list \n";
-  print "<select onchange='document.location=\"$url?o=board&l=\" + this.value;' style='width:5.5em;'>\n";
+  print "<select onchange='document.location=\"$url?o=board&loc=\" + this.value;' style='width:5.5em;'>\n";
   if (!$scrapers{$locparam}) { #Include the current location, even if no scraper
     $scrapers{$locparam} = ""; #that way, the pulldown looks reasonable
   }
@@ -1871,9 +1872,10 @@ sub beerboard {
       my $sizes = $e->{"sizePrice"};
       my $hiddenbuttons = "";
         $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;  # always?
+        $hiddenbuttons .= "<input type='hidden' name='subtype' value='$country' />\n" ;  # always?
         $hiddenbuttons .= "<input type='hidden' name='maker' value='$mak' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='name' value='$beer' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='sty' value='$origsty' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='style' value='$origsty' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='alc' value='$alc' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='loc' value='$loc' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
@@ -1941,7 +1943,8 @@ sub beerboard {
         print "</td>\n";
         print "$buttons\n";
         print "<td style='font-size: x-small;' align=right>$alc</td>\n";
-        print "<td>$dispbeer $dispmak ($country) $sty</td>\n";
+        print "<td>$dispbeer $dispmak ";
+        print "<span style='font-size: x-small;'>($country)</span> $sty</td>\n";
         print "</tr>\n";
       }
       $previd = $id;
@@ -2372,6 +2375,7 @@ sub monthstat {
   my $min = sprintf("%3.1f", $d / 30);  # for whole month
   my $avg = $d / $dayofmonth;
   my $max = 2 * $avg - $min;
+  $max = "NaN" if ($max > 10) ;  # Don't mess with scaling of the graph
   $max = sprintf("%3.1f", $max);
   print F "\n";
   print F "2001-$cur $min\n";
@@ -2663,7 +2667,9 @@ sub lists {
   my @ops = ( "Location", "Brewery", "Beer",
       "Wine", "Booze", "Restaurant", "Style");
   for my $l ( @ops ) {
-    print "<a href='$url?o=$l'><span>$l</span></a> &nbsp;\n";
+    my $bold = "nop";
+    $bold = "b" if ($l eq $op);
+    print "<a href='$url?o=$l'><$bold>$l</$bold></a> &nbsp;\n";
   }
   print "</div>\n";
   my $fld;
@@ -2701,7 +2707,7 @@ sub lists {
       $seentimes = "($seen{$fld})" if ($seen{$fld} );
       $line = "<td>" . filt($mak,"b","","full") . "\n<br/ class='no-wide'>&nbsp;&nbsp;" . glink($fld) . "</td>\n" .
       "<td>$rec->{wday} $rec->{effdate} " . lst($op,$rec->{loc}) . "\n $seentimes " .
-            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]") . " \n " . lst("full",$rec->{name},"b")  ."</td>";
+            "<br class='no-wide'/> " . lst($op,$rec->{style},"","[$rec->{style}]") . " \n " . lst("full",$rec->{name},"b")  ."</td>";
 
     } elsif ( $op eq "Beer" ) {
       next if ( $rec->{type} ne "Beer" );
@@ -2714,12 +2720,12 @@ sub lists {
       $line = "<td>" . filt($fld,"b",$beer,"full") . "&nbsp; $seentimes &nbsp;\n" . glink($rec->{maker},"G") ."</td>" .
             "<td>$rec->{wday} $rec->{effdate} ".
             lst($op,$rec->{loc}) .  "\n <br class='no-wide'/> " .
-            lst($op,$rec->{sty},"","[$rec->{sty}]"). "\n " . unit($rec->{alc},'%') .
+            lst($op,$rec->{style},"","[$rec->{style}]"). "\n " . unit($rec->{alc},'%') .
             lst($op,$rec->{maker},"i") . "&nbsp;</td>";
 
     } elsif ( $op eq "Wine" ) {
       next unless ( $rec->{type} eq "Wine" );
-      my $stylename = "$rec->{subtype} $rec->{maker} $rec->{region}";
+      my $stylename = "$rec->{subtype} $rec->{maker} $rec->{style}";
       my $wine = $rec->{name};
       $fld = $wine;
       next if ( $wine =~ /^Misc/i );
@@ -2728,7 +2734,7 @@ sub lists {
       $line = "<td>" . filt($wine,"b","","full")  . "&nbsp; $stylename &nbsp;\n" . glink($wine, "G") . "</td>\n" .
             "<td>$rec->{wday} $rec->{effdate} ".
             lst($op,$rec->{loc}) . "\n $seentimes \n" .
-            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]"). "</td>";
+            "<br class='no-wide'/> " . lst($op,$rec->{style},"","[$rec->{style}]"). "</td>";
 
     } elsif ( $op eq "Booze" ) {
       next unless ( $rec->{type} eq "Booze" );
@@ -2740,7 +2746,7 @@ sub lists {
       $line = "<td> $stylename, " .filt($beer,"b","","full") . "\n&nbsp;" . glink($beer, "G") ."</td>\n" .
             "<td>$rec->{wday} $rec->{effdate} ".
             lst($op,$rec->{loc}) ."\n $seentimes " .
-            "<br class='no-wide'/> " . lst($op,$rec->{sty},"","[$rec->{sty}]"). " " . unit($rec->{alc},'%') .
+            "<br class='no-wide'/> " . lst($op,$rec->{style},"","[$rec->{style}]"). " " . unit($rec->{alc},'%') .
             "</td>\n";
 
     } elsif ( $op eq "Restaurant" ) {
@@ -2759,7 +2765,7 @@ sub lists {
 
     } elsif ( $op eq "Style" ) {
       next unless ( $rec->{type} eq "Beer" );
-      my $sty = $rec->{sty};
+      my $sty = $rec->{style};
       $fld = $sty;
       my $seentimes = "";
       $seentimes = "($seen{$sty})" if ($seen{$sty} );
@@ -2971,34 +2977,30 @@ sub fulllist {
     $anchor = $rec->{stamp} || "";
     $anchor =~ s/[^0-9]//g;
     print "\n<a id='$anchor'></a>\n";
-    my $disptype = "$rec->{type}"; # Show record type
-    $disptype .= ", $rec->{subtype}" if ($rec->{subtype} && $rec->{subtype} !~ /misc|unspecified/);
-    if ( $rec->{type} eq "Beer" ){
-      $disptype = "" ;  # Beer is the default, no need to repeat on every line
-    } else {
-      $disptype = "[$disptype]: "; # but anything else should be seen
-    }
+    my $disptype = $rec->{type}; # Show record type
+    my $subtype = $rec->{subtype};
+    $subtype = ", $subtype" if ($subtype);
 
     print "<br class='no-print'/><span style='white-space: nowrap'> " .
            "$time ";
-    print " $disptype\n";
+    print " [$disptype$subtype]\n";
 
-    print filt($rec->{maker},"i") . newmark($rec->{maker}). ":" if ($rec->{maker});
+    print filt($rec->{maker},"i") . newmark($rec->{maker}). ": " if ($rec->{maker});
     print filt($rec->{name},"b") . newmark($rec->{name}, $rec->{maker});
-    print $rec->{food};
+    print $rec->{people};
 
     print "</span> <br class='no-wide'/>\n";
-    my $origsty = $rec->{sty} || "???"; # TODO - wine and booze
-    if ( $rec->{sty} || $rec->{pr} || $rec->{vol} || $rec->{alc} || $rec->{rate} || $rec->{com} ) {
-      if ($rec->{sty}) {
-        my $beerstyle = beercolorstyle("$rec->{sty} $rec->{maker}", "$rec->{date}", "[$rec->{sty} $rec->{maker}] : $rec->{name}" );
+    my $origsty = $rec->{style} || "???"; # TODO - wine and booze
+    if ( $rec->{style} || $rec->{pr} || $rec->{vol} || $rec->{alc} || $rec->{rate} || $rec->{com} ) {
+      if ($rec->{style}) {
+        my $beerstyle = beercolorstyle("$rec->{style} $rec->{maker}", "$rec->{date}", "[$rec->{style} $rec->{maker}] : $rec->{name}" );
         my $tag="span $beerstyle";
-        my $ssty = $rec->{sty};
-        $ssty = shortbeerstyle($rec->{sty}) if ( $qrylim ne "x" );
-        print filt("$ssty",$tag) . newmark($rec->{sty}) . " "   ;
+        my $ssty = $rec->{style};
+        $ssty = shortbeerstyle($rec->{style}) if ( $qrylim ne "x" );
+        print filt("$ssty",$tag) . newmark($rec->{style}) . " "   ;
         print "<br>\n" if ( $qrylim eq "x" );
       }
-      if ($rec->{sty} || $rec->{pr} || $rec->{alc}) {
+      if ($rec->{style} || $rec->{pr} || $rec->{alc}) {
         if ( $qrylim ne "x" ) {
           print units($rec->{pr}, $rec->{vol}, $rec->{alc});
         } else {
@@ -3006,20 +3008,17 @@ sub fulllist {
         }
       }
       print "<br/>\n" ;
-      if ($rec->{food} && $qrylim eq "x" ) {
+      if ($rec->{food}) {
         print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
         print "$rec->{food}";
         print "<br/>\n";
       }
-      if ($rec->{people}) {
-        print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
-        print "$rec->{people}";
-        print "<br/>\n";
-      }
       if ($rec->{rate} || $rec->{com}) {
         print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
-        print " <b>'$rec->{rate}'-$ratings[$rec->{rate}]</b>" if ($rec->{rate});
-        print ": " if ($rec->{rate} && $rec->{com});
+        if ($rec->{rate} && $rec->{rate} =~ /^\d+$/ ) {
+          print " <b>'$rec->{rate}' - $ratings[$rec->{rate}]</b>";  # TODO - This gives occasional warnings
+          print ": " if ($rec->{com});
+        }
         print "<i>$rec->{com}</i>" if ($rec->{com});
         print "<br/>\n";
       }
@@ -3649,7 +3648,7 @@ sub splitline {
   $v->{rawline} = $line; # for filtering
   $v->{name} = ""; # Default, make sure we always have something
   $v->{maker} = "";
-  $v->{sty} = "";
+  $v->{style} = "";
   my $fieldnamelist = $datalinetypes{$linetype} || "";
   if ( $fieldnamelist ) {
     my @fnames = @{$fieldnamelist};
