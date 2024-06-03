@@ -724,6 +724,13 @@ sub fixvol {
 } # fixvol
 
 
+# Helper to see if a field is missing
+sub missing {
+  my $rec = shift;
+  my $fld = shift;
+  return  (defined($rec->{$fld}) && $rec->{$fld} eq "" );
+}
+
 # Helper to guess missing values from previous lines
 sub guessvalues {
   my $rec = shift;
@@ -731,7 +738,9 @@ sub guessvalues {
   my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
   my $i = scalar( @records )-1;
   while ( $i > 0 && $rec->{name}
-    && ( !$rec->{maker} || !$rec->{vol} || !$rec->{style} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
+    #&& ( !$rec->{maker} || !$rec->{vol} || !$rec->{style} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
+    && ( missing($rec,"maker") || missing($rec,"vol") || missing($rec,"style") ||
+         missing($rec,"alc") || missing($rec,"pr") )) {
     my $irec = $records[$i];
     if ( !$priceguess &&    # Guess a price
          $irec->{loc} && $rec->{loc} &&
@@ -842,7 +851,7 @@ sub postdata {
 
   # Fix record type
   if ( $rec->{type} eq "Beer" && !$rec->{name} ) { # Not a real line
-    print STDERR "Not POSTing record. t='$rec->{type}' n=$rec->{name}' \n";
+    print STDERR "Not POSTing record. t='$rec->{type}' n='$rec->{name}' \n";
     $rec->{type} = "None";
   }
 
@@ -3713,6 +3722,9 @@ sub nullallfields{
 # Check if a given record type should have this field
 sub hasfield {
   my $linetype = shift;
+  if ( ref($linetype) ) {
+    $linetype = $linetype->{type};
+  }
   my $field = shift;
   print STDERR "hasfield: bad params linetype='$linetype' field='$field' \n"
      if (!$linetype || !$field);
@@ -3720,6 +3732,7 @@ sub hasfield {
   my @fieldnamelist = @{$fieldnamelistref};
   return grep( /^$field$/, @fieldnamelist );
 }
+
 
 # Debug dump of record into STDERR
 sub dumprec {
