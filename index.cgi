@@ -237,6 +237,7 @@ $datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
 
 # A comment on a night out.
 $datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
+  "subtype",# bar discussion, concert, lunch party, etc
   "com",    # Any comments on the night
   "people", # Who else was here
   "geo" ];
@@ -761,7 +762,9 @@ sub guessvalues {
     }
     $i--;
   }
-  $rec->{pr} = $priceguess if $rec->{pr} eq "";
+  if (hasfield($rec->{type},"pr")) {
+    $rec->{pr} = $priceguess if $rec->{pr} eq "";
+  }
   if (hasfield($rec->{type},"vol")) {
     if ( uc($rec->{vol}) eq "X" ) {  # 'X' is an explicit way to indicate a null value
       $rec->{vol} = "";
@@ -772,13 +775,15 @@ sub guessvalues {
       }
     }
   }
-  my $curpr = curprice($rec->{pr});
-  if ($curpr) {
-    $rec->{com} =~ s/ *\[\d+\w+\] *$//i; # Remove old currency price comment "[12eur]"
-    $rec->{com} .= " [$rec->{pr}]";
-    $rec->{pr} = $curpr;
-  } else {
-    $rec->{pr} = price($rec->{pr});
+  if (hasfield($rec->{type},"pr")) {
+    my $curpr = curprice($rec->{pr});
+    if ($curpr) {
+      $rec->{com} =~ s/ *\[\d+\w+\] *$//i; # Remove old currency price comment "[12eur]"
+      $rec->{com} .= " [$rec->{pr}]";
+      $rec->{pr} = $curpr;
+    } else {
+      $rec->{pr} = price($rec->{pr});
+    }
   }
   if (!$rec->{vol} || $rec->{vol} < 0 ) {
     $rec->{alc} = "";  # Clear alc if no vol
@@ -2534,15 +2539,8 @@ sub about {
   print aboutlink("Ratebeer", "https://www.ratebeer.com");
   print aboutlink("Untappd", "https://untappd.com");
   print "</ul><p>\n";
+  print "<hr/>";
 
-  print "<hr/>";
-  if ($tz) {
-    print "Your time zone is: $tz<br>\n";
-  } else  {
-    print "You have not set your timezone. <br/>\n";
-  }
-  print "You can set it with a 'brewery' line like 'tz, Copenhagen'<br/>\n";
-  print "<hr/>";
   print "Shorthand for drink volumes<br/><ul>\n";
   for my $k ( sort { $volumes{$a} cmp $volumes{$b} } keys(%volumes) ) {
     print "<li><b>$k</b> $volumes{$k}</li>\n";
@@ -2553,7 +2551,7 @@ sub about {
   print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
 
   print "<p><hr>\n";
-  print "This site uses no cookies, and collects on personally identifiable information<p>\n";
+  print "This site uses no cookies, and collects no personally identifiable information<p>\n";
 
 
   print "<p><hr/>\n";
