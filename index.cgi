@@ -574,7 +574,9 @@ sub readdatafile {
       $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
     }
     $lastmonthday = $1 if ( $rec->{effdate} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-    $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $rec->{style} $rec->{maker} : $rec->{loc} ;"
+    my $fakestyle = "$rec->{type}, $rec->{subtype} $rec->{style} $rec->{maker}";
+      # TODO Drop this show, just save the last index for the effdate, and pick types when doing the graph #
+    $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $fakestyle : $rec->{loc} ;"
       if ($rec->{alcvol} > 0) ;
   } # line loop
 
@@ -2997,10 +2999,10 @@ sub fulllist {
     print $rec->{people};
 
     print "</span> <br class='no-wide'/>\n";
-    my $origsty = $rec->{style} || "???"; # TODO - wine and booze
+    my $origsty = $rec->{style} || "???";
     if ( $rec->{style} || $rec->{pr} || $rec->{vol} || $rec->{alc} || $rec->{rate} || $rec->{com} ) {
       if ($rec->{style}) {
-        my $beerstyle = beercolorstyle("$rec->{style} $rec->{maker}", "$rec->{date}", "[$rec->{style} $rec->{maker}] : $rec->{name}" );
+        my $beerstyle = beercolorstyle($rec);
         my $tag="span $beerstyle";
         my $ssty = $rec->{style};
         $ssty = shortbeerstyle($rec->{style}) if ( $qrylim ne "x" );
@@ -3571,11 +3573,19 @@ sub beercolor {
       return $prefix."9400d3" ;   # dark-violet, aggressive pink
 }
 
+# Helper to return a style attribute with suitable colors for (beer) style
 sub beercolorstyle {
-  # TODO - Take a whole $rec as one param
-  my $type = shift;
-  my $date = shift; # for error logging
+  my $rec = shift;
+  my $date = shift;
   my $line = shift;
+  my $type = "";
+  if (ref($rec)) {
+    $type = "$rec->{type},$rec->{subtype}: $rec->{style} $rec->{maker}";  # Fake something we can match
+    $date = $rec->{date};
+    $line = $rec->{rawline};
+  } else {
+    $type = $rec;
+  }
   my $bkg= beercolor($type,"#",$date,$line);
   my $col = $bgcolor;
   my $lum = ( hex($1) + hex($2) + hex($3) ) /3  if ($bkg =~ /^#?(..)(..)(..)/i );
