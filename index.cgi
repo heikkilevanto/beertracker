@@ -491,7 +491,7 @@ sub readdatafile {
     }
 
     # Collect stats on what we have seen
-    my $seenkey = seenkey($rec->{maker},$rec->{name});
+    my $seenkey = seenkey($rec);
     $seen{$rec->{maker}}++;
     $seen{$rec->{name}}++;
     $seen{$rec->{style}}++;
@@ -3040,8 +3040,9 @@ sub fulllist {
       }
       $ratecounts[$rec->{rate}] ++ if ($rec->{rate});
       if ( $qrylim eq "x" ) {
-        my $seenkey = seenkey($rec->{maker},$rec->{name});
-        if ($ratecount{$seenkey}) {
+        my $seenkey = $rec->{seenkey};
+        if ($seenkey && $ratecount{$seenkey}) {
+          print "<span class='only-wide'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>\n";
           my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
           if ($ratecount{$seenkey} == 1 )  {
             print " One rating: <b>$avgrate</b> ";
@@ -3049,9 +3050,12 @@ sub fulllist {
             print " Avg of <b>$ratecount{$seenkey}</b> ratings: <b>$avgrate</b><br>";
           }
         }
-        print "<span style='white-space: nowrap'>";
-        print seenline($rec->{maker}, $rec->{name});
-        print "</span><br>\n";
+        my $seenline = seenline($rec->{maker}, $rec->{name});
+        if ($seenline) {
+          print "<span style='white-space: nowrap'>";
+          print $seenline;
+          print "</span><br>\n";
+        }
         if ( $rec->{geo} ) {
           my (undef, undef, $gg) = geo($rec->{geo});
           print "Geo: $gg ";
@@ -3491,8 +3495,15 @@ sub datestr {
 # Helper to make a seenkey, an index to %lastseen and %seen
 # Normalizes the names a bit, to catch some misspellings etc
 sub seenkey {
-  my $maker = shift || "";
-  my $name = shift || "";
+  my $rec= shift;
+  my $maker;
+  my $name = shift;
+  if (ref($rec)) {
+    $maker = $rec->{maker} || "";
+    $name = $rec->{name} || "";
+  } else {
+    $maker = $rec;
+  }
   return "" if ( !$maker && !$name );
   my $key = lc("$maker:$name");
   return "" if ( $key =~ /misc|mixed/ );
@@ -3505,7 +3516,7 @@ sub seenkey {
 sub seenline {
   my $maker = shift;
   my $beer = shift;
-  my $seenkey = seenkey($maker,$beer);
+  my $seenkey = seenkey($maker,$beer);  # TODO - use $rec
   return "" unless ($seenkey);
   my $seenline = "";
   $seenline = "Seen <b>" . ($seen{$seenkey}). "</b> times: " if ($seen{$seenkey});
@@ -3688,7 +3699,7 @@ sub splitline {
   $v->{pr} = price( $v->{pr} );
   # Precalculate some things we often need
   ( $v->{date}, $v->{year}, $v->{time} ) = $v->{stamp} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
-  $v->{seenkey} = seenkey($v->{maker},$v->{name});
+  $v->{seenkey} = seenkey($v);
   my $alcvol = $v->{alc} * $v->{vol} || 0 ;
   $alcvol = 0 if ( $v->{pr} < 0  );  # skip box wines
   $v->{alcvol} = $alcvol;
