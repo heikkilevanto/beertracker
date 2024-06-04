@@ -3039,6 +3039,7 @@ sub fulllist {
         print "<br/>\n";
       }
       $ratecounts[$rec->{rate}] ++ if ($rec->{rate});
+      print "k='$rec->{seenkey}' <br>\n";  # TODO
       if ( $qrylim eq "x" ) {
         my $seenkey = $rec->{seenkey};
         if ($seenkey && $ratecount{$seenkey}) {
@@ -3498,14 +3499,27 @@ sub seenkey {
   my $rec= shift;
   my $maker;
   my $name = shift;
+  my $key;
   if (ref($rec)) {
     $maker = $rec->{maker} || "";
     $name = $rec->{name} || "";
+    if ($rec->{type} eq "Beer") {
+      $key = "$rec->{maker}:$rec->{name}";
+    } elsif ( $rec->{type} =~ /Restaurant|Night/ ) {
+      $key = "$rec->{type}:$rec->{loc}";  # TODO also subkey ?
+    } elsif ( $rec->{name} && $rec->{subkey} ) {  # Wine and booze: Wine:Red:Mywine
+      $key = "$rec->{type}:$rec->{subkey}:$rec->{name}";
+    } elsif ( $rec->{name} ) {  # Wine and booze: Wine::Mywine
+      $key = "$rec->{type}::$rec->{name}";
+    } else {
+      return "";  # Nothing to make a good key from
+    }
   } else {
     $maker = $rec;
+    $key = "$maker:$name";
   }
   return "" if ( !$maker && !$name );
-  my $key = lc("$maker:$name");
+  $key = lc($key);
   return "" if ( $key =~ /misc|mixed/ );
   $key =~ s/&amp;/&/g;
   $key =~ s/[^a-zåæø0-9:]//gi;  # Skip all special characters and spaces
