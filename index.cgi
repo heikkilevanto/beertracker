@@ -3039,7 +3039,7 @@ sub fulllist {
         print "<br/>\n";
       }
       $ratecounts[$rec->{rate}] ++ if ($rec->{rate});
-      print "k='$rec->{seenkey}' <br>\n";  # TODO
+      #print "k='$rec->{seenkey}' <br>\n";  # TODO
       if ( $qrylim eq "x" ) {
         my $seenkey = $rec->{seenkey};
         if ($seenkey && $ratecount{$seenkey}) {
