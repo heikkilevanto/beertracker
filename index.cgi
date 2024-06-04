@@ -278,7 +278,7 @@ my $url = $q->url;
 # Mostly from reading the file, used in various places
 ################################################################################
 # TODO - Check these
-my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated. For the graph
+my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated. For the graph # TODO - Drop this
 my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 my $foundrec = {};  # The record we found, either the last one or one defined by edit param
 my @records; # All data records, parsed
@@ -297,7 +297,8 @@ my $tz = "";
 my $copylocation = 0;  # should the copy button copy location too. TODO - Remove this, we use geo location for everything now
 my %averages; # floating average by effdate. Calculated in graph, used in extended full list
 my $starttime = "";  # For the datestr helper
-
+my %firstdateindex; # index of first record for each effdate
+my %lastdateindex; # index of last record for each effdate
 
 
 ################################################################################
@@ -426,6 +427,7 @@ sub readdatafile {
   my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
   my $alcinbody = 0; # Grams of alc inside my body
   my $balctime = 0; # Time of the last drink
+  my $recindex = -1; # count the records
 
   open F, "<$datafile"
     or error("Could not open $datafile for reading: $!".
@@ -439,8 +441,7 @@ sub readdatafile {
     my $rec = splitline( $_ );
     next unless $rec->{type};
 
-    # TODO - Make sure we accept missing values for fields
-
+    # Make sure we accept missing values for fields
     nullfields($rec);
 
     # Convert "Old" records to better types if possible
@@ -472,10 +473,14 @@ sub readdatafile {
       nullfields($rec); # clear undefined fields again, we may have changed the type
     }
     push (@records, $rec);
+    $recindex++;
 
     if (!$allfirstdate) {
       $allfirstdate=$rec->{effdate};
     }
+    $lastdateindex{$rec->{effdate}} = $recindex;
+    $firstdateindex{$rec->{effdate}} = $recindex unless ($firstdateindex{$rec->{effdate}});
+
     if ( /$qry/ ) {  # Total counts for different years
       $years{ $rec->{year} }++;
     } # TODO - Do we need these to depend on $qry ?
@@ -497,6 +502,7 @@ sub readdatafile {
       $ratesum{$rec->{seenkey}} += $rec->{rate};
       $ratecount{$rec->{seenkey}} ++;
     }
+    # Remember this record, if the one we asked for (or the last one)
     if ( ! $edit || ($edit eq $rec->{stamp} ) ) {
       $foundrec = $rec;
     }
@@ -3376,18 +3382,18 @@ sub units {
   my $extended = shift || "";
   my $s = unit($rec->{pr},"kr") .
     unit($rec->{vol}, "cl").
-    unit($rec->{alc],'%');
-  if ( $alc && $vol && $pr >= 0) {
+    unit($rec->{alc},'%');
+  if ( $rec->{alcvol} && $rec->{pr} >= 0) {
     my $dr = sprintf("%1.2f", $rec->{alcvol} / $onedrink );
     $s .= unit($dr, "d") if ($dr > 0.1);
   }
-  if ($ext) {
-    if ($pr && $vol) {
-      my $lpr = int($pr / $vol * 100);
+  if ($extended) {
+    if ($rec->{pr} && $rec->{vol}) {
+      my $lpr = int($rec->{pr} / $rec->{vol} * 100);
       $s .= unit($lpr, "kr/l");
     }
-    if ($bloodalc) {
-      $s .= unit( sprintf("%0.2f",$bloodalc), "‰");
+    if ($rec->{bloodalc}) {
+      $s .= unit( sprintf("%0.2f",$rec->{bloodalc}), "‰");
     }
   }
   return $s;
