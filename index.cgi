@@ -541,6 +541,7 @@ sub readdatafile {
         $bloodalc{$rec->{effdate}} = $ba;
       }
       $bloodalc{$rec->{stamp}} = $ba;  # indexed by the whole timestamp
+      $rec->{bloodalc} = $ba;
     }
 
     $lastdatesum += $rec->{alcvol} ;
@@ -3011,9 +3012,9 @@ sub fulllist {
       }
       if ($rec->{style} || $rec->{pr} || $rec->{alc}) {
         if ( $qrylim ne "x" ) {
-          print units($rec->{pr}, $rec->{vol}, $rec->{alc});
+          print units($rec);
         } else {
-          print units($rec->{pr}, $rec->{vol}, $rec->{alc}, $bloodalc{$rec->{stamp}});
+          print units($rec, "x");  # indicates extended units
         }
       }
       print "<br/>\n" ;
@@ -3369,25 +3370,25 @@ sub unit {
 
 # helper to display the units string
 # price, alc, vol, drinks
-# TODO - Take a whole $rec instead of individual values
+# optionally liter price and blood alc
 sub units {
-  my $pr = shift;
-  my $vol = shift;
-  my $alc = shift;
-  my $bloodalc = shift;
-  my $s = unit($pr,"kr") .
-    unit($vol, "cl").
-    unit($alc,'%');
+  my $rec = shift;
+  my $extended = shift || "";
+  my $s = unit($rec->{pr},"kr") .
+    unit($rec->{vol}, "cl").
+    unit($rec->{alc],'%');
   if ( $alc && $vol && $pr >= 0) {
-    my $dr = sprintf("%1.2f", ($alc * $vol) / $onedrink );
+    my $dr = sprintf("%1.2f", $rec->{alcvol} / $onedrink );
     $s .= unit($dr, "d") if ($dr > 0.1);
   }
-  if ( $pr && $vol && $bloodalc ) {  # bloodalc indicates we have the extended list
-    my $lpr = int($pr / $vol * 100);
-    $s .= unit($lpr, "kr/l");
-  }
-  if ($bloodalc) {
-    $s .= unit( sprintf("%0.2f",$bloodalc), "‰");
+  if ($ext) {
+    if ($pr && $vol) {
+      my $lpr = int($pr / $vol * 100);
+      $s .= unit($lpr, "kr/l");
+    }
+    if ($bloodalc) {
+      $s .= unit( sprintf("%0.2f",$bloodalc), "‰");
+    }
   }
   return $s;
 }
@@ -3575,7 +3576,7 @@ sub beercolor {
 
 # Helper to return a style attribute with suitable colors for (beer) style
 sub beercolorstyle {
-  my $rec = shift;
+  my $rec = shift;  # Can also be style as text, see below
   my $date = shift;
   my $line = shift;
   my $type = "";
