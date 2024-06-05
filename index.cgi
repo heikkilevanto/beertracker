@@ -352,6 +352,9 @@ if ( $op eq "About" ) {
 if ( $op eq "geo" ) {
   geodebug();
 }
+if ( $devversion && $op eq "copyproddata" ) {
+  copyproddata();
+}
 if ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
   lists();
 }
@@ -928,14 +931,7 @@ sub postdata {
 
   # Clear the cached files from the data dir.
   # All graphs for this user can now be out of date
-  foreach my $pf ( glob($datadir."*") ) {
-    next if ( $pf =~ /\.data$/ );
-    if ( $pf =~ /\/$username.*png/ ||   # All png files for this user
-         -M $pf > 7 ) {  # And any file older than a week
-      unlink ($pf)
-        or error ("Could not unlink $pf $!");
-      }
-  }
+  clearcachefiles();
 
   # Redirect to the same script, without the POST, so we see the results
   # But keep $op and $qry (maybe also filters?)
@@ -944,7 +940,17 @@ sub postdata {
   exit();
 } # POST data
 
-
+# Helper to clear the cached files from the data dir.
+sub clearcachefiles {
+  foreach my $pf ( glob($datadir."*") ) {
+    next if ( $pf =~ /\.data$/ );
+    if ( $pf =~ /\/$username.*png/ ||   # All png files for this user
+         -M $pf > 7 ) {  # And any file older than a week
+      unlink ($pf)
+        or error ("Could not unlink $pf $!");
+      }
+  }
+}
 
 
 ################################################################################
@@ -2568,10 +2574,42 @@ sub about {
   print "<b>Debug info </b><br/>\n";
   print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' ><span>Tail of the data file</span></a><br/>\n";
   print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
-  print "&nbsp; <a href='$url?o=geo'><span>Geolocation summary</span></a><br/>\n";
+  print "&nbsp; <a href='$url?o=geo'><span>Geolocation debug</span></a><br/>\n";
+  if ($devversion) {
+    print "<p/>&nbsp; <a href='$url?o=copyproddata'><span>Get production data</span></a><br>\n";
+  }
   exit();
 } # About
 
+################################################################################
+# Copy production data to dev file
+################################################################################
+sub copyproddata {
+  if (!$devversion) {
+    error ("Not allowed");
+  }
+  print "Copy production data to dev version <br>\n";
+  print "You will loose all data you have entered here on the dev version <br>\n";
+  if ( $qrylim ne "x" ) {
+    print "<p/>Are you sure?<ul>\n";
+    print "<li><a href='$url?o=copyproddata&f=x'><span>Yes, do it</span></a></li> \n";
+    print "<li><a href='$url'><span>No, get me out of here</span></a></li>\n";
+    print "</ul>\n";
+  } else { # Do the actual copying
+    print "<p/>\n";
+    my $bakfile = $datafile . ".bak";
+    my $prodfile = "../beertracker/$datafile";
+    error("$prodfile not readable") if ( ! -r $prodfile);
+    print "Copying $datafile to $bakfile <br>\n";
+    system("cat $datafile > $bakfile");
+    print "Copying $prodfile to $datafile <br>\n";
+    system("cat $prodfile > $datafile");
+    print "Clearing cached files <br>\n";
+    clearcachefiles();
+    print "<br>Ok, all done";
+
+  }
+}
 
 ################################################################################
 # Geolocation debug
