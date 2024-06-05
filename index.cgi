@@ -1149,7 +1149,11 @@ SCRIPTEND
           } else {
             loc.value = origloc;
           }
-
+          if ( origloc.trim != bestloc.trim ) {
+            console.log("o='" + origloc + "' b='" + bestloc + "'");
+            var of = document.getElementById("oldloc");
+            of.hidden = false;
+          }
         }
       }
     }
@@ -1308,8 +1312,7 @@ sub inputform {
   print "<tr>\n";
   print inputfield("loc","$sz1 id='loc'","Location", "", $loc);
   print "<td>";
-  print "($foundrec->{loc})"; # without geo overwriting it.
-     # TODO - Make hidden, show only when setting geo
+  print "<span id='oldloc' hidden>($foundrec->{loc})</span>\n"; # without geo overwriting it.
   print "&nbsp; &nbsp; <span onclick='showrows();'  align=right>&nbsp; ^</span>";
   print "</td></tr>\n";
 
