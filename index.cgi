@@ -438,8 +438,8 @@ sub readdatafile {
 
   while (<F>) {
     chomp();
-    s/#.*$//;  # remove comments
     next unless $_; # skip empty lines
+    next if ( /^ *#/ ); # skip comment lines
 
     my $rec = splitline( $_ );
     next unless $rec->{type};
