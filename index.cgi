@@ -2922,10 +2922,13 @@ sub fulllist {
   my $locmsum = 0;
   my $origpr = "";
   my $anchor;
+  my $rec = $records[$i];
+  my $lastrec; # TODO - Use this instead of the many last-somethings above
   $maxlines = $i*10 if ($maxlines <0); # neg means all of them
   while ( $i > 0 ) {  # Usually we exit at end-of-day
     $i--;
-    my $rec = $records[$i];
+    $lastrec = $rec;
+    $rec = $records[$i];
     next unless ( !$qry || $rec->{rawline} =~ /\b$qry\b/i );  # TODO - Make a helper for these two tests
     next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
     next if ( $qrylim eq "c" && (! $rec->{com} || $rec->{com} =~ /^ *\(/ ) );
@@ -2959,16 +2962,26 @@ sub fulllist {
           print "<br/>\n";
         } # fl avg on loc line, if not going to print a day summary line
         # Restaurant copy button
-        print "<form method='POST' style='display: inline;' class='no-print'>\n";
         my $rtype = $restaurants{$lastloc2} || "";
         $rtype =~ s/Restaurant, //;
-        print "<input type='hidden' name='loc' value='$lastloc2' />\n";
+        my $rtime = $1 . ":" . ($2+1) if ( $lastrec->{time} =~ /^(\d+):(\d+)/ );
+        my $hiddeninputs =
+          "<input type='hidden' name='loc' value='$lastloc2' />\n" .
+          "<input type='hidden' name='pr' value='$locmsum kr' />\n" .
+          "<input type='hidden' name='geo' value='' />\n" .
+          "<input type='hidden' name='date' value='$lastrec->{date}' />\n" .
+          "<input type='hidden' name='time' value='$rtime' />\n" ;
+        print "<form method='POST' style='display: inline;' class='no-print'>\n";
+        print $hiddeninputs;
         print "<input type='hidden' name='type' value='Restaurant' />\n";
-        print "<input type='hidden' name='food' value='' />\n";
-        print "<input type='hidden' name='reststyle' value='$rtype' />\n";
-        print "<input type='hidden' name='pr' value='$locmsum kr' />\n";
-        print "<input type='hidden' name='geo' value='' />\n";
+        print "<input type='hidden' name='subtype' value='$rtype' />\n";
         print "<input type='submit' name='submit' value='Rest'
+                    style='display: inline; font-size: x-small' />\n";
+        print "</form>\n";
+        print "<form method='POST' style='display: inline;' class='no-print'>\n";
+        print $hiddeninputs;
+        print "<input type='hidden' name='type' value='Night' />\n";
+        print "<input type='submit' name='submit' value='Night'
                     style='display: inline; font-size: x-small' />\n";
         print "</form>\n";
         print "<br/>\n";
@@ -3017,7 +3030,6 @@ sub fulllist {
         print "Geo: $gg $tdist $guess<br/>\n" if ($gg || $guess || $tdist);
       }
     }
-
     ###### The beer entry itself ##############
     my $time = $rec->{time};
     if ( $rec->{date} ne $rec->{effdate} ) {
@@ -3119,9 +3131,7 @@ sub fulllist {
 
     my %vols;     # guess sizes for small/large beers
     $vols{$rec->{vol}} = 1 if ($rec->{vol});
-    if ( $rec->{type} eq "Restaurant" ) {
-      $vols{"R"} = 1;
-    } elsif ( $rec->{type} =~ /Night/) {
+    if ( $rec->{type} =~ /Night|Restaurant/) {
       %vols=(); # nothing to copy
     } elsif ( $rec->{type}  eq "Wine" ) {
       $vols{12} = 1;
