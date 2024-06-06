@@ -2972,7 +2972,7 @@ sub fulllist {
         # Restaurant copy button
         my $rtype = $restaurants{$lastloc2} || "";
         $rtype =~ s/Restaurant, //;
-        my $rtime = $1 . ":" . ($2+1) if ( $lastrec->{time} =~ /^(\d+):(\d+)/ );
+        my $rtime = $1 . ":" . sprintf("%02d",$2+1) if ( $lastrec->{time} =~ /^(\d+):(\d+)/ );
         my $hiddeninputs =
           "<input type='hidden' name='loc' value='$lastloc2' />\n" .
           "<input type='hidden' name='pr' value='$locmsum kr' />\n" .
