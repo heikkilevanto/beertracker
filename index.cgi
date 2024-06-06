@@ -872,6 +872,14 @@ sub postdata {
     print STDERR "Not POSTing record. t='$rec->{type}' n='$rec->{name}' \n";
     $rec->{type} = "None";
   }
+  if ($rec->{subtype}) { # Convert subtypes like "Wine, Red" into rectype "Wine", subtype "Red"
+    for  my $rt ( sort(keys(%datalinetypes)) ) {
+      if ($rec->{subtype} =~ /^($rt) *,? *(.*)$/ ) {
+        $rec->{type} = $1;
+        $rec->{subtype} = $2;
+      }
+    }
+  }
 
   $rec->{edit} = "" unless defined($rec->{edit});
 
