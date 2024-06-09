@@ -35,11 +35,10 @@ selected from the "show" pull-down in the input form.
 ## Input fields
 The first part of the screen is the input area, where you can enter what beers
 you drink. Most of the fields start with default values. When you click on one,
-the value disappears, making it easier to type in a new value, especially on
-a phone.
+the whole field gets selected, so if you start typing, the old value disappears.
 
-The first three input fields are normally not visible. There is a little
-up-arrow next to the rate pull-down, clicking on that will show the fields.
+The first four input fields are normally not visible. There is a little
+up-arrow on first visible line, clicking on that will show the fields.
 
 ### Date
 Usually you can leave this empty, the system defaults to the current date. If
@@ -50,20 +49,30 @@ and 'Y' for yesterday.
 ### Time
 Here you can enter the time when you drank the beer. It accepts some common
 formats, like 23:55 1am 1pm 2335 etc. If you leave it emtpy, as you usually
-should, it takes the system time. (but see timezones under tips and tricks)
-Since drinking often continues past midnight, the system counts times up to
-08 next morning as belonging to the day before.
+should, it takes the system time. Since drinking often continues past midnight,
+the system counts times up to 08 next morning as belonging to the day before.
 
 ### Geo Coordinates
 Automagically filled in by the browser, these show your current location. If
 you don't want the system to use the location, put a simple X in there. Otherwise
 it will try to autofill it again.
 
+### Record type
+This is a pull-down for changing the type of the record. At the moment we have
+Beer, Wine, Booze, and also Restaurant and Night.
+
 ### Location
 Where you had your beer. Used for various lists. Guesses from the geo coordinates
 when possible. That failing, defaults to the same location as the previous beer.
-If you know you are not in that location, you can prefix it with a dot, so the
-system will not remember wrong geo coordinates for the place.
+
+### Subtype
+Most often used for wines, this could take values like Red or White. For beers
+the system can automatically fill in the country where the beer comes from.
+
+You can also enter the whole record type here, for example "Wine, Red".
+
+The subtype is preceded by the record type, so you can see it without flipping
+the hidden lines.
 
 ### Style
 The style of the beer. There are no predefined styles, you will have to enter
@@ -71,15 +80,11 @@ them the way you like to classify your beers. Used for various lists. The system
 tries to copy the style from an earlier entry of the same name. The field can
 also be used for the style of restaurants, booze, or wine.
 
-### Brewery
-Who made the beer. Again, if you have had the beer before (and spelled if the
-same way), the system will reuse the brewery name.
+### Maker
+Who made the beer (or wine or...). Again, if you have had the beer before (and
+spelled if the same way), the system will reuse the brewery name.
 
-The field can also be used for special cases that are not beers, for example
-"Wine, Red", or "Booze, Whisky", or "Restaurant, Thai". These will show up on
-the respective special lists.
-
-### Beer Name
+### Name
 The name of the beer (or wine, or whatever).
 
 ### Volume
@@ -106,12 +111,6 @@ symbols don't work. Maybe some day)
 A pull-down menu where you can choose how well you liked the beer, on a scale
 from "0 - Undrinkable" to "10 - I'm in love". Later you can see how you liked
 different beers, so you can choose one you like.
-
-### Quick link
-There is a simple "G" that is a quick link to showing the graph (see below).
-When the graph is shown, the link changes to "B" to show the beer board of the
-current location, or if not known, of my favourite place, Ølbaren. There is also
-the little '^' to make the date, time, and geo fields visible.
 
 ### Comments
 Here you can write any descriptions or comments about the beer. These are shown
@@ -142,6 +141,10 @@ Clears all input fields, in case you want to enter something completely differen
 This is the main menu, where you can choose what to show under the input form.
 See below.
 
+### Quick link
+There is a simple "G" that is a quick link to showing the graph (see below).
+When the graph is shown, the link changes to "B" to show the beer board of the
+current location, or if not known, of my favourite place, Ølbaren.
 
 ---
 
@@ -154,6 +157,8 @@ are identified by their timestamps.
 the record.
 * There is a 'Del' button for deleting the record, and a 'Cancel' link to get
 out of the edit mode.
+* There is no 'Record' button, you should use the 'Save' button to save your
+changes to that record.
 
 ---
 
@@ -238,13 +243,21 @@ averages for the graph, they are shown in the list for each day too.
 ### Beer Board
 This is a list of beers available on the current location (or Ølbaren, if no
 list available for that location). There is a pull-down for selecting the location
-out of the few I have scripted access to. Next to that is a link to change the
-list from the simple format to a more extended one.
+out of the few I have scripted access to. There are couple of links nex to it:
+* www links to the home page of the bar, if known
+* (PA) filters the list so it only shows Pale Ales, IPAs and suchlike, as those
+are what I most often drink.
+* (Reload) forces a reload of the beer list. Otherwise the system caches the
+list for a couple of hours to make things go faster. Useful if you see the
+bartender writing a new one on the blackboard.
+* (all) expands all the entries, making the list more informative, but also
+using up much more space on the screen.
 
 In the simple form, each beer is on a line of its own. The lines can get wider
 than your phone screen, you can scroll sideways to read the rest. The important
 details are in the beginning of the line.
-* Tap number. Color coded for beer style
+* Tap number. Color coded for beer style. Clicking on this expands that one
+beer entry.
 * Two buttons for entering the beer into the system. One for a small beer, the
 other for a large one. Usually 25 and 40 cl, but can vary depending on what sizes
 the beer is served.
@@ -273,7 +286,8 @@ Shows a line for each day with
 * How many drinks
 * How much money
 * Highest blood alc for the day
-* Locations where I have been that day, in reverse order.
+* Locations where I have been that day, in reverse order. Some are abbreviated,
+like "Øb" for Ølbaren and "H" for Home.
 
 Consecutive days with no drinks are compressed in one line like "... (3 days)..."
 
@@ -286,7 +300,7 @@ Underneath is the same data in a table form. For each month we have average
 drinks per day and week, and amount of money spent. For the current month there
 is also a projection where we might end at the same speed.
 
-There are also averages for wach calendar month, and averages and sums for
+There are also averages for each calendar month, and averages and sums for
 each year.
 
 #### Years
@@ -327,15 +341,12 @@ the style, alcohol, and brewery of the beer. Also this list excludes the "specia
 breweries, so it only shows things that really are beers.
 
 #### Wine and Booze
-This shows all the "beers" that have a special brewery that starts with "Wine"
-or "Booze" and a comma, for example `Wine, Red` or `Booze, Whisky`. Otherwise
-this is much like the beer list.
+Much like the beer list, these show record types "Wine" and "Booze".
 
 #### Restaurant
-Shows a list of the "special breweries" that start with "Restaurant" and a comma.
-For each it shows the style, what you had (comes from the beer name), when you
-visited last, and how much did you spend - if you entered that in the price field.
-Also the rating of the place if you entered one the last time.
+Shows a list of the "Restaurant" type records. Shows the style of the place,
+what you had there, how much you spent (total price, for one person), and ratings
+if you rated the place.
 
 #### Style
 Lists all beer styles known to the system, when and where you last had one.
@@ -345,31 +356,12 @@ Contains the copyright message, and all kind of useful details I didn't know
 where else to put.
 * Link to the source code and bug tracker on GitHub
 * Links to RateBeer and Untappd, as well as some of my favourite watering holes
-* Information on what time zone the system thinks you are in
 * Summary of the abbreviations for various volumes
 * Debug info, including a download of the whole data file or just the tail of it.
 
 
 ---
 
-## Tips and tricks
-
-* I use the brewery field for specifying non-beer categories. All of them should
-have a comma in the name, for example `Booze, whisky`, or `Wine, Red`. These can
-be shown in separate booze and wine lists. I try to put wine styles in the style
-field, but it is small, so most of the stuff needs to go in the comments.
-* I file restaurants the same way, for example `Restaurant, Thai`. I fill in the
-whole price of the evening, for one person. But no alcohol or volume, those I
-should have filed separately. In the comments I write what I ate and drank, some
-comments about prices, or what ever else comes to mind.
-* There is a small list of pre-defined beer sizes. The 'About' page will show
-you the current list. If traveling in the US, you can give the size as `12 oz`
-and it will be converted into 36 cl.
-* The time defaults to the time on the server. But you can enter a fake "brewery"
-line like `tz,Copenhagen` to change your time zone. It gets remembered until you
-set it again. To clear it, just set a new with 'tz,'
-
----
 
 ## Problems
 If you are just starting, I may be willing to help with technical issues, especially
