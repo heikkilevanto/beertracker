@@ -751,6 +751,7 @@ sub guessvalues {
   my $priceguess = "";
   my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
   my $i = scalar( @records )-1;
+  $rec->{name} = trim($rec->{name});  # Remove leading spaces if any
   while ( $i > 0 && $rec->{name}
     #&& ( !$rec->{maker} || !$rec->{vol} || !$rec->{style} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
     && ( missing($rec,"maker") || missing($rec,"vol") || missing($rec,"style") ||
