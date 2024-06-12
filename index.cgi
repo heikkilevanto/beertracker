@@ -278,7 +278,6 @@ my $url = $q->url;
 # Mostly from reading the file, used in various places
 ################################################################################
 # TODO - Check these
-my %drinktypes; # What types for any given date. alc, vol, and type. ;-separated. For the graph # TODO - Drop this
 my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 my $foundrec = {};  # The record we found, either the last one or one defined by edit param
 my @records; # All data records, parsed
@@ -585,10 +584,6 @@ sub readdatafile {
       $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
     }
     $lastmonthday = $1 if ( $rec->{effdate} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-    my $fakestyle = "$rec->{type}, $rec->{subtype} $rec->{style} $rec->{maker}";
-      # TODO Drop this show, just save the last index for the effdate, and pick types when doing the graph #
-    $drinktypes{$rec->{effdate}} .= "$rec->{alcvol} $fakestyle : $rec->{loc} ;"
-      if ($rec->{alcvol} > 0) ;
   } # line loop
 
   if ( ! $todaydrinks ) { # not today
@@ -753,7 +748,6 @@ sub guessvalues {
   my $i = scalar( @records )-1;
   $rec->{name} = trim($rec->{name});  # Remove leading spaces if any
   while ( $i > 0 && $rec->{name}
-    #&& ( !$rec->{maker} || !$rec->{vol} || !$rec->{style} || !$rec->{alc} || (defined($rec->{pr}) && $rec->{pr} eq '') )) {
     && ( missing($rec,"maker") || missing($rec,"vol") || missing($rec,"style") ||
          missing($rec,"alc") || missing($rec,"pr") )) {
     my $irec = $records[$i];
@@ -1568,26 +1562,30 @@ sub graph {
         my $totdrinks = $tot;
         my $drinkline = "";
         my $ndrinks = 0;
-        if ( $drinktypes{$date} ) {
-          my $lastloc = "";
-          foreach my $dt ( reverse(split(';', $drinktypes{$date} ) ) ) {
-            my ($alcvol, $type, $loc) =  $dt =~ /^([0-9.]+) ([^:]*) : (.*)/;
-            $lastloc = $loc unless ($lastloc);
-            next unless ( $type );
-            my $color = beercolor($type,"0x",$date,$dt);
-            my $drinks = $alcvol / $onedrink;
-            if ( $lastloc ne $loc  &&  $startoff - $endoff < 100 ) {
-              my $lw = $totdrinks + 0.2; # White line for location change
-              $lw += 0.1 unless ($bigimg eq "B");
-              $drinkline .= "$lw 0xffffff ";
-              $lastloc = $loc;
-              $ndrinks++;
+        if ( $lastdateindex{$date} ) {
+          my $i = $lastdateindex{$date};
+          my $lastloc = $records[$i]->{loc};
+          while ( $records[$i]->{effdate} eq $date ) {
+            my $drec = $records[$i];
+            if ( $drec->{alcvol} ) {
+              my $fakestyle = "$drec->{type}, $drec->{subtype} $drec->{style} $drec->{maker}";
+              my $color = beercolor($fakestyle,"0x",$date,$drec->{rawline});
+              my $drinks = $drec->{alcvol} / $onedrink;
+              if ( $lastloc ne $drec->{loc}  &&  $startoff - $endoff < 100 ) {
+                my $lw = $totdrinks + 0.2; # White line for location change
+                $lw += 0.1 unless ($bigimg eq "B");
+                $drinkline .= "$lw 0xffffff ";
+                $lastloc = $drec->{loc};
+                $ndrinks++;
+              }
+              $drinkline .= "$totdrinks $color ";
+              $ndrinks ++;
+              $totdrinks -= $drinks;
+              last if ($totdrinks <= 0 ); #defensive coding, have seen it happen once
             }
-            $drinkline .= "$totdrinks $color ";
-            $ndrinks ++;
-            $totdrinks -= $drinks;
-            last if ($totdrinks <= 0 ); #defensive coding, have seen it happen once
+            $i--;
           }
+
         }
         print STDERR "Many ($ndrinks) drink entries on $date \n"
           if ( $ndrinks >= 20 ) ;
