@@ -1246,7 +1246,7 @@ sub inputform {
   }
 
   print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
-  my $clr = "Onfocus='value=value.trim();select();'";
+  my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
   my $c2 = "colspan='2'";
   my $c3 = "colspan='3'";
   my $c4 = "colspan='4'";
@@ -1372,7 +1372,7 @@ sub inputform {
   if (hasfield($type,'com')) {
     print "<tr>";
     print " <td $c6><textarea name='com' cols='45' rows='3' id='com'
-      placeholder='$todaydrinks'>$foundrec->{com}</textarea></td>\n";
+      placeholder='$todaydrinks' autocapitalize='sentences'>$foundrec->{com}</textarea></td>\n";
     print "</tr>\n";
   }
 
