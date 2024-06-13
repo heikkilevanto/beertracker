@@ -1120,6 +1120,9 @@ SCRIPTEND
     function savelocation (myposition) {
       geoloc = " " + myposition.coords.latitude + " " + myposition.coords.longitude;
       var gf = document.getElementById("geo");
+      if (! gf) {  #
+        return;
+      }
       console.log ("Geo field: '" + gf.value + "'" );
       if ( ! gf.value ||  gf.value.match( /^ / )) { // empty, or starts with a space
         var el = document.getElementsByName("geo");
