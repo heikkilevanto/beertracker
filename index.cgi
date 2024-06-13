@@ -1120,7 +1120,7 @@ SCRIPTEND
     function savelocation (myposition) {
       geoloc = " " + myposition.coords.latitude + " " + myposition.coords.longitude;
       var gf = document.getElementById("geo");
-      if (! gf) {  #
+      if (! gf) {
         return;
       }
       console.log ("Geo field: '" + gf.value + "'" );
@@ -1155,10 +1155,9 @@ SCRIPTEND
           } else {
             loc.value = origloc;
           }
-          if ( origloc.trim != bestloc.trim ) {
-            console.log("o='" + origloc + "' b='" + bestloc + "'");
+          if ( origloc.trim() != bestloc.trim() ) {
             var of = document.getElementById("oldloc");
-            of.hidden = false;
+            of.hidden = false;  // display the original location
           }
         }
       }
