@@ -1323,7 +1323,8 @@ sub inputform {
 
   # Type, subtype, and style (flavor, coctail, country/region, etc)
   print "<td>$type \n";
-  print inputfield("subtype", $sz3, "", "nop");
+  #print inputfield("subtype", $sz3, "", "nop");
+  print inputfield("subtype", "size=10 $clr", "", "nop");
   print inputfield("style", $sz1, "Style");
   print "</td>";
 
