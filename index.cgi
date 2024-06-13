@@ -1421,11 +1421,16 @@ sub inputform {
 
 sub graph {
   if ( $allfirstdate && # Have data
-       ($op =~ /Graph([BS]?)-?(\d+)?-?(-?\d+)?/i || $op =~ /Board/i)) {
+       ($op =~ /Graph([BSX]?)-?(\d+)?-?(-?\d+)?/i || $op =~ /Board/i)) {
     my $defbig = $mobile ? "S" : "B";
     my $bigimg = $1 || $defbig;
     my $startoff = $2 || 30; # days ago
     my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
+    my $reload = "";
+    if ( $bigimg eq "X" ) {
+      $reload = 1;
+      $bigimg = $defbig;
+    }
     my $startdate = datestr ("%F", -$startoff );
     my $enddate = datestr( "%F", -$endoff);
     my $havedata = 0;
@@ -1445,7 +1450,7 @@ sub graph {
     my $pngfile = $plotfile;
     $pngfile =~ s/.plot$/-$startdate-$enddate-$bigimg.png/;
 
-    if (  -r $pngfile ) { # Have a cached file
+    if (  -r $pngfile && !$reload ) { # Have a cached file
       print "\n<!-- Cached graph op='$op' $pngfile -->\n";
     } else { # Have to plot a new one
 
@@ -1559,8 +1564,10 @@ sub graph {
             "size $threedays,200 behind  fc rgbcolor \"#005000\"  fillstyle solid noborder \n";
           $wkendtag++;
         }
-        my $totdrinks = $tot;
+
+        # Collect drink types into $drinkline ready for plotting
         my $drinkline = "";
+        my $totdrinks = $tot;
         my $ndrinks = 0;
         if ( $lastdateindex{$date} ) {
           my $i = $lastdateindex{$date};
