@@ -1334,12 +1334,11 @@ sub inputform {
   print "</td></tr>\n";
 
   # Type, subtype, and style (flavor, coctail, country/region, etc)
-  print "<td>$type \n";
+  print "<tr><td>$type\n";
   #print inputfield("subtype", $sz3, "", "nop");
   print inputfield("subtype", "size=10 $clr", "", "nop");
-  print inputfield("style", $sz1, "Style");
   print "</td>";
-
+  print inputfield("style", $sz1, "Style");
   print "</tr>\n";
 
   # Maker and name, for most drinks
@@ -2580,7 +2579,8 @@ sub datastats {
   print "<tr><td></td><td><b>Data file</b></td></tr>\n";
   print "<tr><td></td><td> $datafile </td></tr>\n";
   my $dfsize = -s $datafile;
-  print "<tr><td align='right'>$dfsize</td><td>bytes</td></tr>\n";
+  $dfsize = int($dfsize / 1024);
+  print "<tr><td align='right'>$dfsize</td><td>kb</td></tr>\n";
   my $datarecords = scalar(@records);
   my $totallines = $datarecords + $commentlines + $commentedrecords;
   print "<tr><td align='right'>$totallines</td><td> lines</td></tr>\n";
@@ -2589,6 +2589,8 @@ sub datastats {
   print "<tr><td align='right'>$datarecords</td><td> real data records</td></tr>\n";
 
   my %rectypes;
+  my %distinct;
+  my %seen;
   my $oldrecs = 0;
   my $comments = 0;
   my @rates;
@@ -2604,17 +2606,22 @@ sub datastats {
       $ratesum += $rec->{rate};
       $ratecount++;
     }
+    if ( ! $seen{$rec->{seenkey}} ) {
+      $seen{$rec->{seenkey}} = 1;
+      $distinct{$rec->{type}}++;
+    }
   }
   print "<tr><td align='right'>$oldrecs</td><td> old type lines</td></tr>\n";
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td>&nbsp;</td><td><b>Record types</b></td></tr>\n";
   foreach my $rt ( sort  { $rectypes{$b} <=> $rectypes{$a} } keys(%rectypes) )  {
-    print "<tr><td align='right'>$rectypes{$rt}</td><td> $rt</td></tr>\n";
+    print "<tr><td align='right'>$rectypes{$rt}</td>" .
+    "<td> $rt ($distinct{$rt} different)</td></tr>\n";
   }
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td>&nbsp;</td><td><b>Ratings</b></td></tr>\n";
   for (my $i = 0; $i <= 10; $i++) {
-    $rates[$i] = 0 unless ($rates[$i]);
+    $rates[$i] = "" unless ($rates[$i]);
     print "<tr><td align='right'>$rates[$i]</td><td>'$ratings[$i]' ($i)</td></tr>\n";
   }
   my $avg = sprintf("%3.1f", $ratesum / $ratecount);
