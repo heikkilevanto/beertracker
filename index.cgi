@@ -298,7 +298,8 @@ my %averages; # floating average by effdate. Calculated in graph, used in extend
 my $starttime = "";  # For the datestr helper
 my %firstdateindex; # index of first record for each effdate
 my %lastdateindex; # index of last record for each effdate
-
+my $commentlines = 0; # Number of comment lines in the data file
+my $commentedrecords = 0; # Number of commented-out data lines
 
 ################################################################################
 # Main program
@@ -344,6 +345,9 @@ if ( $op =~ /short/i ) {
 }
 if ( $op =~ /Months([BS])?/ ) {
   monthstat($1);
+}
+if ( $op =~ /DataStats/i ) {
+  datastats();
 }
 if ( $op eq "About" ) {
   about();
@@ -438,7 +442,15 @@ sub readdatafile {
   while (<F>) {
     chomp();
     next unless $_; # skip empty lines
-    next if ( /^ *#/ ); # skip comment lines
+    if ( /^[^0-9a-z]*#(20)?/i ) { # skip comment lines
+      # The set expression is to allow the BOM on the first line
+      if ($1) {
+        $commentedrecords++;
+      } else {
+        $commentlines++;
+      }
+      next;
+    }
 
     my $rec = splitline( $_ );
     next unless $rec->{type};
@@ -2027,6 +2039,7 @@ sub shortlist{
   print "<a href='$url?o=short'><b>Days</b></a>&nbsp;\n";
   print "<a href='$url?o=Months'><span>Months</span></a>&nbsp;\n";
   print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
+  print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
   print "<hr/>\n";
   my $filts = splitfilter($qry);
   print "<hr/>Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'><span>Clear</span></a>)" .
@@ -2154,6 +2167,7 @@ sub yearsummary {
   print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
   print "<a href='$url?o=Months'><span>Months</span></a>&nbsp;\n";
   print "<a href='$url?o=Years'><b>Years</b></a>&nbsp;\n";
+  print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
   print "<hr/>\n";
   my $nlines = param("maxl") || 10;
   if ($sortdr) {
@@ -2279,6 +2293,7 @@ sub monthstat {
   print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
   print "<a href='$url?o=Months'><b>Months</b></a>&nbsp;\n";
   print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
+  print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
   print "<hr/>\n";
 
   if ( $allfirstdate !~ /^(\d\d\d\d)/ ) {
@@ -2551,6 +2566,67 @@ sub monthstat {
 } # Monthly stats
 
 ################################################################################
+# Statistics of the data file
+################################################################################
+sub datastats {
+  print "<hr/>Other stats: \n";
+  print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
+  print "<a href='$url?o=Months'><span>Months</span></a>&nbsp;\n";
+  print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
+  print "<a href='$url?o=DataStats'><b>Datafile</b></a>&nbsp;\n";
+  print "<hr/>\n";
+
+  print "<table>\n";
+  print "<tr><td></td><td><b>Data file</b></td></tr>\n";
+  print "<tr><td></td><td> $datafile </td></tr>\n";
+  my $dfsize = -s $datafile;
+  print "<tr><td align='right'>$dfsize</td><td>bytes</td></tr>\n";
+  my $datarecords = scalar(@records);
+  my $totallines = $datarecords + $commentlines + $commentedrecords;
+  print "<tr><td align='right'>$totallines</td><td> lines</td></tr>\n";
+  print "<tr><td align='right'>$commentlines</td><td> lines of comments</td></tr>\n";
+  print "<tr><td align='right'>$commentedrecords</td><td> record lines commented out</td></tr>\n";
+  print "<tr><td align='right'>$datarecords</td><td> real data records</td></tr>\n";
+
+  my %rectypes;
+  my $oldrecs = 0;
+  my $comments = 0;
+  my @rates;
+  my $ratesum = 0;
+  my $ratecount = 0;
+  foreach my $rec ( @records ) {
+    my $rt = $rec->{type};
+    $rectypes{$rt} ++;
+    $oldrecs ++ if ( $rec->{rawline} !~ /; *$rt *;/ );
+    $comments++ if ( $rec->{com} );
+    if (defined($rec->{rate}) && $rec->{rate} =~ /\d/ ) {
+      $rates[ $rec->{rate} ] ++;
+      $ratesum += $rec->{rate};
+      $ratecount++;
+    }
+  }
+  print "<tr><td align='right'>$oldrecs</td><td> old type lines</td></tr>\n";
+  print "<tr><td>&nbsp;</td></tr>\n";
+  print "<tr><td>&nbsp;</td><td><b>Record types</b></td></tr>\n";
+  foreach my $rt ( sort  { $rectypes{$b} <=> $rectypes{$a} } keys(%rectypes) )  {
+    print "<tr><td align='right'>$rectypes{$rt}</td><td> $rt</td></tr>\n";
+  }
+  print "<tr><td>&nbsp;</td></tr>\n";
+  print "<tr><td>&nbsp;</td><td><b>Ratings</b></td></tr>\n";
+  for (my $i = 0; $i <= 10; $i++) {
+    $rates[$i] = 0 unless ($rates[$i]);
+    print "<tr><td align='right'>$rates[$i]</td><td>'$ratings[$i]' ($i)</td></tr>\n";
+  }
+  my $avg = sprintf("%3.1f", $ratesum / $ratecount);
+  print "<tr><td align='right'>$ratecount</td><td>Records with ratings</td></tr>\n";
+  print "<tr><td align='right'>$avg</td><td>Average rating</td></tr>\n";
+  print "<tr><td align='right'>$comments</td><td>Records with comments</td></tr>\n";
+
+  print "</table>\n";
+}
+
+
+################################################################################
 # About page
 ################################################################################
 
@@ -2719,7 +2795,6 @@ sub geodebug {
     print "</table>\n";
   }
 }  # Geo debug
-
 
 ################################################################################
 # various lists (beer, location, etc)
