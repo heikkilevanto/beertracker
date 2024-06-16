@@ -285,15 +285,13 @@ my %seen; # Count how many times various names seen before (for NEW marks)
 my $todaydrinks = "";  # For a hint in the comment box
 my %ratesum; # sum of ratings for every beer
 my %ratecount; # count of ratings for every beer, for averaging
-my %restaurants; # maps location name to restaurant types
+my %restaurants; # maps location name to restaurant records, mostly for the type
 my $allfirstdate = "";
 my %years;  # Keep track which years we have seen, for the "more" links
 my %bloodalc; # max blood alc for each day, and current bloodalc for each line
 my %lastseen; # Last time I have seen a given beer
 my %monthdrinks; # total drinks for each calendar month
 my %monthprices; # total money spent. Indexed with "yyyy-mm"
-my $tz = "";
-my $copylocation = 0;  # should the copy button copy location too. TODO - Remove this, we use geo location for everything now
 my %averages; # floating average by effdate. Calculated in graph, used in extended full list
 my $starttime = "";  # For the datestr helper
 my %firstdateindex; # index of first record for each effdate
@@ -608,7 +606,6 @@ sub readdatafile {
     $todaydrinks .=  sprintf("%4.2f‰",($bloodalc{$lasteffdate}))
       if ($lasteffdate && $bloodalc{$lasteffdate});
     $todaydrinks .= ")" ;
-    $copylocation = 1;
     my $today = datestr("%F");
     if ( $calmon && $today =~ /$calmon-(\d\d)/ ) {
       $lastmonthday = $1;
