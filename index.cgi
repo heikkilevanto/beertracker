@@ -286,7 +286,6 @@ my $todaydrinks = "";  # For a hint in the comment box
 my %ratesum; # sum of ratings for every beer
 my %ratecount; # count of ratings for every beer, for averaging
 my %restaurants; # maps location name to restaurant records, mostly for the type
-my $allfirstdate = "";
 my %years;  # Keep track which years we have seen, for the "more" links
 my %bloodalc; # max blood alc for each day, and current bloodalc for each line
 my %lastseen; # Last time I have seen a given beer
@@ -488,9 +487,6 @@ sub readdatafile {
     push (@records, $rec);
     $recindex++;
 
-    if (!$allfirstdate) {
-      $allfirstdate=$rec->{effdate};
-    }
     $lastdateindex{$rec->{effdate}} = $recindex;
     $firstdateindex{$rec->{effdate}} = $recindex unless ($firstdateindex{$rec->{effdate}});
 
@@ -1442,7 +1438,7 @@ sub inputform {
 ################################################################################
 
 sub graph {
-  if ( $allfirstdate && # Have data
+  if ( @records && # Have data
        ($op =~ /Graph([BSX]?)-?(\d+)?-?(-?\d+)?/i || $op =~ /Board/i)) {
     my $defbig = $mobile ? "S" : "B";
     my $bigimg = $1 || $defbig;
@@ -1459,7 +1455,7 @@ sub graph {
     my $futable = ""; # Table to display the 'future' values
 
     # Normalize limits to where we have data
-    while ( $startdate lt $allfirstdate) {
+    while ( $startdate lt $records[0]->{date}) {
       $startoff --;
       $startdate = datestr ("%F", -$startoff );
       if ($endoff >= 0 ) {
@@ -1467,7 +1463,6 @@ sub graph {
         $enddate = datestr( "%F", -$endoff);
       }
     }
-    #print STDERR "Rolled dates to $startoff $startdate - $endoff $enddate  - f= $allfirstdate\n";
 
     my $pngfile = $plotfile;
     $pngfile =~ s/.plot$/-$startdate-$enddate-$bigimg.png/;
@@ -2303,9 +2298,9 @@ sub monthstat {
   print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
   print "<hr/>\n";
 
-  if ( $allfirstdate !~ /^(\d\d\d\d)/ ) {
-    print "Oops, no year from allfirstdate '$allfirstdate' <br/>\n";
-    exit(); # Never mind missing footers
+  if ( $records[0]->{date} !~ /^(\d\d\d\d)/ ) { # Should not happen
+    print "Oops, no start year found <br/>\n";
+    return;
   }
   my $firsty=$1;
   my $pngfile = $plotfile;
