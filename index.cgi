@@ -525,10 +525,14 @@ sub readdatafile {
    if ( $rec->{type} eq "Restaurant" ) {
       my $restname = "Restaurant," . $rec->{loc};
       $seen{$restname}++;
-      if ( ( $rec->{subtype} ) ) {
-        $restaurants{$rec->{loc}} = $rec->{subtype}; # Remember style
-        next; # do not sum restaurant lines, drinks filed separately
+      # Remember last rest record, but don't overwrite it with
+      # one without subtype, if we already have a subtype
+      if ( $rec->{subtype} ||    # Remember last with subtype
+           ! $restaurants{$rec->{loc}} || # Or anything at all
+           ! $restaurants{$rec->{loc}}->{subtype} ) { # or safe to overwrite
+        $restaurants{$rec->{loc}} = $rec; # remember it
       }
+      next; # do not sum restaurant lines, drinks filed separately
     }
 
     if ($rec->{loc} && $rec->{geo} ) {
@@ -881,7 +885,7 @@ sub postdata {
   }
   if ($rec->{subtype}) { # Convert subtypes like "Wine, Red" into rectype "Wine", subtype "Red"
     for  my $rt ( sort(keys(%datalinetypes)) ) {
-      if ($rec->{subtype} =~ /^($rt) *,? *(.*)$/ ) {
+      if ($rec->{subtype} =~ /^($rt) *, *(.*)$/ ) {
         $rec->{type} = $1;
         $rec->{subtype} = $2;
       }
@@ -926,6 +930,7 @@ sub postdata {
            "x$rec->{stamp}" lt "x$stp") {  # Right Place to insert the line
            # Note the "x" trick, to force pure string comparision
         print F "$line\n";
+        $rec->{oldstamp} = $rec->{stamp}; # Remember the stamp for the edit link
         $rec->{stamp} = ""; # do not write it again
       }
       if ( !$stp || $stp ne $rec->{edit} ) {
@@ -948,9 +953,15 @@ sub postdata {
   # All graphs for this user can now be out of date
   clearcachefiles();
 
+  # if POSTing a restaurant, return to editing the record, so we can add
+  # more relevant fields.
+  my $editit = "";
+  if ( $rec->{type} =~ /Restaurant|Night/i && $sub ne "Del") {
+    $editit = $rec->{oldstamp};
+  }
   # Redirect to the same script, without the POST, so we see the results
   # But keep $op and $qry (maybe also filters?)
-  print $q->redirect( "$url?o=$op&q=$qry#here" );
+  print $q->redirect( "$url?o=$op&e=$editit&q=$qry#here" );
 
   exit();
 } # POST data
@@ -3061,7 +3072,7 @@ sub fulllist {
           print "<br/>\n";
         } # fl avg on loc line, if not going to print a day summary line
         # Restaurant copy button
-        my $rtype = $restaurants{$lastloc2} || "";
+        my $rtype = $restaurants{$lastloc2}->{subtype}|| "";
         $rtype =~ s/Restaurant, //;
         my $rtime = $1 . ":" . sprintf("%02d",$2+1) if ( $lastrec->{time} =~ /^(\d+):(\d+)/ );
         my $hiddeninputs =
@@ -3337,7 +3348,7 @@ sub fulllist {
 
 # Helper to trim leading and trailing spaces
 sub trim {
-  my $val = shift;
+  my $val = shift || "";
   $val =~ s/^ +//; # Trim leading spaces
   $val =~ s/ +$//; # and trailing
   $val =~ s/\s+/ /g; # and repeated spaces in the middle
