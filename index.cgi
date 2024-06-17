@@ -2564,6 +2564,7 @@ sub monthstat {
   exit();
 } # Monthly stats
 
+
 ################################################################################
 # Statistics of the data file
 ################################################################################
@@ -2803,6 +2804,7 @@ sub geodebug {
   }
 }  # Geo debug
 
+
 ################################################################################
 # various lists (beer, location, etc)
 ################################################################################
@@ -2918,7 +2920,7 @@ sub lists {
       $line = "<td>" . filt($rec->{loc},"b","","full") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> \n ".
               "$rstyle  &nbsp;\n" . glink("Restaurant $rec->{loc}") . "</td>\n" .
               "<td>$rec->{wday} $rec->{effdate} <i>$rec->{food}</i>". " $rpr <br class='no-wide'/> " .
-              " $ratestr</td>";
+              " &nbsp; $ratestr</td>";
 
     } elsif ( $op eq "Style" ) {
       next unless ( $rec->{type} eq "Beer" );
@@ -3526,8 +3528,9 @@ sub unit {
 sub units {
   my $rec = shift;
   my $extended = shift || "";
-  my $s = unit($rec->{pr},".-") .
+  my $s =
     unit($rec->{vol}, "cl").
+    unit($rec->{pr},".-") .
     unit($rec->{alc},'%');
   if ( $rec->{alcvol} && $rec->{pr} >= 0) {
     my $dr = sprintf("%1.2f", $rec->{alcvol} / $onedrink );
