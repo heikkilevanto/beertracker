@@ -566,7 +566,7 @@ sub readdatafile {
     $lastdatemsum += $rec->{pr};
     if ( $efftoday eq $rec->{effdate} ) { # Actually today
         $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
-        $todaydrinks .= " $lastdatemsum kr." if $lastdatemsum > 0  ;
+        $todaydrinks .= " $lastdatemsum.-" if $lastdatemsum > 0  ;
         if ($bloodalc{$rec->{effdate}}) { # Calculate the blood alc at the current time.
           # TODO - Only needed to show at the end of the day in ext full list
           $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$rec->{effdate}}); # max of the day
@@ -597,7 +597,7 @@ sub readdatafile {
 
   if ( ! $todaydrinks ) { # not today
     $todaydrinks = "($lastwday: " .
-      sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum kr ";
+      sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum.- ";
     $todaydrinks .=  sprintf("%4.2f‰",($bloodalc{$lasteffdate}))
       if ($lasteffdate && $bloodalc{$lasteffdate});
     $todaydrinks .= ")" ;
@@ -613,10 +613,10 @@ sub readdatafile {
 
   # Remember some values to display in the comment box when no comment to show
   $weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
-  $todaydrinks .= "\nWeek: $weeksum $weekmsum kr. " . (7 - scalar( keys(%weekdates) ) ) . "z";
+  $todaydrinks .= "\nWeek: $weeksum $weekmsum.- " . (7 - scalar( keys(%weekdates) ) ) . "z";
   $todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
         $monthdrinks{$calmon}/$onedrink, $monthdrinks{$calmon}/$onedrink/$lastmonthday).
-    " $monthprices{$calmon} kr."
+    " $monthprices{$calmon}.-."
     if ($calmon);
 
 } # readdatafile
@@ -2069,7 +2069,7 @@ sub shortlist{
     if ( $lastdate ne $rec->{effdate} ) {
       if ( $entry ) {
         my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
-        $entry .= " " . unit($daydrinks,"d") . " " . unit($daymsum,"kr");
+        $entry .= " " . unit($daydrinks,"d") . " " . unit($daymsum,".-");
         $entry .= " " . unit(sprintf("%0.2f",$bloodalc{$lastdate}), "‰")
           if ( ( $bloodalc{$lastdate} || 0 ) > 0.01 );
         print "<span style='white-space: nowrap'>$entry";
@@ -2218,14 +2218,14 @@ sub yearsummary {
         while ( $k < $nlines && $kl[$k] ) {
           my $loc = $kl[$k];
           my $alc = unit(sprintf("%5.0f", $alc{$loc} / $onedrink),"d");
-          my $pr = unit(sprintf("%6.0f", $sum{$loc}),"kr");
+          my $pr = unit(sprintf("%6.0f", $sum{$loc}),".-");
           print "<tr><td align='right'>$pr&nbsp;</td>\n" .
             "<td align=right>$alc&nbsp;</td>" .
             "<td>&nbsp;". filt($loc)."</td></tr>\n";
           $k++;
         }
         my $alc = unit(sprintf("%5.0f", $yalc / $onedrink),"d");
-        my $pr = unit(sprintf("%6.0f", $ysum),"kr");
+        my $pr = unit(sprintf("%6.0f", $ysum),".-");
         print "<tr><td align=right>$pr&nbsp;</td>" .
           "<td align=right>$alc&nbsp;</td>" .
           "<td> &nbsp;  = TOTAL for $thisyear $sofar</td></tr> \n";
@@ -2233,7 +2233,7 @@ sub yearsummary {
         if ($sofar) {
           $daynum = datestr("%j"); # day number in year
           my $alcp = unit(sprintf("%5.0f", $yalc / $onedrink / $daynum * 365),"d");
-          my $prp = unit(sprintf("%6.0f", $ysum / $daynum * 365),"kr");
+          my $prp = unit(sprintf("%6.0f", $ysum / $daynum * 365),".-");
           print "<tr><td align=right>$prp&nbsp;</td>".
             "<td align=right>$alcp&nbsp;</td>".
             "<td>&nbsp; = PROJECTED for whole $thisyear</td></tr>\n";
@@ -2241,12 +2241,12 @@ sub yearsummary {
         my $alcday = $yalc / $onedrink / $daynum;
         my $prday = $ysum / $daynum;
         my $alcdayu = unit(sprintf("%5.1f", $alcday),"d");
-        my $prdayu = unit(sprintf("%6.0f", $prday),"kr");
+        my $prdayu = unit(sprintf("%6.0f", $prday),".-");
         print "<tr><td align=right>$prdayu&nbsp;</td>" .
           "<td align=right>$alcdayu&nbsp;</td>" .
           "<td>&nbsp; = per day</td></tr>\n";
         $alcday = unit(sprintf("%5.1f", $alcday *7),"d");
-        $prday = unit(sprintf("%6.0f", $prday *7),"kr");
+        $prday = unit(sprintf("%6.0f", $prday *7),".-");
         print "<tr><td align=right>$prday&nbsp;</td>" .
           "<td align=right>$alcday&nbsp;</td>" .
           "<td>&nbsp; = per week</td></tr>\n";
@@ -2264,10 +2264,6 @@ sub yearsummary {
     $alc{$loc} += $rec->{alcvol};
     $ysum += abs($rec->{pr});
     $yalc += $rec->{alcvol};
-    #print "$i: $effdate $loc: $mak:  $pr:" . $sum{$loc} . "kr  " .$alc * $vol .":" . $alc{$loc} . " <br/>\n" ;
-    #if ($loc =~ /Home/i) {
-    #  print "$i: $effdate $loc: $mak:  p=$pr: " . $sum{$loc} . "kr  a=" .$alc * $vol .": " . $alc{$loc} . " <br/>\n" ;
-    #}
   }
   print "</table>\n";
   print "Show ";
@@ -2482,19 +2478,19 @@ sub monthstat {
   foreach $y ( reverse($firsty .. $lasty) ) {
     my $pr  = "";
     if ( $ydays[$y] ) { # have data for the year
-      $pr = unit(sprintf("%5.0f", ($yprice[$y]+500)/1000), "kkr") ;
+      $pr = unit(sprintf("%5.0f", ($yprice[$y]+500)/1000), " k") ;
       $grandtot += $yprice[$y];
     }
     $t .= "<td align=right>$pr";
     if ( $y eq $lasty && $yprice[$lasty] ) {
       $pr = $yprice[$lasty] / $ydays[$lasty] * 365;
-      $pr = unit(sprintf("%5.0f", ($pr+500)/1000), "kkr") ;
+      $pr = unit(sprintf("%5.0f", ($pr+500)/1000), " k") ;
       $pr =~ s/^ *//;  # Remove leading space
       $t .= "<br/>~$pr";
     }
     $t .= "</td>\n";
   }
-  $grandtot = unit(sprintf("%5.0f",($grandtot+500)/1000), "kkr");
+  $grandtot = unit(sprintf("%5.0f",($grandtot+500)/1000), " k");
   $t .= "<td align=right>$grandtot</td>\n";
   $t .= "</tr>\n";
 
@@ -2918,7 +2914,7 @@ sub lists {
       $ratestr = "$rec->{rate}: <b>$ratings[$rec->{rate}]</b>" if $rec->{rate};  # TODO - Make a helper for this
       my $restname = "Restaurant,$rec->{loc}";
       my $rpr = "";
-      $rpr = "&nbsp; $rec->{pr} kr" if ($rec->{pr} && $rec->{pr} >0) ;
+      $rpr = "&nbsp; $rec->{pr}.-" if ($rec->{pr} && $rec->{pr} >0) ;
       $line = "<td>" . filt($rec->{loc},"b","","full") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> \n ".
               "$rstyle  &nbsp;\n" . glink("Restaurant $rec->{loc}") . "</td>\n" .
               "<td>$rec->{wday} $rec->{effdate} <i>$rec->{food}</i>". " $rpr <br class='no-wide'/> " .
@@ -3049,7 +3045,7 @@ sub fulllist {
       # or there is a new loc coming,
       if ( $locdrinks > 0.1) {
         print "<br/>$lastwday ";
-        print "$lastloc2: " . unit($locdrinks,"d"). unit($locmsum, "kr"). "\n";
+        print "$lastloc2: " . unit($locdrinks,"d"). unit($locmsum, ".-"). "\n";
         if ($averages{$lastdate} && $locdrinks eq $daydrinks && $lastdate ne $rec->{effdate}) {
           print " (a=" . unit($averages{$lastdate},"d"). " )\n";
           if ($bloodalc{$lastdate}) {
@@ -3063,7 +3059,7 @@ sub fulllist {
         my $rtime = $1 . ":" . sprintf("%02d",$2+1) if ( $lastrec->{time} =~ /^(\d+):(\d+)/ );
         my $hiddeninputs =
           "<input type='hidden' name='loc' value='$lastloc2' />\n" .
-          "<input type='hidden' name='pr' value='$locmsum kr' />\n" .
+          "<input type='hidden' name='pr' value='$locmsum.-' />\n" .
           "<input type='hidden' name='geo' value='' />\n" .
           "<input type='hidden' name='date' value='$lastrec->{date}' />\n" .
           "<input type='hidden' name='time' value='$rtime' />\n" ;
@@ -3085,7 +3081,7 @@ sub fulllist {
       # day summary
       if ($lastdate ne $rec->{effdate} ) {
         if ( $locdrinks ne $daydrinks) {
-          print " <b>$lastwday</b>: ". unit($daydrinks,"d"). unit($daymsum,"kr");
+          print " <b>$lastwday</b>: ". unit($daydrinks,"d"). unit($daymsum,".-");
           if ($averages{$lastdate}) {
             print " (a=" . unit($averages{$lastdate},"d"). " )\n";
           }
@@ -3282,12 +3278,12 @@ sub fulllist {
     # loc summary: if nonzero, and diff from daysummary
     # or there is a new loc coming
     if ( $locdrinks > 0.1 ) {
-      print "$lastloc2: $locdrinks d, $locmsum kr. \n";
+      print "$lastloc2: $locdrinks d, $locmsum.- \n";
       }
       # day summary: if nonzero and diff from daysummary and end of day
     if ( abs ( $daydrinks > 0.1 ) && abs ( $daydrinks - $locdrinks ) > 0.1 &&
          $lastdate ne $efftoday ) {
-      print " <b>$lastwday</b>: $daydrinks d, $daymsum kr\n";
+      print " <b>$lastwday</b>: $daydrinks d, $daymsum.- \n";
       }
       print "<br/>";
     }
@@ -3530,7 +3526,7 @@ sub unit {
 sub units {
   my $rec = shift;
   my $extended = shift || "";
-  my $s = unit($rec->{pr},"kr") .
+  my $s = unit($rec->{pr},".-") .
     unit($rec->{vol}, "cl").
     unit($rec->{alc},'%');
   if ( $rec->{alcvol} && $rec->{pr} >= 0) {
@@ -3540,7 +3536,7 @@ sub units {
   if ($extended) {
     if ($rec->{pr} && $rec->{vol}) {
       my $lpr = int($rec->{pr} / $rec->{vol} * 100);
-      $s .= unit($lpr, "kr/l");
+      $s .= unit($lpr, "/l");
     }
     if ($rec->{bloodalc}) {
       $s .= unit( sprintf("%0.2f",$rec->{bloodalc}), "‰");
