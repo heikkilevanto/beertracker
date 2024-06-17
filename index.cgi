@@ -301,7 +301,6 @@ my $commentedrecords = 0; # Number of commented-out data lines
 ################################################################################
 # Main program
 ################################################################################
-# TODO - Much is still in one continuous script
 
 if ( $op eq "Datafile" ) {  # Must be done before sending HTML headers
   dumpdatafile(); # Never returns
@@ -394,7 +393,7 @@ sub dumpdatafile {
     $len =~ s/[^0-9]//g;
     $skip = $len-$max;
   }
-  print "# Date Time; Weekday; Effective-date; Location; Brewery; Beer; Vol; " .
+  print "# Date Time; [LineType;] Weekday; Effective-date; Location; Brewery; Beer; Vol; " .
     "Style; Alc; Price; Rating; Comment; GeoCoords\n";
   # TODO - Print a header for each line type
   while (<F>) {
@@ -1593,7 +1592,7 @@ sub graph {
             my $drec = $records[$i];
             if ( $drec->{alcvol} ) {
               my $fakestyle = "$drec->{type}, $drec->{subtype} $drec->{style} $drec->{maker}";
-              my $color = beercolor($fakestyle,"0x",$date,$drec->{rawline});
+              my $color = beercolor($drec,"0x");
               my $drinks = $drec->{alcvol} / $onedrink;
               if ( $lastloc ne $drec->{loc}  &&  $startoff - $endoff < 100 ) {
                 my $lw = $totdrinks + 0.2; # White line for location change
@@ -3722,11 +3721,16 @@ sub seenline {
 
 # Helper to assign a color for a beer
 sub beercolor {
-  my $type = shift;
+  my $rec = shift; # Can also be type
   my $prefix = shift || "0x";
-  my $date = shift; # for error logging
   my $line = shift;
-
+  my $type;
+  if ( ref($rec) ) {
+    $type = "$rec->{type},$rec->{subtype}: $rec->{style} $rec->{maker}";  # something we can match
+    $line = $rec->{rawline};
+  } else {
+    $type = $rec;
+  }
   my @drinkcolors = (   # color, pattern. First match counts, so order matters
       "003000", "restaurant", # regular bg color, no highlight
       "eac4a6", "wine[, ]+white",
@@ -3755,24 +3759,22 @@ sub beercolor {
           return $prefix.$drinkcolors[$i] ;
         }
       }
-      print STDERR "No color (on $date) for  '$line' \n";
+      print STDERR "No color for '$line' \n";
       return $prefix."9400d3" ;   # dark-violet, aggressive pink
 }
 
 # Helper to return a style attribute with suitable colors for (beer) style
 sub beercolorstyle {
   my $rec = shift;  # Can also be style as text, see below
-  my $date = shift;
-  my $line = shift;
+  my $line = shift; # for error logging
   my $type = "";
+  my $bkg;
   if (ref($rec)) {
-    $type = "$rec->{type},$rec->{subtype}: $rec->{style} $rec->{maker}";  # Fake something we can match
-    $date = $rec->{date};
-    $line = $rec->{rawline};
+    $bkg= beercolor($rec,"#");
   } else {
     $type = $rec;
+    $bkg= beercolor($type,"#",$line);
   }
-  my $bkg= beercolor($type,"#",$date,$line);
   my $col = $bgcolor;
   my $lum = ( hex($1) + hex($2) + hex($3) ) /3  if ($bkg =~ /^#?(..)(..)(..)/i );
   if ($lum < 64) {  # If a fairly dark color
