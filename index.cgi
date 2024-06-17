@@ -278,7 +278,6 @@ my $url = $q->url;
 # Mostly from reading the file, used in various places
 ################################################################################
 # TODO - Check these
-my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 my $foundrec = {};  # The record we found, either the last one or one defined by edit param
 my @records; # All data records, parsed
 my %seen; # Count how many times various names seen before (for NEW marks)
@@ -430,6 +429,7 @@ sub readdatafile {
   my $alcinbody = 0; # Grams of alc inside my body
   my $balctime = 0; # Time of the last drink
   my $recindex = -1; # count the records
+  my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
   open F, "<$datafile"
     or error("Could not open $datafile for reading: $!".
@@ -3003,15 +3003,8 @@ sub fulllist {
   }
   print "</span>\n";
   my $i = scalar( @records );
-  my $todaydate = datestr("%F");
-  if ($averages{$todaydate} && $records[$i-1]->{rawline} !~ /$todaydate/) {
-    # We have an average from the graph for today, but the last entry is not
-    # for today, so we have a zero day. Display the average
-    # TODO - Should that not be effdate?
-    # TODO - Do we need this at all?
-    print "<hr/>\n";
-    print "<b>". datestr("%a %F"). "</b> (a=$averages{$todaydate}) <br/>\n";
-  }
+  #my $todaydate = datestr("%F");
+  my $efftoday = datestr( "%F", -0.3, 1); #  today's date
   my $lastloc = "";
   my $lastdate = "today";
   my $lastloc2 = "";
@@ -3354,9 +3347,6 @@ sub param {
   return $val;
 }
 
-
-# $places .= " " . filt($rec->{loc}, "", $sloc, "short");
-
 # Helper to make a filter link
 sub filt {
   my $f = shift; # filter term
@@ -3667,7 +3657,7 @@ sub seenkey {
     } else { # TODO - Not getting keys for many records !!!
       return "";  # Nothing to make a good key from
     }
-  } else { # Called  the old way, should not happen too often
+  } else { # Called  the old way, like for beer board
     $maker = $rec;
     $key = "$maker:$name";
     #return "" if ( !$maker && !$name );
