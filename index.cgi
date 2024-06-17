@@ -3124,7 +3124,7 @@ sub fulllist {
         print "Geo: $gg $tdist $guess<br/>\n" if ($gg || $guess || $tdist);
       }
     }
-    ###### The beer entry itself ##############
+    ###### The (beer) entry itself ##############
     my $time = $rec->{time};
     if ( $rec->{date} ne $rec->{effdate} ) {
       $time = "($time)";
@@ -3199,7 +3199,7 @@ sub fulllist {
             print " Avg of <b>$ratecount{$seenkey}</b> ratings: <b>$avgrate</b><br>";
           }
         }
-        my $seenline = seenline($rec->{maker}, $rec->{name});
+        my $seenline = seenline($rec);
         if ($seenline) {
           print "<span style='white-space: nowrap'>";
           print $seenline;
@@ -3674,8 +3674,15 @@ sub seenkey {
 sub seenline {
   my $maker = shift;
   my $beer = shift;
-  my $seenkey = seenkey($maker,$beer);  # TODO - use $rec
+  my $seenkey;
+  if ( ref($maker) ) {
+    my $rec = $maker;
+    $seenkey = $rec->{seenkey};
+  } else {
+    $seenkey = seenkey($maker,$beer);  # TODO - use $rec
+  }
   return "" unless ($seenkey);
+  return "" unless ($seenkey =~ /[a-z]/ );  # At least some real text in it
   my $seenline = "";
   $seenline = "Seen <b>" . ($seen{$seenkey}). "</b> times: " if ($seen{$seenkey});
   my $prefix = "";
