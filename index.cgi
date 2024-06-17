@@ -1948,7 +1948,9 @@ sub beerboard {
         my $pr = $sp->{"price"};
         my $lbl;
         if ($extraboard == $id || $extraboard == -2) {
-          $lbl = "$vol cl: $pr.-";
+          $lbl = "$vol cl: $pr.- \n";
+          $lbl .= sprintf( "%d/l ", $pr * 100 / $vol );
+          $lbl .= sprintf( "%3.1fd", $vol * $alc / $onedrink);
         } else {
           $lbl = "$pr.-";
           $buttons .= "<td>";
@@ -1981,7 +1983,7 @@ sub beerboard {
         print "$hiddenbuttons";
         print "<input type='hidden' name='vol' value='T' />\n" ;  # taster
         print "<input type='hidden' name='pr' value='X' />\n" ;  # at no cost
-        print "<input type='submit' name='submit' value='Taster' /> \n";
+        print "<input type='submit' name='submit' value='Taster\n ' /> \n";
         print "</form>\n";
         print "</td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
