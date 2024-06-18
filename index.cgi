@@ -292,7 +292,6 @@ my %monthdrinks; # total drinks for each calendar month
 my %monthprices; # total money spent. Indexed with "yyyy-mm"
 my %averages; # floating average by effdate. Calculated in graph, used in extended full list
 my $starttime = "";  # For the datestr helper
-my %firstdateindex; # index of first record for each effdate
 my %lastdateindex; # index of last record for each effdate
 my $commentlines = 0; # Number of comment lines in the data file
 my $commentedrecords = 0; # Number of commented-out data lines
@@ -487,7 +486,6 @@ sub readdatafile {
     $recindex++;
 
     $lastdateindex{$rec->{effdate}} = $recindex;
-    $firstdateindex{$rec->{effdate}} = $recindex unless ($firstdateindex{$rec->{effdate}});
 
     if ( /$qry/ ) {  # Total counts for different years
       $years{ $rec->{year} }++;
@@ -2688,6 +2686,7 @@ sub about {
 ################################################################################
 # Copy production data to dev file
 ################################################################################
+# Nice to see up to date data when developing
 sub copyproddata {
   if (!$devversion) {
     error ("Not allowed");
@@ -2872,8 +2871,14 @@ sub lists {
       next if ( $rec->{type} ne "Beer" );
       my $beer = $rec->{name};
       $fld = $beer;
-      $beer =~ s"(/|%2F)+"<br/>&nbsp;"gi if ( length($beer) > 25 ); # Split long lines
-      $beer =~ s"\("<br/>&nbsp("gi if ( length($beer) > 25 ); # Split long lines
+      if ( length($beer) > 25 ) { # Split long lines
+        if ( $beer =~ s"(/|%2F)+"<br/>&nbsp;"gi ) {
+        } elsif ( $beer =~ s"(.{20,30} )"$1<br/>&nbsp; "gi ) {
+        #} elsif ( $beer =~ s"\("<br/>&nbsp("gi ) {
+        } else {
+          $beer .= " XXX";
+        }
+      }
       my $seentimes = "";
       $seentimes = "($seen{$fld})" if ($seen{$fld} );
       $line = "<td>" . filt($fld,"b",$beer,"full") . "&nbsp; $seentimes &nbsp;\n" . glink($rec->{maker},"G") ."</td>" .
@@ -3058,7 +3063,7 @@ sub fulllist {
         # Restaurant copy button
         my $rtype = $restaurants{$lastloc2}->{subtype}|| "";
         $rtype =~ s/Restaurant, //;
-        my $rtime = $1 . ":" . sprintf("%02d",$2+1) if ( $lastrec->{time} =~ /^(\d+):(\d+)/ );
+        my $rtime = $1 . ":" . sprintf("%02d",$2-1) if ( $lastrec->{time} =~ /^(\d+):(\d+)/ );
         my $hiddeninputs =
           "<input type='hidden' name='loc' value='$lastloc2' />\n" .
           "<input type='hidden' name='pr' value='$locmsum.-' />\n" .
@@ -3187,7 +3192,6 @@ sub fulllist {
         print "<br/>\n";
       }
       $ratecounts[$rec->{rate}] ++ if ($rec->{rate});
-      #print "k='$rec->{seenkey}' <br>\n";  # TODO
       if ( $qrylim eq "x" ) {
         my $seenkey = $rec->{seenkey};
         if ($seenkey && $ratecount{$seenkey}) {
