@@ -2835,7 +2835,9 @@ sub lists {
   my @displines;
   my %lineseen;
   my $anchor="";
-  print "&nbsp;<br/><table style='background-color: #00600;' >\n";
+  my $maxwidth = "style='max-width:30%;'";
+  #$maxwidth = "style='width: 15em'" if ($mobile);
+  print "&nbsp;<br/><table style='background-color: #00600; max-width: 60em;' >\n";
   # For some reason this sets a color between the cells, not within them.
   # which is ok, makes it easier to see what is what.
   my $i = scalar( @records );
@@ -2870,21 +2872,21 @@ sub lists {
     } elsif ( $op eq "Beer" ) {
       next if ( $rec->{type} ne "Beer" );
       my $beer = $rec->{name};
+      $beer =~ s"(/|%2f|\()+"<br/>&nbsp; $1"gi if (length($beer) > 25); # Split longer lines
       $fld = $beer;
-      if ( length($beer) > 25 ) { # Split long lines
-        if ( $beer =~ s"(/|%2F)+"<br/>&nbsp;"gi ) {
-        } elsif ( $beer =~ s"(.{20,30} )"$1<br/>&nbsp; "gi ) {
-        #} elsif ( $beer =~ s"\("<br/>&nbsp("gi ) {
-        } else {
-          $beer .= " XXX";
-        }
-      }
       my $seentimes = "";
-      $seentimes = "($seen{$fld})" if ($seen{$fld} );
-      $line = "<td>" . filt($fld,"b",$beer,"full") . "&nbsp; $seentimes &nbsp;\n" . glink($rec->{maker},"G") ."</td>" .
+      $seentimes = "$seen{$fld}" if ($seen{$fld} );
+      my $sterm = "$rec->{maker} $rec->{name}";
+      my $col = beercolorstyle($rec);
+      my $dispsty = "<span $col>" . shortbeerstyle($rec->{style}). "</span>";
+      $line = "<td $maxwidth>" . filt($fld,"b",$beer,"full") ;
+      $line .= "<br/>&nbsp; " if ( $mobile || length($fld) > 25 );
+      $line .= "&nbsp; $seentimes &nbsp;\n" .
+            unit($rec->{alc},'%') .
+            glink($sterm,"G") . rblink($sterm,"R") . utlink($sterm,"U") . "</td>" .
             "<td>$rec->{wday} $rec->{effdate} ".
             lst($op,$rec->{loc}) .  "\n <br class='no-wide'/> " .
-            lst($op,$rec->{style},"","[$rec->{style}]"). "\n " . unit($rec->{alc},'%') .
+            lst($op,$rec->{style},"",$dispsty). "\n " .
             lst($op,$rec->{maker},"i") . "&nbsp;</td>";
 
     } elsif ( $op eq "Wine" ) {
