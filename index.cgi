@@ -3458,8 +3458,8 @@ sub glink {
   my $txt = shift || "Google";
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
-  my $lnk = "&nbsp;<i>(<a href='https://www.google.com/search?q=" .
-    uri_escape($qry) . "' target='_blank' class='no-print'><span>$txt</span></a>)</i>\n";
+  my $lnk = "&nbsp;<i>(<a href='https://www.google.com/search?q=$qry'" .
+    " target='_blank' class='no-print'><span>$txt</span></a>)</i>\n";
   return $lnk;
 }
 
@@ -3469,8 +3469,8 @@ sub rblink {
   my $txt = shift || "Ratebeer";
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
-  my $lnk = "<i>(<a href='https://www.ratebeer.com/search?q=" . uri_escape($qry) .
-    "' target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
+  my $lnk = "<i>(<a href='https://www.ratebeer.com/search?q=$qry' " .
+    " target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
   return $lnk;
 }
 
@@ -3480,8 +3480,8 @@ sub utlink {
   my $txt = shift || "Untappd";
   return "" unless $qry;
   $qry = uri_escape_utf8($qry);
-  my $lnk = "<i>(<a href='https://untappd.com/search?q=" . uri_escape($qry) .
-    "' target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
+  my $lnk = "<i>(<a href='https://untappd.com/search?q=$qry'" .
+    " target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
   return $lnk;
 }
 
