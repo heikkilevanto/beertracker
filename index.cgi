@@ -264,6 +264,7 @@ $datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
 my $edit= param("e");  # Record to edit
 my $type = param("type"); # Switch record type
 my $qry = param("q");  # filter query, greps the list
+my $qryfield = param("qf") || "rawline"; # Which field to match $qry to
 my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info, "f" for forcing refresh of board
 my $yrlim = param("y"); # Filter by year
 my $op  = param("o");  # operation, to list breweries, locations, etc
@@ -2050,7 +2051,7 @@ sub shortlist{
   while ( $i > 0 ) {
     $i--;
     my $rec = $records[$i];  # it is a reference
-    next unless ( !$qry || $rec->{rawline} =~ /\b$qry\b/i || $i == 0 );
+    next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i || $i == 0 );
     next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ || $i == 0 );
     if ( $i == 0 ) {
       $lastdate = "";
@@ -2844,7 +2845,7 @@ sub lists {
   while ( $i > 0 ) {
     $i--;
     my $rec = $records[$i];
-    next unless ( !$qry || $rec->{rawline} =~ /\b$qry\b/i );
+    next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i );
     next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
     next if ( $rec->{type} eq "Tz" );
     $fld = "";
@@ -3030,7 +3031,7 @@ sub fulllist {
     $i--;
     $lastrec = $rec;
     $rec = $records[$i];
-    next unless ( !$qry || $rec->{rawline} =~ /\b$qry\b/i );  # TODO - Make a helper for these two tests
+    next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i );
     next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
     next if ( $qrylim eq "c" && (! $rec->{com} || $rec->{com} =~ /^ *\(/ ) );
       # Skip also comments like "(4 EUR)"
@@ -3386,10 +3387,23 @@ sub splitfilter {
 
 # Helper to pring a search form
 sub searchform {
+  my $rectype = shift || "Beer";
   my $r = "" .
     "<form method=GET accept-charset='UTF-8'> " .
     "<input type=hidden name='o' value=$op />\n" .
-    "<input type=text name='q' />  \n " .
+    "<input type=text name='q' value='$qry' />  \n " .
+    "<select name='qf'> \n";
+  my $fieldnamelistref = $datalinetypes{$rectype};
+  my @fieldnamelist = @{$fieldnamelistref};
+  $r .=  "<option value='rawline'>(any field)</option>\n";
+
+  foreach my $fn ( @fieldnamelist ) {
+    my $dsp = ucfirst($fn);
+    my $sel = "";
+    $sel = "selected" if ( $fn eq $qryfield );
+    $r .=  "<option value='$fn' $sel>$dsp</option>\n";
+  }
+  $r .= "</select> \n" .
     "<input type=submit value='Search'/> \n " .
     "</form> \n" .
     "";
