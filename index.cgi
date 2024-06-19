@@ -92,7 +92,6 @@ my $workdir = cwd();
 my $devversion = 0;  # Changes a few display details if on the development version
 $devversion = 1 unless ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ );
 $devversion = 1 if ( $workdir =~ /-dev/ );
-
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.
@@ -300,6 +299,11 @@ my $commentedrecords = 0; # Number of commented-out data lines
 ################################################################################
 # Main program
 ################################################################################
+
+
+if ($devversion) { # Print a line in error.log, to see what errors come from this invocation
+  print STDERR datestr() . " " . $q->request_method . " " .  $ENV{'QUERY_STRING'} . " \n";
+}
 
 if ( $op eq "Datafile" ) {  # Must be done before sending HTML headers
   dumpdatafile(); # Never returns
