@@ -3375,7 +3375,7 @@ sub filt {
   my $dsp = shift || $f;
   my $op = shift || $op || "";
   my $fld = shift || ""; # Field to filter by
-  $op = "o=$op&" if ($op);
+  $op = "o=$op" if ($op);
   my $param = $f;
   $param =~ s"[\[\]]""g; # remove the [] around styles etc
   my $endtag = $tag;
