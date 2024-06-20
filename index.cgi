@@ -3002,13 +3002,16 @@ sub fulllist {
   my @ratecounts = ( 0,0,0,0,0,0,0,0,0,0,0);
   print "\n<!-- Full list -->\n ";
   my $filts = splitfilter($qry);
-  print "<hr/>Filter: \n";
+  print "<hr/>\n";
+  print "<a href='$url?o=$op&q=.'><span>Filter</span></a> \n";
   print " -$qrylim " if ($qrylim);
   print "(<a href='$url'><span>Clear</span></a>) <b>$yrlim $filts</b>" if ($qry || $qrylim || $yrlim);
   print " &nbsp; \n";
-  print "<br/>" . searchform() . "<br/>" .
-    glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n"
-    if ($qry||$qrylim);
+  if ($qry||$qrylim) {
+    $qry = "" if ( $qry eq "." );
+    print "<br/>" . searchform() . "<br/>" ;
+    print  glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n";
+  }
 
   print "<span class='no-print'>\n";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&y=" . uri_escape_utf8($yrlim) .
