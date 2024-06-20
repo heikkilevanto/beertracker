@@ -3394,6 +3394,22 @@ sub filt {
   return $link;
 }
 
+# Helper to make a link to a list
+# TODO - Is this needed, wouldn't filt() above do the same?
+sub lst {
+  my $op = shift; # The kind of list
+  my $qry = shift; # Optional query to filter the list
+  my $tag = shift || "nop";
+  my $dsp = shift || $qry || "???";
+  my $fld = shift || "";
+  $fld = "&qf=$fld" if ($fld);
+  $qry = "&q=" . uri_escape_utf8($qry) if $qry;
+  $op = uri_escape_utf8($op);
+  my $link = "<a href='$url?o=$op$qry$fld' ><$tag>$dsp</$tag></a>";
+  return $link;
+}
+
+
 # Helper to split the filter string into individual words, each of which is
 # a new filter link. Useful with long beer names etc
 sub splitfilter {
@@ -3440,19 +3456,6 @@ sub newmark {
   return " <i>new</i> ";
 }
 
-# Helper to make a link to a list
-sub lst {
-  my $op = shift; # The kind of list
-  my $qry = shift; # Optional query to filter the list
-  my $tag = shift || "nop";
-  my $dsp = shift || $qry || "???";
-  my $fld = shift || "";
-  $fld = "&qf=$fld" if ($fld);
-  $qry = "&q=" . uri_escape_utf8($qry) if $qry;
-  $op = uri_escape_utf8($op);
-  my $link = "<a href='$url?o=$op$qry$fld' ><$tag>$dsp</$tag></a>";
-  return $link;
-}
 
 # Helper to make a link to a bar of brewery web page and/or scraped beer menu
 sub loclink {
