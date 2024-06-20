@@ -2055,8 +2055,7 @@ sub shortlist{
   while ( $i > 0 ) {
     $i--;
     my $rec = $records[$i];  # it is a reference
-    next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i || $i == 0 );
-    next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ || $i == 0 );
+    next if filtered ( $rec );
     if ( $i == 0 ) {
       $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
@@ -3048,8 +3047,7 @@ sub fulllist {
     $i--;
     $lastrec = $rec;
     $rec = $records[$i];
-    next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i );
-    next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
+    next if filtered ( $rec );
     next if ( $qrylim eq "c" && (! $rec->{com} || $rec->{com} =~ /^ *\(/ ) );
       # Skip also comments like "(4 EUR)"
     if ( $qrylim =~ /^r(\d*)/ ){  # any rating
@@ -3421,6 +3419,24 @@ sub splitfilter {
   return $ret;
 }
 
+
+# Helper to filter out records
+# Checks them against $qry, $qryfield and $yrlim
+#    next if filtered ( $rec );
+# returns 0 if the record should be displayed
+sub filtered {
+  my $rec = shift;
+  my $skip = 0; # default to displaying it
+  if ( $qry ) {
+    $rec->{$qryfield} = "" if ( !defined($rec->{$qryfield} ) );
+    $skip = 1 if ( $rec->{$qryfield} !~ /\b$qry\b/i ) ;
+  }
+  if ( $yrlim ) {
+    $skip = 1 if ( $rec->{rawline} !~ /^$yrlim/ );
+  }
+  return $skip;
+}
+
 # Helper to pring a search form
 sub searchform {
   my $rectype = shift || "Beer";
@@ -3433,7 +3449,7 @@ sub searchform {
   my @fieldnamelist = @{$fieldnamelistref};
   $r .=  "<option value='rawline'>(any field)</option>\n";
 
-  foreach my $fn ( @fieldnamelist ) {
+  foreach my $fn ( fieldnames() ) {
     my $dsp = ucfirst($fn);
     my $sel = "";
     $sel = "selected" if ( $fn eq $qryfield );
@@ -3919,18 +3935,37 @@ sub splitline {
 }
 
 
+# Get all field names for a type, or all
+sub fieldnames {
+  my $type = shift || "";
+  my @fields;
+  my @typelist;
+  if ( $type ) {
+    @typelist = ( $type ) ;
+  } else {
+    @typelist = sort( keys ( %datalinetypes ) );
+  }
+  my %seen;
+  foreach my $t ( @typelist ) {
+    my $fieldnamelistref = $datalinetypes{$t};
+    my @fieldnamelist = @{$fieldnamelistref};
+    foreach my $f ( @fieldnamelist ) {
+      push @fields, $f unless ( $seen{$f} );
+      $seen{$f} = 1;
+    }
+  }
+  return @fields;
+}
+
 # Create a line out of a record
 sub makeline {
   my $rec = shift;
   my $linetype = $rec->{type} || "Old";
   my $line = "";
   return "" if ($linetype eq "None"); # Not worth saving
-  my $fieldnamelistref = $datalinetypes{$linetype};
-  my @fieldnamelist = @{$fieldnamelistref};
-  for ( my $i = 0; $fieldnamelist[$i]; $i++ ) {
-    $line .=  $rec->{$fieldnamelist[$i]} || "";
+  foreach my $f ( fieldnames($linetype) ) {
+    $line .=  $rec->{$f} || "";
     $line .= "; ";
-    #print STDERR "$line \n";
   }
   return trim($line);
 }
@@ -3941,9 +3976,9 @@ sub nullfields {
   my $linetype = shift || $rec->{type} || "Old";
   my $fieldnamelistref = $datalinetypes{$linetype};
   my @fieldnamelist = @{$fieldnamelistref};
-  for ( my $i = 0; $fieldnamelist[$i]; $i++ ) { # TODO  drop the $i
-    $rec->{$fieldnamelist[$i]} = ""
-      unless defined($rec->{$fieldnamelist[$i]});
+  foreach my $f ( fieldnames($linetype) ) {
+    $rec->{$f} = ""
+      unless defined($rec->{$f});
   }
 }
 
@@ -3966,9 +4001,7 @@ sub hasfield {
   my $field = shift;
   print STDERR "hasfield: bad params linetype='$linetype' field='$field' \n"
      if (!$linetype || !$field);
-  my $fieldnamelistref = $datalinetypes{$linetype};
-  my @fieldnamelist = @{$fieldnamelistref};
-  return grep( /^$field$/, @fieldnamelist );
+  return grep( /^$field$/, fieldnames($linetype) );
 }
 
 
