@@ -3444,10 +3444,10 @@ sub searchform {
     "<form method=GET accept-charset='UTF-8'> " .
     "<input type=hidden name='o' value=$op />\n" .
     "<input type=text name='q' value='$qry' />  \n " .
-    "<select name='qf'> \n";
+    "<select name='qf' style='width:6em;'> \n";
   my $fieldnamelistref = $datalinetypes{$rectype};
   my @fieldnamelist = @{$fieldnamelistref};
-  $r .=  "<option value='rawline'>(any field)</option>\n";
+  $r .=  "<option value='rawline'>(any)</option>\n";
 
   foreach my $fn ( fieldnames() ) {
     my $dsp = ucfirst($fn);
