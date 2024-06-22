@@ -264,7 +264,7 @@ my $edit= param("e");  # Record to edit
 my $type = param("type"); # Switch record type
 my $qry = param("q");  # filter query, greps the list
 my $qryfield = param("qf") || "rawline"; # Which field to match $qry to
-my $qrylim = param("f"); # query limit, "c" or "r" for comments or ratings, "x" for extra info, "f" for forcing refresh of board
+my $qrylim = param("f"); # query limit, "x" for extra info, "f" for forcing refresh of board
 my $yrlim = param("y"); # Filter by year
 my $op  = param("o");  # operation, to list breweries, locations, etc
 my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
@@ -3004,28 +3004,19 @@ sub fulllist {
   print "<hr/>\n";
   print "<a href='$url?o=$op&q=.'><span>Filter</span></a> \n";
   print " -$qrylim " if ($qrylim);
-  print "(<a href='$url'><span>Clear</span></a>) <b>$yrlim $filts</b>" if ($qry || $qrylim || $yrlim);
+  print "(<a href='$url'><span>Clear</span></a>) <b>$yrlim $filts</b>" if ($qry || $qrylim || $yrlim || $qryfield!~/rawline/i);
   print " &nbsp; \n";
-  if ($qry||$qrylim) {
-    $qry = "" if ( $qry eq "." );
-    print "<br/>" . searchform() . "<br/>" ;
-    print  glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n";
-  }
-
   print "<span class='no-print'>\n";
-  print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&y=" . uri_escape_utf8($yrlim) .
-      "&f=r' ><span>Ratings</span></a>\n";
-  print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
-      "&f=c' ><span>Comments</span></a>\n";
   print " &nbsp; Show: ";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
       "&f=x' ><span>Extra info</span></a><br/>\n";
-  if ($qrylim) {
-    for ( my $i = 0; $i < 11; $i++) {
-      print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) . "&f=r$i' ><span>$i</span></a> &nbsp;";
-    }
-  }
   print "</span>\n";
+  if ($qry||$qrylim||$qryfield!~/rawline/i) {
+    $qry = "" if ( $qry eq "." );
+    print "<br/>" . searchform() . "<br/>" ;
+    print  glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n" if ($qry);
+  }
+
   my $i = scalar( @records );
   #my $todaydate = datestr("%F");
   my $efftoday = datestr( "%F", -0.3, 1); #  today's date
@@ -3048,13 +3039,6 @@ sub fulllist {
     $lastrec = $rec;
     $rec = $records[$i];
     next if filtered ( $rec );
-    next if ( $qrylim eq "c" && (! $rec->{com} || $rec->{com} =~ /^ *\(/ ) );
-      # Skip also comments like "(4 EUR)"
-    if ( $qrylim =~ /^r(\d*)/ ){  # any rating
-      my $rlim = $1 || "";
-      next if ( !$rlim && !$rec->{rate}); # l=r: Skip all that don't have a rating
-      next if ( $rlim && $rec->{rate} ne $rlim );  # filter on "r7" or such
-      }
     nullallfields($rec);  # Make sure we don't access undefined values, fills the log with warnings
     $maxlines--;
 
@@ -3430,6 +3414,12 @@ sub filtered {
   if ( $qry ) {
     $rec->{$qryfield} = "" if ( !defined($rec->{$qryfield} ) );
     $skip = 1 if ( $rec->{$qryfield} !~ /\b$qry\b/i ) ;
+  } else {
+    if (  $qryfield !~ /rawline/i ) {
+      if ( ! defined($rec->{$qryfield}) || ! $rec->{$qryfield} ) {
+        $skip = 1;
+      }
+    }
   }
   if ( $yrlim ) {
     $skip = 1 if ( $rec->{rawline} !~ /^$yrlim/ );
