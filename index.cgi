@@ -858,6 +858,8 @@ sub postdata {
 
   # Sanity check, do not accept conflicting locations
   # Happens typically when entering data at home
+  # TODO - Check also if we have a geo for the given location, and the guess is
+  # too far from it, don't save a conflicting geo
   if ( $rec->{geo} =~ / *\d+/) {
     my  ($guess, $dist) = guessloc($rec->{geo});
     if ( $rec->{loc} && $guess  # We have location name, and geo guess
