@@ -861,9 +861,9 @@ sub postdata {
   if ( $rec->{geo} =~ / *\d+/) {
     my  ($guess, $dist) = guessloc($rec->{geo});
     if ( $rec->{loc} && $guess  # We have location name, and geo guess
-        && $geolocations{$rec->{loc}} # And we know the geo for the location
+        && $dist < 20  # and the guess is good enough
         && $rec->{loc} !~ /$guess/i ) { # And they differ
-      print STDERR "Refusing to store geo '$rec->{geo}' for '$rec->{loc}', it is closer to '$guess' \n";
+      print STDERR "Refusing to store geo '$rec->{geo}' for '$rec->{loc}', it is closer to '$guess' at $dist m\n";
       $rec->{geo} = "";  # Ignore the suspect geo coords
     }
   }
@@ -1149,7 +1149,7 @@ SCRIPTEND
             el[i].value=geoloc;
           }
         }
-        console.log("Saved the location " + geoloc + " in " + el.length + " inputs");
+        console.log("Saved the location '" + geoloc + "' in " + el.length + " inputs");
         var loc = document.getElementById("loc");
         var locval = loc.value + " ";
         if ( locval.startsWith(" ")) {
@@ -3998,7 +3998,7 @@ sub hasfield {
 # Debug dump of record into STDERR
 sub dumprec {
   my $rec = shift;
-  my $msg = shift;
+  my $msg = shift || "";
   print STDERR "$msg -- ";
   for my $k ( sort(keys( %{$rec} ) ) )  {
     print STDERR "$k:'$rec->{$k}'  ";
