@@ -3163,7 +3163,6 @@ sub fulllist {
     print $rec->{people};
 
     print "</span> <br class='no-wide'/>\n";
-    my $origsty = $rec->{style} || "???";
     if ( $rec->{style} || $rec->{pr} || $rec->{vol} || $rec->{alc} || $rec->{rate} || $rec->{com} ) {
       if ($rec->{style}) {
         my $beerstyle = beercolorstyle($rec);
@@ -3254,10 +3253,9 @@ sub fulllist {
     my $fieldnamelistref = $datalinetypes{$rec->{type}};
     my @fieldnamelist = @{$fieldnamelistref};
     foreach my $k ( @fieldnamelist ) {
-      next if $k =~ /stamp|wday|effdate|loc|sty|vol|geo|rate|com|people|food/; # not these
+      next if $k =~ /stamp|wday|effdate|loc|vol|geo|rate|com|people|food/; # not these
       print "<input type='hidden' name='$k' value='$rec->{$k}' />\n";
     }
-    print "<input type='hidden' name='sty' value='$origsty' />\n";
     print "<input type='hidden' name='geo' id='geo' value='' />\n"; # with the id
     print "<input type='hidden' name='o' value='$op' />\n";  # Stay on page
     print "<input type='hidden' name='q' value='$qry' />\n";
