@@ -3011,7 +3011,7 @@ sub fulllist {
   print "<span class='no-print'>\n";
   print " &nbsp; Show: ";
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
-      "&f=x' ><span>Extra info</span></a><br/>\n";
+      "&f=x&qf=$qryfield' ><span>Extra info</span></a><br/>\n";
   print "</span>\n";
   if ($qry||$qrylim||$qryfield!~/rawline/i) {
     $qry = "" if ( $qry eq "." );
@@ -3411,6 +3411,9 @@ sub splitfilter {
 sub filtered {
   my $rec = shift;
   my $skip = 0; # default to displaying it
+  if ( $qryfield eq "shortstyle" ) {
+    checkshortstyle($rec); # Make sure we have a short style
+  }
   if ( $qry ) {
     $rec->{$qryfield} = "" if ( !defined($rec->{$qryfield} ) );
     $skip = 1 if ( $rec->{$qryfield} !~ /\b$qry\b/i ) ;
@@ -3439,7 +3442,7 @@ sub searchform {
   my @fieldnamelist = @{$fieldnamelistref};
   $r .=  "<option value='rawline'>(any)</option>\n";
 
-  foreach my $fn ( fieldnames() ) {
+  foreach my $fn ( fieldnames(), "shortstyle" ) {
     my $dsp = ucfirst($fn);
     my $sel = "";
     $sel = "selected" if ( $fn eq $qryfield );
@@ -3887,7 +3890,13 @@ sub shortbeerstyle {
   return $sty;
 }
 
-
+# Check that the record has a short style
+sub checkshortstyle {
+  my $rec = shift;
+  return unless $rec;
+  return if $rec->{shortstyle}; # already have it
+  $rec->{shortstyle} = shortbeerstyle($rec->{style});
+}
 
 # Split a data line into a hash. Precalculate some fields
 sub splitline {
