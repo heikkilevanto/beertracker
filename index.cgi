@@ -3168,9 +3168,13 @@ sub fulllist {
         my $beerstyle = beercolorstyle($rec);
         my $tag="span $beerstyle";
         my $ssty = $rec->{style};
-        $ssty = shortbeerstyle($rec->{style}) if ( $qrylim ne "x" );
-        print filt("$ssty",$tag,"","","style") . newmark($rec->{style}) . " "   ;
-        print "<br>\n" if ( $qrylim eq "x" );
+        if ( $qrylim ne "x" ) {
+          $ssty = shortbeerstyle($rec->{style}) ;
+          print filt("$ssty",$tag,"","","shortstyle") . newmark($rec->{style}) . " "   ;
+          print "<br>\n";
+        } else {
+          print filt("$ssty",$tag,"","","style") . " "   ;
+        }
       }
       if ($rec->{style} || $rec->{pr} || $rec->{alc}) {
         if ( $qrylim ne "x" ) {
