@@ -448,6 +448,8 @@ sub readdatafile {
     # TODO - Make the beer etc lists read the last year, and an option to read all
   } elsif ( $maxlines < 0 || $maxlines > 50 ){ # Any non-standard list length
     $notbefore = "1900-01-01"; # read the whole file
+  } elsif ( $qry || $qryfield ){ # We need only a few selected records, read them all
+    $notbefore = "1900-01-01"; # read the whole file
   } elsif ( $op =~ /Graph.?(-\d+)/) {
     my $days = $1 - 30; # 30 days to get the floating avg to work
     $notbefore = datestr("%F", $days);
