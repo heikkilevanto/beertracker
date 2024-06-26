@@ -439,11 +439,27 @@ sub readdatafile {
     or error("Could not open $datafile for reading: $!".
       "<br/>Probably the user hasn't been set up yet" );
 
+  # Decide what data we can safely skip
+  my $notbefore = datestr("%F", -90); # 90 days is a good default for most
+  if ( $q->request_method eq "POST" ) {
+    $notbefore = datestr("%F", -180); # Bit more for getting values to guess
+  } elsif ( $op =~ /Months|Years|DataStats|Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ){
+    $notbefore = "1900-01-01"; # read the whole file
+    # TODO - Make the beer etc lists read the last year, and an option to read all
+  } elsif ( $maxlines < 0 || $maxlines > 50 ){ # Any non-standard list length
+    $notbefore = "1900-01-01"; # read the whole file
+  } elsif ( $op =~ /Graph.?(-\d+)/) {
+    my $days = $1 - 30; # 30 days to get the floating avg to work
+    $notbefore = datestr("%F", $days);
+  }
+  @records = (); # forget old records, in case we are rereading
+
   while (<F>) {
     chomp();
     next unless $_; # skip empty lines
+    next if ( $_ lt $notbefore );
     if ( /^[^0-9a-z]*#(20)?/i ) { # skip comment lines
-      # The set expression is to allow the BOM on the first line
+      # The set expression is to allow the BOM on the first line which usually is a comment
       if ($1) {
         $commentedrecords++;
       } else {
