@@ -308,7 +308,7 @@ if ($devversion) { # Print a line in error.log, to see what errors come from thi
 if ( $op eq "Datafile" ) {  # Must be done before sending HTML headers
   dumpdatafile(); # Never returns
 }
-readdatafile();
+my $datafilecomment = readdatafile();
 
 # Default new users to the about page, we have nothing else to show
 if ( !$op) {
@@ -323,7 +323,7 @@ if ( $q->request_method eq "POST" ) {
   postdata(); # Never returns, forwards back to the script to display the data
 }
 
-htmlhead(); # Ok, now we can commit to making a HTML page
+htmlhead($datafilecomment); # Ok, now we can commit to making a HTML page
 javascript(); # with some javascript trickery in it
 
 # The input form is at the top of every page
@@ -448,13 +448,12 @@ sub readdatafile {
     # TODO - Make the beer etc lists read the last year, and an option to read all
   } elsif ( $maxlines < 0 || $maxlines > 50 ){ # Any non-standard list length
     $notbefore = "1900-01-01"; # read the whole file
-  } elsif ( $qry || $qryfield ){ # We need only a few selected records, read them all
+  } elsif ( $qry || $qryfield ne "rawline" ){ # We need only a few selected records, read them all
     $notbefore = "1900-01-01"; # read the whole file
   } elsif ( $op =~ /Graph.?(-\d+)/) {
     my $days = $1 - 30; # 30 days to get the floating avg to work
     $notbefore = datestr("%F", $days);
   }
-  @records = (); # forget old records, in case we are rereading
 
   while (<F>) {
     chomp();
@@ -639,6 +638,8 @@ sub readdatafile {
         $monthdrinks{$calmon}/$onedrink, $monthdrinks{$calmon}/$onedrink/$lastmonthday).
     " $monthprices{$calmon}.-."
     if ($calmon);
+  my $nrecs = scalar(@records);
+  return "<!-- Read $nrecs records from $datafile up to '$notbefore' for op '$op' m='$maxlines' q='$qry'/'$qryfield' -->\n";
 
 } # readdatafile
 
@@ -999,6 +1000,7 @@ sub clearcachefiles {
 ################################################################################
 
 sub htmlhead {
+  my $datafilecomment = shift || "";
   print $q->header(
     -type => "text/html;charset=UTF-8",
     -Cache_Control => "no-cache, no-store, must-revalidate",
@@ -1040,7 +1042,7 @@ sub htmlhead {
   print "</style>\n";
   print "</head>\n";
   print "<body>\n";
-  print "\n<!-- Read " . scalar(@records). " records from $datafile -->\n\n" ;
+  print "\n$datafilecomment";
 } # htmlhead
 
 
