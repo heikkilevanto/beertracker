@@ -3970,6 +3970,7 @@ sub fieldnames {
   }
   my %seen;
   foreach my $t ( @typelist ) {
+    next if ( $t =~ /Old/i );
     my $fieldnamelistref = $datalinetypes{$t};
     my @fieldnamelist = @{$fieldnamelistref};
     foreach my $f ( @fieldnamelist ) {
