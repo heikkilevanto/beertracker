@@ -448,7 +448,7 @@ sub readdatafile {
       $notbef = "$yrlim-01-01"; # read from that year
     } elsif ( $op =~ /Months|Years|DataStats/i ){
       $notbef = "1900-01-01"; # read the whole file
-    } elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ){
+    } elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style|Geo/i ){
       $notbef = datestr("%F", -366); # Lists default to the past year
     } elsif ( $maxlines < 0 || $maxlines > 50 ){ # Any non-standard list length
       $notbef = "1900-01-01"; # read the whole file
@@ -2750,7 +2750,7 @@ sub copyproddata {
 
 sub geodebug {
   if (!$qry || $qry =~ /^ *[0-9 .]+ *$/ ) {  # numerical query
-    print "<hr><b>Geolocations</b><p>\n";
+    print "<hr><b>Geolocations</b> since $notbef<p>\n";
     if ($qry) {
       my ($guess, $gdist) = guessloc($qry);
       if ($gdist < 2 ) {
@@ -2793,6 +2793,14 @@ sub geodebug {
       print "</tr>\n";
     }
     print "</table>\n";
+    print "<hr/>\n" ;
+    if ( scalar(keys(%years)) > 1 ) {
+      print "More: <br/>\n";
+      for my $y ( reverse sort(keys(%years)) ) {
+        print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) . "'><span>$y</span></a> &nbsp; \n" ;
+      }
+    }
+
 
   } else { # loc given, list all occurrences of that location
     print "<hr/>Geolocation for <b>$qry</b> &nbsp;";
@@ -3327,7 +3335,7 @@ sub fulllist {
     my  $ysum;
     if ( scalar(keys(%years)) > 1 ) {
       for my $y ( reverse sort(keys(%years)) ) {
-        print "<a href='$url?y=$y&q=" . uri_escape($qry) .
+        print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) .
             "'><span>$y</span></a> ($years{$y})<br/>\n" ;  # TODO - Skips some ??!!
         $ysum += $years{$y};
       }
