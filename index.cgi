@@ -270,6 +270,7 @@ my $op  = param("o");  # operation, to list breweries, locations, etc
 my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
    # Defaults to 25, unless we have a year limit, in which case defaults to something huge.
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
+my $notbef = param("notbef") || ""; # Skip parsing records older than this
 my $url = $q->url;
 # the POST routine reads its own input parameters
 
@@ -440,25 +441,32 @@ sub readdatafile {
       "<br/>Probably the user hasn't been set up yet" );
 
   # Decide what data we can safely skip
-  my $notbefore = datestr("%F", -90); # 90 days is a good default for most
-  if ( $q->request_method eq "POST" ) {
-    $notbefore = datestr("%F", -180); # Bit more for getting values to guess
-  } elsif ( $op =~ /Months|Years|DataStats|Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ){
-    $notbefore = "1900-01-01"; # read the whole file
-    # TODO - Make the beer etc lists read the last year, and an option to read all
-  } elsif ( $maxlines < 0 || $maxlines > 50 ){ # Any non-standard list length
-    $notbefore = "1900-01-01"; # read the whole file
-  } elsif ( $qry || $qryfield ne "rawline" ){ # We need only a few selected records, read them all
-    $notbefore = "1900-01-01"; # read the whole file
-  } elsif ( $op =~ /Graph.?(-\d+)/) {
-    my $days = $1 - 30; # 30 days to get the floating avg to work
-    $notbefore = datestr("%F", $days);
+  if ( !$notbef ) {  # Explicitly asked for a notbefore via url param notbef
+    if ( $q->request_method eq "POST" ) {
+      $notbef = datestr("%F", -180); # Bit more for getting values to guess
+    } elsif ( $yrlim ){ # We need only a few selected records, read them all
+      $notbef = "$yrlim-01-01"; # read from that year
+    } elsif ( $op =~ /Months|Years|DataStats/i ){
+      $notbef = "1900-01-01"; # read the whole file
+    } elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ){
+      $notbef = datestr("%F", -366); # Lists default to the past year
+    } elsif ( $maxlines < 0 || $maxlines > 50 ){ # Any non-standard list length
+      $notbef = "1900-01-01"; # read the whole file
+    } elsif ( $qry || $qryfield ne "rawline" ){ # We need only a few selected records, read them all
+      $notbef = "1900-01-01"; # read the whole file
+    } elsif ( $op =~ /Graph.?(-\d+)/) {
+      my $days = $1 - 30; # 30 days to get the floating avg to work
+      $notbef = datestr("%F", $days);
+    } else {
+      $notbef = datestr("%F", -90); # 90 days is a good default for most
+    }
   }
 
   while (<F>) {
     chomp();
     next unless $_; # skip empty lines
-    next if ( $_ lt $notbefore );
+    $years{$1} ++ if ( /^(20\d\d)/ ); # track which years we have seen
+    next if ( $_ lt $notbef );
     if ( /^[^0-9a-z]*#(20)?/i ) { # skip comment lines
       # The set expression is to allow the BOM on the first line which usually is a comment
       if ($1) {
@@ -508,10 +516,6 @@ sub readdatafile {
     $recindex++;
 
     $lastdateindex{$rec->{effdate}} = $recindex;
-
-    if ( /$qry/ ) {  # Total counts for different years
-      $years{ $rec->{year} }++;
-    } # TODO - Do we need these to depend on $qry ?
 
     if (hasfield($rec->{type},"loc")) {
       $thisloc = $rec->{loc} || "";
@@ -639,7 +643,7 @@ sub readdatafile {
     " $monthprices{$calmon}.-."
     if ($calmon);
   my $nrecs = scalar(@records);
-  return "<!-- Read $nrecs records from $datafile up to '$notbefore' for op '$op' m='$maxlines' q='$qry'/'$qryfield' -->\n";
+  return "<!-- Read $nrecs records from $datafile up to '$notbef' for op '$op' m='$maxlines' q='$qry'/'$qryfield' -->\n";
 
 } # readdatafile
 
@@ -2997,20 +3001,17 @@ sub lists {
     }
   }
   print "</table>\n";
-  print "<br/>Total " . scalar(@displines) . " entries <br/>\n" if (scalar(@displines));
-  my $rsum = 0;
-  my $rcnt = 0;
+  print "<br/>Total " . scalar(@displines) . " entries until $notbef<br/>\n" ;
+
   print "<hr/>\n" ;
-  my  $ysum ;
   if ( scalar(keys(%years)) > 1 ) {
     print "More: <br/>\n";
     for my $y ( reverse sort(keys(%years)) ) {
-      print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) . "'><span>$y</span></a><br/>\n" ;
-      $ysum += $years{$y};
+      print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) . "'><span>$y</span></a> &nbsp; \n" ;
     }
   }
-  print "<a href='$url?maxl=-1&" . $q->query_string() . "'>" .
-    "All</a> ($ysum)<br/>\n" if($ysum);
+  print "<a href='$url?o=$op&maxl=-1&notbef=1900-01-01'>" .
+    "<span>All</span></a><br/>\n";
 
 }  # Lists
 
