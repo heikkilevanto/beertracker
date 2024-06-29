@@ -449,7 +449,7 @@ sub readdatafile {
     } elsif ( $op =~ /Months|Years|DataStats/i ){
       $notbef = "1900-01-01"; # read the whole file
     } elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style|Geo/i ){
-      $notbef = datestr("%F", -366); # Lists default to the past year
+      $notbef = datestr("%F", -120); # Lists default to the past 3 months (short enough to work on my phone)
     } elsif ( $maxlines < 0 || $maxlines > 50 ){ # Any non-standard list length
       $notbef = "1900-01-01"; # read the whole file
     } elsif ( $qry || $qryfield ne "rawline" ){ # We need only a few selected records, read them all
@@ -2847,12 +2847,12 @@ sub geodebug {
 ################################################################################
 sub lists {
   print "<hr/><a href='$url'><span><b>$op</b> list</span></a>\n";
-  print "<div class='no-print'>\n";
   if ( !$sortlist) {
-    print "(<a href='$url?o=$op&sort=1' ><span>sort</span></a>) <br/>\n";
+    print "(<a href='$url?o=$op&sort=1&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "' ><span>sort</span></a>) <br/>\n";
   } else {
-    print "(<a href='$url?o=$op'><span>Recent</span></a>) <br/>\n";
+    print "(<a href='$url?o=$op&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "'><span>Recent</span></a>) <br/>\n";
   }
+  print "<br/><div class='no-print'>\n";
   my $filts = splitfilter($qry);
   print "Filter: $filts " .
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $qry;
@@ -2867,21 +2867,18 @@ sub lists {
     $bold = "b" if ($l eq $op);
     print "<a href='$url?o=$l'><$bold>$l</$bold></a> &nbsp;\n";
   }
-  print "</div>\n";
+  print "</div><hr/>\n";
   my $fld;
   my $line;
   my @displines;
   my %lineseen;
   my $anchor="";
   my $maxwidth = "style='max-width:30%;'";
-  #$maxwidth = "style='width: 15em'" if ($mobile);
-  print "&nbsp;<br/><table style='background-color: #00600; max-width: 60em;' >\n";
-  # For some reason this sets a color between the cells, not within them.
-  # which is ok, makes it easier to see what is what.
   my $i = scalar( @records );
   while ( $i > 0 ) {
     $i--;
     my $rec = $records[$i];
+    checkshortstyle($rec) if ( $qryfield =~ /shortstyle/i );
     next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i );
     next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
     next if ( $rec->{type} eq "Tz" );
@@ -2918,7 +2915,8 @@ sub lists {
       $seentimes = "$seen{$fld}" if ($seen{$fld} );
       my $sterm = "$rec->{maker} $rec->{name}";
       my $col = beercolorstyle($rec);
-      my $dispsty = "<span $col>" . shortbeerstyle($rec->{style}). "</span>";
+      my $shortstyle = shortbeerstyle($rec->{style});
+      my $dispsty = "<span $col>$shortstyle</span>";
       $line = "<td $maxwidth>" . filt($fld,"b",$beer,"full","name") ;
       $line .= "<br/>&nbsp; " if ( $mobile || length($fld) > 25 );
       $line .= "&nbsp; $seentimes &nbsp;\n" .
@@ -2926,7 +2924,7 @@ sub lists {
             glink($sterm,"G") . rblink($sterm,"R") . utlink($sterm,"U") . "</td>" .
             "<td>$rec->{wday} $rec->{effdate} ".
             lst($op,$rec->{loc},"","","loc") .  "\n <br class='no-wide'/> " .
-            lst($op,$rec->{style},"",$dispsty,"style"). "\n " .
+            lst($op,$shortstyle,"",$dispsty,"shortstyle"). "\n " .
             lst($op,$rec->{maker},"i","","maker") . "&nbsp;</td>";
 
     } elsif ( $op eq "Wine" ) {
@@ -2998,6 +2996,20 @@ sub lists {
     #print "<tr>$line</tr>\n";
     push @displines, "$line";
   }
+  print "<br/>Total " . scalar(@displines) . " entries from $notbef<br/>\n" ;
+
+  if ( scalar(keys(%years)) > 1 ) {
+    print "More: \n";
+    for my $y ( reverse sort(keys(%years)) ) {
+      print "<a href='$url?o=$op&notbef=$y-01-01&qf=$qryfield&q=" . uri_escape($qry) . "'><span>$y</span></a> &nbsp; \n" ;
+      print "<br class='no-wide'/>" if ( $y =~ /0$/ );
+    }
+  }
+  print "<a href='$url?o=$op&maxl=-1&notbef=1900-01-01'>" .
+    "<span>All</span></a><br/>\n";
+
+  print "<hr/>\n" ;
+  print "&nbsp;<br /><table style='background-color: #00600; max-width: 60em;' >\n";
   if ($sortlist) {
     @displines = ();
     for my $k ( sort { "\U$a" cmp "\U$b" } keys(%lineseen) ) {
@@ -3009,17 +3021,6 @@ sub lists {
     }
   }
   print "</table>\n";
-  print "<br/>Total " . scalar(@displines) . " entries until $notbef<br/>\n" ;
-
-  print "<hr/>\n" ;
-  if ( scalar(keys(%years)) > 1 ) {
-    print "More: <br/>\n";
-    for my $y ( reverse sort(keys(%years)) ) {
-      print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) . "'><span>$y</span></a> &nbsp; \n" ;
-    }
-  }
-  print "<a href='$url?o=$op&maxl=-1&notbef=1900-01-01'>" .
-    "<span>All</span></a><br/>\n";
 
 }  # Lists
 
@@ -3481,10 +3482,10 @@ sub searchform {
     $sel = "selected" if ( $fn eq $qryfield );
     $r .=  "<option value='$fn' $sel>$dsp</option>\n";
   }
-  $r .= "</select> \n" .
-    "<input type=submit value='Search'/> \n " .
-    "</form> \n" .
-    "";
+  $r .= "</select> \n" ;
+  $r .=  "<input type=hidden name=notbef value='$notbef' />\n" if ( $notbef gt "2000" );
+  $r .=  "<input type=submit value='Search'/> \n " .
+    "</form> \n";
   return $r;
 }
 
