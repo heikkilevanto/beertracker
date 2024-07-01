@@ -286,7 +286,6 @@ my $todaydrinks = "";  # For a hint in the comment box
 my %ratesum; # sum of ratings for every beer
 my %ratecount; # count of ratings for every beer, for averaging
 my %restaurants; # maps location name to restaurant records, mostly for the type
-my %years;  # Keep track which years we have seen, for the "more" links
 my %bloodalc; # max blood alc for each day, and current bloodalc for each line
 my %lastseen; # Last time I have seen a given beer
 my %monthdrinks; # total drinks for each calendar month
@@ -448,12 +447,12 @@ sub readdatafile {
       $notbef = "$yrlim-01-01"; # read from that year
     } elsif ( $op =~ /Months|Years|DataStats/i ){
       $notbef = "1900-01-01"; # read the whole file
-    } elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style|Geo/i ){
-      $notbef = datestr("%F", -120); # Lists default to the past 3 months (short enough to work on my phone)
     } elsif ( $maxlines < 0 || $maxlines > 50 ){ # Any non-standard list length
       $notbef = "1900-01-01"; # read the whole file
     } elsif ( $qry || $qryfield ne "rawline" ){ # We need only a few selected records, read them all
       $notbef = "1900-01-01"; # read the whole file
+    } elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style|Geo/i ){
+      $notbef = datestr("%F", -120); # Lists default to the past 3 months (short enough to work on my phone)
     } elsif ( $op =~ /Graph.?(-\d+)/) {
       my $days = $1 - 30; # 30 days to get the floating avg to work
       $notbef = datestr("%F", $days);
@@ -465,7 +464,6 @@ sub readdatafile {
   while (<F>) {
     chomp();
     next unless $_; # skip empty lines
-    $years{$1} ++ if ( /^(20\d\d)/ ); # track which years we have seen
     next if ( $_ lt $notbef );
     if ( /^[^0-9a-z]*#(20)?/i ) { # skip comment lines
       # The set expression is to allow the BOM on the first line which usually is a comment
@@ -2073,8 +2071,13 @@ sub shortlist{
   print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
   print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
   print "<hr/>\n";
+  for ( my $y = datestr("%Y"); $y >= 2016; $y-- ) {
+    print "<a href='$url?o=$op&y=$y'><span>$y</span></a>&nbsp;\n";
+  }
+  print "<a href='$url?o=$op&maxl=-1'><span>(all)</span></a>&nbsp;\n";
+  print "<hr/>\n";
   my $filts = splitfilter($qry);
-  print "<hr/>Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'><span>Clear</span></a>)" .
+  print "Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'><span>Clear</span></a>)" .
     "&nbsp;(<a href='$url?q=$qry'><span>Full</span></a>)<br/>" if ($qry||$yrlim);
   print searchform(). "<hr/>" if $qry;
   my $i = scalar( @records );
@@ -2118,7 +2121,7 @@ sub shortlist{
             $ndays = 0;
             $zerodate = $rec->{effdate}; # force the loop to end
           }
-        } while ( $zerodate gt $rec->{effdate} );
+        } while ( $zerodate gt $rec->{effdate} && $i > 1);
         $ndays-=3;
         if ( $ndays == 1 ) {
           print ". . . <br/>\n";
@@ -2159,22 +2162,6 @@ sub shortlist{
     }
     $daysum += $rec->{'alcvol'};
     $daymsum += $rec->{pr} if ( $rec->{pr} > 0 );
-  }
-
-  print "<hr/>\n";
-  if ( $maxlines == 0 || $yrlim ) {
-    print "More: <br/>\n";
-    my  $ysum ;
-    if ( scalar(keys(%years)) > 1 ) {
-      for my $y ( reverse sort(keys(%years)) ) {
-        print "<a href='$url?o=short&y=$y&q=".uri_escape_utf8($qry)."'><span>$y</span></a> ($years{$y})<br/>\n" ;
-        $ysum += $years{$y};
-      }
-    }
-    print "<a href='$url?maxl=-1&" . $q->query_string(). "'>" .
-      "All</a> ($ysum)<p>\n";
-  } else {
-    print "<br/>That was the whole list<p>\n" unless ($yrlim);
   }
 } # Short list
 
@@ -2794,13 +2781,6 @@ sub geodebug {
     }
     print "</table>\n";
     print "<hr/>\n" ;
-    if ( scalar(keys(%years)) > 1 ) {
-      print "More: <br/>\n";
-      for my $y ( reverse sort(keys(%years)) ) {
-        print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) . "'><span>$y</span></a> &nbsp; \n" ;
-      }
-    }
-
 
   } else { # loc given, list all occurrences of that location
     print "<hr/>Geolocation for <b>$qry</b> &nbsp;";
@@ -2998,15 +2978,6 @@ sub lists {
   }
   print "<br/>Total " . scalar(@displines) . " entries from $notbef<br/>\n" ;
 
-  if ( scalar(keys(%years)) > 1 ) {
-    print "More: \n";
-    for my $y ( reverse sort(keys(%years)) ) {
-      print "<a href='$url?o=$op&notbef=$y-01-01&qf=$qryfield&q=" . uri_escape($qry) . "'><span>$y</span></a> &nbsp; \n" ;
-      print "<br class='no-wide'/>" if ( $y =~ /0$/ );
-    }
-  }
-  print "<a href='$url?o=$op&maxl=-1&notbef=1900-01-01'>" .
-    "<span>All</span></a><br/>\n";
 
   print "<hr/>\n" ;
   print "&nbsp;<br /><table style='background-color: #00600; max-width: 60em;' >\n";
@@ -3043,7 +3014,7 @@ sub fulllist {
   print "<a href='$url?o=$op&q=" . uri_escape_utf8($qry) ."&y=" . uri_escape_utf8($yrlim) .
       "&f=x&qf=$qryfield' ><span>Extra info</span></a><br/>\n";
   print "</span>\n";
-  if ($qry||$qrylim||$qryfield!~/rawline/i) {
+  if ($qry || $qrylim || $qryfield !~ /rawline/i || $yrlim) {
     $qry = "" if ( $qry eq "." );
     print "<br/>" . searchform() . "<br/>" ;
     print  glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n" if ($qry);
@@ -3331,25 +3302,9 @@ sub fulllist {
     }
 
   print "<hr/>\n" ;
-  if ( $i > 0 || $yrlim ) {
-    print "More: <br/>\n";
-    my  $ysum;
-    if ( scalar(keys(%years)) > 1 ) {
-      for my $y ( reverse sort(keys(%years)) ) {
-        print "<a href='$url?o=$op&y=$y&q=" . uri_escape($qry) .
-            "'><span>$y</span></a> ($years{$y})<br/>\n" ;  # TODO - Skips some ??!!
-        $ysum += $years{$y};
-      }
-    }
-    $anchor = "#".$anchor if ($anchor);
-    $ysum = $ysum || "";
-    print "<a href='$url?maxl=-1$anchor' ><span>All</span></a> ($ysum)<p>\n";
-  } else {
-    print "<br/>That was the whole list<p>\n" unless ($yrlim);
-  }
   my $rsum = 0;
   my $rcnt = 0;
-  print "<p>Ratings:<br/>\n";
+  print "<p>Ratings:<br/>\n"; # TODO - Move these to the datafile stats, for every year
   for (my $i = 0; $i<11; $i++) {
     $rsum += $ratecounts[$i] * $i;
     $rcnt += $ratecounts[$i];
