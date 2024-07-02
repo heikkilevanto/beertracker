@@ -1850,11 +1850,11 @@ sub beerboard {
   if ($links{$locparam} ) {
     print loclink($locparam,"www"," ");
   }
-  print "&nbsp; (<a href='$url?o=$op&l=$locparam&q=PA'><span>PA</span></a>) "
+  print "&nbsp; (<a href='$url?o=$op&loc=$locparam&q=PA'><span>PA</span></a>) "
     if ($qry ne "PA" );
 
-  print "<a href=$url?o=board&f=f><i>(Reload)</i></a>\n";
-  print "<a href=$url?o=board-2><i>(all)</i></a>\n";
+  print "<a href=$url?o=board&loc=$locparam&f=f><i>(Reload)</i></a>\n";
+  print "<a href=$url?o=board-2&loc=$locparam><i>(all)</i></a>\n";
 
   print "<p>\n";
   if (!$scrapers{$locparam}) {
@@ -1895,7 +1895,7 @@ sub beerboard {
     my $nbeers = 0;
     if ($qry) {
     print "Filter:<b>$qry</b> " .
-      "(<a href='$url?o=$op&l=$locparam'><span>Clear</span></a>) " .
+      "(<a href='$url?o=$op&loc=$locparam'><span>Clear</span></a>) " .
       "<p>\n";
     }
     my $oldbeer = "$foundrec->{maker} : $foundrec->{name}";  # Remember current beer for opening
@@ -1915,7 +1915,7 @@ sub beerboard {
       $alc = sprintf("%4.1f",$alc) if ($alc);
       my $seenkey = seenkey($mak,$beer);
       if ( $qry ) {
-        next unless ( $sty =~ /$qry/ );
+        next unless ( "$sty $mak $beer" =~ /$qry/ );
       }
 
       if ( $id != $previd +1 ) {
@@ -1939,16 +1939,16 @@ sub beerboard {
       if ( $beer =~ /$dispmak/ || !$mak) {
         $dispmak = ""; # Same word in the beer, don't repeat
       } else {
-        $dispmak = filt($mak, "i", $dispmak,"board&l=$locparam","maker");
+        $dispmak = filt($mak, "i", $dispmak,"board&loc=$locparam","maker");
       }
       $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
       $beer =~ s/.*(Hopfenweisse).*/$1/;
       $beer =~ s/.*(Ungespundet).*/$1/;
       if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
         $mak = "Schlenkerla";
-        $dispmak = filt($mak, "i", $mak,"board&l=$locparam");
+        $dispmak = filt($mak, "i", $mak,"board&loc=$locparam");
       }
-      my $dispbeer .= filt($beer, "b", $beer, "board&l=$loc");
+      my $dispbeer .= filt($beer, "b", $beer, "board&loc=$loc");
 
       $mak =~ s/'//g; # Apostrophes break the input form below
       $beer =~ s/'//g; # So just drop them
@@ -1999,7 +1999,7 @@ sub beerboard {
         if ($extraboard == $id) {
           $linkid = "-3";  # Force no expansion
         }
-        print "<a href='$url?o=board$linkid'><span width=100% $beerstyle id='here'>$id</span></a> ";
+        print "<a href='$url?o=board$linkid&loc=$locparam'><span width=100% $beerstyle id='here'>$id</span></a> ";
         print "</td>\n";
 
         print "<td colspan=4 >";
@@ -2031,7 +2031,7 @@ sub beerboard {
         print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
       } else { # Plain view
         print "<tr><td align=right $beerstyle>";
-        print "<a href='$url?o=board$id&loc=$loc#here'><span width=100% $beerstyle>$id</span></a> ";
+        print "<a href='$url?o=board$id&loc=$locparam#here'><span width=100% $beerstyle>$id</span></a> ";
         print "</td>\n";
         print "$buttons\n";
         print "<td style='font-size: x-small;' align=right>$alc</td>\n";
@@ -3462,7 +3462,7 @@ sub loclink {
   my $scrape = shift || "List";
   my $lnk = "";
   if (defined($scrapers{$loc}) && $scrape ne " ") {
-    $lnk .= " &nbsp; <i><a href='$url?o=board&l=$loc'><span>$scrape</span></a></i>" ;
+    $lnk .= " &nbsp; <i><a href='$url?o=board&loc=$loc'><span>$scrape</span></a></i>" ;
   }
   if (defined($links{$loc}) && $www ne " ") {
     $lnk .= " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' ><span>$www</span></a></i>" ;
