@@ -5,7 +5,7 @@ use utf8;
 
 # Version 2, using their API
 
-my $base_url = "https://taphouse.dk/api/taplist/index.php";
+my $base_url = "https://taphouse.dk/api/taplist/";
 
 
 binmode STDOUT, ":encoding(UTF-8)";
