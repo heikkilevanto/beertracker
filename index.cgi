@@ -881,12 +881,21 @@ sub postdata {
   # Happens typically when entering data at home
   # TODO - Check also if we have a geo for the given location, and the guess is
   # too far from it, don't save a conflicting geo
-  if ( $rec->{geo} =~ / *\d+/) {
+  if ( $rec->{geo} =~ / *\d+/) { # Have a (guessed?) geo location
+    if ( $rec->{loc} && $geolocations{$rec->{loc}} ) {
+      my $dist = geodist( $rec->{geo}, $geolocations{$rec->{loc}} );
+      if ( $dist && $dist > 20 ) {
+        print STDERR "Refusing to store geo '$rec->{geo}' for '$rec->{loc}', " .
+          "it is $dist m from its known location $geolocations{$rec->{loc}} '\n";
+        $rec->{geo} = "";  # Ignore the suspect geo coords
+      }
+    }
     my  ($guess, $dist) = guessloc($rec->{geo});
     if ( $rec->{loc} && $guess  # We have location name, and geo guess
         && $dist < 20  # and the guess is good enough
         && $rec->{loc} !~ /$guess/i ) { # And they differ
-      print STDERR "Refusing to store geo '$rec->{geo}' for '$rec->{loc}', it is closer to '$guess' at $dist m\n";
+      print STDERR "Refusing to store geo '$rec->{geo}' for '$rec->{loc}', " .
+        "it is closer to '$guess' at $dist m\n";
       $rec->{geo} = "";  # Ignore the suspect geo coords
     }
   }
