@@ -442,7 +442,7 @@ sub readdatafile {
   # Decide what data we can safely skip
   if ( !$notbef ) {  # Explicitly asked for a notbefore via url param notbef
     if ( $q->request_method eq "POST" ) {
-      $notbef = datestr("%F", -180); # Bit more for getting values to guess
+      $notbef = datestr("%F", -720); # Read quite much data, to get good guesses
     } elsif ( $yrlim ){ # We need only a few selected records, read them all
       $notbef = "$yrlim-01-01"; # read from that year
     } elsif ( $op =~ /Months|Years|DataStats/i ){
@@ -884,7 +884,7 @@ sub postdata {
   if ( $rec->{geo} =~ / *\d+/) { # Have a (guessed?) geo location
     if ( $rec->{loc} && $geolocations{$rec->{loc}} ) {
       my $dist = geodist( $rec->{geo}, $geolocations{$rec->{loc}} );
-      if ( $dist && $dist > 20 ) {
+      if ( $dist && $dist > 50 ) {
         print STDERR "Refusing to store geo '$rec->{geo}' for '$rec->{loc}', " .
           "it is $dist m from its known location $geolocations{$rec->{loc}} '\n";
         $rec->{geo} = "";  # Ignore the suspect geo coords
