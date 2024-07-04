@@ -340,25 +340,29 @@ javascript(); # with some javascript trickery in it
 # The input form is at the top of every page
 inputform();
 
-parsedatalines(); # TODO - Move to various pages, once the input form can manage
 
 # We display a graph for some pages, but only if we have data
 if ( $op =~ /^Graph/i || $op =~ /Board/i) {
+  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   graph();
 }
 if ( $op =~ /Board/i ) {
   beerboard();
 }
 if ( $op =~ /Years(d?)/i ) {
+  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   yearsummary($1); # $1 indicates sort order
 }
 if ( $op =~ /short/i ) {
+  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   shortlist();
 }
 if ( $op =~ /Months([BS])?/ ) {
+  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   monthstat($1);
 }
 if ( $op =~ /DataStats/i ) {
+  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   datastats();
 }
 if ( $op eq "About" ) {
@@ -863,6 +867,8 @@ sub guessvalues {
 sub postdata {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
 
+  findrec(); # Get some defaults in $foundrec
+
   my $sub = $q->param("submit") || "";
 
   # Input parameters, only used here in POST
@@ -875,7 +881,7 @@ sub postdata {
   }
 
   nullfields($rec);  # set all undefined fields to "", to avoid warnings
-  my $lastrec = $records[ scalar(@records)-1 ];
+  my $lastrec = getrecord(scalar(@lines)-1);
   # dumprec($rec, "raw");
 
   fixtimes($rec, $lastrec, $sub);
@@ -1559,6 +1565,7 @@ sub inputform {
 ################################################################################
 # Graph
 ################################################################################
+# TODO - Do not depend on stuff from parserecords, do calculations here
 
 sub graph {
   if ( @records && # Have data
@@ -1595,11 +1602,12 @@ sub graph {
       print "\n<!-- Cached graph op='$op' $pngfile -->\n";
     } else { # Have to plot a new one
 
-      my %sums; # drink sums by (eff) date
+      my %sums; # drink sums by (eff) date # TODO - Don't calculate the whole history
       for ( my $i = 0; $i < scalar(@records); $i++ ) { # calculate sums
-        my $rec = $records[$i];
+        my $rec = getrecord($i);
         nullallfields($rec);
-        next if ( $rec->{type} =~ /^Restaurant/i );
+        next if ( $rec && $rec->{type} =~ /^Restaurant/i ); # TODO Fails on a tz? line
+        next unless ($rec->{alcvol});
         $sums{$rec->{effdate}} += $rec->{alcvol};
       }
       my $ndays = $startoff+35; # to get enough material for the running average
@@ -2952,10 +2960,11 @@ sub lists {
   my %lineseen;
   my $anchor="";
   my $maxwidth = "style='max-width:30%;'";
-  my $i = scalar( @records );
+  my $i = scalar( @lines );
   while ( $i > 0 ) {
     $i--;
-    my $rec = $records[$i];
+    next if ($lines[$i] lt $notbef);
+    my $rec = getrecord($i);
     checkshortstyle($rec) if ( $qryfield =~ /shortstyle/i );
     next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i );
     next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
@@ -3138,7 +3147,7 @@ sub fulllist {
   while ( $i > 0 ) {  # Usually we exit at end-of-day
     $i--;
     $lastrec = $rec;
-    $rec = $records[$i];
+    $rec = getrecord($i);
     next if filtered ( $rec );
     nullallfields($rec);  # Make sure we don't access undefined values, fills the log with warnings
     $maxlines--;
