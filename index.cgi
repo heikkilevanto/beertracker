@@ -281,6 +281,7 @@ my $url = $q->url;
 # TODO - Check these
 my $foundrec = {};  # The record we found, either the last one or one defined by edit param
 my @records; # All data records, parsed
+my @lines; # All data lines, unparsed
 my %seen; # Count how many times various names seen before (for NEW marks)
 my $todaydrinks = "";  # For a hint in the comment box
 my %ratesum; # sum of ratings for every beer
@@ -306,9 +307,12 @@ if ($devversion) { # Print a line in error.log, to see what errors come from thi
 }
 
 if ( $op eq "Datafile" ) {  # Must be done before sending HTML headers
-  dumpdatafile(); # Never returns
+  dumpdatafile();
+  exit;
 }
+
 my $datafilecomment = readdatafile();
+parsedatalines(); # TODO - Move to various pages, once the input form can manage
 
 # Default new users to the about page, we have nothing else to show
 if ( !$op) {
@@ -372,6 +376,7 @@ exit();  # The rest should be subs only
 ################################################################################
 # Dump of the data file
 # Needs to be done before the HTML head, since we output text/plain
+# Dump directly from the data file, so we get comments too
 ################################################################################
 sub dumpdatafile {
   print $q->header(
@@ -404,18 +409,53 @@ sub dumpdatafile {
     print "$_ \n" unless ($skip-- >0);
   }
   close(F);
-  exit();
 } # Dump of data file
 
 
 ################################################################################
 # Read the file
+# Readsa all the (non-comment) lines into @lines
+################################################################################
+
+sub readdatafile {
+
+  my $nlines = 0;
+  open F, "<$datafile"
+    or error("Could not open $datafile for reading: $!".
+      "<br/>Probably the user hasn't been set up yet" );
+
+  while (<F>) {
+    chomp();
+    next unless $_; # skip empty lines
+    $nlines++;
+    if ( /^[^0-9a-z]*#(20)?/i ) { # skip comment lines
+      # The set expression is to allow the BOM on the first line which usually is a comment
+      if ($1) {
+        $commentedrecords++;
+      } else {
+        $commentlines++;
+      }
+      next;
+    }
+    push (@lines, $_ ); #
+  }
+  close(F);
+  my $ndatalines = scalar(@lines);
+  my $ncom = $commentedrecords + $commentlines;
+  return "<!-- Read $nlines lines from $datafile: $ndatalines real reocrds, $ncom comments -->\n";
+}
+
+
+################################################################################
+# Parse all data lines
 # Remembers the last line for defaults, and collects all kind of stats
 # to be used later, in some global variables
 ################################################################################
+#
+# TODO - Get rid of this, let each page parse as little as it needs
+#
 
-
-sub readdatafile {
+sub parsedatalines {
   my $thisdate = "";
   my $weekago = datestr("%F", -7);
   my $thisloc = "";
@@ -435,9 +475,6 @@ sub readdatafile {
   my $recindex = -1; # count the records
   my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
-  open F, "<$datafile"
-    or error("Could not open $datafile for reading: $!".
-      "<br/>Probably the user hasn't been set up yet" );
 
   # Decide what data we can safely skip
   if ( !$notbef ) {  # Explicitly asked for a notbefore via url param notbef
@@ -461,55 +498,11 @@ sub readdatafile {
     }
   }
 
-  while (<F>) {
-    chomp();
-    next unless $_; # skip empty lines
-    next if ( $_ lt $notbef );
-    if ( /^[^0-9a-z]*#(20)?/i ) { # skip comment lines
-      # The set expression is to allow the BOM on the first line which usually is a comment
-      if ($1) {
-        $commentedrecords++;
-      } else {
-        $commentlines++;
-      }
-      next;
-    }
+  for ( my $i = 0; $i < scalar(@lines); $i++) {
+    next if ( $lines[$i] lt $notbef );
 
-    my $rec = splitline( $_ );
+    my $rec = parseline( $lines[$i] );
     next unless $rec->{type};
-
-    # Make sure we accept missing values for fields
-    nullfields($rec);
-
-    # Convert "Old" records to better types if possible
-    if ( $rec->{type} eq "Old") {
-      next if ($rec->{mak} =~ /^Tz,/i); # Skip Time Zone lines, almost never used
-      if ($rec->{mak} !~ /,/ ) {
-        $rec->{type} = "Beer";
-        $rec->{maker} = $rec->{mak};
-        $rec->{name} = $rec->{beer};
-        $rec->{style} = $rec->{sty};
-      } elsif ( $rec->{mak} =~ /^(Wine|Booze)[ ,]*(.*)/i ) {
-        $rec->{type} = ucfirst($1);
-        $rec->{subtype} = $2;
-        $rec->{name} = $rec->{beer};
-      } elsif ( $rec->{mak} =~ /^Drink/i ) {
-        $rec->{type} = "Booze";
-        $rec->{name} = $rec->{beer};
-      } elsif ( $rec->{mak} =~ /^Restaurant *, *(.*)/i ) {
-        $rec->{type} = "Restaurant";
-        $rec->{subtype} = $1;
-        $rec->{food} = $rec->{beer};
-        $rec->{sty} = "";
-      } else {
-        print STDERR "Unconverted 'Old' line: $rec->{rawline} \n";
-      }
-      $rec->{beer} = "";  # Kill old style fields, no longer used
-      $rec->{mak} = "";
-      $rec->{sty} = "";
-      nullfields($rec); # clear undefined fields again, we may have changed the type
-    }
-    $rec->{seenkey} = seenkey($rec); # Do after normalizing name and type
     push (@records, $rec);
     $recindex++;
 
@@ -641,7 +634,7 @@ sub readdatafile {
     " $monthprices{$calmon}.-."
     if ($calmon);
   my $nrecs = scalar(@records);
-  return "<!-- Read $nrecs records from $datafile up to '$notbef' for op '$op' m='$maxlines' q='$qry'/'$qryfield' -->\n";
+  return "<!-- Parsed $nrecs records up to '$notbef' for op '$op' m='$maxlines' q='$qry'/'$qryfield' -->\n";
 
 } # readdatafile
 
@@ -836,6 +829,7 @@ sub guessvalues {
 # POST itself
 sub postdata {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
+
   my $sub = $q->param("submit") || "";
 
   # Input parameters, only used here in POST
@@ -1053,7 +1047,8 @@ sub htmlhead {
   print "</style>\n";
   print "</head>\n";
   print "<body>\n";
-  print "\n$datafilecomment";
+  print "\n";
+  print $datafilecomment;
 } # htmlhead
 
 
@@ -3931,6 +3926,46 @@ sub splitline {
   return $v;
 }
 
+# Parse a line to a proper $rec
+# Converts Old type records to more modern types, etc
+sub parseline {
+  my $line = shift;
+  my $rec = splitline( $line );
+
+  # Make sure we accept missing values for fields
+  nullfields($rec);
+
+  # Convert "Old" records to better types if possible
+  if ( $rec->{type} eq "Old") {
+    next if ($rec->{mak} =~ /^Tz,/i); # Skip Time Zone lines, almost never used
+    if ($rec->{mak} !~ /,/ ) {
+      $rec->{type} = "Beer";
+      $rec->{maker} = $rec->{mak};
+      $rec->{name} = $rec->{beer};
+      $rec->{style} = $rec->{sty};
+    } elsif ( $rec->{mak} =~ /^(Wine|Booze)[ ,]*(.*)/i ) {
+      $rec->{type} = ucfirst($1);
+      $rec->{subtype} = $2;
+      $rec->{name} = $rec->{beer};
+    } elsif ( $rec->{mak} =~ /^Drink/i ) {
+      $rec->{type} = "Booze";
+      $rec->{name} = $rec->{beer};
+    } elsif ( $rec->{mak} =~ /^Restaurant *, *(.*)/i ) {
+      $rec->{type} = "Restaurant";
+      $rec->{subtype} = $1;
+      $rec->{food} = $rec->{beer};
+      $rec->{sty} = "";
+    } else {
+      print STDERR "Unconverted 'Old' line: $rec->{rawline} \n";
+    }
+    $rec->{beer} = "";  # Kill old style fields, no longer used
+    $rec->{mak} = "";
+    $rec->{sty} = "";
+    nullfields($rec); # clear undefined fields again, we may have changed the type
+  }
+  $rec->{seenkey} = seenkey($rec); # Do after normalizing name and type
+  return $rec;
+}
 
 # Get all field names for a type, or all
 sub fieldnames {
