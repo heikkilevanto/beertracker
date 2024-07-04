@@ -296,6 +296,7 @@ my $starttime = "";  # For the datestr helper
 my %lastdateindex; # index of last record for each effdate
 my $commentlines = 0; # Number of comment lines in the data file
 my $commentedrecords = 0; # Number of commented-out data lines
+my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
 ################################################################################
 # Main program
@@ -335,10 +336,11 @@ extractgeo(); # Extract geo coords
 
 javascript(); # with some javascript trickery in it
 
-parsedatalines(); # TODO - Move to various pages, once the input form can manage
 
 # The input form is at the top of every page
 inputform();
+
+parsedatalines(); # TODO - Move to various pages, once the input form can manage
 
 # We display a graph for some pages, but only if we have data
 if ( $op =~ /^Graph/i || $op =~ /Board/i) {
@@ -509,7 +511,6 @@ sub parsedatalines {
   my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
   my $alcinbody = 0; # Grams of alc inside my body
   my $balctime = 0; # Time of the last drink
-  my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
 
   # Decide what data we can safely skip
@@ -1290,6 +1291,65 @@ sub inputfield {
   return $s;
 }
 
+# Compute a summary we can show instead of a comment. We have 4 lines of
+# plain text:
+#  Today, or last day we have data. drinks, money, blood alc
+#  Week, the last 7 days, including today: drinks dr/day, money, zero days
+#  The calendar month: drinks dr/day, money, zero days
+#
+sub summarycomment {
+# TODO - Get blood alc as well
+  my $i = scalar(@lines)-1;
+  my $last = getrecord($i);
+  my $daylimit = $last->{effdate};
+  my $weeklimit = datestr("%F", -7);
+  my $monthlimit = datestr("%F", -30);
+  my $effd = $daylimit;
+  my $daydr = 0;
+  my $daysum = 0;
+  my $weekdr = 0;
+  my $weeksum = 0;
+  my $monthdr = 0;
+  my $monthsum = 0;
+  my $monthdays = 1; # so we don't divide by zero
+  while ( $i >= 0 ) {
+    my $going = 0;
+    my $rec = getrecord($i);
+    #print STDERR "sum: $i: $rec->{stamp} \n";
+    if ( $rec->{effdate} eq $daylimit ) {
+      $daydr += $rec->{drinks};
+      $daysum += $rec->{pr} if ($rec->{pr} > 0 );
+    }
+    if ( $rec->{effdate} gt $weeklimit ) {
+       $weekdr += $rec->{drinks};
+       $weeksum += $rec->{pr} if ($rec->{pr} > 0 );
+       $going = 1;
+    }
+    if ( $rec->{effdate} gt $monthlimit ) {
+       $monthdr += $rec->{drinks};
+       $monthsum += $rec->{pr} if ($rec->{pr} > 0 );
+       if ( $rec->{effdate} ne $effd ) {
+         $effd = $rec->{effdate};
+         $monthdays++;
+       }
+       $going = 1;
+    }
+    $i--;
+    last unless $going;
+  }
+  my $dayline = sprintf("%dd %d.-", $daydr, $daysum);
+  if ( $daylimit eq $efftoday ){
+    $dayline = "Today, $last->{wday}: $dayline";
+  } else {
+    $dayline = "($last->{wday}: $dayline)"
+  }
+  my $weekline = sprintf("Week: %dd  (%3.1f/day) %d.-", $weekdr, $weekdr/7, $weeksum);
+  my $monthline = sprintf("Month: %dd  (%3.1f/day) %d.-", $monthdr, $monthdr/$monthdays, $monthsum);
+  return "$dayline\n".
+         "$weekline\n".
+         "$monthline";
+}
+
 sub inputform {
   if ($devversion) {
     print "\n<b>Dev version!</b><br>\n";
@@ -1450,9 +1510,10 @@ sub inputform {
 
   # Comments
   if (hasfield($type,'com')) {
+    my $placeholder = summarycomment();
     print "<tr>";
     print " <td $c6><textarea name='com' cols='45' rows='3' id='com'
-      placeholder='$todaydrinks' autocapitalize='sentences'>$foundrec->{com}</textarea></td>\n";
+      placeholder='$placeholder' autocapitalize='sentences'>$foundrec->{com}</textarea></td>\n";
     print "</tr>\n";
   }
 
@@ -3956,6 +4017,7 @@ sub splitline {
   my $alcvol = $v->{alc} * $v->{vol} || 0 ;
   $alcvol = 0 if ( $v->{pr} < 0  );  # skip box wines
   $v->{alcvol} = $alcvol;
+  $v->{drinks} = $alcvol / $onedrink;
   return $v;
 }
 
