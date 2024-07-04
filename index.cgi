@@ -312,11 +312,10 @@ if ( $op eq "Datafile" ) {  # Must be done before sending HTML headers
 }
 
 my $datafilecomment = readdatafile();
-parsedatalines(); # TODO - Move to various pages, once the input form can manage
 
 # Default new users to the about page, we have nothing else to show
 if ( !$op) {
-  if ( !@records ) {
+  if ( !@lines) {
     $op = "About";
   } else {
     $op = "Graph";  # Default to showing the graph
@@ -324,11 +323,19 @@ if ( !$op) {
 }
 
 if ( $q->request_method eq "POST" ) {
-  postdata(); # Never returns, forwards back to the script to display the data
+  postdata(); # forwards back to the script to display the data
+  exit;
 }
 
+
 htmlhead($datafilecomment); # Ok, now we can commit to making a HTML page
+
+findrec(); # Find the default record for display and geo
+extractgeo(); # Extract geo coords
+
 javascript(); # with some javascript trickery in it
+
+parsedatalines(); # TODO - Move to various pages, once the input form can manage
 
 # The input form is at the top of every page
 inputform();
@@ -445,6 +452,36 @@ sub readdatafile {
   return "<!-- Read $nlines lines from $datafile: $ndatalines real reocrds, $ncom comments -->\n";
 }
 
+################################################################################
+# Extract geo locations
+# Does not parse every line, only those that seem to contain a geo
+################################################################################
+sub extractgeo {
+  for ( my $i = scalar(@lines)-1; $i>0; $i-- ) {
+    next unless ( $lines[$i] =~ /\d\d\.\d\d\d\d\d/ ); # seems to contain a geo
+    my $rec = getrecord($i);
+    if ($rec->{loc} && $rec->{geo} && !$geolocations{$rec->{loc}} ) {
+      my $geocoord;
+      (undef, undef, $geocoord) = geo($rec->{geo});
+      $geolocations{$rec->{loc}} = $geocoord if ($geocoord); # Save the last seen location
+    }
+  }
+}
+
+# Helper to find the record we should prefill in the input form
+# Sets $foundrec to it, as it may be used elsewhere
+sub findrec {
+  my $i = scalar( @lines ) -1;
+  if ( ! $edit ) {
+    $foundrec = getrecord($i);
+  }
+  while ( ! $foundrec && $i > 0) {
+    if ( $lines[$i] =~ /^$edit/ ) {
+      $foundrec = getrecord($i);
+    }
+    $i--;
+  }
+}
 
 ################################################################################
 # Parse all data lines
@@ -472,7 +509,6 @@ sub parsedatalines {
   my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
   my $alcinbody = 0; # Grams of alc inside my body
   my $balctime = 0; # Time of the last drink
-  my $recindex = -1; # count the records
   my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
 
@@ -501,12 +537,10 @@ sub parsedatalines {
   for ( my $i = 0; $i < scalar(@lines); $i++) {
     next if ( $lines[$i] lt $notbef );
 
-    my $rec = parseline( $lines[$i] );
+    my $rec = getrecord( $i );
     next unless $rec->{type};
-    push (@records, $rec);
-    $recindex++;
 
-    $lastdateindex{$rec->{effdate}} = $recindex;
+    $lastdateindex{$rec->{effdate}} = $i;
 
     if (hasfield($rec->{type},"loc")) {
       $thisloc = $rec->{loc} || "";
@@ -634,9 +668,9 @@ sub parsedatalines {
     " $monthprices{$calmon}.-."
     if ($calmon);
   my $nrecs = scalar(@records);
-  return "<!-- Parsed $nrecs records up to '$notbef' for op '$op' m='$maxlines' q='$qry'/'$qryfield' -->\n";
+  print "<!-- Parsed $nrecs records up to '$notbef' for op '$op' m='$maxlines' q='$qry'/'$qryfield' -->\n";
 
-} # readdatafile
+} # parsedatalines
 
 
 ################################################################################
@@ -770,12 +804,12 @@ sub guessvalues {
   my $rec = shift;
   my $priceguess = "";
   my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
-  my $i = scalar( @records )-1;
+  my $i = scalar( @lines )-1;
   $rec->{name} = trim($rec->{name});  # Remove leading spaces if any
   while ( $i > 0 && $rec->{name}
     && ( missing($rec,"maker") || missing($rec,"vol") || missing($rec,"style") ||
          missing($rec,"alc") || missing($rec,"pr") )) {
-    my $irec = $records[$i];
+    my $irec = parseline($lines[$i]);
     if ( !$priceguess &&    # Guess a price
          $irec->{loc} && $rec->{loc} &&
          uc($irec->{loc}) eq uc($rec->{loc}) &&   # if same location and volume
@@ -795,9 +829,6 @@ sub guessvalues {
     }
     $i--;
   }
-  if (hasfield($rec->{type},"pr")) {
-    $rec->{pr} = $priceguess if $rec->{pr} eq "";
-  }
   if (hasfield($rec->{type},"vol")) {
     if ( uc($rec->{vol}) eq "X" ) {  # 'X' is an explicit way to indicate a null value
       $rec->{vol} = "";
@@ -809,6 +840,7 @@ sub guessvalues {
     }
   }
   if (hasfield($rec->{type},"pr")) {
+    $rec->{pr} = $priceguess if $rec->{pr} eq "";
     my $curpr = curprice($rec->{pr});
     if ($curpr) {
       $rec->{com} =~ s/ *\[\d+\w+\] *$//i; # Remove old currency price comment "[12eur]"
@@ -975,7 +1007,7 @@ sub postdata {
   clearcachefiles();
 
   # if POSTing a restaurant, return to editing the record, so we can add
-  # more relevant fields.
+  # more relevant stuff like foods, people etc.
   my $editit = "";
   if ( $rec->{type} =~ /Restaurant|Night/i && $sub ne "Del") {
     $editit = $rec->{oldstamp};
@@ -984,7 +1016,6 @@ sub postdata {
   # But keep $op and $qry (maybe also filters?)
   print $q->redirect( "$url?o=$op&e=$editit&q=$qry#here" );
 
-  exit();
 } # POST data
 
 # Helper to clear the cached files from the data dir.
@@ -1237,6 +1268,7 @@ SCRIPTEND
 # Main input form
 ################################################################################
 
+
 # Helper to make an input field
 #  print "<td><input name='flavor' value='$foundrec->{flavor}' $sz1 placeholder='Flavor' /></td>\n";
 # Checks if this field should exist in $type kind of records. If not, returns ""
@@ -1485,6 +1517,7 @@ sub graph {
     my $futable = ""; # Table to display the 'future' values
 
     # Normalize limits to where we have data
+    getrecord(0);
     while ( $startdate lt $records[0]->{date}) {
       $startoff --;
       $startdate = datestr ("%F", -$startoff );
@@ -3937,7 +3970,10 @@ sub parseline {
 
   # Convert "Old" records to better types if possible
   if ( $rec->{type} eq "Old") {
-    next if ($rec->{mak} =~ /^Tz,/i); # Skip Time Zone lines, almost never used
+    if ($rec->{mak} =~ /^Tz,/i){ # Skip Time Zone lines, almost never used
+      $rec = {};
+      return;
+    }
     if ($rec->{mak} !~ /,/ ) {
       $rec->{type} = "Beer";
       $rec->{maker} = $rec->{mak};
@@ -3965,6 +4001,16 @@ sub parseline {
   }
   $rec->{seenkey} = seenkey($rec); # Do after normalizing name and type
   return $rec;
+}
+
+# Helper to get the ith record
+# Caches the parsing
+sub getrecord {
+  my $i = shift;
+  if ( ! $records[$i] ) {
+    $records[$i] = parseline($lines[$i]);
+  }
+  return $records[$i];
 }
 
 # Get all field names for a type, or all
