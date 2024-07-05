@@ -343,7 +343,6 @@ inputform();
 
 # We display a graph for some pages, but only if we have data
 if ( $op =~ /^Graph/i || $op =~ /Board/i) {
-  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   graph();
 }
 if ( $op =~ /Board/i ) {
@@ -1561,7 +1560,6 @@ sub inputform {
 ################################################################################
 # Graph
 ################################################################################
-# TODO - Do not depend on stuff from parserecords, do calculations here
 
 sub graph {
   if ( @records && # Have data
@@ -1577,6 +1575,7 @@ sub graph {
     }
     my $startdate = datestr ("%F", -$startoff );
     my $enddate = datestr( "%F", -$endoff);
+    my $prestartdate = datestr( "%F", -$startoff-40);
     my $havedata = 0;
     my $futable = ""; # Table to display the 'future' values
 
@@ -1599,12 +1598,15 @@ sub graph {
     } else { # Have to plot a new one
 
       my %sums; # drink sums by (eff) date # TODO - Don't calculate the whole history
-      for ( my $i = 0; $i < scalar(@records); $i++ ) { # calculate sums
+      my %lastdateindex;
+      for ( my $i = scalar(@records)-1; $i >= 0; $i-- ) { # calculate sums
         my $rec = getrecord($i);
-        nullallfields($rec);
+        #nullallfields($rec);
         next if ( $rec && $rec->{type} =~ /^Restaurant/i ); # TODO Fails on a tz? line
         next unless ($rec->{alcvol});
         $sums{$rec->{effdate}} += $rec->{alcvol};
+        $lastdateindex{$rec->{effdate}} = $i unless ( $lastdateindex{$rec->{effdate}} );
+        last if ( $rec->{effdate} lt $prestartdate );
       }
       my $ndays = $startoff+35; # to get enough material for the running average
       my $date;
@@ -1716,11 +1718,12 @@ sub graph {
         my $ndrinks = 0;
         if ( $lastdateindex{$date} ) {
           my $i = $lastdateindex{$date};
-          my $lastloc = $records[$i]->{loc};
+          my $lastrec = getrecord($i);
+          my $lastloc = $lastrec->{loc};
+          my $lasteff = $lastrec->{effdate};
           while ( $records[$i]->{effdate} eq $date ) {
             my $drec = $records[$i];
             if ( $drec->{alcvol} ) {
-              my $fakestyle = "$drec->{type}, $drec->{subtype} $drec->{style} $drec->{maker}";
               my $color = beercolor($drec,"0x");
               my $drinks = $drec->{alcvol} / $onedrink;
               if ( $lastloc ne $drec->{loc}  &&  $startoff - $endoff < 100 ) {
