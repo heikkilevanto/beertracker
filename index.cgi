@@ -354,7 +354,6 @@ if ( $op =~ /Years(d?)/i ) {
   yearsummary($1); # $1 indicates sort order
 }
 if ( $op =~ /short/i ) {
-  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   shortlist();
 }
 if ( $op =~ /Months([BS])?/ ) {
@@ -2177,19 +2176,25 @@ sub shortlist{
   print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
   print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
   print "<hr/>\n";
+  print "<a href='$url?o=$op'><span>(Recent)</span></a>&nbsp;\n";
   for ( my $y = datestr("%Y"); $y >= 2016; $y-- ) {
-    print "<a href='$url?o=$op&y=$y'><span>$y</span></a>&nbsp;\n";
+    my $tag = "span";
+    $tag = "b" if ( $yrlim eq $y );
+    print "<a href='$url?o=$op&y=$y'><$tag>$y</$tag></a>&nbsp;\n";
   }
   print "<a href='$url?o=$op&maxl=-1'><span>(all)</span></a>&nbsp;\n";
   print "<hr/>\n";
   my $filts = splitfilter($qry);
   print "Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'><span>Clear</span></a>)" .
-    "&nbsp;(<a href='$url?q=$qry'><span>Full</span></a>)<br/>" if ($qry||$yrlim);
+    "&nbsp;(<a href='$url?q=$qry'><span>Full</span></a>)<hr/>" if ($qry||$yrlim);
   print searchform(). "<hr/>" if $qry;
-  my $i = scalar( @records );
+  my $i = scalar( @lines );
   while ( $i > 0 ) {
     $i--;
-    my $rec = $records[$i];  # it is a reference
+    if ( $yrlim ) {  # Quick filter on the year, without parsing
+      next if ( $lines[$i] !~ /^$yrlim/ );
+    }
+    my $rec = getrecord($i);  # it is a reference
     next if filtered ( $rec );
     if ( $i == 0 ) {
       $lastdate = "";
@@ -2213,6 +2218,7 @@ sub shortlist{
         print "$places</span><br/>\n";
         $maxlines--;
         last if ($maxlines == 0); # if negative, will go for ever
+        last if ( $lines[$i] lt $yrlim );  # Past the selected year
       }
       # Check for empty days in between
       if (!$qry) {
@@ -2261,6 +2267,7 @@ sub shortlist{
       $sloc =~ s/ place$//i;  # Dorthes Place => Dorthes
       $sloc =~ s/ /&nbsp;/gi;   # Prevent names breaking in the middle
       if ( $places !~ /$sloc/ ) {
+        $places .= "," if ($places);
         $places .= " " . filt($rec->{loc}, "", $sloc, "short", "loc");
         $locseen{$rec->{loc}} = 1;
         }
@@ -2968,6 +2975,7 @@ sub lists {
     checkshortstyle($rec) if ( $qryfield =~ /shortstyle/i );
     next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i );
     next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
+    next unless ($rec); # defensive coding, probably gets that one TZ record
     next if ( $rec->{type} eq "Tz" );
     $fld = "";
 
@@ -3510,6 +3518,7 @@ sub filtered {
   if ( $qryfield eq "shortstyle" ) {
     checkshortstyle($rec); # Make sure we have a short style
   }
+  return 1 if ( !$rec );
   if ( $qry ) {
     $rec->{$qryfield} = "" if ( !defined($rec->{$qryfield} ) );
     $skip = 1 if ( $rec->{$qryfield} !~ /\b$qry\b/i ) ;
