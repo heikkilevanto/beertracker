@@ -350,18 +350,15 @@ if ( $op =~ /Board/i ) {
   beerboard();
 }
 if ( $op =~ /Years(d?)/i ) {
-  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   yearsummary($1); # $1 indicates sort order
 }
 if ( $op =~ /short/i ) {
   shortlist();
 }
 if ( $op =~ /Months([BS])?/ ) {
-  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   monthstat($1);
 }
 if ( $op =~ /DataStats/i ) {
-  parsedatalines(); # TODO - Move to various pages, once the input form can manage
   datastats();
 }
 if ( $op eq "About" ) {
@@ -2194,7 +2191,7 @@ sub shortlist{
     if ( $yrlim ) {  # Quick filter on the year, without parsing
       next if ( $lines[$i] !~ /^$yrlim/ );
     }
-    my $rec = getrecord($i);  # it is a reference
+    my $rec = getrecord($i);
     next if filtered ( $rec );
     if ( $i == 0 ) {
       $lastdate = "";
@@ -2309,10 +2306,11 @@ sub yearsummary {
        "' class='no-print'><span>Sort by drinks</span></a>)\n";
   }
   print "<table border=1>\n";
-  my $i = scalar( @records );
+  my $i = scalar( @lines );
   while ( $i > 0 ) {
     $i--;
-    my $rec = $records[$i];
+    my $rec = getrecord($i);
+    next unless ($rec);
     my $loc = $rec->{loc};
     $y = substr($rec->{effdate},0,4);
     #print "  y=$y, ty=$thisyear <br/>\n";
@@ -2423,10 +2421,27 @@ sub monthstat {
   print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
   print "<hr/>\n";
 
-  if ( $records[0]->{date} !~ /^(\d\d\d\d)/ ) { # Should not happen
+  if ( getrecord(0)->{date} !~ /^(\d\d\d\d)/ ) { # Should not happen
     print "Oops, no start year found <br/>\n";
     return;
   }
+
+  # Collect stats
+  my %monthdrinks;
+  my %monthprices;
+  my $lastmonthday;  # last day of the last month
+  for ( my $i = 0 ; $i < scalar(@lines); $i++ ) {
+    my $rec = getrecord($i);
+    next unless ($rec);
+    if ( $rec->{effdate} =~ /(^\d\d\d\d-\d\d)-(\d\d)/ )  { # collect stats for each month
+      my $calmon = $1;
+      $monthdrinks{$calmon} += $rec->{alcvol};
+      $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
+      $lastmonthday = $2;  # Remember the last day
+    }
+  }
+
+
   my $firsty=$1;
   my $pngfile = $plotfile;
   $pngfile =~ s/\.plot/-stat.png/;
@@ -2474,14 +2489,6 @@ sub monthstat {
   }
   $t .= "<td align='right'><b>&nbsp;Avg</b></td>";
   $t .= "</tr>\n";
-  # If in January, extend to Feb, so we see the beginning of the line
-#  if ( datestr("%m",0) eq "01" ) {
-#    my $nextm = "$lasty-02";
-#    if ( ! $monthdrinks{$nextm} ) {
-#      $monthdrinks{$nextm} = $monthdrinks{$lastym} / $dayofmonth * 30;
-#      $monthprices{$nextm} = 0;
-#    }
-#  }
   foreach my $m ( 1 .. 12 ) {
     my $plotline;
     $t .= "<tr><td><b>$months[$m]</b></td>\n";
@@ -2721,11 +2728,18 @@ sub datastats {
   my %distinct;
   my %seen;
   my $oldrecs = 0;
+  my $badrecs = 0;
   my $comments = 0;
   my @rates;
   my $ratesum = 0;
   my $ratecount = 0;
-  foreach my $rec ( @records ) {
+
+  for ( my $i = 0 ; $i < scalar(@lines); $i++) {
+    my $rec = getrecord($i);
+    if ( ! $rec ) {
+      $badrecs++;
+      next;
+    }
     my $rt = $rec->{type};
     $rectypes{$rt} ++;
     $oldrecs ++ if ( $rec->{rawline} !~ /; *$rt *;/ );
@@ -2746,6 +2760,9 @@ sub datastats {
   foreach my $rt ( sort  { $rectypes{$b} <=> $rectypes{$a} } keys(%rectypes) )  {
     print "<tr><td align='right'>$rectypes{$rt}</td>" .
     "<td> $rt ($distinct{$rt} different)</td></tr>\n";
+  }
+  if ( $badrecs ) {
+    print "<tr><td align='right'>$badrecs</td><td>Bad</td></tr>\n";
   }
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td>&nbsp;</td><td><b>Ratings</b></td></tr>\n";
