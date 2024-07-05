@@ -484,193 +484,6 @@ sub findrec {
   }
 }
 
-################################################################################
-# Parse all data lines
-# Remembers the last line for defaults, and collects all kind of stats
-# to be used later, in some global variables
-################################################################################
-#
-# TODO - Get rid of this, let each page parse as little as it needs
-#
-
-sub parsedatalines {
-  my $thisdate = "";
-  my $weekago = datestr("%F", -7);
-  my $thisloc = "";
-  my $lastdatesum = 0.0;
-  my $lastdatemsum = 0;
-  my $lasteffdate = "";
-  my $lastwday = "";
-  my $weeksum = 0;
-  my $weekmsum = 0;
-  my %weekdates; # count the dates within last week where we have an entry
-  my $calmon; # YYYY-MM for montly stats
-  my $lastmonthday = "";
-  my %daydsums; # Sum of drinks for each date   # TODO Sum these up here (See #142)
-  my %daymsums; # Sum of prices for each date   # and reuse in graphs, summaries
-  my $alcinbody = 0; # Grams of alc inside my body
-  my $balctime = 0; # Time of the last drink
-
-
-  # Decide what data we can safely skip
-  if ( !$notbef ) {  # Explicitly asked for a notbefore via url param notbef
-    if ( $q->request_method eq "POST" ) {
-      $notbef = datestr("%F", -720); # Read quite much data, to get good guesses
-    } elsif ( $yrlim ){ # We need only a few selected records, read them all
-      $notbef = "$yrlim-01-01"; # read from that year
-    } elsif ( $op =~ /Months|Years|DataStats/i ){
-      $notbef = "1900-01-01"; # read the whole file
-    } elsif ( $maxlines < 0 || $maxlines > 50 ){ # Any non-standard list length
-      $notbef = "1900-01-01"; # read the whole file
-    } elsif ( $qry || $qryfield ne "rawline" ){ # We need only a few selected records, read them all
-      $notbef = "1900-01-01"; # read the whole file
-    } elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style|Geo/i ){
-      $notbef = datestr("%F", -120); # Lists default to the past 3 months (short enough to work on my phone)
-    } elsif ( $op =~ /Graph.?(-\d+)/) {
-      my $days = $1 - 30; # 30 days to get the floating avg to work
-      $notbef = datestr("%F", $days);
-    } else {
-      $notbef = datestr("%F", -90); # 90 days is a good default for most
-    }
-  }
-
-  for ( my $i = 0; $i < scalar(@lines); $i++) {
-    next if ( $lines[$i] lt $notbef );
-
-    my $rec = getrecord( $i );
-    next unless $rec->{type};
-
-    $lastdateindex{$rec->{effdate}} = $i;
-
-    if (hasfield($rec->{type},"loc")) {
-      $thisloc = $rec->{loc} || "";
-      $seen{$thisloc}++;
-    }
-
-    # Collect stats on what we have seen
-    my $seenkey = seenkey($rec);
-    $seen{$rec->{maker}}++;
-    $seen{$rec->{name}}++;
-    $seen{$rec->{style}}++;
-    $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
-    $seen{$rec->{seenkey}}++;
-
-    if ($rec->{rate} && $rec->{name}) {
-      $ratesum{$rec->{seenkey}} += $rec->{rate};
-      $ratecount{$rec->{seenkey}} ++;
-    }
-    # Remember this record, if the one we asked for (or the last one)
-    if ( ! $edit || ($edit eq $rec->{stamp} ) ) {
-      $foundrec = $rec;
-    }
-
-   if ( $rec->{type} eq "Restaurant" ) {
-      my $restname = "Restaurant," . $rec->{loc};
-      $seen{$restname}++;
-      # Remember last rest record, but don't overwrite it with
-      # one without subtype, if we already have a subtype
-      if ( $rec->{subtype} ||    # Remember last with subtype
-           ! $restaurants{$rec->{loc}} || # Or anything at all
-           ! $restaurants{$rec->{loc}}->{subtype} ) { # or safe to overwrite
-        $restaurants{$rec->{loc}} = $rec; # remember it
-      }
-      next; # do not sum restaurant lines, drinks filed separately
-    }
-
-    if ($rec->{loc} && $rec->{geo} ) {
-      my $geocoord;
-      (undef, undef, $geocoord) = geo($rec->{geo});
-      $geolocations{$rec->{loc}} = $geocoord if ($geocoord); # Save the last seen location
-      # TODO: Later we may start taking averages, or collect a few data points for each
-    } # Let's see how precise it seems to be
-
-    if ( $thisdate ne $rec->{effdate} ) { # new date
-      $lastdatesum = 0.0;
-      $lastdatemsum = 0;
-      $thisdate = $rec->{effdate};
-      $lasteffdate = $rec->{effdate};
-      $lastwday = $rec->{wday};
-      $alcinbody = 0; # Blood alcohol
-      $balctime = 0; # Time of the last drink
-    }
-    # Blood alcohol
-    if ($bodyweight && $rec->{alcvol}  ) {
-      my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
-      my $drtime = $1 + $2/60 if ( $rec->{stamp} =~ / (\d\d):(\d\d)/ );   # time in fractional hours
-      if ($drtime < $balctime ) { $drtime += 24; } # past midnight
-      my $timediff = $drtime - $balctime;
-      $alcinbody -= $bodyweight * $burnrate * $timediff;
-      if ($alcinbody < 0) { $alcinbody = 0; }
-      $balctime = $drtime;
-      $alcinbody += $rec->{alcvol} / $onedrink * 12 ; # grams of alc in body
-      my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-      if ( $ba > ( $bloodalc{$rec->{effdate}} || 0 ) ) {
-        $bloodalc{$rec->{effdate}} = $ba;
-      }
-      $bloodalc{$rec->{stamp}} = $ba;  # indexed by the whole timestamp
-      $rec->{bloodalc} = $ba;
-    }
-
-    $lastdatesum += $rec->{alcvol} ;
-    $lastdatemsum += $rec->{pr};
-    if ( $efftoday eq $rec->{effdate} ) { # Actually today
-        $todaydrinks = sprintf("%3.1f", $lastdatesum / $onedrink ) . " d " ;
-        $todaydrinks .= " $lastdatemsum.-" if $lastdatemsum > 0  ;
-        if ($bloodalc{$rec->{effdate}}) { # Calculate the blood alc at the current time.
-          # TODO - Only needed to show at the end of the day in ext full list
-          $todaydrinks .= sprintf("  %4.2f‰",$bloodalc{$rec->{effdate}}); # max of the day
-          # TODO - This replicates the calculations above, move to a helper func
-          my $curtime = datestr("%H:%M",0,1);
-          my $burnrate = .12;  # g of alc per kg of weight  (.10 to .15)
-          my $drtime = $1 + $2/60 if ( $curtime =~ /(\d\d):(\d\d)/ );   # time in fractional hours
-          if ($drtime < $balctime ) { $drtime += 24; } # past midnight
-          my $timediff = $drtime - $balctime;
-          my $curalc = $alcinbody - $bodyweight * $burnrate * $timediff;  # my weight * .12 g/hr burn rate
-          if ($curalc < 0) { $curalc = 0; }
-          my $ba = $curalc / ( $bodyweight * .68 ); # non-fat weight
-          $todaydrinks .= sprintf(" - %0.2f‰",$ba);
-        }
-    }
-    if ( $rec->{effdate} gt $weekago ) {
-      $weeksum += $rec->{alcvol};
-      $weekmsum += abs($rec->{pr});
-      $weekdates{$rec->{effdate}}++;
-    }
-    if ( $rec->{effdate} =~ /(^\d\d\d\d-\d\d)/ )  { # collect stats for each month
-      $calmon = $1;
-      $monthdrinks{$calmon} += $rec->{alcvol};
-      $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
-    }
-    $lastmonthday = $1 if ( $rec->{effdate} =~ /^\d\d\d\d-\d\d-(\d\d)/ );
-  } # line loop
-
-  if ( ! $todaydrinks ) { # not today
-    $todaydrinks = "($lastwday: " .
-      sprintf("%3.1f", $lastdatesum / $onedrink ) . "d $lastdatemsum.- ";
-    $todaydrinks .=  sprintf("%4.2f‰",($bloodalc{$lasteffdate}))
-      if ($lasteffdate && $bloodalc{$lasteffdate});
-    $todaydrinks .= ")" ;
-    my $today = datestr("%F");
-    if ( $calmon && $today =~ /$calmon-(\d\d)/ ) {
-      $lastmonthday = $1;
-      # When today is in the next month, it shows prev month up to the last
-      # entry date, not to end of the month. I can live with that for now, esp
-      # since the entry must be pretty close to the end of the month. Showing
-      # zeroes for the current month would be no fun.
-    }
-  }
-
-  # Remember some values to display in the comment box when no comment to show
-  $weeksum = sprintf( "%3.1fd (=%3.1f/day)", $weeksum / $onedrink,  $weeksum / $onedrink /7);
-  $todaydrinks .= "\nWeek: $weeksum $weekmsum.- " . (7 - scalar( keys(%weekdates) ) ) . "z";
-  $todaydrinks .= "\n$calmon: " . sprintf("%3.1fd (=%3.1f/d)",
-        $monthdrinks{$calmon}/$onedrink, $monthdrinks{$calmon}/$onedrink/$lastmonthday).
-    " $monthprices{$calmon}.-."
-    if ($calmon);
-  my $nrecs = scalar(@records);
-  print "<!-- Parsed $nrecs records up to '$notbef' for op '$op' m='$maxlines' q='$qry'/'$qryfield' -->\n";
-
-} # parsedatalines
 
 
 ################################################################################
@@ -2828,7 +2641,7 @@ sub about {
   print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
   print "&nbsp; <a href='$url?o=geo'><span>Geolocation debug</span></a><br/>\n";
   if ($devversion) {
-    print "<p/>&nbsp; <a href='$url?o=copyproddata'><span>Get production data</span></a><br>\n";
+    print "<p>&nbsp; <a href='$url?o=copyproddata'><span>Get production data</span></a><br>\n";
   }
   exit();
 } # About
@@ -3001,13 +2814,13 @@ sub lists {
 
     if ( $op eq "Location" ) {
       $fld = $rec->{loc};
-      $line = "<td>" . filt($fld,"b","","full","loc") .
-        "<span class='no-print'> ".
+      $line = "<td>" . filt($fld,"b","","full","loc");
+      $line .=  "<span class='no-print'> ".
         "&nbsp; " . loclink($fld, "Www") . "\n  " . glink($fld, "G") . "</span>" .
-        "</td>\n" .
-        "<td>$rec->{wday} $rec->{effdate} ($seen{$fld}) <br class='no-wide'/>" .
-        lst("Location",$rec->{maker},"i","","maker") . ": \n" .
-        lst($op,$rec->{name},"","","name") . "</td>";
+        "</td>\n";
+      $line .=   "<td>$rec->{wday} $rec->{effdate} <br class='no-wide'/>";
+      $line .= lst("Location",$rec->{maker},"i","","maker") . ": \n";
+      $line .= lst($op,$rec->{name},"","","name") . "</td>";
 
     } elsif ( $op eq "Brewery" ) {
       next unless ( $rec->{type} eq "Beer" );
@@ -3082,7 +2895,7 @@ sub lists {
       my $restname = "Restaurant,$rec->{loc}";
       my $rpr = "";
       $rpr = "&nbsp; $rec->{pr}.-" if ($rec->{pr} && $rec->{pr} >0) ;
-      $line = "<td>" . filt($rec->{loc},"b","","full","loc") . "&nbsp; ($seen{$restname}) <br class='no-wide'/> \n ".
+      $line = "<td>" . filt($rec->{loc},"b","","full","loc") . "&nbsp; <br class='no-wide'/> \n ".
               filt("$rec->{subtype}", "", " [$rec->{subtype}] ", "Restaurant", "subtype") .
               " &nbsp;\n" . glink("Restaurant $rec->{loc}") . "</td>\n" .
               "<td>$rec->{wday} $rec->{effdate} <i>$rec->{food}</i>". " $rpr <br class='no-wide'/> " .
@@ -3504,7 +3317,7 @@ sub filt {
 # TODO - Is this needed, wouldn't filt() above do the same?
 sub lst {
   my $op = shift; # The kind of list
-  my $qry = shift; # Optional query to filter the list
+  my $qry = shift || ""; # Optional query to filter the list
   my $tag = shift || "nop";
   my $dsp = shift || $qry || "???";
   my $fld = shift || "";
