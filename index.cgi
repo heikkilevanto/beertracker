@@ -482,6 +482,7 @@ sub findrec {
     }
     $i--;
   }
+  print STDERR "Find: $i $foundrec->{rawline} \n";
 }
 
 
@@ -675,12 +676,14 @@ sub guessvalues {
 sub postdata {
   error("Can not see $datafile") if ( ! -w $datafile ) ;
 
-  findrec(); # Get some defaults in $foundrec
 
   my $sub = $q->param("submit") || "";
 
   # Input parameters, only used here in POST
   my $rec = inputrecord();  # Get an approximation of a record from the params
+
+  $edit = $rec->{edit}; # Tell findrec what we are editing
+  findrec(); # Get some defaults in $foundrec
 
   # Fix record type.
   $rec->{type} = "None" unless $rec->{type};
@@ -698,6 +701,16 @@ sub postdata {
 
   my $lasttimestamp = $lastrec->{stamp};
 
+  # Keep geo and loc unless explicitly changed
+  # ( the js trickery can change these from under us)
+  if ( $sub eq "Save" ) {
+    if ( $rec->{loc} =~ /^ / && $foundrec->{loc} ){
+      $rec->{loc} = $foundrec->{loc};
+    }
+    if ( $rec->{geo} =~ /^ / && $foundrec->{geo} ){
+      $rec->{geo} = $foundrec->{geo};
+    }
+  }
   # Clean the location
   if ($rec->{loc}) {
     $rec->{loc} =~ s/ *\[.*$//; # Drop the distance from geolocation
@@ -705,10 +718,6 @@ sub postdata {
     $rec->{loc} = $foundrec->{loc}; # default to previous loc
   }
 
-  if ( $sub eq "Save" && $rec->{loc} =~ /^ /  ) {   # Saving and geo guessed loc
-    $rec->{loc} = $foundrec->{loc}; # Ignore that guess, fall back to the latest location # See #301
-    $rec->{geo} = ""; # Drop the geo coords, we don't want to mix $thisloc and random coords
-  }
 
   # Manually entered date/time indicate we are filling the data after the fact
   # so do not trust the current geo coordinates
