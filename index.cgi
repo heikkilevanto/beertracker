@@ -279,7 +279,7 @@ my $url = $q->url;
 # Mostly from reading the file, used in various places
 ################################################################################
 # TODO - Check these
-my $foundrec = {};  # The record we found, either the last one or one defined by edit param
+my $foundrec;  # The record we found, either the last one or one defined by edit param
 my @records; # All data records, parsed
 my @lines; # All data lines, unparsed
 my %seen; # Count how many times various names seen before (for NEW marks)
