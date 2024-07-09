@@ -1397,7 +1397,7 @@ sub inputform {
   print "</form>\n";
 
   print "<div id='debug' hidden ><hr/>Debug<br/></div>\n"; # for javascript debugging
-}
+} # inputform
 
 ################################################################################
 # Graph
@@ -2805,12 +2805,7 @@ sub geodebug {
 # various lists (beer, location, etc)
 ################################################################################
 sub lists {
-  print "<hr/><a href='$url'><span><b>$op</b> list</span></a>\n";
-  if ( !$sortlist) {
-    print "(<a href='$url?o=$op&sort=1&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "' ><span>sort</span></a>) <br/>\n";
-  } else {
-    print "(<a href='$url?o=$op&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "'><span>Recent</span></a>) <br/>\n";
-  }
+  print "<hr/><b>$op list</b>\n";
   print "<br/><div class='no-print'>\n";
   my $filts = splitfilter($qry);
   print "Filter: $filts " .
@@ -2819,14 +2814,16 @@ sub lists {
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
   print searchform();
   print "Other lists: " ;
-  my @ops = ( "Location", "Brewery", "Beer",
-      "Wine", "Booze", "Restaurant", "Style");
+  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style");
   for my $l ( @ops ) {
     my $bold = "nop";
     $bold = "b" if ($l eq $op);
     print "<a href='$url?o=$l'><$bold>$l</$bold></a> &nbsp;\n";
   }
   print "</div><hr/>\n";
+  if ( !$notbef && !$qry ) {
+    $notbef = datestr("%F", -180); # Default to last half year
+  }
   my $fld;
   my $line;
   my @displines;
@@ -2836,12 +2833,12 @@ sub lists {
   my $i = scalar( @lines );
   while ( $i > 0 ) {
     $i--;
-    next if ($lines[$i] lt $notbef);
     my $rec = getrecord($i);
+    next unless ($rec); # defensive coding, probably gets that one TZ record
+    last if ($lines[$i] lt $notbef && scalar(@displines) >= 30);
     checkshortstyle($rec) if ( $qryfield =~ /shortstyle/i );
     next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i );
     next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
-    next unless ($rec); # defensive coding, probably gets that one TZ record
     next if ( $rec->{type} eq "Tz" );
     $fld = "";
 
@@ -2954,10 +2951,16 @@ sub lists {
     $fld = uc($fld);
     next if $lineseen{$fld};
     $lineseen{$fld} = $line;
-    #print "<tr>$line</tr>\n";
     push @displines, "$line";
   }
-  print "<br/>Total " . scalar(@displines) . " entries from $notbef<br/>\n" ;
+  print scalar(@displines) . " entries ";
+  print "from $notbef" if ($notbef);
+  print "<br/>\n" ;
+  if ( !$sortlist) {
+    print "(<a href='$url?o=$op&sort=1&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "' ><span>Sort Alphabetically</span></a>) <br/>\n";
+  } else {
+    print "(<a href='$url?o=$op&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "'><span>Sort Recent First</span></a>) <br/>\n";
+  }
 
 
   print "<hr/>\n" ;
