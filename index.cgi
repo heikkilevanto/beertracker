@@ -487,6 +487,24 @@ sub findrec {
   }
 }
 
+################################################################################
+# A helper to preload the last few years of records, to get seen marks in
+# %seen and %lastseen
+################################################################################
+sub getseen{
+  my $limit = shift || datestr( "%F", -2*365 ) ; # When to stop scannig
+  my $i = scalar( @lines )-1;
+  while ($i > 0) { # normall we exit when we hit the limit
+    my $rec = getrecord($i);
+    $seen{$rec->{maker}}++;
+    $seen{$rec->{name}}++;
+    $seen{$rec->{style}}++;
+    $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
+    $seen{$rec->{seenkey}}++;
+    last if ( $rec->{stamp} lt $limit );
+    $i--;
+  }
+}
 
 
 ################################################################################
@@ -1756,11 +1774,15 @@ sub graph {
 ################################################################################
 
 sub beerboard {
-  my $extraboard = -1; # Which of the entries to open, or -1 for all, -2 for none
+  my $extraboard = -1; # Which of the entries to open, or -1 current, -2 for all, -3 for none
   if ( $op =~ /board(-?\d+)/i ) {
     $extraboard = $1;
-    }
+  }
   my $locparam = param("loc") || $foundrec->{loc} || "";
+
+  # Set up %seen and %lastseen, for the past 2 years
+  getseen(datestr( "%F", -2*365 )) unless ( $extraboard < -1 );
+
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
@@ -2978,23 +3000,9 @@ sub fulllist {
     print "<br/>" . searchform() . "<br/>" ;
     print  glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n" if ($qry);
   }
-  # Preload the last few years of records, to get seen marks
-  # TODO - Make this into a helper that can be used elsewhere as well
-  my $i = scalar( @lines )-1;
   if ( $qrylim eq "x" ) {
-    my $twoyear = datestr( "%F", -3*365 );
-    while ($i > 0) { # normall we exit when we hit the twoyear limit
-      my $rec = getrecord($i);
-        $seen{$rec->{maker}}++;
-        $seen{$rec->{name}}++;
-        $seen{$rec->{style}}++;
-        $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
-        $seen{$rec->{seenkey}}++;
-      last if ( $rec->{stamp} lt $twoyear );
-      $i--;
-    }
+    getseen(datestr( "%F", -3*365 ));
   }
-
   my $efftoday = datestr( "%F", -0.3, 1); #  today's date
   my $lastloc = "";
   my $lastdate = "today";
@@ -3007,7 +3015,7 @@ sub fulllist {
   my $locmsum = 0;
   my $origpr = "";
   my $anchor;
-  $i = scalar( @lines );
+  my $i = scalar( @lines );
   $maxlines = $i*10 if ($maxlines <0); # neg means all of them
   my $rec = getrecord($i-1);
   my $lastrec; # TODO - Use this instead of the many last-somethings above
