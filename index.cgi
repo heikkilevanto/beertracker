@@ -2578,7 +2578,7 @@ sub datastats {
   my $oldrecs = 0;
   my $badrecs = 0;
   my $comments = 0;
-  my @rates;
+  my @rates = ( 0,0,0,0,0,0,0,0,0,0 );
   my $ratesum = 0;
   my $ratecount = 0;
 
@@ -2614,9 +2614,10 @@ sub datastats {
   }
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td>&nbsp;</td><td><b>Ratings</b></td></tr>\n";
-  for (my $i = 1; $i < scalar(@rates); $i++) {
-    $rates[$i] = "" unless ($rates[$i]);
+  my $i = 1;
+  while ( $ratings[$i] ){
     print "<tr><td align='right'>$rates[$i]</td><td>'$ratings[$i]' ($i)</td></tr>\n";
+    $i++;
   }
   my $avg = sprintf("%3.1f", $ratesum / $ratecount);
   print "<tr><td align='right'>$ratecount</td><td>Records with ratings</td></tr>\n";
