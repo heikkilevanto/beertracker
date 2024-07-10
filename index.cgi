@@ -120,9 +120,8 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
 if ( ! -w $datafile ) {
   error ("Bad username: $datafile not writable\n");
 }
-my @ratings = ( "Undrinkable", "Bad", "Unpleasant", "Could be better",
-"Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect",
-"I'm in love" );
+my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero should not be used!
+"Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect");  # 9 is the top
 
 my %volumes = ( # Comment is displayed on the About page
   'T' => " 2 Taster, sizes vary, always small",
@@ -1328,7 +1327,7 @@ sub inputform {
   if (hasfield($type,'rate')) {
     print "<select name='rate' id='rate' value='$foundrec->{rate}' placeholder='Rating' style='width:4.5em;'>\n";
     print "<option value=''>Rate</option>\n";
-    for my $ro (0 .. scalar(@ratings)-1) {
+    for my $ro (1 .. scalar(@ratings)-1) {
       print "<option value='$ro'" ;
       print " selected='selected'" if ( $ro eq $foundrec->{rate} );
       print  ">$ro $ratings[$ro]</option>\n";
@@ -2615,7 +2614,7 @@ sub datastats {
   }
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td>&nbsp;</td><td><b>Ratings</b></td></tr>\n";
-  for (my $i = 0; $i <= 10; $i++) {
+  for (my $i = 1; $i < scalar(@rates); $i++) {
     $rates[$i] = "" unless ($rates[$i]);
     print "<tr><td align='right'>$rates[$i]</td><td>'$ratings[$i]' ($i)</td></tr>\n";
   }
