@@ -3207,6 +3207,7 @@ sub fulllist {
           print "<br>\n";
         } else {
           print filt("$ssty",$tag,"","","style") . " "   ;
+          print "<br>\n";
         }
       }
       if ($rec->{style} || $rec->{pr} || $rec->{alc}) {
@@ -3600,26 +3601,28 @@ sub unit {
 
 
 # helper to display the units string
-# price, alc, vol, drinks
-# optionally liter price and blood alc
+# price (literprice), alc, vol, drinks, (bloodalc)
 sub units {
   my $rec = shift;
   my $extended = shift || "";
-  my $s =
-    unit($rec->{vol}, "cl").
-    unit($rec->{pr},".-") .
-    unit($rec->{alc},'%');
-  if ( $rec->{alcvol} && $rec->{pr} >= 0) {
-    my $dr = sprintf("%1.2f", $rec->{alcvol} / $onedrink );
-    $s .= unit($dr, "d") if ($dr > 0.1);
-  }
+  my $s = "<b>". unit($rec->{vol}, "cl") . "</b>";
+  $s .= unit($rec->{pr},".-");
   if ($extended) {
     if ($rec->{pr} && $rec->{vol}) {
       my $lpr = int($rec->{pr} / $rec->{vol} * 100);
-      $s .= unit($lpr, "/l");
+      $s .= "(" . unit($lpr, "/l") . ") ";
     }
+  }
+  $s .=  unit($rec->{alc},'%');
+  if ( $rec->{drinks} && $rec->{pr} >= 0) {
+    my $dr = sprintf("%1.2f", $rec->{drinks} );
+    $s .= unit($dr, "d") if ($dr > 0.1);
+  }
+  if ($extended) {
     if ($rec->{bloodalc}) {
-      $s .= unit( sprintf("%0.2f",$rec->{bloodalc}), "‰");
+      my $tag = "nop";
+      $tag = "b" if ( $rec->{bloodalc} > 0.5 );
+      $s .= "<$tag>" . unit( sprintf("%0.2f",$rec->{bloodalc}), "‰"). "</$tag>";
     }
   }
   return $s;
