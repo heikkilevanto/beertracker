@@ -174,6 +174,7 @@ $currency{"usd"} = 6.3;  # Varies bit over time
 my $bodyweight;  # in kg, for blood alc calculations
 $bodyweight = 120 if ( $username eq "heikki" );
 $bodyweight =  83 if ( $username eq "dennis" );
+my $burnrate = .12; # g of alc pr kg of weight (.10 to .15)
 
 # Geolocations. Set up when reading the file, passed to the javascript
 my %geolocations; # Latest known geoloc for each location name
@@ -286,7 +287,7 @@ my $todaydrinks = "";  # For a hint in the comment box
 my %ratesum; # sum of ratings for every beer
 my %ratecount; # count of ratings for every beer, for averaging
 my %restaurants; # maps location name to restaurant records, mostly for the type
-my %bloodalc; # max blood alc for each day, and current bloodalc for each line
+my %bloodalc; # max blood alc for each day
 my %lastseen; # Last time I have seen a given beer
 my %monthdrinks; # total drinks for each calendar month
 my %monthprices; # total money spent. Indexed with "yyyy-mm"
@@ -505,6 +506,54 @@ sub getseen{
   }
 }
 
+################################################################################
+# A helper to calculate blood alcohol
+# Sets the bloodalc to all records at the date of the given index
+# and $bloodalc{$effdate} to max bloodalc for the effdate
+#
+################################################################################
+sub bloodalcohol {
+  my $i = shift || scalar(@lines)-1;  # Index to any line on the interesting date
+  if ( !$bodyweight ) {
+    print STDERR "Can not calculate alc for $username, don't know body weight \n";
+    return; # TODO - What to return
+  }
+  my $rec = getrecord($i);
+  my $eff = $rec->{effdate};
+  return if ( $bloodalc{$eff} ); # already done
+
+  # Scan back to the beginning of the day
+  while ( $eff eq $rec->{effdate} && $i>0 ) {
+    $i--;
+    $rec = getrecord($i);
+  }
+  $i++; # now at the first record of the date
+  my $alcinbody = 0;
+  my $balctime = 0;
+  my $maxba = 0;
+  while ( $i < scalar(@lines) ) { # Forward until end of day
+    $rec = getrecord($i);
+    last if ( ! $rec || $rec->{effdate} ne $eff );
+    if ( $rec->{alcvol} ) {
+      my $drtime = $1 + $2/60 if ($rec->{stamp} =~/ (\d\d):(\d\d)/ ); # frac hrs
+      $drtime += 24 if ( $drtime < $balctime ); # past midnight
+      my $timediff = $drtime - $balctime;
+      $balctime = $drtime;
+      $alcinbody -= $burnrate * $bodyweight * $timediff;
+      $alcinbody = 0 if ( $alcinbody < 0);
+      #my $lower = $alcinbody;
+      $alcinbody += $rec->{alcvol} / $onedrink * 12 ; # grams of alc in body
+      my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+      $maxba = $ba if ( $ba > $maxba );
+      $rec->{bloodalc} = $ba;
+      #print STDERR "Bloodalc $i $eff $rec->{stamp}: down to $lower in $timediff, up to $alcinbody, makes $ba \n";
+    }
+    $i++;
+  }
+  #print STDERR "max $maxba \n";
+  $bloodalc{$eff} = $maxba;
+
+}
 
 ################################################################################
 # POST data into the file
@@ -1140,23 +1189,22 @@ sub inputfield {
 #  The calendar month: drinks dr/day, money, zero days
 #
 sub summarycomment {
-# TODO - Get blood alc as well
   my $i = scalar(@lines)-1;
   my $last = getrecord($i);
   my $daylimit = $last->{effdate};
   my $weeklimit = datestr("%F", -7);
   my $monthlimit = datestr("%F", -30);
-  my $effd = $daylimit;
   my $daydr = 0;
   my $daysum = 0;
   my $weekdr = 0;
   my $weeksum = 0;
   my $monthdr = 0;
   my $monthsum = 0;
-  my $monthdays = 1; # so we don't divide by zero
   while ( $i >= 0 ) {
     my $going = 0;
     my $rec = getrecord($i);
+    bloodalcohol($i);
+
     #print STDERR "sum: $i: $rec->{stamp} \n";
     if ( $rec->{effdate} eq $daylimit ) {
       $daydr += $rec->{drinks};
@@ -1170,23 +1218,21 @@ sub summarycomment {
     if ( $rec->{effdate} gt $monthlimit ) {
        $monthdr += $rec->{drinks};
        $monthsum += $rec->{pr} if ($rec->{pr} > 0 );
-       if ( $rec->{effdate} ne $effd ) {
-         $effd = $rec->{effdate};
-         $monthdays++;
-       }
        $going = 1;
     }
     $i--;
     last unless $going;
   }
-  my $dayline = sprintf("%dd %d.-", $daydr, $daysum);
+  my $balc = "";
+  $balc = sprintf( "%4.2f‰", $bloodalc{$daylimit}); # if ( $bloodalc{$daylimit} );
+  my $dayline = sprintf("%dd %d.-  %s", $daydr, $daysum, $balc);
   if ( $daylimit eq $efftoday ){
     $dayline = "Today, $last->{wday}: $dayline";
   } else {
     $dayline = "($last->{wday}: $dayline)"
   }
   my $weekline = sprintf("Week: %dd  (%3.1f/day) %d.-", $weekdr, $weekdr/7, $weeksum);
-  my $monthline = sprintf("Month: %dd  (%3.1f/day) %d.-", $monthdr, $monthdr/$monthdays, $monthsum);
+  my $monthline = sprintf("30d: %dd  (%3.1f/day) %d.-", $monthdr, $monthdr/30, $monthsum);
   return "$dayline\n".
          "$weekline\n".
          "$monthline";
@@ -3033,6 +3079,7 @@ sub fulllist {
     $origpr = $rec->{pr};
 
     my $dateloc = "$rec->{effdate} : $rec->{loc}";
+    bloodalcohol($i);
 
     if ( $dateloc ne $lastloc && ! $qry) { # summary of loc and maybe date
       print "\n";
@@ -3045,7 +3092,7 @@ sub fulllist {
         print "$lastloc2: " . unit($locdrinks,"d"). unit($locmsum, ".-"). "\n";
         if ($averages{$lastdate} && $locdrinks eq $daydrinks && $lastdate ne $rec->{effdate}) {
           print " (a=" . unit($averages{$lastdate},"d"). " )\n";
-          if ($bloodalc{$lastdate}) {
+          if ($bloodalc{$lastdate}) { #
             print " ". unit(sprintf("%0.2f",$bloodalc{$lastdate}), "‰");
           }
           print "<br/>\n";
