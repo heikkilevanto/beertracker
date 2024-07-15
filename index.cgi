@@ -737,6 +737,10 @@ sub guessvalues {
     $rec->{vol} = "";  # But keep the price for restaurants etc
   }
   $rec->{alc} = number($rec->{alc});
+
+  if ( $rec->{type} eq "Beer" && ! $rec->{subtype} ) {
+    $rec->{subtype} = "DK"; # A good default
+  }
 } # guessvalues
 
 ########################
