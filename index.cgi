@@ -3477,6 +3477,7 @@ sub searchform {
   }
   $r .= "</select> \n" ;
   $r .=  "<input type=hidden name=notbef value='$notbef' />\n" if ( $notbef gt "2000" );
+  $r .=  "<input type=hidden name=f value='$qrylim' />\n" if ( $qrylim);
   $r .=  "<input type=submit value='Search'/> \n " .
     "</form> \n";
   return $r;
