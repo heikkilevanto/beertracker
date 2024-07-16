@@ -3220,7 +3220,11 @@ sub fulllist {
         }
       }
       if ($rec->{style} || $rec->{pr} || $rec->{alc}) {
-        print units($rec, "x");  # indicates extended units
+        if ( $qrylim ne "x" ) {
+          print units($rec);
+        } else {
+          print units($rec, "x");  # indicates extended units
+        }
       }
       print "<br/>\n" ;
       if ($rec->{food}) {
