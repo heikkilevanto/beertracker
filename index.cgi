@@ -3630,12 +3630,13 @@ sub units {
     my $dr = sprintf("%1.2f", $rec->{drinks} );
     $s .= unit($dr, "d") if ($dr > 0.1);
   }
-  if ($extended) {
-    if ($rec->{bloodalc}) {
-      my $tag = "nop";
-      $tag = "b" if ( $rec->{bloodalc} > 0.5 );
-      $s .= "<$tag>" . unit( sprintf("%0.2f",$rec->{bloodalc}), "‰"). "</$tag>";
-    }
+  if ($rec->{bloodalc}) {
+    my $tag = "nop";
+    $tag = "b" if ( $rec->{bloodalc} > 0.5 );
+    $s .= "<$tag>" . unit( sprintf("%0.2f",$rec->{bloodalc}), "/₀₀"). "</$tag>";
+    # The promille sign '‰' is hard to read on a phone. Experimenting wiht alternatives:
+    # from https://en.wikipedia.org/wiki/List_of_Unicode_characters
+    # ⁂ ₀  /₀₀ ◎ ➿ 。🜽
   }
   return $s;
 }
