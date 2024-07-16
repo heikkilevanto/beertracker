@@ -499,6 +499,7 @@ sub getseen{
     $seen{$rec->{maker}}++;
     $seen{$rec->{name}}++;
     $seen{$rec->{style}}++;
+    $seen{$rec->{loc}}++;
     $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
     $seen{$rec->{seenkey}}++;
     last if ( $rec->{stamp} lt $limit );
