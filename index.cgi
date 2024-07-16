@@ -1831,7 +1831,7 @@ sub beerboard {
   my $locparam = param("loc") || $foundrec->{loc} || "";
 
   # Set up %seen and %lastseen, for the past 2 years
-  getseen(datestr( "%F", -2*365 )) unless ( $extraboard < -1 );
+  getseen(datestr( "%F", -3*365 )) unless ( $extraboard < -1 );
 
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
@@ -1916,12 +1916,11 @@ sub beerboard {
       $alc = sprintf("%4.1f",$alc) if ($alc);
       my $seenkey = seenkey($mak,$beer);
       if ( $qry ) {
-        next unless ( "$sty $mak $beer" =~ /$qry/ );
+        next unless ( "$sty $mak $beer" =~ /$qry/i );
       }
 
       if ( $id != $previd +1 ) {
-        my $missing = $previd +1 ;
-        print "<tr><td align=right>$missing</td><td align=right>. . .</td></tr>\n";
+        print "<tr><td align=right>&nbsp;</td><td align=right>. . .</td></tr>\n";
       }
       my $thisbeer = "$mak : $beer";  # Remember current beer for opening
       $thisbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
@@ -2091,7 +2090,7 @@ sub shortlist{
       next if ( $lines[$i] !~ /^$yrlim/ );
     }
     my $rec = getrecord($i);
-    next if filtered ( $rec );
+    next if filtered ( $rec ); # TODO - Does this make any sense
     if ( $i == 0 ) {
       $lastdate = "";
       if (!$entry) { # make sure to count the last entry too
@@ -3055,7 +3054,8 @@ sub fulllist {
     print  glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n" if ($qry);
   }
   if ( $qrylim eq "x" || $qryfield eq "new" ) {
-    getseen(datestr( "%F", -3*365 ));
+    getseen(datestr( "%F", -3*365 ))
+       unless ( scalar(%seen) > 2 );  # already done in beer board
   }
   my $efftoday = datestr( "%F", -0.3, 1); #  today's date
   my $lastloc = "";
@@ -3946,7 +3946,7 @@ sub checknew {
   for my $f ( @fields ) {
     next unless ( $rec->{$f} );
     my $s = $seen{ $rec->{$f} };
-    next if ( $s > 1 );
+    next if ( $s &&  $s > 1 );
     $rec->{new} = $f;
     last;
   }
