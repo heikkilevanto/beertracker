@@ -685,7 +685,7 @@ sub missing {
 sub guessvalues {
   my $rec = shift;
   my $priceguess = "";
-  my $defaultvol = 40;  # TODO - We don't need this, now that editing is so easy
+  my $defaultvol = 40;
   my $i = scalar( @lines )-1;
   $rec->{name} = trim($rec->{name});  # Remove leading spaces if any
   while ( $i > 0 && $rec->{name}
@@ -717,7 +717,7 @@ sub guessvalues {
     } else {
       $rec->{vol} = number($rec->{vol});
       if ($rec->{vol}<=0) {
-        $rec->{vol} = $defaultvol;  # TODO - Can this ever happen ? Doesn't neg vol mean something?
+        $rec->{vol} = $defaultvol;
       }
     }
   }
