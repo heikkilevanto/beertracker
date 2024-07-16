@@ -496,6 +496,7 @@ sub getseen{
   my $i = scalar( @lines )-1;
   while ($i > 0) { # normall we exit when we hit the limit
     my $rec = getrecord($i);
+    last if ( ! $rec);
     $seen{$rec->{maker}}++;
     $seen{$rec->{name}}++;
     $seen{$rec->{style}}++;
@@ -2871,6 +2872,7 @@ sub lists {
     print "<a href='$url?o=$l'><$bold>$l</$bold></a> &nbsp;\n";
   }
   print "</div><hr/>\n";
+  getseen() if ( $qryfield =~ /new/i );
   if ( !$notbef && !$qry ) {
     $notbef = datestr("%F", -180); # Default to last half year
   }
@@ -2886,13 +2888,10 @@ sub lists {
     my $rec = getrecord($i);
     next unless ($rec); # defensive coding, probably gets that one TZ record
     last if ($lines[$i] lt $notbef && scalar(@displines) >= 30);
-    checkshortstyle($rec) if ( $qryfield =~ /shortstyle/i );
-    next unless ( !$qry || $rec->{$qryfield} =~ /\b$qry\b/i );
-    next unless ( !$yrlim || $rec->{rawline} =~ /^$yrlim/ );
-    next if ( $rec->{type} eq "Tz" );
     $fld = "";
 
     if ( $op eq "Location" ) {
+      next if filtered ( $rec, "loc" );
       $fld = $rec->{loc};
       $line = "<td>" . filt($fld,"b","","full","loc");
       $line .=  "<span class='no-print'> ".
@@ -2904,6 +2903,7 @@ sub lists {
 
     } elsif ( $op eq "Brewery" ) {
       next unless ( $rec->{type} eq "Beer" );
+      next if filtered ( $rec, "maker" );
       my $mak = $rec->{maker};
       $fld = $mak;
       $mak =~ s"/+"/<br/>&nbsp;"; # Split collab brews on two lines
@@ -2916,6 +2916,7 @@ sub lists {
 
     } elsif ( $op eq "Beer" ) {
       next if ( $rec->{type} ne "Beer" );
+      next if filtered ( $rec, "name" );
       my $beer = $rec->{name};
       $beer =~ s"(/|%2f|\()+"<br/>&nbsp; $1"gi if (length($beer) > 25); # Split longer lines
       $fld = $beer;
@@ -2937,6 +2938,7 @@ sub lists {
 
     } elsif ( $op eq "Wine" ) {
       next unless ( $rec->{type} eq "Wine" );
+      next if filtered ( $rec ); # new marks anywhere
       my $wine = $rec->{name};
       $fld = $wine;
       next if ( $wine =~ /^Misc/i );
@@ -2953,6 +2955,7 @@ sub lists {
 
     } elsif ( $op eq "Booze" ) {
       next unless ( $rec->{type} eq "Booze" );
+      next if filtered ( $rec, "name" );
       my $stylename = $rec->{subtype};
       my $beer = $rec->{name};
       $fld = $beer;
@@ -2968,6 +2971,7 @@ sub lists {
 
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $rec->{type} eq "Restaurant" );
+      next if filtered ( $rec, "loc" );
       my $rstyle= $rec->{subtype};
       $fld = "$rec->{loc}";
       my $ratestr = "";
@@ -2983,6 +2987,7 @@ sub lists {
 
     } elsif ( $op eq "Style" ) {
       next unless ( $rec->{type} eq "Beer" );
+      next if filtered ( $rec, "style" );
       my $sty = $rec->{style};
       $fld = $sty;
       my $seentimes = "";
