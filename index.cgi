@@ -3054,7 +3054,7 @@ sub fulllist {
     print "<br/>" . searchform() . "<br/>" ;
     print  glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n" if ($qry);
   }
-  if ( $qrylim eq "x" ) {
+  if ( $qrylim eq "x" || $qryfield eq "new" ) {
     getseen(datestr( "%F", -3*365 ));
   }
   my $efftoday = datestr( "%F", -0.3, 1); #  today's date
@@ -3437,11 +3437,15 @@ sub splitfilter {
 # returns 0 if the record should be displayed
 sub filtered {
   my $rec = shift;
+  my $newfield = shift; # the field to check for new mark. Defaults to all relevant
   my $skip = 0; # default to displaying it
+  return 1 if ( !$rec ); # nothing to show
   if ( $qryfield eq "shortstyle" ) {
     checkshortstyle($rec); # Make sure we have a short style
   }
-  return 1 if ( !$rec );
+  if ( $qryfield eq "new" ) {
+    checknew($rec, $newfield);
+  }
   if ( $qry ) {
     $rec->{$qryfield} = "" if ( !defined($rec->{$qryfield} ) );
     $skip = 1 if ( $rec->{$qryfield} !~ /\b$qry\b/i ) ;
@@ -3466,11 +3470,9 @@ sub searchform {
     "<input type=hidden name='o' value=$op />\n" .
     "<input type=text name='q' value='$qry' />  \n " .
     "<select name='qf' style='width:6em;'> \n";
-  my $fieldnamelistref = $datalinetypes{$rectype};
-  my @fieldnamelist = @{$fieldnamelistref};
   $r .=  "<option value='rawline'>(any)</option>\n";
 
-  foreach my $fn ( fieldnames(), "shortstyle" ) {
+  foreach my $fn ( fieldnames(), "shortstyle", "new" ) {
     my $dsp = ucfirst($fn);
     my $sel = "";
     $sel = "selected" if ( $fn eq $qryfield );
@@ -3926,8 +3928,29 @@ sub shortbeerstyle {
 sub checkshortstyle {
   my $rec = shift;
   return unless $rec;
+  return unless ( $rec->{style} );
   return if $rec->{shortstyle}; # already have it
   $rec->{shortstyle} = shortbeerstyle($rec->{style});
+}
+
+# Check if the record should have a NEW marker
+# Only considers fields in the given list
+sub checknew {
+  my $rec = shift;
+  my $field = shift;
+  my @fields = ( $field );
+  @fields = ( "name", "maker", "style" ) unless ( $field );
+  return if defined($rec->{new}) ; # already checked
+  $rec->{new} = ""; # default not new
+  return if ( scalar(%seen) < 2); # no new marks to check
+  for my $f ( @fields ) {
+    next unless ( $rec->{$f} );
+    my $s = $seen{ $rec->{$f} };
+    next if ( $s > 1 );
+    $rec->{new} = $f;
+    last;
+  }
+
 }
 
 # Split a data line into a hash. Precalculate some fields
