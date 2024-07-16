@@ -3194,16 +3194,15 @@ sub fulllist {
     $anchor =~ s/[^0-9]//g;
     print "\n<a id='$anchor'></a>\n";
     my $disptype = $rec->{type}; # Show record type
-    my $subtype = $rec->{subtype};
-    $subtype = ", $subtype" if ($subtype);
+    $disptype .= ", $rec->{subtype}" if ($rec->{subtype});
 
     print "<br class='no-print'/><span style='white-space: nowrap'> " .
            "$time ";
-    print " [$disptype$subtype]\n";
+    print " [$disptype]\n";
 
     print filt($rec->{maker},"i", "","","maker") . newmark($rec->{maker}). ": " if ($rec->{maker});
     print filt($rec->{name},"b","","","name") . newmark($rec->{name}, $rec->{maker});
-    print $rec->{people};
+    print $rec->{people}; # Not on the same type record as maker/name
 
     print "</span> <br class='no-wide'/>\n";
     if ( $rec->{style} || $rec->{pr} || $rec->{vol} || $rec->{alc} || $rec->{rate} || $rec->{com} ) {
