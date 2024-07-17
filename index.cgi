@@ -1524,11 +1524,13 @@ sub graph {
       my $oneyear = 365.24 * $oneday;
       my $onemonth = $oneyear / 12;
       my $numberofdays=7;
+      my $maxd = 0;
       while ( $ndays > $endoff) {
         $ndays--;
         my $rawdate = datestr("%F:%u", -$ndays);
         ($date,$wkday) = split(':',$rawdate);
         my $tot = ( $sums{$date} || 0 ) / $onedrink ;
+        $maxd = $tot if ( $tot > $maxd && $date ge $startdate);
         @month = ( @month, $tot);
         shift @month if scalar(@month)>=30;
         @week = ( @week, $tot);
@@ -1666,6 +1668,7 @@ sub graph {
         my $imgsz;
         if ( $bigimg eq "B" ) {  # Big image
           $imgsz = "640,480";
+          $maxd = $maxd *7 + 4; # Make room at the top of the graph for the legend
           if ( $startoff - $endoff > 365*4 ) {  # "all"
             ( $xtic, $xformat ) = @xyear;
           } elsif ( $startoff - $endoff > 400 ) { # "2y"
@@ -1680,6 +1683,7 @@ sub graph {
         } else { # Small image
           $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
           $imgsz = "320,250";  # Works on my Fairphone, and Dennis' iPhone
+          $maxd = $maxd *7 + 8; # Make room at the top of the graph for the legend
           if ( $startoff - $endoff > 365*4 ) {  # "all"
             ( $xtic, $xformat ) = @xyear;
           } elsif ( $startoff - $endoff > 360 ) { # "2y", "y"
@@ -1701,7 +1705,7 @@ sub graph {
             "set xdata time \n".
             "set timefmt \"%Y-%m-%d\" \n".
             "set xrange [ \"$startdate\" : \"$enddate\" ] \n".
-            "set y2range [ -.5 : ] \n" .
+            "set yrange [ -.5 : $maxd ] \n" .
             "set format x $xformat \n" .
             "set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
             "set border linecolor \"white\" \n" .
