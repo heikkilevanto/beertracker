@@ -1869,8 +1869,10 @@ sub beerboard {
   $cachefile =~ s/\.pl/.cache/;
   my $json = "";
   my $loaded = 0;
-  my $cacheage = (-M $cachefile) * 24 * 60 ; # in minutes
-  if ( -f $cachefile && $cacheage < 20 && -s $cachefile > 256 && $qrylim ne "f" ) {
+  if ( -f $cachefile
+       && (-M $cachefile) * 24 * 60 < 20    # age in minutes
+       && -s $cachefile > 256    # looks like a real file
+       && $qrylim ne "f" ) {
     open CF, $cachefile or error ("Could not open $cachefile for reading");
     while ( <CF> ) {
       $json .= $_ ;
