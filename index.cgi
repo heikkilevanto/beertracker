@@ -3179,7 +3179,8 @@ sub fulllist {
         my ($guess, $gdist) = guessloc($gg,$rec->{loc});
         $gdist = unit($gdist,"m");
         $guess = " <b>($guess $gdist?)</b> " if ($guess);
-        print "Geo: $gg $tdist $guess<br/>\n" if ($gg || $guess || $tdist);
+        my $map = maplink($gg);
+        print "Geo: $gg $tdist $guess $map<br/>\n" if ($gg || $guess || $tdist);
       }
     }
     ###### The (beer) entry itself ##############
@@ -3267,7 +3268,8 @@ sub fulllist {
         }
         if ( $rec->{geo} ) {
           my (undef, undef, $gg) = geo($rec->{geo});
-          print "Geo: $gg ";
+          my $map = maplink($gg);
+          print "Geo: $gg $map";
           my $dist = "";
           $dist = geodist( $geolocations{$rec->{loc}}, $rec->{geo});
           my ($guess,$gdist) = guessloc($gg);
@@ -3573,6 +3575,16 @@ sub utlink {
   $qry = uri_escape_utf8($qry);
   my $lnk = "<i>(<a href='https://untappd.com/search?q=$qry'" .
     " target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
+  return $lnk;
+}
+
+sub maplink {
+  my $g = shift;
+  my $txt = shift || "Map";
+  return "" unless $g;
+  my ( $la, $lo, undef ) = geo($g);
+  my $lnk = "<a href='https://www.google.com/maps/place/$la,$lo' " .
+  "target='_blank' class='no-print'><span>$txt</span></a>";
   return $lnk;
 }
 
