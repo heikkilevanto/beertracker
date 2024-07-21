@@ -3276,7 +3276,7 @@ sub fulllist {
           } else {
             print " <b>$guess ??? </b>  ";
           }
-            print " (" . unit($gdist,"m"). ")";
+          print " (" . unit($gdist,"m"). ")";
           print "<br>\n";
         }
       }
@@ -3452,9 +3452,10 @@ sub filtered {
   return 1 if ( !$rec ); # nothing to show
   if ( $qryfield eq "shortstyle" ) {
     checkshortstyle($rec); # Make sure we have a short style
-  }
-  if ( $qryfield eq "new" ) {
+  } elsif ( $qryfield eq "new" ) {
     checknew($rec, $newfield);
+  } elsif ( $qryfield eq "geoerror" ) {
+    checkgeoerror($rec);
   }
   if ( $qry ) {
     $rec->{$qryfield} = "" if ( !defined($rec->{$qryfield} ) );
@@ -3482,7 +3483,7 @@ sub searchform {
     "<select name='qf' style='width:6em;'> \n";
   $r .=  "<option value='rawline'>(any)</option>\n";
 
-  foreach my $fn ( fieldnames(), "shortstyle", "new" ) {
+  foreach my $fn ( fieldnames(), "shortstyle", "new", "geoerror" ) {
     my $dsp = ucfirst($fn);
     my $sel = "";
     $sel = "selected" if ( $fn eq $qryfield );
@@ -3961,7 +3962,21 @@ sub checknew {
     $rec->{new} = $f;
     last;
   }
+}
 
+# Check if the record has problematic geo coords
+# That is, coords and loc don't match
+sub checkgeoerror {
+  my $rec = shift;
+  return unless $rec;
+  return unless ( $rec->{loc} );
+  return unless ( $rec->{geo} );
+  my ( $guess, $dist ) = guessloc($rec->{geo});
+  if ( $guess ne $rec->{loc} ) {
+    $rec->{geoerror} = "$guess [$dist]m";
+    #print STDERR "Possible geo error for $rec->{stamp}: '$rec->{loc}' " .
+    # "is not at $rec->{geo}, '$guess' is at $dist m from it\n";
+  }
 }
 
 # Split a data line into a hash. Precalculate some fields
