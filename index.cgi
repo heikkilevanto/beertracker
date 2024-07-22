@@ -1717,11 +1717,12 @@ sub graph {
             "set key left top horizontal textcolor \"white\" \n" .
             "set grid xtics y2tics  linewidth 0.1 linecolor \"white\" \n".
             "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
-              "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
-            "set arrow from \"$startdate\", 35 to \"$enddate\", 35 nohead linewidth 0.1 linecolor \"white\" \n" .
-            "set arrow from \"$startdate\", 70 to \"$enddate\", 70 nohead linewidth 0.1 linecolor \"white\" \n" .
-            "set arrow from \"$startdate\", 105 to \"$enddate\", 105 nohead linewidth 0.1 linecolor \"white\" \n" .
-            "set arrow from \"$startdate\", 140 to \"$enddate\", 140 nohead linewidth 0.1 linecolor \"white\" \n" .
+              "behind fc \"#003000\" fillstyle solid border \n";  # green bkg
+        for my $m ( 35, 70, 105, 140 ) {
+          $cmd .= "set arrow from \"$startdate\", $m to \"$enddate\", $m nohead linewidth 0.1 linecolor \"#00dd10\" \n"
+            if ( $maxd > $m + 7 );
+        }
+        $cmd .=
             $weekends .
             "plot " .
                   # note the order of plotting, later ones get on top
