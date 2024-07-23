@@ -512,10 +512,14 @@ sub getseen{
 # A helper to calculate blood alcohol
 # Sets the bloodalc to all records at the date of the given index
 # and $bloodalc{$effdate} to max bloodalc for the effdate
+# If asking for the index of the last record, calculates and returns also
+# the blood alc at current time, and time when all alc is burned off
 #
 ################################################################################
 sub bloodalcohol {
   my $i = shift || scalar(@lines)-1;  # Index to any line on the interesting date
+  my $atend = 0;
+  $atend = 1 if ( $i == scalar(@lines)-1 );
   if ( !$bodyweight ) {
     print STDERR "Can not calculate alc for $username, don't know body weight \n";
     return; # TODO - What to return
@@ -552,9 +556,26 @@ sub bloodalcohol {
     }
     $i++;
   }
-  #print STDERR "max $maxba \n";
-  $bloodalc{$eff} = $maxba;
+  $bloodalc{$eff} = $maxba;  # Remember it for the date
 
+  my $curba = "";
+  my $allgone = "";
+  if ( $atend && $eff eq datestr("%F", -0.3, 1) ) {  # We want the current bloodalc and time when down to zero
+  #if ( $atend ) {  # We want the current bloodalc and time when down to zero
+    my $now = datestr( "%H:%M", 0, 1);
+    my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs
+    $drtime += 24 if ( $drtime < $balctime ); # past midnight
+    my $timediff = $drtime - $balctime;
+    $alcinbody -= $burnrate * $bodyweight * $timediff;
+    $alcinbody = 0 if ( $alcinbody < 0);
+    $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+    my $lasts = $alcinbody / ( $burnrate * $bodyweight );
+    my $gone = $drtime + $lasts;
+    $gone -= 24 if ( $gone > 24 );
+    $allgone = sprintf( "%02d:%02d", int($gone), ( $gone - int($gone) ) * 60 );
+    #print STDERR "balc: e='$eff' n='$now' dr='$drtime' b='$balctime' d=$timediff a=$alcinbody ba=$curba l=$lasts ag=$allgone\n";
+  }
+  return ( $curba, $allgone );
 }
 
 ################################################################################
@@ -1206,10 +1227,16 @@ sub summarycomment {
   my $weeksum = 0;
   my $monthdr = 0;
   my $monthsum = 0;
+  my $curba = "";
+  my $allgone = "";
   while ( $i >= 0 ) {
     my $going = 0;
     my $rec = getrecord($i);
-    bloodalcohol($i);
+    my ( $cba,$agne ) = bloodalcohol($i);
+    if ( $cba ) {
+      $curba = $cba;
+      $allgone = $agne;
+    }
 
     #print STDERR "sum: $i: $rec->{stamp} \n";
     if ( $rec->{effdate} eq $daylimit ) {
@@ -1230,10 +1257,13 @@ sub summarycomment {
     last unless $going;
   }
   my $balc = "";
-  $balc = sprintf( "%4.2f‰", $bloodalc{$daylimit}); # if ( $bloodalc{$daylimit} );
+  $balc = sprintf( "%4.2f‰", $bloodalc{$daylimit});
   my $dayline = sprintf("%3.1fd %d-  %s", $daydr, $daysum, $balc);
   if ( $daylimit eq $efftoday ){
     $dayline = "Today, $last->{wday}: $dayline";
+    if ( $curba ) {
+      $dayline .= sprintf (" -> %4.2f‰ -> %s", $curba, $allgone );
+    }
   } else {
     $dayline = "($last->{wday}: $dayline)"
   }
