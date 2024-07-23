@@ -1231,14 +1231,14 @@ sub summarycomment {
   }
   my $balc = "";
   $balc = sprintf( "%4.2f‰", $bloodalc{$daylimit}); # if ( $bloodalc{$daylimit} );
-  my $dayline = sprintf("%dd %d.-  %s", $daydr, $daysum, $balc);
+  my $dayline = sprintf("%3.1fd %d-  %s", $daydr, $daysum, $balc);
   if ( $daylimit eq $efftoday ){
     $dayline = "Today, $last->{wday}: $dayline";
   } else {
     $dayline = "($last->{wday}: $dayline)"
   }
-  my $weekline = sprintf("Week: %dd  (%3.1f/day) %d.-", $weekdr, $weekdr/7, $weeksum);
-  my $monthline = sprintf("30d: %dd  (%3.1f/day) %d.-", $monthdr, $monthdr/30, $monthsum);
+  my $weekline = sprintf("Week: %dd  (%3.1f/d) %d-", $weekdr, $weekdr/7, $weeksum);
+  my $monthline = sprintf("30d: %dd  (%3.1f/d) %d-", $monthdr, $monthdr/30, $monthsum);
   return "$dayline\n".
          "$weekline\n".
          "$monthline";
@@ -2217,10 +2217,10 @@ sub yearsummary {
     $i--;
     my $rec = getrecord($i);
     next unless ($rec);
+    next if ($rec->{type} =~ "Restaurant|Night" );
     my $loc = $rec->{loc};
     $y = substr($rec->{effdate},0,4);
     #print "  y=$y, ty=$thisyear <br/>\n";
-    next if ($rec->{type} =~ "Restaurant" );
 
     if ($i == 0) { # count also the last line
       $thisyear = $y unless ($thisyear);
