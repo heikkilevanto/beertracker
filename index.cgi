@@ -174,7 +174,8 @@ $currency{"usd"} = 6.3;  # Varies bit over time
 my $bodyweight;  # in kg, for blood alc calculations
 $bodyweight = 120 if ( $username eq "heikki" );
 $bodyweight =  83 if ( $username eq "dennis" );
-my $burnrate = .12; # g of alc pr kg of weight (.10 to .15)
+my $burnrate = .10; # g of alc pr kg of weight (.10 to .15)
+  # Assume .10 as a pessimistic value. Would need an alc meter to calibrate
 
 # Geolocations. Set up when reading the file, passed to the javascript
 my %geolocations; # Latest known geoloc for each location name
@@ -1260,7 +1261,7 @@ sub summarycomment {
   $balc = sprintf( "%4.2f‰", $bloodalc{$daylimit});
   my $dayline = sprintf("%3.1fd %d-  %s", $daydr, $daysum, $balc);
   if ( $daylimit eq $efftoday ){
-    $dayline = "Today, $last->{wday}: $dayline";
+    $dayline = "$last->{wday}: $dayline";
     if ( $curba ) {
       $dayline .= sprintf (" -> %4.2f‰ -> %s", $curba, $allgone );
     }
