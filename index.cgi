@@ -3152,7 +3152,7 @@ sub fulllist {
         my $hiddeninputs =
           "<input type='hidden' name='loc' value='$lastloc2' />\n" .
           "<input type='hidden' name='pr' value='$locmsum.-' />\n" .
-          "<input type='hidden' name='geo' value='' />\n" .
+          #"<input type='hidden' name='geo' value='' />\n" .  # no geo, we already have it on a drink, can get wrong
           "<input type='hidden' name='date' value='$lastrec->{date}' />\n" .
           "<input type='hidden' name='time' value='$rtime' />\n" ;
         print "<form method='POST' style='display: inline;' class='no-print'>\n";
