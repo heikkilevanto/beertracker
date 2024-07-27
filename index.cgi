@@ -502,8 +502,8 @@ sub getseen{
     $seen{$rec->{name}}++;
     $seen{$rec->{style}}++;
     $seen{$rec->{loc}}++;
-    $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
     $seen{$rec->{seenkey}}++;
+    $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
     last if ( $rec->{stamp} lt $limit );
     $i--;
   }
@@ -3217,10 +3217,10 @@ sub fulllist {
     }
     ###### The (beer) entry itself ##############
     my $time = $rec->{time};
+    $time = $1 if ( $qrylim ne "x" && $time =~ /^(\d+:\d+)/ ); # Drop the seconds
     if ( $rec->{date} ne $rec->{effdate} ) {
       $time = "($time)";
     }
-    $time = $1 if ( $qrylim ne "x" && $time =~ /^(\d+:\d+)/ ); # Drop the seconds
 
     if ( !( $rec->{type}  eq "Restaurant" ) ) { # don't count rest lines
       $daydsum += $rec->{alcvol};
@@ -3800,6 +3800,7 @@ sub seenkey {
     } elsif ( $rec->{name} ) {  # Wine and booze: Wine::Mywine
       $key = "$rec->{type}::$rec->{name}";
     } else { # TODO - Not getting keys for many records !!!
+      #print STDERR "No seenkey for $rec->{rawline} \n";
       return "";  # Nothing to make a good key from
     }
   } else { # Called  the old way, like for beer board
@@ -3823,7 +3824,7 @@ sub seenline {
     my $rec = $maker;
     $seenkey = $rec->{seenkey};
   } else {
-    $seenkey = seenkey($maker,$beer);  # TODO - use $rec
+    $seenkey = seenkey($maker,$beer);
   }
   return "" unless ($seenkey);
   return "" unless ($seenkey =~ /[a-z]/ );  # At least some real text in it
