@@ -312,6 +312,10 @@ if ( $op eq "Datafile" ) {  # Must be done before sending HTML headers
   dumpdatafile();
   exit;
 }
+if ( $devversion && $op eq "copyproddata" ) {
+  copyproddata();
+  exit;
+}
 
 my $datafilecomment = readdatafile();
 
@@ -367,9 +371,6 @@ if ( $op eq "About" ) {
 if ( $op eq "geo" ) {
   geodebug();
 }
-if ( $devversion && $op eq "copyproddata" ) {
-  copyproddata();
-}
 if ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
   lists();
 }
@@ -419,6 +420,25 @@ sub dumpdatafile {
   }
   close(F);
 } # Dump of data file
+
+################################################################################
+# Copy production data to dev file
+# Needs to be before the HTML head, as it forwards back to the page
+################################################################################
+# Nice to see up to date data when developing
+sub copyproddata {
+  if (!$devversion) {
+    error ("Not allowed");
+  }
+  my $bakfile = $datafile . ".bak";
+  my $prodfile = "../beertracker/$datafile";
+  error("$prodfile not readable") if ( ! -r $prodfile);
+  system("cat $datafile > $bakfile");
+  system("cat $prodfile > $datafile");
+  clearcachefiles();
+  print $q->redirect( "$url" );
+  exit();
+} # copyproddata
 
 
 ################################################################################
@@ -542,7 +562,7 @@ sub bloodalcohol {
     $rec = getrecord($i);
     last if ( ! $rec || $rec->{effdate} ne $eff );
     if ( $rec->{alcvol} ) {
-      my $drtime = $1 + $2/60 if ($rec->{stamp} =~/ (\d\d):(\d\d)/ ); # frac hrs
+      my $drtime = $1 + $2/60 if ($rec->{stamp} =~/ (\d?\d):(\d\d)/ ); # frac hrs
       $drtime += 24 if ( $drtime < $balctime ); # past midnight
       my $timediff = $drtime - $balctime;
       $balctime = $drtime;
@@ -1292,6 +1312,8 @@ sub inputform {
     }
     # Would be nice to get git branch and log tail
     # But git is anal about file/dir ownerships
+    print "<a href='$url?o=copyproddata'><span>Get production data</span></a></li> \n";
+
     print "<hr>\n";
   }
 
@@ -2762,42 +2784,9 @@ sub about {
   print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' ><span>Tail of the data file</span></a><br/>\n";
   print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
   print "&nbsp; <a href='$url?o=geo'><span>Geolocation debug</span></a><br/>\n";
-  if ($devversion) {
-    print "<p>&nbsp; <a href='$url?o=copyproddata'><span>Get production data</span></a><br>\n";
-  }
   exit();
 } # About
 
-################################################################################
-# Copy production data to dev file
-################################################################################
-# Nice to see up to date data when developing
-sub copyproddata {
-  if (!$devversion) {
-    error ("Not allowed");
-  }
-  print "Copy production data to dev version <br>\n";
-  print "You will loose all data you have entered here on the dev version <br>\n";
-  if ( $qrylim ne "x" ) {
-    print "<p/>Are you sure?<ul>\n";
-    print "<li><a href='$url?o=copyproddata&f=x'><span>Yes, do it</span></a></li> \n";
-    print "<li><a href='$url'><span>No, get me out of here</span></a></li>\n";
-    print "</ul>\n";
-  } else { # Do the actual copying
-    print "<p/>\n";
-    my $bakfile = $datafile . ".bak";
-    my $prodfile = "../beertracker/$datafile";
-    error("$prodfile not readable") if ( ! -r $prodfile);
-    print "Copying $datafile to $bakfile <br>\n";
-    system("cat $datafile > $bakfile");
-    print "Copying $prodfile to $datafile <br>\n";
-    system("cat $prodfile > $datafile");
-    print "Clearing cached files <br>\n";
-    clearcachefiles();
-    print "<br>Ok, all done";
-
-  }
-}
 
 ################################################################################
 # Geolocation debug
