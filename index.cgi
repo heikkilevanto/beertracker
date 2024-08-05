@@ -968,7 +968,7 @@ sub clearcachefiles {
         or error ("Could not unlink $pf $!");
       }
   }
-}
+} # clearcachefiles
 
 
 ################################################################################
@@ -1966,7 +1966,7 @@ sub beerboard {
 
     print "<table border=0 style='white-space: nowrap;'>\n";
     my $previd  = 0;
-    foreach my $e ( @$beerlist )  {
+    foreach my $e ( sort {$a->{"id"} <=> $b->{"id"} } @$beerlist )  {
       $nbeers++;
       my $id = $e->{"id"} || 0;
       my $mak = $e->{"maker"} || "" ;
