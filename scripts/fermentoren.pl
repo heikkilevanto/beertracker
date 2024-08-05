@@ -7,28 +7,20 @@ use utf8;
 
 ### Script to scrape from Untapped.
 
-# TODO - Get the whole list from
-#        https://business.untappd.com/locations/2098/themes/4868/js
-# and parse the html out of the js
-
-# The rest is OUTDATED!
-
-# Unfortunately, it would require clicking on the "show more beers" button
-# and wait for the ajax code to load the rest of the list.
-# Also, prices seem not to be available.
-
+my $debug = 0;
 
 my $base_url = "https://business.untappd.com/locations/2098/themes/4868/js";
 my $xpath        = '//div[@class="item"]';
 my $xpath_number = './/span[@class="tap-number-hideable"]/text()';
-my $xpath_model  = './/p[@class="item-name"]/a';
+my $xpath_model  = './/h4[@class="item-name"]/a';
 #my $xpath_model  = './/p[@class="beer-name"]/a';
 my $xpath_maker  = './/span[@class="brewery"]/a';
 
-my $xpath_type   = './/p[@class="item-style beer-style-hideable item-title-color"]/span';
+#my $xpath_type   = './/span[@class="item-style beer-style-hideable item-title-color"]';
+my $xpath_type   = './/span[@class="item-style item-title-color"]';
 my $regex_type   = '.*';
 my $regex_maker  = '.*';
-my $xpath_abv    = './/span[@class="abv"]';
+my $xpath_abv    = './/span[@class="item-abv"]';
 my $regex_abv    = '^([0-9\.,]*)%';
 
 
@@ -58,23 +50,38 @@ my $dom = XML::LibXML->load_html(
 
 #print STDERR $dom->toString() . "\n";
 my @taps;
-my $count = 1;
+my $count = 0;
+my $foundcount = 0;
 foreach my $design ($dom->findnodes($xpath)) {
   my @beer;
-  print STDERR "=========$count: " . $design->toString() . "\n";
+  print STDERR "========= $count: " . $design->toString() . "\n" if $debug;
+  print STDERR "========= $count \n" if $debug;
 
   my ($number,$model,$maker,$type,$abv, $other);
 
   foreach my $node ($design->findnodes($xpath_model)) {
-    ($number,$model) = $node->textContent =~ m/([0-9]+)[ \.]*(.*)/g;
+    print STDERR "Model: '$node' \n" if $debug;
+    my $txt = $node->textContent;
+    $txt =~ s/\n/ /gs;
+    $txt =~ s/ +/ /g;
+    print STDERR "Model txt: '$txt' \n" if $debug;
+    ($number,$model) = $txt =~ m/([0-9]+)\W+(\w.*\w)/s;
     $model =~ s/ *$//;
+    print STDERR "Got number '$number' and model '$model' \n" if $debug;
   }
   foreach my $node ($design->findnodes($xpath_type)) {
-    ($type) = $node->textContent =~ m/$regex_type/g;
+    ($type) = $node->textContent;
+    print STDERR "Got type '$type' \n" if $debug;
   }
 
   foreach my $node ($design->findnodes($xpath_maker)) {
+    print STDERR "Maker '$node' \n" if $debug;
     $maker = $node->textContent;
+    $maker =~ s/\n/ /gs;
+    $maker =~ s/ +/ /g;
+    $maker =~ s/^ +//;
+    $maker =~ s/ +$//;
+    print STDERR "Got maker '$maker' \n" if $debug;
   }
 
   $node = ($design->findnodes($xpath_abv))[0];
@@ -84,6 +91,7 @@ foreach my $design ($dom->findnodes($xpath)) {
   } else {
     $abv = "";
   }
+  print STDERR "Got alc '$abv' \n" if $debug;
 
   # The list has no prices, so we make a decent guess.
   my ($size, $price,$size2, $price2) = (20, 30,  40, 50);
@@ -108,10 +116,10 @@ foreach my $design ($dom->findnodes($xpath)) {
 
   if ($model) {
     push @taps, $tapItem;
-    print STDERR "=== $count: " . to_json($tapItem, {pretty=>1}). "\n";
+    print STDERR "=== $count: " . to_json($tapItem, {pretty=>1}). "\n" if $debug;
+    $foundcount++;
   };
   $count++;
-
 }
-print STDERR "Found $count beers for Fermentoren\n"; ###
+print STDERR "Found $foundcount beers for Fermentoren\n";
 print(to_json(\@taps, {pretty => 1}));
