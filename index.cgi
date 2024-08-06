@@ -151,7 +151,9 @@ my %scrapers;
 $scrapers{"Ølbaren"} = "oelbaren.pl";
 $scrapers{"Taphouse"} = "taphouse.pl";
 $scrapers{"Fermentoren"} = "fermentoren.pl";
-$scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
+#$scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
+# Ølsnedkerens web site is broken, does not show a beer list at all
+# See #368
 
 # Short names for the most commong watering holes
 my %shortnames;
