@@ -66,6 +66,7 @@ use strict;
 use POSIX qw(strftime localtime locale_h);
 use JSON;
 use Cwd qw(cwd);
+use File::Copy;
 
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
@@ -105,6 +106,7 @@ my $scriptdir = "./scripts/";  # screen scraping scripts
 my $datafile = "";
 my $plotfile = "";
 my $cmdfile = "";
+my $photodir = "";
 my $username = ($q->remote_user()||"");
 
 # Sudo mode, normally commented out
@@ -114,6 +116,7 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
   $datafile = $datadir . $username . ".data";
   $plotfile = $datadir . $username . ".plot";
   $cmdfile = $datadir . $username . ".cmd";
+  $photodir = $datadir . $username. ".photo";
 } else {
   error ("Bad username\n");
 }
@@ -790,6 +793,27 @@ sub guessvalues {
   }
 } # guessvalues
 
+sub savefile {
+  my $rec = shift;
+  my $fn = $rec->{newphoto};
+  if ( $fn !~ /^[A-Za-z0-9._-]+\.jpe?g$/ || $fn =~ /\.\./ ) {
+    error("Bad upload file name '$rec->{newphoto}'");
+  }
+  $rec->{photo} = $rec->{newphoto}; # Remember the new name
+  if ( ! -d $photodir ) {
+    print STDERR "Creating photo dir $photodir \n";
+    mkdir($photodir);
+  }
+  my $filehandle = $q->upload('newphoto');
+  my $tmpfilename = $q->tmpFileName( $filehandle );
+  my $savefile = "$photodir/$fn";
+  # TODO - Check if exists already, increment name
+  copy( $tmpfilename, $savefile )
+          or error("Copy to '$savefile' failed: $!");
+  my $fsz = -s $savefile;
+  print STDERR "Uploaded $fsz bytes into '$savefile' \n";
+}
+
 ########################
 # POST itself
 sub postdata {
@@ -817,6 +841,9 @@ sub postdata {
   fixtimes($rec, $lastrec, $sub);
   fixvol($rec, $sub);
   guessvalues($rec);
+  if ( $rec->{newphoto} ) { # Uploaded a new photo
+    savefile($rec);
+  }
 
   my $lasttimestamp = $lastrec->{stamp};
 
@@ -889,6 +916,7 @@ sub postdata {
   }
 
   $rec->{edit} = "" unless defined($rec->{edit});
+  $rec->{oldstamp} = $rec->{stamp}; # Remember the stamp for the edit link
 
   #dumprec($rec, "final");
   my $line = makeline($rec);
@@ -926,7 +954,6 @@ sub postdata {
            "x$rec->{stamp}" lt "x$stp") {  # Right Place to insert the line
            # Note the "x" trick, to force pure string comparision
         print F "$line\n";
-        $rec->{oldstamp} = $rec->{stamp}; # Remember the stamp for the edit link
         $rec->{stamp} = ""; # do not write it again
       }
       if ( !$stp || $stp ne $rec->{edit} ) {
@@ -952,7 +979,7 @@ sub postdata {
   # if POSTing a restaurant, return to editing the record, so we can add
   # more relevant stuff like foods, people etc.
   my $editit = "";
-  if ( $rec->{type} =~ /Restaurant|Night/i && $sub ne "Del") {
+  if ( $rec->{type} =~ /Restaurant|Night/i && $sub ne "Del" && $rec->{oldstamp}) {
     $editit = $rec->{oldstamp};
   }
   # Redirect to the same script, without the POST, so we see the results
@@ -1376,8 +1403,10 @@ sub inputform {
   if (hasfield($type,"photo") ) {
     print "<tr id='td1' $hidden >\n";
     print "<td $c6>\n";
-    print "Photo ";
-    print "<input type='file' accept='image/*' capture='camera'/> \n";
+    print "$foundrec->{photo}  ";
+    print "<input type='hidden' name='photo' value='$foundrec->{photo}' />\n";
+    print "<input type='file' name='newphoto' accept='image/*' capture='camera' /> \n";
+    # No broweser accepts a value for the file browser, considered unsafe. Fix in POST
     print "</td>\n";
     print "</tr>\n";
   }
