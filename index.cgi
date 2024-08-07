@@ -242,7 +242,7 @@ $datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
   "subtype",# bar discussion, concert, lunch party, etc
   "com",    # Any comments on the night
   "people", # Who else was here
-  "geo" ];
+  "geo", "photo" ];
 
 # Restaurants and bars
 $datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
@@ -250,7 +250,8 @@ $datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
   "rate", "pr", # price for the night, per person
   "food",   # Food and drink
   "people",
-  "com", "geo"];
+  "com", "geo",
+  "photo"];
 
 # TODO - Create types for wine, booze, tz, and others
 # To add a new record type, define it here
@@ -1335,7 +1336,8 @@ sub inputform {
     }
   }
 
-  print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
+  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+        "enctype='multipart/form-data'>\n";
   my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
   my $c2 = "colspan='2'";
   my $c3 = "colspan='3'";
@@ -1370,9 +1372,18 @@ sub inputform {
     $hidden = "hidden"; # Hide the geo and date fields for normal use
     $loc = " $loc"; # Mark it as uncertain
   }
+  # Taking a photo. Usually hidden
+  if (hasfield($type,"photo") ) {
+    print "<tr id='td1' $hidden >\n";
+    print "<td $c6>\n";
+    print "Photo ";
+    print "<input type='file' accept='image/*' capture='camera'/> \n";
+    print "</td>\n";
+    print "</tr>\n";
+  }
 
   # Date and time, usually hidden
-  print "<tr id='td1' $hidden ><td>";
+  print "<tr id='td2' $hidden ><td>\n";
   print "<input name='edit' type='hidden' value='$foundrec->{stamp}' id='editrec' />\n";
   print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
   print "<input name='q' type='hidden' value='$qry' id='editrec' />\n";
@@ -1381,7 +1392,7 @@ sub inputform {
   print "</tr>\n";
 
   # Geolocation
-  print "<tr id='td2' $hidden ><td $c2>";
+  print "<tr id='td3' $hidden ><td $c2>\n";
   print inputfield("geo", $sz4, "Geo", "nop", $geo );
   my $chg = "onchange='document.location=\"$url?type=\"+this.value+\"&o=$op&q=$qry\"' ";
   # Disabling the field here is no good, when re-enabled, will not get transmitted !!??
@@ -1397,7 +1408,7 @@ sub inputform {
   print "</td></tr>\n";
 
   # Actual location and record type, normally hidden
-  print "<tr id='td3' $hidden >";
+  print "<tr id='td4' $hidden >";
   print "<td>($foundrec->{type})</td>\n" if ($foundrec->{type} ne $type);
   print "</tr>\n";
 
