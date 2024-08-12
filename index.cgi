@@ -795,19 +795,25 @@ sub guessvalues {
 
 sub savefile {
   my $rec = shift;
-  my $fn = $rec->{newphoto};
-  if ( $fn !~ /^[A-Za-z0-9._-]+\.jpe?g$/ || $fn =~ /\.\./ ) {
-    error("Bad upload file name '$rec->{newphoto}'");
+  my $fn = $rec->{stamp};
+  $fn =~ s/ /+/; # Remove spaces
+  $fn .= ".jpg";
+  my $savefile = "$photodir/$fn";
+  while ( -e $savefile )  {
+    print STDERR "Upload: $fn exists \n";
+    my ( $base, $sec ) = $fn =~ /^(.*):(\d\d)/;
+    $sec++;
+    $fn = "$base:$sec.jpg";
+    $savefile = "$photodir/$fn";
   }
-  $rec->{photo} = $rec->{newphoto}; # Remember the new name
+  $rec->{photo} = $fn; # Remember the new name
+
   if ( ! -d $photodir ) {
     print STDERR "Creating photo dir $photodir \n";
     mkdir($photodir);
   }
   my $filehandle = $q->upload('newphoto');
   my $tmpfilename = $q->tmpFileName( $filehandle );
-  my $savefile = "$photodir/$fn";
-  # TODO - Check if exists already, increment name
   copy( $tmpfilename, $savefile )
           or error("Copy to '$savefile' failed: $!");
   my $fsz = -s $savefile;
