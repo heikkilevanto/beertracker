@@ -1563,10 +1563,14 @@ sub graph {
     my $bigimg = $1 || $defbig;
     my $startoff = $2 || 30; # days ago
     my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
+    my $imgsz="320,250";
     my $reload = "";
     if ( $bigimg eq "X" ) {
       $reload = 1;
       $bigimg = $defbig;
+    }
+    if ( $bigimg eq "B" ) {  # Big image
+      $imgsz = "640,480";
     }
     my $startdate = datestr ("%F", -$startoff );
     my $enddate = datestr( "%F", -$endoff);
@@ -1767,9 +1771,7 @@ sub graph {
         my $pointsize = "";
         my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
         my $fillstyleborder = "fill solid border linecolor \"#003000\""; # Small gap around each drink
-        my $imgsz;
         if ( $bigimg eq "B" ) {  # Big image
-          $imgsz = "640,480";
           $maxd = $maxd *7 + 4; # Make room at the top of the graph for the legend
           if ( $startoff - $endoff > 365*4 ) {  # "all"
             ( $xtic, $xformat ) = @xyear;
@@ -1784,7 +1786,6 @@ sub graph {
           }
         } else { # Small image
           $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
-          $imgsz = "320,250";  # Works on my Fairphone, and Dennis' iPhone
           $maxd = $maxd *7 + 8; # Make room at the top of the graph for the legend
           if ( $startoff - $endoff > 365*4 ) {  # "all"
             ( $xtic, $xformat ) = @xyear;
@@ -1869,10 +1870,12 @@ sub graph {
     } # Have to plot
 
     print "<hr/>\n";
+    my ( $imw,$imh ) = $imgsz =~ /(\d+),(\d+)/;
+    my $htsize = "width=$imw height=$imh" if ($imh) ;
     if ($bigimg eq "B") {
-      print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
+      print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\" $htsize/></a><br/>\n";
     } else {
-      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" /></a><br/>\n";
+      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" $htsize/></a><br/>\n";
     }
     print "<div class='no-print'>\n";
     my $len = $startoff - $endoff;
