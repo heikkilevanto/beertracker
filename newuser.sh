@@ -3,6 +3,11 @@
 # A simple script to create a new user
 # Needs to be run as root, so as not to expose it to the web interface.
 
+if [ "$EUID" -ne 0 ]
+  then echo "Please run as root"
+  exit
+fi
+
 echo -n "Username: "
 read usr
 echo -n "Password: "
