@@ -10,8 +10,10 @@ read pwd
 echo "Creating user $usr"
 
 datafile="beerdata/$usr.data"
+picdir="beerdata/$usr.photo"
+mkdir -p $picdir
 touch $datafile
-chown www-data:heikki $datafile
-chmod g+w $datafile
+chown www-data:heikki $datafile $picdir
+chmod g+w $datafile $picdir
 
 htpasswd -b  .htpasswd  $usr $pwd && echo "Created $usr all right"
