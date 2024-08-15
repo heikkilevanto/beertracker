@@ -793,29 +793,43 @@ sub guessvalues {
   }
 } # guessvalues
 
+
+# TODO
+# - Keep just the raw file name in the record
+# - Save file as .orig.jpg
+# - Make a routine to get file names for any given width (and orig)
+# - Make a routine to scale to any given width. Check if already there.
+# - Use that when displaying
+# - When clearing the cache, delete scaled images over a month old, but not .orig
 sub savefile {
   my $rec = shift;
   my $fn = $rec->{stamp};
   $fn =~ s/ /+/; # Remove spaces
   $fn .= ".jpg";
-  my $savefile = "$photodir/$fn";
-  while ( -e $savefile )  {
-    print STDERR "Upload: $fn exists \n";
-    my ( $base, $sec ) = $fn =~ /^(.*):(\d\d)/;
-    $sec++;
-    $fn = "$base:$sec.jpg";
-    $savefile = "$photodir/$fn";
-  }
-  $rec->{photo} = $fn; # Remember the new name
-
   if ( ! -d $photodir ) {
     print STDERR "Creating photo dir $photodir \n";
     mkdir($photodir);
   }
+  my $savefile = "$photodir/$fn";
+  my ( $base, $sec ) = $fn =~ /^(.*):(\d\d)/;
+  $sec--;
+  do {
+    $sec++;
+    $fn = "$base:$sec.jpg";
+    $savefile = "$photodir/$fn";
+  }  while ( -e $savefile ) ;
+  $rec->{photo} = $fn; # Remember the new name
+
   my $filehandle = $q->upload('newphoto');
   my $tmpfilename = $q->tmpFileName( $filehandle );
-  copy( $tmpfilename, $savefile )
-          or error("Copy to '$savefile' failed: $!");
+  print STDERR "convert $tmpfilename -auto-orient $savefile \n";
+  print STDERR `ls -l $tmpfilename` . "\n";
+  my $conv = `/usr/bin/convert $tmpfilename -auto-orient -strip $savefile`;
+    # -auto-orient turns them upside up. -strip removes the orientation, so
+    # they don't get turned again when displaying.
+  print STDERR "Conv returned '$conv' \n";
+  #copy( $tmpfilename, $savefile )
+  #        or error("Copy to '$savefile' failed: $!");
   my $fsz = -s $savefile;
   print STDERR "Uploaded $fsz bytes into '$savefile' \n";
 }
