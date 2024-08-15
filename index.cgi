@@ -794,6 +794,20 @@ sub guessvalues {
 } # guessvalues
 
 
+sub imagefilename {
+  my $fn = shift; # The raw file name
+  my $width = shift; # How wide we want it, or "orig" or ""
+  $fn =~ s/(\.?\+?orig)?\.jpe?g$//i; # drop extension if any
+  return $fn if (!$width); # empty width for saving the clean filename in $rec
+  $fn = "$photodir/$fn"; # a real filename
+  if ( $width =~ /\.?orig/ ) {
+    $fn .= "+orig.jpg";
+    return $fn;
+  }
+  $fn .= "+$width.jpg";
+  return $fn;
+}
+
 # TODO
 # - Keep just the raw file name in the record
 # - Save file as .orig.jpg
@@ -807,7 +821,8 @@ sub savefile {
   $fn =~ s/ /+/; # Remove spaces
   $fn .= ".jpg";
   if ( ! -d $photodir ) {
-    print STDERR "Creating photo dir $photodir \n";
+    print STDERR "Creating photo dir $photodir - FIX PERMISSIONS \n";
+    print STDERR "chgrp heikki $photodir; chmod g+sw $photodir \n";
     mkdir($photodir);
   }
   my $savefile = "$photodir/$fn";
@@ -815,21 +830,17 @@ sub savefile {
   $sec--;
   do {
     $sec++;
-    $fn = "$base:$sec.jpg";
-    $savefile = "$photodir/$fn";
+    $fn = "$base:$sec";
+    $savefile = imagefilename($fn,"orig");
   }  while ( -e $savefile ) ;
-  $rec->{photo} = $fn; # Remember the new name
+  $rec->{photo} = imagefilename($fn,"");
 
   my $filehandle = $q->upload('newphoto');
   my $tmpfilename = $q->tmpFileName( $filehandle );
-  print STDERR "convert $tmpfilename -auto-orient $savefile \n";
-  print STDERR `ls -l $tmpfilename` . "\n";
   my $conv = `/usr/bin/convert $tmpfilename -auto-orient -strip $savefile`;
     # -auto-orient turns them upside up. -strip removes the orientation, so
     # they don't get turned again when displaying.
-  print STDERR "Conv returned '$conv' \n";
-  #copy( $tmpfilename, $savefile )
-  #        or error("Copy to '$savefile' failed: $!");
+  print STDERR "Conv returned '$conv' \n" if ($conv); # Can this happen
   my $fsz = -s $savefile;
   print STDERR "Uploaded $fsz bytes into '$savefile' \n";
 }
