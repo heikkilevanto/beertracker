@@ -442,6 +442,7 @@ sub copyproddata {
   system("cat $datafile > $bakfile");
   system("cat $prodfile > $datafile");
   clearcachefiles();
+  system("cp ../beertracker/photodir/* photodir"); # TODO - Gives a warning until we have on under prod
   print $q->redirect( "$url" );
   exit();
 } # copyproddata
@@ -809,9 +810,6 @@ sub imagefilename {
 }
 
 # TODO
-# - Keep just the raw file name in the record
-# - Save file as .orig.jpg
-# - Make a routine to get file names for any given width (and orig)
 # - Make a routine to scale to any given width. Check if already there.
 # - Use that when displaying
 # - When clearing the cache, delete scaled images over a month old, but not .orig
