@@ -227,7 +227,8 @@ $datalinetypes{"Beer"} = [
   "maker",  # Brewery
   "name",   # Name of the beer
   "vol", "style", "alc", "pr", "rate", "com", "geo",
-  "subtype"]; # Taste of the beer, could be fruits, special hops, or type of barrel
+  "subtype", # Taste of the beer, could be fruits, special hops, or type of barrel
+  "photo" ]; # Image file name
 
 # Wine
 $datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
@@ -235,7 +236,7 @@ $datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
   "maker", # brand or house
   "name", # What it says on the label
   "style", # Can be grape (chardonnay) or country/region (rioja)
-  "vol", "alc", "pr", "rate", "com", "geo"];
+  "vol", "alc", "pr", "rate", "com", "geo", "photo"];
 
 # Booze. Also used for coctails
 $datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
@@ -244,7 +245,7 @@ $datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
   "name",  # What it says on the label
   "style", # can be coctail, country/(region, or flavor
   "vol", "alc",  # These are for the alcohol itself
-  "pr", "rate", "com", "geo"];
+  "pr", "rate", "com", "geo", "photo"];
 
 
 # A comment on a night out.
