@@ -182,6 +182,13 @@ $bodyweight =  83 if ( $username eq "dennis" );
 my $burnrate = .10; # g of alc pr kg of weight (.10 to .15)
   # Assume .10 as a pessimistic value. Would need an alc meter to calibrate
 
+# Default image sizes (width in pixels)
+my %imagesizes;
+$imagesizes{"thumb"} = 90;
+$imagesizes{"mob"} = 240;  # 320 is full width on my phone
+$imagesizes{"pc"} = 640;
+
+
 # Geolocations. Set up when reading the file, passed to the javascript
 my %geolocations; # Latest known geoloc for each location name
 $geolocations{"Home "} =   "[55.6588/12.0825]";  # Special case for FF.
@@ -795,6 +802,9 @@ sub guessvalues {
 } # guessvalues
 
 
+# Get image file name. Width can be in pixels, or special values like
+# "orig" for the original image, "" for the plain name to be saved in the record,
+# or "thumb", "mob", "pc" for default sizes
 sub imagefilename {
   my $fn = shift; # The raw file name
   my $width = shift; # How wide we want it, or "orig" or ""
@@ -805,10 +815,32 @@ sub imagefilename {
     $fn .= "+orig.jpg";
     return $fn;
   }
+  $width = $imagesizes{$width} || "";
+  return "" unless $width;
+  $width .= "w"; # for easier deleting *w.jpg
   $fn .= "+$width.jpg";
   return $fn;
 }
 
+sub image {
+  my $rec = shift;
+  my $width = shift; # One of the keys in %imagesizes
+  return "" unless ( $rec->{photo} );
+  my $fn = imagefilename($rec->{photo}, $width);
+  return "" unless $fn;
+  my $orig = imagefilename($rec->{photo}, "orig");
+  if ( ! -r $fn ) { # Need to resize it
+    my $size = $imagesizes{$width};
+    $size = $size . "x". $size .">";
+    system ("convert $orig -resize '$size' $fn");
+    print STDERR "convert $orig -resize '$size' $fn \n";
+  }
+  my $w = $imagesizes{$width};
+  my $itag = "<img src='$fn' width='$w' />";
+  my $tag = "<a href='$orig'>$itag</a>";
+  return $tag;
+
+}
 # TODO
 # - Make a routine to scale to any given width. Check if already there.
 # - Use that when displaying
@@ -828,7 +860,7 @@ sub savefile {
   $sec--;
   do {
     $sec++;
-    $fn = "$base:$sec";
+    $fn = sprintf("%s:%02d", $base,$sec);
     $savefile = imagefilename($fn,"orig");
   }  while ( -e $savefile ) ;
   $rec->{photo} = imagefilename($fn,"");
@@ -1297,7 +1329,8 @@ sub inputfield {
 #  Last 30 days: drinks dr/day, money, zero days
 #    The 30 days is not the same as the one in the graph, as that is a floating
 #    average, but this is a linear average.
-# TODO - Loop by days to get this right! See #369
+# TODO - Loop by days to get this right! See #369. Refactor the avg calculations
+# from the graph code, and use the same here.
 #
 sub summarycomment {
   my $i = scalar(@lines)-1;
@@ -3386,9 +3419,20 @@ sub fulllist {
           print "<br>\n";
         }
       }
-
     }
 
+    if ( $rec->{photo} ) {
+      my $w = "thumb";
+      if ( $qrylim eq "x" ) {
+        if ( $mobile ) {
+          $w = "mob";
+        } else {
+          $w = "pc";
+        }
+      }
+      print image($rec,$w);
+      print "<br/>\n";
+    }
     my %vols;     # guess sizes for small/large beers
     $vols{$rec->{vol}} = 1 if ($rec->{vol});
     if ( $rec->{type} =~ /Night|Restaurant/) {
