@@ -151,7 +151,9 @@ my %scrapers;
 $scrapers{"Ølbaren"} = "oelbaren.pl";
 $scrapers{"Taphouse"} = "taphouse.pl";
 $scrapers{"Fermentoren"} = "fermentoren.pl";
-$scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
+#$scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
+# Ølsnedkerens web site is broken, does not show a beer list at all
+# See #368
 
 # Short names for the most commong watering holes
 my %shortnames;
@@ -961,7 +963,8 @@ sub postdata {
 # Helper to clear the cached files from the data dir.
 sub clearcachefiles {
   foreach my $pf ( glob($datadir."*") ) {
-    next if ( $pf =~ /\.data$/ );
+    next if ( $pf =~ /\.data$/ ); # .data files are the only really important ones
+    next if ( -d $pf ); # Skip subdirs, if we have such
     if ( $pf =~ /\/$username.*png/ ||   # All png files for this user
          -M $pf > 7 ) {  # And any file older than a week
       unlink ($pf)
@@ -1234,7 +1237,10 @@ sub inputfield {
 # plain text:
 #  Today, or last day we have data. drinks, money, blood alc
 #  Week, the last 7 days, including today: drinks dr/day, money, zero days
-#  The calendar month: drinks dr/day, money, zero days
+#  Last 30 days: drinks dr/day, money, zero days
+#    The 30 days is not the same as the one in the graph, as that is a floating
+#    average, but this is a linear average.
+# TODO - Loop by days to get this right! See #369
 #
 sub summarycomment {
   my $i = scalar(@lines)-1;
@@ -1250,6 +1256,7 @@ sub summarycomment {
   my $monthsum = 0;
   my $curba = "";
   my $allgone = "";
+  my $cureff = "";
   while ( $i >= 0 ) {
     my $going = 0;
     my $rec = getrecord($i);
@@ -1258,8 +1265,6 @@ sub summarycomment {
       $curba = $cba;
       $allgone = $agne;
     }
-
-    #print STDERR "sum: $i: $rec->{stamp} \n";
     if ( $rec->{effdate} eq $daylimit ) {
       $daydr += $rec->{drinks};
       $daysum += $rec->{pr} if ($rec->{pr} > 0 );
@@ -1274,6 +1279,12 @@ sub summarycomment {
        $monthsum += $rec->{pr} if ($rec->{pr} > 0 );
        $going = 1;
     }
+    #if ( $cureff ne $rec->{effdate} ) {
+    #   $cureff = $rec->{effdate};
+    #   print STDERR "sum: $i: $cureff ".
+    #       sprintf( "%5d,- %6.2fd  / %5d,- %6.2fd \n",
+    #          $weeksum, $weekdr,$monthsum,$monthdr);
+    #}
     $i--;
     last unless $going;
   }
