@@ -66,6 +66,7 @@ use strict;
 use POSIX qw(strftime localtime locale_h);
 use JSON;
 use Cwd qw(cwd);
+use File::Copy;
 
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
@@ -105,6 +106,7 @@ my $scriptdir = "./scripts/";  # screen scraping scripts
 my $datafile = "";
 my $plotfile = "";
 my $cmdfile = "";
+my $photodir = "";
 my $username = ($q->remote_user()||"");
 
 # Sudo mode, normally commented out
@@ -114,6 +116,7 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
   $datafile = $datadir . $username . ".data";
   $plotfile = $datadir . $username . ".plot";
   $cmdfile = $datadir . $username . ".cmd";
+  $photodir = $datadir . $username. ".photo";
 } else {
   error ("Bad username\n");
 }
@@ -179,6 +182,13 @@ $bodyweight =  83 if ( $username eq "dennis" );
 my $burnrate = .10; # g of alc pr kg of weight (.10 to .15)
   # Assume .10 as a pessimistic value. Would need an alc meter to calibrate
 
+# Default image sizes (width in pixels)
+my %imagesizes;
+$imagesizes{"thumb"} = 90;
+$imagesizes{"mob"} = 240;  # 320 is full width on my phone
+$imagesizes{"pc"} = 640;
+
+
 # Geolocations. Set up when reading the file, passed to the javascript
 my %geolocations; # Latest known geoloc for each location name
 $geolocations{"Home "} =   "[55.6588/12.0825]";  # Special case for FF.
@@ -217,7 +227,8 @@ $datalinetypes{"Beer"} = [
   "maker",  # Brewery
   "name",   # Name of the beer
   "vol", "style", "alc", "pr", "rate", "com", "geo",
-  "subtype"]; # Taste of the beer, could be fruits, special hops, or type of barrel
+  "subtype", # Taste of the beer, could be fruits, special hops, or type of barrel
+  "photo" ]; # Image file name
 
 # Wine
 $datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
@@ -225,7 +236,7 @@ $datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
   "maker", # brand or house
   "name", # What it says on the label
   "style", # Can be grape (chardonnay) or country/region (rioja)
-  "vol", "alc", "pr", "rate", "com", "geo"];
+  "vol", "alc", "pr", "rate", "com", "geo", "photo"];
 
 # Booze. Also used for coctails
 $datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
@@ -234,7 +245,7 @@ $datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
   "name",  # What it says on the label
   "style", # can be coctail, country/(region, or flavor
   "vol", "alc",  # These are for the alcohol itself
-  "pr", "rate", "com", "geo"];
+  "pr", "rate", "com", "geo", "photo"];
 
 
 # A comment on a night out.
@@ -242,7 +253,7 @@ $datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
   "subtype",# bar discussion, concert, lunch party, etc
   "com",    # Any comments on the night
   "people", # Who else was here
-  "geo" ];
+  "geo", "photo" ];
 
 # Restaurants and bars
 $datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
@@ -250,13 +261,15 @@ $datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
   "rate", "pr", # price for the night, per person
   "food",   # Food and drink
   "people",
-  "com", "geo"];
+  "com", "geo",
+  "photo"];
 
-# TODO - Create types for wine, booze, tz, and others
 # To add a new record type, define it here
-# To add new input fields, mention them here, and add handling in the input form
-# You probably want to add specific display code to the full list, and other
-# places
+
+# To add new input fields, add them to the end of the field list, so they
+# will default to empty in old records that don't have them.
+# You probably want to add special code in the input form, record POST, and
+# to the various lists.
 
 ################################################################################
 # Input Parameters
@@ -438,6 +451,7 @@ sub copyproddata {
   system("cat $datafile > $bakfile");
   system("cat $prodfile > $datafile");
   clearcachefiles();
+  system("cp ../beertracker/photodir/* photodir"); # TODO - Gives a warning until we have on under prod
   print $q->redirect( "$url" );
   exit();
 } # copyproddata
@@ -789,6 +803,80 @@ sub guessvalues {
   }
 } # guessvalues
 
+
+# Get image file name. Width can be in pixels, or special values like
+# "orig" for the original image, "" for the plain name to be saved in the record,
+# or "thumb", "mob", "pc" for default sizes
+sub imagefilename {
+  my $fn = shift; # The raw file name
+  my $width = shift; # How wide we want it, or "orig" or ""
+  $fn =~ s/(\.?\+?orig)?\.jpe?g$//i; # drop extension if any
+  return $fn if (!$width); # empty width for saving the clean filename in $rec
+  $fn = "$photodir/$fn"; # a real filename
+  if ( $width =~ /\.?orig/ ) {
+    $fn .= "+orig.jpg";
+    return $fn;
+  }
+  $width = $imagesizes{$width} || "";
+  return "" unless $width;
+  $width .= "w"; # for easier deleting *w.jpg
+  $fn .= "+$width.jpg";
+  return $fn;
+}
+
+sub image {
+  my $rec = shift;
+  my $width = shift; # One of the keys in %imagesizes
+  return "" unless ( $rec->{photo} );
+  my $fn = imagefilename($rec->{photo}, $width);
+  return "" unless $fn;
+  my $orig = imagefilename($rec->{photo}, "orig");
+  if ( ! -r $fn ) { # Need to resize it
+    my $size = $imagesizes{$width};
+    $size = $size . "x". $size .">";
+    system ("convert $orig -resize '$size' $fn");
+    print STDERR "convert $orig -resize '$size' $fn \n";
+  }
+  my $w = $imagesizes{$width};
+  my $itag = "<img src='$fn' width='$w' />";
+  my $tag = "<a href='$orig'>$itag</a>";
+  return $tag;
+
+}
+# TODO
+# - Make a routine to scale to any given width. Check if already there.
+# - Use that when displaying
+# - When clearing the cache, delete scaled images over a month old, but not .orig
+sub savefile {
+  my $rec = shift;
+  my $fn = $rec->{stamp};
+  $fn =~ s/ /+/; # Remove spaces
+  $fn .= ".jpg";
+  if ( ! -d $photodir ) {
+    print STDERR "Creating photo dir $photodir - FIX PERMISSIONS \n";
+    print STDERR "chgrp heikki $photodir; chmod g+sw $photodir \n";
+    mkdir($photodir);
+  }
+  my $savefile = "$photodir/$fn";
+  my ( $base, $sec ) = $fn =~ /^(.*):(\d\d)/;
+  $sec--;
+  do {
+    $sec++;
+    $fn = sprintf("%s:%02d", $base,$sec);
+    $savefile = imagefilename($fn,"orig");
+  }  while ( -e $savefile ) ;
+  $rec->{photo} = imagefilename($fn,"");
+
+  my $filehandle = $q->upload('newphoto');
+  my $tmpfilename = $q->tmpFileName( $filehandle );
+  my $conv = `/usr/bin/convert $tmpfilename -auto-orient -strip $savefile`;
+    # -auto-orient turns them upside up. -strip removes the orientation, so
+    # they don't get turned again when displaying.
+  print STDERR "Conv returned '$conv' \n" if ($conv); # Can this happen
+  my $fsz = -s $savefile;
+  print STDERR "Uploaded $fsz bytes into '$savefile' \n";
+}
+
 ########################
 # POST itself
 sub postdata {
@@ -816,6 +904,9 @@ sub postdata {
   fixtimes($rec, $lastrec, $sub);
   fixvol($rec, $sub);
   guessvalues($rec);
+  if ( $rec->{newphoto} ) { # Uploaded a new photo
+    savefile($rec);
+  }
 
   my $lasttimestamp = $lastrec->{stamp};
 
@@ -888,6 +979,7 @@ sub postdata {
   }
 
   $rec->{edit} = "" unless defined($rec->{edit});
+  $rec->{oldstamp} = $rec->{stamp}; # Remember the stamp for the edit link
 
   #dumprec($rec, "final");
   my $line = makeline($rec);
@@ -925,7 +1017,6 @@ sub postdata {
            "x$rec->{stamp}" lt "x$stp") {  # Right Place to insert the line
            # Note the "x" trick, to force pure string comparision
         print F "$line\n";
-        $rec->{oldstamp} = $rec->{stamp}; # Remember the stamp for the edit link
         $rec->{stamp} = ""; # do not write it again
       }
       if ( !$stp || $stp ne $rec->{edit} ) {
@@ -951,7 +1042,7 @@ sub postdata {
   # if POSTing a restaurant, return to editing the record, so we can add
   # more relevant stuff like foods, people etc.
   my $editit = "";
-  if ( $rec->{type} =~ /Restaurant|Night/i && $sub ne "Del") {
+  if ( $rec->{type} =~ /Restaurant|Night/i && $sub ne "Del" && $rec->{oldstamp}) {
     $editit = $rec->{oldstamp};
   }
   # Redirect to the same script, without the POST, so we see the results
@@ -1204,6 +1295,14 @@ SCRIPTEND
 
 SCRIPTEND
 
+  # Take a photo
+  $script .= <<'SCRIPTEND';
+  function takephoto() {
+    var inp = document.getElementsByName("newphoto");
+    inp[0].click();
+  }
+SCRIPTEND
+
   print "<script>\n$script</script>\n";
 }
 
@@ -1240,7 +1339,8 @@ sub inputfield {
 #  Last 30 days: drinks dr/day, money, zero days
 #    The 30 days is not the same as the one in the graph, as that is a floating
 #    average, but this is a linear average.
-# TODO - Loop by days to get this right! See #369
+# TODO - Loop by days to get this right! See #369. Refactor the avg calculations
+# from the graph code, and use the same here.
 #
 sub summarycomment {
   my $i = scalar(@lines)-1;
@@ -1343,7 +1443,8 @@ sub inputform {
     }
   }
 
-  print "\n<form method='POST' accept-charset='UTF-8' class='no-print'>\n";
+  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+        "enctype='multipart/form-data'>\n";
   my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
   my $c2 = "colspan='2'";
   my $c3 = "colspan='3'";
@@ -1378,9 +1479,21 @@ sub inputform {
     $hidden = "hidden"; # Hide the geo and date fields for normal use
     $loc = " $loc"; # Mark it as uncertain
   }
+  # Taking a photo. Usually hidden
+  if (hasfield($type,"photo") ) {
+    print "<tr id='td1' $hidden >\n";
+    print "<td $c6>\n";
+    print "<input type='button' onclick='takephoto()' value='Photo' />\n";
+    print "$foundrec->{photo}  ";
+    print "<input type='hidden' name='photo' value='$foundrec->{photo}' />\n";
+    print "<input type='file' name='newphoto' accept='image/*' capture='camera' hidden /> \n";
+    # No broweser accepts a value for the file browser, considered unsafe. Fix in POST
+    print "</td>\n";
+    print "</tr>\n";
+  }
 
   # Date and time, usually hidden
-  print "<tr id='td1' $hidden ><td>";
+  print "<tr id='td2' $hidden ><td>\n";
   print "<input name='edit' type='hidden' value='$foundrec->{stamp}' id='editrec' />\n";
   print "<input name='o' type='hidden' value='$op' id='editrec' />\n";
   print "<input name='q' type='hidden' value='$qry' id='editrec' />\n";
@@ -1389,7 +1502,7 @@ sub inputform {
   print "</tr>\n";
 
   # Geolocation
-  print "<tr id='td2' $hidden ><td $c2>";
+  print "<tr id='td3' $hidden ><td $c2>\n";
   print inputfield("geo", $sz4, "Geo", "nop", $geo );
   my $chg = "onchange='document.location=\"$url?type=\"+this.value+\"&o=$op&q=$qry\"' ";
   # Disabling the field here is no good, when re-enabled, will not get transmitted !!??
@@ -1405,7 +1518,7 @@ sub inputform {
   print "</td></tr>\n";
 
   # Actual location and record type, normally hidden
-  print "<tr id='td3' $hidden >";
+  print "<tr id='td4' $hidden >";
   print "<td>($foundrec->{type})</td>\n" if ($foundrec->{type} ne $type);
   print "</tr>\n";
 
@@ -1525,10 +1638,14 @@ sub graph {
     my $bigimg = $1 || $defbig;
     my $startoff = $2 || 30; # days ago
     my $endoff = $3 || -1;  # days ago, -1 defaults to tomorrow
+    my $imgsz="320,250";
     my $reload = "";
     if ( $bigimg eq "X" ) {
       $reload = 1;
       $bigimg = $defbig;
+    }
+    if ( $bigimg eq "B" ) {  # Big image
+      $imgsz = "640,480";
     }
     my $startdate = datestr ("%F", -$startoff );
     my $enddate = datestr( "%F", -$endoff);
@@ -1729,9 +1846,7 @@ sub graph {
         my $pointsize = "";
         my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
         my $fillstyleborder = "fill solid border linecolor \"#003000\""; # Small gap around each drink
-        my $imgsz;
         if ( $bigimg eq "B" ) {  # Big image
-          $imgsz = "640,480";
           $maxd = $maxd *7 + 4; # Make room at the top of the graph for the legend
           if ( $startoff - $endoff > 365*4 ) {  # "all"
             ( $xtic, $xformat ) = @xyear;
@@ -1746,7 +1861,6 @@ sub graph {
           }
         } else { # Small image
           $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
-          $imgsz = "320,250";  # Works on my Fairphone, and Dennis' iPhone
           $maxd = $maxd *7 + 8; # Make room at the top of the graph for the legend
           if ( $startoff - $endoff > 365*4 ) {  # "all"
             ( $xtic, $xformat ) = @xyear;
@@ -1831,10 +1945,12 @@ sub graph {
     } # Have to plot
 
     print "<hr/>\n";
+    my ( $imw,$imh ) = $imgsz =~ /(\d+),(\d+)/;
+    my $htsize = "width=$imw height=$imh" if ($imh) ;
     if ($bigimg eq "B") {
-      print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\"/></a><br/>\n";
+      print "<a href='$url?o=GraphS-$startoff-$endoff'><img src=\"$pngfile\" $htsize/></a><br/>\n";
     } else {
-      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" /></a><br/>\n";
+      print "<a href='$url?o=GraphB-$startoff-$endoff'><img src=\"$pngfile\" $htsize/></a><br/>\n";
     }
     print "<div class='no-print'>\n";
     my $len = $startoff - $endoff;
@@ -3314,9 +3430,20 @@ sub fulllist {
           print "<br>\n";
         }
       }
-
     }
 
+    if ( $rec->{photo} ) {
+      my $w = "thumb";
+      if ( $qrylim eq "x" ) {
+        if ( $mobile ) {
+          $w = "mob";
+        } else {
+          $w = "pc";
+        }
+      }
+      print image($rec,$w);
+      print "<br/>\n";
+    }
     my %vols;     # guess sizes for small/large beers
     $vols{$rec->{vol}} = 1 if ($rec->{vol});
     if ( $rec->{type} =~ /Night|Restaurant/) {
