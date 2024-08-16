@@ -36,6 +36,15 @@
   </FilesMatch>
 </DirectoryMatch>
 
+# Allow photos from the photo dir
+<DirectoryMatch /var/www/html/beertracker(-dev)?/beerdata/heikki\.photo>
+  Allow from All
+  <FilesMatch ".*\.png$">
+    Allow from All
+  </FilesMatch>
+</DirectoryMatch>
+
+
 # Hide the .git directory too, although it is available at github
 <DirectoryMatch /var/www/html/beertracker(-dev)?/.git>
    Deny from All
