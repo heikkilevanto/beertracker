@@ -20,5 +20,13 @@ mkdir -p $picdir
 touch $datafile
 chown www-data:heikki $datafile $picdir
 chmod g+w $datafile $picdir
+chmod g+s $picdir
 
-htpasswd -b  .htpasswd  $usr $pwd && echo "Created $usr all right"
+if [ -n "$pwd" ]
+then
+  htpasswd -b  .htpasswd  $usr $pwd && echo "Created $usr all right"
+else
+  echo "Not touching $usr's password"
+fi
+
+ls -ld beerdata/$usr*
