@@ -264,11 +264,12 @@ $datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
   "com", "geo",
   "photo"];
 
-# TODO - Create types for wine, booze, tz, and others
 # To add a new record type, define it here
-# To add new input fields, mention them here, and add handling in the input form
-# You probably want to add specific display code to the full list, and other
-# places
+
+# To add new input fields, add them to the end of the field list, so they
+# will default to empty in old records that don't have them.
+# You probably want to add special code in the input form, record POST, and
+# to the various lists.
 
 ################################################################################
 # Input Parameters
@@ -1294,6 +1295,14 @@ SCRIPTEND
 
 SCRIPTEND
 
+  # Take a photo
+  $script .= <<'SCRIPTEND';
+  function takephoto() {
+    var inp = document.getElementsByName("newphoto");
+    inp[0].click();
+  }
+SCRIPTEND
+
   print "<script>\n$script</script>\n";
 }
 
@@ -1474,9 +1483,10 @@ sub inputform {
   if (hasfield($type,"photo") ) {
     print "<tr id='td1' $hidden >\n";
     print "<td $c6>\n";
+    print "<input type='button' onclick='takephoto()' value='Photo' />\n";
     print "$foundrec->{photo}  ";
     print "<input type='hidden' name='photo' value='$foundrec->{photo}' />\n";
-    print "<input type='file' name='newphoto' accept='image/*' capture='camera' /> \n";
+    print "<input type='file' name='newphoto' accept='image/*' capture='camera' hidden /> \n";
     # No broweser accepts a value for the file browser, considered unsafe. Fix in POST
     print "</td>\n";
     print "</tr>\n";
