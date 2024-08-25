@@ -1896,8 +1896,8 @@ sub graph {
             "set grid xtics y2tics  linewidth 0.1 linecolor \"white\" \n".
             "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
               "behind fc \"#003000\" fillstyle solid border \n";  # green bkg
-        for my $m ( 35, 70, 105, 140 ) {
-          $cmd .= "set arrow from \"$startdate\", $m to \"$enddate\", $m nohead linewidth 0.1 linecolor \"#00dd10\" \n"
+        for (my $m=20; $m<$maxd-7; $m+= 21) {
+          $cmd .= "set arrow from \"$startdate\", $m to \"$enddate\", $m nohead linewidth 1 linecolor \"#00dd10\" \n"
             if ( $maxd > $m + 7 );
         }
         $cmd .=
