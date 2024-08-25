@@ -451,7 +451,7 @@ sub copyproddata {
   system("cat $datafile > $bakfile");
   system("cat $prodfile > $datafile");
   clearcachefiles();
-  system("cp ../beertracker/photodir/* photodir"); # TODO - Gives a warning until we have on under prod
+  system("cp ../beertracker/$photodir/* $photodir");
   print $q->redirect( "$url" );
   exit();
 } # copyproddata
@@ -824,13 +824,18 @@ sub imagefilename {
   return $fn;
 }
 
+# Produce the image tag
 sub image {
   my $rec = shift;
   my $width = shift; # One of the keys in %imagesizes
   return "" unless ( $rec->{photo} );
+  my $orig = imagefilename($rec->{photo}, "orig");
+  if ( ! -r $orig ) {
+    print STDERR "Photo file $orig not found for record $rec->{rawline} \n";
+    return "";
+  }
   my $fn = imagefilename($rec->{photo}, $width);
   return "" unless $fn;
-  my $orig = imagefilename($rec->{photo}, "orig");
   if ( ! -r $fn ) { # Need to resize it
     my $size = $imagesizes{$width};
     $size = $size . "x". $size .">";
