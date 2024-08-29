@@ -2085,7 +2085,8 @@ sub beerboard {
     }
     chomp($json);
     #print "<!--\nPage:\n$json\n-->\n";  # for debugging
-    my $beerlist = JSON->new->utf8->decode($json);
+    my $beerlist = JSON->new->utf8->decode($json)
+      or error("Json decode failed for $scrapers{$locparam} <pre>$json</pre>");
     my $nbeers = 0;
     if ($qry) {
     print "Filter:<b>$qry</b> " .
