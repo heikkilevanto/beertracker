@@ -1324,7 +1324,8 @@ SCRIPTEND
 
 
 # Helper to make an input field
-#  print "<td><input name='flavor' value='$foundrec->{flavor}' $sz1 placeholder='Flavor' /></td>\n";
+#  prints something like
+#     "<td><input name='flavor' value='$foundrec->{flavor}' $sz1 placeholder='Flavor' /></td>\n";
 # Checks if this field should exist in $type kind of records. If not, returns ""
 sub inputfield {
   my $fld = shift; # The field name
@@ -1333,6 +1334,7 @@ sub inputfield {
   $placeholder = "placeholder='$placeholder'" if ($placeholder);
   my $tag = shift || "td";
   my $value = shift || $foundrec->{$fld};
+  $value = "" if ( $foundrec->{type} ne $type ); # Don't copy from wrong types
   my $colspan = shift || "";
   my $s = "";
   if (hasfield($type,$fld)) {
