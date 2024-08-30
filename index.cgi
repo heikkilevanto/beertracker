@@ -748,6 +748,9 @@ sub guessvalues {
   my $defaultvol = 40;
   my $i = scalar( @lines )-1;
   $rec->{name} = trim($rec->{name});  # Remove leading spaces if any
+  if ( $rec->{name} =~ /^(misc|mixed)$/i ) {  # don't guess those
+    $i = 0;  # Skip the guessing loop
+  }
   while ( $i > 0 && $rec->{name}
     && ( missing($rec,"maker") || missing($rec,"vol") || missing($rec,"style") ||
          missing($rec,"alc") || missing($rec,"pr") )) {
