@@ -745,7 +745,10 @@ sub missing {
 sub guessvalues {
   my $rec = shift;
   my $priceguess = "";
-  my $defaultvol = 40;
+  my $defaultvol = "";
+  $defaultvol = 40 if ( $rec->{type} eq "Beer" );
+  $defaultvol = 16 if ( $rec->{type} eq "Wine" );
+  $defaultvol = 4 if ( $rec->{type} eq "Booze" );
   my $i = scalar( @lines )-1;
   $rec->{name} = trim($rec->{name});  # Remove leading spaces if any
   if ( $rec->{name} =~ /^(misc|mixed)$/i ) {  # don't guess those
@@ -761,7 +764,8 @@ sub guessvalues {
          $irec->{vol} eq $rec->{vol} ) { # even if different beer, good fallback
       $priceguess = $irec->{pr};
     }
-    if ( uc($rec->{name}) eq uc($irec->{name}) ) { # Same beer, copy values over if not set
+    if ( $rec->{type} eq $irec->{type} && # Same kind of record
+         uc($rec->{name}) eq uc($irec->{name}) ) { # Same beer, copy values over if not set
       $rec->{name} = $irec->{name}; # with proper case letters
       $rec->{maker} = $irec->{maker} unless $rec->{maker};
       $rec->{style} = $irec->{style} unless $rec->{style};
