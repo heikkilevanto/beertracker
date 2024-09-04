@@ -1810,24 +1810,33 @@ sub graph {
           my $i = $lastdateindex{$date};
           my $lastrec = getrecord($i);
           my $lastloc = $lastrec->{loc};
+          my $lasttime = $1 + $2/60 if ( $lastrec->{time} =~ /^(\d+):(\d\d)/ );
+          print STDERR "First lt '$lasttime' \n";
           my $lasteff = $lastrec->{effdate};
           while ( $records[$i]->{effdate} eq $date ) {
             my $drec = $records[$i];
-            if ( $drec->{alcvol} ) {
-              my $color = beercolor($drec,"0x");
-              my $drinks = $drec->{alcvol} / $onedrink;
-              if ( $lastloc ne $drec->{loc}  &&  $startoff - $endoff < 100 ) {
+            my $dtime = $1 + $2/60 if ( $drec->{time} =~ /^(\d+):(\d\d)/ );
+            my $timediff = $lasttime - $dtime ;
+            $timediff +=24 if ( $timediff < 0);
+            print STDERR "dt '$dtime' diff '$timediff' \n";
+            if ( $startoff - $endoff < 100  ) {
+              if ( $lastloc ne $drec->{loc} || $timediff > 3 ) {
                 my $lw = $totdrinks + 0.2; # White line for location change
                 $lw += 0.1 unless ($bigimg eq "B");
                 $drinkline .= "$lw 0xffffff ";
                 $lastloc = $drec->{loc};
                 $ndrinks++;
               }
+            }
+            if ( $drec->{alcvol} ) {
+              my $color = beercolor($drec,"0x");
+              my $drinks = $drec->{alcvol} / $onedrink;
               $drinkline .= "$totdrinks $color ";
               $ndrinks ++;
               $totdrinks -= $drinks;
               last if ($totdrinks <= 0 ); #defensive coding, have seen it happen once
             }
+            $lasttime = $dtime;
             $i--;
           }
 
