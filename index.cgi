@@ -1437,8 +1437,9 @@ sub inputform {
     }
     # Would be nice to get git branch and log tail
     # But git is anal about file/dir ownerships
-    print "<a href='$url?o=copyproddata'><span>Get production data</span></a></li> \n";
-
+    my $prodfile = "../beertracker/$datafile";
+    print "<a href='$url?o=copyproddata'><span>Get production data</span></a> \n";
+    print " &nbsp; Prod data is newer!" if ( ( -M $prodfile ) < ( -M $datafile)  );
     print "<hr>\n";
   }
 
