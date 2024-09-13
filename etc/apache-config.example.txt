@@ -37,7 +37,7 @@
 </DirectoryMatch>
 
 # Allow photos from the photo dir
-<DirectoryMatch /var/www/html/beertracker(-dev)?/beerdata/heikki\.photo>
+<DirectoryMatch /var/www/html/beertracker(-dev)?/beerdata/.*\.photo>
   Allow from All
   <FilesMatch ".*\.png$">
     Allow from All
