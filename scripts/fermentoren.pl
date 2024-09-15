@@ -122,4 +122,5 @@ foreach my $design ($dom->findnodes($xpath)) {
   $count++;
 }
 print STDERR "Found $foundcount beers for Fermentoren\n";
-print(to_json(\@taps, {pretty => 1}));
+my $js = JSON->new->utf8(1)->pretty(1)->encode(\@taps);
+print $js;
