@@ -1598,8 +1598,9 @@ sub inputform {
   if (hasfield($type,'com')) {
     my $placeholder = summarycomment();
     print "<tr>";
-    print " <td $c6><textarea name='com' cols='45' rows='3' id='com'
-      placeholder='$placeholder' autocapitalize='sentences'>$foundrec->{com}</textarea></td>\n";
+    print "<td $c6><textarea name='com' cols='45' rows='3' id='com' " .
+          "Onfocus='value=value.trim();select();' " .
+          "placeholder='$placeholder' autocapitalize='sentences'>$foundrec->{com}</textarea></td>\n";
     print "</tr>\n";
   }
 
