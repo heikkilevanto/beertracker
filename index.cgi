@@ -2173,8 +2173,9 @@ sub beerboard {
       my $country = $e->{'country'} || "";
       my $sizes = $e->{"sizePrice"};
       my $hiddenbuttons = "";
-        $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;  # always?
-        $hiddenbuttons .= "<input type='hidden' name='subtype' value='$country' />\n" ;  # always?
+        $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='subtype' value='$country' />\n"
+          if ($country) ;
         $hiddenbuttons .= "<input type='hidden' name='maker' value='$mak' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='name' value='$beer' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='style' value='$origsty' />\n" ;
@@ -2183,15 +2184,21 @@ sub beerboard {
         $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
       my $buttons="";
       foreach my $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
-        my $vol = $sp->{"vol"};
-        my $pr = $sp->{"price"};
+        my $vol = $sp->{"vol"} || "";
+        my $pr = $sp->{"price"} || "";
         my $lbl;
         if ($extraboard == $id || $extraboard == -2) {
-          $lbl = "$vol cl: $pr.- \n";
-          $lbl .= sprintf( "%d/l ", $pr * 100 / $vol );
+          $lbl = "$vol cl:";
+          $lbl .= "$pr.- \n" . sprintf( "%d/l ", $pr * 100 / $vol ) if ($pr);
           $lbl .= sprintf( "%3.1fd", $vol * $alc / $onedrink);
         } else {
-          $lbl = "$pr.-";
+          if ( $pr ) {
+            $lbl = "$pr.-";
+          } elsif ( $vol ) {
+            $lbl = "$vol cl";
+          } else {
+            $lbl = "???";
+          }
           $buttons .= "<td>";
         }
         $buttons .= "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
@@ -2216,13 +2223,15 @@ sub beerboard {
 
         print "<td colspan=4 >";
         print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
-        print "$mak: $dispbeer <span style='font-size: x-small;'>($country)</span></span></td></tr>\n";
+        print "$mak: $dispbeer ";
+        print "<span style='font-size: x-small;'>($country)</span>" if ($country);
+        print "</span></td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
         print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
         print "$hiddenbuttons";
         print "<input type='hidden' name='vol' value='T' />\n" ;  # taster
         print "<input type='hidden' name='pr' value='X' />\n" ;  # at no cost
-        print "<input type='submit' name='submit' value='Taster\n ' /> \n";
+        print "<input type='submit' name='submit' value='Taster ' /> \n";
         print "</form>\n";
         print "</td></tr>\n";
         print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
@@ -2248,7 +2257,8 @@ sub beerboard {
         print "$buttons\n";
         print "<td style='font-size: x-small;' align=right>$alc</td>\n";
         print "<td>$dispbeer $dispmak ";
-        print "<span style='font-size: x-small;'>($country)</span> $sty</td>\n";
+        print "<span style='font-size: x-small;'>($country)</span> " if ($country);
+        print "$sty</td>\n";
         print "</tr>\n";
       }
       $previd = $id;

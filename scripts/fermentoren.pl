@@ -93,15 +93,15 @@ foreach my $design ($dom->findnodes($xpath)) {
   }
   print STDERR "Got alc '$abv' \n" if $debug;
 
-  # The list has no prices, so we make a decent guess.
-  my ($size, $price,$size2, $price2) = (20, 30,  40, 50);
+  # The list has no prices, guess volumes to have something to show
+  my ($size, $size2 ) = (20, 40);
   my @sizePrices = ();
 
   if ($size) {
-    push @sizePrices, { vol => $size, price => $price};
+    push @sizePrices, { vol => $size };
   }
   if ($size2) {
-    push @sizePrices, { vol => $size2, price => $price2};
+    push @sizePrices, { vol => $size2};
   }
   my $tapItem = {
     id => 0 + $number,
