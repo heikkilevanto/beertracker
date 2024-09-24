@@ -1554,7 +1554,6 @@ sub inputform {
   if ( $subtypes{$type} ) {
     print "<datalist id='subtypes' >\n";
     for my $t ( @{$subtypes{$type}} ) {
-      print STDERR "Subtype for '$type' : $t \n";
       print "<option value='$t'/>\n";
     }
     print "</datalist>\n";
