@@ -205,6 +205,8 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
 my %datalinetypes;
 # Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
 
+my %subtypes;
+
 # The old style lines with no type.
 $datalinetypes{"Old"} = [
   "stamp",  # Time stamp, as in "yyyy-mm-dd hh:mm:ss"
@@ -237,6 +239,8 @@ $datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
   "name", # What it says on the label
   "style", # Can be grape (chardonnay) or country/region (rioja)
   "vol", "alc", "pr", "rate", "com", "geo", "photo"];
+
+$subtypes{"Wine"} = [ "Red", "White", "Sweet", "Bubbly" ];
 
 # Booze. Also used for coctails
 $datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
@@ -1547,8 +1551,15 @@ sub inputform {
 
   # Type, subtype, and style (flavor, coctail, country/region, etc)
   print "<tr><td>$type\n";
-  #print inputfield("subtype", $sz3, "", "nop");
-  print inputfield("subtype", "size=10 $clr", "", "nop");
+  if ( $subtypes{$type} ) {
+    print "<datalist id='subtypes' >\n";
+    for my $t ( @{$subtypes{$type}} ) {
+      print STDERR "Subtype for '$type' : $t \n";
+      print "<option value='$t'/>\n";
+    }
+    print "</datalist>\n";
+  }
+  print inputfield("subtype", "list='subtypes' size=10 $clr", "", "nop");
   print "</td>";
   print inputfield("style", $sz1, "Style");
   print "</tr>\n";
