@@ -53,6 +53,9 @@ foreach my $design ($dom->findnodes($xpath)) {
           undef $size2;
           undef $price2;
       }
+      if ( $size2 && $size > $size2 ) {
+        ( $size, $price, $size2, $price2 ) = ( $size2, $price2, $size, $price )
+      }
       #    my($url) = $design->findnodes('./a/@href')->to_literal_list;
       my @sizePrices = ();
 

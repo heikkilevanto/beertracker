@@ -2193,19 +2193,24 @@ sub beerboard {
         $hiddenbuttons .= "<input type='hidden' name='loc' value='$loc' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
       my $buttons="";
-      foreach my $sp ( sort( {$a->{"vol"} <=> $b->{"vol"}} @$sizes) ) {
+      #foreach my $sp ( sort( {($a->{"vol"} <=> $b->{"vol"}) || ($a->{"vol"} cmp $b->{"vol"}) } @$sizes) ) {
+      foreach my $sp ( @$sizes ) {
         my $vol = $sp->{"vol"} || "";
         my $pr = $sp->{"price"} || "";
         my $lbl;
         if ($extraboard == $id || $extraboard == -2) {
-          $lbl = "$vol cl:";
-          $lbl .= "$pr.- \n" . sprintf( "%d/l ", $pr * 100 / $vol ) if ($pr);
-          $lbl .= sprintf( "%3.1fd", $vol * $alc / $onedrink);
+          my $dispvol = $vol;
+          $dispvol = $1 if ( $volumes{$vol} && $volumes{$vol} =~ /(^\d+)/);   # Translate S and L
+          $lbl = "$dispvol cl  ";
+          $lbl .= sprintf( "%3.1fd", $dispvol * $alc / $onedrink);
+          $lbl .= "\n$pr.- " . sprintf( "%d/l ", $pr * 100 / $vol ) if ($pr);
         } else {
           if ( $pr ) {
             $lbl = "$pr.-";
-          } elsif ( $vol ) {
+          } elsif ( $vol =~ /\d/ ) {
             $lbl = "$vol cl";
+          } elsif ( $vol ) {
+            $lbl = "&nbsp; $vol &nbsp;";
           } else {
             $lbl = "???";
           }
@@ -2221,14 +2226,16 @@ sub beerboard {
       }
       my $beerstyle = beercolorstyle($origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
 
+      my $dispid = $id;
+      $dispid = "&nbsp;&nbsp;$id"  if ( length($dispid) < 2);
       if ($extraboard == $id  || $extraboard == -2) { # More detailed view
         print "<tr><td colspan=5><hr></td></tr>\n";
-        print "<tr><td $beerstyle>";
+        print "<tr><td align=right $beerstyle>";
         my $linkid = $id;
         if ($extraboard == $id) {
           $linkid = "-3";  # Force no expansion
         }
-        print "<a href='$url?o=board$linkid&loc=$locparam'><span width=100% $beerstyle id='here'>$id</span></a> ";
+        print "<a href='$url?o=board$linkid&loc=$locparam'><span width=100% $beerstyle id='here'>$dispid</span></a> ";
         print "</td>\n";
 
         print "<td colspan=4 >";
@@ -2262,7 +2269,7 @@ sub beerboard {
         print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
       } else { # Plain view
         print "<tr><td align=right $beerstyle>";
-        print "<a href='$url?o=board$id&loc=$locparam#here'><span width=100% $beerstyle>$id</span></a> ";
+        print "<a href='$url?o=board$id&loc=$locparam#here'><span width=100% $beerstyle>$dispid</span></a> ";
         print "</td>\n";
         print "$buttons\n";
         print "<td style='font-size: x-small;' align=right>$alc</td>\n";

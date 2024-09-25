@@ -94,15 +94,10 @@ foreach my $design ($dom->findnodes($xpath)) {
   print STDERR "Got alc '$abv' \n" if $debug;
 
   # The list has no prices, guess volumes to have something to show
-  my ($size, $size2 ) = (20, 40);
   my @sizePrices = ();
 
-  if ($size) {
-    push @sizePrices, { vol => $size };
-  }
-  if ($size2) {
-    push @sizePrices, { vol => $size2};
-  }
+  push @sizePrices, { vol => "S"};
+  push @sizePrices, { vol => "L"};
   my $tapItem = {
     id => 0 + $number,
     maker  => $maker,
