@@ -1697,7 +1697,7 @@ sub graph {
       print "\n<!-- Cached graph op='$op' $pngfile -->\n";
     } else { # Have to plot a new one
 
-      my %sums; # drink sums by (eff) date # TODO - Don't calculate the whole history
+      my %sums; # drink sums by (eff) date
       my %lastdateindex;
       for ( my $i = scalar(@records)-1; $i >= 0; $i-- ) { # calculate sums
         my $rec = getrecord($i);
@@ -1706,6 +1706,8 @@ sub graph {
         next unless ($rec->{alcvol});
         $sums{$rec->{effdate}} += $rec->{alcvol};
         $lastdateindex{$rec->{effdate}} = $i unless ( $lastdateindex{$rec->{effdate}} );
+        #bloodalcohol($i) unless ( defined($rec->{bloodalc}) );
+        bloodalcohol($i) unless ( defined($bloodalc{$rec->{effdate}}) );
         last if ( $rec->{effdate} lt $prestartdate );
       }
       my $ndays = $startoff+35; # to get enough material for the running average
@@ -1782,11 +1784,11 @@ sub graph {
         }
         if ( $ndays >=0 && $endoff<=0) {  # On the last current date, add averages to legend
           if ($bigimg eq "B") {
-            $lastavg = sprintf("(%2.1f/d %0.0f/w)", $sum30, $sum30*7) if ($sum30 > 0);
-            $lastwk = sprintf("(%2.1f/d %0.0f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
+            $lastavg = sprintf("30d (%2.1f/d %0.0f/w)", $sum30, $sum30*7) if ($sum30 > 0);
+            $lastwk = sprintf("wk (%2.1f/d %0.0f/w)", $sumweek, $sumweek*7) if ($sumweek > 0);
           } else {
-            $lastavg = sprintf("%2.1f %0.0f", $sum30, $sum30*7) if ($sum30 > 0);
-            $lastwk = sprintf("%2.1f %0.0f", $sumweek, $sumweek*7) if ($sumweek > 0);
+            $lastavg = sprintf("m %2.1f", $sum30) if ($sum30 > 0);
+            $lastwk = sprintf("w %0.0f", $sumweek*7) if ($sumweek > 0);
           }
         }
         if ( $ndays == 0 ){  # Plot the start of the day
@@ -1818,6 +1820,8 @@ sub graph {
         my $drinkline = "";
         my $totdrinks = $tot;
         my $ndrinks = 0;
+        my $ba = -1 ; # invisible
+        $ba = $bloodalc{$date} * 10 if ( $bloodalc{$date} );
         if ( $lastdateindex{$date} ) {
           my $i = $lastdateindex{$date};
           my $lastrec = getrecord($i);
@@ -1858,7 +1862,7 @@ sub graph {
         }
 
         if ($zerodays >= 0) {
-          print F "$date  $tot $sum30 $sumweek  $zero $fut  $drinkline \n" ;
+          print F "$date  $tot $sum30 $sumweek  $zero $fut $ba  $drinkline \n" ;
           $havedata = 1;
         }
       }
@@ -1869,8 +1873,9 @@ sub graph {
       } else {
         my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
         my $weekline = "";
-        my $plotweekline = "\"$plotfile\" " .
-                  "using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"wk $lastwk\", " ;
+        my $plotweekline =
+          "\"$plotfile\" using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$lastwk\", " .
+          "\"$plotfile\" using 1:7 with points lc \"red\" pointtype 7 axes x1y2 title \"ba\", ";
         my $xtic = 1;
         my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
         my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
@@ -1939,30 +1944,30 @@ sub graph {
                   # note the order of plotting, later ones get on top
                   # so we plot weekdays, avg line, zeroes
 
-              "\"$plotfile\" using 1:7:8 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:9:10 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:11:12 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:13:14 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:15:16 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:17:18 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:19:20 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:21:22 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:23:24 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:25:26 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:27:28 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:29:30 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:31:32 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:33:34 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:35:36 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:37:38 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:39:40 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:41:42 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:43:44 with boxes lc rgbcolor variable axes x1y2 notitle, " .
-              "\"$plotfile\" using 1:45:46 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:8:9 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:10:11 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:12:13 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:14:15 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:16:17 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:18:19 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:20:21 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:22:23 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:24:25 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:26:27 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:28:29 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:30:31 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:32:33 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:34:35 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:36:37 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:38:39 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:40:41 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:42:43 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:44:45 with boxes lc rgbcolor variable axes x1y2 notitle, " .
+              "\"$plotfile\" using 1:46:47 with boxes lc rgbcolor variable axes x1y2 notitle, " .
 
               "$weekline " .
               "\"$plotfile\" " .
-                  "using 1:3 with line lc \"#FfFfFf\" lw 3 axes x1y2 title \" 30d $lastavg\", " .  # avg30
+                  "using 1:3 with line lc \"#FfFfFf\" lw 3 axes x1y2 title \"$lastavg\", " .  # avg30
                     # smooth csplines
               "\"$plotfile\" " .
                   "using 1:6 with points pointtype 7 lc \"#E0E0E0\" axes x1y2 notitle, " .  # future tail
