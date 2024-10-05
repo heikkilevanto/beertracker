@@ -2941,7 +2941,8 @@ sub about {
 
   print "Beertracker on GitHub: <ul>";
   print aboutlink("GitHub","https://github.com/heikkilevanto/beertracker");
-  print aboutlink("Bugtracker", "https://github.com/heikkilevanto/beertracker/issues");
+  print aboutlink("Bugtracker", "https://github.com/heikkilevanto/beertracker/issues" .
+      "?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+-label%3ANextVersion");
   print aboutlink("User manual", "https://github.com/heikkilevanto/beertracker/blob/master/manual.md" );
   print "</ul><p>\n";
   print "Some of my favourite bars and breweries<ul>";
@@ -3760,6 +3761,7 @@ sub aboutlink {
   my $long = $url;
   $long =~ s/^https?:\/\/(www)?\.?\/?//i;  # remove prefixes
   $long =~ s/\/$//;
+  $long =~ s/\?.*$//; # Remove parameters
   my $short = $1 if ( $long =~ /([^#\/]+)\/?$/ );  # last part of the path
   return "<$tag>$name: <a href='$url' target='_blank' > ".
     "<span class='only-wide'>$long</span>".
