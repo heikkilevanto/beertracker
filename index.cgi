@@ -393,6 +393,9 @@ if ( $op eq "geo" ) {
 if ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
   lists();
 }
+if ( $op =~ /People/i ) {
+  people();
+}
 if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   fulllist();
 }
@@ -1634,7 +1637,7 @@ sub inputform {
   print "<option value='o=board&q=$qry' >Beer Board</option>\n";
   print "<option value='o=Months&q=$qry' >Stats</option>\n";
     # All the stats pages link to each other
-  print "<option value='o=Beer&q=$qry' >Beers</option>\n";
+  print "<option value='o=Beer&q=$qry' >Lists</option>\n";
     # The Beer list has links to locations, wines, and other such lists
   print "<option value='o=About' >About</option>\n";
   print "</select>\n";
@@ -3083,7 +3086,7 @@ sub lists {
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
   print searchform();
   print "Other lists: " ;
-  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style");
+  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "People");
   for my $l ( @ops ) {
     my $bold = "nop";
     $bold = "b" if ($l eq $op);
@@ -3216,6 +3219,7 @@ sub lists {
               "\n <br class='no-wide'/> " .
               lst($op,$rec->{maker},"i","","maker") . ": \n" .
               lst("full",$rec->{name},"b","","name") . "</td>";
+
     } else {
       print "<!-- unknown shortlist '$op' -->\n";
       last;
@@ -3251,6 +3255,86 @@ sub lists {
   print "</table>\n";
 
 }  # Lists
+
+################################################################################
+# List of people
+################################################################################
+# Needs to be separate from the beer(etc) lists above, as there can be multiple
+# people in an entry, separated by commas
+sub people {
+  print "<hr/><b>$op list</b>\n";
+  print "<br/><div class='no-print'>\n";
+  my $filts = splitfilter($qry);
+  print "Filter: $filts " .
+     "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $qry;
+  print "Filter: <a href='$url?y=$yrlim'><span>$yrlim</span></a> " .
+     "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
+  print searchform();
+  print "Other lists: " ;
+  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "People");
+  for my $l ( @ops ) {
+    my $bold = "nop";
+    $bold = "b" if ($l eq $op);
+    print "<a href='$url?o=$l'><$bold>$l</$bold></a> &nbsp;\n";
+  }
+  print "</div><hr/>\n";
+  getseen() if ( $qryfield =~ /new/i );
+  if ( !$notbef && !$qry ) {
+    $notbef = datestr("%F", -180); # Default to last half year
+  }
+  my $fld;
+  my $line;
+  my @displines;
+  my %lineseen;
+  my $anchor="";
+  my $maxwidth = "style='max-width:30%;'";
+  my $i = scalar( @lines );
+  while ( $i > 0 ) {
+    $i--;
+    my $rec = getrecord($i);
+    next unless ($rec); # defensive coding, probably gets that one TZ record
+    last if ($lines[$i] lt $notbef && scalar(@displines) >= 30);
+    $fld = "";
+
+    my $ppl = $rec->{people};
+    next unless ( $ppl );
+    next if filtered ( $rec, "people" );
+    for my $p ( split(/[.,] */, $ppl) ) {
+      $line = "<td>" . filt("$p","b","","full","people") . "</td>" .
+              "<td>$rec->{wday} " .
+              filt($rec->{effdate},"","","full") ." \n" .
+              "$rec->{loc}</td>";
+      $fld = uc($p);
+      next if $lineseen{$fld};
+      $lineseen{$fld} = $line;
+      push @displines, "$line";
+    }
+  }
+  print scalar(@displines) . " entries ";
+  print "from $notbef" if ($notbef);
+  print "<br/>\n" ;
+  if ( !$sortlist) {
+    print "(<a href='$url?o=$op&sort=1&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "' ><span>Sort Alphabetically</span></a>) <br/>\n";
+  } else {
+    print "(<a href='$url?o=$op&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "'><span>Sort Recent First</span></a>) <br/>\n";
+  }
+
+
+  print "<hr/>\n" ;
+  print "&nbsp;<br /><table style='background-color: #00600; max-width: 60em;' >\n";
+  if ($sortlist) {
+    @displines = ();
+    for my $k ( sort { "\U$a" cmp "\U$b" } keys(%lineseen) ) {
+      print "<tr>\n$lineseen{$k}</tr>\n";
+    }
+  } else {
+    foreach my $dl (@displines) {
+      print "<tr>\n$dl</tr>\n";
+    }
+  }
+  print "</table>\n";
+
+} # people
 
 
 ################################################################################
