@@ -2854,12 +2854,15 @@ sub datastats {
   print "<hr/>\n";
 
   print "<table>\n";
-  print "<tr><td></td><td><b>Data file</b></td></tr>\n";
-  print "<tr><td></td><td> $datafile </td></tr>\n";
+  print "<tr><td></td><td><b>Data file stats</b></td></tr>\n";
+  print "<tr><td></td><td>" . searchform() . "</td></tr>\n";
+
+  print "<tr><td></td><td><b>General</b></td></tr>\n";
   my $dfsize = -s $datafile;
   $dfsize = int($dfsize / 1024);
-  print "<tr><td align='right'>$dfsize</td><td>kb</td></tr>\n";
+  print "<tr><td align='right'>$dfsize</td><td>kb in $datafile </td></tr>\n";
   my $datarecords = scalar(@records);
+  # The following have been calculated when reading the file, without parsing it
   my $totallines = $datarecords + $commentlines + $commentedrecords;
   print "<tr><td align='right'>$totallines</td><td> lines</td></tr>\n";
   print "<tr><td align='right'>$commentlines</td><td> lines of comments</td></tr>\n";
@@ -2878,6 +2881,7 @@ sub datastats {
 
   for ( my $i = 0 ; $i < scalar(@lines); $i++) {
     my $rec = getrecord($i);
+    next if filtered ( $rec );
     if ( ! $rec ) {
       $badrecs++;
       next;
@@ -2913,9 +2917,11 @@ sub datastats {
     print "<tr><td align='right'>$rates[$i]</td><td>'$ratings[$i]' ($i)</td></tr>\n";
     $i++;
   }
-  my $avg = sprintf("%3.1f", $ratesum / $ratecount);
   print "<tr><td align='right'>$ratecount</td><td>Records with ratings</td></tr>\n";
-  print "<tr><td align='right'>$avg</td><td>Average rating</td></tr>\n";
+  if ( $ratecount ) {
+    my $avg = sprintf("%3.1f", $ratesum / $ratecount);
+    print "<tr><td align='right'>$avg</td><td>Average rating</td></tr>\n";
+  }
   print "<tr><td align='right'>$comments</td><td>Records with comments</td></tr>\n";
 
   print "</table>\n";
