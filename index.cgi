@@ -1875,7 +1875,7 @@ sub graph {
         my $weekline = "";
         my $plotweekline =
           "\"$plotfile\" using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$lastwk\", " .
-          "\"$plotfile\" using 1:7 with points lc \"red\" pointtype 6 axes x1y2 title \"ba\", ";
+          "\"$plotfile\" using 1:7 with points lc \"red\" pointtype 1 pointsize 0.2 axes x1y2 title \"ba\", ";
         my $xtic = 1;
         my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
         my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
