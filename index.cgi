@@ -3477,6 +3477,7 @@ sub fulllist {
         $guess = " <b>($guess $gdist?)</b> " if ($guess);
         my $map = maplink($gg);
         print "Geo: $gg $tdist $guess $map<br/>\n" if ($gg || $guess || $tdist);
+        print utlink($rec->{loc}), rblink($rec->{loc}), glink($rec->{loc}) , "<br>\n";
       }
     }
     ###### The (beer) entry itself ##############
