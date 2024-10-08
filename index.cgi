@@ -990,7 +990,7 @@ sub postdata {
   }
   if ($rec->{subtype}) { # Convert subtypes like "Wine, Red" into rectype "Wine", subtype "Red"
     for  my $rt ( sort(keys(%datalinetypes)) ) {
-      if ($rec->{subtype} =~ /^($rt) *, *(.*)$/ ) {
+      if ($rec->{subtype} =~ /^($rt) *, *(.*)$/i ) {
         $rec->{type} = $1;
         $rec->{subtype} = $2;
       }
@@ -1343,10 +1343,11 @@ sub inputfield {
   my $value = shift || $foundrec->{$fld};
   $value = "" if ( $foundrec->{type} ne $type ); # Don't copy from wrong types
   my $colspan = shift || "";
+  my $autocomplete = "autocomplete='beertracker $fld'";
   my $s = "";
   if (hasfield($type,$fld)) {
     $s .= "<$tag $colspan>" if ($tag);
-    $s .= "<input name='$fld' value='$value' $size $placeholder />";
+    $s .= "<input name='$fld' value='$value' $size $placeholder  $autocomplete />";
     $s .= "</$tag>" if ($tag);
     $s .= "\n";
   }
@@ -1557,11 +1558,14 @@ sub inputform {
   if ( $subtypes{$type} ) {
     print "<datalist id='subtypes' >\n";
     for my $t ( @{$subtypes{$type}} ) {
-      print "<option value='$t'/>\n";
+      print "<option value='$t' >$t</option>\n";
     }
     print "</datalist>\n";
   }
-  print inputfield("subtype", "list='subtypes' size=10 $clr", "", "nop");
+  print inputfield("subtype", "list='subtypes'  size=10 $clr", "", "nop");
+  # TODO - The list thing works on my desktop browser, but nothing I can do makes it work on
+  # my phone. Firefox in both cases. See #357
+
   print "</td>";
   print inputfield("style", $sz1, "Style");
   print "</tr>\n";
