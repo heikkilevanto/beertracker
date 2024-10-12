@@ -1590,7 +1590,7 @@ sub inputform {
     print "<option value=''>Rate</option>\n";
     for my $ro (1 .. scalar(@ratings)-1) {
       print "<option value='$ro'" ;
-      print " selected='selected'" if ( $ro eq $foundrec->{rate} );
+      print " selected='selected'" if ( $ro eq $foundrec->{rate} && $foundrec->{type} eq $type);
       print  ">$ro $ratings[$ro]</option>\n";
     }
     print "</select>\n";
@@ -1614,10 +1614,12 @@ sub inputform {
   # Comments
   if (hasfield($type,'com')) {
     my $placeholder = summarycomment();
+    my $commentval = $foundrec->{com};
+    $commentval = "" if ($foundrec->{type} ne $type);
     print "<tr>";
     print "<td $c6><textarea name='com' cols='45' rows='3' id='com' " .
           "Onfocus='value=value.trim();select();' " .
-          "placeholder='$placeholder' autocapitalize='sentences'>$foundrec->{com}</textarea></td>\n";
+          "placeholder='$placeholder' autocapitalize='sentences'>$commentval</textarea></td>\n";
     print "</tr>\n";
   }
 
