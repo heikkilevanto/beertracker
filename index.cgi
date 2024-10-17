@@ -533,7 +533,7 @@ sub findrec {
 
 ################################################################################
 # A helper to preload the last few years of records, to get seen marks in
-# %seen and %lastseen
+# %seen and %lastseen. Also %ratesum and %ratecount
 ################################################################################
 sub getseen{
   my $limit = shift || datestr( "%F", -2*365 ) ; # When to stop scannig
@@ -547,6 +547,11 @@ sub getseen{
     $seen{$rec->{loc}}++;
     $seen{$rec->{seenkey}}++;
     $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
+    if ( $rec->{rate} ) {
+      $ratesum{$rec->{seenkey}} += $rec->{rate};
+      $ratecount{$rec->{seenkey}}++;
+      print STDERR "'$rec->{seenkey}' : $rec->{rate} = $ratesum{$rec->{seenkey}} / $ratecount{$rec->{seenkey}} \n";
+    }
     last if ( $rec->{stamp} lt $limit );
     $i--;
   }
