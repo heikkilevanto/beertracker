@@ -81,6 +81,7 @@ foreach my $design ($dom->findnodes($xpath)) {
     $maker =~ s/ +/ /g;
     $maker =~ s/^ +//;
     $maker =~ s/ +$//;
+    $maker =~ s/Dry & Bitter Brewing Company/Dry & Bitter/;  # Use same name as for øb
     print STDERR "Got maker '$maker' \n" if $debug;
   }
 
