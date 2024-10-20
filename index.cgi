@@ -1226,7 +1226,7 @@ SCRIPTEND
             row.hidden = false;
           } else {
             row.hidden = true;
-          }
+          }1
         }
       } // i loop
     };
@@ -3051,7 +3051,7 @@ sub geodebug {
     print "<a href='$url?o=geo'><span>Back</span></a>";
     print "<p>\n";
     my (undef,undef,$defloc) = geo($geolocations{$qry});
-    print "$qry is at: $defloc <p>\n" if ($defloc);
+    print "$qry is at: $defloc " . maplink($defloc) . "<p> \n" if ($defloc);
     print "<table>\n";
     print "<tr><td>Latitude</td><td>Longitude</td><td>Dist</td></tr>\n";
     my $i = scalar( @records );
@@ -3072,7 +3072,7 @@ sub geodebug {
       }
       print "<tr>\n";
       print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
-      print "<td align='right'>$ddist</td>";
+      print "<td align='right'>$ddist" . maplink($g) . "</td>\n";
       print "<td><a href='$url?o=$op&q=$qry&e=$rec->{stamp}' ><span>$rec->{stamp}</span></a> ";
       if ($guess) {
         print "<br>(<b>$guess $gdist ?)</b>\n" ;
@@ -3373,6 +3373,7 @@ sub fulllist {
     print "<br/>" . searchform() . "<br/>" ;
     print  glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n" if ($qry);
   }
+  $qrylim = "x" if ( $qryfield =~ /Geoerror/i ) ;
   if ( $qrylim eq "x" || $qryfield eq "new" ) {
     getseen(datestr( "%F", -3*365 ))
        unless ( scalar(%seen) > 2 );  # already done in beer board
