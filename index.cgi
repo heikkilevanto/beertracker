@@ -208,20 +208,6 @@ my %datalinetypes;
 my %subtypes;
 
 # The old style lines with no type.
-$datalinetypes{"Old"} = [
-  "stamp",  # Time stamp, as in "yyyy-mm-dd hh:mm:ss"
-  "wday",   # Weekday, "Mon" to "Sun"
-  "effdate",# Effective date "yyyy-mm-dd". Beers after midnight count as the night before. Changes at 08.
-  "loc",    # Location
-  "mak",    # Maker, or brewer
-  "beer",   # Name of the beer
-  "vol",    # Volume, in cl
-  "sty",    # Style of the beer
-  "alc",    # Alcohol percentage, with one decimal
-  "pr",     # Price in default currency, in my case DKK
-  "rate",   # Rating
-  "com",    # Comment
-  "geo"];   # Geo coordinates
 
 # A dedicated beer entry. Almost like above. But with a type and subtype
 $datalinetypes{"Beer"} = [
@@ -1211,27 +1197,6 @@ SCRIPTEND
     };
 SCRIPTEND
 
-  # Show the fields for the current record type, and hide the rest
-  # TODO - Kill this
-  $script .= <<'SCRIPTEND';
-    var showrecordtype= function(current) {
-      if (current == "Old" ) { current = "" }; // show all sections
-      var target = "type-" + current ;
-      var rows = document.getElementById("inputformtable").rows;
-      for ( var i = 0; i < rows.length-1; i++ ){
-        var row = rows[i];
-        var id = row.id;
-        if ( id.startsWith("type-") ) {
-          if (id && id.startsWith(target) ) {
-            row.hidden = false;
-          } else {
-            row.hidden = true;
-          }1
-        }
-      } // i loop
-    };
-SCRIPTEND
-
 
   # Try to get the geolocation. Async function, to wait for the user to give
   # permission (for good, we hope)
@@ -1467,7 +1432,7 @@ sub inputform {
     if ( $foundrec && $foundrec->{type} )  {
       $type = $foundrec->{type};
     } else {
-      $type = "Old"; # Should not happen
+      $type = ""; # Should not happen
     }
   }
 
@@ -1537,7 +1502,6 @@ sub inputform {
   $chg = "" if ($edit); # Don't move around while editing
   print "&nbsp;<select name='type' $chg style='width:4.5em;' id='type'>\n";
   foreach my $t ( sort(keys(%datalinetypes)) ) {
-    next if ($t eq "Old");
     my $sel = "";
     $sel = "selected='selected'" if ( $type eq $t );
     print "<option value='$t' $sel>$t</option>\n";
@@ -4316,82 +4280,39 @@ sub checkgeoerror {
 }
 
 # Split a data line into a hash. Precalculate some fields
-sub splitline {
+sub parseline {
   my $line = shift;
   my @datafields = split(/ *; */, $line);
   my $linetype = $datafields[1]; # This is either the type, or the weekday for old format lines (or comment)
-  my $v = {};
-  return $v unless ($linetype); # Can be an empty line, BOM mark, or other funny stuff
-  return $v if ( $line =~/^#/ ); # skip comment lines
-  $linetype =~ s/(Mon|Tue|Wed|Thu|Fri|Sat|Sun)/Old/i; # If we match a weekday, we have an old-format line with no type
-  $v->{type} = $linetype; # Likely to be overwritten below, this is just in case (Old)
-  $v->{rawline} = $line; # for filtering
-  $v->{name} = ""; # Default, make sure we always have something
-  $v->{maker} = "";
-  $v->{style} = "";
+  my $rec = {};
+  return $rec unless ($linetype); # Can be an empty line, BOM mark, or other funny stuff
+  return $rec if ( $line =~/^#/ ); # skip comment lines
+  $rec->{type} = $linetype; # Likely to be overwritten below, this is just in case (Old)
+  $rec->{rawline} = $line; # for filtering
+  $rec->{name} = ""; # Default, make sure we always have something
+  $rec->{maker} = "";
+  $rec->{style} = "";
   my $fieldnamelist = $datalinetypes{$linetype} || "";
   if ( $fieldnamelist ) {
     my @fnames = @{$fieldnamelist};
     for ( my $i = 0; $fieldnamelist->[$i]; $i++ ) {
-      $v->{$fieldnamelist->[$i]} = $datafields[$i] || "";
+      $rec->{$fieldnamelist->[$i]} = $datafields[$i] || "";
     }
   } else {
     error ("Unknown line type '$linetype' in $line");
   }
   # Normalize some common fields
-  $v->{alc} = number( $v->{alc} );
-  $v->{vol} = number( $v->{vol} );
-  $v->{pr} = price( $v->{pr} );
+  $rec->{alc} = number( $rec->{alc} );
+  $rec->{vol} = number( $rec->{vol} );
+  $rec->{pr} = price( $rec->{pr} );
   # Precalculate some things we often need
-  ( $v->{date}, $v->{year}, $v->{time} ) = $v->{stamp} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
-  my $alcvol = $v->{alc} * $v->{vol} || 0 ;
-  $alcvol = 0 if ( $v->{pr} < 0  );  # skip box wines
-  $v->{alcvol} = $alcvol;
-  $v->{drinks} = $alcvol / $onedrink;
-  return $v;
-}
-
-# Parse a line to a proper $rec
-# Converts Old type records to more modern types, etc
-sub parseline {
-  my $line = shift;
-  my $rec = splitline( $line );
-
-  # Make sure we accept missing values for fields
-  nullfields($rec);
-
-  # Convert "Old" records to better types if possible
-  if ( $rec->{type} eq "Old") {
-    if ($rec->{mak} =~ /^Tz,/i){ # Skip Time Zone lines, almost never used
-      $rec = {};
-      return;
-    }
-    if ($rec->{mak} !~ /,/ ) {
-      $rec->{type} = "Beer";
-      $rec->{maker} = $rec->{mak};
-      $rec->{name} = $rec->{beer};
-      $rec->{style} = $rec->{sty};
-    } elsif ( $rec->{mak} =~ /^(Wine|Booze)[ ,]*(.*)/i ) {
-      $rec->{type} = ucfirst($1);
-      $rec->{subtype} = $2;
-      $rec->{name} = $rec->{beer};
-    } elsif ( $rec->{mak} =~ /^Drink/i ) {
-      $rec->{type} = "Booze";
-      $rec->{name} = $rec->{beer};
-    } elsif ( $rec->{mak} =~ /^Restaurant *, *(.*)/i ) {
-      $rec->{type} = "Restaurant";
-      $rec->{subtype} = $1;
-      $rec->{food} = $rec->{beer};
-      $rec->{sty} = "";
-    } else {
-      print STDERR "Unconverted 'Old' line: $rec->{rawline} \n";
-    }
-    $rec->{beer} = "";  # Kill old style fields, no longer used
-    $rec->{mak} = "";
-    $rec->{sty} = "";
-    nullfields($rec); # clear undefined fields again, we may have changed the type
-  }
-  $rec->{seenkey} = seenkey($rec); # Do after normalizing name and type
+  ( $rec->{date}, $rec->{year}, $rec->{time} ) = $rec->{stamp} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
+  my $alcvol = $rec->{alc} * $rec->{vol} || 0 ;
+  $alcvol = 0 if ( $rec->{pr} < 0  );  # skip box wines
+  $rec->{alcvol} = $alcvol;
+  $rec->{drinks} = $alcvol / $onedrink;
+  nullfields($rec); # Make sure we accept missing values for fields
+  $rec->{seenkey} = seenkey($rec);
   return $rec;
 }
 
@@ -4431,9 +4352,9 @@ sub fieldnames {
 # Create a line out of a record
 sub makeline {
   my $rec = shift;
-  my $linetype = $rec->{type} || "Old";
+  my $linetype = $rec->{type};
   my $line = "";
-  return "" if ($linetype eq "None"); # Not worth saving
+  return "" if (!$linetype || $linetype eq "None"); # Not worth saving
   foreach my $f ( fieldnames($linetype) ) {
     $line .=  $rec->{$f} || "";
     $line .= "; ";
@@ -4444,7 +4365,7 @@ sub makeline {
 # Make sure we have all fields defined, even as empty strings
 sub nullfields {
   my $rec = shift;
-  my $linetype = shift || $rec->{type} || "Old";
+  my $linetype = shift || $rec->{type};
   my $fieldnamelistref = $datalinetypes{$linetype};
   my @fieldnamelist = @{$fieldnamelistref};
   foreach my $f ( fieldnames($linetype) ) {
