@@ -1,7 +1,10 @@
 #!/usr/bin/perl
 
 # Script to produce my beer database. Based on the design in #379. Made with
-# the help of ChatGPT
+# the help of ChatGPT. I have since made changes and added comments, so this
+# should not be overwitten by a new chatGTP output.
+
+
 
 use strict;
 use warnings;
@@ -150,6 +153,7 @@ $dbh->do(q{
 });
 
 # Create indexes
+# TODO - Create text indexes with COLLATE NOCASE
 $dbh->do("CREATE INDEX idx_glasses_username ON GLASSES (Username)");  # Username, Id?
 $dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)");
 $dbh->do("CREATE INDEX idx_names_name ON NAMES (Name)");
