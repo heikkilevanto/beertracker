@@ -16,7 +16,7 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=beertracker.db", "", "", { RaiseError 
     or die $DBI::errstr;
 
 # Drop existing tables if they exist to avoid conflicts
-my @tables = qw(GLASSES COMMENTS NAMES BREWS BREWTYPE_BEER BREWTYPE_WINE BREWTYPE_CIDER BREWTYPE_BOOZE);
+my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS ADDRESSES BREWS BREWTYPE_BEER BREWTYPE_WINE BREWTYPE_CIDER BREWTYPE_BOOZE);
 for my $table (@tables) {
     $dbh->do("DROP TABLE IF EXISTS $table");
 }
@@ -35,7 +35,7 @@ $dbh->do(q{
         Price DECIMAL,
         Volume DECIMAL, /* NULL indicates an "empty" glass */
         Alc DECIMAL,
-        FOREIGN KEY (Location) REFERENCES NAMES(Id),
+        FOREIGN KEY (Location) REFERENCES LOCATIONS(Id),
         FOREIGN KEY (Brew) REFERENCES BREWS(Id)
     )
 });
@@ -53,27 +53,50 @@ $dbh->do(q{
         Person INTEGER,
         Photo TEXT,
         FOREIGN KEY (Glass) REFERENCES GLASSES(Id),
-        FOREIGN KEY (Person) REFERENCES NAMES(Id)
+        FOREIGN KEY (Person) REFERENCES PERSONS(Id)
     )
 });
 
-# Create NAMES table
-# Names can refer to people, breweries, locations like bars, breweries, etc.
+# Create ADDRESSES table
 $dbh->do(q{
-    CREATE TABLE NAMES (
+    CREATE TABLE ADDRESSES (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        StreetAddress TEXT,
+        City TEXT,
+        Country TEXT,
+        PostalCode TEXT,
+        Website TEXT,
+        Email TEXT
+    )
+});
+
+# Create PERSONS table
+$dbh->do(q{
+    CREATE TABLE PERSONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT NOT NULL,
         ShortName TEXT,
         OfficialName TEXT,
-        Website TEXT,
-        Email TEXT,
-        StreetAddress TEXT,
-        GeoCoordinates TEXT,
+        AddressId INTEGER,
         RelatedPerson INTEGER,
-        ReplacedBy INTEGER,
-        FOREIGN KEY (RelatedPerson) REFERENCES NAMES(Id)
+        FOREIGN KEY (RelatedPerson) REFERENCES PERSONS(Id)
+        FOREIGN KEY (AddressId) REFERENCES ADDRESSES(Id)
     )
 });
+
+# Create LOCATIONS table
+$dbh->do(q{
+    CREATE TABLE LOCATIONS (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Name TEXT NOT NULL,
+        ShortName TEXT,
+        OfficialName TEXT,
+        AddressId INTEGER,
+        GeoCoordinates TEXT,
+        FOREIGN KEY (AddressId) REFERENCES ADDRESSES(Id)
+    )
+});
+
 
 # Create BREWS table
 # A Brew is a definition of a beer or other stuff, whereas a Glass is the
@@ -93,7 +116,7 @@ $dbh->do(q{
         /* is the way the beer is "officially" defined */
         Alc DECIMAL,
         ReplacedBy INTEGER,
-        FOREIGN KEY (Producer) REFERENCES NAMES(Id)
+        FOREIGN KEY (Producer) REFERENCES LOCATIONS(Id)
     )
 });
 
@@ -104,7 +127,7 @@ $dbh->do(q{
         Brew INTEGER,
         Style TEXT, /* As defined by the brewery, if availabe */
         Flavors TEXT,  /* Hops, or fruits, or cask */
-        Country TEXT DEFAULT "DK",  /* Often from the NAMES record for the brewery */
+        Country TEXT DEFAULT "DK",  /* Often from the LOCATION record for the brewery */
         IBU INTEGER,
         Color TEXT,
         Year INTEGER,
@@ -155,11 +178,14 @@ $dbh->do(q{
 
 # Create indexes
 # TODO - Create text indexes with COLLATE NOCASE
-$dbh->do("CREATE INDEX idx_glasses_username ON GLASSES (Username)");  # Username, Id?
+$dbh->do("CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE)");  # Username, Id?
+$dbh->do("CREATE INDEX idx_glasses_location ON GLASSES (Location COLLATE NOCASE)");
+$dbh->do("CREATE INDEX idx_comments_person ON COMMENTS (Person COLLATE NOCASE)");
+$dbh->do("CREATE INDEX idx_brewtype_beer_brew ON BREWTYPE_BEER (Brew)");
 $dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)");
-$dbh->do("CREATE INDEX idx_names_name ON NAMES (Name)");
-$dbh->do("CREATE INDEX idx_names_shortname ON NAMES (ShortName)");
-$dbh->do("CREATE INDEX idx_brews_name ON BREWS (Name)");
+$dbh->do("CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE)");
+$dbh->do("CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE)");
+$dbh->do("CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE)");
 
 print "Database and tables created successfully.\n";
 

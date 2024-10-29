@@ -21,14 +21,13 @@ use warnings;
 use DBI;
 
 
-
-my $debug = 1;  # Does not seem to slow down too much
 my $username = "heikki";  # Default username
-
 
 # Database setup
 my $dbh = DBI->connect("dbi:SQLite:dbname=beertracker.db", "", "", { RaiseError => 1, AutoCommit => 1 })
     or die $DBI::errstr;
+
+#$dbh->trace(1);  # Log every SQL statement while debugging
 
 # Define the path to the data file
 my $datafile = "../beerdata/heikki.data";
@@ -97,7 +96,7 @@ sub insert_data {
     $dbh->do("BEGIN TRANSACTION");
 
     # Determine the location and brew IDs. Can be undef
-    my $location_id = get_or_insert_name($rec->{loc}, $rec->{geo});
+    my $location_id = get_or_insert_location($rec->{loc}, undef, $rec->{geo});  # we don't know the addresses here
     my $brew_id     = get_or_insert_brew($rec->{name}, $rec->{maker}, $rec->{style}, $rec->{alc}, $type);
 
     # Insert a GLASS record with common fields
@@ -119,7 +118,7 @@ sub insert_data {
             refer_to  => $type,              # Use record type as ReferTo
             comment   => $rec->{com},
             rating    => $rec->{rate},
-            person    => get_or_insert_name($rec->{people}) ,
+            person    => get_or_insert_person($rec->{people}) ,
             photo     => $rec->{photo},
         });
     }
@@ -174,33 +173,71 @@ sub insert_data {
     $dbh->do("COMMIT");
 }
 
+# Helper to get or insert an address
+sub get_or_insert_address {
+    my ($address) = @_;
+    my $address_id;
 
+    # Don't insert empty addresses
+    return undef unless $address;
 
-# Helper to get or insert a Name record (location or person)
-sub get_or_insert_name {
-    my ($name, $geo) = @_;
-    return undef unless $name;
-    my $id;
+    # Check if the address already exists
+    my $sth_check = $dbh->prepare("SELECT Id FROM ADDRESSES WHERE StreetAddress = ?");
+    $sth_check->execute($address);
 
-    # Check if the name exists in NAMES table
-    my $sth = $dbh->prepare("SELECT Id, GeoCoordinates FROM NAMES WHERE Name = ?");
-    $sth->execute($name);
-    if (my $row = $sth->fetchrow_hashref) {
-        $id = $row->{Id};
-
-        # Update GeoCoordinates if geo is provided and empty in the existing record
-        if ($geo && !$row->{GeoCoordinates}) {
-            my $update_sth = $dbh->prepare("UPDATE NAMES SET GeoCoordinates = ? WHERE Id = ?");
-            $update_sth->execute($geo, $id);
-        }
+    if ($address_id = $sth_check->fetchrow_array) {
+        return $address_id;
     } else {
-        # Insert new name record if it does not exist
-        my $insert_sth = $dbh->prepare("INSERT INTO NAMES (Name, GeoCoordinates) VALUES (?, ?)");
-        $insert_sth->execute($name, $geo);
-        $id = $dbh->last_insert_id(undef, undef, "NAMES", undef);
+        # Insert new address if it doesn't exist
+        my $sth_insert = $dbh->prepare("INSERT INTO ADDRESSES (StreetAddress) VALUES (?)");
+        $sth_insert->execute($address);
+        return $dbh->last_insert_id(undef, undef, "ADDRESSES", undef);
     }
-    return $id;
 }
+
+
+# Helper to get or insert a Location record
+sub get_or_insert_location {
+    my ($location_name, $geo) = @_;
+
+    return undef unless $location_name;
+
+    # Check if the location already exists
+    my $sth_check = $dbh->prepare("SELECT Id FROM LOCATIONS WHERE Name = ?");
+    $sth_check->execute($location_name);
+
+    if (my $location_id = $sth_check->fetchrow_array) {
+        return $location_id;
+    } else {
+        # Insert new location record if it does not exist
+        my $sth_insert = $dbh->prepare("INSERT INTO LOCATIONS (Name, GeoCoordinates) VALUES (?, ?)");
+        $sth_insert->execute($location_name, $geo);
+        return $dbh->last_insert_id(undef, undef, "LOCATIONS", undef);
+    }
+}
+
+# Helper to get or insert a Person record
+sub get_or_insert_person {
+    my ($person_name) = @_;
+
+    # Don't insert persons without names
+    return undef unless $person_name;
+
+    # Check if the person already exists
+    my $sth_check = $dbh->prepare("SELECT Id FROM PERSONS WHERE Name = ?");
+    $sth_check->execute($person_name);
+
+    if (my $person_id = $sth_check->fetchrow_array) {
+        return $person_id;
+    } else {
+        # Insert new person record if it does not exist
+        my $sth_insert = $dbh->prepare("INSERT INTO PERSONS (Name) VALUES (?)");
+        $sth_insert->execute($person_name);
+        return $dbh->last_insert_id(undef, undef, "PERSONS", undef);
+    }
+}
+
+
 
 # Helper to get or insert a Brew record
 sub get_or_insert_brew {
@@ -239,6 +276,7 @@ sub insert_comment {
     $sth->execute($data->{glass_id}, $data->{refer_to}, $data->{comment}, $data->{rating}, $data->{person}, $data->{photo});
     return $dbh->last_insert_id(undef, undef, "COMMENTS", undef);
 }
+
 
 # Helper to insert a BrewType record for Beer
 sub insert_brewtype_beer {
