@@ -104,7 +104,7 @@ $dbh->do(q{
         Brew INTEGER,
         Style TEXT, /* As defined by the brewery, if availabe */
         Flavors TEXT,  /* Hops, or fruits, or cask */
-        Country TEXT,  /* Often from the NAMES record for the brewery */
+        Country TEXT DEFAULT "DK",  /* Often from the NAMES record for the brewery */
         IBU INTEGER,
         Color TEXT,
         Year INTEGER,
@@ -144,6 +144,7 @@ $dbh->do(q{
     CREATE TABLE BREWTYPE_BOOZE (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Brew INTEGER,
+        Style TEXT, /* Whisky, Rom, etc */
         Country TEXT,
         Region TEXT,
         Age INTEGER,

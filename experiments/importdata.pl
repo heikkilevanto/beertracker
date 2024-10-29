@@ -2,6 +2,9 @@
 
 # Script to import old beerdata text files into sqlite
 # Created with a lot of help from ChatGTP, and lots of cursing at its stupidity
+#
+# At stage 2: Getting ChatGPT to propose changes, but editing them in manually.
+# Do not reproduce the script with GPT any more!
 
 # TODO  (run out of ChatGpt tokens again)
 #   - Forget all about the diagrams
@@ -16,22 +19,20 @@
 #   - Brewtype_wine should get something into Region. Check name, style, and maker in
 #     that order, and take the first non-empty. If more than one set, put the rest into Region
 #   - Refactor all the insert calls into a function called insert_record
-# DONE so far. run out of tokens again
-
 #   - The record type should go int Comment.ReferTo and Brews.BrewType
 #   - Brewtype_wine should use Year instead of Vintage
 #   - In Beer records, if the substyle is a two letter code, put it into country
 #   - Do not insert brewtype records if we already have a matching one. Case-insensitive
 #   - Normalize geo: remove enclosing "[]" and replace "/" with a space
-#   - What would be the consequences of adding BEGIN TRANSACTION and COMMIT at insert_record
+# DONE so far. run out of tokens again
+
 
 # TODO Problems I have seen
-#   - Too many "Misc" brews
-#   - Wine names and styles in older records
-#   - No booze types
+#   - No booze
 
-# TODO Later, in a separate (manual?) step. Probably once I have imported the data
-#   - Separate wine styles into country and region. Normalize country codes
+# TODO Later, in a separate (manual?) step.
+#   - Separate wine styles into country and region. Normalize country codes. Check duplicates.
+#   - Extract ciders from beer records
 #   - Get location details at least for the most common watering holes
 
 
@@ -102,9 +103,12 @@ close(F);
 sub insert_data {
     my ($type, $rec) = @_;
 
+    # Begin transaction
+    $dbh->do("BEGIN TRANSACTION");
+
     # Determine the location and brew IDs, if provided
     my $location_id = $rec->{loc} ? get_or_insert_name($rec->{loc}, $rec->{geo}) : undef;
-    my $brew_id     = $rec->{name} ? get_or_insert_brew($rec->{name}, $rec->{maker}, $rec->{style}, $rec->{alc}) : undef;
+    my $brew_id     = $rec->{name} ? get_or_insert_brew($rec->{name}, $rec->{maker}, $rec->{style}, $rec->{alc}, $type) : undef;
 
     # Insert a GLASS record with common fields
     my $glass_id = insert_glass({
@@ -142,20 +146,20 @@ sub insert_data {
     }
     elsif ($type eq "Wine") {
         # Construct Region based on priority order: name, style, maker
-        my @regions = grep { $_ } ($rec->{name}, $rec->{style}, $rec->{maker});
+        my @regions = grep { $_ } ($rec->{style}, $rec->{maker});
         my $region = shift @regions;
         insert_brewtype_wine({
             brew_id    => $brew_id,
             region     => $region,
-            other_regions => join(", ", @regions) || undef,
+            flavor     => join(", ", @regions) || undef,
             alc        => $rec->{alc},
         });
     }
     elsif ($type eq "Booze" && ($rec->{style} || $rec->{subtype} || $rec->{alc})) {
         insert_brewtype_booze({
             brew_id    => $brew_id,
-            subtype    => $rec->{subtype},
-            style      => $rec->{style},
+            style      => $rec->{subtype},
+            region     => $rec->{style},
             alc        => $rec->{alc},
         });
     }
@@ -164,6 +168,8 @@ sub insert_data {
     if ($type eq "Night" || $type eq "Restaurant") {
         # Additional logic for Night or Restaurant types if needed
     }
+
+    $dbh->do("COMMIT");
 }
 
 
@@ -172,6 +178,9 @@ sub insert_data {
 sub get_or_insert_name {
     my ($name, $geo) = @_;
     my $id;
+
+    # Normalize old style geo
+    $geo =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/;
 
     # Check if the name exists in NAMES table
     my $sth = $dbh->prepare("SELECT Id, GeoCoordinates FROM NAMES WHERE Name = ?");
@@ -195,20 +204,20 @@ sub get_or_insert_name {
 
 # Helper to get or insert a Brew record
 sub get_or_insert_brew {
-    my ($name, $maker, $style, $alc) = @_;
+    my ($name, $maker, $style, $alc, $type) = @_;
     my $id;
 
-    # Check if the brew exists in BREWS table
+    # Check if the brew exists in the BREWS table
     my $sth = $dbh->prepare("SELECT Id FROM BREWS WHERE Name = ?");
     $sth->execute($name);
     if ($id = $sth->fetchrow_array) {
         # Update optional fields if missing in existing record
-        my $update_sth = $dbh->prepare("UPDATE BREWS SET Producer = COALESCE(?, Producer), BrewStyle = COALESCE(?, BrewStyle), Alc = COALESCE(?, Alc) WHERE Id = ?");
-        $update_sth->execute($maker, $style, $alc, $id);
+        my $update_sth = $dbh->prepare("UPDATE BREWS SET Producer = COALESCE(?, Producer), BrewStyle = COALESCE(?, BrewStyle), Alc = COALESCE(?, Alc), BrewType = COALESCE(?, BrewType) WHERE Id = ?");
+        $update_sth->execute($maker, $style, $alc, $type, $id);
     } else {
-        # Insert new brew record
-        my $insert_sth = $dbh->prepare("INSERT INTO BREWS (Name, Producer, BrewStyle, Alc) VALUES (?, ?, ?, ?)");
-        $insert_sth->execute($name, $maker, $style, $alc);
+        # Insert new brew record, including BrewType
+        my $insert_sth = $dbh->prepare("INSERT INTO BREWS (Name, Producer, BrewStyle, Alc, BrewType) VALUES (?, ?, ?, ?, ?)");
+        $insert_sth->execute($name, $maker, $style, $alc, $type);
         $id = $dbh->last_insert_id(undef, undef, "BREWS", undef);
     }
     return $id;
@@ -233,19 +242,39 @@ sub insert_comment {
 # Helper to insert a BrewType record for Beer
 sub insert_brewtype_beer {
     my ($data) = @_;
-    return unless $data->{style} || $data->{flavors} || $data->{ibu} || $data->{color} || $data->{year} || $data->{batch_number};
 
-    my $sth = $dbh->prepare("INSERT INTO BREWTYPE_BEER (Brew, Style, Flavors, IBU, Color, Year, BatchNumber) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $sth->execute($data->{brew_id}, $data->{style}, $data->{flavors}, $data->{ibu}, $data->{color}, $data->{year}, $data->{batch_number});
+    # Check if the 'substyle' is a two-letter country code
+    my $country = ($data->{flavors} && $data->{flavors} =~ /^[A-Z]{2}$/) ? $data->{flavors} : undef;
+    my $flavors = $country ? undef : $data->{flavors}; # Use substyle as flavor only if not a country code
+
+    return unless $data->{style} || $flavors || $country;
+
+    # Check if an identical record already exists
+    my $sth_check = $dbh->prepare("SELECT 1 FROM BREWTYPE_BEER WHERE Brew = ? AND Style = ? AND Flavors = ? AND Country = ? ");
+    $sth_check->execute($data->{brew_id}, $data->{style}, $flavors, $country);
+
+    # If no record is found, proceed with the insertion
+    unless ($sth_check->fetchrow_array) {
+      my $sth_insert = $dbh->prepare("INSERT INTO BREWTYPE_BEER (Brew, Style, Flavors, Country) VALUES (?, ?, ?, ?)");
+      $sth_insert->execute($data->{brew_id}, $data->{style}, $flavors, $country);
+    }
+
 }
 
 # Helper to insert a BrewType record for Wine
 sub insert_brewtype_wine {
     my ($data) = @_;
-    return unless $data->{region} || $data->{flavor} || $data->{vintage} || $data->{classification};
+    return unless $data->{region} || $data->{flavor} || $data->{year} || $data->{classification};
 
-    my $sth = $dbh->prepare("INSERT INTO BREWTYPE_WINE (Brew, Region, Flavor, Year, Classification) VALUES (?, ?, ?, ?, ?)");
-    $sth->execute($data->{brew_id}, $data->{region}, $data->{flavor}, $data->{vintage}, $data->{classification});
+    # Check if an identical record already exists
+    my $sth_check = $dbh->prepare("SELECT 1 FROM BREWTYPE_WINE WHERE Brew = ? AND Region = ? AND Flavor = ? ");
+    $sth_check->execute($data->{brew_id}, $data->{region}, $data->{flavor});
+
+    # If no record is found, proceed with the insertion
+    unless ($sth_check->fetchrow_array) {
+        my $sth_insert = $dbh->prepare("INSERT INTO BREWTYPE_WINE (Brew, Region, Flavor) VALUES (?, ?, ? )");
+        $sth_insert->execute($data->{brew_id}, $data->{region}, $data->{flavor});
+    }
 }
 
 # Helper to insert a BrewType record for Cider
@@ -260,9 +289,9 @@ sub insert_brewtype_cider {
 # Helper to insert a BrewType record for Booze
 sub insert_brewtype_booze {
     my ($data) = @_;
-    return unless $data->{country} || $data->{region} || $data->{age} || $data->{flavor};
+    return unless $data->{style} || $data->{region} || $data->{age} || $data->{flavor};
 
-    my $sth = $dbh->prepare("INSERT INTO BREWTYPE_BOOZE (Brew, Country, Region, Age, Flavor) VALUES (?, ?, ?, ?, ?)");
-    $sth->execute($data->{brew_id}, $data->{country}, $data->{region}, $data->{age}, $data->{flavor});
+    my $sth = $dbh->prepare("INSERT INTO BREWTYPE_BOOZE (Brew, Style, Country, Region, Age, Flavor) VALUES (?, ?, ?, ?, ?, ?)");
+    $sth->execute($data->{brew_id}, $data->{style}, $data->{country}, $data->{region}, $data->{age}, $data->{flavor});
 }
 
