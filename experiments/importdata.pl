@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -w
 
 # Script to import old beerdata text files into sqlite
 # Created with a lot of help from ChatGTP, and lots of cursing at its stupidity
@@ -6,33 +6,9 @@
 # At stage 2: Getting ChatGPT to propose changes, but editing them in manually.
 # Do not reproduce the script with GPT any more!
 
-# TODO  (run out of ChatGpt tokens again)
-#   - Forget all about the diagrams
-#   - Any kind of line can have comments. Insert them so they refer to the proper GLASS record
-#   - If a line has "people" field, insert it as a Person in the comments table
-#   - Add effdate to the Glass record
-#   - Add geo into names.Geocoordinates
-#   - When checking a NAME, if we have geo coords, and the record does not, update the geocoordinates
-#   - Get alc also into brew.alc
-#   - BrewStyle should come from Style in the data
-#   - If there is no data to insert in the brew details, do not create a record.
-#   - Brewtype_wine should get something into Region. Check name, style, and maker in
-#     that order, and take the first non-empty. If more than one set, put the rest into Region
-#   - Refactor all the insert calls into a function called insert_record
-#   - The record type should go int Comment.ReferTo and Brews.BrewType
-#   - Brewtype_wine should use Year instead of Vintage
-#   - In Beer records, if the substyle is a two letter code, put it into country
-#   - Do not insert brewtype records if we already have a matching one. Case-insensitive
-#   - Normalize geo: remove enclosing "[]" and replace "/" with a space
-# DONE so far. run out of tokens again
-
-
-# TODO Problems I have seen
-#   - No booze
 
 # TODO Later, in a separate (manual?) step.
 #   - Separate wine styles into country and region. Normalize country codes. Check duplicates.
-#   - Extract ciders from beer records
 #   - Get location details at least for the most common watering holes
 
 
@@ -78,12 +54,13 @@ my $nlines = 0;
 while (<F>) {
     $nlines++;
     chomp;
-    print "$nlines: $_ \n";
-    next unless $_;                 # Skip empty lines
+    my $line = $_;
+    print "$nlines: $line \n";
+    next unless $line;          # Skip empty lines
     next if /^.?.?.?#/;             # Skip comment lines (with BOM)
 
     # Parse the line and map fields to $rec hash
-    my @datafields = split(/ *; */, $_);
+    my @datafields = split(/ *; */, $line);
     my $linetype = $datafields[1]; # Determine the type (Beer, Wine, Booze, etc.)
     my $rec = {};
     my $fieldnamelist = $datalinetypes{$linetype} || "";
@@ -92,6 +69,16 @@ while (<F>) {
     for (my $i = 0; $fieldnamelist->[$i]; $i++) {
         $rec->{$fieldnamelist->[$i]} = $datafields[$i] || "";
     }
+
+    # Normalize old style geo
+    $rec->{geo} =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/;
+
+    if ( $line =~ /\Wcider\W/i ) {
+      $linetype = "Cider" ;
+      $rec->{style} =~ s/cider\W*//i; # don't repeat that in the style
+
+    }
+
 
     # Pass the parsed record and line type to insert_data for processing
     insert_data($linetype, $rec);
@@ -103,12 +90,13 @@ close(F);
 sub insert_data {
     my ($type, $rec) = @_;
 
+
     # Begin transaction
     $dbh->do("BEGIN TRANSACTION");
 
-    # Determine the location and brew IDs, if provided
-    my $location_id = $rec->{loc} ? get_or_insert_name($rec->{loc}, $rec->{geo}) : undef;
-    my $brew_id     = $rec->{name} ? get_or_insert_brew($rec->{name}, $rec->{maker}, $rec->{style}, $rec->{alc}, $type) : undef;
+    # Determine the location and brew IDs. Can be undef
+    my $location_id = get_or_insert_name($rec->{loc}, $rec->{geo});
+    my $brew_id     = get_or_insert_brew($rec->{name}, $rec->{maker}, $rec->{style}, $rec->{alc}, $type);
 
     # Insert a GLASS record with common fields
     my $glass_id = insert_glass({
@@ -129,14 +117,23 @@ sub insert_data {
             refer_to  => $type,              # Use record type as ReferTo
             comment   => $rec->{com},
             rating    => $rec->{rate},
-            person    => $rec->{people} ? get_or_insert_name($rec->{people}) : undef,
+            person    => get_or_insert_name($rec->{people}) ,
             photo     => $rec->{photo},
         });
     }
 
     # Insert details into the relevant BREWTYPE table if applicable
-    if ($type eq "Beer" && ($rec->{style} || $rec->{subtype} || $rec->{alc})) {
+    if ($type eq "Beer") {
         insert_brewtype_beer({
+            brew_id    => $brew_id,
+            style      => $rec->{style},
+            flavors    => $rec->{subtype},
+            country    => $rec->{subtype} =~ /^[A-Z]{2}$/ ? $rec->{subtype} : undef,
+            alc        => $rec->{alc},
+        });
+    }
+    elsif ($type eq "Cider") {
+        insert_brewtype_cider({
             brew_id    => $brew_id,
             style      => $rec->{style},
             flavors    => $rec->{subtype},
@@ -155,7 +152,7 @@ sub insert_data {
             alc        => $rec->{alc},
         });
     }
-    elsif ($type eq "Booze" && ($rec->{style} || $rec->{subtype} || $rec->{alc})) {
+    elsif ($type eq "Booze") {
         insert_brewtype_booze({
             brew_id    => $brew_id,
             style      => $rec->{subtype},
@@ -163,11 +160,14 @@ sub insert_data {
             alc        => $rec->{alc},
         });
     }
-
     # Handle additional specific types (Night, Restaurant) as needed
-    if ($type eq "Night" || $type eq "Restaurant") {
-        # Additional logic for Night or Restaurant types if needed
+    # They get comments already, and don't seem to need Brewtype_x records for now
+    elsif ($type eq "Restaurant" || $type eq "Night") {
     }
+    else {
+      die "Bad record type '$type' ";
+    }
+
 
     $dbh->do("COMMIT");
 }
@@ -177,10 +177,8 @@ sub insert_data {
 # Helper to get or insert a Name record (location or person)
 sub get_or_insert_name {
     my ($name, $geo) = @_;
+    return undef unless $name;
     my $id;
-
-    # Normalize old style geo
-    $geo =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/;
 
     # Check if the name exists in NAMES table
     my $sth = $dbh->prepare("SELECT Id, GeoCoordinates FROM NAMES WHERE Name = ?");
@@ -205,6 +203,7 @@ sub get_or_insert_name {
 # Helper to get or insert a Brew record
 sub get_or_insert_brew {
     my ($name, $maker, $style, $alc, $type) = @_;
+    return unless $name;
     my $id;
 
     # Check if the brew exists in the BREWS table
