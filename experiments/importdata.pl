@@ -7,9 +7,11 @@
 # Do not reproduce the script with GPT any more!
 
 
-# TODO Later, in a separate (manual?) step.
-#   - Separate wine styles into country and region. Normalize country codes. Check duplicates.
-#   - Get location details at least for the most common watering holes
+# TODO
+#  - Drop NAMES. Make PERSONS and LOCATIONS, both pointing to ADDRESSES which
+#    contain street and net addresses.
+#  - Separate wine styles into country and region. Normalize country codes. Check duplicates.
+#  - Get location details at least for the most common watering holes
 
 
 
@@ -280,7 +282,7 @@ sub insert_brewtype_wine {
 sub insert_brewtype_cider {
     my ($data) = @_;
     return unless $data->{country} || $data->{region} || $data->{flavor};
-
+    # TODO - Check for dups
     my $sth = $dbh->prepare("INSERT INTO BREWTYPE_CIDER (Brew, Country, Region, Flavor) VALUES (?, ?, ?, ?)");
     $sth->execute($data->{brew_id}, $data->{country}, $data->{region}, $data->{flavor});
 }
@@ -289,6 +291,7 @@ sub insert_brewtype_cider {
 sub insert_brewtype_booze {
     my ($data) = @_;
     return unless $data->{style} || $data->{region} || $data->{age} || $data->{flavor};
+    # TODO - Check for dups
 
     my $sth = $dbh->prepare("INSERT INTO BREWTYPE_BOOZE (Brew, Style, Country, Region, Age, Flavor) VALUES (?, ?, ?, ?, ?, ?)");
     $sth->execute($data->{brew_id}, $data->{style}, $data->{country}, $data->{region}, $data->{age}, $data->{flavor});
