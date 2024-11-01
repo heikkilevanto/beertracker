@@ -31,6 +31,7 @@ $dbh->do(q{
         Username TEXT,
         Timestamp DATETIME,
         Effdate DATE,
+        RecordNumber INTEGER,  /* In the file we import from. Can be dropped once we to go production */
         Location INTEGER,
         Brew INTEGER,
         Price DECIMAL,
@@ -40,6 +41,9 @@ $dbh->do(q{
         FOREIGN KEY (Brew) REFERENCES BREWS(Id)
     )
 });
+$dbh->do("CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE)");  # Username, Id?
+$dbh->do("CREATE INDEX idx_glasses_location ON GLASSES (Location)");
+$dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)"); # Also effdate?
 
 
 # Create BREWS table
@@ -65,6 +69,7 @@ $dbh->do(q{
         FOREIGN KEY (Producer) REFERENCES LOCATIONS(Id)
     )
 });
+$dbh->do("CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE)");
 
 
 # Create COMMENTS table
@@ -83,6 +88,7 @@ $dbh->do(q{
         FOREIGN KEY (Person) REFERENCES PERSONS(Id)
     )
 });
+$dbh->do("CREATE INDEX idx_comments_person ON COMMENTS (Person)");
 
 
 # Create PERSONS table
@@ -98,6 +104,7 @@ $dbh->do(q{
         FOREIGN KEY (AddressId) REFERENCES LOCATIONS(Id)
     )
 });
+$dbh->do("CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE)");
 
 # Create LOCATIONS table
 $dbh->do(q{
@@ -115,6 +122,7 @@ $dbh->do(q{
         Country TEXT
     )
 });
+$dbh->do("CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE)");
 
 
 
@@ -124,17 +132,6 @@ $dbh->do(q{
       select * from GLASSES, BREWS
       where glasses.Brew = Brews.id
 });
-
-
-# Create indexes
-# TODO - Create text indexes with COLLATE NOCASE
-$dbh->do("CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE)");  # Username, Id?
-$dbh->do("CREATE INDEX idx_glasses_location ON GLASSES (Location)");
-$dbh->do("CREATE INDEX idx_comments_person ON COMMENTS (Person)");
-$dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)");
-$dbh->do("CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE)");
-$dbh->do("CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE)");
-$dbh->do("CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE)");
 
 print "Database and tables created successfully.\n";
 

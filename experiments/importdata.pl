@@ -20,14 +20,13 @@ use Data::Dumper;
 use DBI;
 
 
-my $username = "heikki";  # Default username
+my $username = $ARGV[0] || "heikki";
+
 # Database setup
 my $dbh = DBI->connect("dbi:SQLite:dbname=beertracker.db", "", "", { RaiseError => 1, AutoCommit => 1 })
     or die $DBI::errstr;
 
-if ( $ARGV[0] ) {
-  $dbh->trace(1);  # Log every SQL statement while debugging
-}
+# $dbh->trace(1);  # Log every SQL statement while debugging
 
 # Define the path to the data file
 my $datafile = "../beerdata/$username.data";
@@ -51,102 +50,86 @@ my %datalinetypes = (
 
 # Read the old type lines from the old file, in order to fix wine styles
 my %winestyles;  # indexed by timestamp
-if ( -r $oldfile ) {
-  print "Reading old wine styles from $oldfile \n";
-  open F, '<', $oldfile or die("Could not open $oldfile for reading: $!");
-  while ( <F> ) {
-    chomp();
-    my $line = $_ ;
-    next unless $line;          # Skip empty lines
-    next if /^.?.?.?#/;             # Skip comment lines (with BOM)
-    #print "$line \n";
-    my @datafields = split(/ *; */, $line);
-    my $stamp = $datafields[0];
-    my $linetype = $datafields[1];
-    my $winestyle = $datafields[7];
-    if ( $linetype =~ /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ &&   # Old style line
-         $line =~ /wine/i  && # about wine
-         $winestyle ) {
-      $winestyles{$stamp} = $winestyle;
+sub readwines {
+  if ( -r $oldfile ) {
+    print "Reading old wine styles from $oldfile \n";
+    open F, '<', $oldfile or die("Could not open $oldfile for reading: $!");
+    while ( <F> ) {
+      chomp();
+      my $line = $_ ;
+      next unless $line;          # Skip empty lines
+      next if /^.?.?.?#/;             # Skip comment lines (with BOM)
       #print "$line \n";
-      #print "   got '$winestyle' \n";
+      my @datafields = split(/ *; */, $line);
+      my $stamp = $datafields[0];
+      my $linetype = $datafields[1];
+      my $winestyle = $datafields[7];
+      if ( $linetype =~ /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ &&   # Old style line
+          $line =~ /wine/i  && # about wine
+          $winestyle ) {
+        $winestyles{$stamp} = $winestyle;
+        #print "$line \n";
+        #print "   got '$winestyle' \n";
+      }
     }
+    print "got " . scalar(keys(%winestyles)) . " wine styles \n";
   }
-  print "got " . scalar(keys(%winestyles)) . " wine styles \n";
 }
 
+sub readfile {
+  # Open the data file
+  open F, '<', $datafile or die("Could not open $datafile for reading: $!");
 
-# Open the data file
-open F, '<', $datafile or die("Could not open $datafile for reading: $!");
+  my $nlines = 0;
+  my $nrecords = 0;
+  my $nfixes = 0;
+  # Main logic: Read each line, parse, and send data for insertion
+  while (<F>) {
+      $nlines++;
+      chomp;
+      my $line = $_;
+      print "$nlines: $line \n" if ($nlines % 1000 == 0);
+      next unless $line;          # Skip empty lines
+      next if /^.?.?.?#/;             # Skip comment lines (with BOM)
+      # Parse the line and map fields to $rec hash
+      my @datafields = split(/ *; */, $line);
+      my $linetype = $datafields[1]; # Determine the type (Beer, Wine, Booze, etc.)
+      my $rec = {};
 
-my $nlines = 0;
-my $nrecords = 0;
-my $nfixes = 0;
-# Main logic: Read each line, parse, and send data for insertion
-while (<F>) {
-    $nlines++;
-    chomp;
-    my $line = $_;
-    print "$nlines: $line \n" if ($nlines % 1000 == 0);
-    next unless $line;          # Skip empty lines
-    next if /^.?.?.?#/;             # Skip comment lines (with BOM)
-    $nrecords++ ;
-    # Parse the line and map fields to $rec hash
-    my @datafields = split(/ *; */, $line);
-    my $linetype = $datafields[1]; # Determine the type (Beer, Wine, Booze, etc.)
-    my $rec = {};
-    my $fieldnamelist = $datalinetypes{$linetype} || "";
-    my @fnames = @{$fieldnamelist};
+      my $fieldnamelist = $datalinetypes{$linetype} || "";
+      die ("Bad line (old format?) \n$line\n ") unless $fieldnamelist;
+      my @fnames = @{$fieldnamelist};
 
-    for (my $i = 0; $fieldnamelist->[$i]; $i++) {
-        $rec->{$fieldnamelist->[$i]} = $datafields[$i] || "";
-    }
+      for (my $i = 0; $fieldnamelist->[$i]; $i++) {
+          $rec->{$fieldnamelist->[$i]} = $datafields[$i] || "";
+      }
+      $rec->{recordnumber} = $nrecords++ ;  # Remember for cross checking the code
 
-    # Normalize old style geo
-    $rec->{geo} =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/;
+      # Normalize old style geo
+      $rec->{geo} =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/;
 
-    if ( $line =~ /\Wcider\W/i ) {
-      $linetype = "Cider" ;
-      $rec->{style} =~ s/cider\W*//i; # don't repeat that in the style
-    }
+      if ( $line =~ /\Wcider\W/i ) {
+        $linetype = "Cider" ;
+        $rec->{style} =~ s/cider\W*//i; # don't repeat that in the style
+      }
 
-    my $fixstyle = $winestyles{ $rec->{stamp} };
-    if ( $fixstyle ) {
-      $rec->{style} = $fixstyle;
-      $nfixes++;
-    }
+      my $fixstyle = $winestyles{ $rec->{stamp} };
+      if ( $fixstyle && ! $rec->{style} ) {
+        $rec->{style} = $fixstyle;
+        $nfixes++;
+      }
 
-    # TODO - Fix the wines
-    # Old line
-    # 2016-01-23 17:20:46; Wine; Sat; 2016-01-23; Home; red;    ; Santa Carolina;    ; 75; 14; 69; ; ; ; ;
-    #  st                   ty    wd    eff       loc   sub mak    name          sty   vol  a   p
-    # New line
-    # 024-10-25 18:16:11; Wine; Fri; 2024-10-25; Home; White; Lenz Moser; Jubiläums Selection; Grüner Veltliner; 16; 12.5; ; ; ; 55.67; ;
-    #  st                  ty    wd   eff         loc   sub    maker       name                  sty             v    a   p r c   geo  ph
-    # Beer line
-    # 2024-10-27 19:10:37; Beer; Sun; 2024-10-27; Ølbaren; Gamma; Orb; 25; IPA - New Zealand; 6.4; 48; ; ; ; DK; ;
-    #  st                  ty    wd   eff         loc      maker  name  v   style             a    p  r c g sub ph
-    #
-    # So, in beer, we have a good style, and country code in sub
-    # In new wine lines we have subtype and style right
-    # In old wine lines we have subtype right, missing style
-    # To make a beer line out of wine, swap sub and style
+      # Pass the parsed record and line type to insert_data for processing
+      insert_data($linetype, $rec);
+  }
 
-    # TODO Do this when calling get_or_insert_brew, redesign its parameters and get them from the right fields dep on type
-    # TODO - But fix the wine data conversion first!
+  close(F);
 
-
-
-
-    # Pass the parsed record and line type to insert_data for processing
-    insert_data($linetype, $rec);
+  print "\n";
+  printf ("%5d lines read\n", $nlines);
+  printf ("%5d records\n", $nrecords);
+  printf ("%5d wine fixes\n", $nfixes);
 }
-
-close(F);
-
-printf ("%5d lines read\n", $nlines);
-printf ("%5d records\n", $nrecords);
-printf ("%5d wine fixes\n", $nfixes);
 
 # Insert data into the database based on parsed fields and line type
 sub insert_data {
@@ -160,20 +143,19 @@ sub insert_data {
     my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo});
 
     my $brew_id     = get_or_insert_brew($rec->{name}, $rec->{maker}, $rec->{style}, $rec->{alc}, $type);
-    #                                 ($name, $maker, $style, $alc, $type)
-    # type, style, country,
 
 
     # Insert a GLASS record with common fields
     my $glass_id = insert_glass({
-        username    => $username,
-        timestamp   => $rec->{stamp},
-        location    => $location_id,
-        brew        => $brew_id,
-        price       => $rec->{pr},
-        volume      => $rec->{vol},
-        alc         => $rec->{alc},
-        effdate     => $rec->{effdate},
+        username     => $username,
+        timestamp    => $rec->{stamp},
+        recordnumber => $rec->{recordnumber},
+        location     => $location_id,
+        brew         => $brew_id,
+        price        => $rec->{pr},
+        volume       => $rec->{vol},
+        alc          => $rec->{alc},
+        effdate      => $rec->{effdate},
     });
 
     # Insert a COMMENT record if there is a 'com' field
@@ -202,6 +184,7 @@ sub insert_data {
 
 
 # Helper to get or insert a Location record
+my $insert_loc = $dbh->prepare("INSERT INTO LOCATIONS (Name, GeoCoordinates) VALUES (?, ?)");
 sub get_or_insert_location {
     my ($location_name, $geo) = @_;
 
@@ -213,15 +196,14 @@ sub get_or_insert_location {
 
     if (my $location_id = $sth_check->fetchrow_array) {
         return $location_id;
-    } else {
-        # Insert new location record if it does not exist
-        my $sth_insert = $dbh->prepare("INSERT INTO LOCATIONS (Name, GeoCoordinates) VALUES (?, ?)");
-        $sth_insert->execute($location_name, $geo);
+    } else {  # Insert new location record if it does not exist
+        $insert_loc->execute($location_name, $geo);
         return $dbh->last_insert_id(undef, undef, "LOCATIONS", undef);
     }
 }
 
 # Helper to get or insert a Person record
+my $insert_person = $dbh->prepare("INSERT INTO PERSONS (Name) VALUES (?)");
 sub get_or_insert_person {
     my ($person_name) = @_;
 
@@ -236,8 +218,7 @@ sub get_or_insert_person {
         return $person_id;
     } else {
         # Insert new person record if it does not exist
-        my $sth_insert = $dbh->prepare("INSERT INTO PERSONS (Name) VALUES (?)");
-        $sth_insert->execute($person_name);
+        $insert_person->execute($person_name);
         return $dbh->last_insert_id(undef, undef, "PERSONS", undef);
     }
 }
@@ -245,6 +226,7 @@ sub get_or_insert_person {
 
 
 # Helper to get or insert a Brew record
+my $insert_brew = $dbh->prepare("INSERT INTO BREWS (Name, Producer, BrewStyle, Alc, BrewType) VALUES (?, ?, ?, ?, ?)");
 sub get_or_insert_brew {
     my ($name, $maker, $style, $alc, $type) = @_;
     my $id;
@@ -260,27 +242,33 @@ sub get_or_insert_brew {
         $update_sth->execute($maker, $style, $alc, $type, $id);
     } else {
         # Insert new brew record, including BrewType
-        my $insert_sth = $dbh->prepare("INSERT INTO BREWS (Name, Producer, BrewStyle, Alc, BrewType) VALUES (?, ?, ?, ?, ?)");
-        $insert_sth->execute($name, $maker, $style, $alc, $type);
+        $insert_brew->execute($name, $maker, $style, $alc, $type);
         $id = $dbh->last_insert_id(undef, undef, "BREWS", undef);
     }
     return $id;
 }
 
 # Helper to insert a Glass record
+my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
+  "(Username, Timestamp, Location, Brew, Price, Volume, Alc, Effdate, RecordNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)");
 sub insert_glass {
     my ($data) = @_;
-    my $sth = $dbh->prepare("INSERT INTO GLASSES (Username, Timestamp, Location, Brew, Price, Volume, Alc, Effdate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $sth->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{brew}, $data->{price}, $data->{volume}, $data->{alc}, $data->{effdate});
+    $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{brew}, $data->{price},
+       $data->{volume}, $data->{alc}, $data->{effdate}, $data->{recordnumber});
     return $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 }
 
 # Helper to insert a Comment record
+my $insert_comment = $dbh->prepare("INSERT INTO COMMENTS (Glass, ReferTo, Comment, Rating, Person, Photo) VALUES (?, ?, ?, ?, ?, ?)");
 sub insert_comment {
     my ($data) = @_;
-    my $sth = $dbh->prepare("INSERT INTO COMMENTS (Glass, ReferTo, Comment, Rating, Person, Photo) VALUES (?, ?, ?, ?, ?, ?)");
-    $sth->execute($data->{glass_id}, $data->{refer_to}, $data->{comment}, $data->{rating}, $data->{person}, $data->{photo});
+    $insert_comment->execute($data->{glass_id}, $data->{refer_to}, $data->{comment}, $data->{rating}, $data->{person}, $data->{photo});
     return $dbh->last_insert_id(undef, undef, "COMMENTS", undef);
 }
 
 
+############
+# Main program
+
+readwines();
+readfile();
