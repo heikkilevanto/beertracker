@@ -30,7 +30,9 @@ if ( $ARGV[0] ) {
 }
 
 # Define the path to the data file
-my $datafile = "../beerdata/heikki.data";
+my $datafile = "../beerdata/$username.data";
+my $oldfile = "./$username.data.OLD";
+
 
 # Define data types
 my %datalinetypes = (
@@ -47,19 +49,48 @@ my %datalinetypes = (
 );
 
 
+# Read the old type lines from the old file, in order to fix wine styles
+my %winestyles;  # indexed by timestamp
+if ( -r $oldfile ) {
+  print "Reading old wine styles from $oldfile \n";
+  open F, '<', $oldfile or die("Could not open $oldfile for reading: $!");
+  while ( <F> ) {
+    chomp();
+    my $line = $_ ;
+    next unless $line;          # Skip empty lines
+    next if /^.?.?.?#/;             # Skip comment lines (with BOM)
+    #print "$line \n";
+    my @datafields = split(/ *; */, $line);
+    my $stamp = $datafields[0];
+    my $linetype = $datafields[1];
+    my $winestyle = $datafields[7];
+    if ( $linetype =~ /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ &&   # Old style line
+         $line =~ /wine/i  && # about wine
+         $winestyle ) {
+      $winestyles{$stamp} = $winestyle;
+      #print "$line \n";
+      #print "   got '$winestyle' \n";
+    }
+  }
+  print "got " . scalar(keys(%winestyles)) . " wine styles \n";
+}
+
+
 # Open the data file
 open F, '<', $datafile or die("Could not open $datafile for reading: $!");
-my $nlines = 0;
 
+my $nlines = 0;
+my $nrecords = 0;
+my $nfixes = 0;
 # Main logic: Read each line, parse, and send data for insertion
 while (<F>) {
     $nlines++;
     chomp;
     my $line = $_;
-    print STDERR "$nlines: $line \n" if ($nlines % 100 == 0);
+    print "$nlines: $line \n" if ($nlines % 1000 == 0);
     next unless $line;          # Skip empty lines
     next if /^.?.?.?#/;             # Skip comment lines (with BOM)
-
+    $nrecords++ ;
     # Parse the line and map fields to $rec hash
     my @datafields = split(/ *; */, $line);
     my $linetype = $datafields[1]; # Determine the type (Beer, Wine, Booze, etc.)
@@ -77,6 +108,12 @@ while (<F>) {
     if ( $line =~ /\Wcider\W/i ) {
       $linetype = "Cider" ;
       $rec->{style} =~ s/cider\W*//i; # don't repeat that in the style
+    }
+
+    my $fixstyle = $winestyles{ $rec->{stamp} };
+    if ( $fixstyle ) {
+      $rec->{style} = $fixstyle;
+      $nfixes++;
     }
 
     # TODO - Fix the wines
@@ -106,6 +143,10 @@ while (<F>) {
 }
 
 close(F);
+
+printf ("%5d lines read\n", $nlines);
+printf ("%5d records\n", $nrecords);
+printf ("%5d wine fixes\n", $nfixes);
 
 # Insert data into the database based on parsed fields and line type
 sub insert_data {
