@@ -101,12 +101,12 @@ sub readfile {
       my @fnames = @{$fieldnamelist};
 
       for (my $i = 0; $fieldnamelist->[$i]; $i++) {
-          $rec->{$fieldnamelist->[$i]} = $datafields[$i] || "";
+          $rec->{$fieldnamelist->[$i]} = $datafields[$i] || undef;
       }
       $rec->{recordnumber} = $nrecords++ ;  # Remember for cross checking the code
 
       # Normalize old style geo
-      $rec->{geo} =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/;
+      $rec->{geo} =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/ if ($rec->{geo});
 
       if ( $line =~ /\Wcider\W/i ) {
         $linetype = "Cider" ;
