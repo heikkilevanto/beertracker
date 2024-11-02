@@ -83,6 +83,11 @@ use CGI qw( -utf8 );
 my $q = CGI->new;
 $q->charset( "UTF-8" );
 
+use DBI;
+
+# Database setup
+my $dbh = DBI->connect("dbi:SQLite:dbname=beerdata/beertracker.db", "", "", { RaiseError => 1, AutoCommit => 1 })
+    or die $DBI::errstr;
 
 ################################################################################
 # Constants and setup
@@ -236,6 +241,14 @@ $datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
   "style", # can be coctail, country/(region, or flavor
   "vol", "alc",  # These are for the alcohol itself
   "pr", "rate", "com", "geo", "photo"];
+
+$datalinetypes{"Cider"} = [
+  "stamp", "type", "wday", "effdate", "loc",
+  "maker",  # Brewery
+  "name",   # Name of the beer
+  "vol", "style", "alc", "pr", "rate", "com", "geo",
+  "subtype", # Taste of the beer, could be fruits, special hops, or type of barrel
+  "photo" ]; # Image file name
 
 
 # A comment on a night out.
@@ -527,10 +540,10 @@ sub getseen{
   while ($i > 0) { # normall we exit when we hit the limit
     my $rec = getrecord($i);
     last if ( ! $rec);
-    $seen{$rec->{maker}}++;
-    $seen{$rec->{name}}++;
-    $seen{$rec->{style}}++;
-    $seen{$rec->{loc}}++;
+    $seen{$rec->{maker}}++ if($rec->{maker});
+    $seen{$rec->{name}}++ if($rec->{name});
+    $seen{$rec->{style}}++ if($rec->{style});
+    $seen{$rec->{loc}}++ if($rec->{loc});
     $seen{$rec->{seenkey}}++;
     $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
     if ( $rec->{rate} ) {
@@ -2868,7 +2881,7 @@ sub datastats {
     }
     my $rt = $rec->{type};
     $rectypes{$rt} ++;
-    $oldrecs ++ if ( $rec->{rawline} !~ /; *$rt *;/ );
+    $oldrecs ++ if ($rec->{rawline} && $rec->{rawline} !~ /; *$rt *;/ );
     $comments++ if ( $rec->{com} );
     if (defined($rec->{rate}) && $rec->{rate} =~ /\d/ ) {
       $rates[ $rec->{rate} ] ++;
@@ -4318,13 +4331,45 @@ sub parseline {
 
 # Helper to get the ith record
 # Caches the parsing
-sub getrecord {
+sub getrecordOLD {   # Old version, parsing text lines
   my $i = shift;
   if ( ! $records[$i] ) {
     $records[$i] = parseline($lines[$i]);
   }
   return $records[$i];
 }
+
+sub getrecord {
+  my $i = shift;
+  if ( ! $records[$i] ) {
+    #$records[$i] = parseline($lines[$i]);
+    my $get_sth = $dbh->prepare("select * from glassrec where username=? and recordnumber = ?");
+    $get_sth->execute($username, $i);
+    my $rec = $get_sth->fetchrow_hashref;
+    #print STDERR "got rec $i: '$rec' : " ,  JSON->new->encode($rec), "\n";
+    # Normalize some common fields
+    $rec->{alc} = number( $rec->{alc} );
+    $rec->{vol} = number( $rec->{vol} );
+    $rec->{pr} = price( $rec->{pr} );
+    # Precalculate some things we often need
+    error ("Missing stamp in $i:  $rec->{recordnumber}: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}'") unless ($rec->{stamp});
+    error ("Missing effdate '$rec->{effdate}' in $i:  $rec->{recordnumber}: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}'") unless ($rec->{effdate});
+    my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
+    $rec->{wday} = $weekdays[ $rec->{wdaynumber} ] ;
+    #( $rec->{date}, $rec->{year}, $rec->{time} ) = $rec->{stamp} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
+    my $alcvol = $rec->{alc} * $rec->{vol} || 0 ;
+    $alcvol = 0 if ( $rec->{pr} < 0  );  # skip box wines
+    $rec->{alcvol} = $alcvol;
+    $rec->{drinks} = $alcvol / $onedrink;
+    nullfields($rec); # Make sure we accept missing values for fields
+    $rec->{seenkey} = seenkey($rec);
+    $records[$i] = $rec;
+  }
+  return $records[$i];
+}
+
+
+
 
 # Get all field names for a type, or all
 sub fieldnames {

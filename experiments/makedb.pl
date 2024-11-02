@@ -20,7 +20,10 @@ my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS BREWS);
 for my $table (@tables) {
     $dbh->do("DROP TABLE IF EXISTS $table");
 }
-$dbh->do("DROP VIEW IF EXISTS GLASSDET");
+my @views = qw(GLASSDET GLASSREC);
+for my $v ( @views) {
+  $dbh->do("DROP VIEW IF EXISTS $v");
+}
 
 # Create GLASSES table
 # A glass of anything I can drink, or special "empty" glasses for
@@ -44,6 +47,7 @@ $dbh->do(q{
 $dbh->do("CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE)");  # Username, Id?
 $dbh->do("CREATE INDEX idx_glasses_location ON GLASSES (Location)");
 $dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)"); # Also effdate?
+$dbh->do("CREATE INDEX idx_glasses_recordnumber ON GLASSES (RecordNumber)");
 
 
 # Create BREWS table
@@ -129,9 +133,39 @@ $dbh->do("CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE)");
 # Create view GLASSDET
 $dbh->do(q{
     CREATE VIEW GLASSDET AS
-      select * from GLASSES, BREWS
-      where glasses.Brew = Brews.id
+      select *, glasses.alc * glasses.volume as alcvol
+      from GLASSES, BREWS, LOCATIONS
+      where glasses.Brew = Brews.id and glasses.Location = Locations.id
 });
+
+
+# Create view GLASSREC  - a way to return records the way the old script likes them
+# All fields must have a "as" clause, to make sure we get lowercase fieldnames
+$dbh->do(q{
+    CREATE VIEW GLASSREC AS
+      select
+        glasses.username,
+        glasses.recordnumber,
+        datetime(glasses.timestamp) as stamp,
+        strftime ('%w', glasses.effdate) as wdaynumber,  /* as number, monday=1 */
+        strftime ('%Y-%m-%d', glasses.timestamp) as date,
+        strftime ('%Y', glasses.timestamp) as year,
+        strftime ('%H:%M:%S', glasses.timestamp) as time,
+        brews.brewtype as type,
+        effdate as effdate,
+        locations.name as loc,
+        brews.producer as maker,
+        brews.name as name,
+        volume as vol,
+        brewstyle as style,
+        glasses.alc as alc,
+        price as pr,
+        locations.geocoordinates as geo,
+        "??" as subtype
+      from GLASSES, BREWS, LOCATIONS
+      where glasses.Brew = Brews.id and glasses.Location = Locations.id
+});
+
 
 print "Database and tables created successfully.\n";
 

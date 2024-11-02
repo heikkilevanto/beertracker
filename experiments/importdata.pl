@@ -88,9 +88,10 @@ sub readfile {
       $nlines++;
       chomp;
       my $line = $_;
-      print "$nlines: $line \n" if ($nlines % 1000 == 0);
       next unless $line;          # Skip empty lines
       next if /^.?.?.?#/;             # Skip comment lines (with BOM)
+      print "$nlines $nrecords: $line \n" if ($nrecords % 1000 == 0);
+
       # Parse the line and map fields to $rec hash
       my @datafields = split(/ *; */, $line);
       my $linetype = $datafields[1]; # Determine the type (Beer, Wine, Booze, etc.)
@@ -103,11 +104,26 @@ sub readfile {
       for (my $i = 0; $fieldnamelist->[$i]; $i++) {
           $rec->{$fieldnamelist->[$i]} = $datafields[$i] || undef;
       }
+
+      # Check timestamp, confuses SqLite if impossible
+      my ($yy,$mm,$dd, $ho,$mi,$se) = $rec->{stamp}=~/^(\d+)-(\d\d)-(\d\d) (\d\d+):(\d\d):(\d\d)$/;
+      if ( !$yy || !$se ||  # didn't match
+           length($yy) != 4 || $yy<2016 || $yy>2025 ||
+           length($mm) != 2 || $mm<01 || $mm>12 ||
+           length($dd) != 2 || $dd<01 || $dd>31 ||
+           length($ho) != 2 || $ho<00 || $ho>23 ||
+           length($mi) != 2 || $mi<00 || $mi>59 ||
+           length($se) != 2 || $se<00 || $se>59 ) {
+        print "Bad time stamp '$rec->{stamp}' in line $nlines record $nrecords\n";
+        print "  '$yy' '$mm' '$dd'  '$ho' '$mi' '$se' \n";
+        print "  $line\n";
+        next;
+      }
       $rec->{recordnumber} = $nrecords++ ;  # Remember for cross checking the code
 
       # Normalize old style geo
       $rec->{geo} =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/ if ($rec->{geo});
-
+      $rec->{stamp} =~s/ ([0-9]:)/ 0$1/;  # Make sure we have leading zero in time
       if ( $line =~ /\Wcider\W/i ) {
         $linetype = "Cider" ;
         $rec->{style} =~ s/cider\W*//i; # don't repeat that in the style
@@ -118,6 +134,7 @@ sub readfile {
         $rec->{style} = $fixstyle;
         $nfixes++;
       }
+      die ("Record without stamp at line $nlines\n$line\n") unless $rec->{stamp};
 
       # Pass the parsed record and line type to insert_data for processing
       insert_data($linetype, $rec);
