@@ -8,9 +8,9 @@
 
 
 # TODO
-#  - Drop the BREWTYPE_X tables, collect the few relevant details directly into BREWS
 #  - Separate wine styles into country and region. Normalize country codes. Check duplicates.
 #  - Get location details at least for the most common watering holes
+#  - Clean up the code. Similar parameter passing for all the insert_ functions
 
 
 
@@ -46,6 +46,7 @@ my %datalinetypes = (
     "Restaurant" => ["stamp", "type", "wday", "effdate", "loc", "subtype", "rate",
                      "pr", "food", "people", "com", "geo", "photo"],
 );
+
 
 
 # Read the old type lines from the old file, in order to fix wine styles
@@ -181,7 +182,6 @@ sub insert_data {
         price        => $rec->{pr},
         volume       => $rec->{vol},
         alc          => $rec->{alc},
-        effdate      => $rec->{effdate},
     });
 
     # Insert a COMMENT record if there is a 'com' field
@@ -279,11 +279,11 @@ sub get_or_insert_brew {
 
 # Helper to insert a Glass record
 my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-  "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc, Effdate, RecordNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+  "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc, RecordNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 sub insert_glass {
     my ($data) = @_;
     $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{type}, $data->{brew}, $data->{price},
-       $data->{volume}, $data->{alc}, $data->{effdate}, $data->{recordnumber});
+       $data->{volume}, $data->{alc}, $data->{recordnumber});
     return $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 }
 

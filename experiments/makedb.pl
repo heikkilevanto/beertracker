@@ -33,7 +33,6 @@ $dbh->do(q{
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Username TEXT,
         Timestamp DATETIME,
-        Effdate DATE,
         RecordNumber INTEGER,  /* In the file we import from. Can be dropped once we to go production */
         BrewType TEXT,  /* Wine, Beer, Restaurant */
         Location INTEGER,
@@ -151,13 +150,13 @@ $dbh->do(q{
         glasses.username as username,
         glasses.recordnumber as recordnumber,
         datetime(glasses.timestamp) as stamp,
-        strftime ('%w', glasses.effdate) as wdaynumber,  /* as number, monday=1 */
+        strftime ('%w', glasses.timestamp, '-06:00' ) as wdaynumber,  /* as number, monday=1 */
         strftime ('%Y-%m-%d', glasses.timestamp) as date,
         strftime ('%Y', glasses.timestamp) as year,
         strftime ('%H:%M:%S', glasses.timestamp) as time,
         glasses.brewtype as type,
         COALESCE(brews.subtype, brews.country) as subtype,
-        effdate as effdate,
+        strftime ('%Y-%m-%d', glasses.timestamp,'-06:00') as effdate,
         locations.name as loc,
         brews.producer as maker,
         brews.name as name,
@@ -166,8 +165,8 @@ $dbh->do(q{
         glasses.alc as alc,
         price as pr,
         locations.geocoordinates as geo
-      from GLASSES, LOCATIONS
-      left join BREWS on glasses.Brew = Brews.id
+      from GLASSES , LOCATIONS
+      left join BREWS  on glasses.Brew = Brews.id
       where glasses.Location = Locations.id
 });
 
