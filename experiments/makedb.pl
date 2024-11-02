@@ -20,7 +20,7 @@ my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS BREWS);
 for my $table (@tables) {
     $dbh->do("DROP TABLE IF EXISTS $table");
 }
-my @views = qw(GLASSDET GLASSREC);
+my @views = qw(GLASSDET GLASSREC COMPERS);
 for my $v ( @views) {
   $dbh->do("DROP VIEW IF EXISTS $v");
 }
@@ -146,8 +146,9 @@ $dbh->do(q{
 $dbh->do(q{
     CREATE VIEW GLASSREC AS
       select
-        glasses.username,
-        glasses.recordnumber,
+        glasses.id as glassid,
+        glasses.username as username,
+        glasses.recordnumber as recordnumber,
         datetime(glasses.timestamp) as stamp,
         strftime ('%w', glasses.effdate) as wdaynumber,  /* as number, monday=1 */
         strftime ('%Y-%m-%d', glasses.timestamp) as date,
@@ -169,6 +170,23 @@ $dbh->do(q{
         and glasses.Location = Locations.id
 });
 
+# Create vier COMPERS that combines comments and persons
+$dbh->do(q{
+    CREATE VIEW COMPERS AS
+      select
+        comments.glass as id,
+        AVG(comments.Rating) AS rate,
+        GROUP_CONCAT(comments.Comment, ' | ') AS com,
+        COUNT(comments.Id) AS com_cnt,
+        GROUP_CONCAT(persons.name, ', ') AS people,
+        COUNT(persons.Id) AS pers_cnt
+      from COMMENTS
+      LEFT JOIN PERSONS on PERSONS.id = COMMENTS.Person
+      GROUP BY comments.glass
+});
+
+
+
 # Tried to get the comments too. Works, but is awfully slow (12 secs vs 0.2)
 #         AVG(comments.Rating) AS rate,
 #         GROUP_CONCAT(comments.Comment, ' | ') AS com,
@@ -177,6 +195,7 @@ $dbh->do(q{
 #       left join COMMENTS on comments.glass = glasses.id
 #       where glasses.Brew = Brews.id and glasses.Location = Locations.id
 #       group by glasses.id
+
 
 
 print "Database and tables created successfully.\n";

@@ -3370,12 +3370,12 @@ sub fulllist {
   my $anchor;
   my $i = scalar( @lines );
   $maxlines = $i*10 if ($maxlines <0); # neg means all of them
-  my $rec = getrecord($i-1);
+  my $rec = getrecord_com($i-1);
   my $lastrec; # TODO - Use this instead of the many last-somethings above
   while ( $i > 0 ) {  # Usually we exit at end-of-day
     $i--;
     $lastrec = $rec;
-    $rec = getrecord($i);
+    $rec = getrecord_com($i);
     next if filtered ( $rec );
     nullallfields($rec);  # Make sure we don't access undefined values, fills the log with warnings
     $maxlines--;
@@ -3497,7 +3497,7 @@ sub fulllist {
     print " [$disptype]\n";
 
     print filt($rec->{maker},"i", "","","maker") . newmark($rec->{maker}). ": " if ($rec->{maker});
-    print filt($rec->{name},"b","","","name") . newmark($rec->{name}, $rec->{maker});
+    print filt($rec->{name},"b","","","name") . newmark($rec->{name}, $rec->{maker}) unless ($rec->{type} eq "Restaurant");
     print $rec->{people}; # Not on the same type record as maker/name
 
     print "</span> <br class='no-wide'/>\n";
@@ -4331,6 +4331,8 @@ sub parseline {
 }
 
 
+# Helper to get a record from the database
+# Does not get comments, that's too slow, and often not needed
 sub getrecord {
   my $i = shift;
   if ( ! $records[$i] ) {
@@ -4360,6 +4362,25 @@ sub getrecord {
   return $records[$i];
 }
 
+# Helper to get a record with comments
+sub getrecord_com {
+  my $i = shift;
+  my $rec = getrecord($i);
+  if ( ! defined($rec->{com_cnt} ) ) {  # no comments yet, get them
+    my $get_sth = $dbh->prepare("select * from compers where id = ?");
+    $get_sth->execute($rec->{glassid});
+    my $com = $get_sth->fetchrow_hashref;
+    if ( ! $com ) {
+      $rec->{com_cnt} = 0; # Mark that we have tried
+    } else {
+      for my $k ( keys(%$com) ) {
+        $rec->{$k} = $com->{$k};
+      }
+      $records[$i] = $rec;
+    }
+  }
+  return $records[$i];
+}
 
 
 
