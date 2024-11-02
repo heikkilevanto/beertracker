@@ -4331,8 +4331,10 @@ sub parseline {
 }
 
 
+
 # Helper to get a record from the database
-# Does not get comments, that's too slow, and often not needed
+# Does not get comments, that's too slow, and often not needed. But does get
+# brew names and locations.
 sub getrecord {
   my $i = shift;
   if ( ! $records[$i] ) {
@@ -4340,6 +4342,7 @@ sub getrecord {
     my $get_sth = $dbh->prepare("select * from glassrec where username=? and recordnumber = ?");
     $get_sth->execute($username, $i);
     my $rec = $get_sth->fetchrow_hashref;
+    error("Got no record $i for '$username'") unless ($rec);
     #print STDERR "got rec $i: '$rec' : " ,  JSON->new->encode($rec), "\n";
     # Normalize some common fields
     $rec->{alc} = number( $rec->{alc} );
@@ -4362,7 +4365,8 @@ sub getrecord {
   return $records[$i];
 }
 
-# Helper to get a record with comments
+
+# Helper to get a full record with comments
 sub getrecord_com {
   my $i = shift;
   my $rec = getrecord($i);

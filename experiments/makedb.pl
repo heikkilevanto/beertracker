@@ -35,6 +35,7 @@ $dbh->do(q{
         Timestamp DATETIME,
         Effdate DATE,
         RecordNumber INTEGER,  /* In the file we import from. Can be dropped once we to go production */
+        BrewType TEXT,  /* Wine, Beer, Restaurant */
         Location INTEGER,
         Brew INTEGER,
         Price DECIMAL,
@@ -154,7 +155,7 @@ $dbh->do(q{
         strftime ('%Y-%m-%d', glasses.timestamp) as date,
         strftime ('%Y', glasses.timestamp) as year,
         strftime ('%H:%M:%S', glasses.timestamp) as time,
-        brews.brewtype as type,
+        glasses.brewtype as type,
         COALESCE(brews.subtype, brews.country) as subtype,
         effdate as effdate,
         locations.name as loc,
@@ -165,9 +166,9 @@ $dbh->do(q{
         glasses.alc as alc,
         price as pr,
         locations.geocoordinates as geo
-      from GLASSES, BREWS, LOCATIONS
-      where glasses.Brew = Brews.id
-        and glasses.Location = Locations.id
+      from GLASSES, LOCATIONS
+      left join BREWS on glasses.Brew = Brews.id
+      where glasses.Location = Locations.id
 });
 
 # Create vier COMPERS that combines comments and persons

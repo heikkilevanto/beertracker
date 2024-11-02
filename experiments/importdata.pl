@@ -175,6 +175,7 @@ sub insert_data {
         username     => $username,
         timestamp    => $rec->{stamp},
         recordnumber => $rec->{recordnumber},
+        type         => $type,
         location     => $location_id,
         brew         => $brew_id,
         price        => $rec->{pr},
@@ -251,22 +252,25 @@ sub get_or_insert_person {
 
 
 # Helper to get or insert a Brew record
-my $insert_brew = $dbh->prepare("INSERT INTO BREWS (BrewType, SubType, Name, Producer, BrewStyle, Alc, Country) VALUES (?, ?, ?, ?, ?, ?, ?)");
+# TODO - Fetch all the important fields in the check, and actively update those that need to
+# Take the first existing value, do not overwrite later
+my $insert_brew = $dbh->prepare("INSERT INTO BREWS (Brewtype, SubType, Name, Producer, BrewStyle, Alc, Country) VALUES (?, ?, ?, ?, ?, ?, ?)");
 sub get_or_insert_brew {
     my ($type, $subtype, $name, $maker, $style, $alc, $country) = @_;
     my $id;
 
-    $name = $type unless $name;  # for the "empty" glasses
-
     # Check if the brew exists in the BREWS table
-    my $sth = $dbh->prepare("SELECT Id FROM BREWS WHERE Name = ?");
-    $sth->execute($name);
+    my $sth = $dbh->prepare("SELECT Id FROM BREWS WHERE Name = ? and BrewType = ? ".
+    " and (subtype = ? OR ( subtype is null and ? is null )) ");
+    $sth->execute($name, $type, $subtype, $subtype);
     if ($id = $sth->fetchrow_array) {
         # Update optional fields if missing in existing record
-        my $update_sth = $dbh->prepare("UPDATE BREWS SET Producer = COALESCE(?, Producer), BrewStyle = COALESCE(?, BrewStyle), Alc = COALESCE(?, Alc), BrewType = COALESCE(?, BrewType) WHERE Id = ?");
-        $update_sth->execute($maker, $style, $alc, $type, $id);
+        my $update_sth = $dbh->prepare("UPDATE BREWS ".
+            "SET Producer = COALESCE(?, Producer), BrewStyle = COALESCE(?, BrewStyle), ".
+            "Alc = COALESCE(?, Alc)  WHERE Id = ?");
+        $update_sth->execute($maker, $style, $alc, $id);
     } else {
-        # Insert new brew record, including BrewType
+        # Insert new brew record
         $insert_brew->execute($type, $subtype, $name, $maker, $style, $alc, $country);
         $id = $dbh->last_insert_id(undef, undef, "BREWS", undef);
     }
@@ -275,13 +279,14 @@ sub get_or_insert_brew {
 
 # Helper to insert a Glass record
 my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-  "(Username, Timestamp, Location, Brew, Price, Volume, Alc, Effdate, RecordNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?,?)");
+  "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc, Effdate, RecordNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 sub insert_glass {
     my ($data) = @_;
-    $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{brew}, $data->{price},
+    $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{type}, $data->{brew}, $data->{price},
        $data->{volume}, $data->{alc}, $data->{effdate}, $data->{recordnumber});
     return $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 }
+
 
 # Helper to insert a Comment record
 my $insert_comment = $dbh->prepare("INSERT INTO COMMENTS (Glass, ReferTo, Comment, Rating, Person, Photo) VALUES (?, ?, ?, ?, ?, ?)");
