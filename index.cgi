@@ -4348,12 +4348,11 @@ sub getrecord {
     $rec->{alc} = number( $rec->{alc} );
     $rec->{vol} = number( $rec->{vol} );
     $rec->{pr} = price( $rec->{pr} );
-    # Precalculate some things we often need
     error ("Missing stamp in $i:  $rec->{recordnumber}: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}'") unless ($rec->{stamp});
-    error ("Missing effdate '$rec->{effdate}' in $i:  $rec->{recordnumber}: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}'") unless ($rec->{effdate});
+    # Should never happen
+    # Precalculate some things we often need
     my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
     $rec->{wday} = $weekdays[ $rec->{wdaynumber} ] ;
-    #( $rec->{date}, $rec->{year}, $rec->{time} ) = $rec->{stamp} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
     my $alcvol = $rec->{alc} * $rec->{vol} || 0 ;
     $alcvol = 0 if ( $rec->{pr} < 0  );  # skip box wines
     $rec->{alcvol} = $alcvol;
@@ -4380,7 +4379,6 @@ sub getrecord_com {
       for my $k ( keys(%$com) ) {
         $rec->{$k} = $com->{$k};
       }
-      $records[$i] = $rec;
     }
   }
   return $records[$i];

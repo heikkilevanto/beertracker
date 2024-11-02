@@ -31,14 +31,14 @@ for my $v ( @views) {
 $dbh->do(q{
     CREATE TABLE GLASSES (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Username TEXT,
+        Username TEXT, /* every user has his own glasses - the rest are shared */
         Timestamp DATETIME,
         RecordNumber INTEGER,  /* In the file we import from. Can be dropped once we to go production */
         BrewType TEXT,  /* Wine, Beer, Restaurant */
         Location INTEGER,
-        Brew INTEGER,
+        Brew INTEGER, /* Can be null for "empty glasses" which should not have alc nor vol */
         Price DECIMAL,
-        Volume DECIMAL, /* NULL indicates an "empty" glass */
+        Volume DECIMAL,
         Alc DECIMAL,
         FOREIGN KEY (Location) REFERENCES LOCATIONS(Id),
         FOREIGN KEY (Brew) REFERENCES BREWS(Id)
@@ -178,24 +178,14 @@ $dbh->do(q{
         AVG(comments.Rating) AS rate,
         GROUP_CONCAT(comments.Comment, ' | ') AS com,
         COUNT(comments.Id) AS com_cnt,
+        GROUP_CONCAT(comments.Photo, ' | ') AS photo,
+        COUNT(comments.Id) AS com_cnt,
         GROUP_CONCAT(persons.name, ', ') AS people,
         COUNT(persons.Id) AS pers_cnt
       from COMMENTS
       LEFT JOIN PERSONS on PERSONS.id = COMMENTS.Person
       GROUP BY comments.glass
 });
-
-
-
-# Tried to get the comments too. Works, but is awfully slow (12 secs vs 0.2)
-#         AVG(comments.Rating) AS rate,
-#         GROUP_CONCAT(comments.Comment, ' | ') AS com,
-#         COUNT(comments.Id) AS com_cnt
-#       from GLASSES, BREWS, LOCATIONS
-#       left join COMMENTS on comments.glass = glasses.id
-#       where glasses.Brew = Brews.id and glasses.Location = Locations.id
-#       group by glasses.id
-
 
 
 print "Database and tables created successfully.\n";

@@ -9,6 +9,7 @@
 
 # TODO
 #  - Separate wine styles into country and region. Normalize country codes. Check duplicates.
+#  - Short styles (subtype?) for beers
 #  - Get location details at least for the most common watering holes
 #  - Clean up the code. Similar parameter passing for all the insert_ functions
 
@@ -185,7 +186,7 @@ sub insert_data {
     });
 
     # Insert a COMMENT record if there is a 'com' field
-    if ($rec->{com}) {
+    if ($rec->{com}||$rec->{photo}) {
         insert_comment({
             glass_id  => $glass_id,
             refer_to  => $type,              # Use record type as ReferTo
@@ -217,10 +218,16 @@ sub get_or_insert_location {
     return undef unless $location_name;
 
     # Check if the location already exists
-    my $sth_check = $dbh->prepare("SELECT Id FROM LOCATIONS WHERE Name = ?");
+    my $sth_check = $dbh->prepare("SELECT Id, GeoCoordinates FROM LOCATIONS WHERE Name = ?");
     $sth_check->execute($location_name);
 
-    if (my $location_id = $sth_check->fetchrow_array) {
+    if (my ($location_id, $old_geo) = $sth_check->fetchrow_array) {
+        if (!$old_geo && $geo) {
+          my $usth = $dbh->prepare("UPDATE LOCATIONS ".
+            "set GeoCoordinates = ? " .
+            "where id = ? ");
+          $usth->execute($geo, $location_id);
+        }
         return $location_id;
     } else {  # Insert new location record if it does not exist
         $insert_loc->execute($location_name, $geo);
@@ -252,23 +259,34 @@ sub get_or_insert_person {
 
 
 # Helper to get or insert a Brew record
-# TODO - Fetch all the important fields in the check, and actively update those that need to
-# Take the first existing value, do not overwrite later
 my $insert_brew = $dbh->prepare("INSERT INTO BREWS (Brewtype, SubType, Name, Producer, BrewStyle, Alc, Country) VALUES (?, ?, ?, ?, ?, ?, ?)");
 sub get_or_insert_brew {
     my ($type, $subtype, $name, $maker, $style, $alc, $country) = @_;
     my $id;
-
+    my($prod, $sty, $al);
     # Check if the brew exists in the BREWS table
-    my $sth = $dbh->prepare("SELECT Id FROM BREWS WHERE Name = ? and BrewType = ? ".
-    " and (subtype = ? OR ( subtype is null and ? is null )) ");
+    my $sth = $dbh->prepare("SELECT Id, Producer, Brewstyle, Alc FROM BREWS WHERE Name = ? and BrewType = ? ".
+        " and (subtype = ? OR ( subtype is null and ? is null )) ");
     $sth->execute($name, $type, $subtype, $subtype);
-    if ($id = $sth->fetchrow_array) {
-        # Update optional fields if missing in existing record
+    if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
+      if ( !$prod || !$sty || !$al )  {
         my $update_sth = $dbh->prepare("UPDATE BREWS ".
             "SET Producer = COALESCE(?, Producer), BrewStyle = COALESCE(?, BrewStyle), ".
             "Alc = COALESCE(?, Alc)  WHERE Id = ?");
         $update_sth->execute($maker, $style, $alc, $id);
+      }
+      if ( !$prod && $maker )  {
+        my $update_sth = $dbh->prepare("UPDATE BREWS SET Producer = ? WHERE Id = ?");
+        $update_sth->execute($maker, $id);
+      }
+      if ( !$sty && $style)  {
+        my $update_sth = $dbh->prepare("UPDATE BREWS SET BrewStyle= ? WHERE Id = ?");
+        $update_sth->execute($style, $id);
+      }
+      if ( !$al && $alc)  {
+        my $update_sth = $dbh->prepare("UPDATE BREWS SET Alc= ? WHERE Id = ?");
+        $update_sth->execute($alc, $id);
+      }
     } else {
         # Insert new brew record
         $insert_brew->execute($type, $subtype, $name, $maker, $style, $alc, $country);
@@ -299,6 +317,13 @@ sub insert_comment {
 
 ############
 # Main program
+
+# Insert known geo coords for my home
+# They tend to be far away from the actual location, esp on my desktop machine
+# Note the trailing spaces to make the names different. The UI will strip those
+get_or_insert_location("Home ", "55.6588 12.0825"); # Special case for FF.
+get_or_insert_location("Home  ", "55.6531712 12.5042688"); # Chrome
+get_or_insert_location("Home   ", "55.6717389 12.5563058"); # Chrome on my phone
 
 readwines();
 readfile();
