@@ -71,7 +71,7 @@ use File::Copy;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use locale; # The data file can contain locale overrides
+use locale;
 setlocale(LC_COLLATE, "da_DK.utf8"); # but dk is the default
 setlocale(LC_CTYPE, "da_DK.utf8");
 
@@ -87,7 +87,8 @@ use DBI;
 
 # Database setup
 my $dbh = DBI->connect("dbi:SQLite:dbname=beerdata/beertracker.db", "", "", { RaiseError => 1, AutoCommit => 1 })
-    or die $DBI::errstr;
+    or error($DBI::errstr);
+$dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
 
 ################################################################################
 # Constants and setup
@@ -4329,15 +4330,6 @@ sub parseline {
   return $rec;
 }
 
-# Helper to get the ith record
-# Caches the parsing
-sub getrecordOLD {   # Old version, parsing text lines
-  my $i = shift;
-  if ( ! $records[$i] ) {
-    $records[$i] = parseline($lines[$i]);
-  }
-  return $records[$i];
-}
 
 sub getrecord {
   my $i = shift;

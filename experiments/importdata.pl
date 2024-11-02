@@ -90,7 +90,7 @@ sub readfile {
       my $line = $_;
       next unless $line;          # Skip empty lines
       next if /^.?.?.?#/;             # Skip comment lines (with BOM)
-      print "$nlines $nrecords: $line \n" if ($nrecords % 1000 == 0);
+      print sprintf("%6d %6d: ", $nlines,$nrecords), "$line \n" if ($nrecords % 1000 == 0);
 
       # Parse the line and map fields to $rec hash
       my @datafields = split(/ *; */, $line);
@@ -134,6 +134,13 @@ sub readfile {
         $rec->{style} = $fixstyle;
         $nfixes++;
       }
+
+      if ( $linetype eq "Beer" ) { # We used to have country in the subtype
+        $rec->{country} = $rec->{subtype};
+        $rec->{subtype} = undef;
+      }
+
+      # Complain of really bad records
       die ("Record without stamp at line $nlines\n$line\n") unless $rec->{stamp};
 
       # Pass the parsed record and line type to insert_data for processing
@@ -159,7 +166,8 @@ sub insert_data {
     # Determine the location and brew IDs.
     my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo});
 
-    my $brew_id     = get_or_insert_brew($rec->{name}, $rec->{maker}, $rec->{style}, $rec->{alc}, $type);
+    my $brew_id = get_or_insert_brew($type, $rec->{subtype}, $rec->{name},
+       $rec->{maker}, $rec->{style}, $rec->{alc}, $rec->{country});
 
 
     # Insert a GLASS record with common fields
@@ -243,9 +251,9 @@ sub get_or_insert_person {
 
 
 # Helper to get or insert a Brew record
-my $insert_brew = $dbh->prepare("INSERT INTO BREWS (Name, Producer, BrewStyle, Alc, BrewType) VALUES (?, ?, ?, ?, ?)");
+my $insert_brew = $dbh->prepare("INSERT INTO BREWS (BrewType, SubType, Name, Producer, BrewStyle, Alc, Country) VALUES (?, ?, ?, ?, ?, ?, ?)");
 sub get_or_insert_brew {
-    my ($name, $maker, $style, $alc, $type) = @_;
+    my ($type, $subtype, $name, $maker, $style, $alc, $country) = @_;
     my $id;
 
     $name = $type unless $name;  # for the "empty" glasses
@@ -259,7 +267,7 @@ sub get_or_insert_brew {
         $update_sth->execute($maker, $style, $alc, $type, $id);
     } else {
         # Insert new brew record, including BrewType
-        $insert_brew->execute($name, $maker, $style, $alc, $type);
+        $insert_brew->execute($type, $subtype, $name, $maker, $style, $alc, $country);
         $id = $dbh->last_insert_id(undef, undef, "BREWS", undef);
     }
     return $id;
@@ -289,3 +297,4 @@ sub insert_comment {
 
 readwines();
 readfile();
+$dbh->disconnect();

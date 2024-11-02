@@ -58,6 +58,7 @@ $dbh->do(q{
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT,   /* May be NULL for restaurants and such "empty-glass" things */
         BrewType TEXT,  /* Wine, Beer, Restaurant */
+        SubType TEXT,  /* Wines: Red, Booze: Rum, Restaurant: Pizza */
         BrewStyle TEXT, /* What ever style we get in, "IPA Hazy" */
         ShortStyle TEXT, /* Short style like Red, IPA, Whisky */
         ShortName TEXT,
@@ -93,6 +94,7 @@ $dbh->do(q{
     )
 });
 $dbh->do("CREATE INDEX idx_comments_person ON COMMENTS (Person)");
+$dbh->do("CREATE INDEX idx_comments_glass ON COMMENTS (Glass)");
 
 
 # Create PERSONS table
@@ -152,6 +154,7 @@ $dbh->do(q{
         strftime ('%Y', glasses.timestamp) as year,
         strftime ('%H:%M:%S', glasses.timestamp) as time,
         brews.brewtype as type,
+        COALESCE(brews.subtype, brews.country) as subtype,
         effdate as effdate,
         locations.name as loc,
         brews.producer as maker,
@@ -160,11 +163,20 @@ $dbh->do(q{
         brewstyle as style,
         glasses.alc as alc,
         price as pr,
-        locations.geocoordinates as geo,
-        "??" as subtype
+        locations.geocoordinates as geo
       from GLASSES, BREWS, LOCATIONS
-      where glasses.Brew = Brews.id and glasses.Location = Locations.id
+      where glasses.Brew = Brews.id
+        and glasses.Location = Locations.id
 });
+
+# Tried to get the comments too. Works, but is awfully slow (12 secs vs 0.2)
+#         AVG(comments.Rating) AS rate,
+#         GROUP_CONCAT(comments.Comment, ' | ') AS com,
+#         COUNT(comments.Id) AS com_cnt
+#       from GLASSES, BREWS, LOCATIONS
+#       left join COMMENTS on comments.glass = glasses.id
+#       where glasses.Brew = Brews.id and glasses.Location = Locations.id
+#       group by glasses.id
 
 
 print "Database and tables created successfully.\n";
