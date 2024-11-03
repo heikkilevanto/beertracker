@@ -121,7 +121,7 @@ sub readfile {
         print "  $line\n";
         next;
       }
-      $rec->{recordnumber} = $nrecords++ ;  # Remember for cross checking the code
+      $rec->{recordnumber} = ++$nrecords ;  # Remember for cross checking the code
 
       # Normalize old style geo
       $rec->{geo} =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/ if ($rec->{geo});

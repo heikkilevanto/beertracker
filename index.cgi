@@ -445,13 +445,15 @@ sub copyproddata {
 
 sub readdatafile {
   my $nlines = 0;
-  my $sql = "select timestamp from glasses where username = ? order by timestamp";
+  $lines[0] = "";
+  my $sql = "select timestamp, recordnumber from glasses where username = ? order by timestamp";
   my $get_sth = $dbh->prepare($sql);
   $get_sth->execute($username);
-  while ( my $ts = $get_sth->fetchrow_array ) {
-    push (@lines, $ts);
+  while ( my ($ts,$rn) = $get_sth->fetchrow_array ) {
+    #push (@lines, $ts);
+    $lines[$rn] = $ts;
   }
-  my $ndatalines = scalar(@lines);
+  my $ndatalines = scalar(@lines)-1;
   return "<!-- Read $ndatalines records from the database to the lines array-->\n";
 }
 
@@ -1630,8 +1632,8 @@ sub graph {
     my $futable = ""; # Table to display the 'future' values
 
     # Normalize limits to where we have data
-    getrecord(0);
-    while ( $startdate lt $records[0]->{date}) {
+    getrecord(1);
+    while ( $startdate lt $records[1]->{date}) {
       $startoff --;
       $startdate = datestr ("%F", -$startoff );
       if ($endoff >= 0 ) {
@@ -4289,34 +4291,42 @@ sub parseline {
 }
 
 
+# Helper to fix a record after getting it from the database
+sub fixrecord {
+  my $rec = shift;
+  my $recindex = shift || "";
+  # Normalize some common fields
+  $rec->{alc} = number( $rec->{alc} );
+  $rec->{vol} = number( $rec->{vol} );
+  $rec->{pr} = price( $rec->{pr} );
+  error ("Missing stamp in $recindex:  $rec->{recordnumber}: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}'") unless ($rec->{stamp});
+  # Should never happen
+  # Precalculate some things we often need
+  my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
+  $rec->{wday} = $weekdays[ $rec->{wdaynumber} ] ;
+  my $alcvol = $rec->{alc} * $rec->{vol} || 0 ;
+  $alcvol = 0 if ( $rec->{pr} < 0  );  # skip box wines
+  $rec->{alcvol} = $alcvol;
+  $rec->{drinks} = $alcvol / $onedrink;
+  nullfields($rec); # Make sure we accept missing values for fields
+  $rec->{seenkey} = seenkey($rec);
+}
 
-# Helper to get a record from the database
+
+# Helper to get a record from the database by array index
 # Does not get comments, that's too slow, and often not needed. But does get
 # brew names and locations.
 sub getrecord {
   my $i = shift;
   if ( ! $records[$i] ) {
     #$records[$i] = parseline($lines[$i]);
-    my $get_sth = $dbh->prepare("select * from glassrec where username=? and recordnumber = ?");
+    my $sql = "select * from glassrec where username=? and recordnumber = ?";
+    my $get_sth = $dbh->prepare($sql);
     $get_sth->execute($username, $i);
     my $rec = $get_sth->fetchrow_hashref;
     error("Got no record $i for '$username'") unless ($rec);
     #print STDERR "got rec $i: '$rec' : " ,  JSON->new->encode($rec), "\n";
-    # Normalize some common fields
-    $rec->{alc} = number( $rec->{alc} );
-    $rec->{vol} = number( $rec->{vol} );
-    $rec->{pr} = price( $rec->{pr} );
-    error ("Missing stamp in $i:  $rec->{recordnumber}: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}'") unless ($rec->{stamp});
-    # Should never happen
-    # Precalculate some things we often need
-    my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-    $rec->{wday} = $weekdays[ $rec->{wdaynumber} ] ;
-    my $alcvol = $rec->{alc} * $rec->{vol} || 0 ;
-    $alcvol = 0 if ( $rec->{pr} < 0  );  # skip box wines
-    $rec->{alcvol} = $alcvol;
-    $rec->{drinks} = $alcvol / $onedrink;
-    nullfields($rec); # Make sure we accept missing values for fields
-    $rec->{seenkey} = seenkey($rec);
+    fixrecord($rec, $i);
     $records[$i] = $rec;
   }
   return $records[$i];
