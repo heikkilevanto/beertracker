@@ -411,36 +411,7 @@ exit();  # The rest should be subs only
 # Dump directly from the data file, so we get comments too
 ################################################################################
 sub dumpdatafile {
-  print $q->header(
-    -type => "text/plain;charset=UTF-8",
-    -Cache_Control => "no-cache, no-store, must-revalidate",
-    -Pragma => "no-cache",
-    -Expires => "0",
-    -X_beertracker => "This beertracker is my hobby project. It is open source",
-    -X_author => "Heikki Levanto",
-    -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
-  open F, "<$datafile"
-    or error("Could not open $datafile for reading: $!" );
-
-  print "# Dump of beerdata file for '". $q->remote_user() .
-    "' as of ". datestr() . "\n";
-  my $max = param("maxl");
-  my $skip = -1;
-  if ($max) {
-    print "# Only the last $max lines\n";
-    my $len = `wc -l $datafile`;
-    chomp($len);
-    $len =~ s/[^0-9]//g;
-    $skip = $len-$max;
-  }
-  print "# Date Time; [LineType;] Weekday; Effective-date; Location; Brewery; Beer; Vol; " .
-    "Style; Alc; Price; Rating; Comment; GeoCoords\n";
-  # TODO - Print a header for each line type
-  while (<F>) {
-    chomp();
-    print "$_ \n" unless ($skip-- >0);
-  }
-  close(F);
+  error ("Data file dump disabled, moving away from text files");
 } # Dump of data file
 
 ################################################################################
@@ -448,6 +419,7 @@ sub dumpdatafile {
 # Needs to be before the HTML head, as it forwards back to the page
 ################################################################################
 # Nice to see up to date data when developing
+# TODO - Only copies the text file, which needs to be imported into the db
 sub copyproddata {
   if (!$devversion) {
     error ("Not allowed");
@@ -465,36 +437,22 @@ sub copyproddata {
 
 
 ################################################################################
-# Read the file
-# Readsa all the (non-comment) lines into @lines
+# Read the records
+# Reads all the records into @lines, to simulate the old way of reading the
+# whole file. Puts only the timestamp in the line for now.
 ################################################################################
 
+
 sub readdatafile {
-
   my $nlines = 0;
-  open F, "<$datafile"
-    or error("Could not open $datafile for reading: $!".
-      "<br/>Probably the user hasn't been set up yet" );
-
-  while (<F>) {
-    chomp();
-    next unless $_; # skip empty lines
-    $nlines++;
-    if ( /^[^0-9a-z]*#(20)?/i ) { # skip comment lines
-      # The set expression is to allow the BOM on the first line which usually is a comment
-      if ($1) {
-        $commentedrecords++;
-      } else {
-        $commentlines++;
-      }
-      next;
-    }
-    push (@lines, $_ ); #
+  my $sql = "select timestamp from glasses where username = ? order by timestamp";
+  my $get_sth = $dbh->prepare($sql);
+  $get_sth->execute($username);
+  while ( my $ts = $get_sth->fetchrow_array ) {
+    push (@lines, $ts);
   }
-  close(F);
   my $ndatalines = scalar(@lines);
-  my $ncom = $commentedrecords + $commentlines;
-  return "<!-- Read $nlines lines from $datafile: $ndatalines real reocrds, $ncom comments -->\n";
+  return "<!-- Read $ndatalines records from the database to the lines array-->\n";
 }
 
 ################################################################################
@@ -521,11 +479,11 @@ sub extractgeo {
 sub findrec {
   my $i = scalar( @lines ) -1;
   if ( ! $edit ) { # Usually the last one
-    $foundrec = getrecord($i);
+    $foundrec = getrecord_com($i);
   }
   while ( ! $foundrec && $i > 0) { # Or the one we are editing
     if ( $lines[$i] =~ /^$edit/ ) {
-      $foundrec = getrecord($i);
+      $foundrec = getrecord_com($i);
     }
     $i--;
   }
