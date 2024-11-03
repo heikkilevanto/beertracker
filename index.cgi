@@ -3057,7 +3057,7 @@ sub lists {
   my $i = scalar( @lines );
   while ( $i > 0 ) {
     $i--;
-    my $rec = getrecord($i);
+    my $rec = getrecord_com($i);
     next unless ($rec); # defensive coding, probably gets that one TZ record
     last if ($lines[$i] lt $notbef && scalar(@displines) >= 30);
     $fld = "";
@@ -3242,7 +3242,7 @@ sub people {
   my $i = scalar( @lines );
   while ( $i > 0 ) {
     $i--;
-    my $rec = getrecord($i);
+    my $rec = getrecord_com($i);
     next unless ($rec); # defensive coding, probably gets that one TZ record
     last if ($lines[$i] lt $notbef && scalar(@displines) >= 30);
     $fld = "";
@@ -4318,6 +4318,7 @@ sub fixrecord {
 # brew names and locations.
 sub getrecord {
   my $i = shift;
+  $i++ unless $i;
   if ( ! $records[$i] ) {
     #$records[$i] = parseline($lines[$i]);
     my $sql = "select * from glassrec where username=? and recordnumber = ?";
