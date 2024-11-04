@@ -458,19 +458,30 @@ sub readdatafile {
 }
 
 ################################################################################
-# Extract geo locations
-# Does not parse every line, only those that seem to contain a geo
+# Get all geo locations
+# TODO - Don't use this for the javascript, send also the 'last' time
 ################################################################################
 sub extractgeo {
-  for ( my $i = scalar(@lines)-1; $i>0; $i-- ) {
-    next unless ( $lines[$i] =~ /\d\d\.\d\d\d\d\d/ ); # seems to contain a geo
-    my $rec = getrecord($i);
-    if ($rec->{loc} && $rec->{geo} && !$geolocations{$rec->{loc}} ) {
-      my $geocoord;
-      (undef, undef, $geocoord) = geo($rec->{geo});
-      $geolocations{$rec->{loc}} = $geocoord if ($geocoord); # Save the last seen location
-    }
+#  Earlier version of the sql, with last seen and sorting
+#     select name, GeoCoordinates, max(timestamp) as last
+#     from Locations, glasses
+#     where  LOCATIONS.id = GLASSES.Location
+#       and GeoCoordinates is not null
+#     group by location
+#     order by last desc
+  my $sql = q(
+    select name, GeoCoordinates
+    from Locations, glasses
+    where  LOCATIONS.id = GLASSES.Location
+      and GeoCoordinates is not null
+    group by location
+  ); # No need to sort here, since put it all in a hash.
+  my $get_sth = $dbh->prepare($sql);
+  $get_sth->execute();
+  while ( my ($name, $geo, $last) = $get_sth->fetchrow_array ) {
+    $geolocations{$name} = $geo;
   }
+
 }
 
 ################################################################################
@@ -942,9 +953,6 @@ sub postdata {
       $rec->{geo} = "";  # Ignore the suspect geo coords
     }
   }
-
-  # TODO - TZ
-
 
   (undef, undef, $rec->{geo})  = geo($rec->{geo});  # Skip bad ones, format right
 
@@ -2994,7 +3002,7 @@ sub geodebug {
     print "<tr><td>Latitude</td><td>Longitude</td><td>Dist</td></tr>\n";
     my $i = scalar( @records );
     while ( $i-- > 0 ){
-      my $rec = $records[$i];
+      my $rec = getrecord($i);
       next unless $rec->{geo};
       next unless ($rec->{loc} eq $qry);
       my ($la, $lo, $g) = geo($rec->{geo});
@@ -3058,7 +3066,7 @@ sub lists {
   while ( $i > 0 ) {
     $i--;
     my $rec = getrecord_com($i);
-    next unless ($rec); # defensive coding, probably gets that one TZ record
+    next unless ($rec); # defensive coding
     last if ($lines[$i] lt $notbef && scalar(@displines) >= 30);
     $fld = "";
 
