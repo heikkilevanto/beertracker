@@ -92,7 +92,7 @@ sub readfile {
       my $line = $_;
       next unless $line;          # Skip empty lines
       next if /^.?.?.?#/;             # Skip comment lines (with BOM)
-      print sprintf("%6d %6d: ", $nlines,$nrecords), "$line \n" if ($nrecords % 1000 == 0);
+      print sprintf("%6d: ", $nrecords), substr($line,0,100 ), " \n" if ($nrecords % 1000 == 0);
 
       # Parse the line and map fields to $rec hash
       my @datafields = split(/ *; */, $line);

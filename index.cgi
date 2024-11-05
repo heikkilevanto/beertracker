@@ -529,74 +529,71 @@ sub getseen{
 }
 
 ################################################################################
-# A helper to calculate blood alcohol
-# Sets the bloodalc to all records at the date of the given index
-# and $bloodalc{$effdate} to max bloodalc for the effdate
-# If asking for the index of the last record, calculates and returns also
-# the blood alc at current time, and time when all alc is burned off
-#
+# A helper to calculate blood alcohol for a given effdate
+# Returns a hash with bloodalcs for each timestamp for the effdate
+#  $bloodalc{"max"} = max ba for the date
+#  $bloodacl{"date"} = the effdate we calculated for
+#  $bloodalc{$timestamp} = ba after ingesting that glass
 ################################################################################
+# TODO: Change this to return a list of values: ( date, max, hashref ). Add time when gone
+
 sub bloodalcohol {
-  my $i = shift || scalar(@lines)-1;  # Index to any line on the interesting date
-  my $atend = 0;
-  $atend = 1 if ( $i == scalar(@lines)-1 );
+  my $effdate = shift; # effdate we are interested in
   if ( !$bodyweight ) {
     print STDERR "Can not calculate alc for $username, don't know body weight \n";
-    return; # TODO - What to return
+    return undef;
   }
-  my $rec = getrecord($i);
-  my $eff = $rec->{effdate};
-  return if ( $bloodalc{$eff} ); # already done
-
-  # Scan back to the beginning of the day
-  while ( $eff eq $rec->{effdate} && $i>0 ) {
-    $i--;
-    $rec = getrecord($i);
-  }
-  $i++; # now at the first record of the date
+  #print STDERR "Bloodalc for '$effdate' \n";
+  my $bloodalc = {};
+  $bloodalc->{"date"} = $effdate;
+  my $sql = q(
+    select
+      timestamp,
+      strftime ('%Y-%m-%d', timestamp,'-06:00') as effdate,
+      alc * volume as alcvol
+    from glasses
+    where effdate = ?
+      and alc > 0
+      and volume > 0
+    order by timestamp
+  ); # No need to sort here, since put it all in a hash.
+  my $get_sth = $dbh->prepare($sql);
+  $get_sth->execute($effdate);
   my $alcinbody = 0;
   my $balctime = 0;
   my $maxba = 0;
-  while ( $i < scalar(@lines) ) { # Forward until end of day
-    $rec = getrecord($i);
-    last if ( ! $rec || $rec->{effdate} ne $eff );
-    if ( $rec->{alcvol} ) {
-      my $drtime = $1 + $2/60 if ($rec->{stamp} =~/ (\d?\d):(\d\d)/ ); # frac hrs
-      $drtime += 24 if ( $drtime < $balctime ); # past midnight
-      my $timediff = $drtime - $balctime;
-      $balctime = $drtime;
-      $alcinbody -= $burnrate * $bodyweight * $timediff;
-      $alcinbody = 0 if ( $alcinbody < 0);
-      #my $lower = $alcinbody;
-      $alcinbody += $rec->{alcvol} / $onedrink * 12 ; # grams of alc in body
-      my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-      $maxba = $ba if ( $ba > $maxba );
-      $rec->{bloodalc} = $ba;
-      #print STDERR "Bloodalc $i $eff $rec->{stamp}: down to $lower in $timediff, up to $alcinbody, makes $ba \n";
-    }
-    $i++;
-  }
-  $bloodalc{$eff} = $maxba;  # Remember it for the date
-
-  my $curba = "";
-  my $allgone = "";
-  if ( $atend && $eff eq datestr("%F", -0.3, 1) ) {  # We want the current bloodalc and time when down to zero
-  #if ( $atend ) {  # We want the current bloodalc and time when down to zero
-    my $now = datestr( "%H:%M", 0, 1);
-    my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs
+  while ( my ($stamp, $eff, $alcvol) = $get_sth->fetchrow_array ) {
+    next unless $alcvol;
+    my $drtime = $1 + $2/60 if ($stamp =~/ (\d?\d):(\d\d)/ ); # frac hrs
     $drtime += 24 if ( $drtime < $balctime ); # past midnight
     my $timediff = $drtime - $balctime;
+    $balctime = $drtime;
     $alcinbody -= $burnrate * $bodyweight * $timediff;
     $alcinbody = 0 if ( $alcinbody < 0);
-    $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-    my $lasts = $alcinbody / ( $burnrate * $bodyweight );
-    my $gone = $drtime + $lasts;
-    $gone -= 24 if ( $gone > 24 );
-    $allgone = sprintf( "%02d:%02d", int($gone), ( $gone - int($gone) ) * 60 );
-    #print STDERR "balc: e='$eff' n='$now' dr='$drtime' b='$balctime' d=$timediff a=$alcinbody ba=$curba l=$lasts ag=$allgone\n";
+    $alcinbody += $alcvol / $onedrink * 12 ; # grams of alc in std drink
+    my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+    $maxba = $ba if ( $ba > $maxba );
+    $bloodalc->{$stamp} = $ba;
+    #print STDERR "  $stamp : $ba \n";
   }
-  return ( $curba, $allgone );
+  $bloodalc->{"max"} = $maxba ;
+  #print STDERR "  max : $maxba \n";
+  return $bloodalc;
+
 }
+
+#     # Get allgone  TODO
+#     my $now = datestr( "%H:%M", 0, 1);
+#     my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs
+#     $drtime += 24 if ( $drtime < $balctime ); # past midnight
+#     my $timediff = $drtime - $balctime;
+#     $alcinbody -= $burnrate * $bodyweight * $timediff;
+#     $alcinbody = 0 if ( $alcinbody < 0);
+#     $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+#     my $lasts = $alcinbody / ( $burnrate * $bodyweight );
+#     my $gone = $drtime + $lasts;
+#     $gone -= 24 if ( $gone > 24 );
+#     $allgone = sprintf( "%02d:%02d", int($gone), ( $gone - int($gone) ) * 60 );
 
 ################################################################################
 # POST data into the file
@@ -1306,7 +1303,26 @@ sub inputfield {
   return $s;
 }
 
-# Compute a summary we can show instead of a comment. We have 4 lines of
+# Helper to get sums for a date interval
+sub getsums {
+  my ($first, $last)  = @_;  # two effdates, inclusive
+  my $sql = q(
+    select
+      sum( alc * volume ) as alcvol,
+      sum( price ) as pr
+    from Glasses
+    where strftime ('%Y-%m-%d', timestamp,'-06:00') >= ?
+      and strftime ('%Y-%m-%d', timestamp,'-06:00') <= ?
+  ); # No need to sort here, since put it all in a hash.
+  my $get_sth = $dbh->prepare($sql);
+  $get_sth->execute($first,$last);
+  my ($alcvol, $pr, $effdate) = $get_sth->fetchrow_array;
+  $alcvol = $alcvol / $onedrink;
+  return ( $alcvol, $pr );
+
+}
+
+# Compute a summary we can show instead of a comment. We have 3 lines of
 # plain text:
 #  Today, or last day we have data. drinks, money, blood alc
 #  Week, the last 7 days, including today: drinks dr/day, money, zero days
@@ -1320,56 +1336,18 @@ sub summarycomment {
   my $i = scalar(@lines)-1;
   my $last = getrecord($i);
   my $daylimit = $last->{effdate};
-  my $weeklimit = datestr("%F", -7);
+  my $weeklimit = datestr("%F", -6);
   my $monthlimit = datestr("%F", -30);
-  my $daydr = 0;
-  my $daysum = 0;
-  my $weekdr = 0;
-  my $weeksum = 0;
-  my $monthdr = 0;
-  my $monthsum = 0;
-  my $curba = "";
+  my ($daydr, $daysum) = getsums( $daylimit, $daylimit);
+  my ($weekdr, $weeksum) = getsums ( $weeklimit, $daylimit);
+  my ($monthdr,$monthsum) = getsums ( $monthlimit, $daylimit);
   my $allgone = "";
-  my $cureff = "";
-  while ( $i >= 0 ) {
-    my $going = 0;
-    my $rec = getrecord($i);
-    my ( $cba,$agne ) = bloodalcohol($i);
-    if ( $cba ) {
-      $curba = $cba;
-      $allgone = $agne;
-    }
-    if ( $rec->{effdate} eq $daylimit ) {
-      $daydr += $rec->{drinks};
-      $daysum += $rec->{pr} if ($rec->{pr} > 0 );
-    }
-    if ( $rec->{effdate} gt $weeklimit ) {
-       $weekdr += $rec->{drinks};
-       $weeksum += $rec->{pr} if ($rec->{pr} > 0 );
-       $going = 1;
-    }
-    if ( $rec->{effdate} gt $monthlimit ) {
-       $monthdr += $rec->{drinks};
-       $monthsum += $rec->{pr} if ($rec->{pr} > 0 );
-       $going = 1;
-    }
-    #if ( $cureff ne $rec->{effdate} ) {
-    #   $cureff = $rec->{effdate};
-    #   print STDERR "sum: $i: $cureff ".
-    #       sprintf( "%5d,- %6.2fd  / %5d,- %6.2fd \n",
-    #          $weeksum, $weekdr,$monthsum,$monthdr);
-    #}
-    $i--;
-    last unless $going;
-  }
-  my $balc = "";
-  $balc = sprintf( "%4.2f‰", $bloodalc{$daylimit});
+  my $bloodalc = bloodalcohol($last->{effdate});
+  my $maxba = $bloodalc->{ "max" };
+  my $balc = sprintf( "%4.2f‰", $maxba);
   my $dayline = sprintf("%3.1fd %d-  %s", $daydr, $daysum, $balc);
   if ( $daylimit eq $efftoday ){
     $dayline = "$last->{wday}: $dayline";
-    if ( $curba ) {
-      $dayline .= sprintf (" -> %4.2f‰ -> %s", $curba, $allgone );
-    }
   } else {
     $dayline = "($last->{wday}: $dayline)"
   }
@@ -1638,7 +1616,6 @@ sub graph {
     my $prestartdate = datestr( "%F", -$startoff-40);
     my $havedata = 0;
     my $futable = ""; # Table to display the 'future' values
-
     # Normalize limits to where we have data
     getrecord(1);
     while ( $startdate lt $records[1]->{date}) {
@@ -1659,15 +1636,19 @@ sub graph {
 
       my %sums; # drink sums by (eff) date
       my %lastdateindex;
-      for ( my $i = scalar(@records)-1; $i >= 0; $i-- ) { # calculate sums
+      my $bloodalc;
+      my $maxba = {};
+      for ( my $i = scalar(@lines)-1; $i >= 0; $i-- ) { # calculate sums
         my $rec = getrecord($i);
         #nullallfields($rec);
         next if ( $rec && $rec->{type} =~ /^Restaurant/i ); # TODO Fails on a tz? line
         next unless ($rec->{alcvol});
         $sums{$rec->{effdate}} += $rec->{alcvol};
         $lastdateindex{$rec->{effdate}} = $i unless ( $lastdateindex{$rec->{effdate}} );
-        #bloodalcohol($i) unless ( defined($rec->{bloodalc}) );
-        bloodalcohol($i) unless ( defined($bloodalc{$rec->{effdate}}) );
+        if ( !$bloodalc || !$bloodalc->{"date"} || $bloodalc->{"date"} ne $rec->{effdate} ) {
+          $bloodalc = bloodalcohol($rec->{effdate});
+          $maxba->{$rec->{effdate}} = $bloodalc->{"max"};
+        }
         last if ( $rec->{effdate} lt $prestartdate );
       }
       my $ndays = $startoff+35; # to get enough material for the running average
@@ -1781,7 +1762,8 @@ sub graph {
         my $totdrinks = $tot;
         my $ndrinks = 0;
         my $ba = -1 ; # invisible
-        $ba = $bloodalc{$date} * 10 if ( $bloodalc{$date} );
+        $ba = $maxba->{$date} * 10 if ( $maxba->{$date} );
+
         if ( $lastdateindex{$date} ) {
           my $i = $lastdateindex{$date};
           my $lastrec = getrecord($i);
@@ -3340,6 +3322,7 @@ sub fulllist {
   $maxlines = $i*10 if ($maxlines <0); # neg means all of them
   my $rec = getrecord_com($i-1);
   my $lastrec; # TODO - Use this instead of the many last-somethings above
+  my $bloodalc;
   while ( $i > 0 ) {  # Usually we exit at end-of-day
     $i--;
     $lastrec = $rec;
@@ -3351,7 +3334,7 @@ sub fulllist {
     $origpr = $rec->{pr};
 
     my $dateloc = "$rec->{effdate} : $rec->{loc}";
-    bloodalcohol($i);
+    #bloodalcohol($i); # TODO Pass effdate
 
     if ( $dateloc ne $lastloc && ! $qry) { # summary of loc and maybe date
       print "\n";
@@ -3420,6 +3403,7 @@ sub fulllist {
     if ( $lastdate ne $rec->{effdate} ) { # New date
       print "<hr/>\n" ;
       $lastloc = "";
+      $bloodalc = bloodalcohol($rec->{effdate});
     }
     if ( $dateloc ne $lastloc ) { # New location and maybe also new date
       print "<br/><b>$rec->{wday} $rec->{effdate} </b>" . filt($rec->{loc},"b","","","loc") . newmark($rec->{loc}) . loclink($rec->{loc});
@@ -3483,6 +3467,10 @@ sub fulllist {
           print "<br>\n";
         }
       }
+      if ( ! $rec->{bloodalc} && $bloodalc->{ $rec->{stamp} } ) {
+        $rec->{bloodalc} = $bloodalc->{ $rec->{stamp} };
+      }
+
       if ($rec->{style} || $rec->{pr} || $rec->{alc}) {
         if ( $qrylim ne "x" ) {
           print units($rec);
