@@ -33,7 +33,6 @@ $dbh->do(q{
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Username TEXT, /* every user has his own glasses - the rest are shared */
         Timestamp DATETIME,
-        RecordNumber INTEGER,  /* In the file we import from. Can be dropped once we to go production */
         BrewType TEXT,  /* Wine, Beer, Restaurant */
         Location INTEGER,
         Brew INTEGER, /* Can be null for "empty glasses" which should not have alc nor vol */
@@ -47,7 +46,6 @@ $dbh->do(q{
 $dbh->do("CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE)");  # Username, Id?
 $dbh->do("CREATE INDEX idx_glasses_location ON GLASSES (Location)");
 $dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)"); # Also effdate?
-$dbh->do("CREATE INDEX idx_glasses_recordnumber ON GLASSES (RecordNumber)");
 
 
 # Create BREWS table
@@ -148,7 +146,6 @@ $dbh->do(q{
       select
         glasses.id as glassid,
         glasses.username as username,
-        glasses.recordnumber as recordnumber,
         datetime(glasses.timestamp) as stamp,
         strftime ('%w', glasses.timestamp, '-06:00' ) as wdaynumber,  /* as number, monday=1 */
         strftime ('%Y-%m-%d', glasses.timestamp) as date,

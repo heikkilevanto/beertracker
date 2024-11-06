@@ -86,7 +86,10 @@ $q->charset( "UTF-8" );
 use DBI;
 
 # Database setup
-my $dbh = DBI->connect("dbi:SQLite:dbname=beerdata/beertracker.db", "", "", { RaiseError => 1, AutoCommit => 1 })
+my $databasefile = "beerdata/beertracker.db";
+die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
+
+my $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
     or error($DBI::errstr);
 $dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
 
@@ -446,12 +449,16 @@ sub copyproddata {
 sub readdatafile {
   my $nlines = 0;
   $lines[0] = "";
-  my $sql = "select timestamp, recordnumber from glasses where username = ? order by timestamp";
+  my $sql = "select timestamp from glasses where username = ? order by timestamp";
   my $get_sth = $dbh->prepare($sql);
   $get_sth->execute($username);
-  while ( my ($ts,$rn) = $get_sth->fetchrow_array ) {
-    #push (@lines, $ts);
+  my $rn = 1;
+  while ( my ($ts) = $get_sth->fetchrow_array ) {
     $lines[$rn] = $ts;
+    if ( $rn > 13735 ) {
+      print STDERR "Read: $rn: $lines[$rn] \n";
+    }
+    $rn++;
   }
   my $ndatalines = scalar(@lines)-1;
   return "<!-- Read $ndatalines records from the database to the lines array-->\n";
@@ -737,7 +744,7 @@ sub guessvalues {
   while ( $i > 0 && $rec->{name}
     && ( missing($rec,"maker") || missing($rec,"vol") || missing($rec,"style") ||
          missing($rec,"alc") || missing($rec,"pr") )) {
-    my $irec = parseline($lines[$i]);
+    my $irec = getrecord($i);
     if ( !$priceguess &&    # Guess a price
          $irec->{loc} && $rec->{loc} &&
          uc($irec->{loc}) eq uc($rec->{loc}) &&   # if same location and volume
@@ -981,6 +988,9 @@ sub postdata {
     $sub = "Save"; # force this to be an updating save, so the record goes into its right place
   }
 
+  # Save into the database
+  saverecord( $rec );
+
   # Finally, save the line in the file
   if ( $sub ne "Save" && $sub ne "Del" ) { # Regular append
     if ( $line =~ /^[0-9]/ ) { # has at leas something on it
@@ -1038,7 +1048,8 @@ sub postdata {
   # But keep $op and $qry (maybe also filters?)
   print $q->redirect( "$url?o=$op&e=$editit&q=$qry#here" );
 
-} # POST data
+} # POST data itself
+
 
 # Helper to clear the cached files from the data dir.
 sub clearcachefiles {
@@ -1052,6 +1063,122 @@ sub clearcachefiles {
       }
   }
 } # clearcachefiles
+
+
+#
+# Helpers to save the record in the database
+
+# Save the whole record
+sub saverecord {
+  my $rec = shift;
+
+  my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo});
+
+  my $brew_id = get_or_insert_brew($type, $rec->{subtype}, $rec->{name},
+       $rec->{maker}, $rec->{style}, $rec->{alc}, $rec->{country});
+
+  # Insert the GLASS record itself
+  my $glass_id = insert_glass({
+      username     => $username,
+      timestamp    => $rec->{stamp},
+      type         => $type,
+      location     => $location_id,
+      brew         => $brew_id,
+      price        => $rec->{pr},
+      volume       => $rec->{vol},
+      alc          => $rec->{alc},
+  });
+
+  # TODO - Comments
+}
+
+sub insert_glass {
+    my ($data) = @_;
+    my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
+        "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc) " .
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{type}, $data->{brew}, $data->{price},
+       $data->{volume}, $data->{alc} );
+    my $id = $dbh->last_insert_id(undef, undef, "GLASSES", undef);
+    print STDERR "Inserted glass '$data->{timestamp} \n";
+    return $id;
+} # insert_glass
+
+
+# Helper to get or insert a Location record
+# Returns the id
+sub get_or_insert_location {
+    my ($location_name, $geo) = @_;
+
+    return undef unless $location_name;
+
+    # Check if the location already exists
+    my $sth_check = $dbh->prepare("SELECT Id, GeoCoordinates FROM LOCATIONS WHERE Name = ?");
+    $sth_check->execute($location_name);
+
+    if (my ($location_id, $old_geo) = $sth_check->fetchrow_array) {
+        print STDERR "Found location '$location_name' id=$location_id \n";
+        if (!$old_geo && $geo) {
+          my $usth = $dbh->prepare("UPDATE LOCATIONS ".
+            "set GeoCoordinates = ? " .
+            "where id = ? ");
+          $usth->execute($geo, $location_id);
+          print STDERR "Updated geo for $location_id $location_name to $geo \n";
+        }
+        return $location_id;
+    } else {  # Insert new location record if it does not exist
+        my $insert_loc = $dbh->prepare("INSERT INTO LOCATIONS (Name, GeoCoordinates) VALUES (?, ?)");
+        $insert_loc->execute($location_name, $geo);
+        my  $id = $dbh->last_insert_id(undef, undef, "LOCATIONS", undef);
+        print STDERR "Inserted location '$location_name' as id $id. geo='$geo' \n";
+        return $id;
+    }
+} # get_or_insert_location
+
+# Helper to get or insert a Brew record
+sub get_or_insert_brew {
+    my ($type, $subtype, $name, $maker, $style, $alc, $country) = @_;
+    my $id;
+    my($prod, $sty, $al);
+    # Check if the brew exists in the BREWS table
+    my $sth = $dbh->prepare("SELECT Id, Producer, Brewstyle, Alc FROM BREWS WHERE Name = ? and BrewType = ? ".
+        " and (subtype = ? OR ( subtype is null and ? is null )) ");
+    $sth->execute($name, $type, $subtype, $subtype);
+    if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
+      print STDERR "Found brew '$name' form '$maker' as id $id \n";
+      if ( !$prod || !$sty || !$al )  {
+        #my $update_sth = $dbh->prepare("UPDATE BREWS ".
+        #    "SET Producer = COALESCE(?, Producer), BrewStyle = COALESCE(?, BrewStyle), ".
+        #    "Alc = COALESCE(?, Alc)  WHERE Id = ?");
+        #$update_sth->execute($maker, $style, $alc, $id);
+      }
+      if ( !$prod && $maker )  {
+        my $update_sth = $dbh->prepare("UPDATE BREWS SET Producer = ? WHERE Id = ?");
+        $update_sth->execute($maker, $id);
+        print STDERR "Updated maker '$maker' for brew $id \n";
+      }
+      if ( !$sty && $style)  {
+        my $update_sth = $dbh->prepare("UPDATE BREWS SET BrewStyle= ? WHERE Id = ?");
+        $update_sth->execute($style, $id);
+        print STDERR "Updated style '$style' for brew $id \n";
+      }
+      if ( !$al && $alc)  {
+        my $update_sth = $dbh->prepare("UPDATE BREWS SET Alc= ? WHERE Id = ?");
+        $update_sth->execute($alc, $id);
+        print STDERR "Updated alc '$alc' for brew $id \n";
+      }
+    } else {
+        # Insert new brew record
+        my $insert_brew = $dbh->prepare(
+            "INSERT INTO BREWS (Brewtype, SubType, Name, Producer, BrewStyle, Alc, Country) " .
+            "VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $insert_brew->execute($type, $subtype, $name, $maker, $style, $alc, $country);
+        $id = $dbh->last_insert_id(undef, undef, "BREWS", undef);
+        print STDERR "Inserted brew '$name' '$maker' '$alc' as $id \n";
+    }
+    return $id;
+} # get_or_insert_brew
+
 
 
 ################################################################################
@@ -4295,7 +4422,7 @@ sub fixrecord {
   $rec->{alc} = number( $rec->{alc} );
   $rec->{vol} = number( $rec->{vol} );
   $rec->{pr} = price( $rec->{pr} );
-  error ("Missing stamp in $recindex:  $rec->{recordnumber}: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}'") unless ($rec->{stamp});
+  error ("Missing stamp in $recindex: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}'") unless ($rec->{stamp});
   # Should never happen
   # Precalculate some things we often need
   my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
@@ -4314,14 +4441,16 @@ sub fixrecord {
 # brew names and locations.
 sub getrecord {
   my $i = shift;
-  $i++ unless $i;
+  $i++ unless $i; # trick to get around [0]
   if ( ! $records[$i] ) {
-    #$records[$i] = parseline($lines[$i]);
-    my $sql = "select * from glassrec where username=? and recordnumber = ?";
+    my $ts = $lines[$i];
+    print STDERR "getrecord( $i ): '$ts' \n" if ( $i > 17375 );
+    error ("No timestamp for record '$i' ") unless ($ts);
+    my $sql = "select * from glassrec where username=? and stamp = ?";
     my $get_sth = $dbh->prepare($sql);
-    $get_sth->execute($username, $i);
+    $get_sth->execute($username, $ts);
     my $rec = $get_sth->fetchrow_hashref;
-    error("Got no record $i for '$username'") unless ($rec);
+    error("Got no record $i ($ts) for '$username'") unless ($rec);
     #print STDERR "got rec $i: '$rec' : " ,  JSON->new->encode($rec), "\n";
     fixrecord($rec, $i);
     $records[$i] = $rec;

@@ -176,7 +176,6 @@ sub insert_data {
     my $glass_id = insert_glass({
         username     => $username,
         timestamp    => $rec->{stamp},
-        recordnumber => $rec->{recordnumber},
         type         => $type,
         location     => $location_id,
         brew         => $brew_id,
@@ -211,7 +210,6 @@ sub insert_data {
 
 
 # Helper to get or insert a Location record
-my $insert_loc = $dbh->prepare("INSERT INTO LOCATIONS (Name, GeoCoordinates) VALUES (?, ?)");
 sub get_or_insert_location {
     my ($location_name, $geo) = @_;
 
@@ -230,13 +228,13 @@ sub get_or_insert_location {
         }
         return $location_id;
     } else {  # Insert new location record if it does not exist
+        my $insert_loc = $dbh->prepare("INSERT INTO LOCATIONS (Name, GeoCoordinates) VALUES (?, ?)");
         $insert_loc->execute($location_name, $geo);
         return $dbh->last_insert_id(undef, undef, "LOCATIONS", undef);
     }
 }
 
 # Helper to get or insert a Person record
-my $insert_person = $dbh->prepare("INSERT INTO PERSONS (Name) VALUES (?)");
 sub get_or_insert_person {
     my ($person_name) = @_;
 
@@ -251,6 +249,7 @@ sub get_or_insert_person {
         return $person_id;
     } else {
         # Insert new person record if it does not exist
+        my $insert_person = $dbh->prepare("INSERT INTO PERSONS (Name) VALUES (?)");
         $insert_person->execute($person_name);
         return $dbh->last_insert_id(undef, undef, "PERSONS", undef);
     }
@@ -259,7 +258,6 @@ sub get_or_insert_person {
 
 
 # Helper to get or insert a Brew record
-my $insert_brew = $dbh->prepare("INSERT INTO BREWS (Brewtype, SubType, Name, Producer, BrewStyle, Alc, Country) VALUES (?, ?, ?, ?, ?, ?, ?)");
 sub get_or_insert_brew {
     my ($type, $subtype, $name, $maker, $style, $alc, $country) = @_;
     my $id;
@@ -289,6 +287,9 @@ sub get_or_insert_brew {
       }
     } else {
         # Insert new brew record
+        my $insert_brew = $dbh->prepare(
+            "INSERT INTO BREWS (Brewtype, SubType, Name, Producer, BrewStyle, Alc, Country) " .
+            "VALUES (?, ?, ?, ?, ?, ?, ?)");
         $insert_brew->execute($type, $subtype, $name, $maker, $style, $alc, $country);
         $id = $dbh->last_insert_id(undef, undef, "BREWS", undef);
     }
@@ -296,12 +297,13 @@ sub get_or_insert_brew {
 }
 
 # Helper to insert a Glass record
-my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-  "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc, RecordNumber) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 sub insert_glass {
     my ($data) = @_;
+    my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
+        "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc) " .
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{type}, $data->{brew}, $data->{price},
-       $data->{volume}, $data->{alc}, $data->{recordnumber});
+       $data->{volume}, $data->{alc});
     return $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 }
 
