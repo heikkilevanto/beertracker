@@ -92,6 +92,7 @@ die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
 my $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
     or error($DBI::errstr);
 $dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
+#$dbh->trace(1);  # Lots of SQL logging in error.log
 
 ################################################################################
 # Constants and setup
@@ -985,8 +986,27 @@ sub postdata {
     $sub = "Save"; # force this to be an updating save, so the record goes into its right place
   }
 
-  # Save into the database
-  saverecord( $rec );
+  # Update the database
+  if ( $sub eq "Record" ) {
+    saverecord( $rec );
+  } elsif ( $sub eq "Del" ) {
+    # Delete the glass record
+    # Delete all comments relating to the glass
+    # Optionally, delete all Location and Brew if no longer referred to
+#     DELETE FROM LOCATIONS
+#     WHERE LOCATIONS.GLASS = ?
+#     AND NOT EXISTS (
+#       SELECT 1
+#       FROM GLASSES
+#       WHERE GLASSES.Location = LOCATIONS.Id
+#     )
+    error ("Deleting not implemented yet");
+  } elsif ( $sub eq "Save" ) {
+    error ("Updating not implemented yet");
+  } else {
+    error ("OOps, unhandled sub '$sub' ");
+  }
+
 
   # Finally, save the line in the file
   if ( $sub ne "Save" && $sub ne "Del" ) { # Regular append
@@ -1088,8 +1108,8 @@ sub saverecord {
       alc          => $rec->{alc},
   });
 
-  # Insert a COMMENT record if there is a 'com' field
-  if ($rec->{com}||$rec->{photo}) {
+  # Insert a COMMENT record if there is stuff for it
+  if ($rec->{com} || $rec->{photo} || $rec->{rate} ) {
       insert_comment({
           glass_id  => $glass_id,
           refer_to  => $type,              # Use record type as ReferTo
@@ -1131,6 +1151,7 @@ sub insert_glass {
 sub get_or_insert_location {
     my ($location_name, $geo) = @_;
 
+    $location_name = trim($location_name);
     return undef unless $location_name;
 
     # Check if the location already exists
@@ -1157,6 +1178,7 @@ sub get_or_insert_location {
 } # get_or_insert_location
 
 # Helper to get or insert a Brew record
+# TODO - Check that maker matches as well. Otherwise all Pilsners count as the same
 sub get_or_insert_brew {
     my ($type, $subtype, $name, $maker, $style, $alc, $country) = @_;
     return undef unless ($type && $name );

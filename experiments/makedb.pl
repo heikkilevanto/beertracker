@@ -12,8 +12,12 @@ use warnings;
 use DBI;
 
 # Connect to SQLite database (or create it if it doesn't exist)
-my $dbh = DBI->connect("dbi:SQLite:dbname=beertracker.db", "", "", { RaiseError => 1 })
-    or die $DBI::errstr;
+my $databasefile = "beertracker.db";
+die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
+
+my $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
+    or error($DBI::errstr);
+$dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
 
 # Drop existing tables if they exist to avoid conflicts
 my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS BREWS);

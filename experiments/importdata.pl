@@ -24,8 +24,11 @@ use DBI;
 my $username = $ARGV[0] || "heikki";
 
 # Database setup
-my $dbh = DBI->connect("dbi:SQLite:dbname=beertracker.db", "", "", { RaiseError => 1, AutoCommit => 1 })
-    or die $DBI::errstr;
+my $databasefile = "../beerdata/beertracker.db";
+die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
+
+my $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
+    or error($DBI::errstr);
 
 # $dbh->trace(1);  # Log every SQL statement while debugging
 
@@ -81,18 +84,21 @@ sub readwines {
 sub readfile {
   # Open the data file
   open F, '<', $datafile or die("Could not open $datafile for reading: $!");
+  print "Reading $datafile ";
 
   my $nlines = 0;
   my $nrecords = 0;
   my $nfixes = 0;
+  my $line;
   # Main logic: Read each line, parse, and send data for insertion
   while (<F>) {
       $nlines++;
       chomp;
-      my $line = $_;
+      $line = $_;
       next unless $line;          # Skip empty lines
       next if /^.?.?.?#/;             # Skip comment lines (with BOM)
-      print sprintf("%6d: ", $nrecords), substr($line,0,100 ), " \n" if ($nrecords % 1000 == 0);
+      #print sprintf("%6d: ", $nrecords), substr($line,0,100 ), " \n" if ($nrecords % 1000 == 0);
+      print ". " if ($nrecords % 1000 == 0);
 
       # Parse the line and map fields to $rec hash
       my @datafields = split(/ *; */, $line);
@@ -148,13 +154,14 @@ sub readfile {
       # Pass the parsed record and line type to insert_data for processing
       insert_data($linetype, $rec);
   }
-
+  print "\n";
   close(F);
 
   print "\n";
   printf ("%5d lines read\n", $nlines);
   printf ("%5d records\n", $nrecords);
   printf ("%5d wine fixes\n", $nfixes);
+  print "$line \n";
 }
 
 # Insert data into the database based on parsed fields and line type
@@ -263,8 +270,15 @@ sub get_or_insert_brew {
     my $id;
     my($prod, $sty, $al);
     # Check if the brew exists in the BREWS table
-    my $sth = $dbh->prepare("SELECT Id, Producer, Brewstyle, Alc FROM BREWS WHERE Name = ? and BrewType = ? ".
-        " and (subtype = ? OR ( subtype is null and ? is null )) ");
+    my $sql = q{
+      SELECT
+        Id, Producer, Brewstyle, Alc
+      FROM BREWS
+      WHERE Name = ?
+      AND BrewType = ?
+      AND (subtype = ? OR ( subtype is null and ? is null ) )
+};
+    my $sth = $dbh->prepare($sql);
     $sth->execute($name, $type, $subtype, $subtype);
     if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
       if ( !$prod || !$sty || !$al )  {
