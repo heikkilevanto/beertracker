@@ -455,9 +455,6 @@ sub readdatafile {
   my $rn = 1;
   while ( my ($ts) = $get_sth->fetchrow_array ) {
     $lines[$rn] = $ts;
-    if ( $rn > 13735 ) {
-      print STDERR "Read: $rn: $lines[$rn] \n";
-    }
     $rn++;
   }
   my $ndatalines = scalar(@lines)-1;
@@ -1072,6 +1069,8 @@ sub clearcachefiles {
 sub saverecord {
   my $rec = shift;
 
+  $dbh->do("BEGIN TRANSACTION");
+
   my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo});
 
   my $brew_id = get_or_insert_brew($type, $rec->{subtype}, $rec->{name},
@@ -1089,7 +1088,29 @@ sub saverecord {
       alc          => $rec->{alc},
   });
 
-  # TODO - Comments
+  # Insert a COMMENT record if there is a 'com' field
+  if ($rec->{com}||$rec->{photo}) {
+      insert_comment({
+          glass_id  => $glass_id,
+          refer_to  => $type,              # Use record type as ReferTo
+          comment   => $rec->{com},
+          rating    => $rec->{rate},
+          photo     => $rec->{photo},
+      });
+  }
+  # Insert a COMMENT record for every person mentioned
+  if ($rec->{people}) {
+      for my $pers ( split ( / *, */, $rec->{people} ) ) {
+        insert_comment({
+            glass_id  => $glass_id,
+            refer_to  => $type,              # Use record type as ReferTo
+            person    => get_or_insert_person($pers) ,
+        });
+      }
+  }
+
+  $dbh->do("COMMIT");
+
 }
 
 sub insert_glass {
@@ -1138,6 +1159,7 @@ sub get_or_insert_location {
 # Helper to get or insert a Brew record
 sub get_or_insert_brew {
     my ($type, $subtype, $name, $maker, $style, $alc, $country) = @_;
+    return undef unless ($type && $name );
     my $id;
     my($prod, $sty, $al);
     # Check if the brew exists in the BREWS table
@@ -1178,6 +1200,41 @@ sub get_or_insert_brew {
     }
     return $id;
 } # get_or_insert_brew
+
+# Helper to insert a comment
+sub insert_comment {
+    my ($data) = @_;
+    $data->{photo} = undef unless $data->{photo};
+    my $insert_comment = $dbh->prepare("INSERT INTO COMMENTS (Glass, ReferTo, Comment, Rating, Person, Photo) VALUES (?, ?, ?, ?, ?, ?)");
+    $insert_comment->execute($data->{glass_id}, $data->{refer_to}, $data->{comment}, $data->{rating}, $data->{person}, $data->{photo});
+    my $id = $dbh->last_insert_id(undef, undef, "COMMENTS", undef);
+    print STDERR "Inserted comment for glass $data->{glass_id}, as $id: '$data->{comment}' \n";
+    return $id;
+} # insert_comment
+
+# Helper to get or insert a Person record
+sub get_or_insert_person {
+    my ($person_name) = @_;
+
+    # Don't insert persons without names
+    return undef unless $person_name;
+
+    # Check if the person already exists
+    my $sth_check = $dbh->prepare("SELECT Id FROM PERSONS WHERE Name = ?");
+    $sth_check->execute($person_name);
+
+    if (my $person_id = $sth_check->fetchrow_array) {
+        print STDERR "Found person '$person_name' at id $person_id \n";
+        return $person_id;
+    } else {
+        # Insert new person record if it does not exist
+        my $insert_person = $dbh->prepare("INSERT INTO PERSONS (Name) VALUES (?)");
+        $insert_person->execute($person_name);
+        my $id = $dbh->last_insert_id(undef, undef, "PERSONS", undef);
+        print STDERR "Inserted person '$person_name' as $id \n";
+        return $id;
+    }
+}
 
 
 
