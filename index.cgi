@@ -4498,7 +4498,6 @@ sub getrecord {
   $i++ unless $i; # trick to get around [0]
   if ( ! $records[$i] ) {
     my $ts = $lines[$i];
-    print STDERR "getrecord( $i ): '$ts' \n" if ( $i > 17375 );
     error ("No timestamp for record '$i' ") unless ($ts);
     my $sql = "select * from glassrec where username=? and stamp = ?";
     my $get_sth = $dbh->prepare($sql);

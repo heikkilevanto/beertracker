@@ -23,6 +23,7 @@ use DBI;
 
 my $username = $ARGV[0] || "heikki";
 
+$| =  1; # Force perl to flush STDOUT after every write
 # Database setup
 my $databasefile = "../beerdata/beertracker.db";
 die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
@@ -33,7 +34,10 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError =
 # $dbh->trace(1);  # Log every SQL statement while debugging
 
 # Define the path to the data file
-my $datafile = "../beerdata/$username.data";
+#my $datafile = "../beerdata/$username.data";
+# Read directly from production data, we don't have a local data file any more in dev
+my $datafile = "../../beertracker/beerdata/$username.data";
+
 my $oldfile = "./$username.data.OLD";
 
 
@@ -57,7 +61,6 @@ my %datalinetypes = (
 my %winestyles;  # indexed by timestamp
 sub readwines {
   if ( -r $oldfile ) {
-    print "Reading old wine styles from $oldfile \n";
     open F, '<', $oldfile or die("Could not open $oldfile for reading: $!");
     while ( <F> ) {
       chomp();
@@ -77,14 +80,14 @@ sub readwines {
         #print "   got '$winestyle' \n";
       }
     }
-    print "got " . scalar(keys(%winestyles)) . " wine styles \n";
+    print "Got " . scalar(keys(%winestyles)) . " wine styles from $oldfile\n";
   }
 }
 
 sub readfile {
   # Open the data file
   open F, '<', $datafile or die("Could not open $datafile for reading: $!");
-  print "Reading $datafile ";
+  print "Reading $datafile \n";
 
   my $nlines = 0;
   my $nrecords = 0;
@@ -98,7 +101,7 @@ sub readfile {
       next unless $line;          # Skip empty lines
       next if /^.?.?.?#/;             # Skip comment lines (with BOM)
       #print sprintf("%6d: ", $nrecords), substr($line,0,100 ), " \n" if ($nrecords % 1000 == 0);
-      print ". " if ($nrecords % 1000 == 0);
+      print $nrecords/1000, " " if ($nrecords % 1000 == 0);
 
       # Parse the line and map fields to $rec hash
       my @datafields = split(/ *; */, $line);
@@ -158,9 +161,7 @@ sub readfile {
   close(F);
 
   print "\n";
-  printf ("%5d lines read\n", $nlines);
-  printf ("%5d records\n", $nrecords);
-  printf ("%5d wine fixes\n", $nfixes);
+  print "Got $nrecords records out of $nlines lines. Fixed $nfixes wines. Last line: \n";
   print "$line \n";
 }
 
@@ -344,3 +345,5 @@ get_or_insert_location("Home   ", "55.6717389 12.5563058"); # Chrome on my phone
 readwines();
 readfile();
 $dbh->disconnect();
+# Remove cached graphs, since we have new data
+system("rm -f ../beerdata/*png");
