@@ -904,6 +904,7 @@ sub postdata {
   if ( $rec->{newphoto} ) { # Uploaded a new photo
     savefile($rec);
   }
+  $sub = "Record" if ( $sub =~ /^Copy/ );
 
   my $lasttimestamp = $lastrec->{stamp};
 
@@ -987,25 +988,19 @@ sub postdata {
   }
 
   # Update the database
+  $dbh->do("BEGIN TRANSACTION");
   if ( $sub eq "Record" ) {
     saverecord( $rec );
   } elsif ( $sub eq "Del" ) {
-    # Delete the glass record
-    # Delete all comments relating to the glass
-    # Optionally, delete all Location and Brew if no longer referred to
-#     DELETE FROM LOCATIONS
-#     WHERE LOCATIONS.GLASS = ?
-#     AND NOT EXISTS (
-#       SELECT 1
-#       FROM GLASSES
-#       WHERE GLASSES.Location = LOCATIONS.Id
-#     )
-    error ("Deleting not implemented yet");
+    deleterecord( $rec );
   } elsif ( $sub eq "Save" ) {
-    error ("Updating not implemented yet");
+    # Dirty way to update a record: Delete it all, and insert again
+    deleterecord( $rec );
+    saverecord( $rec );
   } else {
     error ("OOps, unhandled sub '$sub' ");
   }
+  $dbh->do("COMMIT");
 
 
   # Finally, save the line in the file
@@ -1089,29 +1084,25 @@ sub clearcachefiles {
 sub saverecord {
   my $rec = shift;
 
-  $dbh->do("BEGIN TRANSACTION");
 
-  my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo});
+  my $locationid = get_or_insert_location($rec->{loc}, $rec->{geo});
 
-  my $brew_id = get_or_insert_brew($type, $rec->{subtype}, $rec->{name},
+  my $brewid = get_or_insert_brew($type, $rec->{subtype}, $rec->{name},
        $rec->{maker}, $rec->{style}, $rec->{alc}, $rec->{country});
 
   # Insert the GLASS record itself
-  my $glass_id = insert_glass({
-      username     => $username,
-      timestamp    => $rec->{stamp},
-      type         => $type,
-      location     => $location_id,
-      brew         => $brew_id,
-      price        => $rec->{pr},
-      volume       => $rec->{vol},
-      alc          => $rec->{alc},
-  });
+  my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
+      "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc) " .
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+  $insert_glass->execute($username, $rec->{stamp}, $locationid, $type,
+      $brewid, $rec->{pr}, $rec->{vol}, $rec->{alc} );
+  my $glassid = $dbh->last_insert_id(undef, undef, "GLASSES", undef);
+  print STDERR "Inserted glass id $glassid '$rec->{stamp}' '$type' '$rec->{name}'  \n";
 
   # Insert a COMMENT record if there is stuff for it
   if ($rec->{com} || $rec->{photo} || $rec->{rate} ) {
       insert_comment({
-          glass_id  => $glass_id,
+          glass_id  => $glassid,
           refer_to  => $type,              # Use record type as ReferTo
           comment   => $rec->{com},
           rating    => $rec->{rate},
@@ -1122,28 +1113,69 @@ sub saverecord {
   if ($rec->{people}) {
       for my $pers ( split ( / *, */, $rec->{people} ) ) {
         insert_comment({
-            glass_id  => $glass_id,
+            glass_id  => $glassid,
             refer_to  => $type,              # Use record type as ReferTo
             person    => get_or_insert_person($pers) ,
         });
       }
   }
+} # saverecord
 
-  $dbh->do("COMMIT");
+sub deleterecord {
+  my $rec = shift;
 
-}
+  # Get the actuall glass record
+  my $sth_get = $dbh->prepare("SELECT Id, Location, Brew  FROM GLASSES " .
+     "WHERE username = ? and timestamp = ?");
+  $sth_get->execute($username, $rec->{stamp});
+  my ($glassid, $locid, $brewid ) = $sth_get->fetchrow_array;
+  error ("Could not find record '$rec->{stamp}', can not delete it")
+    unless ($glassid);
 
-sub insert_glass {
-    my ($data) = @_;
-    my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-        "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc) " .
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{type}, $data->{brew}, $data->{price},
-       $data->{volume}, $data->{alc} );
-    my $id = $dbh->last_insert_id(undef, undef, "GLASSES", undef);
-    print STDERR "Inserted glass '$data->{timestamp} \n";
-    return $id;
-} # insert_glass
+  # Delete comments, if any
+  my $del_comm = $dbh->prepare("DELETE FROM COMMENTS " .
+     "where glass  = ?");
+  $del_comm->execute( $glassid );
+  print STDERR "Deleted " . $del_comm->rows . " comments for glass '$rec->{stamp}' \n";
+
+  # Delete the glass record
+  my $del_glass = $dbh->prepare("DELETE FROM GLASSES " .
+     "where timestamp = ? ");
+  $del_glass->execute($rec->{stamp} );
+  print STDERR "Deleted glass $glassid '$rec->{stamp}' \n";
+
+  # Delete the location, if not used by any other glass
+  # So we don't leave misspelled locations in the database
+  if ( $locid ) {
+    my $sql = q{
+     DELETE FROM LOCATIONS
+     WHERE LOCATIONS.id = ?
+     AND NOT EXISTS (
+       SELECT 1
+       FROM GLASSES
+       WHERE GLASSES.Location = LOCATIONS.Id )
+    };
+    my $del = $dbh->prepare($sql);
+    $del->execute($locid);
+    print STDERR "Deleted " . $del->rows . " locations for '$rec->{stamp}' \n";
+  }
+
+  # Delete the brew, if not used by any other glass
+  if ( $brewid ) {
+    my $sql = q{
+     DELETE FROM BREWS
+     WHERE BREWS.id = ?
+     AND NOT EXISTS (
+       SELECT 1
+       FROM GLASSES
+       WHERE GLASSES.Brew = BREWS.Id )
+    };
+    my $del = $dbh->prepare($sql);
+    $del->execute($brewid);
+    print STDERR "Deleted " . $del->rows . " brews for '$rec->{stamp}' \n";
+  }
+
+} # deleterecord
 
 
 # Helper to get or insert a Location record
@@ -1190,12 +1222,6 @@ sub get_or_insert_brew {
     $sth->execute($name, $type, $subtype, $subtype);
     if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
       print STDERR "Found brew '$name' form '$maker' as id $id \n";
-      if ( !$prod || !$sty || !$al )  {
-        #my $update_sth = $dbh->prepare("UPDATE BREWS ".
-        #    "SET Producer = COALESCE(?, Producer), BrewStyle = COALESCE(?, BrewStyle), ".
-        #    "Alc = COALESCE(?, Alc)  WHERE Id = ?");
-        #$update_sth->execute($maker, $style, $alc, $id);
-      }
       if ( !$prod && $maker )  {
         my $update_sth = $dbh->prepare("UPDATE BREWS SET Producer = ? WHERE Id = ?");
         $update_sth->execute($maker, $id);
