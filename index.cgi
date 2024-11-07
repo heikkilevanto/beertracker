@@ -113,7 +113,6 @@ $bgcolor = "#003050" if ( $devversion );
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
 my $datadir = "./beerdata/";
 my $scriptdir = "./scripts/";  # screen scraping scripts
-my $datafile = "";
 my $plotfile = "";
 my $cmdfile = "";
 my $photodir = "";
@@ -123,16 +122,13 @@ my $username = ($q->remote_user()||"");
 #$username = "dennis" if ( $username eq "heikki" );  # Fake user to see one with less data
 
 if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
-  $datafile = $datadir . $username . ".data";
   $plotfile = $datadir . $username . ".plot";
   $cmdfile = $datadir . $username . ".cmd";
   $photodir = $datadir . $username. ".photo";
 } else {
   error ("Bad username\n");
 }
-if ( ! -w $datafile ) {
-  error ("Bad username: $datafile not writable\n");
-}
+
 my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero should not be used!
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect");  # 9 is the top
 
@@ -331,16 +327,12 @@ if ($devversion) { # Print a line in error.log, to see what errors come from thi
   print STDERR datestr() . " " . $q->request_method . " " .  $ENV{'QUERY_STRING'} . " \n";
 }
 
-if ( $op eq "Datafile" ) {  # Must be done before sending HTML headers
-  dumpdatafile();
-  exit;
-}
 if ( $devversion && $op eq "copyproddata" ) {
   copyproddata();
   exit;
 }
 
-my $datafilecomment = readdatafile();
+my $datafilecomment = readdatalines();
 
 # Default new users to the about page, we have nothing else to show
 if ( !$op) {
@@ -428,11 +420,11 @@ sub copyproddata {
   if (!$devversion) {
     error ("Not allowed");
   }
-  my $bakfile = $datafile . ".bak";
-  my $prodfile = "../beertracker/$datafile";
-  error("$prodfile not readable") if ( ! -r $prodfile);
-  system("cat $datafile > $bakfile");
-  system("cat $prodfile > $datafile");
+  #my $bakfile = $datafile . ".bak";
+  #my $prodfile = "../beertracker/$datafile";
+  #error("$prodfile not readable") if ( ! -r $prodfile);
+  #system("cat $datafile > $bakfile");
+  #system("cat $prodfile > $datafile");
   clearcachefiles();
   system("cp ../beertracker/$photodir/* $photodir");
   print $q->redirect( "$url" );
@@ -447,7 +439,7 @@ sub copyproddata {
 ################################################################################
 
 
-sub readdatafile {
+sub readdatalines {
   my $nlines = 0;
   $lines[0] = "";
   my $sql = "select timestamp from glasses where username = ? order by timestamp";
@@ -877,8 +869,6 @@ sub savefile {
 ########################
 # POST itself
 sub postdata {
-  error("Can not see $datafile") if ( ! -w $datafile ) ;
-
 
   my $sub = $q->param("submit") || "";
 
@@ -939,6 +929,7 @@ sub postdata {
   # TODO - Check also if we have a geo for the given location, and the guess is
   # too far from it, don't save a conflicting geo
   if ( $rec->{geo} =~ / *\d+/) { # Have a (guessed?) geo location
+    # TODO - check only on recording new records
     if ( $rec->{loc} && $geolocations{$rec->{loc}} ) {
       my $dist = geodist( $rec->{geo}, $geolocations{$rec->{loc}} );
       if ( $dist && $dist > 50 ) {
@@ -1002,49 +993,6 @@ sub postdata {
   }
   $dbh->do("COMMIT");
 
-
-  # Finally, save the line in the file
-  if ( $sub ne "Save" && $sub ne "Del" ) { # Regular append
-    if ( $line =~ /^[0-9]/ ) { # has at leas something on it
-        open F, ">>$datafile"
-          or error ("Could not open $datafile for appending");
-        print F "$line\n"
-          or error ("Could not write in $datafile");
-        close(F)
-          or error("Could not close data file");
-    }
-  } else { # Editing or deleting an existing line
-    # Copy the data file to .bak
-    my $bakfile = $datafile . ".bak";
-    system("cat $datafile > $bakfile");
-    open BF, $bakfile
-      or error ("Could not open $bakfile for reading");
-    open F, ">$datafile"
-      or error ("Could not open $datafile for writing");
-    while (<BF>) {
-      my ( $stp ) = $_ =~ /^([^;]*)/ ; # Just take the timestamp (or comment, or whatever)
-      if ( $rec->{stamp} && $stp && $stp =~ /^\d+/ &&  # real line
-           $sub eq "Save" && # Not deleting it
-           "x$rec->{stamp}" lt "x$stp") {  # Right Place to insert the line
-           # Note the "x" trick, to force pure string comparision
-        print F "$line\n";
-        $rec->{stamp} = ""; # do not write it again
-      }
-      if ( !$stp || $stp ne $rec->{edit} ) {
-        print F $_; # just copy the line
-      } else { # found the line
-        print F "#" . $_ ;  # comment the original line out
-        $edit = "XXX"; # Do not delete another line, even if same timestamp
-      }
-    }
-    if ($rec->{stamp} && $sub eq "Save") {  # have not saved it yet
-      print F "$line \n";  # (happens when editing latest entry)
-    }
-    close F
-      or error("Error closing $datafile: $!");
-    close BF
-      or error("Error closing $bakfile: $!");
-  }
 
   # Clear the cached files from the data dir.
   # All graphs for this user can now be out of date
@@ -1607,9 +1555,9 @@ sub inputform {
     }
     # Would be nice to get git branch and log tail
     # But git is anal about file/dir ownerships
-    my $prodfile = "../beertracker/$datafile";
     print "<a href='$url?o=copyproddata'><span>Get production data</span></a> \n";
-    print " &nbsp; Prod data is newer!" if ( ( -M $prodfile ) < ( -M $datafile)  );
+    #my $prodfile = "../beertracker/$datafile";
+    #print " &nbsp; Prod data is newer!" if ( ( -M $prodfile ) < ( -M $datafile)  );
     print "<hr>\n";
   }
 
@@ -3021,6 +2969,7 @@ sub monthstat {
 ################################################################################
 # Statistics of the data file
 ################################################################################
+# TODO - Get stuff from the database
 sub datastats {
   print "<hr/>Other stats: \n";
   print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
@@ -3034,9 +2983,9 @@ sub datastats {
   print "<tr><td></td><td>" . searchform() . "</td></tr>\n";
 
   print "<tr><td></td><td><b>General</b></td></tr>\n";
-  my $dfsize = -s $datafile;
-  $dfsize = int($dfsize / 1024);
-  print "<tr><td align='right'>$dfsize</td><td>kb in $datafile </td></tr>\n";
+  #my $dfsize = -s $datafile;
+  #$dfsize = int($dfsize / 1024);
+  #print "<tr><td align='right'>$dfsize</td><td>kb in $datafile </td></tr>\n";
   my $datarecords = scalar(@records);
   # The following have been calculated when reading the file, without parsing it
   my $totallines = $datarecords + $commentlines + $commentedrecords;
@@ -3148,8 +3097,8 @@ sub about {
 
   print "<p><hr/>\n";
   print "<b>Debug info </b><br/>\n";
-  print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' ><span>Tail of the data file</span></a><br/>\n";
-  print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
+  #print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' ><span>Tail of the data file</span></a><br/>\n";
+  #print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
   print "&nbsp; <a href='$url?o=geo'><span>Geolocation debug</span></a><br/>\n";
   exit();
 } # About
