@@ -276,12 +276,14 @@ sub get_or_insert_brew {
         Id, Producer, Brewstyle, Alc
       FROM BREWS
       WHERE Name = ?
+      AND Producer = ?
       AND BrewType = ?
       AND (subtype = ? OR ( subtype is null and ? is null ) )
 };
     my $sth = $dbh->prepare($sql);
-    $sth->execute($name, $type, $subtype, $subtype);
+    $sth->execute($name, $maker, $type, $subtype, $subtype);
     if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
+      # Found the brew, check optional fields
       if ( !$prod || !$sty || !$al )  {
         my $update_sth = $dbh->prepare("UPDATE BREWS ".
             "SET Producer = COALESCE(?, Producer), BrewStyle = COALESCE(?, BrewStyle), ".
