@@ -503,6 +503,8 @@ sub findrec {
 # A helper to preload the last few years of records, to get seen marks in
 # %seen and %lastseen. Also %ratesum and %ratecount
 ################################################################################
+# TODO - This should be killed once all lists get their seen details
+# directly from the database
 sub getseen{
   my $limit = shift || datestr( "%F", -2*365 ) ; # When to stop scannig
   my $i = scalar( @lines )-1;
@@ -518,7 +520,7 @@ sub getseen{
     if ( $rec->{rate} ) {
       $ratesum{$rec->{seenkey}} += $rec->{rate};
       $ratecount{$rec->{seenkey}}++;
-      print STDERR "'$rec->{seenkey}' : $rec->{rate} = $ratesum{$rec->{seenkey}} / $ratecount{$rec->{seenkey}} \n";
+      #print STDERR "'$rec->{seenkey}' : $rec->{rate} = $ratesum{$rec->{seenkey}} / $ratecount{$rec->{seenkey}} \n";
     }
     last if ( $rec->{stamp} lt $limit );
     $i--;
@@ -894,7 +896,7 @@ sub postdata {
   if ( $rec->{newphoto} ) { # Uploaded a new photo
     savefile($rec);
   }
-  $sub = "Record" if ( $sub =~ /^Copy/ );
+  $sub = "Record" if ( $sub =~ /^Copy|\d/ );
 
   my $lasttimestamp = $lastrec->{stamp};
 
@@ -2178,9 +2180,6 @@ sub beerboard {
   }
   my $locparam = param("loc") || $foundrec->{loc} || "";
 
-  # Set up %seen and %lastseen, for the past 2 years
-  getseen(datestr( "%F", -3*365 )) unless ( $extraboard < -1 );
-
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
@@ -2202,8 +2201,8 @@ sub beerboard {
   print "&nbsp; (<a href='$url?o=$op&loc=$locparam&q=PA'><span>PA</span></a>) "
     if ($qry ne "PA" );
 
-  print "<a href=$url?o=board&loc=$locparam&f=f><i>(Reload)</i></a>\n";
-  print "<a href=$url?o=board-2&loc=$locparam><i>(all)</i></a>\n";
+  print "<a href='$url?o=board&loc=$locparam&f=f'><i>(Reload)</i></a>\n";
+  print "<a href='$url?o=board-2&loc=$locparam'><i>(all)</i></a>\n";
 
   print "<p>\n";
   if (!$scrapers{$locparam}) {
@@ -2225,10 +2224,12 @@ sub beerboard {
       $json .= $_ ;
     }
     close CF;
+    print "<!-- Loaded cached board from '$cachefile' -->\n";
   }
   if ( !$json ){
     $json = `perl $script`;
     $loaded = 1;
+    print "<!-- run scraper script '$script' -->\n";
   }
   if (! $json) {
     print "Sorry, could not get the list from $locparam<br/>\n";
@@ -3483,10 +3484,6 @@ sub fulllist {
     print  glink($qry) . " " . rblink($qry) . " " . utlink($qry) . "\n" if ($qry);
   }
   $qrylim = "x" if ( $qryfield =~ /Geoerror/i ) ;
-  if ( $qrylim eq "x" || $qryfield eq "new" ) {
-    getseen(datestr( "%F", -3*365 ))
-       unless ( scalar(%seen) > 2 );  # already done in beer board
-  }
   my $efftoday = datestr( "%F", -0.3, 1); #  today's date
   my $lastloc = "";
   my $lastdate = "today";
@@ -3686,26 +3683,11 @@ sub fulllist {
             print " Avg of <b>$ratecount{$seenkey}</b> ratings: <b>$avgrate</b><br>";
           }
         }
-        my $seenline = seenline($rec);
+        my $seenline = seenline($rec->{maker}, $rec->{name});
         if ($seenline) {
           print "<span style='white-space: nowrap'>";
           print $seenline;
           print "</span><br>\n";
-        }
-        if ( $rec->{geo} ) {
-          my (undef, undef, $gg) = geo($rec->{geo});
-          my $map = maplink($gg);
-          print "Geo: $gg $map";
-          my $dist = "";
-          $dist = geodist( $geolocations{$rec->{loc}}, $rec->{geo});
-          my ($guess,$gdist) = guessloc($gg);
-          if ( $guess eq $rec->{loc} ) {
-            print " $guess ";
-          } else {
-            print " <b>$guess ??? </b>  ";
-          }
-          print " (" . unit($gdist,"m"). ")";
-          print "<br>\n";
         }
       }
     }
@@ -4226,31 +4208,45 @@ sub seenline {
   my $maker = shift;
   my $beer = shift;
   my $seenkey;
-  if ( ref($maker) ) {
-    my $rec = $maker;
-    $seenkey = $rec->{seenkey};
-  } else {
-    $seenkey = seenkey($maker,$beer);
-  }
+  $seenkey = seenkey($maker,$beer);
   return "" unless ($seenkey);
   return "" unless ($seenkey =~ /[a-z]/ );  # At least some real text in it
-  my $seenline = "";
-  $seenline = "Seen <b>" . ($seen{$seenkey}). "</b> times: " if ($seen{$seenkey});
+  my $countsql = q{
+    select brews.id, count(glasses.id)
+    from brews, glasses
+    where brews.id = glasses.brew
+    and brews.producer = ?
+    and brews.name = ?
+  };
+  my $get_sth = $dbh->prepare($countsql);
+  $get_sth->execute($maker,$beer);
+  my ( $brewid, $count ) = $get_sth->fetchrow_array;
+  return "" unless($count);
+  my $seenline = "Seen <b>$count</b> times: ";
+  my $listsql = q{
+    select
+      distinct strftime ('%Y-%m-%d', timestamp,'-06:00') as effdate
+    from glasses
+    where brew = ?
+    order by timestamp desc
+    limit 7
+  };
   my $prefix = "";
   my $detail="";
   my $detailpattern = "";
   my $nmonths = 0;
   my $nyears = 0;
-  my $lastseenline = $lastseen{$seenkey} || "";
-  foreach my $ls ( split(' ', $lastseenline ) )  {
+  my $list_sth = $dbh->prepare($listsql);
+  $list_sth->execute($brewid);
+  while ( my $eff = $list_sth->fetchrow_array ) {
     my $comma = ",";
-    if ( ! $prefix || $ls !~ /^$prefix/ ) {
+    if ( ! $prefix || $eff !~ /^$prefix/ ) {
       $comma = ":" ;
       if ( $nmonths++ < 2 ) {
-        ($prefix) = $ls =~ /^(\d+-\d+)/ ;  # yyyy-mm
+        ($prefix) = $eff =~ /^(\d+-\d+)/ ;  # yyyy-mm
         $detailpattern = "(\\d\\d)\$";
       } elsif ( $nyears++ < 1 ) {
-        ($prefix) = $ls =~ /^(\d+)/ ;  # yyyy
+        ($prefix) = $eff =~ /^(\d+)/ ;  # yyyy
         $detailpattern = "(\\d\\d)-\\d\\d\$";
       } else {
         $prefix = "20";
@@ -4259,14 +4255,14 @@ sub seenline {
       }
       $seenline .= " <b>$prefix</b>";
     }
-    my ($det) = $ls =~ /$detailpattern/ ;
+    my ($det) = $eff =~ /$detailpattern/ ;
     next if ($det eq $detail);
     $detail = $det;
     $seenline .= $comma . "$det";
   }
+
   return $seenline;
 }
-
 
 # Helper to assign a color for a beer
 sub beercolor {
