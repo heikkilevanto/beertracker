@@ -2674,7 +2674,6 @@ sub yearsummary {
 
 ################################################################################
 # Monthly statistics
-# from %monthdrinks and %monthprices
 ################################################################################
 
 sub monthstat {
@@ -2692,24 +2691,35 @@ sub monthstat {
     print "Oops, no start year found <br/>\n";
     return;
   }
+  my $firsty=$1;
 
-  # Collect stats
   my %monthdrinks;
   my %monthprices;
   my $lastmonthday;  # last day of the last month
-  for ( my $i = 0 ; $i < scalar(@lines); $i++ ) {
-    my $rec = getrecord($i);
-    next unless ($rec);
-    if ( $rec->{effdate} =~ /(^\d\d\d\d-\d\d)-(\d\d)/ )  { # collect stats for each month
-      my $calmon = $1;
-      $monthdrinks{$calmon} += $rec->{alcvol};
-      $monthprices{$calmon} += abs($rec->{pr}); # negative prices for buying box wines
-      $lastmonthday = $2;  # Remember the last day
-    }
+
+  my $sumsql = q{
+  select
+    distinct strftime ('%Y-%m', timestamp,'-06:00') as calmon,
+  	sum(abs(price)) as pr,
+   	sum ( CASE
+      WHEN price >=0 THEN Alc * Volume
+      WHEN price IS NULL THEN Alc * Volume
+      ELSE 0
+    END ) as alcvol,
+ 	  max( strftime ('%d', timestamp,'-06:00')) as last
+  from glasses
+  group by calmon
+  };
+
+  my $sum_sth = $dbh->prepare($sumsql);
+  $sum_sth->execute();
+  while ( my ( $calmon, $pr, $alcvol, $last ) = $sum_sth->fetchrow_array ) {
+    $monthdrinks{$calmon} = $alcvol;
+    $monthprices{$calmon} = $pr; # negative prices for buying box wines
+    $lastmonthday = $last;  # Remember the last day
   }
 
 
-  my $firsty=$1;
   my $pngfile = $plotfile;
   $pngfile =~ s/\.plot/-stat.png/;
   my $lasty = datestr("%Y",0);
@@ -2931,8 +2941,11 @@ sub monthstat {
        "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
           "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
        "set border linecolor \"white\" \n" .
-       "set arrow from \"2000-$firstm\", 5 to \"2001-$lastm\", 5 nohead linewidth 0.1 linecolor \"white\" \n" .
+       "set arrow from \"2000-$firstm\", 1 to \"2001-$lastm\", 1 nohead linewidth 0.1 linecolor \"white\" \n" .
+       "set arrow from \"2000-$firstm\", 4 to \"2001-$lastm\", 4 nohead linewidth 0.1 linecolor \"white\" \n" .
+       "set arrow from \"2000-$firstm\", 7 to \"2001-$lastm\", 7 nohead linewidth 0.1 linecolor \"white\" \n" .
        "set arrow from \"2000-$firstm\", 10 to \"2001-$lastm\", 10 nohead linewidth 0.1 linecolor \"white\" \n" .
+       "set arrow from \"2000-$firstm\", 13 to \"2001-$lastm\", 13 nohead linewidth 0.1 linecolor \"white\" \n" .
        "set arrow from \"2001-01\", 0 to \"2001-01\", 10 nohead linewidth 0.1 linecolor \"white\" \n" .
        "plot ";
   my $lw = 2;
