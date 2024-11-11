@@ -9,7 +9,6 @@
 
 # TODO
 #  - Separate wine styles into country and region. Normalize country codes. Check duplicates.
-#  - Short styles (subtype?) for beers
 #  - Get location details at least for the most common watering holes
 #  - Clean up the code. Similar parameter passing for all the insert_ functions
 
@@ -149,7 +148,7 @@ sub readfile {
 
       if ( $linetype eq "Beer" ) { # We used to have country in the subtype
         $rec->{country} = $rec->{subtype};
-        $rec->{subtype} = undef;
+        $rec->{subtype} = shortbeerstyle($rec->{style});
       }
 
       # Pre-calculate standard drinks
@@ -159,9 +158,14 @@ sub readfile {
         if ( (!$rec->{pr} || $rec->{pr} > 0 )   # Box wines can have neg price
           && $rec->{vol} && $rec->{vol} > 0  #
           && $rec->{alc} && $rec->{alc} > 0 );
-
+#       if ( ($rec->{pr} && $rec->{pr} < 0 ) ||
+#            ($rec->{alc} && $rec->{alc} < 0 ) ||
+#            ($rec->{vol} && $rec->{vol} < 0 ) ) {
+#         print "\n Negative pr, alc, or vol at \n$line\n";
+#       }
+#
       # Complain of really bad records
-      die ("Record without stamp at line $nlines\n$line\n") unless $rec->{stamp};
+      die ("\n$line\n") unless $rec->{stamp};
 
       # Pass the parsed record and line type to insert_data for processing
       insert_data($linetype, $rec);
@@ -341,6 +345,63 @@ sub insert_comment {
     my ($data) = @_;
     $insert_comment->execute($data->{glass_id}, $data->{refer_to}, $data->{comment}, $data->{rating}, $data->{person}, $data->{photo});
     return $dbh->last_insert_id(undef, undef, "COMMENTS", undef);
+}
+
+
+# Helper to shorten a beer style into subtype
+sub shortbeerstyle {
+  my $sty = shift || "";
+  return undef unless $sty;
+  $sty =~ s/\b(Beer|Style)\b//i; # Stop words
+  $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
+  $sty =~ s/\s+/ /g;  # multiple spaces etc
+  if ( $sty =~ /(\WPA|Pale Ale)/i ) {
+    return "APA"   if ( $sty =~ /America|US/i );
+    return "BelPA" if ( $sty =~ /Belg/i );
+    return "NEPA"  if ( $sty =~ /Hazy|Haze|New England|NE/i);
+    return "PA";
+  }
+  if ( $sty =~ /(IPA|India)/i ) {
+    return "SIPA" if ( $sty =~ /Session/i);
+    return "BIPA" if ( $sty =~ /Black/i);
+    return "DNE"  if ( $sty =~ /(Double|Triple).*(New England|NE)/i);
+    return "DIPA" if ( $sty =~ /Double|Dipa/i);
+    return "WIPA" if ( $sty =~ /Wheat/i);
+    return "NEIPA" if ( $sty =~ /New England|NE|Hazy/i);
+    return "NZIPA" if ( $sty =~ /New Zealand|NZ/i);
+    return "WC"   if ( $sty =~ /West Coast|WC/i);
+    return "AIPA" if ( $sty =~ /America|US/i);
+    return "IPA";
+  }
+  return "IL"   if ( $sty =~ /India Lager/i);
+  return "Lag"  if ( $sty =~ /Pale Lager/i);
+  return "Kel"  if ( $sty =~ /^Keller.*/i);
+  return "Pils" if ( $sty =~ /.*(Pils).*/i);
+  return "Hefe" if ( $sty =~ /.*Hefe.*/i);
+  return "Wit"  if ( $sty =~ /.*Wit.*/i);
+  return "Dunk" if ( $sty =~ /.*Dunkel.*/i);
+  return "Wbock" if ( $sty =~ /.*Weizenbock.*/i);
+  return "Dbock" if ( $sty =~ /.*Doppelbock.*/i);
+  return "Bock" if ( $sty =~ /.*[^DW]Bock.*/i);
+  return "Smoke" if ( $sty =~ /.*(Smoke|Rauch).*/i);
+  return "Berl" if ( $sty =~ /.*Berliner.*/i);
+  return "Imp"  if ( $sty =~ /.*(Imperial).*/i);
+  return "Stout" if ( $sty =~ /.*(Stout).*/i);
+  return "Port"  if ( $sty =~ /.*(Porter).*/i);
+  return "Farm" if ( $sty =~ /.*Farm.*/i);
+  return "Sais" if ( $sty =~ /.*Saison.*/i);
+  return "Dubl" if ( $sty =~ /.*(Double|Dubbel).*/i);
+  return "Trip" if ( $sty =~ /.*(Triple|Tripel|Tripple).*/i);
+  return "Quad" if ( $sty =~ /.*(Quadruple|Quadrupel).*/i);
+  return "Blond" if ( $sty =~ /Blond/i);
+  return "Brown" if ( $sty =~ /Brown/i);
+  return "Strng" if ( $sty =~ /Strong/i);
+  return "Belg" if ( $sty =~ /.*Belg.*/i);
+  return "BW"   if ( $sty =~ /.*Barley.*Wine.*/i);
+  $sty =~ s/.*(Lambic|Sour) *(\w+).*/$1/i;   # Lambic Fruit - Fruit
+  $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc
+  $sty =~ s/^ *([^ ]{1,5}).*/$1/; # first word, max 5 chars, in case we didn't get it above
+  return $sty;
 }
 
 

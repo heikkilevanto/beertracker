@@ -71,7 +71,6 @@ $dbh->do(q{
         Flavor TEXT,  /* hops, grapes, fruits, cask */
         Year INTEGER,
         Details TEXT, /* Classification: Reserva, DOCG, 20y; Edition: Anniversary */
-        StyleColor TEXT, /* For displaying in lists, graphs */
         ReplacedBy INTEGER,
         FOREIGN KEY (Producer) REFERENCES LOCATIONS(Id)
     )

@@ -710,12 +710,6 @@ sub fixvol {
   if ( $rec->{vol} =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
     $rec->{vol} = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
   }
-  # Pre-calculate stdrinks
-  $rec->{stdrinks} = 0;
-  $rec->{stdrinks} = $rec->{alc} * $rec->{vol} / $onedrink
-    if ( (!$rec->{pr} || $rec->{pr} > 0 )   # Box wines can have neg price
-      && $rec->{vol} && $rec->{vol} > 0  #
-      && $rec->{alc} && $rec->{alc} > 0 );
 } # fixvol
 
 
@@ -793,6 +787,12 @@ sub guessvalues {
   if ( $rec->{type} eq "Beer" && ! $rec->{subtype} ) {
     $rec->{subtype} = "DK"; # A good default
   }
+  # Pre-calculate stdrinks
+  $rec->{stdrinks} = 0;
+  $rec->{stdrinks} = $rec->{alc} * $rec->{vol} / $onedrink
+    if ( (!$rec->{pr} || $rec->{pr} > 0 )   # Box wines can have neg price
+      && $rec->{vol} && $rec->{vol} > 0  #
+      && $rec->{alc} && $rec->{alc} > 0 );
 } # guessvalues
 
 
@@ -823,7 +823,7 @@ sub image {
   return "" unless ( $rec->{photo} );
   my $orig = imagefilename($rec->{photo}, "orig");
   if ( ! -r $orig ) {
-    print STDERR "Photo file $orig not found for record $rec->{rawline} \n";
+    print STDERR "Photo file $orig not found for record $rec->{stamp} \n";
     return "";
   }
   my $fn = imagefilename($rec->{photo}, $width);
