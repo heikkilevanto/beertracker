@@ -5,7 +5,6 @@
 # should not be overwitten by a new chatGTP output.
 
 
-
 use strict;
 use warnings;
 
@@ -43,6 +42,7 @@ $dbh->do(q{
         Price DECIMAL,
         Volume DECIMAL,
         Alc DECIMAL,
+        StDrinks DECIMAL, /* pre-calculated Alc * Vol / OneDrink, zero for box wines etc */
         FOREIGN KEY (Location) REFERENCES LOCATIONS(Id),
         FOREIGN KEY (Brew) REFERENCES BREWS(Id)
     )

@@ -710,6 +710,12 @@ sub fixvol {
   if ( $rec->{vol} =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
     $rec->{vol} = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
   }
+  # Pre-calculate stdrinks
+  $rec->{stdrinks} = 0;
+  $rec->{stdrinks} = $rec->{alc} * $rec->{vol} / $onedrink
+    if ( (!$rec->{pr} || $rec->{pr} > 0 )   # Box wines can have neg price
+      && $rec->{vol} && $rec->{vol} > 0  #
+      && $rec->{alc} && $rec->{alc} > 0 );
 } # fixvol
 
 
@@ -1042,10 +1048,10 @@ sub saverecord {
 
   # Insert the GLASS record itself
   my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-      "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc) " .
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+      "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc, StDrinks) " .
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
   $insert_glass->execute($username, $rec->{stamp}, $locationid, $type,
-      $brewid, $rec->{pr}, $rec->{vol}, $rec->{alc} );
+      $brewid, $rec->{pr}, $rec->{vol}, $rec->{alc}, $rec->{stdrinks} );
   my $glassid = $dbh->last_insert_id(undef, undef, "GLASSES", undef);
   print STDERR "Inserted glass id $glassid '$rec->{stamp}' '$type' '$rec->{name}'  \n";
 
@@ -2424,6 +2430,20 @@ sub beerboard {
 ################################################################################
 # Short list, aka daily statistics
 ################################################################################
+# TODO  Use Sql, something like this:
+# my $sumsql = q{
+#   select
+#     strftime ('%Y-%m-%d %w', timestamp,'-06:00') as effdate,
+#   	sum(abs(price)) as pr,
+#    	sum ( stdrinks ) as stdrinks,
+#     GROUP_CONCAT(Locations.Name, ';')
+#   from glasses, Locations
+#   where Locations.id = Glasses.location
+#   group by eff
+#   };
+#   my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
+#   And separate and dedup the locations
+#   Add Julianday(timestamp) to detect zero days and longer gaps
 
 sub shortlist{
   my $entry = "";
@@ -2701,11 +2721,7 @@ sub monthstat {
   select
     distinct strftime ('%Y-%m', timestamp,'-06:00') as calmon,
   	sum(abs(price)) as pr,
-   	sum ( CASE
-      WHEN price >=0 THEN Alc * Volume
-      WHEN price IS NULL THEN Alc * Volume
-      ELSE 0
-    END ) as alcvol,
+  	sum(stdrinks) as drinks,
  	  max( strftime ('%d', timestamp,'-06:00')) as last
   from glasses
   group by calmon
@@ -2713,8 +2729,8 @@ sub monthstat {
 
   my $sum_sth = $dbh->prepare($sumsql);
   $sum_sth->execute();
-  while ( my ( $calmon, $pr, $alcvol, $last ) = $sum_sth->fetchrow_array ) {
-    $monthdrinks{$calmon} = $alcvol;
+  while ( my ( $calmon, $pr, $drinks, $last ) = $sum_sth->fetchrow_array ) {
+    $monthdrinks{$calmon} = $drinks;
     $monthprices{$calmon} = $pr; # negative prices for buying box wines
     $lastmonthday = $last;  # Remember the last day
   }
@@ -2783,7 +2799,7 @@ sub monthstat {
         $ydrinks[$y] += $monthdrinks{$calm};
         $yprice[$y] += $monthprices{$calm};
         $ydays[$y] += 30;
-        $d = ($monthdrinks{$calm}||0) / $onedrink;
+        $d = ($monthdrinks{$calm}||0);
         $dd = sprintf("%3.1f", $d / 30); # scale to dr/day, approx
         if ( $calm eq $lastym ) { # current month
           $dd = sprintf("%3.1f", $d / $dayofmonth); # scale to dr/day
@@ -2847,7 +2863,7 @@ sub monthstat {
   # Projections
   my $cur = datestr("%m",0);
   my $curmonth = datestr("%Y-%m",0);
-  my $d = ($monthdrinks{$curmonth}||0) / $onedrink ;
+  my $d = ($monthdrinks{$curmonth}||0) ;
   my $min = sprintf("%3.1f", $d / 30);  # for whole month
   my $avg = $d / $dayofmonth;
   my $max = 2 * $avg - $min;
@@ -2868,7 +2884,7 @@ sub monthstat {
     if ( $ydays[$y] ) { # have data for the year
       $granddr += $ydrinks[$y];
       $granddays += $ydays[$y];
-      $d = sprintf("%3.1f", $ydrinks[$y] / $ydays[$y] / $onedrink) ;
+      $d = sprintf("%3.1f", $ydrinks[$y] / $ydays[$y] ) ;
       $dw = $1 if ($d=~/([0-9.]+)/);
       $dw = unit(int($dw*7+0.5), "/w");
       $d = unit($d, "/d");
@@ -2877,7 +2893,7 @@ sub monthstat {
     }
     $t .= "<td align=right>$d<br/>$dw<br/>$p</td>\n";
   }
-  $d = sprintf("%3.1f", $granddr / $granddays / $onedrink) ;
+  $d = sprintf("%3.1f", $granddr / $granddays ) ;
   my $dw = $1 if ($d=~/([0-9.]+)/);
   $dw = unit(int($dw*7+0.5), "/w");
   $d = unit($d, "/d");

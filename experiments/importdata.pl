@@ -55,6 +55,7 @@ my %datalinetypes = (
                      "pr", "food", "people", "com", "geo", "photo"],
 );
 
+my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
 
 
 # Read the old type lines from the old file, in order to fix wine styles
@@ -151,6 +152,14 @@ sub readfile {
         $rec->{subtype} = undef;
       }
 
+      # Pre-calculate standard drinks
+      #
+      $rec->{stdrinks} = 0;
+      $rec->{stdrinks} = $rec->{alc} * $rec->{vol} / $onedrink
+        if ( (!$rec->{pr} || $rec->{pr} > 0 )   # Box wines can have neg price
+          && $rec->{vol} && $rec->{vol} > 0  #
+          && $rec->{alc} && $rec->{alc} > 0 );
+
       # Complain of really bad records
       die ("Record without stamp at line $nlines\n$line\n") unless $rec->{stamp};
 
@@ -190,6 +199,7 @@ sub insert_data {
         price        => $rec->{pr},
         volume       => $rec->{vol},
         alc          => $rec->{alc},
+        stdrinks     => $rec->{stdrinks}
     });
 
     # Insert a COMMENT record if there is a 'com' field
@@ -317,10 +327,10 @@ sub get_or_insert_brew {
 sub insert_glass {
     my ($data) = @_;
     my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-        "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc) " .
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc, StDrinks) " .
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{type}, $data->{brew}, $data->{price},
-       $data->{volume}, $data->{alc});
+       $data->{volume}, $data->{alc}, $data->{stdrinks} );
     return $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 }
 
