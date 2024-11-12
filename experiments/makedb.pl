@@ -37,6 +37,7 @@ $dbh->do(q{
         Username TEXT, /* every user has his own glasses - the rest are shared */
         Timestamp DATETIME,
         BrewType TEXT,  /* Wine, Beer, Restaurant */
+        SubType TEXT,  /* Ipa, Red, Whisky - for display color */
         Location INTEGER,
         Brew INTEGER, /* Can be null for "empty glasses" which should not have alc nor vol */
         Price DECIMAL,

@@ -200,6 +200,7 @@ sub insert_data {
         username     => $username,
         timestamp    => $rec->{stamp},
         type         => $type,
+        subtype      => $rec->{subtype},
         location     => $location_id,
         brew         => $brew_id,
         price        => $rec->{pr},
@@ -300,12 +301,6 @@ sub get_or_insert_brew {
     $sth->execute($name, $maker, $type, $subtype, $subtype);
     if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
       # Found the brew, check optional fields
-      if ( !$prod || !$sty || !$al )  {
-        my $update_sth = $dbh->prepare("UPDATE BREWS ".
-            "SET Producer = COALESCE(?, Producer), BrewStyle = COALESCE(?, BrewStyle), ".
-            "Alc = COALESCE(?, Alc)  WHERE Id = ?");
-        $update_sth->execute($maker, $style, $alc, $id);
-      }
       if ( !$prod && $maker )  {
         my $update_sth = $dbh->prepare("UPDATE BREWS SET Producer = ? WHERE Id = ?");
         $update_sth->execute($maker, $id);
@@ -333,10 +328,10 @@ sub get_or_insert_brew {
 sub insert_glass {
     my ($data) = @_;
     my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-        "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc, StDrinks) " .
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{type}, $data->{brew}, $data->{price},
-       $data->{volume}, $data->{alc}, $data->{stdrinks} );
+        "(Username, Timestamp, Location, BrewType, SubType, Brew, Price, Volume, Alc, StDrinks) " .
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{type},  $data->{subtype},
+       $data->{brew}, $data->{price},  $data->{volume}, $data->{alc}, $data->{stdrinks} );
     return $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 }
 
