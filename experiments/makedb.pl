@@ -63,7 +63,6 @@ $dbh->do(q{
         BrewType TEXT,  /* Wine, Beer, Restaurant */
         SubType TEXT,  /* Wines: Red, Booze: Rum, Restaurant: Pizza */
         BrewStyle TEXT, /* What ever style we get in, "IPA Hazy" */
-        ShortStyle TEXT, /* Short style like Red, IPA, Whisky */
         ShortName TEXT,
         Producer INTEGER,
         Alc DECIMAL,

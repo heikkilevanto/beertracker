@@ -149,7 +149,6 @@ sub readfile {
       if ( $linetype eq "Beer" ) { # We used to have country in the subtype
         $rec->{country} = $rec->{subtype};
         $rec->{subtype} = shortbeerstyle($rec->{style}) ||
-           shortbeerstyle($rec->{name}) ||  # fallback for names like IPA
            undef; # and NULL if not set
       }
 
@@ -160,12 +159,6 @@ sub readfile {
         if ( (!$rec->{pr} || $rec->{pr} > 0 )   # Box wines can have neg price
           && $rec->{vol} && $rec->{vol} > 0  #
           && $rec->{alc} && $rec->{alc} > 0 );
-#       if ( ($rec->{pr} && $rec->{pr} < 0 ) ||
-#            ($rec->{alc} && $rec->{alc} < 0 ) ||
-#            ($rec->{vol} && $rec->{vol} < 0 ) ) {
-#         print "\n Negative pr, alc, or vol at \n$line\n";
-#       }
-#
       # Complain of really bad records
       die ("\n$line\n") unless $rec->{stamp};
 
@@ -280,6 +273,10 @@ sub get_or_insert_brew {
     my ($type, $subtype, $name, $maker, $style, $alc, $country) = @_;
     my $id;
     my($prod, $sty, $al);
+
+    # Skip some misc/misc records
+    return undef if ( !$name || $name =~ /misc/i );
+
     # Check if the brew exists in the BREWS table
     my $sql = q{
       SELECT
