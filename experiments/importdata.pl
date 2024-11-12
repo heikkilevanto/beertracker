@@ -194,20 +194,13 @@ sub insert_data {
     my $brew_id = get_or_insert_brew($type, $rec->{subtype}, $rec->{name},
        $rec->{maker}, $rec->{style}, $rec->{alc}, $rec->{country});
 
-
-    # Insert a GLASS record with common fields
-    my $glass_id = insert_glass({
-        username     => $username,
-        timestamp    => $rec->{stamp},
-        type         => $type,
-        subtype      => $rec->{subtype},
-        location     => $location_id,
-        brew         => $brew_id,
-        price        => $rec->{pr},
-        volume       => $rec->{vol},
-        alc          => $rec->{alc},
-        stdrinks     => $rec->{stdrinks}
-    });
+    # Insert the GLASSES record itself
+    my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
+        "(Username, Timestamp, Location, BrewType, SubType, Brew, Price, Volume, Alc, StDrinks) " .
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $insert_glass->execute($username, $rec->{stamp}, $location_id, $type,  $rec->{subtype},
+       $brew_id, $rec->{pr},  $rec->{vol}, $rec->{alc}, $rec->{stdrinks} );
+    my $glass_id = $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 
     # Insert a COMMENT record if there is a 'com' field
     if ($rec->{com}||$rec->{photo}) {
@@ -324,16 +317,6 @@ sub get_or_insert_brew {
     return $id;
 }
 
-# Helper to insert a Glass record
-sub insert_glass {
-    my ($data) = @_;
-    my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-        "(Username, Timestamp, Location, BrewType, SubType, Brew, Price, Volume, Alc, StDrinks) " .
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $insert_glass->execute($data->{username}, $data->{timestamp}, $data->{location}, $data->{type},  $data->{subtype},
-       $data->{brew}, $data->{price},  $data->{volume}, $data->{alc}, $data->{stdrinks} );
-    return $dbh->last_insert_id(undef, undef, "GLASSES", undef);
-}
 
 
 # Helper to insert a Comment record
