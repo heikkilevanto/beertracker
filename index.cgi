@@ -4359,7 +4359,8 @@ sub beercolorstyle {
 
 # Helper to shorten a beer style
 sub shortbeerstyle {
-  my $sty = shift;
+  my $sty = shift || "";
+  return "" unless $sty;
   $sty =~ s/\b(Beer|Style)\b//i; # Stop words
   $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
   $sty =~ s/\s+/ /g;  # multiple spaces etc
@@ -4370,45 +4371,37 @@ sub shortbeerstyle {
     return "PA";
   }
   if ( $sty =~ /(IPA|India)/i ) {
-    return "SIPA" if ( $sty =~ /Session/i);
-    return "BIPA" if ( $sty =~ /Black/i);
-    return "DNE"  if ( $sty =~ /(Double|Triple).*(New England|NE)/i);
-    return "DIPA" if ( $sty =~ /Double|Dipa/i);
-    return "WIPA" if ( $sty =~ /Wheat/i);
+    return "SIPA"  if ( $sty =~ /Session/i);
+    return "BIPA"  if ( $sty =~ /Black/i);
+    return "DNE"   if ( $sty =~ /(Double|Triple).*(New England|NE)/i);
+    return "DIPA"  if ( $sty =~ /Double|Dipa|Triple/i);
+    return "WIPA"  if ( $sty =~ /Wheat/i);
     return "NEIPA" if ( $sty =~ /New England|NE|Hazy/i);
     return "NZIPA" if ( $sty =~ /New Zealand|NZ/i);
-    return "WC"   if ( $sty =~ /West Coast|WC/i);
-    return "AIPA" if ( $sty =~ /America|US/i);
+    return "WC"    if ( $sty =~ /West Coast|WC/i);
+    return "AIPA"  if ( $sty =~ /America|US/i);
     return "IPA";
   }
-  return "IL"   if ( $sty =~ /India Lager/i);
-  return "Lag"  if ( $sty =~ /Pale Lager/i);
-  return "Kel"  if ( $sty =~ /^Keller.*/i);
-  return "Pils" if ( $sty =~ /.*(Pils).*/i);
-  return "Hefe" if ( $sty =~ /.*Hefe.*/i);
-  return "Wit"  if ( $sty =~ /.*Wit.*/i);
-  return "Dunk" if ( $sty =~ /.*Dunkel.*/i);
-  return "Wbock" if ( $sty =~ /.*Weizenbock.*/i);
-  return "Dbock" if ( $sty =~ /.*Doppelbock.*/i);
-  return "Bock" if ( $sty =~ /.*[^DW]Bock.*/i);
-  return "Smoke" if ( $sty =~ /.*(Smoke|Rauch).*/i);
-  return "Berl" if ( $sty =~ /.*Berliner.*/i);
-  return "Imp"  if ( $sty =~ /.*(Imperial).*/i);
-  return "Stout" if ( $sty =~ /.*(Stout).*/i);
-  return "Port"  if ( $sty =~ /.*(Porter).*/i);
-  return "Farm" if ( $sty =~ /.*Farm.*/i);
-  return "Saison" if ( $sty =~ /.*Saison.*/i);
-  return "Dubl" if ( $sty =~ /.*(Double|Dubbel).*/i);
-  return "Trip" if ( $sty =~ /.*(Triple|Tripel|Tripple).*/i);
-  return "Quad" if ( $sty =~ /.*(Quadruple|Quadrupel).*/i);
+  return "Dunk"  if ( $sty =~ /.*Dunkel.*/i);
+  return "Bock"  if ( $sty =~ /Bock/i);
+  return "Smoke" if ( $sty =~ /(Smoke|Rauch)/i);
+  return "Lager" if ( $sty =~ /Lager|Keller|Pils|Zwickl/i);
+  return "Berl"  if ( $sty =~ /Berliner/i);
+  return "Weiss" if ( $sty =~ /Hefe|Weizen|Hvede|Wit/i);
+  return "Stout" if ( $sty =~ /Stout|Porter|Imperial/i);
+  return "Farm"  if ( $sty =~ /Farm/i);
+  return "Sais"  if ( $sty =~ /Saison/i);
+  return "Dubl"  if ( $sty =~ /(Double|Dubbel)/i);
+  return "Trip"  if ( $sty =~ /(Triple|Tripel|Tripple)/i);
+  return "Quad"  if ( $sty =~ /(Quadruple|Quadrupel)/i);
+  return "Trap"  if ( $sty =~ /Trappist/i);
   return "Blond" if ( $sty =~ /Blond/i);
   return "Brown" if ( $sty =~ /Brown/i);
-  return "Strong" if ( $sty =~ /Strong/i);
-  return "Belg" if ( $sty =~ /.*Belg.*/i);
-  return "BW"   if ( $sty =~ /.*Barley.*Wine.*/i);
-  $sty =~ s/.*(Lambic|Sour) *(\w+).*/$1/i;   # Lambic Fruit - Fruit
-  $sty =~ s/.*\b(\d+)\b.*/$1/i; # Abt 12 -> 12 etc
-  $sty =~ s/^ *([^ ]{1,6}).*/$1/; # Only six chars, in case we didn't get it above
+  return "Strng" if ( $sty =~ /Strong/i);
+  return "Belg"  if ( $sty =~ /Belg/i);
+  return "BW"    if ( $sty =~ /Barley.*Wine/i);
+  return "Sour"  if ( $sty =~ /Lambic|Gueuze|Sour|Kriek|Frmaboise/i);
+  $sty =~ s/^ *([^ ]{1,5}).*/$1/; # First word, only five chars, in case we didn't get it above
   return $sty;
 }
 
