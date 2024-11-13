@@ -113,7 +113,7 @@ sub readfile {
       my @fnames = @{$fieldnamelist};
 
       for (my $i = 0; $fieldnamelist->[$i]; $i++) {
-          $rec->{$fieldnamelist->[$i]} = $datafields[$i] || undef;
+          $rec->{$fieldnamelist->[$i]} = $datafields[$i] || "";
       }
 
       # Check timestamp, confuses SqLite if impossible
@@ -148,8 +148,7 @@ sub readfile {
 
       if ( $linetype eq "Beer" ) { # We used to have country in the subtype
         $rec->{country} = $rec->{subtype};
-        $rec->{subtype} = shortbeerstyle($rec->{style}) ||
-           undef; # and NULL if not set
+        $rec->{subtype} = shortbeerstyle($rec->{style}) || "";
       } elsif ( $linetype eq "Wine" ) {  # Try to separate country, region, grapes, and such
         winestyle($rec);
       }

@@ -1,11 +1,7 @@
 #!/usr/bin/perl
 
 # Script to produce my beer database. Based on the design in #379. Made with
-# the help of ChatGPT. I have since made changes and added comments, so this
-# should not be overwitten by a new chatGTP output.
-
-# TODO Check which fields should be nullable and which not
-# Things I compare against are easier if empty values (name, country, region, style)
+# the help of ChatGPT.
 
 
 use strict;
@@ -37,16 +33,16 @@ for my $v ( @views) {
 $dbh->do(q{
     CREATE TABLE GLASSES (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Username TEXT, /* every user has his own glasses - the rest are shared */
-        Timestamp DATETIME,
-        BrewType TEXT,  /* Wine, Beer, Restaurant */
+        Username TEXT not null, /* every user has his own glasses - the rest are shared */
+        Timestamp DATETIME not null,
+        BrewType TEXT not null,  /* Wine, Beer, Restaurant */
         SubType TEXT,  /* Ipa, Red, Whisky - for display color */
         Location INTEGER,
         Brew INTEGER, /* Can be null for "empty glasses" which should not have alc nor vol */
-        Price DECIMAL,
-        Volume DECIMAL,
-        Alc DECIMAL,
-        StDrinks DECIMAL, /* pre-calculated Alc * Vol / OneDrink, zero for box wines etc */
+        Price DECIMAL default 0,
+        Volume DECIMAL default 0,
+        Alc DECIMAL default 0.0,
+        StDrinks DECIMAL default 0.0, /* pre-calculated Alc * Vol / OneDrink, zero for box wines etc */
         FOREIGN KEY (Location) REFERENCES LOCATIONS(Id),
         FOREIGN KEY (Brew) REFERENCES BREWS(Id)
     )
@@ -62,18 +58,18 @@ $dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)"); # Also ef
 $dbh->do(q{
     CREATE TABLE BREWS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name TEXT,   /* May be NULL for restaurants and such "empty-glass" things */
-        BrewType TEXT,  /* Wine, Beer, Restaurant */
+        Name TEXT,
+        BrewType TEXT not null,  /* Wine, Beer, Restaurant */
         SubType TEXT,  /* Wines: Red, Booze: Rum, Restaurant: Pizza */
         BrewStyle TEXT, /* What ever style we get in, "IPA Hazy" */
         ShortName TEXT,
         Producer INTEGER,
-        Alc DECIMAL,
-        Country TEXT,
-        Region TEXT,
-        Flavor TEXT,  /* hops, grapes, fruits, cask */
-        Year INTEGER,
-        Details TEXT, /* Classification: Reserva, DOCG, 20y; Edition: Anniversary */
+        Alc DECIMAL default 0.0,
+        Country TEXT default '',
+        Region TEXT default '',
+        Flavor TEXT default '',  /* hops, grapes, fruits, cask */
+        Year INTEGER default '',
+        Details TEXT default '', /* Classification: Reserva, DOCG, 20y; Edition: Anniversary */
         ReplacedBy INTEGER,
         FOREIGN KEY (Producer) REFERENCES LOCATIONS(Id)
     )
@@ -87,12 +83,12 @@ $dbh->do("CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE)");
 $dbh->do(q{
     CREATE TABLE COMMENTS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Glass INTEGER,
+        Glass INTEGER not null,
         ReferTo TEXT DEFAULT "Beer",  /* What the comment is about */
-        Comment TEXT,
-        Rating INTEGER,
+        Comment TEXT default '',
+        Rating INTEGER default '',
         Person INTEGER,
-        Photo TEXT,
+        Photo TEXT default '',
         FOREIGN KEY (Glass) REFERENCES GLASSES(Id),
         FOREIGN KEY (Person) REFERENCES PERSONS(Id)
     )
@@ -106,8 +102,8 @@ $dbh->do(q{
     CREATE TABLE PERSONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT NOT NULL,
-        ShortName TEXT,
-        OfficialName TEXT,
+        ShortName TEXT default '',
+        OfficialName TEXT default Name,
         AddressId INTEGER,
         RelatedPerson INTEGER,
         FOREIGN KEY (RelatedPerson) REFERENCES PERSONS(Id),
@@ -121,15 +117,15 @@ $dbh->do(q{
     CREATE TABLE LOCATIONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT NOT NULL,
-        ShortName TEXT,
-        OfficialName TEXT,
-        GeoCoordinates TEXT,
-        Website TEXT,
-        Email TEXT
-        StreetAddress TEXT,
-        City TEXT,
-        PostalCode TEXT,
-        Country TEXT
+        ShortName TEXT default '',
+        OfficialName TEXT default Name,
+        GeoCoordinates TEXT default '',
+        Website TEXT default '',
+        Email TEXT default '',
+        StreetAddress TEXT default '',
+        City TEXT default '',
+        PostalCode TEXT default '',
+        Country TEXT default ''
     )
 });
 $dbh->do("CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE)");
