@@ -150,6 +150,8 @@ sub readfile {
         $rec->{country} = $rec->{subtype};
         $rec->{subtype} = shortbeerstyle($rec->{style}) ||
            undef; # and NULL if not set
+      } elsif ( $linetype eq "Wine" ) {  # Try to separate country, region, grapes, and such
+        winestyle($rec);
       }
 
       # Pre-calculate standard drinks
@@ -184,8 +186,7 @@ sub insert_data {
     # Determine the location and brew IDs.
     my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo});
 
-    my $brew_id = get_or_insert_brew($type, $rec->{subtype}, $rec->{name},
-       $rec->{maker}, $rec->{style}, $rec->{alc}, $rec->{country});
+    my $brew_id = get_or_insert_brew($rec);
 
     # Insert the GLASSES record itself
     my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
@@ -269,13 +270,15 @@ sub get_or_insert_person {
 
 
 # Helper to get or insert a Brew record
+# TODO - Pass $rec, insert year and region as well
+# TODO - Check country and region in matching
 sub get_or_insert_brew {
-    my ($type, $subtype, $name, $maker, $style, $alc, $country) = @_;
+    my $rec = shift;
     my $id;
     my($prod, $sty, $al);
 
     # Skip some misc/misc records
-    return undef if ( !$name || $name =~ /misc/i );
+    return undef if ( !$rec->{name}|| $rec->{name} =~ /misc/i );
 
     # Check if the brew exists in the BREWS table
     my $sql = q{
@@ -286,29 +289,31 @@ sub get_or_insert_brew {
       AND Producer = ?
       AND BrewType = ?
       AND (subtype = ? OR ( subtype is null and ? is null ) )
-};
+    };
     my $sth = $dbh->prepare($sql);
-    $sth->execute($name, $maker, $type, $subtype, $subtype);
+    $sth->execute($rec->{name}, $rec->{maker}, $rec->{type}, $rec->{subtype}, $rec->{subtype});
     if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
       # Found the brew, check optional fields
-      if ( !$prod && $maker )  {
+      if ( !$prod && $rec->{maker} )  {
         my $update_sth = $dbh->prepare("UPDATE BREWS SET Producer = ? WHERE Id = ?");
-        $update_sth->execute($maker, $id);
+        $update_sth->execute($rec->{maker}, $id);
       }
-      if ( !$sty && $style)  {
+      if ( !$sty && $rec->{style})  {
         my $update_sth = $dbh->prepare("UPDATE BREWS SET BrewStyle= ? WHERE Id = ?");
-        $update_sth->execute($style, $id);
+        $update_sth->execute($rec->{style}, $id);
       }
-      if ( !$al && $alc)  {
+      if ( !$al && $rec->{alc})  {
         my $update_sth = $dbh->prepare("UPDATE BREWS SET Alc= ? WHERE Id = ?");
-        $update_sth->execute($alc, $id);
+        $update_sth->execute($rec->{alc}, $id);
       }
     } else {
         # Insert new brew record
         my $insert_brew = $dbh->prepare(
-            "INSERT INTO BREWS (Brewtype, SubType, Name, Producer, BrewStyle, Alc, Country) " .
-            "VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $insert_brew->execute($type, $subtype, $name, $maker, $style, $alc, $country);
+            "INSERT INTO BREWS (Brewtype, SubType, Name, Producer, BrewStyle, Alc, Country, Region, Flavor, Year) " .
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $insert_brew->execute($rec->{type}, $rec->{subtype}, $rec->{name},
+          $rec->{maker}, $rec->{style}, $rec->{alc}, $rec->{country}, $rec->{region},
+          $rec->{flavor}, $rec->{year});
         $id = $dbh->last_insert_id(undef, undef, "BREWS", undef);
     }
     return $id;
@@ -369,6 +374,104 @@ sub shortbeerstyle {
   return "Sour"  if ( $sty =~ /Lambic|Gueuze|Sour|Kriek|Frmaboise/i);
   $sty =~ s/^ *([^ ]{1,5}).*/$1/; # First word, only five chars, in case we didn't get it above
   return $sty;
+}
+
+# Try to extract country, region, grapes, vintage, etc from a style as entered
+# in the old system.
+sub winestyle {
+  my $rec = shift;
+  return unless $rec;
+  $rec->{style} = "" unless ( $rec->{style} );
+  my $sty = $rec->{style};
+  if ($sty =~ /^misc/i ) {
+    $rec->{style} = "";  # Drop the misc stuff
+  }
+  $rec->{style} =~ s/_//g; # Remove underscores
+  $rec->{year} = $1
+    if ( $rec->{style} =~ s/\b(20\d\d)\b// ); #Fails 1900's and 2100's Never mind
+  my @countries = ( # Country, alt regexp, region...
+    [ "Argentina" ],
+    [ "Australia", "Australian" ],
+    [ "Austria",   "Austrian" ],
+    [ "Canada" ],
+    [ "Chile" ],
+    [ "France", "French", "Bordeaux", "Bourgogne", "Alsace", "Chateauneuf du Pape",
+                          "Cotes du Rhone", "Haut.Medoc", "La Bourgondie", "Langedoc",
+                          "Loire", "Pays d Oc", "Pomerol", "Rhone", "Saint Emillion",
+                          "Champagne", "Chablis", "Corbieres", "Sancerre", "Anjou",
+                          "Vouvray" ],
+    [ "Germany", "German", "Mosel", "Pfalz" ],
+    [ "Greece", "Greek" ],
+    [ "Italy", "Italian", "Puglia", "Toscan.", "Valpolicella", "Verona",
+                          "Abruzzo", "Piemonte", "Amarone",
+                          "Alba", "Asti", "Barolo", "Brunello",
+                          "Chianti", "Corsica", "Langhe", "Salice Salentino",
+                          "Sicily", "Veneto", "Val di Neto" ],
+    [ "New Zealand", "NZ" ],
+    [ "Portugal", "Portugese", "Douro" ],
+    [ "South Africa", "South African", "Stellenbosh" ],
+    [ "Spain", "Spanish", "Rioja", "Priorat", "Ribera del Duero", "Gordoba",
+                          "Sierra de Malaga", "Malaga", "Catalonia", "Navarra",
+                          "Penedes", "Ronda", "Valdepenas"],
+    [ "Switzerland", "Swiss", "Sudtirol" ],
+    [ "United States", "US",  "California" ],
+    [ "Mexico", "Mexican" ],
+  );
+  for my $c ( @countries ) {
+    my @reg = @$c;
+    # Check if a country matches
+    if ( ( $rec->{style} =~ s/\b($reg[0])\b//i ) ||
+           ( $reg[1] && $rec->{style} =~ s/\b($reg[1])\b//i ) ) {
+      $rec->{country} = $reg[0];
+    }
+    # Check the region. May overwrite the country from above, but that is ok
+    for ( my $i = 2; $reg[$i]; $i++ ) {
+      if ( $rec->{style} =~ s/\b($reg[$i])\b//i ){
+        $rec->{region} = $1;
+        $rec->{country} = $reg[0];
+        }
+    }
+  }
+  my @grapes = (
+    "Riesling", "Savignon Blanc", "Shiraz", "Merlot", "Barberra", "Malbec",
+    "Cabernet Sauvignon", "Chardonnay Blanc", "Savignon Blanc", "Chardonnay", "Zinfandel",
+    "Tempranillo", "Grenache", "Granach", "Primitivo", "Spätburgunder", "Syrah",
+    "Negroamaro", "Pinotage", "Cinsault", "Tempranillo", "Muscat", "Chenin Blanc",
+    "Pinot Noir", "Montepulciano", "Cabernet Franc",
+    "Grun Veltliner", "Grün Veltliner", "Gruner Veltliner", "Grüner Veltliner",
+    "Pinot Gris",
+    "Cab Sav", "Cab-Sav", "Cab Sauv", "Sav Blanc",   # Common abbreviations
+  );
+  for my $g ( @grapes ) {
+    $rec->{flavor} .= "$g, " if ( $rec->{style} =~ s/\b($g)\b//i );  # There can be more than one
+  }
+  if ( $rec->{flavor} ) {
+    $rec->{flavor} =~ s/Cab[ -]+Sau?v/Cabernet Sauvignon/i ;
+    $rec->{flavor} =~ s/Sav Blacn/Sauvignon Blacn/i ;
+    $rec->{flavor} =~ s/Gr[uü]n(er?) Veltliner/Grüner Veltliner/i;
+    $rec->{flavor} =~ s/[ ,]$//; # trim
+  }
+  my @details = (
+     # Classifications
+     "Gran Reserva", "Reserva", "Crianza",
+     "Riserva",
+     "Grand Cru", "1er Cru",
+     "Lbv",
+     # Methods
+     "Ripasso", "Spumante",
+     # Other
+     "Organic",
+  );
+  for my $d ( @details ) {
+    $rec->{details} .= "$d " if ( $rec->{style} =~ s/\b($d)\b//i );  # There can be more than one
+  }
+
+  # Clean up what is left of the stype
+  $rec->{style} =~ s/^\s*(d|di|de|dei)\s*$//;  # Remains of barb di asti etc
+  $rec->{style} =~ s/^\W+//; # Trim non-word characters away
+  $rec->{style} =~ s/\W+$//;
+  $rec->{style} =~ s/\s+$/ /g; # And space sequences
+
 }
 
 ############

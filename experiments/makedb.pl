@@ -4,6 +4,9 @@
 # the help of ChatGPT. I have since made changes and added comments, so this
 # should not be overwitten by a new chatGTP output.
 
+# TODO Check which fields should be nullable and which not
+# Things I compare against are easier if empty values (name, country, region, style)
+
 
 use strict;
 use warnings;
@@ -161,7 +164,12 @@ $dbh->do(q{
         brews.producer as maker,
         brews.name as name,
         volume as vol,
-        brewstyle as style,
+        coalesce(Brews.brewstyle,'') || ' ' ||
+          coalesce(Brews.region,'')  || ' ' ||
+          coalesce(Brews.country,'') || ' ' ||
+          coalesce(Brews.details,'') || ' ' ||
+          coalesce(Brews.year,'')
+          as style,
         glasses.alc as alc,
         price as pr,
         locations.geocoordinates as geo
