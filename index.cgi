@@ -3907,6 +3907,12 @@ sub filtered {
   } elsif ( $qryfield eq "geoerror" ) {
     checkgeoerror($rec);
   }
+  if ( $qryfield eq "rawline" && ! $rec->{rawline} ) {
+    for my $k ( keys %{$rec} ) {
+      $rec->{rawline} .= "; " . ( $rec->{$k} || "" ) ;
+    }
+    #error ( "Made rawline '$rec->{rawline}' ");
+  }
   if ( $qry ) {
     $rec->{$qryfield} = "" if ( !defined($rec->{$qryfield} ) );
     $skip = 1 if ( $rec->{$qryfield} !~ /\b$qry\b/i ) ;
@@ -3918,7 +3924,7 @@ sub filtered {
     }
   }
   if ( $yrlim ) {
-    $skip = 1 if ( $rec->{rawline} !~ /^$yrlim/ );
+    $skip = 1 if ( $rec->{stamp} !~ /^$yrlim/ );
   }
   return $skip;
 }
