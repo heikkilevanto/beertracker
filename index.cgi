@@ -435,19 +435,25 @@ sub copyproddata {
 ################################################################################
 # Read the records
 # Reads all the records into @lines, to simulate the old way of reading the
-# whole file. Puts only the timestamp in the line for now.
+# whole file. Puts the whole records in @records
+# This costs some 400ms for every page, but speeds up the really slow ones, like
+# full list filtering from 30 seconds to 3.
 ################################################################################
-
+# TODO - At some point we won't need this at all, when each function reads its
+# own things from the database.
 
 sub readdatalines {
   my $nlines = 0;
   $lines[0] = "";
-  my $sql = "select timestamp from glasses where username = ? order by timestamp";
+  my $sql = "select * from glassrec where username = ? order by stamp";
   my $get_sth = $dbh->prepare($sql);
   $get_sth->execute($username);
   my $rn = 1;
-  while ( my ($ts) = $get_sth->fetchrow_array ) {
-    $lines[$rn] = $ts;
+
+ while ( my $rec = $get_sth->fetchrow_hashref ) {
+    $lines[$rn] = $rec->{stamp};
+    fixrecord($rec, $rn);
+    $records[$rn] = $rec;
     $rn++;
   }
   my $ndatalines = scalar(@lines)-1;
