@@ -251,6 +251,7 @@ sub get_or_insert_person {
 
     # Don't insert persons without names
     return undef unless $person_name;
+    $person_name =~ s/^D$/Dennis/i;
 
     # Check if the person already exists
     my $sth_check = $dbh->prepare("SELECT Id FROM PERSONS WHERE Name = ?");

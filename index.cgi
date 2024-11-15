@@ -3417,17 +3417,13 @@ sub lists {
 ################################################################################
 # List of people
 ################################################################################
-# Needs to be separate from the beer(etc) lists above, as there can be multiple
-# people in an entry, separated by commas
+# Prints all details of the person identified in $qry (by its id), if any,
+# and under that, a list of all people in the system
 sub people {
   print "<hr/><b>$op list</b>\n";
   print "<br/><div class='no-print'>\n";
-  my $filts = splitfilter($qry);
-  print "Filter: $filts " .
-     "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $qry;
-  print "Filter: <a href='$url?y=$yrlim'><span>$yrlim</span></a> " .
-     "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
-  print searchform();
+  # TODO - Filtering and sorting options
+  # No need for time limits, we don't have so many people
   print "Other lists: " ;
   my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "People");
   for my $l ( @ops ) {
@@ -3436,61 +3432,60 @@ sub people {
     print "<a href='$url?o=$l'><$bold>$l</$bold></a> &nbsp;\n";
   }
   print "</div><hr/>\n";
-  getseen() if ( $qryfield =~ /new/i );
-  if ( !$notbef && !$qry ) {
-    $notbef = datestr("%F", -180); # Default to last half year
-  }
-  my $fld;
-  my $line;
-  my @displines;
-  my %lineseen;
-  my $anchor="";
+
+  # Print full info on the given person
+  if ( $qry ) {
+    my $sql = "select * from Persons where id = ?";
+      # This Can leak info from persons filed by other users. Not a problem now
+    my $get_sth = $dbh->prepare($sql);
+    $get_sth->execute($qry);
+    my $p = $get_sth->fetchrow_hashref;
+    if ( $p ) {  # found the person
+      foreach my $k ( sort keys %{$p} ) {
+        # TODO - Print a proper form to edit the person
+        # And to add/edit a location for the person
+        print "$k : '$p->{$k}' <br/>\n";
+      }
+
+      print "<hr/>\n";
+    } # found the person
+  } # qry for full info
+
+  # Print list of people
+  my $sql = q{
+  select
+    PERSONS.Id,
+    PERSONS.Name,
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last,
+    LOCATIONS.Name as loc,
+    count(COMMENTS.Id) as count
+  from PERSONS, GLASSES, COMMENTS, LOCATIONS
+  where COMMENTS.Person = PERSONS.Id
+    and COMMENTS.Glass = GLASSES.Id
+    and GLASSES.Username = ?
+    and LOCATIONS.id = GLASSES.Location
+  group by Persons.id
+  order by last DESC
+  };
   my $maxwidth = "style='max-width:30%;'";
-  my $i = scalar( @lines );
-  while ( $i > 0 ) {
-    $i--;
-    my $rec = getrecord_com($i);
-    next unless ($rec); # defensive coding, probably gets that one TZ record
-    last if ($lines[$i] lt $notbef && scalar(@displines) >= 30);
-    $fld = "";
+  my $list_sth = $dbh->prepare($sql);
+  $list_sth->execute($username);
 
-    my $ppl = $rec->{people};
-    next unless ( $ppl );
-    next if filtered ( $rec, "people" );
-    for my $p ( split(/[.,] */, $ppl) ) {
-      $line = "<td>" . filt("$p","b","","full","people") . "</td>" .
-              "<td>$rec->{wday} " .
-              filt($rec->{effdate},"","","full") ." \n" .
-              "$rec->{loc}</td>";
-      $fld = uc($p);
-      next if $lineseen{$fld};
-      $lineseen{$fld} = $line;
-      push @displines, "$line";
-    }
-  }
-  print scalar(@displines) . " entries ";
-  print "from $notbef" if ($notbef);
-  print "<br/>\n" ;
-  if ( !$sortlist) {
-    print "(<a href='$url?o=$op&sort=1&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "' ><span>Sort Alphabetically</span></a>) <br/>\n";
-  } else {
-    print "(<a href='$url?o=$op&notbef=$notbef&qf=$qryfield&q=" . uri_escape($qry) . "'><span>Sort Recent First</span></a>) <br/>\n";
-  }
+  print "<table>\n";
+  while ( my ($persid, $name, $last, $loc, $count) = $list_sth->fetchrow_array ) {
+    my ($stamp, $wd ) = split (' ', $last);
+    my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
+    $wd = $weekdays[$wd];
 
-
-  print "<hr/>\n" ;
-  print "&nbsp;<br /><table style='background-color: #00600; max-width: 60em;' >\n";
-  if ($sortlist) {
-    @displines = ();
-    for my $k ( sort { "\U$a" cmp "\U$b" } keys(%lineseen) ) {
-      print "<tr>\n$lineseen{$k}</tr>\n";
-    }
-  } else {
-    foreach my $dl (@displines) {
-      print "<tr>\n$dl</tr>\n";
-    }
+    print "<tr><td style='font-size: xx-small' align='right'>$persid</td>\n";
+    print "<td><a href='$url?o=$op&q=$persid'><b>$name</b></a>";
+    print " ($count) " if ( $count > 1 );
+    print "</td>\n";
+    print "<td>$wd " . filt($stamp,"","","full") . "\n";
+    print " $loc</td></tr>\n";
   }
   print "</table>\n";
+  print "<hr/>\n" ;
 
 } # people
 
