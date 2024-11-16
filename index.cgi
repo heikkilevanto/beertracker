@@ -536,7 +536,7 @@ sub getseen{
     if ( $rec->{rate} ) {
       $ratesum{$rec->{seenkey}} += $rec->{rate};
       $ratecount{$rec->{seenkey}}++;
-      print STDERR "'$rec->{seenkey}' : $rec->{rate} = $ratesum{$rec->{seenkey}} / $ratecount{$rec->{seenkey}} \n";
+      #print STDERR "'$rec->{seenkey}' : $rec->{rate} = $ratesum{$rec->{seenkey}} / $ratecount{$rec->{seenkey}} \n";
     }
     last if ( $rec->{stamp} lt $limit );
     $i--;
