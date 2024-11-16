@@ -886,6 +886,12 @@ sub postdata {
 
   my $sub = $q->param("submit") || "";
 
+  if ( $sub eq 'Update Person' ) {
+    updateperson();
+    print $q->redirect( "$url?o=$op&q=$qry" );
+    return;
+  }
+
   # Input parameters, only used here in POST
   my $rec = inputrecord();  # Get an approximation of a record from the params
 
@@ -895,7 +901,7 @@ sub postdata {
   # Fix record type.
   $rec->{type} = "None" unless $rec->{type};
   if ( !$datalinetypes{$rec->{type} }) {
-    error("Trying to POST a record of unknown type: '$rec->{type}'");
+    error("Trying to POST a record of unknown type: '$rec->{type}' sub='$sub'");
   }
 
   nullfields($rec);  # set all undefined fields to "", to avoid warnings
@@ -3419,6 +3425,8 @@ sub lists {
 ################################################################################
 # Prints all details of the person identified in $qry (by its id), if any,
 # and under that, a list of all people in the system
+# TODO Move all the PERSONS routines to their own module
+# That's why updateperson() is kept here for now
 sub people {
   print "<hr/><b>$op list</b>\n";
   print "<br/><div class='no-print'>\n";
@@ -3433,26 +3441,52 @@ sub people {
   }
   print "</div><hr/>\n";
 
+  my $sort = "last DESC";
   # Print full info on the given person
   if ( $qry ) {
+    if ( $qry =~ /^\d+$/ ) {  # Id for full info
     my $sql = "select * from Persons where id = ?";
-      # This Can leak info from persons filed by other users. Not a problem now
-    my $get_sth = $dbh->prepare($sql);
-    $get_sth->execute($qry);
-    my $p = $get_sth->fetchrow_hashref;
-    if ( $p ) {  # found the person
-      foreach my $k ( sort keys %{$p} ) {
-        # TODO - Print a proper form to edit the person
-        # And to add/edit a location for the person
-        print "$k : '$p->{$k}' <br/>\n";
-      }
-
-      print "<hr/>\n";
-    } # found the person
-  } # qry for full info
+        # This Can leak info from persons filed by other users. Not a problem now
+      my $get_sth = $dbh->prepare($sql);
+      $get_sth->execute($qry);
+      my $p = $get_sth->fetchrow_hashref;
+      if ( $p ) {  # found the person
+        my $c2 = "colspan='2'";
+        print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+           "enctype='multipart/form-data'>\n";
+        print "<input type='hidden' name='id' value='$p->{Id}' />\n";
+        print "<table style='width:100%; max-width:500px' id='inputformtable'>\n";
+        print "<tr><td $c2><b>Editing Person $p->{Id}</b></td></tr>\n";
+        print "<tr><td>Name</td>\n";
+        print "<td><input name='name' value='$p->{Name}' /></td></tr>\n";
+        print "<tr><td>Full name</td>\n";
+        print "<td><input name='full' value='$p->{FullName}' /></td></tr>\n";
+        print "<tr><td>Description</td>\n";
+        print "<td><input name='desc' value='$p->{Description}' /></td></tr>\n";
+        print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";
+        # TODO - Pulldown select for RelatedPerson
+        # TODO - Pulldown (or advanced selection) for Location
+        print "</table>\n";
+        # Come back to here after updating
+        print "<input type='hidden' name='o' value='People' />\n";
+        print "<input type='hidden' name='q' value='$p->{Id}' />\n";
+        print "</form>\n";
+        print "<hr/>\n";
+      } # found the person
+    # Sort order or filtering
+    } elsif ( $qry eq "id" ) {
+      $sort = "PERSONS.Id";
+    } elsif ( $qry eq "name" ) {
+      $sort = "PERSONS.Name" ;
+    } elsif ( $qry eq "last" ) {
+      $sort = "last DESC" ;
+    } elsif ( $qry eq "where" ) {
+      $sort = "LOCATIONS.Name" ;
+    }
+  }
 
   # Print list of people
-  my $sql = q{
+  my $sql = "
   select
     PERSONS.Id,
     PERSONS.Name,
@@ -3465,13 +3499,17 @@ sub people {
     and GLASSES.Username = ?
     and LOCATIONS.id = GLASSES.Location
   group by Persons.id
-  order by last DESC
-  };
-  my $maxwidth = "style='max-width:30%;'";
+  order by $sort
+  ";
   my $list_sth = $dbh->prepare($sql);
   $list_sth->execute($username);
 
-  print "<table>\n";
+  print "<table><tr>\n";
+  # TODO - Set a max-width for the name, so one long one will not mess up, esp on the phone
+  print "<td><a href='$url?o=$op&q=id'><i>Id</i></a></td>";
+  print "<td><a href='$url?o=$op&q=name'><i>Name</i></a></td>";
+  print "<td><a href='$url?o=$op&q=last'><i>Last seen</i></a></td>";
+  print "<td><a href='$url?o=$op&q=where'><i>Where</i></a></td></tr>";
   while ( my ($persid, $name, $last, $loc, $count) = $list_sth->fetchrow_array ) {
     my ($stamp, $wd ) = split (' ', $last);
     my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
@@ -3481,14 +3519,36 @@ sub people {
     print "<td><a href='$url?o=$op&q=$persid'><b>$name</b></a>";
     print " ($count) " if ( $count > 1 );
     print "</td>\n";
-    print "<td>$wd " . filt($stamp,"","","full") . "\n";
-    print " $loc</td></tr>\n";
+    print "<td>$wd " . filt($stamp,"","","full") . "</td>\n";
+    print "<td>$loc</td></tr>\n";
   }
   print "</table>\n";
   print "<hr/>\n" ;
 
 } # people
 
+# Update a person from the form above
+sub updateperson {
+  my $id = $q->param("id");
+  error ("Bad id for updating a person '$id' ")
+    unless $id =~ /^\d+$/;
+  my $name = $q->param("name");
+  error ("A Person must have a name" )
+    unless $name;
+  my $full= $q->param("full") || "" ;
+  my $desc= $q->param("desc") || "" ;
+  my $sql = "
+    update PERSONS
+      set
+        Name = ?,
+        FullName = ?,
+        Description = ?
+    where id = ? ";
+  my $sth = $dbh->prepare($sql);
+  $sth->execute( $name, $full, $desc, $id );
+  print STDERR "Updated " . $sth->rows .
+    " Person records for id '$id' : '$name' \n";
+}
 
 ################################################################################
 # Regular list, on its own, or after graph and/or beer board

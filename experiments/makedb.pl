@@ -102,7 +102,7 @@ $dbh->do(q{
     CREATE TABLE PERSONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT NOT NULL,
-        OfficialName TEXT default '',
+        FullName TEXT default '',
         AddressId INTEGER,
         RelatedPerson INTEGER,
         Description TEXT default '',  /* Small comment on the person to distinguish all Sørens */
