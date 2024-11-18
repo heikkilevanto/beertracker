@@ -22,7 +22,7 @@ my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS BREWS);
 for my $table (@tables) {
     $dbh->do("DROP TABLE IF EXISTS $table");
 }
-my @views = qw(GLASSDET GLASSREC COMPERS);
+my @views = qw(GLASSREC COMPERS);
 for my $v ( @views) {
   $dbh->do("DROP VIEW IF EXISTS $v");
 }
@@ -101,11 +101,11 @@ $dbh->do("CREATE INDEX idx_comments_glass ON COMMENTS (Glass)");
 $dbh->do(q{
     CREATE TABLE PERSONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name TEXT NOT NULL,
-        FullName TEXT default '',
-        Location INTEGER,
-        RelatedPerson INTEGER,
+        Name TEXT NOT NULL, /* The name I know the person by. Should be unique */
+        FullName TEXT default '', /* Full name, if I know it */
         Description TEXT default '',  /* Small comment on the person to distinguish all Sørens */
+        Location INTEGER,  /* LOC for persons home, or possibly a bar or such connected with the person */
+        RelatedPerson TEXT,  /* Name of the related person, even if we don't (yet) have a record */
         FOREIGN KEY (RelatedPerson) REFERENCES PERSONS(Id),
         FOREIGN KEY (Location) REFERENCES LOCATIONS(Id)
     )
@@ -132,17 +132,9 @@ $dbh->do("CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE)");
 
 
 
-# Create view GLASSDET
-$dbh->do(q{
-    CREATE VIEW GLASSDET AS
-      select *, glasses.alc * glasses.volume as alcvol
-      from GLASSES, BREWS, LOCATIONS
-      where glasses.Brew = Brews.id and glasses.Location = Locations.id
-});
-
-
 # Create view GLASSREC  - a way to return records the way the old script likes them
 # All fields must have a "as" clause, to make sure we get lowercase fieldnames
+# TODO - Drop this when no longer needed
 $dbh->do(q{
     CREATE VIEW GLASSREC AS
       select
@@ -175,6 +167,7 @@ $dbh->do(q{
 });
 
 # Create vier COMPERS that combines comments and persons
+# TODO - Drop this when we no longer need getrecord_com
 $dbh->do(q{
     CREATE VIEW COMPERS AS
       select

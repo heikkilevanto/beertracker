@@ -7,8 +7,6 @@
 ################################################################################
 # Prints all details of the person identified in $qry (by its id), if any,
 # and under that, a list of all people in the system
-# TODO Move all the PERSONS routines to their own module
-# That's why updateperson() is kept here for now
 # TODO - Split into listpeople and editperson
 # TODO - Make a routine for selecting a person, use for RelatedPerson
 # TODO - Use a similar one for selecting a Location, once I have one

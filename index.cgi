@@ -319,12 +319,17 @@ my $commentedrecords = 0; # Number of commented-out data lines
 my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
 ################################################################################
+# Program modules
+################################################################################
+# After declaring 'our' variables, before calling any functions
+# TODO - More modules, more stuff away from the main script
+require "./persons.pm";   # List of people, their details, editing, helpers
+
+
+################################################################################
 # Main program
 ################################################################################
 
-# Program modules
-# After declaring 'our' variables, before calling any functions
-require "./persons.pm";
 
 if ($devversion) { # Print a line in error.log, to see what errors come from this invocation
   print STDERR datestr() . " " . $q->request_method . " " .  $ENV{'QUERY_STRING'} . " \n";
@@ -366,7 +371,7 @@ javascript(); # with some javascript trickery in it
 inputform();
 
 
-# We display a graph for some pages, but only if we have data
+# We display a graph for some pages
 if ( $op =~ /^Graph/i || $op =~ /Board/i) {
   graph();
 }
