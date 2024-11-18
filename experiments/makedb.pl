@@ -103,11 +103,11 @@ $dbh->do(q{
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT NOT NULL,
         FullName TEXT default '',
-        AddressId INTEGER,
+        Location INTEGER,
         RelatedPerson INTEGER,
         Description TEXT default '',  /* Small comment on the person to distinguish all Sørens */
         FOREIGN KEY (RelatedPerson) REFERENCES PERSONS(Id),
-        FOREIGN KEY (AddressId) REFERENCES LOCATIONS(Id)
+        FOREIGN KEY (Location) REFERENCES LOCATIONS(Id)
     )
 });
 $dbh->do("CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE)");

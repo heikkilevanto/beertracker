@@ -345,6 +345,7 @@ if ( !$op) {
 
 if ( $q->request_method eq "POST" ) {
   postdata(); # forwards back to the script to display the data
+  $dbh->disconnect;
   exit;
 }
 
@@ -358,6 +359,7 @@ javascript(); # with some javascript trickery in it
 
 
 # The input form is at the top of every page
+# TODO - No more, all the lists and special edits don't need it.
 inputform();
 
 
@@ -396,6 +398,7 @@ if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   fulllist();
 }
 
+$dbh->disconnect;
 htmlfooter();
 exit();  # The rest should be subs only
 
@@ -3427,6 +3430,9 @@ sub lists {
 # and under that, a list of all people in the system
 # TODO Move all the PERSONS routines to their own module
 # That's why updateperson() is kept here for now
+# TODO - Split into listpeople and editperson
+# TODO - Make a routine for selecting a person, use for RelatedPerson
+# TODO - Use a similar one for selecting a Location, once I have one
 sub people {
   print "<hr/><b>$op list</b>\n";
   print "<br/><div class='no-print'>\n";
@@ -3450,19 +3456,26 @@ sub people {
       my $get_sth = $dbh->prepare($sql);
       $get_sth->execute($qry);
       my $p = $get_sth->fetchrow_hashref;
+      for my $f ( "Location", "RelatedPerson" ) {
+        $p->{$f} = "" unless $p->{$f};  # Blank out null fields
+      }
       if ( $p ) {  # found the person
         my $c2 = "colspan='2'";
         print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
            "enctype='multipart/form-data'>\n";
         print "<input type='hidden' name='id' value='$p->{Id}' />\n";
         print "<table style='width:100%; max-width:500px' id='inputformtable'>\n";
-        print "<tr><td $c2><b>Editing Person $p->{Id}</b></td></tr>\n";
+        print "<tr><td $c2><b>Editing Person $p->{Id}: $p->{Name}</b></td></tr>\n";
         print "<tr><td>Name</td>\n";
         print "<td><input name='name' value='$p->{Name}' /></td></tr>\n";
         print "<tr><td>Full name</td>\n";
         print "<td><input name='full' value='$p->{FullName}' /></td></tr>\n";
         print "<tr><td>Description</td>\n";
         print "<td><input name='desc' value='$p->{Description}' /></td></tr>\n";
+        print "<tr><td>Location</td>\n";
+        print "<td><input name='loc' value='$p->{Location}' /></td></tr>\n"; # TODO - Select
+        print "<tr><td>Related</td>\n";
+        print "<td><input name='rela' value='$p->{RelatedPerson}' /></td></tr>\n"; # TODO - Select
         print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";
         # TODO - Pulldown select for RelatedPerson
         # TODO - Pulldown (or advanced selection) for Location
@@ -3537,15 +3550,19 @@ sub updateperson {
     unless $name;
   my $full= $q->param("full") || "" ;
   my $desc= $q->param("desc") || "" ;
+  my $loc= $q->param("loc") || undef ;
+  my $rela= $q->param("rela") || undef ;
   my $sql = "
     update PERSONS
       set
         Name = ?,
         FullName = ?,
-        Description = ?
+        Description = ?,
+        Location = ?,
+        RelatedPerson = ?
     where id = ? ";
   my $sth = $dbh->prepare($sql);
-  $sth->execute( $name, $full, $desc, $id );
+  $sth->execute( $name, $full, $desc, $loc, $rela, $id );
   print STDERR "Updated " . $sth->rows .
     " Person records for id '$id' : '$name' \n";
 }
