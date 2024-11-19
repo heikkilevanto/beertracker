@@ -5,7 +5,6 @@
 ################################################################################
 # List of persons
 ################################################################################
-# TODO - Make a routine for selecting a person, use for RelatedPerson
 # TODO - Use a similar one for selecting a Location, once I have one
 # TODO - Use a proper parameter for sort order  ( s=...)
 # TODO - Filtering by location or date  (not just last seen)
@@ -157,6 +156,19 @@ sub updateperson {
   $sth->execute( $name, $full, $desc, $cont, $loc, $rela, $id );
   print STDERR "Updated " . $sth->rows .
     " Person records for id '$id' : '$name' \n";
+  if ( $rela ) {  # Update Relation backlink, if not already set
+    my $sql = "
+      update PERSONS
+        set
+          RelatedPerson = ?
+      where id = ?
+      and RelatedPerson = ''
+      ";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute( $id, $rela );
+    print STDERR "Updated RelatedPerson of $rela to point back to $id \n"
+      if  ( $sth->rows > 0 );
+  }
 }
 
 ################################################################################
