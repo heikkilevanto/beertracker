@@ -399,8 +399,8 @@ if ( $op eq "geo" ) {
 if ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
   lists();
 }
-if ( $op =~ /People/i ) {
-  people();
+if ( $op =~ /People|Persons/i ) { # TODO Drop the P
+  listpersons();
 }
 if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
   fulllist();
@@ -3261,7 +3261,7 @@ sub lists {
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
   print searchform();
   print "Other lists: " ;
-  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "People");
+  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
   for my $l ( @ops ) {
     my $bold = "nop";
     $bold = "b" if ($l eq $op);

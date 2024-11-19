@@ -3,20 +3,20 @@
 
 
 ################################################################################
-# List of people
+# List of persons
 ################################################################################
-# Prints all details of the person identified in $qry (by its id), if any,
-# and under that, a list of all people in the system
-# TODO - Split into listpeople and editperson
 # TODO - Make a routine for selecting a person, use for RelatedPerson
 # TODO - Use a similar one for selecting a Location, once I have one
-sub people {
+# TODO - Use a proper parameter for sort order  ( s=...)
+# TODO - Filtering by location or date  (not just last seen)
+# TODO - When editing, show the most recent dates, other people involved, etc
+sub listpersons {
   print "<hr/><b>$op list</b>\n";
   print "<br/><div class='no-print'>\n";
-  # TODO - Filtering and sorting options
   # No need for time limits, we don't have so many people
   print "Other lists: " ;
-  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "People");
+  # TODO - Use a helper from some other module for choosing what kind of list
+  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
   for my $l ( @ops ) {
     my $bold = "nop";
     $bold = "b" if ($l eq $op);
@@ -24,56 +24,17 @@ sub people {
   }
   print "</div><hr/>\n";
 
-  my $sort = "last DESC";
-  # Print full info on the given person
-  if ( $qry ) {
-    if ( $qry =~ /^\d+$/ ) {  # Id for full info
-    my $sql = "select * from Persons where id = ?";
-        # This Can leak info from persons filed by other users. Not a problem now
-      my $get_sth = $dbh->prepare($sql);
-      $get_sth->execute($qry);
-      my $p = $get_sth->fetchrow_hashref;
-      for my $f ( "Location", "RelatedPerson" ) {
-        $p->{$f} = "" unless $p->{$f};  # Blank out null fields
-      }
-      if ( $p ) {  # found the person
-        my $c2 = "colspan='2'";
-        print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
-           "enctype='multipart/form-data'>\n";
-        print "<input type='hidden' name='id' value='$p->{Id}' />\n";
-        print "<table style='width:100%; max-width:500px' id='inputformtable'>\n";
-        print "<tr><td $c2><b>Editing Person $p->{Id}: $p->{Name}</b></td></tr>\n";
-        print "<tr><td>Name</td>\n";
-        print "<td><input name='name' value='$p->{Name}' /></td></tr>\n";
-        print "<tr><td>Full name</td>\n";
-        print "<td><input name='full' value='$p->{FullName}' /></td></tr>\n";
-        print "<tr><td>Description</td>\n";
-        print "<td><input name='desc' value='$p->{Description}' /></td></tr>\n";
-        print "<tr><td>Location</td>\n";
-        print "<td><input name='loc' value='$p->{Location}' /></td></tr>\n"; # TODO - Select
-        print "<tr><td>Related</td>\n";
-        print "<td><input name='rela' value='$p->{RelatedPerson}' /></td></tr>\n"; # TODO - Select
-        print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";
-        # TODO - Pulldown select for RelatedPerson
-        # TODO - Pulldown (or advanced selection) for Location
-        print "</table>\n";
-        # Come back to here after updating
-        print "<input type='hidden' name='o' value='People' />\n";
-        print "<input type='hidden' name='q' value='$p->{Id}' />\n";
-        print "</form>\n";
-        print "<hr/>\n";
-      } # found the person
-    # Sort order or filtering
-    } elsif ( $qry eq "id" ) {
-      $sort = "PERSONS.Id";
-    } elsif ( $qry eq "name" ) {
-      $sort = "PERSONS.Name" ;
-    } elsif ( $qry eq "last" ) {
-      $sort = "last DESC" ;
-    } elsif ( $qry eq "where" ) {
-      $sort = "LOCATIONS.Name" ;
-    }
+  if ( $qry =~ /^\d+$/ ) {  # Id for full info
+    editperson($qry);
+    return;
   }
+
+  # Sort order or filtering
+  my $sort = "last DESC";
+  $sort = "PERSONS.Id" if ( $qry eq "id" );
+  $sort = "PERSONS.Name" if ( $qry eq "name" );
+  $sort = "last DESC" if ( $qry eq "last" );
+  $sort = "LOCATIONS.Name" if ( $qry eq "where" );
 
   # Print list of people
   my $sql = "
@@ -114,10 +75,62 @@ sub people {
   }
   print "</table>\n";
   print "<hr/>\n" ;
+} # listpersons
 
-} # people
 
-# Update a person from the form above
+################################################################################
+# Editperson - Show a form for editing a person record
+################################################################################
+# TODO - Show extended info about the person, like when and where seen,
+# associations with other people etc
+sub editperson {
+  my $id = shift;
+  my $sql = "select * from Persons where id = ?";
+    # This Can leak info from persons filed by other users. Not a problem now
+  my $get_sth = $dbh->prepare($sql);
+  $get_sth->execute($qry);
+  my $p = $get_sth->fetchrow_hashref;
+  for my $f ( "Location", "RelatedPerson" ) {
+    $p->{$f} = "" unless $p->{$f};  # Blank out null fields
+  }
+  if ( $p->{Id} ) {  # found the person
+    my $c2 = "colspan='2'";
+    print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+        "enctype='multipart/form-data'>\n";
+    print "<input type='hidden' name='id' value='$p->{Id}' />\n";
+    print "<table style='width:100%; max-width:500px' id='inputformtable'>\n";
+    print "<tr><td $c2><b>Editing Person $p->{Id}: $p->{Name}</b></td></tr>\n";
+    print "<tr><td>Name</td>\n";
+    print "<td><input name='name' value='$p->{Name}' /></td></tr>\n";
+    print "<tr><td>Full name</td>\n";
+    print "<td><input name='full' value='$p->{FullName}' /></td></tr>\n";
+    print "<tr><td>Description</td>\n";
+    print "<td><input name='desc' value='$p->{Description}' /></td></tr>\n";
+    print "<tr><td>Contact</td>\n";
+    print "<td><input name='cont' value='$p->{Contact}' /></td></tr>\n";
+    print "<tr><td>Location</td>\n";
+    print "<td><input name='loc' value='$p->{Location}' /></td></tr>\n"; # TODO - Select
+    print "<tr><td>Related</td>\n";
+#     print "<td><input name='rela' value='$p->{RelatedPerson}' /></td></tr>\n"; # TODO - Select
+    print "<td>" . selectperson("rela", $p->{RelatedPerson} ) . "</td></tr>\n";
+    print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";
+    # TODO - Pulldown select for RelatedPerson
+    # TODO - Pulldown (or advanced selection) for Location
+    print "</table>\n";
+    # Come back to here after updating
+    print "<input type='hidden' name='o' value='People' />\n";
+    print "<input type='hidden' name='q' value='$p->{Id}' />\n";
+    print "</form>\n";
+    print "<hr/>\n";
+    print "(This should show a list when the person seen, and with whom)<br/>\n"; # TODO
+  } else {
+    print "Oops - Person id '$id' not found <br/>\n";
+  }
+}
+
+################################################################################
+# Update a person (posted from the form above)
+################################################################################
 sub updateperson {
   my $id = $q->param("id");
   error ("Bad id for updating a person '$id' ")
@@ -127,22 +140,60 @@ sub updateperson {
     unless $name;
   my $full= $q->param("full") || "" ;
   my $desc= $q->param("desc") || "" ;
+  my $cont= $q->param("cont") || "" ;
   my $loc= $q->param("loc") || undef ;
-  my $rela= $q->param("rela") || undef ;
+  my $rela= $q->param("rela") || "" ;
   my $sql = "
     update PERSONS
       set
         Name = ?,
         FullName = ?,
         Description = ?,
+        Contact = ?,
         Location = ?,
         RelatedPerson = ?
     where id = ? ";
   my $sth = $dbh->prepare($sql);
-  $sth->execute( $name, $full, $desc, $loc, $rela, $id );
+  $sth->execute( $name, $full, $desc, $cont, $loc, $rela, $id );
   print STDERR "Updated " . $sth->rows .
     " Person records for id '$id' : '$name' \n";
 }
+
+################################################################################
+# Helper to select a person
+################################################################################
+# For now, just produces a pull-down list. Later we can add filtering, options
+# for sort order and for entering a new person, etc
+sub selectperson {
+  my $fieldname = shift || "person";
+  my $selected = shift || "";  # The id of the selected person
+  my $width = shift || "";
+  my $sql = "
+  select
+    PERSONS.Id,
+    PERSONS.Name,
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
+  from PERSONS, GLASSES, COMMENTS
+  where COMMENTS.Person = PERSONS.Id
+    and COMMENTS.Glass = GLASSES.Id
+    and GLASSES.Username = ?
+  group by Persons.id
+  order by GLASSES.Timestamp DESC
+  ";
+  my $list_sth = $dbh->prepare($sql);
+  $list_sth->execute($username);
+  my $s = " <select name='$fieldname' $width >\n";
+  my $sel = "Selected" unless $selected ;
+  $s .=  "<option value='' $selected ></option>\n";
+  while ( my ($persid, $name, $last) = $list_sth->fetchrow_array ) {
+    $sel = "";
+    $sel = "Selected" if $persid eq $selected;
+    $s .=  "<option value='$persid' $sel $width >$name</option>\n";
+  }
+  $s .= "</select>\n";
+  return $s;
+}
+
 
 # Report module loaded ok
 1;

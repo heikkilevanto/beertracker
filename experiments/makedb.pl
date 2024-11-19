@@ -29,7 +29,8 @@ for my $v ( @views) {
 
 # Create GLASSES table
 # A glass of anything I can drink, or special "empty" glasses for
-# restaurants etc. The main table.
+# restaurants etc. The main table. These are keyed by the username,
+# so each user has his own history.
 $dbh->do(q{
     CREATE TABLE GLASSES (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +55,7 @@ $dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)"); # Also ef
 
 # Create BREWS table
 # A Brew is a definition of a beer or other stuff, whereas a Glass is the
-# event of one being drunk.
+# event of one being drunk. These can be shared between users.
 $dbh->do(q{
     CREATE TABLE BREWS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,14 +99,17 @@ $dbh->do("CREATE INDEX idx_comments_glass ON COMMENTS (Glass)");
 
 
 # Create PERSONS table
+# All the people I want to remember.  These are personal to the username, but
+# that comes from Glasses, via comments.
 $dbh->do(q{
     CREATE TABLE PERSONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT NOT NULL, /* The name I know the person by. Should be unique */
         FullName TEXT default '', /* Full name, if I know it */
         Description TEXT default '',  /* Small comment on the person to distinguish all Sørens */
-        Location INTEGER,  /* LOC for persons home, or possibly a bar or such connected with the person */
-        RelatedPerson TEXT,  /* Name of the related person, even if we don't (yet) have a record */
+        Contact TEXT default '', /* Email, phone, or such. If I need more, I can create a Location */
+        Location INTEGER,  /* persons home, or possibly a bar or such connected with the person */
+        RelatedPerson INTEGER default '',  /* Persons partner or such */
         FOREIGN KEY (RelatedPerson) REFERENCES PERSONS(Id),
         FOREIGN KEY (Location) REFERENCES LOCATIONS(Id)
     )
@@ -113,6 +117,8 @@ $dbh->do(q{
 $dbh->do("CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE)");
 
 # Create LOCATIONS table
+# These are mostly bars and restaurants, but can also be homes of Persons, and
+# other things that need an address, geo coordinates, and such.
 $dbh->do(q{
     CREATE TABLE LOCATIONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -121,6 +127,7 @@ $dbh->do(q{
         OfficialName TEXT default Name,
         GeoCoordinates TEXT default '',
         Website TEXT default '',
+        Phone TEXT default '',
         Email TEXT default '',
         StreetAddress TEXT default '',
         City TEXT default '',
