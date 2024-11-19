@@ -10,18 +10,7 @@
 # TODO - Filtering by location or date  (not just last seen)
 # TODO - When editing, show the most recent dates, other people involved, etc
 sub listpersons {
-  print "<hr/><b>$op list</b>\n";
-  print "<br/><div class='no-print'>\n";
-  # No need for time limits, we don't have so many people
-  print "Other lists: " ;
-  # TODO - Use a helper from some other module for choosing what kind of list
-  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
-  for my $l ( @ops ) {
-    my $bold = "nop";
-    $bold = "b" if ($l eq $op);
-    print "<a href='$url?o=$l'><$bold>$l</$bold></a> &nbsp;\n";
-  }
-  print "</div><hr/>\n";
+  listsmenubar();
 
   if ( $qry =~ /^\d+$/ ) {  # Id for full info
     editperson($qry);
@@ -121,11 +110,11 @@ sub editperson {
     print "<input type='hidden' name='q' value='$p->{Id}' />\n";
     print "</form>\n";
     print "<hr/>\n";
-    print "(This should show a list when the person seen, and with whom)<br/>\n"; # TODO
+    print "(This should show a list when the person seen, comments, and with whom)<br/>\n"; # TODO
   } else {
     print "Oops - Person id '$id' not found <br/>\n";
   }
-}
+} # editperson
 
 ################################################################################
 # Update a person (posted from the form above)
@@ -169,7 +158,7 @@ sub updateperson {
     print STDERR "Updated RelatedPerson of $rela to point back to $id \n"
       if  ( $sth->rows > 0 );
   }
-}
+} # updateperson
 
 ################################################################################
 # Helper to select a person
@@ -204,8 +193,54 @@ sub selectperson {
   }
   $s .= "</select>\n";
   return $s;
-}
+} # selectperson
 
+################################################################################
+# Menu bar for lists
+################################################################################
+# TODO - Should be in some generic helper module, not here
+sub listsmenubar {
+  print "<br/><div class='no-print'>\n";
+  print "<table style='width:100%; max-width:500px' ><tr><td>\n";
+  print " <select  style='width:7em;' " .
+              "onchange='document.location=\"$url?\"+this.value;' >";
+  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
+  for my $l ( @ops ) {
+    my $sel = "";
+    $sel = "selected" if ($l eq $op);
+    print "<option value='o=$l' $sel >$l</option>\n"
+  }
+  print "</select>\n";
+  print "<a href='$url?o=$op'><span>List</span></a> ";
+  print "</td><td>\n";
+
+  showmenu();
+  print "</td></tr></table>\n";
+  print "</div>";
+
+  print "<hr/>\n";
+} # listsmenubar
+
+
+# Helper for the "Show" menu
+sub showmenu {
+  print " <select  style='width:4.5em;' " .
+              "onchange='document.location=\"$url?\"+this.value;' >";
+  print "<option value='' >Show</option>\n";
+  print "<option value='o=full&q=$qry' >Full List</option>\n";
+  print "<option value='o=Graph&q=$qry' >Graph</option>\n";
+  print "<option value='o=board&q=$qry' >Beer Board</option>\n";
+  print "<option value='o=Months&q=$qry' >Stats</option>\n";
+  print "<option value='o=Beer&q=$qry' >Lists</option>\n";
+  print "<option value='o=About' >About</option>\n";
+  print "</select>\n";
+  print  " &nbsp; &nbsp; &nbsp;";
+  if ( $op && $op !~ /graph/i ) {
+    print "<a href='$url'><b>G</b></a>\n";
+  } else {
+    print "<a href='$url?o=board'><b>B</b></a>\n";
+  }
+}
 
 # Report module loaded ok
 1;

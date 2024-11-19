@@ -368,41 +368,45 @@ javascript(); # with some javascript trickery in it
 
 # The input form is at the top of every page
 # TODO - No more, all the lists and special edits don't need it.
-inputform();
 
 
 # We display a graph for some pages
-if ( $op =~ /^Graph/i || $op =~ /Board/i) {
+if ( $op =~ /^Graph/i ) {
+  inputform();
   graph();
-}
-if ( $op =~ /Board/i ) {
+  fulllist();
+} elsif ( $op =~ /Board/i ) {
+  inputform();
+  graph();
   beerboard();
-}
-if ( $op =~ /Years(d?)/i ) {
+  fulllist();
+} elsif ( $op =~ /Years(d?)/i ) {
+  listsmenubar();
   yearsummary($1); # $1 indicates sort order
-}
-if ( $op =~ /short/i ) {
+} elsif ( $op =~ /short/i ) {
+  listsmenubar();
   shortlist();
-}
-if ( $op =~ /Months([BS])?/ ) {
+} elsif ( $op =~ /Months([BS])?/ ) {
+  listsmenubar();
   monthstat($1);
-}
-if ( $op =~ /DataStats/i ) {
+} elsif ( $op =~ /DataStats/i ) {
+  listsmenubar();
   datastats();
-}
-if ( $op eq "About" ) {
+} elsif ( $op eq "About" ) {
+  showmenu();
   about();
-}
-if ( $op eq "geo" ) {
+} elsif ( $op eq "geo" ) {
+  listsmenubar();
   geodebug();
-}
-if ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
+} elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
+  listsmenubar();
   lists();
-}
-if ( $op =~ /People|Persons/i ) { # TODO Drop the P
+} elsif ( $op =~ /People|Persons/i ) { # TODO Drop the P
   listpersons();
-}
-if ( !$op || $op eq "full" ||  $op =~ /Graph(\d*)/i || $op =~ /board/i) {
+} else {  # if ( !$op || $op eq "full") {
+  inputform();
+  graph();
+  beerboard();
   fulllist();
 }
 
