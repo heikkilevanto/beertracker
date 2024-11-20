@@ -318,6 +318,17 @@ my $commentlines = 0; # Number of comment lines in the data file
 my $commentedrecords = 0; # Number of commented-out data lines
 my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
+# Collect all 'global' variables here in one context
+my $context = {
+  'username' => $username,
+  'dbh'      => $dbh,
+  'url'      => $url,
+  'q'        => $q,
+  'edit'     => $edit,
+  'qry'      => $qry,
+  'op'       => $op,
+};
+
 ################################################################################
 # Program modules
 ################################################################################
@@ -381,32 +392,30 @@ if ( $op =~ /^Graph/i ) {
   beerboard();
   fulllist();
 } elsif ( $op =~ /Years(d?)/i ) {
-  showmenu();
+  persons::showmenu($context);
   yearsummary($1); # $1 indicates sort order
 } elsif ( $op =~ /short/i ) {
-  showmenu();
+  persons::showmenu($context);
   shortlist();
 } elsif ( $op =~ /Months([BS])?/ ) {
-  showmenu();
+  persons::showmenu($context);
   monthstat($1);
 } elsif ( $op =~ /DataStats/i ) {
-  showmenu();
+  persons::showmenu($context);
   datastats();
 } elsif ( $op eq "About" ) {
-  showmenu();
+  persons::showmenu($context);
   about();
 } elsif ( $op eq "geo" ) {
-  showmenu();
+  persons::showmenu($context);
   geodebug();
 } elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
   #listsmenubar();
   lists();
-} elsif ( $op =~ /People|Persons/i ) { # TODO Drop the P
-  listpersons();
+} elsif ( $op =~ /Persons/i ) {
+  persons::listpersons($context);
 } else {  # if ( !$op || $op eq "full") {
   inputform();
-  graph();
-  beerboard();
   fulllist();
 }
 
@@ -3263,7 +3272,7 @@ sub lists {
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $qry;
   print "Filter: <a href='$url?y=$yrlim'><span>$yrlim</span></a> " .
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
-  listsmenubar();
+  persons::listsmenubar($context);
   print searchform();
 #   print "Other lists: " ;
 #   my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
