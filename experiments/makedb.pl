@@ -123,8 +123,8 @@ $dbh->do(q{
     CREATE TABLE LOCATIONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT NOT NULL,
-        ShortName TEXT default '',
-        OfficialName TEXT default Name,
+        OfficialName TEXT default '',  /* Official long name */
+        Description TEXT default '',
         GeoCoordinates TEXT default '',
         Website TEXT default '',
         Phone TEXT default '',

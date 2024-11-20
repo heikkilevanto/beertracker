@@ -23,10 +23,10 @@ sub listpersons {
 
   # Sort order or filtering
   my $sort = "last DESC";
-  $sort = "PERSONS.Id" if ( $c->{qry} eq "id" );
-  $sort = "PERSONS.Name" if ( $c->{qry} eq "name" );
-  $sort = "last DESC" if ( $c->{qry} eq "last" );
-  $sort = "LOCATIONS.Name" if ( $c->{qry} eq "where" );
+  $sort = "PERSONS.Id" if ( $c->{sort} eq "id" );
+  $sort = "PERSONS.Name" if ( $c->{sort} eq "name" );
+  $sort = "last DESC" if ( $c->{sort} eq "last" );
+  $sort = "LOCATIONS.Name" if ( $c->{sort} eq "where" );
 
   # Print list of people
   my $sql = "
@@ -51,10 +51,10 @@ sub listpersons {
   # TODO - Set a max-width for the name, so one long one will not mess up, esp on the phone
   my $url = $c->{url};
   my $op = $c->{op};
-  print "<td><a href='$url?o=$op&q=id'><i>Id</i></a></td>";
-  print "<td><a href='$url?o=$op&q=name'><i>Name</i></a></td>";
-  print "<td><a href='$url?o=$op&q=last'><i>Last seen</i></a></td>";
-  print "<td><a href='$url?o=$op&q=where'><i>Where</i></a></td></tr>";
+  print "<td><a href='$url?o=$op&s=id'><i>Id</i></a></td>";
+  print "<td><a href='$url?o=$op&s=name'><i>Name</i></a></td>";
+  print "<td><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
+  print "<td><a href='$url?o=$op&s=where'><i>Where</i></a></td></tr>";
   while ( my ($persid, $name, $last, $loc, $count) = $list_sth->fetchrow_array ) {
     my ($stamp, $wd ) = split (' ', $last);
     my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
@@ -105,15 +105,13 @@ sub editperson {
     print "<tr><td>Location</td>\n";
     print "<td><input name='loc' value='$p->{Location}' /></td></tr>\n"; # TODO - Select
     print "<tr><td>Related</td>\n";
-#     print "<td><input name='rela' value='$p->{RelatedPerson}' /></td></tr>\n"; # TODO - Select
     print "<td>" . selectperson($c, "rela", $p->{RelatedPerson} ) . "</td></tr>\n";
     print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";
-    # TODO - Pulldown select for RelatedPerson
     # TODO - Pulldown (or advanced selection) for Location
     print "</table>\n";
     # Come back to here after updating
-    print "<input type='hidden' name='o' value='People' />\n";
-    print "<input type='hidden' name='q' value='$p->{Id}' />\n";
+    print "<input type='hidden' name='o' value='$c->{op}' />\n";
+    print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "</form>\n";
     print "<hr/>\n";
     print "(This should show a list when the person seen, comments, and with whom)<br/>\n"; # TODO
@@ -127,8 +125,8 @@ sub editperson {
 ################################################################################
 sub updateperson {
   my $c = shift; # context
-  my $id = $c->{id};
-  error ("Bad id for updating a person '$id' ")
+  my $id = $c->{edit};
+  main::error ("Bad id for updating a person '$id' ")
     unless $id =~ /^\d+$/;
   my $name = $c->{'q'}->param("name");
   error ("A Person must have a name" )
@@ -165,6 +163,7 @@ sub updateperson {
     print STDERR "Updated RelatedPerson of $rela to point back to $id \n"
       if  ( $sth->rows > 0 );
   }
+  print $c->{'q'}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
 } # updateperson
 
 ################################################################################

@@ -92,6 +92,7 @@ die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
 our $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
     or error($DBI::errstr);
 $dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
+$dbh->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
 #$dbh->trace(1);  # Lots of SQL logging in error.log
 
 ################################################################################
@@ -292,6 +293,7 @@ my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
 my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
 my $notbef = param("notbef") || ""; # Skip parsing records older than this
 our $url = $q->url;
+my $sort = param("s");  # Sort key
 # the POST routine reads its own input parameters
 
 ################################################################################
@@ -327,6 +329,7 @@ my $context = {
   'edit'     => $edit,
   'qry'      => $qry,
   'op'       => $op,
+  'sort'     => $sort,
 };
 
 ################################################################################
@@ -335,7 +338,7 @@ my $context = {
 # After declaring 'our' variables, before calling any functions
 # TODO - More modules, more stuff away from the main script
 require "./persons.pm";   # List of people, their details, editing, helpers
-
+require "./locations.pm"; # Locations stuff
 
 ################################################################################
 # Main program
@@ -363,7 +366,13 @@ if ( !$op) {
 }
 
 if ( $q->request_method eq "POST" ) {
-  postdata(); # forwards back to the script to display the data
+  if ( $op =~ /Persons/ ) {
+    persons::updateperson($context);
+  } elsif ( $op =~ /Location/ ) {
+    locations::updatelocation($context);
+  } else {
+    postdata(); # forwards back to the script to display the data
+  }
   $dbh->disconnect;
   exit;
 }
@@ -409,11 +418,13 @@ if ( $op =~ /^Graph/i ) {
 } elsif ( $op eq "geo" ) {
   persons::showmenu($context);
   geodebug();
-} elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
+} elsif ( $op =~ /Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
   #listsmenubar();
   lists();
 } elsif ( $op =~ /Persons/i ) {
   persons::listpersons($context);
+} elsif ( $op =~ /Location/i ) {
+  locations::listlocations($context);
 } else {  # if ( !$op || $op eq "full") {
   inputform();
   fulllist();
@@ -910,12 +921,6 @@ sub postdata {
 
   my $sub = $q->param("submit") || "";
 
-  if ( $sub eq 'Update Person' ) {
-    updateperson();
-    print $q->redirect( "$url?o=$op&q=$qry" );
-    return;
-  }
-
   # Input parameters, only used here in POST
   my $rec = inputrecord();  # Get an approximation of a record from the params
 
@@ -925,7 +930,7 @@ sub postdata {
   # Fix record type.
   $rec->{type} = "None" unless $rec->{type};
   if ( !$datalinetypes{$rec->{type} }) {
-    error("Trying to POST a record of unknown type: '$rec->{type}' sub='$sub'");
+    error("Trying to POST a record of unknown type: '$rec->{type}' sub='$sub' op='$op'");
   }
 
   nullfields($rec);  # set all undefined fields to "", to avoid warnings
@@ -1415,7 +1420,8 @@ SCRIPTEND
   }
   $script .= " ]; \n";
 
-  $script .= "var origloc=\" $foundrec->{loc}\"; \n";
+  $script .= "var origloc=\" $foundrec->{loc}\"; \n"
+    if ( $foundrec );
 
   $script .= <<'SCRIPTEND';
     var geoloc = "";
