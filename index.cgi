@@ -298,7 +298,7 @@ our $url = $q->url;
 # Global variables
 # Mostly from reading the file, used in various places
 ################################################################################
-# TODO - Check these
+# TODO - Remove most of these
 my $foundrec;  # The record we found, either the last one or one defined by edit param
 my @records; # All data records, parsed
 my @lines; # All data lines, unparsed
@@ -381,25 +381,25 @@ if ( $op =~ /^Graph/i ) {
   beerboard();
   fulllist();
 } elsif ( $op =~ /Years(d?)/i ) {
-  listsmenubar();
+  showmenu();
   yearsummary($1); # $1 indicates sort order
 } elsif ( $op =~ /short/i ) {
-  listsmenubar();
+  showmenu();
   shortlist();
 } elsif ( $op =~ /Months([BS])?/ ) {
-  listsmenubar();
+  showmenu();
   monthstat($1);
 } elsif ( $op =~ /DataStats/i ) {
-  listsmenubar();
+  showmenu();
   datastats();
 } elsif ( $op eq "About" ) {
   showmenu();
   about();
 } elsif ( $op eq "geo" ) {
-  listsmenubar();
+  showmenu();
   geodebug();
 } elsif ( $op =~ /Location|Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
-  listsmenubar();
+  #listsmenubar();
   lists();
 } elsif ( $op =~ /People|Persons/i ) { # TODO Drop the P
   listpersons();
@@ -3263,15 +3263,16 @@ sub lists {
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $qry;
   print "Filter: <a href='$url?y=$yrlim'><span>$yrlim</span></a> " .
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
+  listsmenubar();
   print searchform();
-  print "Other lists: " ;
-  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
-  for my $l ( @ops ) {
-    my $bold = "nop";
-    $bold = "b" if ($l eq $op);
-    print "<a href='$url?o=$l'><$bold>$l</$bold></a> &nbsp;\n";
-  }
-  print "</div><hr/>\n";
+#   print "Other lists: " ;
+#   my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
+#   for my $l ( @ops ) {
+#     my $bold = "nop";
+#     $bold = "b" if ($l eq $op);
+#     print "<a href='$url?o=$l'><$bold>$l</$bold></a> &nbsp;\n";
+#   }
+#   print "</div><hr/>\n";
   getseen() if ( $qryfield =~ /new/i );
   if ( !$notbef && !$qry ) {
     $notbef = datestr("%F", -180); # Default to last half year
