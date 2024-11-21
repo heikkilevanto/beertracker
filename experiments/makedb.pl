@@ -3,7 +3,6 @@
 # Script to produce my beer database. Based on the design in #379. Made with
 # the help of ChatGPT.
 
-
 use strict;
 use warnings;
 

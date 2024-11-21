@@ -134,17 +134,17 @@ sub updatelocation {
   my $id = $c->{edit};
   main::error ("Bad id for updating a location '$id' ")
     unless $id =~ /^\d+$/;
-  my $name = $c->{'q'}->param("name");
+  my $name = $c->{cgi}->param("name");
   error ("A Location must have a name" )
     unless $name;
-  my $off= $c->{'q'}->param("off") || "" ;
-  my $desc= $c->{'q'}->param("desc") || "" ;
-  my $geo= $c->{'q'}->param("geo") || "" ;
-  my $web= $c->{'q'}->param("web") || "" ;
-  my $phone=  $c->{'q'}->param("phone") || "";
-  my $addr= $c->{'q'}->param("addr") || "" ;
-  my $zip= $c->{'q'}->param("zip") || "" ;
-  my $country= $c->{'q'}->param("country") || "" ;
+  my $off= $c->{cgi}->param("off") || "" ;
+  my $desc= $c->{cgi}->param("desc") || "" ;
+  my $geo= $c->{cgi}->param("geo") || "" ;
+  my $web= $c->{cgi}->param("web") || "" ;
+  my $phone=  $c->{cgi}->param("phone") || "";
+  my $addr= $c->{cgi}->param("addr") || "" ;
+  my $zip= $c->{cgi}->param("zip") || "" ;
+  my $country= $c->{cgi}->param("country") || "" ;
   my $sql = "
     update LOCATIONS
       set
@@ -162,7 +162,7 @@ sub updatelocation {
   $sth->execute( $name, $off, $desc, $geo, $web, $phone, $addr, $zip, $country, $id );
   print STDERR "Updated " . $sth->rows .
     " Location records for id '$id' : '$name' \n";
-  print $c->{'q'}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
+  print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
 } # updateperson
 
 

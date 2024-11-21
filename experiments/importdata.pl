@@ -156,7 +156,7 @@ sub readfile {
       # Pre-calculate standard drinks
       #
       $rec->{stdrinks} = 0;
-      $rec->{stdrinks} = $rec->{alc} * $rec->{vol} / $onedrink
+      $rec->{stdrinks} = sprintf("%6.2f", $rec->{alc} * $rec->{vol} / $onedrink)
         if ( (!$rec->{pr} || $rec->{pr} > 0 )   # Box wines can have neg price
           && $rec->{vol} && $rec->{vol} > 0  #
           && $rec->{alc} && $rec->{alc} > 0 );

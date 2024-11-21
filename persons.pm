@@ -36,16 +36,18 @@ sub listpersons {
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last,
     LOCATIONS.Name as loc,
     count(COMMENTS.Id) as count
-  from PERSONS, GLASSES, COMMENTS, LOCATIONS
-  where COMMENTS.Person = PERSONS.Id
-    and COMMENTS.Glass = GLASSES.Id
-    and GLASSES.Username = ?
-    and LOCATIONS.id = GLASSES.Location
+  from PERSONS
+  left join COMMENTS on COMMENTS.Person = PERSONS.Id
+  left join GLASSES on COMMENTS.Glass = GLASSES.Id
+  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
   group by Persons.id
   order by $sort
   ";
+  # , GLASSES, COMMENTS, LOCATIONS
+  #  and GLASSES.Username = ?
   my $list_sth = $c->{dbh}->prepare($sql);
-  $list_sth->execute($c->{username});
+  #$list_sth->execute($c->{username});
+  $list_sth->execute();
 
   print "<table><tr>\n";
   # TODO - Set a max-width for the name, so one long one will not mess up, esp on the phone
@@ -56,9 +58,13 @@ sub listpersons {
   print "<td><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
   print "<td><a href='$url?o=$op&s=where'><i>Where</i></a></td></tr>";
   while ( my ($persid, $name, $last, $loc, $count) = $list_sth->fetchrow_array ) {
-    my ($stamp, $wd ) = split (' ', $last);
-    my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-    $wd = $weekdays[$wd];
+    my ($wd, $stamp) = ("", "(never)");
+    $loc = "" unless ($loc);
+    if ( $last ) {
+      ($stamp, $wd ) = split (' ', $last);
+      my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
+      $wd = $weekdays[$wd];
+    }
 
     print "<tr><td style='font-size: xx-small' align='right'>$persid</td>\n";
     print "<td><a href='$url?o=$op&e=$persid'><b>$name</b></a>";
@@ -104,8 +110,8 @@ sub editperson {
     print "<td><input name='cont' value='$p->{Contact}' /></td></tr>\n";
     print "<tr><td>Location</td>\n";
     print "<td><input name='loc' value='$p->{Location}' /></td></tr>\n"; # TODO - Select
-    print "<tr><td>Related</td>\n";
-    print "<td>" . selectperson($c, "rela", $p->{RelatedPerson} ) . "</td></tr>\n";
+    print "<tr><td>Related $p->{RelatedPerson} </td>\n";
+    print "<td>" . selectperson($c, "rela", $p->{RelatedPerson}, "", "newperson" ) . "</td></tr>\n";
     print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";
     # TODO - Pulldown (or advanced selection) for Location
     print "</table>\n";
@@ -128,14 +134,25 @@ sub updateperson {
   my $id = $c->{edit};
   main::error ("Bad id for updating a person '$id' ")
     unless $id =~ /^\d+$/;
-  my $name = $c->{'q'}->param("name");
+  my $name = $c->{cgi}->param("name");
   error ("A Person must have a name" )
     unless $name;
-  my $full= $c->{'q'}->param("full") || "" ;
-  my $desc= $c->{'q'}->param("desc") || "" ;
-  my $cont= $c->{'q'}->param("cont") || "" ;
-  my $loc=  $c->{'q'}->param("loc") || undef ;
-  my $rela= $c->{'q'}->param("rela") || "" ;
+  my $full= $c->{cgi}->param("full") || "" ;
+  my $desc= $c->{cgi}->param("desc") || "" ;
+  my $cont= $c->{cgi}->param("cont") || "" ;
+  my $loc=  $c->{cgi}->param("loc") || undef ;
+  my $rela= $c->{cgi}->param("rela") || "" ;
+  my $new = $c->{cgi}->param("newperson") || "" ;
+  if ( $new ) {  # Want to add a new related person
+    my $insql = "
+      insert into PERSONS ( Name, RelatedPerson )
+      values ( ?, ? );
+    ";
+    my $insert_person = $c->{dbh}->prepare($insql);
+    $insert_person->execute($new, $id);
+    $rela = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
+    print STDERR "Inserted a new person as '$rela' as a relatedperson for '$id' \n";
+  }
   my $sql = "
     update PERSONS
       set
@@ -163,7 +180,7 @@ sub updateperson {
     print STDERR "Updated RelatedPerson of $rela to point back to $id \n"
       if  ( $sth->rows > 0 );
   }
-  print $c->{'q'}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
+  print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
 } # updateperson
 
 ################################################################################
@@ -176,23 +193,41 @@ sub selectperson {
   my $fieldname = shift || "person";
   my $selected = shift || "";  # The id of the selected person
   my $width = shift || "";
+  my $newpersonfield = shift || ""; # If set, allows the 'new' option
   my $sql = "
   select
     PERSONS.Id,
     PERSONS.Name,
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
-  from PERSONS, GLASSES, COMMENTS
-  where COMMENTS.Person = PERSONS.Id
-    and COMMENTS.Glass = GLASSES.Id
-    and GLASSES.Username = ?
+  from PERSONS
+  left join COMMENTS on COMMENTS.Person = Persons.Id
+  left join GLASSES on GLASSES.Id = COMMENTS.Glass
   group by Persons.id
   order by GLASSES.Timestamp DESC
   ";
   my $list_sth = $c->{dbh}->prepare($sql);
-  $list_sth->execute($c->{username});
-  my $s = " <select name='$fieldname' $width >\n";
-  my $sel = "Selected" unless $selected ;
-  $s .=  "<option value='' $selected ></option>\n";
+  $list_sth->execute(); # username ?
+  my $s = "";
+  $s .= "<input name='$newpersonfield' id='$newpersonfield' $width hidden placeholder='New person'/>\n";
+  $s .= << "scriptend";
+    <script>
+      function personselchange() {
+        var sel = document.getElementById("$fieldname");
+        console.log ("Sel changed to " + sel.value);
+        if ( sel.value == "new" ) {
+          console.log("Got a 'new'");
+          var inp = document.getElementById("$newpersonfield");
+          sel.hidden = true;
+          inp.hidden = false;
+        }
+      }
+      </script>
+scriptend
+  $s .= " <select name='$fieldname' id='$fieldname' $width onchange='personselchange();'>\n";
+  my $sel = "";
+  $sel = "Selected" unless $selected ;
+  $s .= "<option value='' $sel >(select)</option>\n";
+  $s .= "<option value='new' >(new)</option>\n"  if ( $newpersonfield );
   while ( my ($persid, $name, $last) = $list_sth->fetchrow_array ) {
     $sel = "";
     $sel = "Selected" if $persid eq $selected;
