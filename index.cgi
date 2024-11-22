@@ -354,16 +354,18 @@ if ( $devversion && $op eq "copyproddata" ) {
   exit;
 }
 
-my $datafilecomment = readdatalines();
+my $datafilecomment = "";
 
-# Default new users to the about page, we have nothing else to show
-if ( !$op) {
-  if ( !@lines) {
-    $op = "About";
-  } else {
-    $op = "Graph";  # Default to showing the graph
-  }
-}
+# # Default new users to the about page, we have nothing else to show
+# Not now, we don't have @lines set up yet, and never will
+# TODO - Make a better check, and force  the about page to show an input form
+# if ( !$op) {
+#   if ( !@lines) {
+#     $op = "About";
+#   } else {
+#     $op = "Graph";  # Default to showing the graph
+#   }
+# }
 
 if ( $q->request_method eq "POST" ) {
   if ( $op =~ /Persons/ ) {
@@ -371,6 +373,7 @@ if ( $q->request_method eq "POST" ) {
   } elsif ( $op =~ /Location/ ) {
     locations::updatelocation($context);
   } else {
+    readdatalines();
     postdata(); # forwards back to the script to display the data
   }
   $dbh->disconnect;
@@ -380,10 +383,6 @@ if ( $q->request_method eq "POST" ) {
 
 htmlhead($datafilecomment); # Ok, now we can commit to making a HTML page
 
-findrec(); # Find the default record for display and geo
-extractgeo(); # Extract geo coords
-
-javascript(); # with some javascript trickery in it
 
 
 # The input form is at the top of every page
@@ -391,42 +390,53 @@ javascript(); # with some javascript trickery in it
 
 
 # We display a graph for some pages
-if ( $op =~ /^Graph/i ) {
-  inputform();
-  graph();
-  fulllist();
-} elsif ( $op =~ /Board/i ) {
+if ( $op =~ /Board/i ) {
+  oldstuff();
   inputform();
   graph();
   beerboard();
   fulllist();
 } elsif ( $op =~ /Years(d?)/i ) {
+  oldstuff();
   persons::showmenu($context);
   yearsummary($1); # $1 indicates sort order
 } elsif ( $op =~ /short/i ) {
+  oldstuff();
   persons::showmenu($context);
   shortlist();
 } elsif ( $op =~ /Months([BS])?/ ) {
+  oldstuff();
   persons::showmenu($context);
   monthstat($1);
 } elsif ( $op =~ /DataStats/i ) {
+  oldstuff();
   persons::showmenu($context);
   datastats();
 } elsif ( $op eq "About" ) {
+  # The about page went from 500ms to under 100 when dropping the oldstuff
   persons::showmenu($context);
   about();
-} elsif ( $op eq "geo" ) {
+} elsif ( $op eq "geo" ) { # TODO - This makes no sense any more
+  oldstuff();
   persons::showmenu($context);
   geodebug();
 } elsif ( $op =~ /Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
+  oldstuff();
   #listsmenubar();
   lists();
 } elsif ( $op =~ /Persons/i ) {
   persons::listpersons($context);
 } elsif ( $op =~ /Location/i ) {
   locations::listlocations($context);
-} else {  # if ( !$op || $op eq "full") {
+} elsif ( $op =~ /Full/i ) {
+  oldstuff();
   inputform();
+  fulllist();
+} else { # Default to the graph
+  $op = "Graph" unless $op;
+  oldstuff();
+  inputform();
+  graph();
   fulllist();
 }
 
@@ -435,6 +445,16 @@ htmlfooter();
 exit();  # The rest should be subs only
 
 # End of main
+
+# Helper to do all the 'global' stuff needed by old form pages
+# Used to be called in the beginning, but separated for different pages
+# above, so we can skip it for modern things
+sub oldstuff {
+  readdatalines();
+  findrec(); # Find the default record for display and geo
+  extractgeo(); # Extract geo coords
+  javascript(); # with some javascript trickery in it
+}
 
 ################################################################################
 # Dump of the data file

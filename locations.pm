@@ -221,5 +221,6 @@ scriptend
 } # seleclocation
 
 
+################################################################################
 1; # Tell perl that the module loaded fine
 

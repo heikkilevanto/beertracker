@@ -285,7 +285,7 @@ sub showmenu {
   print "<option value='o=full&' >Full List</option>\n";
   print "<option value='o=Graph' >Graph</option>\n";
   print "<option value='o=board' >Beer Board</option>\n";
-  print "<option value='o=Month' >Stats</option>\n";
+  print "<option value='o=Months' >Stats</option>\n";
   print "<option value='o=Beer' >Lists</option>\n";
   print "<option value='o=About' >About</option>\n";
   print "</select>\n";
@@ -297,5 +297,6 @@ sub showmenu {
   }
 }
 
+################################################################################
 # Report module loaded ok
 1;
