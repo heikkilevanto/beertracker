@@ -108,8 +108,8 @@ sub editperson {
     print "<td><input name='desc' value='$p->{Description}' /></td></tr>\n";
     print "<tr><td>Contact</td>\n";
     print "<td><input name='cont' value='$p->{Contact}' /></td></tr>\n";
-    print "<tr><td>Location</td>\n";
-    print "<td><input name='loc' value='$p->{Location}' /></td></tr>\n"; # TODO - Select
+    print "<tr><td>Location $p->{Location}</td>\n";
+    print "<td>" . locations::selectlocation($c, "loc", $p->{Location}, "", "newloc") ." </td></tr>\n";
     print "<tr><td>Related $p->{RelatedPerson} </td>\n";
     print "<td>" . selectperson($c, "rela", $p->{RelatedPerson}, "", "newperson" ) . "</td></tr>\n";
     print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";
@@ -143,6 +143,7 @@ sub updateperson {
   my $loc=  $c->{cgi}->param("loc") || undef ;
   my $rela= $c->{cgi}->param("rela") || "" ;
   my $new = $c->{cgi}->param("newperson") || "" ;
+  my $newloc = $c->{cgi}->param("newloc") || "" ;
   if ( $new ) {  # Want to add a new related person
     my $insql = "
       insert into PERSONS ( Name, RelatedPerson )
@@ -152,6 +153,16 @@ sub updateperson {
     $insert_person->execute($new, $id);
     $rela = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
     print STDERR "Inserted a new person as '$rela' as a relatedperson for '$id' \n";
+  }
+  if ( $newloc ) { # Create a new location
+    my $insql = "
+      insert into LOCATIONS ( Name )
+      values ( ? );
+    ";
+    my $insert_person = $c->{dbh}->prepare($insql);
+    $insert_person->execute($newloc);
+    $loc = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef) || undef;
+    print STDERR "Inserted a new location '$newloc' as '$loc' for '$id' \n";
   }
   my $sql = "
     update PERSONS
@@ -187,7 +198,7 @@ sub updateperson {
 # Helper to select a person
 ################################################################################
 # For now, just produces a pull-down list. Later we can add filtering, options
-# for sort order and for entering a new person, etc
+# for sort order etc
 sub selectperson {
   my $c = shift; # context
   my $fieldname = shift || "person";

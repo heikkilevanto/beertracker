@@ -8,6 +8,7 @@ use warnings;
 
 # TODO - Make a helper for selecting a location
 # TODO - Add current and latest as options to it
+# TODO - Add a way to add a new location
 
 # TODO - Add a button to use current geo (needs JS trickery)
 
@@ -40,14 +41,13 @@ sub listlocations {
     LOCATIONS.Name,
     LOCATIONS.Website,
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
-  from LOCATIONS, GLASSES
-  where LOCATIONS.id = GLASSES.Location
-    and GLASSES.username = ?
+  from LOCATIONS
+  left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id
   order by $sort
   ";
   my $list_sth = $c->{dbh}->prepare($sql);
-  $list_sth->execute($c->{username});
+  $list_sth->execute();
 
   print "<table><tr>\n";
   # TODO - Set a max-width for the name, so one long one will not mess up, esp on the phone
@@ -58,10 +58,12 @@ sub listlocations {
   print "<td><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
   print "</tr>";
   while ( my ($locid, $name, $web, $last ) = $list_sth->fetchrow_array ) {
-    my ($stamp, $wd ) = split (' ', $last);
-    my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-    $wd = $weekdays[$wd];
-
+    my ($stamp, $wd ) = ( "(never)","" );
+    if ( $last ) {
+      ($stamp, $wd ) = split (' ', $last);
+      my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
+      $wd = $weekdays[$wd];
+    }
     print "<tr><td style='font-size: xx-small' align='right'>$locid</td>\n";
     print "<td><a href='$url?o=$op&e=$locid'><b>$name</b></a>";
     print "<a href='$web' target='_blank' ><span> &nbsp; www</span></a>"
@@ -164,6 +166,59 @@ sub updatelocation {
     " Location records for id '$id' : '$name' \n";
   print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
 } # updateperson
+
+################################################################################
+# Helper to select a location
+################################################################################
+# For now, just produces a pull-down list. Later we can add filtering, options
+# for sort order and some geo coord magic
+sub selectlocation {
+  my $c = shift; # context
+  my $fieldname = shift || "location";
+  my $selected = shift || "";  # The id of the selected location
+  my $width = shift || "";
+  my $newlocfield = shift || ""; # If set, allows the 'new' option
+  my $sql = "
+  select
+    LOCATIONS.Id,
+    LOCATIONS.Name,
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
+  from LOCATIONS
+  left join GLASSES on GLASSES.Location = LOCATIONS.Id
+  group by LOCATIONS.id
+  order by GLASSES.Timestamp DESC
+  ";
+  my $list_sth = $c->{dbh}->prepare($sql);
+  $list_sth->execute(); # username ?
+  my $s = "";
+  $s .= "<input name='$newlocfield' id='$newlocfield' $width hidden placeholder='New location'/>\n";
+  $s .= << "scriptend";
+    <script>
+      function locselchange() {
+        var sel = document.getElementById("$fieldname");
+        console.log ("Sel changed to " + sel.value);
+        if ( sel.value == "new" ) {
+          console.log("Got a 'new'");
+          var inp = document.getElementById("$newlocfield");
+          sel.hidden = true;
+          inp.hidden = false;
+        }
+      }
+      </script>
+scriptend
+  $s .= " <select name='$fieldname' id='$fieldname' $width onchange='locselchange();'>\n";
+  my $sel = "";
+  $sel = "Selected" unless $selected ;
+  $s .= "<option value='' $sel >(select)</option>\n";
+  $s .= "<option value='new' >(new)</option>\n"  if ( $newlocfield );
+  while ( my ($id, $name, $last) = $list_sth->fetchrow_array ) {
+    $sel = "";
+    $sel = "Selected" if $id eq $selected;
+    $s .=  "<option value='$id' $sel $width >$name</option>\n";
+  }
+  $s .= "</select>\n";
+  return $s;
+} # seleclocation
 
 
 1; # Tell perl that the module loaded fine
