@@ -312,8 +312,8 @@ sub get_or_insert_brew {
             "INSERT INTO BREWS (Brewtype, SubType, Name, Producer, BrewStyle, Alc, Country, Region, Flavor, Year) " .
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $insert_brew->execute($rec->{type}, $rec->{subtype}, $rec->{name},
-          $rec->{maker}, $rec->{style}, $rec->{alc}, $rec->{country}, $rec->{region},
-          $rec->{flavor}, $rec->{year});
+          $rec->{maker}, $rec->{style}, $rec->{alc}, $rec->{country}||'', $rec->{region} ||'',
+          $rec->{flavor} ||'', $rec->{year}||'');
         $id = $dbh->last_insert_id(undef, undef, "BREWS", undef);
     }
     return $id;
@@ -449,7 +449,7 @@ sub winestyle {
     $rec->{flavor} =~ s/Cab[ -]+Sau?v/Cabernet Sauvignon/i ;
     $rec->{flavor} =~ s/Sav Blacn/Sauvignon Blacn/i ;
     $rec->{flavor} =~ s/Gr[uü]n(er?) Veltliner/Grüner Veltliner/i;
-    $rec->{flavor} =~ s/[ ,]$//; # trim
+    $rec->{flavor} =~ s/[ ,]*$//; # trim
   }
   my @details = (
      # Classifications
@@ -471,7 +471,6 @@ sub winestyle {
   $rec->{style} =~ s/^\W+//; # Trim non-word characters away
   $rec->{style} =~ s/\W+$//;
   $rec->{style} =~ s/\s+$/ /g; # And space sequences
-
 }
 
 ############
