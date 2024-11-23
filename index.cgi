@@ -339,6 +339,7 @@ my $context = {
 # TODO - More modules, more stuff away from the main script
 require "./persons.pm";   # List of people, their details, editing, helpers
 require "./locations.pm"; # Locations stuff
+require "./brews.pm";  # Lists of various brews, etc
 
 ################################################################################
 # Main program
@@ -420,10 +421,14 @@ if ( $op =~ /Board/i ) {
   oldstuff();
   persons::showmenu($context);
   geodebug();
-} elsif ( $op =~ /Brewery|Beer|Wine|Booze|Restaurant|Style/i ) {
+} elsif ( $op =~ /Brewery|Wine|Booze|Restaurant|Style/i ) {
   oldstuff();
   #listsmenubar();
   lists();
+} elsif ( $op =~ /Beer/i ) {
+  brews::listbrews($context);
+} elsif ( $op =~ /Persons/i ) {
+  persons::listpersons($context);
 } elsif ( $op =~ /Persons/i ) {
   persons::listpersons($context);
 } elsif ( $op =~ /Location/i ) {
