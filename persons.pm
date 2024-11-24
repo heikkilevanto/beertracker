@@ -113,7 +113,6 @@ sub editperson {
     print "<tr><td>Related $p->{RelatedPerson} </td>\n";
     print "<td>" . selectperson($c, "rela", $p->{RelatedPerson}, "", "newperson" ) . "</td></tr>\n";
     print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";
-    # TODO - Pulldown (or advanced selection) for Location
     print "</table>\n";
     # Come back to here after updating
     print "<input type='hidden' name='o' value='$c->{op}' />\n";
