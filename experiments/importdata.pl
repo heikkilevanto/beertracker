@@ -135,8 +135,10 @@ sub readfile {
       # Normalize old style geo
       $rec->{geo} =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/ if ($rec->{geo});
       $rec->{stamp} =~s/ ([0-9]:)/ 0$1/;  # Make sure we have leading zero in time
+
       if ( $line =~ /\Wcider\W/i ) {
         $linetype = "Cider" ;
+        $rec->{type} = "Cider";
         $rec->{style} =~ s/cider\W*//i; # don't repeat that in the style
       }
 
@@ -356,7 +358,7 @@ sub shortbeerstyle {
   return "Dunk"  if ( $sty =~ /.*Dunkel.*/i);
   return "Bock"  if ( $sty =~ /Bock/i);
   return "Smoke" if ( $sty =~ /(Smoke|Rauch)/i);
-  return "Lager" if ( $sty =~ /Lager|Keller|Pils|Zwickl/i);
+  return "Lager" if ( $sty =~ /Lager|Keller|Pils|Zwickl|Altbier/i);
   return "Berl"  if ( $sty =~ /Berliner/i);
   return "Weiss" if ( $sty =~ /Hefe|Weizen|Hvede|Wit/i);
   return "Stout" if ( $sty =~ /Stout|Porter|Imperial/i);
@@ -373,7 +375,7 @@ sub shortbeerstyle {
   return "BW"    if ( $sty =~ /Barley.*Wine/i);
   return "Sour"  if ( $sty =~ /Lambic|Gueuze|Sour|Kriek|Frmaboise/i);
   $sty =~ s/^ *([^ ]{1,5}).*/$1/; # First word, only five chars, in case we didn't get it above
-  return $sty;
+  return ucfirst($sty);
 }
 
 # Try to extract country, region, grapes, vintage, etc from a style as entered
