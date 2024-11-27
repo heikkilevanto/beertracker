@@ -174,9 +174,7 @@ sub updatelocation {
 # for sort order and some geo coord magic
 sub selectlocation {
   my $c = shift; # context
-  my $fieldname = shift || "location";
   my $selected = shift || "";  # The id of the selected location
-  my $width = shift || "";
   my $newlocfield = shift || ""; # If set, allows the 'new' option
   my $sql = "
   select
@@ -191,11 +189,11 @@ sub selectlocation {
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute(); # username ?
   my $s = "";
-  $s .= "<input name='$newlocfield' id='$newlocfield' $width hidden placeholder='New location'/>\n";
+  $s .= "<input name='$newlocfield' id='$newlocfield' width hidden placeholder='New location'/>\n";
   $s .= << "scriptend";
     <script>
       function locselchange() {
-        var sel = document.getElementById("$fieldname");
+        var sel = document.getElementById(""loc"");
         console.log ("Sel changed to " + sel.value);
         if ( sel.value == "new" ) {
           console.log("Got a 'new'");
@@ -206,7 +204,7 @@ sub selectlocation {
       }
       </script>
 scriptend
-  $s .= " <select name='$fieldname' id='$fieldname' $width onchange='locselchange();'>\n";
+  $s .= " <select name='loc' id='loc' onchange='locselchange();'>\n";
   my $sel = "";
   $sel = "Selected" unless $selected ;
   $s .= "<option value='' $sel >(select)</option>\n";
@@ -214,7 +212,7 @@ scriptend
   while ( my ($id, $name, $last) = $list_sth->fetchrow_array ) {
     $sel = "";
     $sel = "Selected" if $id eq $selected;
-    $s .=  "<option value='$id' $sel $width >$name</option>\n";
+    $s .=  "<option value='$id' $sel >$name</option>\n";
   }
   $s .= "</select>\n";
   return $s;

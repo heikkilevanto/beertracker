@@ -340,6 +340,7 @@ my $context = {
 require "./persons.pm";   # List of people, their details, editing, helpers
 require "./locations.pm"; # Locations stuff
 require "./brews.pm";  # Lists of various brews, etc
+require "./glasses.pm"; # Main input for and the full list
 
 ################################################################################
 # Main program
@@ -434,9 +435,8 @@ if ( $op =~ /Board/i ) {
 } elsif ( $op =~ /Location/i ) {
   locations::listlocations($context);
 } elsif ( $op =~ /Full/i ) {
-  oldstuff();
-  inputform();
-  fulllist();
+  glasses::inputform($context);
+  print "No full list done yet <br/>\n";
 } else { # Default to the graph
   $op = "Graph" unless $op;
   oldstuff();

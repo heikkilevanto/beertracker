@@ -109,7 +109,7 @@ sub editperson {
     print "<tr><td>Contact</td>\n";
     print "<td><input name='cont' value='$p->{Contact}' /></td></tr>\n";
     print "<tr><td>Location $p->{Location}</td>\n";
-    print "<td>" . locations::selectlocation($c, "loc", $p->{Location}, "", "newloc") ." </td></tr>\n";
+    print "<td>" . locations::selectlocation($c, $p->{Location}, "newloc") ." </td></tr>\n";
     print "<tr><td>Related $p->{RelatedPerson} </td>\n";
     print "<td>" . selectperson($c, "rela", $p->{RelatedPerson}, "", "newperson" ) . "</td></tr>\n";
     print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";

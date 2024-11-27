@@ -89,6 +89,67 @@ sub listbrews {
   print "<hr/>\n" ;
 } # listpersons
 
+################################################################################
+# Select a brew
+# A key component of the main input form
+################################################################################
+# TODO - Many features missing
+# TODO - Instead of thje "Brew" label, make a pulldown of brew styles
+# TODO - Put the brews in a JS array with id, dispname, style, substyle
+# TODO - Make a JS to put only the selected style brews into the list
+# TODO - Add an option to filter: Show filter field, redo the list on every change
+sub selectbrew {
+  my $c = shift; # context
+  my $selected = shift || "";  # The id of the selected brew
+  my $sql = "
+  select
+    BREWS.Id,
+    BREWS.Name,
+    BREWS.Producer,
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
+  from BREWS
+  left join GLASSES on GLASSES.Brew= BREWS.ID
+  group by BREWS.id
+  order by GLASSES.Timestamp DESC
+  LIMIT 500
+  ";
+  my $list_sth = $c->{dbh}->prepare($sql);
+  $list_sth->execute(); # username ?
+  my $s = "";
+  $s .= "<div id='newbrewdiv' hidden>";
+  $s .= "<input name='newbrewname' placeholder='New Name'/><br/>\n";
+  $s .= "<input name='newbrewmaker' width placeholder='Producer'/><br/>\n";
+  $s .= "<input name='newalc'  placeholder='Alc'/><br/>\n";
+  $s .= "</div>";
+  $s .= << "scriptend";
+    <script>
+      function brewselchange() {
+        var sel = document.getElementById("brewsel");
+        console.log ("Brew changed to " + sel.value);
+        if ( sel.value == "new" ) {
+          console.log("Got a 'new'");
+          var inp = document.getElementById("newbrewdiv");
+          sel.hidden = true;
+          inp.hidden = false;
+        }
+      }
+      </script>
+scriptend
+  $s .= " <select name='brewsel' id='brewsel' onchange='brewselchange();'>\n";
+  my $sel = "";
+  #$sel = "Selected" unless $selected ;
+  $s .= "<option value='' $sel >(select)</option>\n";
+  $s .= "<option value='new' >(new)</option>\n" ;
+  while ( my ($id, $name, $prod, $last) = $list_sth->fetchrow_array ) {
+    $sel = "";
+    $sel = "Selected" if $id eq $selected;
+    $s .=  "<option value='$id' $sel >$prod: $name</option>\n";
+  }
+  $s .= "</select>\n";
+  return $s;
+} # selectbrew
+
+
 
 ################################################################################
 # Report module loaded ok
