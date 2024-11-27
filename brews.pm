@@ -94,7 +94,8 @@ sub listbrews {
 # A key component of the main input form
 ################################################################################
 # TODO - Many features missing
-# TODO - Make nicer display strings, maybe depending on type
+# TODO - Display the brew details under the selection
+# TODO - Hide selector if style is "Restaurant" or "Night"
 # TODO - Add more fields for new brews
 # TODO - Add an option to filter: Show filter field, redo the list on every change
 sub selectbrew {
@@ -103,7 +104,7 @@ sub selectbrew {
   my $brewtype = shift || "";
   my $sql = "
   select
-    BREWS.Id, BREWS.Brewtype, Name, Producer,
+    BREWS.Id, BREWS.Brewtype, BREWS.SubType, Name, Producer,
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
   from BREWS
   left join GLASSES on GLASSES.Brew= BREWS.ID
@@ -132,9 +133,18 @@ sub selectbrew {
       }
     const brews = [
 scriptend
-  while ( my ($id,$bt,$na,$pr)  = $list_sth->fetchrow_array ) {
-    $s .= "  { Id: '$id', BrewType: '$bt', " .
-             " Name: '$na', Producer: '$pr' }, \n";
+  while ( my ($id, $bt, $su, $na, $pr)  = $list_sth->fetchrow_array ) {
+    my $disp = "";
+    $disp .= $na if ($na);
+    $disp .= " / $pr " if ($pr && $na !~ /$pr/ );
+    $disp .= " / ";
+    if ( $su ) {
+      $disp .= $su;
+    } else {
+      $disp .= $bt;
+    }
+    $disp = substr($disp, 0, 30);
+    $s .= "  { Id: '$id', BrewType: '$bt',  Disp: '$disp' },\n";
   }
 
   $s .= << "scriptend";
@@ -150,7 +160,7 @@ scriptend
           var b = brews[i];
           if ( b.BrewType == typ ) {
             var found = (selected == b.Id);
-            sel.add( new Option( b.Producer + ": " + b.Name , b.Id, found, found) );
+            sel.add( new Option( b.Disp , b.Id, found, found) );
             n++;
             if ( n > 200 )
               return;
