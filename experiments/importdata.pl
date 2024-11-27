@@ -153,6 +153,10 @@ sub readfile {
         $rec->{subtype} = shortbeerstyle($rec->{style}) || "";
       } elsif ( $linetype eq "Wine" ) {  # Try to separate country, region, grapes, and such
         winestyle($rec);
+      } elsif ( $linetype eq "Booze" ) {
+        $linetype = "Spirit";
+        $rec->{type} = $linetype;
+        $rec->{subtype} =~ s/sc?h?napp?s/Snaps/i;
       }
 
       # Pre-calculate standard drinks
