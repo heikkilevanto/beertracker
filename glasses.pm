@@ -29,7 +29,7 @@ sub inputform {
   print "<tr><td>Location</td>\n";
   print "<td>" . locations::selectlocation($c, $rec->{Location}, "newloc") . "</td></tr>\n";
   print "<tr><td>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
-  print "<td>". brews::selectbrew($c,$rec->{Brew}). "</td></tr>\n";
+  print "<td>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</td></tr>\n";
   print "</table>\n";
   print "<hr>\n";
 }
@@ -47,7 +47,7 @@ sub selectbrewtype {
   my $sql = "select distinct BrewType from Glasses";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( );
-  my $s = "<select name='selbrewtype' id='selbrewtype' onchange='console.log(\"ch\");populatebrews(this.value)' >\n";
+  my $s = "<select name='selbrewtype' id='selbrewtype' onchange='populatebrews(this.value)' >\n";
   while ( my $bt = $sth->fetchrow_array ) {
     my $se = "";
     $se = "selected" if ( $bt eq $selected );

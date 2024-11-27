@@ -223,9 +223,7 @@ sub selectperson {
     <script>
       function personselchange() {
         var sel = document.getElementById("$fieldname");
-        console.log ("Sel changed to " + sel.value);
         if ( sel.value == "new" ) {
-          console.log("Got a 'new'");
           var inp = document.getElementById("$newpersonfield");
           sel.hidden = true;
           inp.hidden = false;

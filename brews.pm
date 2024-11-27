@@ -94,23 +94,22 @@ sub listbrews {
 # A key component of the main input form
 ################################################################################
 # TODO - Many features missing
-# TODO - Instead of thje "Brew" label, make a pulldown of brew styles
-# TODO - Put the brews in a JS array with id, dispname, style, substyle
-# TODO - Make a JS to put only the selected style brews into the list
+# TODO - Make nicer display strings, maybe depending on type
+# TODO - Add more fields for new brews
 # TODO - Add an option to filter: Show filter field, redo the list on every change
 sub selectbrew {
   my $c = shift; # context
   my $selected = shift || "";  # The id of the selected brew
+  my $brewtype = shift || "";
   my $sql = "
   select
-    BREWS.*,
+    BREWS.Id, BREWS.Brewtype, Name, Producer,
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
   from BREWS
   left join GLASSES on GLASSES.Brew= BREWS.ID
   group by BREWS.id
-  order by GLASSES.Timestamp DESC
-  LIMIT 500
-  ";
+  order by GLASSES.Timestamp DESC ";
+  #$sql .= "LIMIT 400" ; # Saves some time, but looses older records. Ok for beer, not the rest
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute(); # username ?
   my $s = "";
@@ -125,9 +124,7 @@ sub selectbrew {
     <script>
       function brewselchange() {
         var sel = document.getElementById("brewsel");
-        console.log ("Brew changed to " + sel.value);
         if ( sel.value == "new" ) {
-          console.log("Got a 'new': " + sel[sel.selectedIndex].foo );
           var inp = document.getElementById("newbrewdiv");
           sel.hidden = true;
           inp.hidden = false;
@@ -135,30 +132,32 @@ sub selectbrew {
       }
     const brews = [
 scriptend
-  while ( my $b = $list_sth->fetchrow_hashref ) {
-    $s .= "     { ";
-    for my $f ( "Id", "BrewType", "SubType", "Name", "Producer" ) {
-      $s .= "$f: \"$b->{$f}\", ";
-    }
-    $s .= "}, \n";
+  while ( my ($id,$bt,$na,$pr)  = $list_sth->fetchrow_array ) {
+    $s .= "  { Id: '$id', BrewType: '$bt', " .
+             " Name: '$na', Producer: '$pr' }, \n";
   }
 
   $s .= << "scriptend";
     ];
 
-    function populatebrews(typ) {
+    function populatebrews(typ, selected) {
         var sel = document.getElementById("brewsel");
         sel.innerHTML = "";
         sel.add( new Option( "(select)", "" ) );
         sel.add( new Option( "(new)", "new" ) );
+        var n = 0;
         for ( let i=0; i<brews.length; i++) {
           var b = brews[i];
           if ( b.BrewType == typ ) {
-            sel.add( new Option( b.Name, b.Id ) );
+            var found = (selected == b.Id);
+            sel.add( new Option( b.Producer + ": " + b.Name , b.Id, found, found) );
+            n++;
+            if ( n > 200 )
+              return;
           }
         }
       }
-    populatebrews("Wine");
+    populatebrews("$brewtype", $selected);
     </script>
 scriptend
 

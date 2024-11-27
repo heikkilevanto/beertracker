@@ -194,9 +194,7 @@ sub selectlocation {
     <script>
       function locselchange() {
         var sel = document.getElementById("loc");
-        console.log ("Sel changed to " + sel.value);
         if ( sel.value == "new" ) {
-          console.log("Got a 'new'");
           var inp = document.getElementById("$newlocfield");
           sel.hidden = true;
           inp.hidden = false;
