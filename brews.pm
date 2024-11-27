@@ -103,9 +103,7 @@ sub selectbrew {
   my $selected = shift || "";  # The id of the selected brew
   my $sql = "
   select
-    BREWS.Id,
-    BREWS.Name,
-    BREWS.Producer,
+    BREWS.*,
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
   from BREWS
   left join GLASSES on GLASSES.Brew= BREWS.ID
@@ -121,31 +119,49 @@ sub selectbrew {
   $s .= "<input name='newbrewmaker' width placeholder='Producer'/><br/>\n";
   $s .= "<input name='newalc'  placeholder='Alc'/><br/>\n";
   $s .= "</div>";
+  $s .= "<select name='brewsel' id='brewsel' onchange='brewselchange();'>\n";
+  $s .= "</select>\n";  # Options will be filled in populatebrews() js func below
   $s .= << "scriptend";
     <script>
       function brewselchange() {
         var sel = document.getElementById("brewsel");
         console.log ("Brew changed to " + sel.value);
         if ( sel.value == "new" ) {
-          console.log("Got a 'new'");
+          console.log("Got a 'new': " + sel[sel.selectedIndex].foo );
           var inp = document.getElementById("newbrewdiv");
           sel.hidden = true;
           inp.hidden = false;
         }
       }
-      </script>
+    const brews = [
 scriptend
-  $s .= " <select name='brewsel' id='brewsel' onchange='brewselchange();'>\n";
-  my $sel = "";
-  #$sel = "Selected" unless $selected ;
-  $s .= "<option value='' $sel >(select)</option>\n";
-  $s .= "<option value='new' >(new)</option>\n" ;
-  while ( my ($id, $name, $prod, $last) = $list_sth->fetchrow_array ) {
-    $sel = "";
-    $sel = "Selected" if $id eq $selected;
-    $s .=  "<option value='$id' $sel >$prod: $name</option>\n";
+  while ( my $b = $list_sth->fetchrow_hashref ) {
+    $s .= "     { ";
+    for my $f ( "Id", "BrewType", "SubType", "Name", "Producer" ) {
+      $s .= "$f: \"$b->{$f}\", ";
+    }
+    $s .= "}, \n";
   }
-  $s .= "</select>\n";
+
+  $s .= << "scriptend";
+    ];
+
+    function populatebrews(typ) {
+        var sel = document.getElementById("brewsel");
+        sel.innerHTML = "";
+        sel.add( new Option( "(select)", "" ) );
+        sel.add( new Option( "(new)", "new" ) );
+        for ( let i=0; i<brews.length; i++) {
+          var b = brews[i];
+          if ( b.BrewType == typ ) {
+            sel.add( new Option( b.Name, b.Id ) );
+          }
+        }
+      }
+    populatebrews("Wine");
+    </script>
+scriptend
+
   return $s;
 } # selectbrew
 

@@ -28,12 +28,34 @@ sub inputform {
   print "<table>\n";
   print "<tr><td>Location</td>\n";
   print "<td>" . locations::selectlocation($c, $rec->{Location}, "newloc") . "</td></tr>\n";
-  print "<tr><td>Brew</td>\n";
+  print "<tr><td>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
   print "<td>". brews::selectbrew($c,$rec->{Brew}). "</td></tr>\n";
   print "</table>\n";
   print "<hr>\n";
 }
 
+
+
+################################################################################
+# Helper to select a brew type
+################################################################################
+# Selecting from glasses, not brews, so that we get 'empty' glasses as well,
+# f.ex. "Restaurant"
+sub selectbrewtype {
+  my $c = shift;
+  my $selected = shift || "";
+  my $sql = "select distinct BrewType from Glasses";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( );
+  my $s = "<select name='selbrewtype' id='selbrewtype' onchange='console.log(\"ch\");populatebrews(this.value)' >\n";
+  while ( my $bt = $sth->fetchrow_array ) {
+    my $se = "";
+    $se = "selected" if ( $bt eq $selected );
+    $s .= "<option value='$bt' $se>$bt</option>\n";
+  }
+  $s .= "</select>\n";
+  return $s;
+}
 
 ################################################################################
 # Helper to get the record for editing or defaults

@@ -193,7 +193,7 @@ sub selectlocation {
   $s .= << "scriptend";
     <script>
       function locselchange() {
-        var sel = document.getElementById(""loc"");
+        var sel = document.getElementById("loc");
         console.log ("Sel changed to " + sel.value);
         if ( sel.value == "new" ) {
           console.log("Got a 'new'");
