@@ -438,6 +438,8 @@ if ( $op =~ /Board/i ) {
 } elsif ( $op =~ /Full/i ) {
   glasses::inputform($context);
   print "No full list done yet <br/>\n";
+  oldstuff();
+  fulllist();
 } else { # Default to the graph
   $op = "Graph" unless $op;
   oldstuff();
@@ -1115,9 +1117,9 @@ sub saverecord {
 
   # Insert the GLASS record itself
   my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-      "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc, StDrinks) " .
-      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-  $insert_glass->execute($username, $rec->{stamp}, $locationid, $type,
+      "(Username, Timestamp, Location, BrewType, SubType, Brew, Price, Volume, Alc, StDrinks) " .
+      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+  $insert_glass->execute($username, $rec->{stamp}, $locationid, $type, "Old",
       $brewid, $rec->{pr}, $rec->{vol}, $rec->{alc}, $rec->{stdrinks} );
   my $glassid = $dbh->last_insert_id(undef, undef, "GLASSES", undef);
   print STDERR "Inserted glass id $glassid '$rec->{stamp}' '$type' '$rec->{name}'  \n";

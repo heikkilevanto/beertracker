@@ -57,6 +57,9 @@ sub inputform {
     print " <input type='submit' name='submit' value='Save' id='save' />\n";
     print " <input type='button' value='Clr' onclick='clearinputs()'/>\n";
   }
+  print "&nbsp;" ;
+  persons::showmenu($c);
+
   print "</td></tr>\n";
   print "</table>\n";
   print "</form>\n";
