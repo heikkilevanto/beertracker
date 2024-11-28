@@ -235,14 +235,15 @@ $datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
 
 $subtypes{"Wine"} = [ "Red", "White", "Sweet", "Bubbly" ];
 
-# Booze. Also used for coctails
-$datalinetypes{"Booze"} = [ "stamp", "type", "wday", "effdate", "loc",
+# Spirits, Booze. Also used for coctails
+$datalinetypes{"Spirit"} = [ "stamp", "type", "wday", "effdate", "loc",
   "subtype",   # whisky, snaps
   "maker", # brand or house
   "name",  # What it says on the label
   "style", # can be coctail, country/(region, or flavor
   "vol", "alc",  # These are for the alcohol itself
   "pr", "rate", "com", "geo", "photo"];
+$datalinetypes{"Booze"} = $datalinetypes{"Spirit"};
 
 $datalinetypes{"Cider"} = [
   "stamp", "type", "wday", "effdate", "loc",
@@ -4586,6 +4587,7 @@ sub nullfields {
   my $rec = shift;
   my $linetype = shift || $rec->{type};
   my $fieldnamelistref = $datalinetypes{$linetype};
+  error ("Oops, no field list for '$linetype'") unless $fieldnamelistref;
   my @fieldnamelist = @{$fieldnamelistref};
   foreach my $f ( fieldnames($linetype) ) {
     $rec->{$f} = ""
