@@ -331,6 +331,7 @@ my $context = {
   'qry'      => $qry,
   'op'       => $op,
   'sort'     => $sort,
+  'onedrink' => $onedrink,
 };
 
 ################################################################################
@@ -371,11 +372,13 @@ my $datafilecomment = "";
 # }
 
 if ( $q->request_method eq "POST" ) {
-  if ( $op =~ /Persons/ ) {
+  if ( $op =~ /Persons/i ) {
     persons::updateperson($context);
-  } elsif ( $op =~ /Location/ ) {
+  } elsif ( $op =~ /Location/i ) {
     locations::updatelocation($context);
-  } else {
+  } elsif ( $op =~ /Full/i ) {
+    glasses::postglass($context);
+  } else { # Default to the old way of posting, for now  - TODO
     readdatalines();
     postdata(); # forwards back to the script to display the data
   }

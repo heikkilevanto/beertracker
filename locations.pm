@@ -165,7 +165,7 @@ sub updatelocation {
   print STDERR "Updated " . $sth->rows .
     " Location records for id '$id' : '$name' \n";
   print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
-} # updateperson
+} # updatelocation
 
 ################################################################################
 # Helper to select a location

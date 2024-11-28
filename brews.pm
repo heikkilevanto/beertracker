@@ -87,7 +87,8 @@ sub listbrews {
   }
   print "</table>\n";
   print "<hr/>\n" ;
-} # listpersons
+} # listbrews
+
 
 ################################################################################
 # Select a brew
@@ -119,9 +120,16 @@ sub selectbrew {
   $list_sth->execute(); # username ?
   my $s = "";
   $s .= "<div id='newbrewdiv' hidden>";
+  $s .= "<input name='newbrewsub' placeholder='SubType'/><br/>\n";
   $s .= "<input name='newbrewname' placeholder='New Name'/><br/>\n";
-  $s .= "<input name='newbrewmaker' width placeholder='Producer'/><br/>\n";
+  $s .= "<input name='newbrewstyle' placeholder='Style'/><br/>\n";
+  $s .= "<input name='newbrewproducer' width placeholder='Producer'/><br/>\n";
   $s .= "<input name='newalc'  placeholder='Alc'/><br/>\n";
+  $s .= "<input name='newbrewcountry' width placeholder='Country'/><br/>\n";
+  $s .= "<input name='newbrewregion' width placeholder='Region'/><br/>\n";
+  $s .= "<input name='newbrewflavor' width placeholder='Flavor'/><br/>\n";
+  $s .= "<input name='newbrewyear' width placeholder='Year'/><br/>\n";
+  $s .= "<input name='newbrewdetails' width placeholder='Details'/><br/>\n";
   $s .= "</div>";
   $s .= "<select name='brewsel' id='brewsel' onchange='brewselchange();' style='width: 15em'>\n";
   $s .= "</select>\n";  # Options will be filled in populatebrews() js func below
@@ -176,7 +184,7 @@ scriptend
           }
         }
       }
-    populatebrews("$brewtype", $selected);
+    populatebrews("$brewtype", "$selected");
     </script>
 scriptend
 

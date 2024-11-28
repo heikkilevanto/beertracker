@@ -22,6 +22,9 @@ use warnings;
 ################################################################################
 # TODO - (Hidden) line for date and time
 # TODO - Turn into a form that submits. Process it
+# TODO - The timestamp processing is overly simplified, now always puts current time in the form
+#        It still updatyes the record with the entered value, but won't display it
+#        Best would be to let the browser fill it in, but not overwrite existing data
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
@@ -29,11 +32,14 @@ sub inputform {
         "enctype='multipart/form-data'>\n";
   print "<table>\n";
 
+  print "<tr><td>Id $rec->{Id}</td>\n";
+  my $stamp = main::datestr("%F %T");
+  print "<td><input name='stamp' value='$stamp' size=25 />";
   print "<tr><td>Location</td>\n";
   print "<td>" . locations::selectlocation($c, $rec->{Location}, "newloc") . "</td></tr>\n";
 
   # Brew style and brew selection
-  print "<tr><td>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
+  print "<tr><td style='vertical-align:top'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
   print "<td>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</td></tr>\n";
 
   # Vol, Alc, and Price
@@ -45,12 +51,13 @@ sub inputform {
 
   # Buttons
   print "<tr><td>\n";
+  print " <input type='hidden' name='o' value='$c->{op}' />\n";
   if ($c->{edit}) {
+    print " <input type='hidden' name='e' value='$c->{edit}' />\n";
     print " <input type='submit' name='submit' value='Save' id='save' />\n";
     print "</td><td>\n";
     print " <input type='submit' name='submit' value='Del'/>\n";
     print "<a href='$c->{url}?o=$c->{op}' ><span>cancel</span></a>";
-    print "</td>\n";
   } else { # New glass
     print "<input type='submit' name='submit' value='Record'/>\n";
     print "</td><td>\n";
@@ -59,6 +66,7 @@ sub inputform {
   }
   print "&nbsp;" ;
   persons::showmenu($c);
+  print "</td>\n";
 
   print "</td></tr>\n";
   print "</table>\n";
@@ -83,7 +91,81 @@ SCRIPTEND
   print "<script>$script</script>\n";
 } # inputform
 
+################################################################################
+# Update or insert a glass from the form above
+################################################################################
+sub postglass {
+  my $c = shift; # context
+  foreach my $param ($c->{cgi}->param) {
+    my $value = $c->{cgi}->param($param);
+    print STDERR "$param = '$value'\n";
+  }
+  my $sub = $c->{cgi}->param("submit") || "";
 
+  my $stdrinks = 0;
+  $stdrinks = sprintf("%6.2f", $c->{cgi}->param("alc") * $c->{cgi}->param("vol") / $c->{onedrink} );
+
+  main::error ("Creating new locations not yet supported") if ($c->{cgi}->param("loc") eq "new" );
+
+  if ( $sub eq "Save" ) {  # Update existing glass
+    my $sql = "update GLASSES set
+        TimeStamp = ?,
+        Location = ?,
+        Volume = ?,
+        Alc = ?,
+        Price = ?,
+        Brew = ?,
+        StDrinks = ?
+      where id = ? and username = ?
+    ";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute(
+    $c->{cgi}->param("stamp") || "",
+    $c->{cgi}->param("loc") || undef,
+    $c->{cgi}->param("vol") || "",
+    $c->{cgi}->param("alc") || "",
+    $c->{cgi}->param("pr") || "",
+    $c->{cgi}->param("brewsel") || undef,
+    $stdrinks,
+    $c->{edit}, $c->{username} );
+  print STDERR "Updated " . $sth->rows .
+    " Glass records for id '$c->{edit}'  \n";
+
+  } else { # Create a new glass
+    # TODO - Timestamps, Subtypes,
+
+    my $sql = "insert into GLASSES
+      ( Username, TimeStamp, BrewType, SubType,
+        Location, Brew, Price, Volume, Alc, StDrinks )
+      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ? )
+      ";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute(
+      $c->{username},
+      $c->{cgi}->param("stamp") || "",
+      $c->{cgi}->param("selbrewtype") || "",
+      $c->{cgi}->param("newbrewsub") || "",
+      $c->{cgi}->param("loc") || undef,
+      $c->{cgi}->param("brewsel") || "",
+      $c->{cgi}->param("pr") || "",
+      $c->{cgi}->param("vol") || "",
+      $c->{cgi}->param("alc") || "",
+      $c->{cgi}->param("stDrinks") || "" );
+    my $id = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
+    print STDERR "Inserted Glass id '$id' \n";
+  }
+#   my $name = $c->{cgi}->param("name");
+#   my $sql = "
+#     update BREWS
+#       set
+#         Name = ?,
+#     where id = ? ";
+#   my $sth = $c->{dbh}->prepare($sql);
+#   $sth->execute( $name,  $id );
+#   print STDERR "Updated " . $sth->rows .
+#     " Location records for id '$id' : '$name' \n";
+   print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
+} # postglass
 
 ################################################################################
 # Helper to select a brew type
