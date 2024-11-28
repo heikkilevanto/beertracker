@@ -202,7 +202,7 @@ sub selectlocation {
       }
       </script>
 scriptend
-  $s .= " <select name='loc' id='loc' onchange='locselchange();'>\n";
+  $s .= " <select name='loc' id='loc' onchange='locselchange();' style='width: 15em'>\n";
   my $sel = "";
   $sel = "Selected" unless $selected ;
   $s .= "<option value='' $sel >(select)</option>\n";

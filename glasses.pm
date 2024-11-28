@@ -10,10 +10,9 @@ use warnings;
 
 
 # Structure of the input form
-# - Choose a brew, or enter a new one. Should be the first part, as submitting a
-#   new brew will have to reload the page.
 # - Location. Default to same as before. Later add geo magic for an option to
 #   choose a nearby location.
+# - Choose a brew, or enter a new one.
 # - Volume and price.
 # - Submit the glass
 # - Once submitted, allow adding comments and ratings to it
@@ -21,18 +20,65 @@ use warnings;
 ################################################################################
 # The input form
 ################################################################################
+# TODO - (Hidden) line for date and time
+# TODO - Turn into a form that submits. Process it
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
-  print "Main input form <hr/>";
+  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+        "enctype='multipart/form-data'>\n";
   print "<table>\n";
+
   print "<tr><td>Location</td>\n";
   print "<td>" . locations::selectlocation($c, $rec->{Location}, "newloc") . "</td></tr>\n";
+
+  # Brew style and brew selection
   print "<tr><td>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
   print "<td>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</td></tr>\n";
+
+  # Vol, Alc, and Price
+  print "<tr><td>&nbsp;</td><td id='avp'>\n";
+  print "<input name='vol' placeholder='vol' size='3' value='$rec->{Volume}' />\n";
+  print "<input name='alc' placeholder='alc' size='3' value='$rec->{Alc}' />\n";
+  print "<input name='pr' placeholder='pr' size='3' value='$rec->{Price}' />\n";
+  print "</td></tr>\n";
+
+  # Buttons
+  print "<tr><td>\n";
+  if ($c->{edit}) {
+    print " <input type='submit' name='submit' value='Save' id='save' />\n";
+    print "</td><td>\n";
+    print " <input type='submit' name='submit' value='Del'/>\n";
+    print "<a href='$c->{url}?o=$c->{op}' ><span>cancel</span></a>";
+    print "</td>\n";
+  } else { # New glass
+    print "<input type='submit' name='submit' value='Record'/>\n";
+    print "</td><td>\n";
+    print " <input type='submit' name='submit' value='Save' id='save' />\n";
+    print " <input type='button' value='Clr' onclick='clearinputs()'/>\n";
+  }
+  print "</td></tr>\n";
   print "</table>\n";
+  print "</form>\n";
   print "<hr>\n";
-}
+
+  my $script = <<'SCRIPTEND';
+    function clearinputs() {  // Clear all inputs, used by the 'clear' button
+      var inputs = document.getElementsByTagName('input');  // all regular input fields
+      for (var i = 0; i < inputs.length; i++ ) {
+        if ( inputs[i].type == "text" )
+          inputs[i].value = "";
+      }
+      const ids = [ "brewsel" ];
+      for ( var i = 0; i < ids.length; i++) {
+        var r = document.getElementById(ids[i]);
+        if (r)
+          r.value = "";
+      };
+   }
+SCRIPTEND
+  print "<script>$script</script>\n";
+} # inputform
 
 
 
