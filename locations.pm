@@ -6,7 +6,6 @@ use strict;
 use warnings;
 
 
-# TODO - Make a helper for selecting a location
 # TODO - Add current and latest as options to it
 # TODO - Add a way to add a new location
 
@@ -74,7 +73,7 @@ sub listlocations {
   }
   print "</table>\n";
   print "<hr/>\n" ;
-} # listpersons
+} # listlocations
 
 ################################################################################
 # Editlocation - Show a form for editing a location record
@@ -133,38 +132,52 @@ sub editlocation {
 ################################################################################
 sub postlocation {
   my $c = shift; # context
-  my $id = $c->{edit};
-  main::error ("Bad id for updating a location '$id' ")
-    unless $id =~ /^\d+$/;
-  my $name = $c->{cgi}->param("name");
-  error ("A Location must have a name" )
-    unless $name;
-  my $off= $c->{cgi}->param("off") || "" ;
-  my $desc= $c->{cgi}->param("desc") || "" ;
-  my $geo= $c->{cgi}->param("geo") || "" ;
-  my $web= $c->{cgi}->param("web") || "" ;
-  my $phone=  $c->{cgi}->param("phone") || "";
-  my $addr= $c->{cgi}->param("addr") || "" ;
-  my $zip= $c->{cgi}->param("zip") || "" ;
-  my $country= $c->{cgi}->param("country") || "" ;
-  my $sql = "
-    update LOCATIONS
-      set
-        Name = ?,
-        OfficialName = ?,
-        Description = ?,
-        GeoCoordinates = ?,
-        Website = ?,
-        Phone = ?,
-        StreetAddress = ?,
-        PostalCode = ?,
-        Country = ?
-    where id = ? ";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( $name, $off, $desc, $geo, $web, $phone, $addr, $zip, $country, $id );
-  print STDERR "Updated " . $sth->rows .
-    " Location records for id '$id' : '$name' \n";
-  print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
+  my $id = shift || $c->{edit};
+  if ( $id eq "new" ) {
+    my $name = $c->{cgi}->param("newlocname");
+    main::error ("A Location must have a name" )
+      unless $name;
+    my $sql = "insert into LOCATIONS
+       ( Name )
+       values ( ? ) ";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute( $name );
+    $id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef) || undef;
+    print STDERR "Inserted Location id '$id' '$name' \n";
+  } else {
+    my $name = $c->{cgi}->param("name");
+    main::error ("A Location must have a name" )
+      unless $name;
+    my $off= $c->{cgi}->param("off") || "" ;
+    my $desc= $c->{cgi}->param("desc") || "" ;
+    my $geo= $c->{cgi}->param("geo") || "" ;
+    my $web= $c->{cgi}->param("web") || "" ;
+    my $phone=  $c->{cgi}->param("phone") || "";
+    my $addr= $c->{cgi}->param("addr") || "" ;
+    my $zip= $c->{cgi}->param("zip") || "" ;
+    my $country= $c->{cgi}->param("country") || "" ;
+    main::error ("Bad id for updating a location '$id' ")
+      unless $id =~ /^\d+$/;
+    my $sql = "
+      update LOCATIONS
+        set
+          Name = ?,
+          OfficialName = ?,
+          Description = ?,
+          GeoCoordinates = ?,
+          Website = ?,
+          Phone = ?,
+          StreetAddress = ?,
+          PostalCode = ?,
+          Country = ?
+      where id = ? ";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute( $name, $off, $desc, $geo, $web, $phone, $addr, $zip, $country, $id );
+    print STDERR "Updated " . $sth->rows .
+      " Location records for id '$id' : '$name' \n";
+  }
+  return $id;
+  #print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
 } # postlocation
 
 ################################################################################
@@ -172,6 +185,8 @@ sub postlocation {
 ################################################################################
 # For now, just produces a pull-down list. Later we can add filtering, options
 # for sort order and some geo coord magic
+# TODO - Add a few more fields.
+# TODO - Drop the newlocfield, at most a boolean to say we want that option with fixed name(s)
 sub selectlocation {
   my $c = shift; # context
   my $selected = shift || "";  # The id of the selected location

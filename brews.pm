@@ -193,6 +193,74 @@ scriptend
 } # selectbrew
 
 ################################################################################
+# Update a brew, posted from the form in the selection above
+################################################################################
+sub postbrew {
+  my $c = shift; # context
+  my $id = shift || $c->{edit};
+  if ( $id eq "new" ) {
+    my $name = util::param($c, "newbrewname");
+    util::error ("A brew must have a name" ) unless $name;
+    util::error ("A brew must have a type" ) unless util::param($c, "selbrewtype");
+    my $sql = "insert into BREWS
+       ( Name, BrewType, SubType,
+         BrewStyle, Producer, Alc,
+         Country, Region, Flavor, Year, Details )
+       values ( ?, ?, ?,  ?, ?, ?,  ?, ?, ?, ?, ? ) ";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute(
+      $name,
+      util::param($c,"selbrewtype"),
+      util::param($c,"newbrewsub"),
+      util::param($c,"newbrewstyle"),
+      util::param($c,"newbrewproducer"),
+      util::param($c,"newalc"),
+      util::param($c,"newbrewcountry"),
+      util::param($c,"newbrewregion"),
+      util::param($c,"newbrewflavor"),
+      util::param($c,"newbrewyear"),
+      util::param($c,"newbrewdetails")
+    );
+    $id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef) || undef;
+    print STDERR "Inserted Brew id '$id' '$name' \n";
+  } else {
+    # TODO - This is still as stolen from Locations. Fix for brews. Make also an edit form
+    my $name = $c->{cgi}->param("name");
+    main::error ("A Location must have a name" )
+      unless $name;
+    my $off= $c->{cgi}->param("off") || "" ;
+    my $desc= $c->{cgi}->param("desc") || "" ;
+    my $geo= $c->{cgi}->param("geo") || "" ;
+    my $web= $c->{cgi}->param("web") || "" ;
+    my $phone=  $c->{cgi}->param("phone") || "";
+    my $addr= $c->{cgi}->param("addr") || "" ;
+    my $zip= $c->{cgi}->param("zip") || "" ;
+    my $country= $c->{cgi}->param("country") || "" ;
+    main::error ("Bad id for updating a brew '$id' ")
+      unless $id =~ /^\d+$/;
+    my $sql = "
+      update LOCATIONS
+        set
+          Name = ?,
+          OfficialName = ?,
+          Description = ?,
+          GeoCoordinates = ?,
+          Website = ?,
+          Phone = ?,
+          StreetAddress = ?,
+          PostalCode = ?,
+          Country = ?
+      where id = ? ";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute( $name, $off, $desc, $geo, $web, $phone, $addr, $zip, $country, $id );
+    print STDERR "Updated " . $sth->rows .
+      " Location records for id '$id' : '$name' \n";
+  }
+  return $id;
+  #print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
+} # postbrew
+
+################################################################################
 # Helper to get a brew record
 ################################################################################
 sub getbrew {

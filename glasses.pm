@@ -25,7 +25,7 @@ sub inputform {
   my $stamp = main::datestr("%F %T");
   print "<td><input name='stamp' value='$stamp' size=25 />";
   print "<tr><td>Location</td>\n";
-  print "<td>" . locations::selectlocation($c, $rec->{Location}, "newloc") . "</td></tr>\n";
+  print "<td>" . locations::selectlocation($c, $rec->{Location}, "newlocname") . "</td></tr>\n";
 
   # Brew style and brew selection
   print "<tr><td style='vertical-align:top'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
@@ -33,9 +33,9 @@ sub inputform {
 
   # Vol, Alc, and Price
   print "<tr><td>&nbsp;</td><td id='avp'>\n";
-  print "<input name='vol' placeholder='vol' size='3' value='$rec->{Volume}' />\n";
-  print "<input name='alc' placeholder='alc' size='3' value='$rec->{Alc}' />\n";
-  print "<input name='pr' placeholder='pr' size='3' value='$rec->{Price}' />\n";
+  print "<input name='vol' placeholder='vol' size='3' value='$rec->{Volume}c' />\n";
+  print "<input name='alc' placeholder='alc' size='3' value='$rec->{Alc}%' />\n";
+  print "<input name='pr' placeholder='pr' size='3' value='$rec->{Price}.-' />\n";
   print "</td></tr>\n";
 
   # Buttons
@@ -84,19 +84,21 @@ SCRIPTEND
 # Update or insert a glass from the form above
 ################################################################################
 
+
+
 ############## Helper to get input values into $glass with some defaults
 sub getvalues {
   my $c = shift;
   my $glass = shift;
   my $brew = shift;
-  $glass->{TimeStamp} =  $c->{cgi}->param("stamp") || "";
-  $glass->{BrewType} = $c->{cgi}->param("selbrewtype") || "";
-  $glass->{SubType} = $c->{cgi}->param("newbrewsub") || $glass->{SubType} || "";
-  $glass->{Location} = $c->{cgi}->param("loc") || undef;
-  $glass->{Brew} = $c->{cgi}->param("brewsel") || "";
-  $glass->{Price} = $c->{cgi}->param("pr") || "";
-  $glass->{Volume} = $c->{cgi}->param("vol") || "0";
-  $glass->{Alc} = $c->{cgi}->param("alc") || $brew->{Alc} || "0";
+  $glass->{TimeStamp} = util::param($c, "stamp");
+  $glass->{BrewType} = util::param($c, "selbrewtype");
+  $glass->{SubType} = util::param($c, "newbrewsub", $glass->{SubType} || "");
+  $glass->{Location} = util::param($c, "loc", undef);
+  $glass->{Brew} = util::param($c, "brewsel");
+  $glass->{Price} = util::paramnumber($c, "pr");
+  $glass->{Volume} = util::paramnumber($c, "vol", "0");
+  $glass->{Alc} = util::paramnumber($c, "alc", $brew->{Alc} || "0");
 } # getvalues
 
 ############## Helper for alc, volume, etc
@@ -116,7 +118,7 @@ sub fixvol {
   }
 
   $glass->{Volume} = $glass->{Volume} || "0";
-  print STDERR "fv: a '$glass->{Alc}' b:'$brew->{Alc}' \n";
+
   $glass->{Alc} =~ s/[.,]+/./;  # I may enter a comma occasionally
 
   my $std = $glass->{Volume} * $glass->{Alc} / $c->{onedrink};
@@ -137,14 +139,21 @@ sub postglass {
 
   my $sub = $c->{cgi}->param("submit") || "";
 
-  my $glass = findrec($c); # Get defaults, or the record we are editing
+  my $glass = findrec($c); # Get defaults from last glass or the record we are editing
   my $brew = brews::getbrew($c, scalar $c->{cgi}->param("brewsel") );
 
   # Get input values into $glass
   getvalues($c, $glass, $brew);
   fixvol($c, $glass, $brew);
 
-  main::error ("Creating new locations not yet supported") if ($c->{cgi}->param("loc") eq "new" );
+  if ( $glass->{Location} eq "new" ) {
+    $glass->{Location} = locations::postlocation($c, "new" );
+  }
+
+  if ( $glass->{Brew} eq "new" ) {
+    $glass->{Brew} = brews::postbrew($c, "new" );
+  }
+
 
   if ( $sub eq "Save" ) {  # Update existing glass
     my $sql = "update GLASSES set
@@ -193,7 +202,7 @@ sub postglass {
       $glass->{Alc},
       $glass->{StDrinks}
       );
-    my $id = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
+    my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
   }
    print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
