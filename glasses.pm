@@ -17,13 +17,18 @@ use warnings;
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
+
+  # Formatting magic
+  my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
+  my $sz = "size='4' style='text-align:right' $clr";
+
   print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
   print "<table>\n";
 
   print "<tr><td>Id $rec->{Id}</td>\n";
   my $stamp = main::datestr("%F %T");
-  print "<td><input name='stamp' value='$stamp' size=25 />";
+  print "<td><input name='stamp' value='$stamp' size=25 $clr/>";
   print "<tr><td>Location</td>\n";
   print "<td>" . locations::selectlocation($c, $rec->{Location}, "newlocname") . "</td></tr>\n";
 
@@ -33,7 +38,6 @@ sub inputform {
 
   # Vol, Alc, and Price
   print "<tr><td>&nbsp;</td><td id='avp'>\n";
-  my $sz = "size='4' style='text-align:right'";
   my $vol = $rec->{Volume} || "";
   $vol .= "c" if ($vol);
   print "<input name='vol' placeholder='vol' $sz value='$vol' />\n";

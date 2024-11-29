@@ -9,6 +9,8 @@ package brews;
 use strict;
 use warnings;
 
+# Formatting magic
+my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 
 
 ################################################################################
@@ -110,16 +112,16 @@ sub selectbrew {
   my $brewtype = shift || "";
   my $s = "";
   $s .= "<div id='newbrewdiv' hidden>";
-  $s .= "<input name='newbrewsub' placeholder='SubType'/><br/>\n";
-  $s .= "<input name='newbrewname' placeholder='New Name'/><br/>\n";
-  $s .= "<input name='newbrewstyle' placeholder='Style'/><br/>\n";
-  $s .= "<input name='newbrewproducer' width placeholder='Producer'/><br/>\n";
-  $s .= "<input name='newalc'  placeholder='Alc' onInput='updalc(this.value);'/><br/>\n";
-  $s .= "<input name='newbrewcountry' width placeholder='Country'/><br/>\n";
-  $s .= "<input name='newbrewregion' width placeholder='Region'/><br/>\n";
-  $s .= "<input name='newbrewflavor' width placeholder='Flavor'/><br/>\n";
-  $s .= "<input name='newbrewyear' width placeholder='Year'/><br/>\n";
-  $s .= "<input name='newbrewdetails' width placeholder='Details'/><br/>\n";
+  $s .= "<input name='newbrewsub' placeholder='SubType' $clr /><br/>\n";
+  $s .= "<input name='newbrewname' placeholder='New Name' $clr /><br/>\n";
+  $s .= "<input name='newbrewstyle' placeholder='Style' $clr /><br/>\n";
+  $s .= "<input name='newbrewproducer' width placeholder='Producer' $clr /><br/>\n";
+  $s .= "<input name='newalc'  placeholder='Alc' onInput='updalc(this.value);' $clr /><br/>\n";
+  $s .= "<input name='newbrewcountry' width placeholder='Country' $clr /><br/>\n";
+  $s .= "<input name='newbrewregion' width placeholder='Region' $clr /><br/>\n";
+  $s .= "<input name='newbrewflavor' width placeholder='Flavor' $clr /><br/>\n";
+  $s .= "<input name='newbrewyear' width placeholder='Year' $clr /><br/>\n";
+  $s .= "<input name='newbrewdetails' width placeholder='Details' $clr /><br/>\n";
   $s .= "</div>";
   $s .= "<select name='brewsel' id='brewsel' onchange='brewselchange();' style='width: 15em'>\n";
   $s .= "</select>\n";  # Options will be filled in populatebrews() js func below
@@ -137,7 +139,7 @@ sub selectbrew {
 
     function updalc(a) {
       var alc = document.getElementById("alc");
-      if (alc ) {
+      if (alc && a ) {
         alc.value = a;
       }
     }

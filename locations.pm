@@ -15,6 +15,11 @@ use warnings;
 
 # TODO - Move most of geolocation stuff here as well (or in its own module?)
 
+
+# Formatting magic
+my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
+#my $sz = "size='4' style='text-align:right' $clr";
+
 ################################################################################
 # List of locations
 ################################################################################
@@ -97,23 +102,23 @@ sub editlocation {
     print "<table style='width:100%; max-width:500px' id='inputformtable'>\n";
     print "<tr><td $c2><b>Editing Location $p->{Id}: $p->{Name}</b></td></tr>\n";
     print "<tr><td>Name</td>\n";
-    print "<td><input name='name' value='$p->{Name}' /></td></tr>\n";
+    print "<td><input name='name' value='$p->{Name}' $clr /></td></tr>\n";
     print "<tr><td>Official</td>\n";
-    print "<td><input name='off' value='$p->{OfficialName}' /></td></tr>\n";
+    print "<td><input name='off' value='$p->{OfficialName}' $clr /></td></tr>\n";
     print "<tr><td>Description</td>\n";
-    print "<td><input name='desc' value='$p->{Description}' /></td></tr>\n";
+    print "<td><input name='desc' value='$p->{Description}' $clr /></td></tr>\n";
     print "<tr><td>Geo coord</td>\n";
-    print "<td><input name='geo' value='$p->{GeoCoordinates}' /></td></tr>\n";
+    print "<td><input name='geo' value='$p->{GeoCoordinates}' $clr /></td></tr>\n";
     print "<tr><td>Website</td>\n";
-    print "<td><input name='web' value='$p->{Website}' /></td></tr>\n";
+    print "<td><input name='web' value='$p->{Website}' $clr /></td></tr>\n";
     print "<tr><td>Phone</td>\n";
-    print "<td><input name='phone' value='$p->{Phone}' /></td></tr>\n";
+    print "<td><input name='phone' value='$p->{Phone}' $clr /></td></tr>\n";
     print "<tr><td>Address</td>\n";
-    print "<td><input name='addr' value='$p->{StreetAddress}' /></td></tr>\n";
+    print "<td><input name='addr' value='$p->{StreetAddress}' $clr /></td></tr>\n";
     print "<tr><td>Zip</td>\n";
-    print "<td><input name='zip' value='$p->{PostalCode}' /></td></tr>\n";
+    print "<td><input name='zip' value='$p->{PostalCode}' $clr /></td></tr>\n";
     print "<tr><td>Country</td>\n";
-    print "<td><input name='country' value='$p->{Country}' /></td></tr>\n";
+    print "<td><input name='country' value='$p->{Country}' $clr /></td></tr>\n";
     print "<tr><td $c2> <input type='submit' name='submit' value='Update Location' /></td></tr>\n";
     print "</table>\n";
     # Come back to here after updating
@@ -204,7 +209,7 @@ sub selectlocation {
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute(); # username ?
   my $s = "";
-  $s .= "<input name='$newlocfield' id='$newlocfield' width hidden placeholder='New location'/>\n";
+  $s .= "<input name='$newlocfield' id='$newlocfield' hidden $clr placeholder='New location'/>\n";
   $s .= << "scriptend";
     <script>
       function locselchange() {
