@@ -128,7 +128,7 @@ sub editperson {
 ################################################################################
 # Update a person (posted from the form above)
 ################################################################################
-sub updateperson {
+sub postperson {
   my $c = shift; # context
   my $id = $c->{edit};
   main::error ("Bad id for updating a person '$id' ")
@@ -191,7 +191,7 @@ sub updateperson {
       if  ( $sth->rows > 0 );
   }
   print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
-} # updateperson
+} # postperson
 
 ################################################################################
 # Helper to select a person

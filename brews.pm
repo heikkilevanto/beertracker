@@ -192,7 +192,19 @@ scriptend
   return $s;
 } # selectbrew
 
-
+################################################################################
+# Helper to get a brew record
+################################################################################
+sub getbrew {
+  my $c = shift;
+  my $id = shift;
+  return undef unless ($id);
+  my $sql = "select * from BREWS where id = ? ";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($id);
+  my $brew = $sth->fetchrow_hashref;
+  return $brew;
+}
 
 ################################################################################
 # Report module loaded ok

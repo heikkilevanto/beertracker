@@ -373,9 +373,9 @@ my $datafilecomment = "";
 
 if ( $q->request_method eq "POST" ) {
   if ( $op =~ /Persons/i ) {
-    persons::updateperson($context);
+    persons::postperson($context);
   } elsif ( $op =~ /Location/i ) {
-    locations::updatelocation($context);
+    locations::postlocation($context);
   } elsif ( $op =~ /Full/i ) {
     glasses::postglass($context);
   } else { # Default to the old way of posting, for now  - TODO

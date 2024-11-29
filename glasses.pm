@@ -1,21 +1,10 @@
 # Part of my beertracker
 # The main form for inputting a glass record, with all its extras
 # And the routine to save it in the database
-# Also a list of most recent glasses I've drunk
 
 package glasses;
 use strict;
 use warnings;
-
-
-
-# Structure of the input form
-# - Location. Default to same as before. Later add geo magic for an option to
-#   choose a nearby location.
-# - Choose a brew, or enter a new one.
-# - Volume and price.
-# - Submit the glass
-# - Once submitted, allow adding comments and ratings to it
 
 ################################################################################
 # The input form
@@ -94,6 +83,48 @@ SCRIPTEND
 ################################################################################
 # Update or insert a glass from the form above
 ################################################################################
+
+############## Helper to get input values into $glass with some defaults
+sub getvalues {
+  my $c = shift;
+  my $glass = shift;
+  my $brew = shift;
+  $glass->{TimeStamp} =  $c->{cgi}->param("stamp") || "";
+  $glass->{BrewType} = $c->{cgi}->param("selbrewtype") || "";
+  $glass->{SubType} = $c->{cgi}->param("newbrewsub") || $glass->{SubType} || "";
+  $glass->{Location} = $c->{cgi}->param("loc") || undef;
+  $glass->{Brew} = $c->{cgi}->param("brewsel") || "";
+  $glass->{Price} = $c->{cgi}->param("pr") || "";
+  $glass->{Volume} = $c->{cgi}->param("vol") || "0";
+  $glass->{Alc} = $c->{cgi}->param("alc") || $brew->{Alc} || "0";
+} # getvalues
+
+############## Helper for alc, volume, etc
+# TODO - Named volumes
+# TODO - Guess volume from previous glass (same location, brew)
+# TODO - Guess price from previous glass (same location, size, brew - in that order)
+sub fixvol {
+  my $c = shift;
+  my $glass = shift;
+  my $brew = shift;
+  if ( $glass->{BrewType} =~ /Restaurant|Night/ ) { # those don't have volumes
+    $glass->{Volume} = "";
+    $glass->{Alc} = "";
+    $glass->{Price} = $glass->{Price} || "";
+    $glass->{StDrinks} = 0;
+    return;
+  }
+
+  $glass->{Volume} = $glass->{Volume} || "0";
+  print STDERR "fv: a '$glass->{Alc}' b:'$brew->{Alc}' \n";
+  $glass->{Alc} =~ s/[.,]+/./;  # I may enter a comma occasionally
+
+  my $std = $glass->{Volume} * $glass->{Alc} / $c->{onedrink};
+  $glass->{StDrinks} = sprintf("%6.2f", $std );
+} # fixvol
+
+
+############## postglass itself
 sub postglass {
   my $c = shift; # context
 
@@ -105,10 +136,13 @@ sub postglass {
   }
 
   my $sub = $c->{cgi}->param("submit") || "";
-  my $stdrinks = 0;
-  my $alc = $c->{cgi}->param("alc") || 0;
-  my $vol = $c->{cgi}->param("vol") || 0;
-  $stdrinks = sprintf("%6.2f", $alc * $vol / $c->{onedrink} );
+
+  my $glass = findrec($c); # Get defaults, or the record we are editing
+  my $brew = brews::getbrew($c, scalar $c->{cgi}->param("brewsel") );
+
+  # Get input values into $glass
+  getvalues($c, $glass, $brew);
+  fixvol($c, $glass, $brew);
 
   main::error ("Creating new locations not yet supported") if ($c->{cgi}->param("loc") eq "new" );
 
@@ -117,24 +151,24 @@ sub postglass {
         TimeStamp = ?,
         BrewType = ?,
         Location = ?,
+        Brew = ?,
+        Price = ?,
         Volume = ?,
         Alc = ?,
-        Price = ?,
-        Brew = ?,
         StDrinks = ?
       where id = ? and username = ?
     ";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute(
-    $c->{cgi}->param("stamp") || "",
-    $c->{cgi}->param("selbrewtype") || undef,
-    $c->{cgi}->param("loc") || undef,
-    $c->{cgi}->param("vol") || "",
-    $c->{cgi}->param("alc") || "",
-    $c->{cgi}->param("pr") || "",
-    $c->{cgi}->param("brewsel") || undef,
-    $stdrinks,
-    $c->{edit}, $c->{username} );
+    $glass->{TimeStamp},
+    $glass->{BrewType},
+    $glass->{Location},
+    $glass->{Brew},
+    $glass->{Price},
+    $glass->{Volume},
+    $glass->{Alc},
+    $glass->{StDrinks},
+    $glass->{Id}, $c->{username} );
   print STDERR "Updated " . $sth->rows .
     " Glass records for id '$c->{edit}'  \n";
 
@@ -149,15 +183,16 @@ sub postglass {
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute(
       $c->{username},
-      $c->{cgi}->param("stamp") || "",
-      $c->{cgi}->param("selbrewtype") || "",
-      $c->{cgi}->param("newbrewsub") || "",
-      $c->{cgi}->param("loc") || undef,
-      $c->{cgi}->param("brewsel") || "",
-      $c->{cgi}->param("pr") || "",
-      $c->{cgi}->param("vol") || "",
-      $c->{cgi}->param("alc") || "",
-      $c->{cgi}->param("stDrinks") || "" );
+      $glass->{TimeStamp},
+      $glass->{BrewType},
+      $glass->{SubType},
+      $glass->{Location},
+      $glass->{Brew},
+      $glass->{Price},
+      $glass->{Volume},
+      $glass->{Alc},
+      $glass->{StDrinks}
+      );
     my $id = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
   }
