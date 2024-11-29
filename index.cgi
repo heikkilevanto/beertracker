@@ -13,10 +13,22 @@
 # Overview
 ################################################################################
 #
+# THIS IS OUTDATED - I am in the middle of a complex rewrite that
+#  - uses SqLite for the back end
+#  - Splits the code into several dedicated modules
+#  - Should simplify this script to something pretty small
+# At the moment we are somewhere in the middle. Using SqLite all right, but
+# faking the old line-based things for many of the lists etc. TODO
+#
 # The code consists of one very long main function that produces whatever
 # output we need, and a small number of helpers. (Ought to be refactored
 # in version 2). Sections are delimited by comment blocks like above.
-#
+
+# While working on everything at once, I can not maintain github issues for
+# everything, so I put TODO markers in the code. The word may be followed by
+# SOON for things that should be done in the near future, or LATER for those
+# that have to wait a little. Maybe I invite more labeling in time. In the end
+# all TODOs should be resolved, or moved into github issues
 
 # Sections of the main function:
 # - Init and setup

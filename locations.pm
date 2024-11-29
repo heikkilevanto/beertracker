@@ -11,7 +11,7 @@ use warnings;
 
 # TODO - Add a button to use current geo (needs JS trickery)
 
-# TODO - Add a way to merge two locations, in case of spelling errors
+# TODO LATER - Add a way to merge two locations, in case of spelling errors
 
 # TODO - Move most of geolocation stuff here as well (or in its own module?)
 
@@ -54,7 +54,6 @@ sub listlocations {
   $list_sth->execute();
 
   print "<table><tr>\n";
-  # TODO - Set a max-width for the name, so one long one will not mess up, esp on the phone
   my $url = $c->{url};
   my $op = $c->{op};
   print "<td><a href='$url?o=$op&s=id'><i>Id</i></a></td>";
@@ -63,17 +62,17 @@ sub listlocations {
   print "</tr>";
   while ( my ($locid, $name, $web, $last ) = $list_sth->fetchrow_array ) {
     my ($stamp, $wd ) = ( "(never)","" );
-    if ( $last ) {
+    if ( $last ) { # TODO - Make and use a helper
       ($stamp, $wd ) = split (' ', $last);
       my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
       $wd = $weekdays[$wd];
     }
     print "<tr><td style='font-size: xx-small' align='right'>$locid</td>\n";
-    print "<td><a href='$url?o=$op&e=$locid'><b>$name</b></a>";
-    print "<a href='$web' target='_blank' ><span> &nbsp; www</span></a>"
+    print "<td style='max-width:30em' ><a href='$url?o=$op&e=$locid'><b>$name</b></a>";
+    print "<a href='$web' target='_blank' ><span> &nbsp; $web</span></a>"
       if ( $web );
     print "</td>\n";
-    print "<td>$wd " . main::filt($stamp,"","","full") . "</td>\n";
+    print "<td style='width:16em' >$wd " . main::filt($stamp,"","","full") . "</td>\n";
     print "</tr>\n";
   }
   print "</table>\n";
@@ -192,6 +191,7 @@ sub postlocation {
 # for sort order and some geo coord magic
 # TODO - Add a few more fields.
 # TODO - Drop the newlocfield, at most a boolean to say we want that option with fixed name(s)
+# TODO - Add the current location as the first real one in the list, never mind if duplicates
 sub selectlocation {
   my $c = shift; # context
   my $selected = shift || "";  # The id of the selected location

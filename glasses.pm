@@ -9,8 +9,6 @@ use warnings;
 ################################################################################
 # The input form
 ################################################################################
-# TODO - (Hidden) line for date and time
-# TODO - Turn into a form that submits. Process it
 # TODO - The timestamp processing is overly simplified, now always puts current time in the form
 #        It still updatyes the record with the entered value, but won't display it
 #        Best would be to let the browser fill it in, but not overwrite existing data

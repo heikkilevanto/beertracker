@@ -1,9 +1,7 @@
 # Part of my beertracker
 # Stuff for listing, selecting, adding, and editing brews
 
-# TODO - Select a brew
-# TODO - Insert a new one
-# TODO - Edit a brew
+# TODO - Edit a brew, maybe insert a new
 
 package brews;
 use strict;
@@ -61,7 +59,6 @@ sub listbrews {
   $list_sth->execute();
 
   print "<table><tr>\n";
-  # TODO - Set a max-width for the name, so one long one will not mess up, esp on the phone
   my $url = $c->{url};
   my $op = $c->{op};
   my $maxwidth = "style='max-width:20em;'";
@@ -75,7 +72,7 @@ sub listbrews {
     my ($wd, $stamp) = ("", "(never)");
     $loc = "" unless ($loc);
     if ( $last ) {
-      ($stamp, $wd ) = split (' ', $last);
+      ($stamp, $wd ) = split (' ', $last);  # TODO SOON - Make a helper for this
       my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
       $wd = $weekdays[$wd];
     }
@@ -100,11 +97,11 @@ sub listbrews {
 ################################################################################
 # TODO - Many features missing
 # TODO - Display the brew details under the selection
-# TODO - Hide selector if style is "Restaurant" or "Night"
 # TODO - Add an option to filter: Show filter field, redo the list on every change
-# TODO - remember the selected value on start, and try re-establish it when changing
+# TODO SOON - remember the selected value on start, and try re-establish it when changing
 #        the brew style. That way, we can change from beer to wine, get an empty
 #        default selection, and switch back to beer, and get the old value back.
+# TODO - Make a helper to shorten producer names, maybe for each type
 
 sub selectbrew {
   my $c = shift; # context
@@ -112,9 +109,9 @@ sub selectbrew {
   my $brewtype = shift || "";
   my $s = "";
   $s .= "<div id='newbrewdiv' hidden>";
-  $s .= "<input name='newbrewsub' placeholder='SubType' $clr /><br/>\n";
   $s .= "<input name='newbrewname' placeholder='New Name' $clr /><br/>\n";
   $s .= "<input name='newbrewstyle' placeholder='Style' $clr /><br/>\n";
+  $s .= "<input name='newbrewsub' placeholder='SubType' $clr /><br/>\n";
   $s .= "<input name='newbrewproducer' width placeholder='Producer' $clr /><br/>\n";
   $s .= "<input name='newalc'  placeholder='Alc' onInput='updalc(this.value);' $clr /><br/>\n";
   $s .= "<input name='newbrewcountry' width placeholder='Country' $clr /><br/>\n";
@@ -210,6 +207,7 @@ scriptend
 ################################################################################
 # Update a brew, posted from the form in the selection above
 ################################################################################
+# TODO - Calculate subtype, if not set. Make a separate helper, use in import
 sub postbrew {
   my $c = shift; # context
   my $id = shift || $c->{edit};

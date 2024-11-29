@@ -8,6 +8,8 @@ use warnings;
 
 use DBI;
 
+# TODO - Do I really need SubType in the Glasses?
+
 # Connect to SQLite database (or create it if it doesn't exist)
 my $databasefile = "beertracker.db";
 die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );

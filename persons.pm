@@ -8,8 +8,6 @@ use warnings;
 ################################################################################
 # List of persons
 ################################################################################
-# TODO - Use a similar one for selecting a Location, once I have one
-# TODO - Use a proper parameter for sort order  ( s=...)
 # TODO - Filtering by location or date  (not just last seen)
 # TODO - When editing, show the most recent dates, other people involved, etc
 sub listpersons {
@@ -50,7 +48,6 @@ sub listpersons {
   $list_sth->execute();
 
   print "<table><tr>\n";
-  # TODO - Set a max-width for the name, so one long one will not mess up, esp on the phone
   my $url = $c->{url};
   my $op = $c->{op};
   print "<td><a href='$url?o=$op&s=id'><i>Id</i></a></td>";
@@ -70,7 +67,7 @@ sub listpersons {
     print "<td><a href='$url?o=$op&e=$persid'><b>$name</b></a>";
     print " ($count) " if ( $count > 1 );
     print "</td>\n";
-    print "<td>$wd " . main::filt($stamp,"","","full") . "</td>\n";
+    print "<td style='width:8em'>$wd " . main::filt($stamp,"","","full") . "</td>\n";
     print "<td>$loc</td></tr>\n";
   }
   print "</table>\n";
