@@ -106,24 +106,13 @@ sub selectbrew {
   my $c = shift; # context
   my $selected = shift || "";  # The id of the selected brew
   my $brewtype = shift || "";
-  my $sql = "
-  select
-    BREWS.Id, BREWS.Brewtype, BREWS.SubType, Name, Producer
-  from BREWS
-  left join GLASSES on GLASSES.Brew= BREWS.ID
-  group by BREWS.id
-  order by GLASSES.Timestamp DESC ";
-  #$sql .= "LIMIT 400" ; # Saves some time, but looses older records. Ok for beer, not the rest
-  #  strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
-  my $list_sth = $c->{dbh}->prepare($sql);
-  $list_sth->execute(); # username ?
   my $s = "";
   $s .= "<div id='newbrewdiv' hidden>";
   $s .= "<input name='newbrewsub' placeholder='SubType'/><br/>\n";
   $s .= "<input name='newbrewname' placeholder='New Name'/><br/>\n";
   $s .= "<input name='newbrewstyle' placeholder='Style'/><br/>\n";
   $s .= "<input name='newbrewproducer' width placeholder='Producer'/><br/>\n";
-  $s .= "<input name='newalc'  placeholder='Alc'/><br/>\n";
+  $s .= "<input name='newalc'  placeholder='Alc' onInput='updalc(this.value);'/><br/>\n";
   $s .= "<input name='newbrewcountry' width placeholder='Country'/><br/>\n";
   $s .= "<input name='newbrewregion' width placeholder='Region'/><br/>\n";
   $s .= "<input name='newbrewflavor' width placeholder='Flavor'/><br/>\n";
@@ -141,15 +130,29 @@ sub selectbrew {
           sel.hidden = true;
           inp.hidden = false;
         }
-        var alc = document.getElementById("alc");
-        if (alc ) { /* will get autofilled from the brew on post */
-          alc.value = "";
-        }
+        updalc(sel.options[ sel.selectedIndex ].alc );
       }
 
+    function updalc(a) {
+      var alc = document.getElementById("alc");
+      if (alc ) {
+        alc.value = a;
+      }
+    }
     const brews = [
 scriptend
-  while ( my ($id, $bt, $su, $na, $pr )  = $list_sth->fetchrow_array ) {
+  my $sql = "
+  select
+    BREWS.Id, BREWS.Brewtype, BREWS.SubType, Name, Producer, BREWS.Alc
+  from BREWS
+  left join GLASSES on GLASSES.Brew= BREWS.ID
+  group by BREWS.id
+  order by GLASSES.Timestamp DESC ";
+  #$sql .= "LIMIT 400" ; # Saves some time, but looses older records. Ok for beer, not the rest
+  #  strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
+  my $list_sth = $c->{dbh}->prepare($sql);
+  $list_sth->execute(); # username ?
+  while ( my ($id, $bt, $su, $na, $pr, $alc )  = $list_sth->fetchrow_array ) {
     my $disp = "";
     $disp .= $na if ($na);
     $disp = "$pr: $disp  " if ($pr && $na !~ /$pr/ ); # TODO Shorten producer names
@@ -157,7 +160,7 @@ scriptend
     $disptype .= $bt unless ($su);
     $disp .= " [$disptype]";
     $disp = substr($disp, 0, 30);
-    $s .= "  { Id: '$id', BrewType: '$bt',  Disp: '$disp' },\n";
+    $s .= "  { Id: '$id', BrewType: '$bt',  Disp: '$disp', Alc: '$alc' },\n";
   }
 
   $s .= << "scriptend";
@@ -182,7 +185,10 @@ scriptend
             var b = brews[i];
             if ( b.BrewType == typ ) {
               var found = (selected == b.Id);
-              sel.add( new Option( b.Disp , b.Id, found, found) );
+              var op = new Option( b.Disp , b.Id, found, found)
+              op.arrayindex = i;
+              op.alc = b.Alc;
+              sel.add( op );
               n++;
               if ( n > 200 )
                 return;
