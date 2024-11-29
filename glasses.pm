@@ -33,9 +33,16 @@ sub inputform {
 
   # Vol, Alc, and Price
   print "<tr><td>&nbsp;</td><td id='avp'>\n";
-  print "<input name='vol' placeholder='vol' size='3' value='$rec->{Volume}c' />\n";
-  print "<input name='alc' id='alc' placeholder='alc' size='3' value='$rec->{Alc}%' />\n";
-  print "<input name='pr' placeholder='pr' size='3' value='$rec->{Price}.-' />\n";
+  my $sz = "size='4' style='text-align:right'";
+  my $vol = $rec->{Volume} || "";
+  $vol .= "c" if ($vol);
+  print "<input name='vol' placeholder='vol' $sz value='$vol' />\n";
+  my $alc = $rec->{Alc} || "";
+  $alc .= "%" if ($alc);
+  print "<input name='alc' id='alc' placeholder='alc' $sz value='$alc' />\n";
+  my $pr = $rec->{Price} || "";
+  $pr .= ".-" if ($pr);
+  print "<input name='pr' placeholder='pr' $sz value='$pr' />\n";
   print "</td></tr>\n";
 
   # Buttons

@@ -10,6 +10,8 @@ use warnings;
 #  - Helpers for normalizing strings
 #  - Helpers for cgi parameters
 #  - Error handling and debug logging
+#  - Pull-down menus for the Show menu and for selecting a list
+
 
 ################################################################################
 # Helpers for normalizing strings
