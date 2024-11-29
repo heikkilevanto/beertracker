@@ -343,6 +343,7 @@ require "./persons.pm";   # List of people, their details, editing, helpers
 require "./locations.pm"; # Locations stuff
 require "./brews.pm";  # Lists of various brews, etc
 require "./glasses.pm"; # Main input for and the full list
+require "./util.pm"; # Various helper functions
 
 ################################################################################
 # Main program
@@ -382,6 +383,8 @@ if ( $q->request_method eq "POST" ) {
     readdatalines();
     postdata(); # forwards back to the script to display the data
   }
+  # Redirect back to the edit page. Clear Set up $c as needed
+  print $context->{cgi}->redirect( "$context->{url}?o=$context->{op}&e=$context->{edit}" );
   $dbh->disconnect;
   exit;
 }
