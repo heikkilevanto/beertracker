@@ -14,7 +14,7 @@ use warnings;
 # TODO - When editing, show the most recent dates, other people involved, etc
 sub listpersons {
   my $c = shift; # context
-  listsmenubar($c);
+  print util::listsmenu($c), util::showmenu($c);
 
   if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
     editperson($c);
@@ -245,54 +245,6 @@ scriptend
   return $s;
 } # selectperson
 
-################################################################################
-# Menu bar for lists
-################################################################################
-# TODO - Should be in some generic helper module, not here
-sub listsmenubar {
-  my $c = shift or die ("No context for listsmenubar" );
-  print "<br/><div class='no-print'>\n";
-  print "<table style='width:100%; max-width:500px' ><tr><td>\n";
-  print " <select  style='width:7em;' " .
-              "onchange='document.location=\"$c->{url}?\"+this.value;' >";
-  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
-  for my $l ( @ops ) {
-    my $sel = "";
-    $sel = "selected" if ($l eq $c->{op});
-    print "<option value='o=$l' $sel >$l</option>\n"
-  }
-  print "</select>\n";
-  print "<a href='$c->{url}?o=$c->{op}'><span>List</span></a> ";
-  print "</td><td>\n";
-
-  showmenu($c);
-  print "</td></tr></table>\n";
-  print "</div>";
-
-  print "<hr/>\n";
-} # listsmenubar
-
-
-# Helper for the "Show" menu
-sub showmenu {
-  my $c = shift; # context;
-  print " <select  style='width:4.5em;' " .
-              "onchange='document.location=\"$c->{url}?\"+this.value;' >";
-  print "<option value='' >Show</option>\n";
-  print "<option value='o=full&' >Full List</option>\n";
-  print "<option value='o=Graph' >Graph</option>\n";
-  print "<option value='o=board' >Beer Board</option>\n";
-  print "<option value='o=Months' >Stats</option>\n";
-  print "<option value='o=Beer' >Lists</option>\n";
-  print "<option value='o=About' >About</option>\n";
-  print "</select>\n";
-  print  " &nbsp; &nbsp; &nbsp;";
-  if ( $c->{op} && $c->{op} !~ /graph/i ) {
-    print "<a href='$c->{url}'><b>G</b></a>\n";
-  } else {
-    print "<a href='$c->{url}?o=board'><b>B</b></a>\n";
-  }
-}
 
 ################################################################################
 # Report module loaded ok

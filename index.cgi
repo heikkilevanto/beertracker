@@ -407,27 +407,27 @@ if ( $op =~ /Board/i ) {
   fulllist();
 } elsif ( $op =~ /Years(d?)/i ) {
   oldstuff();
-  persons::showmenu($context);
+  print util::showmenu($context);
   yearsummary($1); # $1 indicates sort order
 } elsif ( $op =~ /short/i ) {
   oldstuff();
-  persons::showmenu($context);
+  print util::showmenu($context);
   shortlist();
 } elsif ( $op =~ /Months([BS])?/ ) {
   oldstuff();
-  persons::showmenu($context);
+  print util::showmenu($context);
   monthstat($1);
 } elsif ( $op =~ /DataStats/i ) {
   oldstuff();
-  persons::showmenu($context);
+  print util::showmenu($context);
   datastats();
 } elsif ( $op eq "About" ) {
   # The about page went from 500ms to under 100 when dropping the oldstuff
-  persons::showmenu($context);
+  print util::showmenu($context);
   about();
 } elsif ( $op eq "geo" ) { # TODO - This makes no sense any more
   oldstuff();
-  persons::showmenu($context);
+  print util::showmenu($context);
   geodebug();
 } elsif ( $op =~ /Brewery|Wine|Booze|Restaurant|Style/i ) {
   oldstuff();
@@ -3311,7 +3311,7 @@ sub lists {
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $qry;
   print "Filter: <a href='$url?y=$yrlim'><span>$yrlim</span></a> " .
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
-  persons::listsmenubar($context);
+  print util::listsmenu($context), util::showmenu($context);
   print searchform();
 #   print "Other lists: " ;
 #   my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");

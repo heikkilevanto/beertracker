@@ -81,6 +81,52 @@ sub error {
   exit();
 }
 
+################################################################################
+# Pull-down menus for the Show menu and for selecting a list
+################################################################################
+
+
+# The main "Show" menu
+sub showmenu {
+  my $c = shift; # context;
+  my $s = "";
+  $s .= " <select  style='width:4.5em;' " .
+              "onchange='document.location=\"$c->{url}?\"+this.value;' >";
+  $s .= "<option value='' >Show</option>\n";
+  $s .= "<option value='o=full&' >Full List</option>\n";
+  $s .= "<option value='o=Graph' >Graph</option>\n";
+  $s .= "<option value='o=board' >Beer Board</option>\n";
+  $s .= "<option value='o=Months' >Stats</option>\n";
+  $s .= "<option value='o=Beer' >Lists</option>\n";
+  $s .= "<option value='o=About' >About</option>\n";
+  $s .= "</select>\n";
+  $s .=  " &nbsp; &nbsp; &nbsp;";
+  if ( $c->{op} && $c->{op} !~ /graph/i ) {
+    $s .= "<a href='$c->{url}'><b>G</b></a>\n";
+  } else {
+    $s .= "<a href='$c->{url}?o=board'><b>B</b></a>\n";
+  }
+  return $s;
+}
+
+########## Menu for the various lists we have
+sub listsmenu {
+  my $c = shift or die ("No context for listsmenubar" );
+  my $s = "";
+  $s .= " <select  style='width:7em;' " .
+              "onchange='document.location=\"$c->{url}?\"+this.value;' >";
+  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
+  for my $l ( @ops ) {
+    my $sel = "";
+    $sel = "selected" if ($l eq $c->{op});
+    $s .= "<option value='o=$l' $sel >$l</option>\n"
+  }
+  $s .= "</select>\n";
+  $s .= "<a href='$c->{url}?o=$c->{op}'><span>List</span></a> ";
+  $s .= "&nbsp; &nbsp; &nbsp;";
+  return $s;
+} # listsmenubar
+
 
 ################################################################################
 # Report module loaded ok

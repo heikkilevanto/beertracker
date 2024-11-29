@@ -20,7 +20,7 @@ use warnings;
 ################################################################################
 sub listlocations {
   my $c = shift; # context
-  persons::listsmenubar($c);
+  print util::listsmenu($c), util::showmenu($c);
 
   if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
     editlocation($c);

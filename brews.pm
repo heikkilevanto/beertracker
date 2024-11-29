@@ -18,7 +18,9 @@ use warnings;
 # TODO - Filtering by brew type, subtype, name, producer, etc
 sub listbrews {
   my $c = shift; # context
-  persons::listsmenubar($c);
+  print util::listsmenu($c);
+  print util::showmenu($c);
+  print "<hr/>";
 
   if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
     #editbrew($c);  # TODO
