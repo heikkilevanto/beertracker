@@ -149,7 +149,7 @@ scriptend
   while ( my ($id, $bt, $su, $na, $pr)  = $list_sth->fetchrow_array ) {
     my $disp = "";
     $disp .= $na if ($na);
-    $disp = "$pr : $disp  " if ($pr && $na !~ /$pr/ ); # TODO Shorten producer names
+    $disp = "$pr: $disp  " if ($pr && $na !~ /$pr/ ); # TODO Shorten producer names
     my $disptype = $su;
     $disptype .= $bt unless ($su);
     $disp .= " [$disptype]";
@@ -169,6 +169,7 @@ scriptend
           if ( avp )
             avp.hidden = true;
         } else {
+          sel.hidden = false;
           sel.add( new Option( "(select)", "", true ) );
           sel.add( new Option( "(new)", "new" ) );
           var n = 0;

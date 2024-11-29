@@ -53,7 +53,7 @@ sub inputform {
   print "<tr><td>\n";
   print " <input type='hidden' name='o' value='$c->{op}' />\n";
   if ($c->{edit}) {
-    print " <input type='hidden' name='e' value='$c->{edit}' />\n";
+    print " <input type='hidden' name='e' value='$rec->{Id}' />\n";
     print " <input type='submit' name='submit' value='Save' id='save' />\n";
     print "</td><td>\n";
     print " <input type='submit' name='submit' value='Del'/>\n";
@@ -96,20 +96,26 @@ SCRIPTEND
 ################################################################################
 sub postglass {
   my $c = shift; # context
-  foreach my $param ($c->{cgi}->param) {
-    my $value = $c->{cgi}->param($param);
-    print STDERR "$param = '$value'\n";
-  }
-  my $sub = $c->{cgi}->param("submit") || "";
 
+  if ( 1 ) {
+    foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
+      my $value = $c->{cgi}->param($param);
+      print STDERR "$param = '$value'\n";
+    }
+  }
+
+  my $sub = $c->{cgi}->param("submit") || "";
   my $stdrinks = 0;
-  $stdrinks = sprintf("%6.2f", $c->{cgi}->param("alc") * $c->{cgi}->param("vol") / $c->{onedrink} );
+  my $alc = $c->{cgi}->param("alc") || 0;
+  my $vol = $c->{cgi}->param("vol") || 0;
+  $stdrinks = sprintf("%6.2f", $alc * $vol / $c->{onedrink} );
 
   main::error ("Creating new locations not yet supported") if ($c->{cgi}->param("loc") eq "new" );
 
   if ( $sub eq "Save" ) {  # Update existing glass
     my $sql = "update GLASSES set
         TimeStamp = ?,
+        BrewType = ?,
         Location = ?,
         Volume = ?,
         Alc = ?,
@@ -121,6 +127,7 @@ sub postglass {
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute(
     $c->{cgi}->param("stamp") || "",
+    $c->{cgi}->param("selbrewtype") || undef,
     $c->{cgi}->param("loc") || undef,
     $c->{cgi}->param("vol") || "",
     $c->{cgi}->param("alc") || "",
@@ -154,16 +161,6 @@ sub postglass {
     my $id = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
   }
-#   my $name = $c->{cgi}->param("name");
-#   my $sql = "
-#     update BREWS
-#       set
-#         Name = ?,
-#     where id = ? ";
-#   my $sth = $c->{dbh}->prepare($sql);
-#   $sth->execute( $name,  $id );
-#   print STDERR "Updated " . $sth->rows .
-#     " Location records for id '$id' : '$name' \n";
    print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
 } # postglass
 
@@ -205,6 +202,10 @@ sub findrec {
   }
   my $sql = "select * from glasses " .
             "where id = ? and username = ? ";
+  if ( $id =~ /^\d\d\d\d-\d\d/ ) { # Called with old-style timestamp
+    $sql =~ s/id =/timestamp =/;   # TODO - Drop this when no longer needed
+    #print STDERR "glasses::findrec called with timestamp '$id' instead of proper id\n";
+  }
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( $id, $c->{username} );
   my $rec = $sth->fetchrow_hashref;

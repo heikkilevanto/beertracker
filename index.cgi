@@ -440,7 +440,6 @@ if ( $op =~ /Board/i ) {
   locations::listlocations($context);
 } elsif ( $op =~ /Full/i ) {
   glasses::inputform($context);
-  print "No full list done yet <br/>\n";
   oldstuff();
   fulllist();
 } else { # Default to the graph
