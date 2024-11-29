@@ -62,7 +62,6 @@ $dbh->do(q{
         BrewType TEXT not null,  /* Wine, Beer, Restaurant */
         SubType TEXT,  /* Wines: Red, Booze: Rum, Restaurant: Pizza */
         BrewStyle TEXT, /* What ever style we get in, "IPA Hazy" */
-        ShortName TEXT default '',
         Producer INTEGER,
         Alc DECIMAL default 0.0,
         Country TEXT default '',
