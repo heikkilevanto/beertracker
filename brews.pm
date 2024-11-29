@@ -97,7 +97,6 @@ sub listbrews {
 # TODO - Many features missing
 # TODO - Display the brew details under the selection
 # TODO - Hide selector if style is "Restaurant" or "Night"
-# TODO - Add more fields for new brews
 # TODO - Add an option to filter: Show filter field, redo the list on every change
 # TODO - remember the selected value on start, and try re-establish it when changing
 #        the brew style. That way, we can change from beer to wine, get an empty
@@ -109,13 +108,13 @@ sub selectbrew {
   my $brewtype = shift || "";
   my $sql = "
   select
-    BREWS.Id, BREWS.Brewtype, BREWS.SubType, Name, Producer,
-    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
+    BREWS.Id, BREWS.Brewtype, BREWS.SubType, Name, Producer
   from BREWS
   left join GLASSES on GLASSES.Brew= BREWS.ID
   group by BREWS.id
   order by GLASSES.Timestamp DESC ";
   #$sql .= "LIMIT 400" ; # Saves some time, but looses older records. Ok for beer, not the rest
+  #  strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute(); # username ?
   my $s = "";
@@ -137,16 +136,20 @@ sub selectbrew {
     <script>
       function brewselchange() {
         var sel = document.getElementById("brewsel");
+        var inp = document.getElementById("newbrewdiv");
         if ( sel.value == "new" ) {
-          var inp = document.getElementById("newbrewdiv");
           sel.hidden = true;
           inp.hidden = false;
+        }
+        var alc = document.getElementById("alc");
+        if (alc ) { /* will get autofilled from the brew on post */
+          alc.value = "";
         }
       }
 
     const brews = [
 scriptend
-  while ( my ($id, $bt, $su, $na, $pr)  = $list_sth->fetchrow_array ) {
+  while ( my ($id, $bt, $su, $na, $pr )  = $list_sth->fetchrow_array ) {
     my $disp = "";
     $disp .= $na if ($na);
     $disp = "$pr: $disp  " if ($pr && $na !~ /$pr/ ); # TODO Shorten producer names
@@ -169,6 +172,8 @@ scriptend
           if ( avp )
             avp.hidden = true;
         } else {
+          var inp = document.getElementById("newbrewdiv");
+          inp.hidden = true;
           sel.hidden = false;
           sel.add( new Option( "(select)", "", true ) );
           sel.add( new Option( "(new)", "new" ) );

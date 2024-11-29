@@ -34,7 +34,7 @@ sub inputform {
   # Vol, Alc, and Price
   print "<tr><td>&nbsp;</td><td id='avp'>\n";
   print "<input name='vol' placeholder='vol' size='3' value='$rec->{Volume}c' />\n";
-  print "<input name='alc' placeholder='alc' size='3' value='$rec->{Alc}%' />\n";
+  print "<input name='alc' id='alc' placeholder='alc' size='3' value='$rec->{Alc}%' />\n";
   print "<input name='pr' placeholder='pr' size='3' value='$rec->{Price}.-' />\n";
   print "</td></tr>\n";
 
