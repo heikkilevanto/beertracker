@@ -98,9 +98,10 @@ sub listbrews {
 # TODO - Many features missing
 # TODO - Display the brew details under the selection
 # TODO - Add an option to filter: Show filter field, redo the list on every change
-# TODO SOON - remember the selected value on start, and try re-establish it when changing
+# TODO - remember the selected value on start, and try re-establish it when changing
 #        the brew style. That way, we can change from beer to wine, get an empty
 #        default selection, and switch back to beer, and get the old value back.
+# TODO - Use the saved value to link to the page editing the brew
 # TODO - Make a helper to shorten producer names, maybe for each type
 
 sub selectbrew {
@@ -197,10 +198,14 @@ scriptend
           }
         }
       }
+    </script>
+    <script defer>
     populatebrews("$brewtype", "$selected");
     </script>
 scriptend
-
+    # The 'defer' in the script tag makes it execute after parsing the page,
+    # which eliminates a visible stop at rendering the select. Declaring the
+    # function is not deferred, so that it will be available.
   return $s;
 } # selectbrew
 

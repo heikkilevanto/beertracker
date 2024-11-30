@@ -12,6 +12,8 @@ use warnings;
 # TODO - The timestamp processing is overly simplified, now always puts current time in the form
 #        It still updatyes the record with the entered value, but won't display it
 #        Best would be to let the browser fill it in, but not overwrite existing data
+# TODO - Del button to go back to here, with an option to ask if sure
+#        Could also ask to delete otherwise unused locations and brews
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
@@ -89,10 +91,9 @@ SCRIPTEND
 } # inputform
 
 ################################################################################
-# Update or insert a glass from the form above
+# Update, insert, or delete a glass from the form above
 ################################################################################
-
-
+# TODO - Delete
 
 ############## Helper to get input values into $glass with some defaults
 sub getvalues {
