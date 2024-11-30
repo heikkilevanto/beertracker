@@ -52,22 +52,18 @@ sub listpersons {
   my $op = $c->{op};
   print "<td><a href='$url?o=$op&s=id'><i>Id</i></a></td>";
   print "<td><a href='$url?o=$op&s=name'><i>Name</i></a></td>";
-  print "<td><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
+  print "<td colspan=2><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
   print "<td><a href='$url?o=$op&s=where'><i>Where</i></a></td></tr>";
   while ( my ($persid, $name, $last, $loc, $count) = $list_sth->fetchrow_array ) {
-    my ($wd, $stamp) = ("", "(never)");
+    my ($stamp, $wd) = util::splitdate($last);
     $loc = "" unless ($loc);
-    if ( $last ) {
-      ($stamp, $wd ) = split (' ', $last);
-      my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-      $wd = $weekdays[$wd];
-    }
 
     print "<tr><td style='font-size: xx-small' align='right'>$persid</td>\n";
     print "<td><a href='$url?o=$op&e=$persid'><b>$name</b></a>";
     print " ($count) " if ( $count > 1 );
     print "</td>\n";
-    print "<td style='width:8em'>$wd " . main::filt($stamp,"","","full") . "</td>\n";
+    print "<td>$wd</td>";
+    print "<td >" . main::filt($stamp,"","","full") . "</td>\n";
     print "<td>$loc</td></tr>\n";
   }
   print "</table>\n";

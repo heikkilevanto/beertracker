@@ -61,18 +61,14 @@ sub listlocations {
   print "<td><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
   print "</tr>";
   while ( my ($locid, $name, $web, $last ) = $list_sth->fetchrow_array ) {
-    my ($stamp, $wd ) = ( "(never)","" );
-    if ( $last ) { # TODO - Make and use a helper
-      ($stamp, $wd ) = split (' ', $last);
-      my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-      $wd = $weekdays[$wd];
-    }
+    my ($stamp, $wd) = util::splitdate($last);
     print "<tr><td style='font-size: xx-small' align='right'>$locid</td>\n";
     print "<td style='max-width:30em' ><a href='$url?o=$op&e=$locid'><b>$name</b></a>";
     print "<a href='$web' target='_blank' ><span> &nbsp; $web</span></a>"
       if ( $web );
     print "</td>\n";
-    print "<td style='width:16em' >$wd " . main::filt($stamp,"","","full") . "</td>\n";
+    print "<td>$wd</td>\n";
+    print "<td>" . main::filt($stamp,"","","full") . "</td>\n";
     print "</tr>\n";
   }
   print "</table>\n";

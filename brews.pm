@@ -66,16 +66,11 @@ sub listbrews {
   print "<td><a href='$url?o=$op&s=name'><i>Name</i></a></td>";
   print "<td><a href='$url?o=$op&s=maker'><i>Producer</i></a></td>";
   print "<td><a href='$url?o=$op&s=type'><i>Type</i></a></td>";
-  print "<td><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
+  print "<td colspan=2 ><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
   print "<td><a href='$url?o=$op&s=where'><i>Where</i></a></td></tr>";
   while ( my ($id, $name, $maker, $typ, $sub, $last, $loc, $count) = $list_sth->fetchrow_array ) {
-    my ($wd, $stamp) = ("", "(never)");
     $loc = "" unless ($loc);
-    if ( $last ) {
-      ($stamp, $wd ) = split (' ', $last);  # TODO SOON - Make a helper for this
-      my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-      $wd = $weekdays[$wd];
-    }
+    my ($stamp, $wd) = util::splitdate($last);
 
     print "<tr><td style='font-size: xx-small' align='right'>$id</td>\n";
     print "<td $maxwidth><a href='$url?o=$op&e=$id'><b>$name</b></a>";
@@ -83,7 +78,8 @@ sub listbrews {
     print "<td $maxwidth>$maker</td>";
     print "</td>\n";
     print "<td>$typ, $sub </td>\n";
-    print "<td>$wd " . main::filt($stamp,"","","full") . "</td>\n";
+    print "<td>$wd</td>\n";
+    print "<td>" . main::filt($stamp,"","","full") . "</td>\n";
     print "<td>$loc</td></tr>\n";
   }
   print "</table>\n";

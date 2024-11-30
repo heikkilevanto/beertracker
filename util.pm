@@ -45,6 +45,17 @@ sub price {
   return $v;
 }
 
+# Split date and weekday, convert weekday to text
+# Get the date from Sqlite with a format like '%Y-%m-%d %w'
+# The %w returns the number of the weekday.
+sub splitdate {
+  my $stamp = shift || return ( "(never)", "" );
+  my ($date, $wd ) = split (' ', $stamp);
+  my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
+  $wd = $weekdays[$wd];
+  return ( $date, $wd );
+}
+
 ################################################################################
 # Helpers for cgi parameters
 ################################################################################
