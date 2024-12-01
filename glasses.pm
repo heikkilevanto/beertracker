@@ -93,7 +93,7 @@ SCRIPTEND
 ################################################################################
 # Update, insert, or delete a glass from the form above
 ################################################################################
-# TODO - Delete
+# TODO SOON - Delete a glass
 
 ############## Helper to get input values into $glass with some defaults
 sub getvalues {

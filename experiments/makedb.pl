@@ -8,7 +8,9 @@ use warnings;
 
 use DBI;
 
-# TODO - Do I really need SubType in the Glasses?
+# TODO - Change Brews to refer to a ProducerLocation, where I can have
+# much more than the name of the producer.
+
 
 # Connect to SQLite database (or create it if it doesn't exist)
 my $databasefile = "beertracker.db";
@@ -38,7 +40,6 @@ $dbh->do(q{
         Username TEXT not null, /* every user has his own glasses - the rest are shared */
         Timestamp DATETIME not null,
         BrewType TEXT not null,  /* Wine, Beer, Restaurant */
-        SubType TEXT,  /* Ipa, Red, Whisky - for display color */
         Location INTEGER,
         Brew INTEGER, /* Can be null for "empty glasses" which should not have alc nor vol */
         Price DECIMAL default 0,
@@ -122,17 +123,14 @@ $dbh->do("CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE)");
 $dbh->do(q{
     CREATE TABLE LOCATIONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name TEXT NOT NULL,
+        Name TEXT NOT NULL,  /* The name I know it by. Used in pulldowns */
         OfficialName TEXT default '',  /* Official long name */
         Description TEXT default '',
+        SubType TEXT default '', /* Restaurant/Bar type (Thai, Beer), etc */
         GeoCoordinates TEXT default '',
         Website TEXT default '',
-        Phone TEXT default '',
-        Email TEXT default '',
-        StreetAddress TEXT default '',
-        City TEXT default '',
-        PostalCode TEXT default '',
-        Country TEXT default ''
+        Contact TEXT default '', /* Phone, email, or such */
+        Address TEXT default ''  /* Street, zip, city. Or just a description of where I found it */
     )
 });
 $dbh->do("CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE)");

@@ -1,7 +1,7 @@
 # Part of my beertracker
 # Stuff for listing, selecting, adding, and editing brews
 
-# TODO - Edit a brew, maybe insert a new
+# TODO SOON - Edit a brew, maybe insert a new
 
 package brews;
 use strict;
@@ -94,6 +94,11 @@ sub listbrews {
 # TODO - Many features missing
 # TODO - Display the brew details under the selection
 # TODO - Add an option to filter: Show filter field, redo the list on every change
+#        As it is now, it is way too hard to find a beer in the long list. ChatGpt
+#        recommends a solution based on divs, with an input that actively shows
+#        hides the elements as filter input is typed in. That could work, esp
+#        if I have inputs for producer and name. Better make a simple one for
+#        locations first.
 # TODO - remember the selected value on start, and try re-establish it when changing
 #        the brew style. That way, we can change from beer to wine, get an empty
 #        default selection, and switch back to beer, and get the old value back.

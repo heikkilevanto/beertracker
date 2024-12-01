@@ -62,6 +62,7 @@ sub listlocations {
   print "</tr>";
   while ( my ($locid, $name, $web, $last ) = $list_sth->fetchrow_array ) {
     my ($stamp, $wd) = util::splitdate($last);
+    $name =~ s/( +)$/"_" x length($1)/e; # Mark trailing spaces, as in my 'Home  ' things
     print "<tr><td style='font-size: xx-small' align='right'>$locid</td>\n";
     print "<td style='max-width:30em' ><a href='$url?o=$op&e=$locid'><b>$name</b></a>";
     print "<a href='$web' target='_blank' ><span> &nbsp; $web</span></a>"
@@ -106,14 +107,10 @@ sub editlocation {
     print "<td><input name='geo' value='$p->{GeoCoordinates}' $clr /></td></tr>\n";
     print "<tr><td>Website</td>\n";
     print "<td><input name='web' value='$p->{Website}' $clr /></td></tr>\n";
-    print "<tr><td>Phone</td>\n";
-    print "<td><input name='phone' value='$p->{Phone}' $clr /></td></tr>\n";
+    print "<tr><td>Contact</td>\n";
+    print "<td><input name='contact' value='$p->{Contact}' $clr /></td></tr>\n";
     print "<tr><td>Address</td>\n";
-    print "<td><input name='addr' value='$p->{StreetAddress}' $clr /></td></tr>\n";
-    print "<tr><td>Zip</td>\n";
-    print "<td><input name='zip' value='$p->{PostalCode}' $clr /></td></tr>\n";
-    print "<tr><td>Country</td>\n";
-    print "<td><input name='country' value='$p->{Country}' $clr /></td></tr>\n";
+    print "<td><input name='addr' value='$p->{Address}' $clr /></td></tr>\n";
     print "<tr><td $c2> <input type='submit' name='submit' value='Update Location' /></td></tr>\n";
     print "</table>\n";
     # Come back to here after updating
@@ -152,10 +149,8 @@ sub postlocation {
     my $desc= $c->{cgi}->param("desc") || "" ;
     my $geo= $c->{cgi}->param("geo") || "" ;
     my $web= $c->{cgi}->param("web") || "" ;
-    my $phone=  $c->{cgi}->param("phone") || "";
+    my $contact=  $c->{cgi}->param("contact") || "";
     my $addr= $c->{cgi}->param("addr") || "" ;
-    my $zip= $c->{cgi}->param("zip") || "" ;
-    my $country= $c->{cgi}->param("country") || "" ;
     main::error ("Bad id for updating a location '$id' ")
       unless $id =~ /^\d+$/;
     my $sql = "
@@ -165,14 +160,12 @@ sub postlocation {
           OfficialName = ?,
           Description = ?,
           GeoCoordinates = ?,
+          Contact = ?,
           Website = ?,
-          Phone = ?,
-          StreetAddress = ?,
-          PostalCode = ?,
-          Country = ?
+          Address = ?
       where id = ? ";
     my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute( $name, $off, $desc, $geo, $web, $phone, $addr, $zip, $country, $id );
+    $sth->execute( $name, $off, $desc, $geo, $web, $contact, $addr, $id );
     print STDERR "Updated " . $sth->rows .
       " Location records for id '$id' : '$name' \n";
   }
