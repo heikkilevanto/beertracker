@@ -179,7 +179,7 @@ sub dropdown {
     # Add an option to do so
     $options = "<div class='dropdown-item' id='new'>(new)</div>\n" . $options;
     $newdiv = "<div id='newdiv-$inputname' hidden>\n";
-    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, "New " );
+    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname);
     $newdiv .= "</div>";
   }
 
@@ -204,7 +204,7 @@ sub dropdown {
     </style>
         $newdiv
         <div id="dropdown-$inputname" style="position:relative;width:100%;max-width:300px;">
-        <input type="text" id="dropdown-input" autocomplete="off"
+        <input type="text" id="dropdown-filter-$inputname" autocomplete="off"
           style="width:100%" placeholder='(filter)' value='$selectedname' />
         <input type="hidden" id='$inputname' name='$inputname' value='$selectedid' >
         <div id="dropdown-list" class="dropdown-list">
@@ -213,7 +213,7 @@ sub dropdown {
     </div>
 
     <script>
-        const input = document.getElementById('dropdown-input');
+        const filterinput$inputname = document.getElementById('dropdown-filter-$inputname');
         const hidinput = document.getElementById('$inputname');
         const dropdownList = document.getElementById('dropdown-list');
         const wholedropdown = document.getElementById('dropdown-$inputname');
@@ -222,27 +222,27 @@ sub dropdown {
         // Handle selection of a dropdown item
         dropdownList.addEventListener('click', event => {
             if (event.target.classList.contains('dropdown-item')) {
-              input.value = event.target.textContent;
-              input.oldvalue = "";
+              filterinput$inputname.value = event.target.textContent;
+              filterinput$inputname.oldvalue = "";
               hidinput.value = event.target.getAttribute("id");
               dropdownList.style.display = 'none';
               if (event.target.getAttribute("id") == "new" ) {
-                console.log("Opening the NEW input");
                 wholedropdown.hidden = true;
                 newdiv.hidden = false;
               }
             }
         });
 
-        // Show/hide dropdown based on input focus
-        input.addEventListener('focus', () => {
+        // Show/hide dropdown based on filter focus
+        filterinput$inputname.addEventListener('focus', () => {
             dropdownList.style.display = 'block';
-            input.oldvalue = input.value;
-            input.value = "";
+            filterinput$inputname.oldvalue = filterinput$inputname.value;
+            filterinput$inputname.value = "";
         });
-        input.addEventListener('blur', () => {
-            if ( input.oldvalue ) {
-              input.value = input.oldvalue;
+
+        filterinput$inputname.addEventListener('blur', () => {
+            if ( filterinput$inputname.oldvalue ) {
+              filterinput$inputname.value = filterinput$inputname.oldvalue;
             }
             // Delay hiding to allow click events on dropdown items
             setTimeout(() => {
@@ -251,8 +251,8 @@ sub dropdown {
         });
 
         // Filter dropdown items as the user types
-        input.addEventListener('input', () => {
-            const filter = input.value.toLowerCase();
+        filterinput$inputname.addEventListener('filter', () => {
+            const filter = filterinput$inputname.value.toLowerCase();
             Array.from(dropdownList.children).forEach(item => {
                 if (item.textContent.toLowerCase().includes(filter)) {
                     item.style.display = '';
@@ -263,7 +263,7 @@ sub dropdown {
         });
 
         // Handle Esc to close the dropdown
-        input.addEventListener("keydown", function(event) {
+        filterinput$inputname.addEventListener("keydown", function(event) {
           if (event.key === "Escape" || event.keyCode === 27) {
           this.blur();
           }
@@ -291,13 +291,25 @@ sub inputform {
   my $separatortag = shift || "<br/>";
   my $form = "";
   foreach my $f ( tablefields($c,$table) ) {
+    my $special = $1 if ( $f =~ s/^(\W)// );
     my $pl = $f;
     $pl =~ s/([A-Z])/ $1/g; # Break words GeoCoord -> Geo Coord
     $pl = $placeholderprefix .$pl;
+    $pl .= $special if ($special) ;
     my $inpname = $inputprefix . $f;
     my $val = "";
     $val = "value='$rec->{$f}'" if ( $rec && $rec->{$f} );
-    $form .= "<input name='$inpname' $val placeholder='$pl' $clr />\n";
+    if ( $special ) {  # Special field, needs a dropdown
+      if ( $f =~ /location/i ) {
+        $form .= locations::selectlocation($c, $f, $rec->{$f}, "loc");
+      } elsif ( $f =~ /person/i ) {
+        $form .= persons::selectperson($c, $f, $rec->{$f}, "pers");
+      } else {
+        $form .= "$f not handled yet";
+      }
+    } else {
+      $form .= "<input name='$inpname' $val placeholder='$pl' $clr />\n";
+    }
     $form .= $separatortag;
   }
   return $form;
@@ -313,12 +325,14 @@ sub tablefields {
   my $c = shift;
   my $table = shift;
   my $skips = shift || "Id";  # Regexp for fields to skip. "Id|UnWanted|Field"
+
   my $sql = "PRAGMA table_info($table)";
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute();
   my @fields;
   while ( my ($cid, $name, $type, $notnull, $def, $pk )  = $list_sth->fetchrow_array ) {
     next if ( $skips && $name =~ /^$skips$/ );
+    $name = "-$name" if ( $type eq "INTEGER" );  # Mark those that point to other tables
     push @fields, $name ;
   }
   return @fields;
@@ -342,7 +356,7 @@ sub insertrecord {
   }
   my $fieldlist = "(" . join( ", ", @sqlfields ) . " )";
   my $qlist = $fieldlist;
-  $qlist =~ s/\w+/?/g; #
+  $qlist =~ s/\w+/?/g; # Make a list like ( ?, ?, ?)
   my $sql = "insert into $table $fieldlist values $qlist";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @values );
@@ -361,7 +375,16 @@ sub updaterecord {
   my @sets;
   my @values;
   for my $f ( tablefields($c, $table)) {
+    my $special = $1 if ( $f =~ s/^(-)// );
     my $val = param($c, $inputprefix.$f );
+    print STDERR "updaterecord: '$f' = '$val' \n";
+    if ( $special ) {
+      print STDERR "updaterecord: Met a special field '$f' \n";
+      if ( $val eq "new" ) {
+        print STDERR "updaterecord: Should insert a new $f \n";
+        $val = insertrecord($c, "LOCATIONS", "newloc");
+      }
+    }
     if ( $val ) {
       push @sets , "$f = ?";
       push @values, $val;

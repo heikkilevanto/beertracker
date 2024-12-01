@@ -89,6 +89,7 @@ setlocale(LC_CTYPE, "da_DK.utf8");
 
 use open ':encoding(UTF-8)';  # Data files are in utf-8
 binmode STDOUT, ":utf8"; # Stdout only. Not STDIN, the CGI module handles that
+binmode STDERR, ":utf8"; #
 
 use URI::Escape;
 use CGI qw( -utf8 );
@@ -1495,6 +1496,8 @@ SCRIPTEND
         }
         console.log("Saved the location '" + geoloc + "' in " + el.length + " inputs");
         var loc = document.getElementById("loc");
+        if (! loc)
+          return;
         var locval = loc.value + " ";
         if ( locval.startsWith(" ")) {
           const R = 6371e3; // earth radius in meters

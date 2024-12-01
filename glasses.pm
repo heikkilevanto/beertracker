@@ -32,7 +32,7 @@ sub inputform {
   my $stamp = main::datestr("%F %T");
   print "<td><input name='stamp' value='$stamp' size=25 $clr/>";
   print "<tr><td>Location</td>\n";
-  print "<td>" . locations::selectlocation($c, $rec->{Location}, "newlocname") . "</td></tr>\n";
+  print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname") . "</td></tr>\n";
 
   # Brew style and brew selection
   print "<tr><td style='vertical-align:top'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
@@ -105,7 +105,7 @@ sub getvalues {
   $glass->{TimeStamp} = util::param($c, "stamp");
   $glass->{BrewType} = util::param($c, "selbrewtype");
   $glass->{SubType} = util::param($c, "newbrewsub", $glass->{SubType} || "");
-  $glass->{Location} = util::param($c, "loc", undef);
+  $glass->{Location} = util::param($c, "Location", undef);
   $glass->{Brew} = util::param($c, "brewsel");
   $glass->{Price} = util::paramnumber($c, "pr");
   $glass->{Volume} = util::paramnumber($c, "vol", "0");

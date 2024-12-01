@@ -93,22 +93,11 @@ sub editperson {
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
-    print "<table style='width:100%; max-width:500px' id='inputformtable'>\n";
-    print "<tr><td $c2><b>Editing Person $p->{Id}: $p->{Name}</b></td></tr>\n";
-    print "<tr><td>Name</td>\n";
-    print "<td><input name='name' value='$p->{Name}' /></td></tr>\n";
-    print "<tr><td>Full name</td>\n";
-    print "<td><input name='full' value='$p->{FullName}' /></td></tr>\n";
-    print "<tr><td>Description</td>\n";
-    print "<td><input name='desc' value='$p->{Description}' /></td></tr>\n";
-    print "<tr><td>Contact</td>\n";
-    print "<td><input name='cont' value='$p->{Contact}' /></td></tr>\n";
-    print "<tr><td>Location $p->{Location}</td>\n";
-    print "<td>" . locations::selectlocation($c, $p->{Location}, "newloc") ." </td></tr>\n";
-    print "<tr><td>Related $p->{RelatedPerson} </td>\n";
-    print "<td>" . selectperson($c, "rela", $p->{RelatedPerson}, "", "newperson" ) . "</td></tr>\n";
-    print "<tr><td $c2> <input type='submit' name='submit' value='Update Person' /></td></tr>\n";
-    print "</table>\n";
+    print "<b>Editing Person $p->{Id}: $p->{Name}</b><br/>\n";
+
+    print util::inputform( $c, "PERSONS", $p );
+    print "<input type='submit' name='submit' value='Update Person' /><br/>\n";
+
     # Come back to here after updating
     print "<input type='hidden' name='o' value='$c->{op}' />\n";
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
@@ -123,14 +112,18 @@ sub editperson {
 ################################################################################
 # Update a person (posted from the form above)
 ################################################################################
+# TODO LATER - Insert new person here as well?
 sub postperson {
   my $c = shift; # context
   my $id = $c->{edit};
   main::error ("Bad id for updating a person '$id' ")
     unless $id =~ /^\d+$/;
-  my $name = $c->{cgi}->param("name");
+  my $name = $c->{cgi}->param("Name");
   error ("A Person must have a name" )
     unless $name;
+  util::updaterecord($c, "PERSONS", $id);
+  return;
+
   my $full= $c->{cgi}->param("full") || "" ;
   my $desc= $c->{cgi}->param("desc") || "" ;
   my $cont= $c->{cgi}->param("cont") || "" ;

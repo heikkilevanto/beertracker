@@ -141,13 +141,13 @@ sub postlocation {
 # TODO - Drop the newlocfield, at most a boolean to say we want that option with fixed name(s)
 # TODO - Add the current location as the first real one in the list, never mind if duplicates
 
-# TODO SOON - Abstract most of the pulldown magic into a helper.
-# TODO SOON - Move CSS into its own helper. Remove fancy corners
+# TODO SOON - Move CSS into its own helper.
 # TODO SOON - Clean and parametrisize input names
 # TODO - Use the new helper for persons
 # TODO - And brews, with all the extras those need (brewstyle filtering)
 sub selectlocation {
   my $c = shift; # context
+  my $fieldname = shift || "Location";
   my $selected = shift || "0";  # The id of the selected location
   my $newprefix = shift || ""; # Prefix for new-location fields. Enables the "new"
 
@@ -155,7 +155,6 @@ sub selectlocation {
     print STDERR "selectlocation called with non-numerical 'selected' argument: '$selected' \n";
     $selected = 0;
   }
-
 
   my $sql = "
   select
@@ -177,7 +176,7 @@ sub selectlocation {
       $current = $name;
     }
   }
-  my $s = util::dropdown( $c, "loc", $selected, $current, $opts, "LOCATIONS", "newloc" );
+  my $s = util::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", "newloc" );
   return $s;
 
 } # seleclocation

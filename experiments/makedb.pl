@@ -11,6 +11,11 @@ use DBI;
 # TODO - Change Brews to refer to a ProducerLocation, where I can have
 # much more than the name of the producer.
 
+# Design considerations   TODO - Write more here
+#
+# Fields that are INTEGER are referring to other tables. If I want to save
+# numbers, I use DECIMAL or such. This is a bit dirty, but makes it easier
+# to generate forms with suitable magic for such fields.
 
 # Connect to SQLite database (or create it if it doesn't exist)
 my $databasefile = "beertracker.db";
