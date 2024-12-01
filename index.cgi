@@ -1481,6 +1481,9 @@ SCRIPTEND
     var geoloc = "";
 
     function savelocation (myposition) {
+    }
+
+    function OLDsavelocation (myposition) {  // TODO - Geo disabled for now
       geoloc = " " + myposition.coords.latitude + " " + myposition.coords.longitude;
       var gf = document.getElementById("geo");
       if (! gf) {

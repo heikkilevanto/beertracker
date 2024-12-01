@@ -11,11 +11,12 @@ use utf8;  # Source code and string literals are utf-8
 ################################################################################
 # The input form
 ################################################################################
-# TODO - The timestamp processing is overly simplified, now always puts current time in the form
+# TODO - The timestamp processing is stupid, now always puts current time in the form
 #        It still updatyes the record with the entered value, but won't display it
 #        Best would be to let the browser fill it in, but not overwrite existing data
 # TODO - Del button to go back to here, with an option to ask if sure
 #        Could also ask to delete otherwise unused locations and brews
+# TODO - Better way to handle brewstyle. Second filter in brew dropdown?
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
@@ -103,10 +104,9 @@ sub getvalues {
   my $glass = shift;
   my $brew = shift;
   $glass->{TimeStamp} = util::param($c, "stamp");
-  $glass->{BrewType} = util::param($c, "selbrewtype");
-  $glass->{SubType} = util::param($c, "newbrewsub", $glass->{SubType} || "");
+  $glass->{BrewType} = $brew->{BrewType};
   $glass->{Location} = util::param($c, "Location", undef);
-  $glass->{Brew} = util::param($c, "brewsel");
+  $glass->{Brew} = util::param($c, "Brew");
   $glass->{Price} = util::paramnumber($c, "pr");
   $glass->{Volume} = util::paramnumber($c, "vol", "0");
   $glass->{Alc} = util::paramnumber($c, "alc", $brew->{Alc} || "0");
@@ -145,7 +145,7 @@ sub postglass {
   my $sub = $c->{cgi}->param("submit") || "";
 
   my $glass = findrec($c); # Get defaults from last glass or the record we are editing
-  my $brew = brews::getbrew($c, scalar $c->{cgi}->param("brewsel") );
+  my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
 
   # Get input values into $glass
   getvalues($c, $glass, $brew);
@@ -158,6 +158,7 @@ sub postglass {
   if ( $glass->{Brew} eq "new" ) {
     $glass->{Brew} = brews::postbrew($c, "new" );
   }
+  print STDERR "postglass: '$glass->{Id}' loc='$glass->{Location}' brw='$glass->{Brew}' \n";
 
 
   if ( $sub eq "Save" ) {  # Update existing glass
@@ -223,7 +224,8 @@ sub selectbrewtype {
   my $sql = "select distinct BrewType from Glasses";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( );
-  my $s = "<select name='selbrewtype' id='selbrewtype' onchange='populatebrews(this.value)' >\n";
+  my $s = "<select name='selbrewtype' id='selbrewtype'  >\n";
+    # onchange='populatebrews(this.value)'
   while ( my $bt = $sth->fetchrow_array ) {
     my $se = "";
     $se = "selected" if ( $bt eq $selected );

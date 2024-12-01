@@ -94,123 +94,46 @@ sub listbrews {
 # A key component of the main input form
 ################################################################################
 # TODO - Many features missing
-# TODO - Display the brew details under the selection
-# TODO - Add an option to filter: Show filter field, redo the list on every change
-#        As it is now, it is way too hard to find a beer in the long list. ChatGpt
-#        recommends a solution based on divs, with an input that actively shows
-#        hides the elements as filter input is typed in. That could work, esp
-#        if I have inputs for producer and name. Better make a simple one for
-#        locations first.
-# TODO - remember the selected value on start, and try re-establish it when changing
-#        the brew style. That way, we can change from beer to wine, get an empty
-#        default selection, and switch back to beer, and get the old value back.
-# TODO - Use the saved value to link to the page editing the brew
-# TODO - Make a helper to shorten producer names, maybe for each type
+# TODO - Display the brew details under the selection, with an edit link
+
 
 sub selectbrew {
   my $c = shift; # context
   my $selected = shift || "";  # The id of the selected brew
   my $brewtype = shift || "";
-  my $s = "";
-  $s .= "<div id='newbrewdiv' hidden>";
-  $s .= "<input name='newbrewname' placeholder='New Name' $clr /><br/>\n";
-  $s .= "<input name='newbrewstyle' placeholder='Style' $clr /><br/>\n";
-  $s .= "<input name='newbrewsub' placeholder='SubType' $clr /><br/>\n";
-  $s .= "<input name='newbrewproducer' width placeholder='Producer' $clr /><br/>\n";
-  $s .= "<input name='newalc'  placeholder='Alc' onInput='updalc(this.value);' $clr /><br/>\n";
-  $s .= "<input name='newbrewcountry' width placeholder='Country' $clr /><br/>\n";
-  $s .= "<input name='newbrewregion' width placeholder='Region' $clr /><br/>\n";
-  $s .= "<input name='newbrewflavor' width placeholder='Flavor' $clr /><br/>\n";
-  $s .= "<input name='newbrewyear' width placeholder='Year' $clr /><br/>\n";
-  $s .= "<input name='newbrewdetails' width placeholder='Details' $clr /><br/>\n";
-  $s .= "</div>";
-  $s .= "<select name='brewsel' id='brewsel' onchange='brewselchange();' style='width: 15em'>\n";
-  $s .= "</select>\n";  # Options will be filled in populatebrews() js func below
-  $s .= << "scriptend";
-    <script>
-      function brewselchange() {
-        var sel = document.getElementById("brewsel");
-        var inp = document.getElementById("newbrewdiv");
-        if ( sel.value == "new" ) {
-          sel.hidden = true;
-          inp.hidden = false;
-        }
-        updalc(sel.options[ sel.selectedIndex ].alc );
-      }
 
-    function updalc(a) {
-      var alc = document.getElementById("alc");
-      if (alc && a ) {
-        alc.value = a;
-      }
-    }
-    const brews = [
-scriptend
   my $sql = "
-  select
-    BREWS.Id, BREWS.Brewtype, BREWS.SubType, Name, Producer, BREWS.Alc
-  from BREWS
-  left join GLASSES on GLASSES.Brew= BREWS.ID
-  group by BREWS.id
-  order by max(GLASSES.Timestamp) DESC ";
-  #$sql .= "LIMIT 400" ; # Saves some time, but looses older records. Ok for beer, not the rest
-  #  strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
+    select
+      BREWS.Id, BREWS.Brewtype, BREWS.SubType, Name, Producer, BREWS.Alc
+    from BREWS
+    left join GLASSES on GLASSES.Brew= BREWS.ID
+    group by BREWS.id
+    order by max(GLASSES.Timestamp) DESC
+    ";
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute(); # username ?
+
+  my $opts = "";
+  my $current = "";
+
   while ( my ($id, $bt, $su, $na, $pr, $alc )  = $list_sth->fetchrow_array ) {
+    if ( $id eq $selected ) {
+      $current = $na;
+    }
     my $disp = "";
     $disp .= $na if ($na);
     $disp = "$pr: $disp  " if ($pr && $na !~ /$pr/ ); # TODO Shorten producer names
     my $disptype = $su;
     $disptype .= $bt unless ($su);
     $disp .= " [$disptype]";
-    $disp = substr($disp, 0, 30);
-    $s .= "  { Id: '$id', BrewType: '$bt',  Disp: '$disp', Alc: '$alc' },\n";
+    #$disp = substr($disp, 0, 30);
+    $opts .= "<div class='dropdown-item' id='$id'>$disp</div>\n";
   }
+  my $s = util::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew" );
 
-  $s .= << "scriptend";
-    ];
-
-    function populatebrews(typ, selected) {
-        var sel = document.getElementById("brewsel");
-        sel.innerHTML = "";
-        if ( typ == "Restaurant" || typ == "Night" ) {
-          sel.hidden = true;
-          var avp = document.getElementById("avp");  /* alc-vol-pr */
-          if ( avp )
-            avp.hidden = true;
-        } else {
-          var inp = document.getElementById("newbrewdiv");
-          inp.hidden = true;
-          sel.hidden = false;
-          sel.add( new Option( "(select)", "", true ) );
-          sel.add( new Option( "(new)", "new" ) );
-          var n = 0;
-          for ( let i=0; i<brews.length; i++) {
-            var b = brews[i];
-            if ( b.BrewType == typ ) {
-              var found = (selected == b.Id);
-              var op = new Option( b.Disp , b.Id, found, found)
-              op.arrayindex = i;
-              op.alc = b.Alc;
-              sel.add( op );
-              n++;
-              if ( n > 200 )
-                return;
-            }
-          }
-        }
-      }
-    </script>
-    <script defer>
-    populatebrews("$brewtype", "$selected");
-    </script>
-scriptend
-    # The 'defer' in the script tag makes it execute after parsing the page,
-    # which eliminates a visible stop at rendering the select. Declaring the
-    # function is not deferred, so that it will be available.
   return $s;
-} # selectbrew
+}
+
 
 ################################################################################
 # Update a brew, posted from the form in the selection above
@@ -220,9 +143,13 @@ sub postbrew {
   my $c = shift; # context
   my $id = shift || $c->{edit};
   if ( $id eq "new" ) {
-    my $name = util::param($c, "newbrewname");
+    my $name = util::param($c, "newbrewName");
     util::error ("A brew must have a name" ) unless $name;
-    util::error ("A brew must have a type" ) unless util::param($c, "selbrewtype");
+    util::error ("A brew must have a type" ) unless util::param($c, "newbrewBrewType");
+
+    $id = util::insertrecord($c,  "BREWS", "newbrew");
+    return $id;
+
     my $sql = "insert into BREWS
        ( Name, BrewType, SubType,
          BrewStyle, Producer, Alc,
@@ -245,40 +172,9 @@ sub postbrew {
     $id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef) || undef;
     print STDERR "Inserted Brew id '$id' '$name' \n";
   } else {
-    # TODO - This is still as stolen from Locations. Fix for brews. Make also an edit form
-    my $name = $c->{cgi}->param("name");
-    main::error ("A Location must have a name" )
-      unless $name;
-    my $off= $c->{cgi}->param("off") || "" ;
-    my $desc= $c->{cgi}->param("desc") || "" ;
-    my $geo= $c->{cgi}->param("geo") || "" ;
-    my $web= $c->{cgi}->param("web") || "" ;
-    my $phone=  $c->{cgi}->param("phone") || "";
-    my $addr= $c->{cgi}->param("addr") || "" ;
-    my $zip= $c->{cgi}->param("zip") || "" ;
-    my $country= $c->{cgi}->param("country") || "" ;
-    main::error ("Bad id for updating a brew '$id' ")
-      unless $id =~ /^\d+$/;
-    my $sql = "
-      update LOCATIONS
-        set
-          Name = ?,
-          OfficialName = ?,
-          Description = ?,
-          GeoCoordinates = ?,
-          Website = ?,
-          Phone = ?,
-          StreetAddress = ?,
-          PostalCode = ?,
-          Country = ?
-      where id = ? ";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute( $name, $off, $desc, $geo, $web, $phone, $addr, $zip, $country, $id );
-    print STDERR "Updated " . $sth->rows .
-      " Location records for id '$id' : '$name' \n";
+    # TODO - Implement updating Brews when we have the edit form in place
   }
   return $id;
-  #print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
 } # postbrew
 
 ################################################################################

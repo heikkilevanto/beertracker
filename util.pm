@@ -162,6 +162,8 @@ sub listsmenu {
 # Omit the "new" line if you don't want it
 # Returns a string ready to be printed in a form
 
+# TODO - Add a little space between the options
+
 sub dropdown {
   my $c = shift;
   my $inputname = shift;   # Name of the input field, f.ex. 'loc'
@@ -207,35 +209,35 @@ sub dropdown {
         <input type="text" id="dropdown-filter-$inputname" autocomplete="off"
           style="width:100%" placeholder='(filter)' value='$selectedname' />
         <input type="hidden" id='$inputname' name='$inputname' value='$selectedid' >
-        <div id="dropdown-list" class="dropdown-list">
+        <div id="dropdown-list-$inputname" class="dropdown-list">
             $options
         </div>
     </div>
 
     <script>
         const filterinput$inputname = document.getElementById('dropdown-filter-$inputname');
-        const hidinput = document.getElementById('$inputname');
-        const dropdownList = document.getElementById('dropdown-list');
-        const wholedropdown = document.getElementById('dropdown-$inputname');
-        const newdiv = document.getElementById('newdiv-$inputname');
+        const hidinput$inputname = document.getElementById('$inputname');
+        const dropdownList$inputname = document.getElementById('dropdown-list-$inputname');
+        const wholedropdown$inputname = document.getElementById('dropdown-$inputname');
+        const newdiv$inputname = document.getElementById('newdiv-$inputname');
 
         // Handle selection of a dropdown item
-        dropdownList.addEventListener('click', event => {
+        dropdownList$inputname.addEventListener('click', event => {
             if (event.target.classList.contains('dropdown-item')) {
               filterinput$inputname.value = event.target.textContent;
               filterinput$inputname.oldvalue = "";
-              hidinput.value = event.target.getAttribute("id");
-              dropdownList.style.display = 'none';
+              hidinput$inputname.value = event.target.getAttribute("id");
+              dropdownList$inputname .style.display = 'none';
               if (event.target.getAttribute("id") == "new" ) {
-                wholedropdown.hidden = true;
-                newdiv.hidden = false;
+                wholedropdown$inputname.hidden = true;
+                newdiv$inputname.hidden = false;
               }
             }
         });
 
         // Show/hide dropdown based on filter focus
         filterinput$inputname.addEventListener('focus', () => {
-            dropdownList.style.display = 'block';
+            dropdownList$inputname .style.display = 'block';
             filterinput$inputname.oldvalue = filterinput$inputname.value;
             filterinput$inputname.value = "";
         });
@@ -246,14 +248,14 @@ sub dropdown {
             }
             // Delay hiding to allow click events on dropdown items
             setTimeout(() => {
-                dropdownList.style.display = 'none';
+                dropdownList$inputname .style.display = 'none';
             }, 200);
         });
 
         // Filter dropdown items as the user types
-        filterinput$inputname.addEventListener('filter', () => {
+        filterinput$inputname.addEventListener('input', () => {
             const filter = filterinput$inputname.value.toLowerCase();
-            Array.from(dropdownList.children).forEach(item => {
+            Array.from(dropdownList$inputname .children).forEach(item => {
                 if (item.textContent.toLowerCase().includes(filter)) {
                     item.style.display = '';
                 } else {
@@ -349,6 +351,7 @@ sub insertrecord {
   my @values; # values to insert, in the same order
   for my $f ( tablefields($c, $table)) {
     my $val = param($c, $inputprefix.$f );
+    print STDERR "insertrecord: '$f' = '$val' \n";
     if ( $val ) {
       push @sqlfields, $f;
       push @values, $val;
@@ -358,10 +361,12 @@ sub insertrecord {
   my $qlist = $fieldlist;
   $qlist =~ s/\w+/?/g; # Make a list like ( ?, ?, ?)
   my $sql = "insert into $table $fieldlist values $qlist";
+  print STDERR "insertrecord: $sql \n";
+  print STDERR "insertrecord: " . join (", ", @values ) . "\n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @values );
-  my $id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef) || undef;
-  print STDERR "Inserted Location id '$id' ". join (", ", @values ). " \n";
+  my $id = $c->{dbh}->last_insert_id(undef, undef, $table, undef) || undef;
+  print STDERR "Inserted $table id '$id' ". join (", ", @values ). " \n";
   return $id;
 }
 
@@ -382,17 +387,27 @@ sub updaterecord {
       print STDERR "updaterecord: Met a special field '$f' \n";
       if ( $val eq "new" ) {
         print STDERR "updaterecord: Should insert a new $f \n";
-        $val = insertrecord($c, "LOCATIONS", "newloc");
+        if ( $f =~ /location/i ) {
+          $val = insertrecord($c, "LOCATIONS", "newloc");
+        } elsif ( $f =~ /location/i ) {
+          $val = insertrecord($c, "BREWS", "newbrew");
+        } else {
+          print STDERR "updaterecord: Don't know how to insert a '$f' \n";
+          $val = "TODO";
+        }
       }
     }
     if ( $val ) {
       push @sets , "$f = ?";
       push @values, $val;
+      print STDERR "updaterecord: $f = '$val' \n";
     }
   }
   my $sql = "update $table set " .
     join( ", ", @sets) .
     " where id = ?";
+  print STDERR "updaterecord: $sql \n";
+  print STDERR "updaterecord: " . join(", ", @values) . " \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @values, $id );
    print STDERR "Updated " . $sth->rows .
