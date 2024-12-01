@@ -4,6 +4,8 @@
 package persons;
 use strict;
 use warnings;
+use feature 'unicode_strings';
+use utf8;  # Source code and string literals are utf-8
 
 ################################################################################
 # List of persons

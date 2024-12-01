@@ -4,6 +4,8 @@
 package locations;
 use strict;
 use warnings;
+use feature 'unicode_strings';
+use utf8;  # Source code and string literals are utf-8
 
 
 # TODO - Add current and latest as options to it
@@ -95,24 +97,10 @@ sub editlocation {
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
-    print "<table style='width:100%; max-width:500px' id='inputformtable'>\n";
-    print "<tr><td $c2><b>Editing Location $p->{Id}: $p->{Name}</b></td></tr>\n";
-    print "<tr><td>Name</td>\n";
-    print "<td><input name='name' value='$p->{Name}' $clr /></td></tr>\n";
-    print "<tr><td>Official</td>\n";
-    print "<td><input name='off' value='$p->{OfficialName}' $clr /></td></tr>\n";
-    print "<tr><td>Description</td>\n";
-    print "<td><input name='desc' value='$p->{Description}' $clr /></td></tr>\n";
-    print "<tr><td>Geo coord</td>\n";
-    print "<td><input name='geo' value='$p->{GeoCoordinates}' $clr /></td></tr>\n";
-    print "<tr><td>Website</td>\n";
-    print "<td><input name='web' value='$p->{Website}' $clr /></td></tr>\n";
-    print "<tr><td>Contact</td>\n";
-    print "<td><input name='contact' value='$p->{Contact}' $clr /></td></tr>\n";
-    print "<tr><td>Address</td>\n";
-    print "<td><input name='addr' value='$p->{Address}' $clr /></td></tr>\n";
-    print "<tr><td $c2> <input type='submit' name='submit' value='Update Location' /></td></tr>\n";
-    print "</table>\n";
+    print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
+    print util::inputform($c, "LOCATIONS", $p );
+    print "<input type='submit' name='submit' value='Update Location' /><br/>\n";
+
     # Come back to here after updating
     print "<input type='hidden' name='o' value='$c->{op}' />\n";
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
@@ -122,7 +110,7 @@ sub editlocation {
   } else {
     print "Oops - location id '$c->{edit}' not found <br/>\n";
   }
-} # editperson
+} # editlocation
 
 ################################################################################
 # Update a location (posted from the form above)
@@ -134,45 +122,14 @@ sub postlocation {
     my $name = $c->{cgi}->param("newlocName");
     main::error ("A Location must have a name" )
       unless $name;
-    my $sql = "insert into LOCATIONS
-       ( Name, SubType, Description )
-       values ( ?, ?, ? ) ";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute( $name,
-      util::param($c, "newlocSubType"),
-      util::param($c, "newlocDescription") );
-    $id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef) || undef;
-    print STDERR "Inserted Location id '$id' '$name' \n";
+    $id = util::insertrecord($c, "LOCATIONS", "newloc");
   } else {
-    my $name = $c->{cgi}->param("name");
+    my $name = $c->{cgi}->param("Name");
     main::error ("A Location must have a name" )
       unless $name;
-    my $off= $c->{cgi}->param("off") || "" ;
-    my $desc= $c->{cgi}->param("desc") || "" ;
-    my $geo= $c->{cgi}->param("geo") || "" ;
-    my $web= $c->{cgi}->param("web") || "" ;
-    my $contact=  $c->{cgi}->param("contact") || "";
-    my $addr= $c->{cgi}->param("addr") || "" ;
-    main::error ("Bad id for updating a location '$id' ")
-      unless $id =~ /^\d+$/;
-    my $sql = "
-      update LOCATIONS
-        set
-          Name = ?,
-          OfficialName = ?,
-          Description = ?,
-          GeoCoordinates = ?,
-          Contact = ?,
-          Website = ?,
-          Address = ?
-      where id = ? ";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute( $name, $off, $desc, $geo, $web, $contact, $addr, $id );
-    print STDERR "Updated " . $sth->rows .
-      " Location records for id '$id' : '$name' \n";
+    $id = util::updaterecord($c, "LOCATIONS", $id,  "");
   }
   return $id;
-  #print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
 } # postlocation
 
 ################################################################################
@@ -220,9 +177,7 @@ sub selectlocation {
       $current = $name;
     }
   }
-  my $newfields = [ "newlocName", "newlocSubType", "newlocDescription" ];
-
-  my $s = util::dropdown( "loc", $selected, $current, $opts, $newfields );
+  my $s = util::dropdown( $c, "loc", $selected, $current, $opts, "LOCATIONS", "newloc" );
   return $s;
 
 } # seleclocation

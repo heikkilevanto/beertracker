@@ -385,6 +385,14 @@ my $datafilecomment = "";
 # }
 
 if ( $q->request_method eq "POST" ) {
+
+  if ( 1 ) { # TODO LATER Remove this debug dumping of all CGI params
+    foreach my $param ($context->{cgi}->param) { # Debug dump params while developing
+      my $value = $context->{cgi}->param($param);
+      print STDERR "$param = '$value'\n";
+    }
+  }
+
   if ( $op =~ /Persons/i ) {
     persons::postperson($context);
   } elsif ( $op =~ /Location/i ) {

@@ -6,6 +6,8 @@
 package brews;
 use strict;
 use warnings;
+use feature 'unicode_strings';
+use utf8;  # Source code and string literals are utf-8
 
 # Formatting magic
 my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
@@ -150,7 +152,7 @@ scriptend
   from BREWS
   left join GLASSES on GLASSES.Brew= BREWS.ID
   group by BREWS.id
-  order by GLASSES.Timestamp DESC ";
+  order by max(GLASSES.Timestamp) DESC ";
   #$sql .= "LIMIT 400" ; # Saves some time, but looses older records. Ok for beer, not the rest
   #  strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
   my $list_sth = $c->{dbh}->prepare($sql);

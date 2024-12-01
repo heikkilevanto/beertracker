@@ -4,13 +4,23 @@
 package util;
 use strict;
 use warnings;
+use feature 'unicode_strings';
+use utf8;  # Source code and string literals are utf-8
 
 ################################################################################
 # Table of contents
 #  - Helpers for normalizing strings
 #  - Helpers for cgi parameters
 #  - Error handling and debug logging
-#  - Pull-down menus for the Show menu and for selecting a list
+#  - Drop-down menus for the Show menu and for selecting a list
+#  - Drop-downs for selecting a value from a list (location, brew, etc)
+#  - Helpers for input forms
+#  - Database helpers
+
+
+# Small stuff for input fields
+my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
+
 
 
 ################################################################################
@@ -95,7 +105,7 @@ sub error {
 }
 
 ################################################################################
-# Pull-down menus for the Show menu and for selecting a list
+# Drop-down menus for the Show menu and for selecting a list
 ################################################################################
 
 
@@ -152,31 +162,24 @@ sub listsmenu {
 # Omit the "new" line if you don't want it
 # Returns a string ready to be printed in a form
 
-
-
 sub dropdown {
+  my $c = shift;
   my $inputname = shift;   # Name of the input field, f.ex. 'loc'
   my $selectedid = shift,  # Id of the initially  selected item, '6'
   my $selectedname= shift; # Name of the initially selected item, 'Ølbaren'
   my $options = shift; # List of DIVs to select from
                 #    "<div class='dropdown-item' id='4'>Home</div>\n".
                 #    "<div class='dropdown-item' id='6'>Ølbaren</div>\n" ...
-  my $newfields = shift || ""; # List of input fields for the "new" option
-                # ( "Name", "Address" );  Skip if not wanted
+  my $tablename = shift;  # Table to grab input fields for new records. Empty if not
+  my $newfieldprefix = shift; # Prefix for new input fields, f.ex. newloc
 
-  my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 
   my $newdiv = "";
-  if ($newfields) { # We want a way to add new records
+  if ($tablename) { # We want a way to add new records
     # Add an option to do so
     $options = "<div class='dropdown-item' id='new'>(new)</div>\n" . $options;
     $newdiv = "<div id='newdiv-$inputname' hidden>\n";
-    foreach my $newfield ( @{$newfields} ) {
-      my $pl = $newfield;
-      $pl =~ s/^[a-z]+//; # Skip any prefix line 'new' until uppercase letter
-      $pl =~ s/([A-Z])/ $1/g; # Break words GeoCoord -> Geo Coord
-      $newdiv .= "<input name='$newfield' placeholder='New $pl' $clr /><br/>\n";
-    }
+    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, "New " );
     $newdiv .= "</div>";
   }
 
@@ -270,6 +273,107 @@ sub dropdown {
 
 JSEND
   return $s;
+}
+
+
+################################################################################
+# Helpers for input forms
+################################################################################
+
+####### Make a simple input form for a given table
+# Makes a list of input fields
+sub inputform {
+  my $c = shift;
+  my $table = shift;
+  my $rec = shift; # Current values
+  my $inputprefix = shift || "";
+  my $placeholderprefix = shift || "";
+  my $separatortag = shift || "<br/>";
+  my $form = "";
+  foreach my $f ( tablefields($c,$table) ) {
+    my $pl = $f;
+    $pl =~ s/([A-Z])/ $1/g; # Break words GeoCoord -> Geo Coord
+    $pl = $placeholderprefix .$pl;
+    my $inpname = $inputprefix . $f;
+    my $val = "";
+    $val = "value='$rec->{$f}'" if ( $rec && $rec->{$f} );
+    $form .= "<input name='$inpname' $val placeholder='$pl' $clr />\n";
+    $form .= $separatortag;
+  }
+  return $form;
+
+}
+
+################################################################################
+# Database helpers
+################################################################################
+
+########## Get all field names for a table
+sub tablefields {
+  my $c = shift;
+  my $table = shift;
+  my $skips = shift || "Id";  # Regexp for fields to skip. "Id|UnWanted|Field"
+  my $sql = "PRAGMA table_info($table)";
+  my $list_sth = $c->{dbh}->prepare($sql);
+  $list_sth->execute();
+  my @fields;
+  while ( my ($cid, $name, $type, $notnull, $def, $pk )  = $list_sth->fetchrow_array ) {
+    next if ( $skips && $name =~ /^$skips$/ );
+    push @fields, $name ;
+  }
+  return @fields;
+}
+
+######### Insert a record directly from CGI parameters
+# Takes the field names from the table.
+# Expects cgi inputs with same names with a prefix
+sub insertrecord {
+  my $c = shift;
+  my $table = shift;
+  my $inputprefix = shift || "";  # "newloc" means inputs are "newlocName" etc
+  my @sqlfields; # field names in sql
+  my @values; # values to insert, in the same order
+  for my $f ( tablefields($c, $table)) {
+    my $val = param($c, $inputprefix.$f );
+    if ( $val ) {
+      push @sqlfields, $f;
+      push @values, $val;
+    }
+  }
+  my $fieldlist = "(" . join( ", ", @sqlfields ) . " )";
+  my $qlist = $fieldlist;
+  $qlist =~ s/\w+/?/g; #
+  my $sql = "insert into $table $fieldlist values $qlist";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( @values );
+  my $id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef) || undef;
+  print STDERR "Inserted Location id '$id' ". join (", ", @values ). " \n";
+  return $id;
+}
+
+########## Update a record directly from CGI parameters
+sub updaterecord {
+  my $c = shift;
+  my $table = shift;
+  my $id = shift;
+  my $inputprefix = shift || "";  # "newloc" means inputs are "newlocName" etc
+
+  my @sets;
+  my @values;
+  for my $f ( tablefields($c, $table)) {
+    my $val = param($c, $inputprefix.$f );
+    if ( $val ) {
+      push @sets , "$f = ?";
+      push @values, $val;
+    }
+  }
+  my $sql = "update $table set " .
+    join( ", ", @sets) .
+    " where id = ?";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( @values, $id );
+   print STDERR "Updated " . $sth->rows .
+      " $table records for id '$id' : " . join(", ", @values) ." \n";
 }
 
 

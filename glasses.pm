@@ -5,6 +5,8 @@
 package glasses;
 use strict;
 use warnings;
+use feature 'unicode_strings';
+use utf8;  # Source code and string literals are utf-8
 
 ################################################################################
 # The input form
@@ -139,12 +141,6 @@ sub fixvol {
 sub postglass {
   my $c = shift; # context
 
-  if ( 1 ) {
-    foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
-      my $value = $c->{cgi}->param($param);
-      print STDERR "$param = '$value'\n";
-    }
-  }
 
   my $sub = $c->{cgi}->param("submit") || "";
 
