@@ -194,16 +194,15 @@ sub postglass {
     # TODO - Timestamps, Subtypes,
 
     my $sql = "insert into GLASSES
-      ( Username, TimeStamp, BrewType, SubType,
+      ( Username, TimeStamp, BrewType,
         Location, Brew, Price, Volume, Alc, StDrinks )
-      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ? )
+      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ? )
       ";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute(
       $c->{username},
       $glass->{TimeStamp},
       $glass->{BrewType},
-      $glass->{SubType},
       $glass->{Location},
       $glass->{Brew},
       $glass->{Price},

@@ -181,15 +181,26 @@ sub postlocation {
 # TODO - Add a few more fields.
 # TODO - Drop the newlocfield, at most a boolean to say we want that option with fixed name(s)
 # TODO - Add the current location as the first real one in the list, never mind if duplicates
+
+# TODO SOON - Abstract most of the pulldown magic into a helper.
+# TODO SOON - Move CSS into its own helper. Remove fancy corners
+# TODO SOON - Clean and parametrisize input names
+
 sub selectlocation {
   my $c = shift; # context
-  my $selected = shift || "";  # The id of the selected location
-  my $newlocfield = shift || ""; # If set, allows the 'new' option
+  my $selected = shift || "0";  # The id of the selected location
+  my $newprefix = shift || ""; # Prefix for new-location fields. Enables the "new"
+
+  if ( $selected && $selected !~ /^\d+$/ ){
+    print STDERR "selectlocation called with non-numerical 'selected' argument: '$selected' \n";
+    $selected = 0;
+  }
+
+
   my $sql = "
   select
     LOCATIONS.Id,
-    LOCATIONS.Name,
-    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
+    LOCATIONS.Name
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.id
@@ -197,32 +208,103 @@ sub selectlocation {
   ";
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute(); # username ?
-  my $s = "";
-  $s .= "<input name='$newlocfield' id='$newlocfield' hidden $clr placeholder='New location'/>\n";
-  $s .= << "scriptend";
-    <script>
-      function locselchange() {
-        var sel = document.getElementById("loc");
-        if ( sel.value == "new" ) {
-          var inp = document.getElementById("$newlocfield");
-          sel.hidden = true;
-          inp.hidden = false;
-        }
-      }
-      </script>
-scriptend
-  $s .= " <select name='loc' id='loc' onchange='locselchange();' style='width: 15em'>\n";
-  my $sel = "";
-  $sel = "Selected" unless $selected ;
-  $s .= "<option value='' $sel >(select)</option>\n";
-  $s .= "<option value='new' >(new)</option>\n"  if ( $newlocfield );
-  while ( my ($id, $name, $last) = $list_sth->fetchrow_array ) {
-    $sel = "";
-    $sel = "Selected" if $id eq $selected;
-    $s .=  "<option value='$id' $sel >$name</option>\n";
+  my $opts = "";
+  my $current = "";
+  while ( my ($id, $name ) = $list_sth->fetchrow_array ) {
+    $opts .= "      <div class='dropdown-item' data-value='$id'>$name</div>\n";
+    if ( $id eq $selected ) {
+      $current = $name;
+    }
   }
-  $s .= "</select>\n";
+  my $s = "";
+  $s .= <<JSEND;
+  <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .dropdown-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+        }
+        .dropdown-input {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .dropdown-list {
+            position: absolute;
+            width: 100%;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: white;
+            z-index: 1000;
+            display: none; /* Hidden by default */
+        }
+        .dropdown-item {
+            padding: 10px;
+            cursor: pointer;
+        }
+        .dropdown-item:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+        <div class="dropdown-container">
+        <input type="text" id="dropdown-input" class="dropdown-input" placeholder='(filter)' value='$current'">
+        <input type="hidden" id='loc' name="loc" value='$selected'">
+        <div id="dropdown-list" class="dropdown-list">
+            <div class="dropdown-item" data-value="new">(new)</div>
+            $opts
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('dropdown-input');
+        const hidinput = document.getElementById('loc');
+        const dropdownList = document.getElementById('dropdown-list');
+
+        // Show/hide dropdown based on input focus
+        input.addEventListener('focus', () => {
+            dropdownList.style.display = 'block';
+            input.value = "";
+        });
+        input.addEventListener('blur', () => {
+            // Delay hiding to allow click events on dropdown items
+            setTimeout(() => {
+                dropdownList.style.display = 'none';
+            }, 200);
+        });
+
+        // Filter dropdown items as the user types
+        input.addEventListener('input', () => {
+            const filter = input.value.toLowerCase();
+            Array.from(dropdownList.children).forEach(item => {
+                if (item.textContent.toLowerCase().includes(filter)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+
+        // Handle selection of a dropdown item
+        dropdownList.addEventListener('click', event => {
+            if (event.target.classList.contains('dropdown-item')) {
+                input.value = event.target.textContent;
+                hidinput.value = event.target.getAttribute("data-value");
+                console.log("Set loc to " + hidinput.value );
+                dropdownList.style.display = 'none';
+            }
+        });
+    </script>
+JSEND
+
   return $s;
+
 } # seleclocation
 
 
