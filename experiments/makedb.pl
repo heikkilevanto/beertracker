@@ -29,11 +29,11 @@ my $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError =
 $dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
 
 # Drop existing tables if they exist to avoid conflicts
-my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS BREWS);
+my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS BREWS WEEKDAYS);
 for my $table (@tables) {
     $dbh->do("DROP TABLE IF EXISTS $table");
 }
-my @views = qw(GLASSREC COMPERS);
+my @views = qw(LOCATIONS_LIST GLASSREC COMPERS);
 for my $v ( @views) {
   $dbh->do("DROP VIEW IF EXISTS $v");
 }
@@ -142,6 +142,19 @@ $dbh->do(q{
     )
 });
 $dbh->do("CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE)");
+
+# View for listing LOCATIONS
+$dbh->do(q{
+  CREATE VIEW LOCATIONS_LIST AS select
+    LOCATIONS.Id,
+    LOCATIONS.Name,
+    LOCATIONS.SubType as Sub,
+    LOCATIONS.Description as Desc,
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as Last
+  from LOCATIONS
+  left join GLASSES on GLASSES.Location = LOCATIONS.Id
+  group by LOCATIONS.Id
+});
 
 
 

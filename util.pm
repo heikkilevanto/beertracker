@@ -61,9 +61,11 @@ sub price {
 sub splitdate {
   my $stamp = shift || return ( "(never)", "" );
   my ($date, $wd ) = split (' ', $stamp);
-  my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-  $wd = $weekdays[$wd];
-  return ( $date, $wd );
+  if ($wd) {
+    my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
+    $wd = $weekdays[$wd];
+  }
+  return ( $date, $wd || "" );
 }
 
 ################################################################################
@@ -331,7 +333,9 @@ sub inputform {
 sub tablefields {
   my $c = shift;
   my $table = shift;
-  my $skips = shift || "Id";  # Regexp for fields to skip. "Id|UnWanted|Field"
+  my $skips = shift; # Regexp for fields to skip. "Id|UnWanted|Field"
+  my $nomark = shift || ""; # 1 to skip marking integer fields
+  $skips = "Id" unless defined($skips);
 
   my $sql = "PRAGMA table_info($table)";
   my $list_sth = $c->{dbh}->prepare($sql);
@@ -339,7 +343,7 @@ sub tablefields {
   my @fields;
   while ( my ($cid, $name, $type, $notnull, $def, $pk )  = $list_sth->fetchrow_array ) {
     next if ( $skips && $name =~ /^$skips$/ );
-    $name = "-$name" if ( $type eq "INTEGER" );  # Mark those that point to other tables
+    $name = "-$name" if ( $type eq "INTEGER" && !$nomark );  # Mark those that point to other tables
     push @fields, $name ;
   }
   return @fields;
@@ -419,6 +423,61 @@ sub updaterecord {
       " $table records for id '$id' : " . join(", ", @values) ." \n";
 }
 
+############ Produce a list of records
+sub listrecords {
+  my $c = shift;
+  my $table = shift;
+  my $sort = shift;
+
+  my @fields = tablefields($c, $table, "", 1);
+  my $order = "";
+  for my $f ( @fields ) {
+    print STDERR "listrecords: f='$f' s='$sort' o='$order' \n";
+    $order = "Order by $f" if ( $sort =~ /$f(-?)/ );
+    $order .= " DESC" if ($1);
+  }
+  my $sql = "select * from $table $order";
+  print STDERR "listrecords: $sql \n";
+  my $list_sth = $c->{dbh}->prepare($sql);
+  $list_sth->execute();
+
+  my $url = $c->{url};
+  my $op = $c->{op};
+
+  my $s = "";
+  # Table headers
+  $s .= "<table><tr>\n";
+  for my $f ( @fields ) {
+    $f =~ s/^-//;
+    my $sf = $f;
+    $sf .= "-" if ( $f eq $sort );
+    $s .= "<td><a href='$url?o=$op&s=$sf'><i>$f</i></a></td>";
+  }
+  $s .= "</tr>";
+
+  while ( my @rec = $list_sth->fetchrow_array ) {
+    $s .= "<tr>\n";
+    for ( my $i=0; $i < scalar( @rec ); $i++ ) {
+      my $v = $rec[$i] || "";
+      my $fn = $fields[$i];
+      my $sty = "style='max-width:30em'"; # default
+      if ( $fn eq "Id" ) {
+        $sty = "style='font-size: xx-small' align='right'";
+      } elsif ( $fn eq "Name" ) {
+        $v = "<a href='$url?o=$op&e=$rec[0]'><b>$v</b></a>";
+      } elsif ( $fn eq "Sub" ) {
+        $v = "[$v]" if ($v);
+      } elsif ( $fn eq "Last" ) {
+        my ($date, $wd) = util::splitdate($v);
+        $v = "$date $wd";
+      }
+      $s .= "<td $sty>$v</td>\n";
+    }
+    $s .= "</tr>";
+  }
+  $s .= "</table>\n";
+
+}
 
 ################################################################################
 # Report module loaded ok

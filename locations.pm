@@ -35,47 +35,10 @@ sub listlocations {
   }
 
   # Sort order or filtering
-  my $sort = "last DESC";
-  $sort = "LOCATIONS.Id" if ( $c->{sort} eq "id" );
-  $sort = "LOCATIONS.Name" if ( $c->{sort} eq "name" );
-  $sort = "last DESC" if ( $c->{sort} eq "last" );
 
-  # Print list of locations
-  my $sql = "
-  select
-    LOCATIONS.Id,
-    LOCATIONS.Name,
-    LOCATIONS.Website,
-    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
-  from LOCATIONS
-  left join GLASSES on GLASSES.Location = LOCATIONS.Id
-  group by LOCATIONS.Id
-  order by $sort
-  ";
-  my $list_sth = $c->{dbh}->prepare($sql);
-  $list_sth->execute();
-
-  print "<table><tr>\n";
-  my $url = $c->{url};
-  my $op = $c->{op};
-  print "<td><a href='$url?o=$op&s=id'><i>Id</i></a></td>";
-  print "<td><a href='$url?o=$op&s=name'><i>Name</i></a></td>";
-  print "<td><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
-  print "</tr>";
-  while ( my ($locid, $name, $web, $last ) = $list_sth->fetchrow_array ) {
-    my ($stamp, $wd) = util::splitdate($last);
-    $name =~ s/( +)$/"_" x length($1)/e; # Mark trailing spaces, as in my 'Home  ' things
-    print "<tr><td style='font-size: xx-small' align='right'>$locid</td>\n";
-    print "<td style='max-width:30em' ><a href='$url?o=$op&e=$locid'><b>$name</b></a>";
-    print "<a href='$web' target='_blank' ><span> &nbsp; $web</span></a>"
-      if ( $web );
-    print "</td>\n";
-    print "<td>$wd</td>\n";
-    print "<td>" . main::filt($stamp,"","","full") . "</td>\n";
-    print "</tr>\n";
-  }
-  print "</table>\n";
-  print "<hr/>\n" ;
+  my $sort = $c->{sort} || "Last-";
+  print util::listrecords($c, "LOCATIONS_LIST", $sort );
+  return;
 } # listlocations
 
 ################################################################################
