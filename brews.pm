@@ -51,9 +51,12 @@ sub selectbrew {
 
   my $sql = "
     select
-      BREWS.Id, BREWS.Brewtype, BREWS.SubType, Name, Producer, BREWS.Alc
+      BREWS.Id, BREWS.Brewtype, BREWS.SubType, Brews.Name,
+      Locations.Name as Producer,
+      BREWS.Alc
     from BREWS
     left join GLASSES on GLASSES.Brew= BREWS.ID
+    left join LOCATIONS on LOCATIONS.Id = BREWS.ProducerLocation
     group by BREWS.id
     order by max(GLASSES.Timestamp) DESC
     ";

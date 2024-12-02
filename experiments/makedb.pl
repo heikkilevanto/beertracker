@@ -209,7 +209,7 @@ $dbh->do(q{
         COALESCE(brews.subtype, brews.country) as subtype,
         strftime ('%Y-%m-%d', glasses.timestamp,'-06:00') as effdate,
         locations.name as loc,
-        brews.producer as maker,
+     		PLOC.name as maker,
         brews.name as name,
         volume as vol,
         coalesce(Brews.brewstyle,'') || ' ' ||
@@ -223,6 +223,7 @@ $dbh->do(q{
         locations.geocoordinates as geo
       from GLASSES , LOCATIONS
       left join BREWS  on glasses.Brew = Brews.id
+      left join LOCATIONS PLOC on PLOC.id = Brews.ProducerLocation
       where glasses.Location = Locations.id
 });
 

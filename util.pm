@@ -313,6 +313,10 @@ sub inputform {
         $form .= locations::selectlocation($c, $f, $rec->{$f}, "loc");
       } elsif ( $f =~ /person/i ) {
         $form .= persons::selectperson($c, $f, $rec->{$f}, "pers");
+      } elsif ( $f =~ /brewtype/i ) {
+        $val = $val || param($c, "selbrewtype") || "Cider" ;
+        # TODO - That Cider is just a placeholder for missing types
+        # They would crash otherwise
       } else {
         $form .= "$f not handled yet";
       }

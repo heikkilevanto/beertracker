@@ -107,7 +107,8 @@ sub getvalues {
   my $glass = shift;
   my $brew = shift;
   $glass->{TimeStamp} = util::param($c, "stamp");
-  $glass->{BrewType} = $brew->{BrewType};
+  $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || util::param($c, "selbrewtype") || "Cider";
+    # TODO - The "Cider" is just a placeholder for missing value, should not happen.
   $glass->{Location} = util::param($c, "Location", undef);
   $glass->{Brew} = util::param($c, "Brew");
   $glass->{Price} = util::paramnumber($c, "pr");
@@ -163,6 +164,9 @@ sub postglass {
   }
   print STDERR "postglass: '$glass->{Id}' loc='$glass->{Location}' brw='$glass->{Brew}' \n";
 
+  $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "Cider";
+     # TODO - That Cider is just to catch cases where I don't have any
+     # Should not happen.
 
   if ( $sub eq "Save" ) {  # Update existing glass
     my $sql = "update GLASSES set
