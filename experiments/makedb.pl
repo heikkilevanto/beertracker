@@ -19,27 +19,20 @@ use DBI;
 # to generate forms with suitable magic for such fields.
 
 # Connect to SQLite database (or create it if it doesn't exist)
-my $databasefile = "beertracker.db";
-die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
+my $databasefile = "../beerdata/beertracker.db";
+#die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
+
 
 my $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
     or error($DBI::errstr);
 $dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
 
-# Drop existing tables if they exist to avoid conflicts
-my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS BREWS WEEKDAYS);
-for my $table (@tables) {
-    $dbh->do("DROP TABLE IF EXISTS $table");
-}
-my @views = qw(BREWS_LIST LOCATIONS_LIST PERSONS_LIST GLASSREC COMPERS);
-for my $v ( @views) {
-  $dbh->do("DROP VIEW IF EXISTS $v");
-}
 
 # Create GLASSES table
 # A glass of anything I can drink, or special "empty" glasses for
 # restaurants etc. The main table. These are keyed by the username,
 # so each user has his own history.
+$dbh->do("DROP TABLE IF EXISTS GLASSES");
 $dbh->do(q{
     CREATE TABLE GLASSES (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,6 +57,7 @@ $dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)"); # Also ef
 # Create BREWS table
 # A Brew is a definition of a beer or other stuff, whereas a Glass is the
 # event of one being drunk. These can be shared between users.
+$dbh->do("DROP TABLE IF EXISTS BREWS");
 $dbh->do(q{
     CREATE TABLE BREWS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,6 +78,8 @@ $dbh->do(q{
 $dbh->do("CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE)");
 $dbh->do("CREATE INDEX idx_brews_producer_location ON BREWS(ProducerLocation)");
 
+# A view for listing the brews
+$dbh->do("DROP VIEW IF EXISTS BREWS_LIST");
 $dbh->do(q{
   CREATE VIEW BREWS_LIST AS select
     BREWS.Id,
@@ -107,6 +103,7 @@ $dbh->do(q{
 # Create COMMENTS table
 # Comments always refer to a glass, even if an "empty" one, since the glass has
 # the username needed to keep users separate.
+$dbh->do("DROP TABLE IF EXISTS COMMENTS");
 $dbh->do(q{
     CREATE TABLE COMMENTS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,6 +124,7 @@ $dbh->do("CREATE INDEX idx_comments_glass ON COMMENTS (Glass)");
 # Create PERSONS table
 # All the people I want to remember.  These are personal to the username, but
 # that comes from Glasses, via comments.
+$dbh->do("DROP TABLE IF EXISTS PERSONS");
 $dbh->do(q{
     CREATE TABLE PERSONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,6 +140,7 @@ $dbh->do(q{
 });
 $dbh->do("CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE)");
 
+$dbh->do("DROP VIEW IF EXISTS PERSONS_LIST");
 $dbh->do(q{
   CREATE VIEW PERSONS_LIST AS select
     PERSONS.Id,
@@ -160,6 +159,7 @@ $dbh->do(q{
 # Create LOCATIONS table
 # These are mostly bars and restaurants, but can also be homes of Persons, and
 # other things that need an address, geo coordinates, and such.
+$dbh->do("DROP TABLE IF EXISTS LOCATIONS");
 $dbh->do(q{
     CREATE TABLE LOCATIONS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -176,6 +176,7 @@ $dbh->do(q{
 $dbh->do("CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE)");
 
 # View for listing LOCATIONS
+$dbh->do("DROP VIEW IF EXISTS LOCATIONS_LIST");
 $dbh->do(q{
   CREATE VIEW LOCATIONS_LIST AS select
     LOCATIONS.Id,
@@ -193,6 +194,7 @@ $dbh->do(q{
 # Create view GLASSREC  - a way to return records the way the old script likes them
 # All fields must have a "as" clause, to make sure we get lowercase fieldnames
 # TODO - Drop this when no longer needed
+$dbh->do("DROP VIEW IF EXISTS GLASSREC");
 $dbh->do(q{
     CREATE VIEW GLASSREC AS
       select
@@ -226,6 +228,7 @@ $dbh->do(q{
 
 # Create vier COMPERS that combines comments and persons
 # TODO - Drop this when we no longer need getrecord_com
+$dbh->do("DROP VIEW IF EXISTS COMPERS");
 $dbh->do(q{
     CREATE VIEW COMPERS AS
       select
