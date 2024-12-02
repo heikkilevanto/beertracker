@@ -190,7 +190,7 @@ sub insert_data {
     $dbh->do("BEGIN TRANSACTION");
 
     # Determine the location and brew IDs.
-    my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo});
+    my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo}, $type);
 
     my $brew_id = get_or_insert_brew($rec);
 
@@ -229,7 +229,7 @@ sub insert_data {
 
 # Helper to get or insert a Location record
 sub get_or_insert_location {
-    my ($location_name, $geo) = @_;
+    my ($location_name, $geo, $type) = @_;
 
     return undef unless $location_name;
 
@@ -246,8 +246,9 @@ sub get_or_insert_location {
         }
         return $location_id;
     } else {  # Insert new location record if it does not exist
-        my $insert_loc = $dbh->prepare("INSERT INTO LOCATIONS (Name, GeoCoordinates) VALUES (?, ?)");
-        $insert_loc->execute($location_name, $geo);
+        my $sql = "INSERT INTO LOCATIONS (Name, GeoCoordinates, SubType) VALUES (?, ?, ?)";
+        my $insert_loc = $dbh->prepare($sql);
+        $insert_loc->execute($location_name, $geo, $type);
         return $dbh->last_insert_id(undef, undef, "LOCATIONS", undef);
     }
 }
@@ -288,7 +289,8 @@ sub get_or_insert_brew {
     return undef if ( !$rec->{name} || $rec->{name} =~ /misc/i );
 
     # ProducerLocation
-    $rec->{producer} = get_or_insert_location( $rec->{maker} );
+    $rec->{producer} = get_or_insert_location( $rec->{maker},"", "$rec->{type}-Maker" );
+    # Mark its subtype as a producer. Not using that yet, but could come in handy in filtering
 
     # Check if the brew exists in the BREWS table
     my $sql = q{
