@@ -34,8 +34,6 @@ sub listlocations {
     return;
   }
 
-  # Sort order or filtering
-
   my $sort = $c->{sort} || "Last-";
   print util::listrecords($c, "LOCATIONS_LIST", $sort );
   return;
