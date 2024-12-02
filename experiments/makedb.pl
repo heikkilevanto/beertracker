@@ -9,7 +9,10 @@ use warnings;
 use DBI;
 
 # TODO - Change Brews to refer to a ProducerLocation, where I can have
-# much more than the name of the producer.
+# much more than the name of the producer. Keep the ProducerName in the
+# Brew, for those that don't have anything more.
+
+# TODO - Drop the ReplacedBy until I find that I need it
 
 # Design considerations   TODO - Write more here
 #

@@ -95,7 +95,7 @@ sub listbrews {
 ################################################################################
 # TODO - Many features missing
 # TODO - Display the brew details under the selection, with an edit link
-
+# TODO - Some fields not handled right yet: Producer, Year. BrewStyle as a select with default?
 
 sub selectbrew {
   my $c = shift; # context

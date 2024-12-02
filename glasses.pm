@@ -16,7 +16,10 @@ use utf8;  # Source code and string literals are utf-8
 #        Best would be to let the browser fill it in, but not overwrite existing data
 # TODO - Del button to go back to here, with an option to ask if sure
 #        Could also ask to delete otherwise unused locations and brews
-# TODO - Better way to handle brewstyle. Second filter in brew dropdown?
+# TODO - Filter by BrewStyle. Second pulldown next to filter input
+# TODO - Better way to enter BrewStyle. Select field?
+# TODO - A way to select Restaurants and Nights. Maybe hard-coded entries in
+#        the begininng of the list.
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing

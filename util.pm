@@ -164,6 +164,11 @@ sub listsmenu {
 
 # TODO - Add a little space between the options
 
+# TODO - Reset the filter when blurring the field
+# Otherwise it gets remembered, but not displayed when opening again
+
+# TODO SOON - Move the CSS away from here
+
 sub dropdown {
   my $c = shift;
   my $inputname = shift;   # Name of the input field, f.ex. 'loc'
@@ -207,7 +212,7 @@ sub dropdown {
         $newdiv
         <div id="dropdown-$inputname" style="position:relative;width:100%;max-width:300px;">
         <input type="text" id="dropdown-filter-$inputname" autocomplete="off"
-          style="width:100%" placeholder='(filter)' value='$selectedname' />
+          style="width:100%" placeholder='$inputname' value='$selectedname' />
         <input type="hidden" id='$inputname' name='$inputname' value='$selectedid' >
         <div id="dropdown-list-$inputname" class="dropdown-list">
             $options
