@@ -108,7 +108,9 @@ sub getvalues {
   my $brew = shift;
   $glass->{TimeStamp} = util::param($c, "stamp");
   $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || util::param($c, "selbrewtype") || "Cider";
+  $brew->{BrewType} = $brew->{BrewType} || $glass->{BrewType} || util::param($c, "selbrewtype") || "Cider";
     # TODO - The "Cider" is just a placeholder for missing value, should not happen.
+    # TODO - BrewType handling is fundamentally wrong
   $glass->{Location} = util::param($c, "Location", undef);
   $glass->{Brew} = util::param($c, "Brew");
   $glass->{Price} = util::paramnumber($c, "pr");

@@ -315,8 +315,10 @@ sub inputform {
         $form .= persons::selectperson($c, $f, $rec->{$f}, "pers");
       } elsif ( $f =~ /brewtype/i ) {
         $val = $val || param($c, "selbrewtype") || "Cider" ;
+        $val = "value='$val'";
+        print STDERR "inputform: brew type '$f' is now '$val' \n";
         # TODO - That Cider is just a placeholder for missing types
-        # They would crash otherwise
+        # They would crash otherwise. Seems not to work
       } else {
         $form .= "$f not handled yet";
       }
@@ -359,11 +361,16 @@ sub insertrecord {
   my $c = shift;
   my $table = shift;
   my $inputprefix = shift || "";  # "newloc" means inputs are "newlocName" etc
+  my $defaults = shift || {};
+
   my @sqlfields; # field names in sql
   my @values; # values to insert, in the same order
   for my $f ( tablefields($c, $table)) {
     my $val = param($c, $inputprefix.$f );
-    print STDERR "insertrecord: '$f' = '$val' \n";
+    if ( !$val ) {
+      $val =  $defaults->{$f} || "";
+      print STDERR "insertrecord: '$f' defaults to '$val' \n";
+    }
     if ( $val ) {
       push @sqlfields, $f;
       push @values, $val;

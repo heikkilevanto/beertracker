@@ -88,6 +88,7 @@ sub selectbrew {
 ################################################################################
 # Update a brew, posted from the form in the selection above
 ################################################################################
+# TODO SOON - Get a default BrewType
 # TODO - Calculate subtype, if not set. Make a separate helper, use in import
 sub postbrew {
   my $c = shift; # context
@@ -95,32 +96,13 @@ sub postbrew {
   if ( $id eq "new" ) {
     my $name = util::param($c, "newbrewName");
     util::error ("A brew must have a name" ) unless $name;
-    util::error ("A brew must have a type" ) unless util::param($c, "newbrewBrewType");
+    #util::error ("A brew must have a type" ) unless util::param($c, "newbrewBrewType");
 
-    $id = util::insertrecord($c,  "BREWS", "newbrew");
+    my $defaults = {};
+    $defaults->{BrewType} = util::param($c,"selbrewtype") || util::param($c, "selbrewtype") || "Cider";
+    $id = util::insertrecord($c,  "BREWS", "newbrew", $defaults);
     return $id;
 
-    my $sql = "insert into BREWS
-       ( Name, BrewType, SubType,
-         BrewStyle, Producer, Alc,
-         Country, Region, Flavor, Year, Details )
-       values ( ?, ?, ?,  ?, ?, ?,  ?, ?, ?, ?, ? ) ";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute(
-      $name,
-      util::param($c,"selbrewtype"),
-      util::param($c,"newbrewsub"),
-      util::param($c,"newbrewstyle"),
-      util::param($c,"newbrewproducer"),
-      util::param($c,"newalc"),
-      util::param($c,"newbrewcountry"),
-      util::param($c,"newbrewregion"),
-      util::param($c,"newbrewflavor"),
-      util::param($c,"newbrewyear"),
-      util::param($c,"newbrewdetails")
-    );
-    $id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef) || undef;
-    print STDERR "Inserted Brew id '$id' '$name' \n";
   } else {
     # TODO - Implement updating Brews when we have the edit form in place
   }
