@@ -61,7 +61,7 @@ sub price {
 sub splitdate {
   my $stamp = shift || return ( "(never)", "" );
   my ($date, $wd ) = split (' ', $stamp);
-  if ($wd) {
+  if (defined($wd)) {
     my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
     $wd = $weekdays[$wd];
   }
@@ -303,7 +303,7 @@ sub inputform {
     my $special = $1 if ( $f =~ s/^(\W)// );
     my $pl = $f;
     $pl =~ s/([A-Z])/ $1/g; # Break words GeoCoord -> Geo Coord
-    $pl = $placeholderprefix .$pl;
+    $pl = trim($placeholderprefix .$pl);
     $pl .= $special if ($special) ;
     my $inpname = $inputprefix . $f;
     my $val = "";
@@ -322,8 +322,7 @@ sub inputform {
     $form .= $separatortag;
   }
   return $form;
-
-}
+} # inputform
 
 ################################################################################
 # Database helpers
@@ -424,6 +423,8 @@ sub updaterecord {
 }
 
 ############ Produce a list of records
+# Has some heuristics for adjusting the display for some selected fields
+# Tune these here or in the view definition
 sub listrecords {
   my $c = shift;
   my $table = shift;
@@ -432,10 +433,11 @@ sub listrecords {
   my @fields = tablefields($c, $table, "", 1);
   my $order = "";
   for my $f ( @fields ) {
-    print STDERR "listrecords: f='$f' s='$sort' o='$order' \n";
     $order = "Order by $f" if ( $sort =~ /$f(-?)/ );
     $order .= " DESC" if ($1);
+    # Note, no user-provided data goes into $order, only field names and DESC
   }
+
   my $sql = "select * from $table $order";
   print STDERR "listrecords: $sql \n";
   my $list_sth = $c->{dbh}->prepare($sql);
@@ -460,7 +462,7 @@ sub listrecords {
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i] || "";
       my $fn = $fields[$i];
-      my $sty = "style='max-width:30em'"; # default
+      my $sty = "style='max-width:200px'"; # default
       if ( $fn eq "Id" ) {
         $sty = "style='font-size: xx-small' align='right'";
       } elsif ( $fn eq "Name" ) {

@@ -21,55 +21,10 @@ sub listpersons {
     return;
   }
 
-  # Sort order or filtering
-  my $sort = "last DESC";
-  $sort = "PERSONS.Id" if ( $c->{sort} eq "id" );
-  $sort = "PERSONS.Name" if ( $c->{sort} eq "name" );
-  $sort = "last DESC" if ( $c->{sort} eq "last" );
-  $sort = "LOCATIONS.Name" if ( $c->{sort} eq "where" );
+  my $sort = $c->{sort} || "Last-";
+  print util::listrecords($c, "PERSONS_LIST", $sort );
+  return;
 
-  # Print list of people
-  my $sql = "
-  select
-    PERSONS.Id,
-    PERSONS.Name,
-    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last,
-    LOCATIONS.Name as loc,
-    count(COMMENTS.Id) as count
-  from PERSONS
-  left join COMMENTS on COMMENTS.Person = PERSONS.Id
-  left join GLASSES on COMMENTS.Glass = GLASSES.Id
-  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
-  group by Persons.id
-  order by $sort
-  ";
-  # , GLASSES, COMMENTS, LOCATIONS
-  #  and GLASSES.Username = ?
-  my $list_sth = $c->{dbh}->prepare($sql);
-  #$list_sth->execute($c->{username});
-  $list_sth->execute();
-
-  print "<table><tr>\n";
-  my $url = $c->{url};
-  my $op = $c->{op};
-  print "<td><a href='$url?o=$op&s=id'><i>Id</i></a></td>";
-  print "<td><a href='$url?o=$op&s=name'><i>Name</i></a></td>";
-  print "<td colspan=2><a href='$url?o=$op&s=last'><i>Last seen</i></a></td>";
-  print "<td><a href='$url?o=$op&s=where'><i>Where</i></a></td></tr>";
-  while ( my ($persid, $name, $last, $loc, $count) = $list_sth->fetchrow_array ) {
-    my ($stamp, $wd) = util::splitdate($last);
-    $loc = "" unless ($loc);
-
-    print "<tr><td style='font-size: xx-small' align='right'>$persid</td>\n";
-    print "<td><a href='$url?o=$op&e=$persid'><b>$name</b></a>";
-    print " ($count) " if ( $count > 1 );
-    print "</td>\n";
-    print "<td>$wd</td>";
-    print "<td >" . main::filt($stamp,"","","full") . "</td>\n";
-    print "<td>$loc</td></tr>\n";
-  }
-  print "</table>\n";
-  print "<hr/>\n" ;
 } # listpersons
 
 

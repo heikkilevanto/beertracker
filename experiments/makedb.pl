@@ -33,7 +33,7 @@ my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS BREWS WEEKDAYS);
 for my $table (@tables) {
     $dbh->do("DROP TABLE IF EXISTS $table");
 }
-my @views = qw(LOCATIONS_LIST GLASSREC COMPERS);
+my @views = qw(LOCATIONS_LIST PERSONS_LIST GLASSREC COMPERS);
 for my $v ( @views) {
   $dbh->do("DROP VIEW IF EXISTS $v");
 }
@@ -125,6 +125,21 @@ $dbh->do(q{
 });
 $dbh->do("CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE)");
 
+$dbh->do(q{
+  CREATE VIEW PERSONS_LIST AS select
+    PERSONS.Id,
+    PERSONS.Name,
+    count(COMMENTS.Id) - 1 as Com,
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as Last,
+    LOCATIONS.Name as Location
+  from PERSONS
+  left join COMMENTS on COMMENTS.Person = PERSONS.Id
+  left join GLASSES on COMMENTS.Glass = GLASSES.Id
+  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
+  group by Persons.id
+});
+
+
 # Create LOCATIONS table
 # These are mostly bars and restaurants, but can also be homes of Persons, and
 # other things that need an address, geo coordinates, and such.
@@ -148,9 +163,9 @@ $dbh->do(q{
   CREATE VIEW LOCATIONS_LIST AS select
     LOCATIONS.Id,
     LOCATIONS.Name,
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as Last,
     LOCATIONS.SubType as Sub,
-    LOCATIONS.Description as Desc,
-    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as Last
+    LOCATIONS.Description as Desc
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id
