@@ -63,14 +63,14 @@ $dbh->do(q{
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT,
         BrewType TEXT not null,  /* Wine, Beer, Restaurant */
-        SubType TEXT,  /* Wines: Red, Booze: Rum, Restaurant: Pizza */
-        BrewStyle TEXT, /* What ever style we get in, "IPA Hazy" */
+        SubType TEXT default '',  /* Wines: Red, Booze: Rum, Restaurant: Pizza */
+        BrewStyle TEXT default '', /* What ever style we get in, "IPA Hazy" */
         ProducerLocation INTEGER,  /* points to a LOCATION rec of the producer */
         Alc DECIMAL default 0.0,
         Country TEXT default '',
         Region TEXT default '',
         Flavor TEXT default '',  /* hops, grapes, fruits, cask */
-        Year INTEGER default '',
+        Year DECIMAL default '',
         Details TEXT default '', /* Classification: Reserva, DOCG, 20y; Edition: Anniversary */
         FOREIGN KEY (ProducerLocation) REFERENCES LOCATIONS(Id)
     )
@@ -84,7 +84,8 @@ $dbh->do(q{
   CREATE VIEW BREWS_LIST AS select
     BREWS.Id,
     BREWS.Name,
-  	PLOC.Name as Producer,
+    PLOC.Name as Producer,
+    BREWS.Alc as Alc,
     BREWS.BrewType || ", " || BREWS.Subtype as Type,
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as Last,
     LOCATIONS.Name as Location,

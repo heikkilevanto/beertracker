@@ -2,15 +2,14 @@
 
 # Script to import old beerdata text files into sqlite
 # Created with a lot of help from ChatGTP, and lots of cursing at its stupidity
-#
-# At stage 2: Getting ChatGPT to propose changes, but editing them in manually.
-# Do not reproduce the script with GPT any more!
+# Afterwards a lot of manual adjustments
+
+# TODO SOON - Restaurant types
+# TODO - Get location details at least for the most common watering holes
+# TODO - Clean up the code. Similar parameter passing for all the insert_ functions
 
 
-# TODO
-#  - Separate wine styles into country and region. Normalize country codes. Check duplicates.
-#  - Get location details at least for the most common watering holes
-#  - Clean up the code. Similar parameter passing for all the insert_ functions
+
 
 
 
@@ -136,6 +135,7 @@ sub readfile {
       $rec->{geo} =~ s/\[([0-9.]+)\/([0-9.]+)]/$1 $2/ if ($rec->{geo});
       $rec->{stamp} =~s/ ([0-9]:)/ 0$1/;  # Make sure we have leading zero in time
 
+      # Create a new Cider type for beers that are called Ciders
       if ( $line =~ /\Wcider\W/i ) {
         $linetype = "Cider" ;
         $rec->{type} = "Cider";
@@ -166,6 +166,7 @@ sub readfile {
         if ( (!$rec->{pr} || $rec->{pr} > 0 )   # Box wines can have neg price
           && $rec->{vol} && $rec->{vol} > 0  #
           && $rec->{alc} && $rec->{alc} > 0 );
+
       # Complain of really bad records
       die ("\n$line\n") unless $rec->{stamp};
 
