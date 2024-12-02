@@ -12,8 +12,6 @@ use DBI;
 # much more than the name of the producer. Keep the ProducerName in the
 # Brew, for those that don't have anything more.
 
-# TODO - Drop the ReplacedBy until I find that I need it
-
 # Design considerations   TODO - Write more here
 #
 # Fields that are INTEGER are referring to other tables. If I want to save
@@ -33,7 +31,7 @@ my @tables = qw(GLASSES COMMENTS PERSONS LOCATIONS BREWS WEEKDAYS);
 for my $table (@tables) {
     $dbh->do("DROP TABLE IF EXISTS $table");
 }
-my @views = qw(LOCATIONS_LIST PERSONS_LIST GLASSREC COMPERS);
+my @views = qw(BREWS_LIST LOCATIONS_LIST PERSONS_LIST GLASSREC COMPERS);
 for my $v ( @views) {
   $dbh->do("DROP VIEW IF EXISTS $v");
 }
@@ -73,18 +71,37 @@ $dbh->do(q{
         BrewType TEXT not null,  /* Wine, Beer, Restaurant */
         SubType TEXT,  /* Wines: Red, Booze: Rum, Restaurant: Pizza */
         BrewStyle TEXT, /* What ever style we get in, "IPA Hazy" */
-        Producer INTEGER,
+        ProducerLocation INTEGER,  /* points to a LOCATION rec of the producer */
         Alc DECIMAL default 0.0,
         Country TEXT default '',
         Region TEXT default '',
         Flavor TEXT default '',  /* hops, grapes, fruits, cask */
         Year INTEGER default '',
         Details TEXT default '', /* Classification: Reserva, DOCG, 20y; Edition: Anniversary */
-        ReplacedBy INTEGER,
-        FOREIGN KEY (Producer) REFERENCES LOCATIONS(Id)
+        FOREIGN KEY (ProducerLocation) REFERENCES LOCATIONS(Id)
     )
 });
 $dbh->do("CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE)");
+$dbh->do("CREATE INDEX idx_brews_producer_location ON BREWS(ProducerLocation)");
+
+$dbh->do(q{
+  CREATE VIEW BREWS_LIST AS select
+    BREWS.Id,
+    BREWS.Name,
+  	PLOC.Name as Producer,
+    BREWS.BrewType || ", " || BREWS.Subtype as Type,
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as Last,
+    LOCATIONS.Name as Location,
+    count(COMMENTS.Id) as Com,
+    count(GLASSES.Id) as Count
+  from BREWS
+  left join LOCATIONS PLOC on PLOC.id = BREWS.ProducerLocation
+  left join GLASSES on Glasses.Brew = BREWS.Id
+  left join COMMENTS on COMMENTS.Glass = GLASSES.Id
+  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
+  group by BREWS.id
+});
+# TODO The Last timestamp is right, but the location does not refer to that timestamp
 
 
 # Create COMMENTS table

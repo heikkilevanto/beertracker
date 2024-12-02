@@ -469,6 +469,9 @@ sub listrecords {
         $v = "<a href='$url?o=$op&e=$rec[0]'><b>$v</b></a>";
       } elsif ( $fn eq "Sub" ) {
         $v = "[$v]" if ($v);
+      } elsif ( $fn eq "Type" ) {
+        $v =~ s/[ ,]*$//;
+        $v = "[$v]" if ($v);
       } elsif ( $fn eq "Last" ) {
         my ($date, $wd) = util::splitdate($v);
         $v = "$date $wd";

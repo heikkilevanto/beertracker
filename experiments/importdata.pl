@@ -284,25 +284,28 @@ sub get_or_insert_brew {
     my($prod, $sty, $al);
 
     # Skip some misc/misc records
-    return undef if ( !$rec->{name}|| $rec->{name} =~ /misc/i );
+    return undef if ( !$rec->{name} || $rec->{name} =~ /misc/i );
+
+    # ProducerLocation
+    $rec->{producer} = get_or_insert_location( $rec->{maker} );
 
     # Check if the brew exists in the BREWS table
     my $sql = q{
       SELECT
-        Id, Producer, Brewstyle, Alc
+        Id, ProducerLocation, Brewstyle, Alc
       FROM BREWS
       WHERE Name = ?
-      AND Producer = ?
+      AND ProducerLocation = ?
       AND BrewType = ?
       AND (subtype = ? OR ( subtype is null and ? is null ) )
     };
     my $sth = $dbh->prepare($sql);
-    $sth->execute($rec->{name}, $rec->{maker}, $rec->{type}, $rec->{subtype}, $rec->{subtype});
+    $sth->execute($rec->{name}, $rec->{producer}, $rec->{type}, $rec->{subtype}, $rec->{subtype});
     if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
       # Found the brew, check optional fields
-      if ( !$prod && $rec->{maker} )  {
-        my $update_sth = $dbh->prepare("UPDATE BREWS SET Producer = ? WHERE Id = ?");
-        $update_sth->execute($rec->{maker}, $id);
+      if ( !$prod && $rec->{producer} )  {
+        my $update_sth = $dbh->prepare("UPDATE BREWS SET ProducerLocation = ? WHERE Id = ?");
+        $update_sth->execute($rec->{producer}, $id);
       }
       if ( !$sty && $rec->{style})  {
         my $update_sth = $dbh->prepare("UPDATE BREWS SET BrewStyle= ? WHERE Id = ?");
@@ -315,10 +318,10 @@ sub get_or_insert_brew {
     } else {
         # Insert new brew record
         my $insert_brew = $dbh->prepare(
-            "INSERT INTO BREWS (Brewtype, SubType, Name, Producer, BrewStyle, Alc, Country, Region, Flavor, Year) " .
+            "INSERT INTO BREWS (Brewtype, SubType, Name, ProducerLocation, BrewStyle, Alc, Country, Region, Flavor, Year) " .
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
         $insert_brew->execute($rec->{type}, $rec->{subtype}, $rec->{name},
-          $rec->{maker}, $rec->{style}, $rec->{alc}, $rec->{country}||'', $rec->{region} ||'',
+          $rec->{producer}, $rec->{style}, $rec->{alc}, $rec->{country}||'', $rec->{region} ||'',
           $rec->{flavor} ||'', $rec->{year}||'');
         $id = $dbh->last_insert_id(undef, undef, "BREWS", undef);
     }
