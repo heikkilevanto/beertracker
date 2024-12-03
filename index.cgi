@@ -394,6 +394,8 @@ if ( $q->request_method eq "POST" ) {
     }
   }
 
+  $dbh->do("BEGIN TRANSACTION");
+
   if ( $op =~ /Persons/i ) {
     persons::postperson($context);
   } elsif ( $op =~ /Location/i ) {
@@ -403,6 +405,9 @@ if ( $q->request_method eq "POST" ) {
   } else { # Default to posting a glass
     glasses::postglass($context);
   }
+
+  $dbh->do("COMMIT");
+
   # Redirect back to the edit page. Clear Set up $c as needed
   print $context->{cgi}->redirect( "$context->{url}?o=$context->{op}&e=$context->{edit}" );
   $dbh->disconnect;
@@ -1094,7 +1099,6 @@ sub postdata {
     error ("OOps, unhandled sub '$sub' ");
   }
   $dbh->do("COMMIT");
-
 
   # Clear the cached files from the data dir.
   # All graphs for this user can now be out of date
