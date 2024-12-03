@@ -160,31 +160,17 @@ sub selectperson {
   ";
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute(); # username ?
-  my $s = "";
-  $s .= "<input name='$newpersonfield' id='$newpersonfield' $width hidden placeholder='New person'/>\n";
-  $s .= << "scriptend";
-    <script>
-      function personselchange() {
-        var sel = document.getElementById("$fieldname");
-        if ( sel.value == "new" ) {
-          var inp = document.getElementById("$newpersonfield");
-          sel.hidden = true;
-          inp.hidden = false;
-        }
-      }
-      </script>
-scriptend
-  $s .= " <select name='$fieldname' id='$fieldname' $width onchange='personselchange();'>\n";
-  my $sel = "";
-  $sel = "Selected" unless $selected ;
-  $s .= "<option value='' $sel >(select)</option>\n";
-  $s .= "<option value='new' >(new)</option>\n"  if ( $newpersonfield );
-  while ( my ($persid, $name, $last) = $list_sth->fetchrow_array ) {
-    $sel = "";
-    $sel = "Selected" if $persid eq $selected;
-    $s .=  "<option value='$persid' $sel $width >$name</option>\n";
+
+  my $opts = "";
+
+  my $current = "";
+  while ( my ($id, $name ) = $list_sth->fetchrow_array ) {
+    $opts .= "      <div class='dropdown-item' id='$id'>$name</div>\n";
+    if ( $id eq $selected ) {
+      $current = $name;
+    }
   }
-  $s .= "</select>\n";
+  my $s = util::dropdown( $c, $fieldname, $selected, $current, $opts, "PERSONS", "newperson" );
   return $s;
 } # selectperson
 

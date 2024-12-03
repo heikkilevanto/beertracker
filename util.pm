@@ -298,6 +298,7 @@ sub inputform {
   my $inputprefix = shift || "";
   my $placeholderprefix = shift || "";
   my $separatortag = shift || "<br/>";
+  my $skipfields = shift || "";
   my $form = "";
   foreach my $f ( tablefields($c,$table) ) {
     my $special = $1 if ( $f =~ s/^(\W)// );
@@ -312,7 +313,10 @@ sub inputform {
       if ( $f =~ /location/i ) {
         $form .= locations::selectlocation($c, $f, $rec->{$f}, "loc");
       } elsif ( $f =~ /person/i ) {
-        $form .= persons::selectperson($c, $f, $rec->{$f}, "pers");
+        if ( $inputprefix !~ /newperson/ ) {
+          # Allow editing of RelatedPerson, but only on top level
+          $form .= persons::selectperson($c, $f, $rec->{$f}, "pers");
+        }
       } elsif ( $f =~ /brewtype/i ) {
         $val = $val || param($c, "selbrewtype") || "Cider" ;
         $val = "value='$val'";
@@ -415,6 +419,8 @@ sub updaterecord {
           $val = insertrecord($c, "LOCATIONS", "newloc");
         } elsif ( $f =~ /location/i ) {
           $val = insertrecord($c, "BREWS", "newbrew");
+        } elsif ( $f =~ /person/i ) {
+          $val = insertrecord($c, "PERSONS", "newperson");
         } else {
           print STDERR "updaterecord: Don't know how to insert a '$f' \n";
           $val = "TODO";
