@@ -398,11 +398,10 @@ if ( $q->request_method eq "POST" ) {
     persons::postperson($context);
   } elsif ( $op =~ /Location/i ) {
     locations::postlocation($context);
-  } elsif ( $op =~ /Full/i ) {
+  } elsif ( $op =~ /Beer|Brew/i ) {
+    brews::postbrew($context);
+  } else { # Default to posting a glass
     glasses::postglass($context);
-  } else { # Default to the old way of posting, for now  - TODO
-    readdatalines();
-    postdata(); # forwards back to the script to display the data
   }
   # Redirect back to the edit page. Clear Set up $c as needed
   print $context->{cgi}->redirect( "$context->{url}?o=$context->{op}&e=$context->{edit}" );

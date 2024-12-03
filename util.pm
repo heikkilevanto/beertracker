@@ -329,8 +329,8 @@ sub inputform {
         $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
       }
       $form .= "<input name='$inpname' $val placeholder='$pl' $clr $pass />\n";
+      $form .= $separatortag;
     }
-    $form .= $separatortag;
   }
   return $form;
 } # inputform

@@ -25,15 +25,46 @@ sub listbrews {
   print "<hr/>";
 
   if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
-    #editbrew($c);  # TODO
-    print "Editing of BREWS not implemented yet";
+    editbrew($c);
     return;
   }
   my $sort = $c->{sort} || "Last-";
   print util::listrecords($c, "BREWS_LIST", $sort );
   return;
-
 } # listbrews
+
+################################################################################
+# Editlocation - Show a form for editing a brew record
+################################################################################
+
+sub editbrew {
+  my $c = shift;
+  my $sql = "select * from BREWS where id = ?";
+    # This Can leak info from persons filed by other users. Not a problem now
+  my $get_sth = $c->{dbh}->prepare($sql);
+  $get_sth->execute($c->{edit});
+  my $p = $get_sth->fetchrow_hashref;
+  for my $f ( "ProducerLocation" ) {
+    $p->{$f} = "" unless $p->{$f};  # Blank out null fields
+  }
+  if ( $p->{Id} ) {  # found the person
+    print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+        "enctype='multipart/form-data'>\n";
+    print "<input type='hidden' name='id' value='$p->{Id}' />\n";
+    print "<b>Editing Brew $p->{Id}: $p->{Name}</b><br/>\n";
+    print util::inputform($c, "BREWS", $p );
+    print "<input type='submit' name='submit' value='Update Brew' /><br/>\n";
+
+    # Come back to here after updating
+    print "<input type='hidden' name='o' value='$c->{op}' />\n";
+    print "<input type='hidden' name='e' value='$p->{Id}' />\n";
+    print "</form>\n";
+    print "<hr/>\n";
+    print "(This should show when I had the brew last, comments, ratings, etc)<br/>\n"; # TODO
+  } else {
+    print "Oops - location id '$c->{edit}' not found <br/>\n";
+  }
+} # editbrew
 
 
 ################################################################################
@@ -104,7 +135,9 @@ sub postbrew {
     return $id;
 
   } else {
-    # TODO - Implement updating Brews when we have the edit form in place
+    util::error ("A brew must have a name" ) unless util::param($c, "Name");
+    util::error ("A brew must have a type" ) unless util::param($c, "BrewType");
+    $id = util::updaterecord($c, "BREWS", $id,  "");
   }
   return $id;
 } # postbrew

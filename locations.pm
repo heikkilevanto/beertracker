@@ -54,7 +54,6 @@ sub editlocation {
     $p->{$f} = "" unless $p->{$f};  # Blank out null fields
   }
   if ( $p->{Id} ) {  # found the person
-    my $c2 = "colspan='2'";
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
