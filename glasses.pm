@@ -102,7 +102,6 @@ SCRIPTEND
 ################################################################################
 # Update, insert, or delete a glass from the form above
 ################################################################################
-# TODO SOON - Delete a glass
 
 ############## Helper to get input values into $glass with some defaults
 sub getvalues {
@@ -171,18 +170,18 @@ sub postglass {
   getvalues($c, $glass, $brew);
   fixvol($c, $glass, $brew);
 
-  if ( $glass->{Location} eq "new" ) {
-    $glass->{Location} = locations::postlocation($c, "new" );
-  }
-
-  if ( $glass->{Brew} eq "new" ) {
-    $glass->{Brew} = brews::postbrew($c, "new" );
-  }
-  print STDERR "postglass: '$glass->{Id}' loc='$glass->{Location}' brw='$glass->{Brew}' \n";
-
   $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "Cider";
      # TODO - That Cider is just to catch cases where I don't have any
      # Should not happen.
+
+  # New Location and/or Brew
+  if ( $glass->{Location} eq "new" ) {
+    $glass->{Location} = locations::postlocation($c, "new" );
+  }
+  if ( $glass->{Brew} eq "new" ) {
+    $glass->{Brew} = brews::postbrew($c, "new" );
+  }
+
 
   if ( $sub eq "Save" ) {  # Update existing glass
     my $sql = "update GLASSES set

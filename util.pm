@@ -322,8 +322,13 @@ sub inputform {
       } else {
         $form .= "$f not handled yet";
       }
-    } else {
-      $form .= "<input name='$inpname' $val placeholder='$pl' $clr />\n";
+    } else {  # Regular input field
+      my $pass = "";
+      if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
+        # (that is lowercase 'alc'). Pass it to glass.alc
+        $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
+      }
+      $form .= "<input name='$inpname' $val placeholder='$pl' $clr $pass />\n";
     }
     $form .= $separatortag;
   }
