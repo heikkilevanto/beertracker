@@ -4,18 +4,22 @@
 package util;
 use strict;
 use warnings;
+
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
+use POSIX qw(strftime localtime locale_h);
+
 ################################################################################
 # Table of contents
-#  - Helpers for normalizing strings
-#  - Helpers for cgi parameters
-#  - Error handling and debug logging
-#  - Drop-down menus for the Show menu and for selecting a list
-#  - Drop-downs for selecting a value from a list (location, brew, etc)
-#  - Helpers for input forms
-#  - Database helpers
+# Helpers for normalizing strings
+# Helpers for date and timestamps
+# Helpers for cgi parameters
+# Error handling and debug logging
+# Drop-down menus for the Show menu and for selecting a list
+# Drop-downs for selecting a value from a list (location, brew, etc)
+# Helpers for input forms
+# Database helpers
 
 
 # Small stuff for input fields
@@ -67,6 +71,31 @@ sub splitdate {
   }
   return ( $date, $wd || "" );
 }
+
+
+################################################################################
+# Helpers for date and timestamps
+################################################################################
+
+# Helper to get a date string, with optional delta (in days)
+sub datestr {
+  my $form = shift || "%F %T";  # "YYYY-MM-DD hh:mm:ss"
+  my $delta = shift || 0;  # in days, may be fractional. Negative for ealier
+  my $exact = shift || 0;  # Pass non-zero to use the actual clock, not starttime
+  my $starttime = time();
+  my $clockhours = strftime("%H", localtime($starttime));
+  $starttime = $starttime - $clockhours*3600 + 12 * 3600;
+    # Adjust time to the noon of the same date
+    # This is to fix dates jumping when script running close to miodnight,
+    # when we switch between DST and normal time. See issue #153
+  my $usetime = $starttime;
+  if ( $form =~ /%T/ || $exact ) { # If we want the time (when making a timestamp),
+    $usetime = time();   # base it on unmodified time
+  }
+  my $dstr = strftime ($form, localtime($usetime + $delta *60*60*24));
+  return $dstr;
+}
+
 
 ################################################################################
 # Helpers for cgi parameters
@@ -396,7 +425,7 @@ sub insertrecord {
   my $id = $c->{dbh}->last_insert_id(undef, undef, $table, undef) || undef;
   print STDERR "Inserted $table id '$id' ". join (", ", @values ). " \n";
   return $id;
-}
+} # insertrecord
 
 ########## Update a record directly from CGI parameters
 sub updaterecord {
@@ -442,7 +471,7 @@ sub updaterecord {
   $sth->execute( @values, $id );
    print STDERR "Updated " . $sth->rows .
       " $table records for id '$id' : " . join(", ", @values) ." \n";
-}
+} # updaterecord
 
 ############ Produce a list of records
 # Has some heuristics for adjusting the display for some selected fields

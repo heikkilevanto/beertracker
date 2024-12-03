@@ -5,8 +5,11 @@
 package glasses;
 use strict;
 use warnings;
+
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+
+use POSIX qw(strftime localtime locale_h);
 
 ################################################################################
 # The input form
@@ -29,15 +32,25 @@ sub inputform {
 
   # Formatting magic
   my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
-  my $sz = "size='4' style='text-align:right' $clr";
+  my $sz4 = "size='4' style='text-align:right' $clr";
+  my $sz8 = "size='8'  $clr";
 
   print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+        "onClick='setdate();' " .
         "enctype='multipart/form-data'>\n";
   print "<table>\n";
 
   print "<tr><td>Id $rec->{Id}</td>\n";
   my $stamp = main::datestr("%F %T");
-  print "<td><input name='stamp' value='$stamp' size=25 $clr/>";
+  print "<td>" ; # <input name='stamp' value='$stamp' size=25 $clr/>";
+  my ($date,$time) = ( "", "");
+  ($date,$time) = split ( ' ',$rec->{Timestamp} ) if ($rec->{Timestamp} );
+  if ( !$c->{edit} ) {
+    $date =" $date";  # Mark the time as speculative
+    $time =" $time";
+  }
+  print "<input name='date' id='date' value='$date' $sz8 $clr/> &nbsp;\n";
+  print "<input name='time' id='time' value='$time' $sz8 $clr/> &nbsp;\n";
   print "<tr><td>Location</td>\n";
   print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname") . "</td></tr>\n";
 
@@ -49,13 +62,13 @@ sub inputform {
   print "<tr><td>&nbsp;</td><td id='avp'>\n";
   my $vol = $rec->{Volume} || "";
   $vol .= "c" if ($vol);
-  print "<input name='vol' placeholder='vol' $sz value='$vol' />\n";
+  print "<input name='vol' placeholder='vol' $sz4 value='$vol' />\n";
   my $alc = $rec->{Alc} || "";
   $alc .= "%" if ($alc);
-  print "<input name='alc' id='alc' placeholder='alc' $sz value='$alc' />\n";
+  print "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' />\n";
   my $pr = $rec->{Price} || "";
   $pr .= ".-" if ($pr);
-  print "<input name='pr' placeholder='pr' $sz value='$pr' />\n";
+  print "<input name='pr' placeholder='pr' $sz4 value='$pr' />\n";
   print "</td></tr>\n";
 
   # Buttons
@@ -81,7 +94,9 @@ sub inputform {
   print "</form>\n";
   print "<hr>\n";
 
+  # Javascript trickery
   my $script = <<'SCRIPTEND';
+
     function clearinputs() {  // Clear all inputs, used by the 'clear' button
       var inputs = document.getElementsByTagName('input');  // all regular input fields
       for (var i = 0; i < inputs.length; i++ ) {
@@ -95,20 +110,77 @@ sub inputform {
           r.value = "";
       };
    }
+
+    function setdate() {  // Set date and time, if not already set by the user
+      var di = document.getElementById("date");
+      var ti = document.getElementById("time");
+      const now = new Date();
+      if ( di.value && di.value.startsWith(" ") ) {
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0'); // Zero-padded month
+        const day = String(now.getDate()).padStart(2, '0'); // Zero-padded day
+        const dat = `${year}-${month}-${day}`;
+        di.value = " " + dat;
+      }
+      if ( ti.value && ti.value.startsWith(" ") ) {
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        const tim = `${hh}:${mm}:${ss}`;
+        ti.value = " " + tim;
+      }
+    }
+    setdate();
 SCRIPTEND
-  print "<script>$script</script>\n";
+  print "<script defer>$script</script>\n";
 } # inputform
 
 ################################################################################
 # Update, insert, or delete a glass from the form above
 ################################################################################
 
+
+############## Helper to get the timestamp right
+sub gettimestamp {
+  my $c = shift;
+  my $glass = shift;
+  my $d = util::param($c, "date") || util::datestr("%F");
+  my $t = util::param($c, "time") || util::datestr("%T");
+  if ( $c->{edit} ) { # Keep old values unless explicitly changed
+    my ($origd, $origt) = split(' ',$glass->{Timestamp});
+    $d = $origd if ( $d =~ /^ / );
+    $t = $origt if ( $t =~ /^ / );
+  } else {
+    $d = util::trim($d);
+    $t = util::trim($t);
+  }
+  # TODO Fill in missing time fields 15 15: 15:1 15:16 15:16: 15:16:1 15:16:17
+
+  util::error("Bad date '$d' ") unless ( $d =~ /\d\d-\d\d-\d\d/ );
+
+  # "Y" means date of yesterday
+  $d = util::datestr("%F", -1) if ( $d =~ /^Y/i );
+
+  # "L" in date or time means 5 minutes after the previous one
+  if ( $d =~ /^L/i || $t =~ /^L/i ) {
+    my $sql = "select strftime('%Y-%m-%d %H:%M:%S', Timestamp, '+5 minutes') " .
+      "from GLASSES where username = ?  ".
+      "order by Timestamp desc limit 1";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute( $c->{username} );
+    my $newstamp = $sth->fetchrow_array;
+    print STDERR "gettimestamp: 'L' is '$newstamp' \n";
+    ($d, $t) = split(" ",$newstamp);
+  }
+  $glass->{Timestamp} = "$d $t";
+  print STDERR "gettimestamp: '$glass->{Timestamp}' \n";
+} # gettimestamp
+
 ############## Helper to get input values into $glass with some defaults
 sub getvalues {
   my $c = shift;
   my $glass = shift;
   my $brew = shift;
-  $glass->{TimeStamp} = util::param($c, "stamp");
   $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || util::param($c, "selbrewtype") || "Cider";
   $brew->{BrewType} = $brew->{BrewType} || $glass->{BrewType} || util::param($c, "selbrewtype") || "Cider";
     # TODO - The "Cider" is just a placeholder for missing value, should not happen.
@@ -168,6 +240,7 @@ sub postglass {
 
   # Get input values into $glass
   getvalues($c, $glass, $brew);
+  gettimestamp($c, $glass);
   fixvol($c, $glass, $brew);
 
   $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "Cider";
@@ -197,7 +270,7 @@ sub postglass {
     ";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute(
-    $glass->{TimeStamp},
+    $glass->{Timestamp},
     $glass->{BrewType},
     $glass->{Location},
     $glass->{Brew},
@@ -211,6 +284,7 @@ sub postglass {
 
   } else { # Create a new glass
     # TODO - Timestamps, Subtypes,
+  print STDERR "post: '$glass->{Timestamp}' \n";
 
     my $sql = "insert into GLASSES
       ( Username, TimeStamp, BrewType,
@@ -220,7 +294,7 @@ sub postglass {
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute(
       $c->{username},
-      $glass->{TimeStamp},
+      $glass->{Timestamp},
       $glass->{BrewType},
       $glass->{Location},
       $glass->{Brew},

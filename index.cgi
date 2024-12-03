@@ -4208,7 +4208,6 @@ sub guessloc {
 
 
 # Helper to get a date string, with optional delta (in days)
-
 sub datestr {
   my $form = shift || "%F %T";  # "YYYY-MM-DD hh:mm:ss"
   my $delta = shift || 0;  # in days, may be fractional. Negative for ealier
@@ -4525,8 +4524,12 @@ sub fixrecord {
   $rec->{alc} = number( $rec->{alc} );
   $rec->{vol} = number( $rec->{vol} );
   $rec->{pr} = price( $rec->{pr} );
-  error ("Missing stamp in $recindex: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}'") unless ($rec->{stamp});
-  # Should never happen
+  if (! $rec->{stamp} ) {   # Should never happen
+    # Only when working with the timestamp code. Make the error visible, but don't crash
+    print STDERR "fixrecord: Missing stamp in $recindex: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}' \n";
+    print "fixrecord: Missing stamp in $recindex: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}' \n";
+
+  }
   # Precalculate some things we often need
   my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
   $rec->{wday} = $weekdays[ $rec->{wdaynumber} ] ;
