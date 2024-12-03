@@ -8,9 +8,6 @@ use warnings;
 
 use DBI;
 
-# TODO - Change Brews to refer to a ProducerLocation, where I can have
-# much more than the name of the producer. Keep the ProducerName in the
-# Brew, for those that don't have anything more.
 
 # Design considerations   TODO - Write more here
 #
@@ -160,6 +157,11 @@ $dbh->do(q{
 # Create LOCATIONS table
 # These are mostly bars and restaurants, but can also be homes of Persons, and
 # other things that need an address, geo coordinates, and such.
+#
+# TODO - Rename SubType to LocationType.  Values like Brewery, Bar, Restaurant, Home.
+# Maybe Beerbar as a special case, as I tend to frequent those. Do we need subtypes?
+# "Restaurant, Thai?"
+# Some locations may belong to multiple types, never mind for now.
 $dbh->do("DROP TABLE IF EXISTS LOCATIONS");
 $dbh->do(q{
     CREATE TABLE LOCATIONS (

@@ -11,6 +11,9 @@ use utf8;  # Source code and string literals are utf-8
 ################################################################################
 # The input form
 ################################################################################
+# This is a fairly small, but rather complex form. For now it is hard coded,
+# without using the util::inputform helper, as almost every field has some
+# special considerations.
 # TODO - The timestamp processing is stupid, now always puts current time in the form
 #        It still updatyes the record with the entered value, but won't display it
 #        Best would be to let the browser fill it in, but not overwrite existing data
@@ -150,6 +153,17 @@ sub postglass {
 
   my $sub = $c->{cgi}->param("submit") || "";
 
+  if ( $sub eq "Del" ) {
+    my $sql = "delete from GLASSES
+      where id = ? and username = ?";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute( $c->{edit}, $c->{username} );
+    print STDERR "Deleted " . $sth->rows .
+      " Glass records for id '$c->{edit}'  \n";
+    $c->{edit} = ""; # don't try to edit it any more
+    return;
+  } # delete
+
   my $glass = findrec($c); # Get defaults from last glass or the record we are editing
   my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
 
@@ -245,12 +259,12 @@ sub selectbrewtype {
 }
 
 ################################################################################
-# Helper to get the record for editing or defaults
+# Helper to get the latest glasss record for editing or defaults
 ################################################################################
 sub findrec {
   my $c = shift;
   my $id = $c->{edit};
-  if ( ! $id ) {  # Not editing, get the latest
+  if ( ! $id ) {  # Not editing, just get the latest
     my $sql = "select id from glasses " .
               "where username = ? " .
               "order by timestamp desc ".
