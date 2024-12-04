@@ -125,8 +125,7 @@ sub inputform {
       if ( ti.value && ti.value.startsWith(" ") ) {
         const hh = String(now.getHours()).padStart(2, '0');
         const mm = String(now.getMinutes()).padStart(2, '0');
-        const ss = String(now.getSeconds()).padStart(2, '0');
-        const tim = `${hh}:${mm}:${ss}`;
+        const tim = `${hh}:${mm}`;
         ti.value = " " + tim;
       }
     }
@@ -145,7 +144,7 @@ sub gettimestamp {
   my $c = shift;
   my $glass = shift;
   my $d = util::param($c, "date") || util::datestr("%F");
-  my $t = util::param($c, "time") || util::datestr("%T");
+  my $t = util::param($c, "time") || util::datestr("%H:%M");  # no seconds any more
   if ( $c->{edit} ) { # Keep old values unless explicitly changed
     my ($origd, $origt) = split(' ',$glass->{Timestamp});
     $d = $origd if ( $d =~ /^ / );
@@ -154,9 +153,19 @@ sub gettimestamp {
     $d = util::trim($d);
     $t = util::trim($t);
   }
-  # TODO Fill in missing time fields 15 15: 15:1 15:16 15:16: 15:16:1 15:16:17
-
-  util::error("Bad date '$d' ") unless ( $d =~ /\d\d-\d\d-\d\d/ );
+  # Normalize time
+  if ( $t =~ /^(\d?)(\d)(\d\d)(\d\d)?$/ ) {  # 2358 235859 123
+    $t = ($1 ||"0") . "$2:$3";  #23:59 01:23
+    $t .= ":$4" if ($4); #23:58:59
+  }
+  if ( $t =~ /^(\d)?(\d):?$/ ) {  # 1 15 15:
+    $t = ($1 || "0") . $2. ":";  # 01 or 15, always with a colon
+  }
+  if ( $t =~ /^\d+:$/ ) {  #21: -> 21:00
+    $t .= "00";
+  }
+  $t .= ":" if ( $t =~ /^\d+:\d+$/ ); # 21:00 -> 21:00:
+  $t .= "00" if ( $t =~ /^\d+:\d+:$/ );  # 21:00 -> 21:00:
 
   # "Y" means date of yesterday
   $d = util::datestr("%F", -1) if ( $d =~ /^Y/i );
@@ -172,7 +181,10 @@ sub gettimestamp {
     print STDERR "gettimestamp: 'L' is '$newstamp' \n";
     ($d, $t) = split(" ",$newstamp);
   }
+  util::error("Bad date '$d' ") unless ( $d =~ /^\d\d-\d\d-\d\d|$/ );  # TODO - HOw to validate the fields in js?
+  util::error("Bad time '$t' ") unless ( $t =~ /^\d\d:\d\d(:\d\d|)?$/ );  # TODO - HOw to validate the fields in js?
   $glass->{Timestamp} = "$d $t";
+
   print STDERR "gettimestamp: '$glass->{Timestamp}' \n";
 } # gettimestamp
 
