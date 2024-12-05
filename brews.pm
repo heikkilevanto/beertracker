@@ -119,7 +119,6 @@ sub selectbrew {
 ################################################################################
 # Update a brew, posted from the form in the selection above
 ################################################################################
-# TODO SOON - Get a default BrewType
 # TODO - Calculate subtype, if not set. Make a separate helper, use in import
 sub postbrew {
   my $c = shift; # context

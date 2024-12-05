@@ -7,7 +7,7 @@
 # TODO SOON - Restaurant types
 # TODO - Get location details at least for the most common watering holes
 # TODO - Clean up the code. Similar parameter passing for all the insert_ functions
-
+# TODO - Try harder to deduplicate brewery and beer names
 
 
 
@@ -234,7 +234,7 @@ sub get_or_insert_location {
     return undef unless $location_name;
 
     # Check if the location already exists
-    my $sth_check = $dbh->prepare("SELECT Id, GeoCoordinates FROM LOCATIONS WHERE Name = ?");
+    my $sth_check = $dbh->prepare("SELECT Id, GeoCoordinates FROM LOCATIONS WHERE Name = ? COLLATE nocase");
     $sth_check->execute($location_name);
 
     if (my ($location_id, $old_geo) = $sth_check->fetchrow_array) {
@@ -262,7 +262,7 @@ sub get_or_insert_person {
     $person_name =~ s/^D$/Dennis/i;
 
     # Check if the person already exists
-    my $sth_check = $dbh->prepare("SELECT Id FROM PERSONS WHERE Name = ?");
+    my $sth_check = $dbh->prepare("SELECT Id FROM PERSONS WHERE Name = ? COLLATE nocase");
     $sth_check->execute($person_name);
 
     if (my $person_id = $sth_check->fetchrow_array) {
@@ -280,6 +280,8 @@ sub get_or_insert_person {
 # Helper to get or insert a Brew record
 # TODO - Pass $rec, insert year and region as well
 # TODO - Check country and region in matching
+# TODO SOON - Producer deduplication fails, compares names to numbers. Look up
+#        in Locations. Watch out for nulls
 sub get_or_insert_brew {
     my $rec = shift;
     my $id;
@@ -297,16 +299,18 @@ sub get_or_insert_brew {
       SELECT
         Id, ProducerLocation, Brewstyle, Alc
       FROM BREWS
-      WHERE Name = ?
+      WHERE Name = ? COLLATE NOCASE
       AND ProducerLocation = ?
       AND BrewType = ?
-      AND (subtype = ? OR ( subtype is null and ? is null ) )
+      LIMIT 1
     };
     my $sth = $dbh->prepare($sql);
-    $sth->execute($rec->{name}, $rec->{producer}, $rec->{type}, $rec->{subtype}, $rec->{subtype});
+    #$sth->execute($rec->{name}, $rec->{producer}, $rec->{type}, $rec->{subtype}, $rec->{subtype});
+      # AND (subtype = ? OR ( subtype is null and ? is null ) )
+    $sth->execute($rec->{name}, $rec->{producer}, $rec->{type});
     if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
       # Found the brew, check optional fields
-      if ( !$prod && $rec->{producer} )  {
+      if ( !$prod && $rec->{producer} )  {  # TODO
         my $update_sth = $dbh->prepare("UPDATE BREWS SET ProducerLocation = ? WHERE Id = ?");
         $update_sth->execute($rec->{producer}, $id);
       }

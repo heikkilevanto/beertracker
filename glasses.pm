@@ -165,7 +165,10 @@ sub gettimestamp {
     $t .= "00";
   }
   $t .= ":" if ( $t =~ /^\d+:\d+$/ ); # 21:00 -> 21:00:
-  $t .= "00" if ( $t =~ /^\d+:\d+:$/ );  # 21:00 -> 21:00:
+  $t .= util::datestr("%S") if ( $t =~ /^\d+:\d+:$/ );  # 21:00: -> 21:00:31
+  # Get seconds from current time, to make timestamps a bit more unique and
+  # sortable. We are not likely to display them ever, and even then they won't
+  # matter much.
 
   # "Y" means date of yesterday
   $d = util::datestr("%F", -1) if ( $d =~ /^Y/i );
