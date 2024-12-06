@@ -34,7 +34,7 @@ sub listbrews {
 } # listbrews
 
 ################################################################################
-# Editlocation - Show a form for editing a brew record
+# Editbrew - Show a form for editing a brew record
 ################################################################################
 
 sub editbrew {
@@ -52,6 +52,7 @@ sub editbrew {
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
     print "<b>Editing Brew $p->{Id}: $p->{Name}</b><br/>\n";
+
     print util::inputform($c, "BREWS", $p );
     print "<input type='submit' name='submit' value='Update Brew' /><br/>\n";
 
@@ -71,9 +72,7 @@ sub editbrew {
 # Select a brew
 # A key component of the main input form
 ################################################################################
-# TODO - Many features missing
 # TODO - Display the brew details under the selection, with an edit link
-# TODO - Some fields not handled right yet: Producer, Year. BrewStyle as a select with default?
 
 sub selectbrew {
   my $c = shift; # context
@@ -103,7 +102,7 @@ sub selectbrew {
     }
     my $disp = "";
     $disp .= $na if ($na);
-    $disp = "$pr: $disp  " if ($pr && $na !~ /$pr/ ); # TODO Shorten producer names
+    $disp = "$pr: $disp  " if ($pr && $na !~ /$pr/ );
     my $disptype = $su;
     $disptype .= $bt unless ($su);
     $disp .= " [$disptype]";

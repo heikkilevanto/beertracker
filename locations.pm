@@ -127,7 +127,12 @@ sub selectlocation {
 
   my $current = "";
   while ( my ($id, $name, $type ) = $list_sth->fetchrow_array ) {
-    $opts .= "      <div class='dropdown-item' id='$id'>$name [$type]</div>\n";
+    if ($type) {
+      $type = "[$type]";
+    } else {
+      $type = "";
+    }
+    $opts .= "      <div class='dropdown-item' id='$id'>$name $type</div>\n";
     if ( $id eq $selected ) {
       $current = $name;
     }

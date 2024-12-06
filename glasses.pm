@@ -17,15 +17,8 @@ use POSIX qw(strftime localtime locale_h);
 # This is a fairly small, but rather complex form. For now it is hard coded,
 # without using the util::inputform helper, as almost every field has some
 # special considerations.
-# TODO - The timestamp processing is stupid, now always puts current time in the form
-#        It still updatyes the record with the entered value, but won't display it
-#        Best would be to let the browser fill it in, but not overwrite existing data
 # TODO - Del button to go back to here, with an option to ask if sure
 #        Could also ask to delete otherwise unused locations and brews
-# TODO - Filter by BrewStyle. Second pulldown next to filter input
-# TODO - Better way to enter BrewStyle. Select field?
-# TODO - A way to select Restaurants and Nights. Maybe hard-coded entries in
-#        the begininng of the list.
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
@@ -190,10 +183,9 @@ sub getvalues {
   my $c = shift;
   my $glass = shift;
   my $brew = shift;
-  $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || util::param($c, "selbrewtype") || "Cider";
-  $brew->{BrewType} = $brew->{BrewType} || $glass->{BrewType} || util::param($c, "selbrewtype") || "Cider";
-    # TODO - The "Cider" is just a placeholder for missing value, should not happen.
-    # TODO - BrewType handling is fundamentally wrong
+  $glass->{BrewType} =  util::param($c, "selbrewtype") || $glass->{BrewType} || $brew->{BrewType} || "WRONG";
+  $brew->{BrewType} = util::param($c, "selbrewtype")  || $brew->{BrewType} || $glass->{BrewType} || "WRONG";
+    # TODO - The "WRONG" is just a placeholder for missing value, should not happen.
   $glass->{Location} = util::param($c, "Location", undef);
   $glass->{Brew} = util::param($c, "Brew");
   $glass->{Price} = util::paramnumber($c, "pr");
@@ -214,22 +206,19 @@ sub fixvol {
     $glass->{Alc} = "";
     $glass->{Price} = $glass->{Price} || "";
     $glass->{StDrinks} = 0;
-    return;
+    $glass->{Brew} = undef;
+  } else {
+    $glass->{Volume} = $glass->{Volume} || "0";
+    $glass->{Alc} =~ s/[.,]+/./;  # I may enter a comma occasionally
+    my $std = $glass->{Volume} * $glass->{Alc} / $c->{onedrink};
+    $glass->{StDrinks} = sprintf("%6.2f", $std );
   }
-
-  $glass->{Volume} = $glass->{Volume} || "0";
-
-  $glass->{Alc} =~ s/[.,]+/./;  # I may enter a comma occasionally
-
-  my $std = $glass->{Volume} * $glass->{Alc} / $c->{onedrink};
-  $glass->{StDrinks} = sprintf("%6.2f", $std );
 } # fixvol
 
 
 ############## postglass itself
 sub postglass {
   my $c = shift; # context
-
 
   my $sub = $c->{cgi}->param("submit") || "";
 
@@ -252,8 +241,8 @@ sub postglass {
   gettimestamp($c, $glass);
   fixvol($c, $glass, $brew);
 
-  $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "Cider";
-     # TODO - That Cider is just to catch cases where I don't have any
+  $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "WRONG";
+     # TODO - That WRONG is just to catch cases where I don't have any
      # Should not happen.
 
   # New Location and/or Brew
@@ -292,8 +281,6 @@ sub postglass {
     " Glass records for id '$c->{edit}'  \n";
 
   } else { # Create a new glass
-    # TODO - Timestamps, Subtypes,
-  print STDERR "post: '$glass->{Timestamp}' \n";
 
     my $sql = "insert into GLASSES
       ( Username, TimeStamp, BrewType,

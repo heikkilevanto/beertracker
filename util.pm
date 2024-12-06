@@ -266,11 +266,12 @@ sub dropdown {
               if (event.target.getAttribute("id") == "new" ) {
                 wholedropdown$inputname.hidden = true;
                 newdiv$inputname.hidden = false;
-              } else { // update alc if selected a brew
+              } else { // update alc and brewtype if selected a brew
                 const alcinp = document.getElementById("alc");
                 const selalc = event.target.getAttribute("alc");
                 if ( alcinp && selalc ) {
                   alcinp.value = selalc;
+                  // console.log("Set alc " + selalc + " from brew ");
                 }
               }
             }
@@ -300,8 +301,9 @@ sub dropdown {
             const filter = filterinput$inputname.value.toLowerCase();
             Array.from(dropdownList$inputname .children).forEach(item => {
                 var brewtype = item.getAttribute("brewtype");
+                // ´console.log("filter$inputname: s='" + selbrewtype.value + "' b='" + brewtype +"'");
                 if (item.textContent.toLowerCase().includes(filter) &&
-                    (selbrewtype && brewtype && brewtype == selbrewtype.value ) ) {
+                    (selbrewtype && ( ! brewtype || brewtype == selbrewtype.value ) ) ) {
                     item.style.display = '';
                 } else {
                     item.style.display = 'none';
@@ -352,23 +354,16 @@ sub inputform {
     my $inpname = $inputprefix . $f;
     my $val = "";
     $val = "value='$rec->{$f}'" if ( $rec && $rec->{$f} );
-    if ( $special ) {  # Special field, needs a dropdown
-      if ( $f =~ /location/i ) {
-        $form .= locations::selectlocation($c, $f, $rec->{$f}, "loc");
-      } elsif ( $f =~ /person/i ) {
-        if ( $inputprefix !~ /newperson/ ) {
-          # Allow editing of RelatedPerson, but only on top level
-          $form .= persons::selectperson($c, $f, $rec->{$f}, "pers");
-        }
-      } elsif ( $f =~ /brewtype/i ) {
-        $val = $val || param($c, "selbrewtype") || "Cider" ;
-        $val = "value='$val'";
-        print STDERR "inputform: brew type '$f' is now '$val' \n";
-        # TODO - That Cider is just a placeholder for missing types
-        # They would crash otherwise. Seems not to work
-      } else {
-        $form .= "$f not handled yet";
+    if ( $special && $f =~ /location/i ) {
+      $form .= locations::selectlocation($c, $f, $rec->{$f}, "loc");
+    } elsif ($special && $f =~ /person/i ) {
+      if ( $inputprefix !~ /newperson/ ) {
+        # Allow editing of RelatedPerson, but only on top level
+        $form .= persons::selectperson($c, $f, $rec->{$f}, "pers");
+        # Avoids endless recursion
       }
+    } elsif ( $special ) {
+      $form .= "Special field $f not handled yet";  # Sould not happen
     } else {  # Regular input field
       my $pass = "";
       if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
