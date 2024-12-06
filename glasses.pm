@@ -130,8 +130,8 @@ SCRIPTEND
 sub gettimestamp {
   my $c = shift;
   my $glass = shift;
-  my $d = util::param($c, "date") || util::datestr("%F");
-  my $t = util::param($c, "time") || util::datestr("%H:%M");  # no seconds any more
+  my $d = util::param($c, "date") || util::datestr("%F",0,1);
+  my $t = util::param($c, "time") || util::datestr("%H:%M",0,1);  # Precise time
   if ( $c->{edit} ) { # Keep old values unless explicitly changed
     my ($origd, $origt) = split(' ',$glass->{Timestamp});
     $d = $origd if ( $d =~ /^ / );
@@ -152,13 +152,13 @@ sub gettimestamp {
     $t .= "00";
   }
   $t .= ":" if ( $t =~ /^\d+:\d+$/ ); # 21:00 -> 21:00:
-  $t .= util::datestr("%S") if ( $t =~ /^\d+:\d+:$/ );  # 21:00: -> 21:00:31
+  $t .= util::datestr("%S",0,1) if ( $t =~ /^\d+:\d+:$/ );  # 21:00: -> 21:00:31
   # Get seconds from current time, to make timestamps a bit more unique and
   # sortable. We are not likely to display them ever, and even then they won't
   # matter much.
 
   # "Y" means date of yesterday
-  $d = util::datestr("%F", -1) if ( $d =~ /^Y/i );
+  $d = util::datestr("%F", -1,1) if ( $d =~ /^Y/i );
 
   # "L" in date or time means 5 minutes after the previous one
   if ( $d =~ /^L/i || $t =~ /^L/i ) {
@@ -183,6 +183,7 @@ sub getvalues {
   my $c = shift;
   my $glass = shift;
   my $brew = shift;
+  my $sub = shift;
   $glass->{BrewType} =  util::param($c, "selbrewtype") || $glass->{BrewType} || $brew->{BrewType} || "WRONG";
   $brew->{BrewType} = util::param($c, "selbrewtype")  || $brew->{BrewType} || $glass->{BrewType} || "WRONG";
     # TODO - The "WRONG" is just a placeholder for missing value, should not happen.
@@ -191,6 +192,10 @@ sub getvalues {
   $glass->{Price} = util::paramnumber($c, "pr");
   $glass->{Volume} = util::paramnumber($c, "vol", "0");
   $glass->{Alc} = util::paramnumber($c, "alc", $brew->{Alc} || "0");
+  if ( $sub =~ /Copy (\d+)/ ) {
+    $glass->{Volume} = $1;
+    print STDERR "getvalues: s='$sub' v='$1' \n";
+  }
 } # getvalues
 
 ############## Helper for alc, volume, etc
@@ -237,7 +242,7 @@ sub postglass {
   my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
 
   # Get input values into $glass
-  getvalues($c, $glass, $brew);
+  getvalues($c, $glass, $brew, $sub);
   gettimestamp($c, $glass);
   fixvol($c, $glass, $brew);
 

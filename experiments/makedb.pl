@@ -222,9 +222,11 @@ $dbh->do(q{
         glasses.brewtype as type,
         COALESCE(brews.subtype, brews.country) as subtype,
         strftime ('%Y-%m-%d', glasses.timestamp,'-06:00') as effdate,
-        locations.name as loc,
-     		PLOC.name as maker,
-        brews.name as name,
+        LOCATIONS.Id as locid,
+        LOCATIONS.name as loc,
+        PLOC.name as maker,
+        BREWS.Id as brewid,
+        BREWS.name as name,
         volume as vol,
         coalesce(Brews.brewstyle,'') || ' ' ||
           coalesce(Brews.region,'')  || ' ' ||

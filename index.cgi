@@ -3785,6 +3785,13 @@ sub fulllist {
       print "<input type='hidden' name='$k' value='$rec->{$k}' />\n";
     }
     print "<input type='hidden' name='geo' id='geo' value='' />\n"; # with the id
+    { # Input fields to simulate the new input form
+      my $brewid = $rec->{brewid} || "";
+      my $locid = $rec->{locid} || "";
+      print "<input type='hidden' name='Location'  value='$locid' />\n";
+      print "<input type='hidden' name='Brew'  value='$brewid' />\n";
+      print "<input type='hidden' name='selbrewtype'  value='$rec->{type}' />\n";
+    }
     print "<input type='hidden' name='o' value='$op' />\n";  # Stay on page
     print "<input type='hidden' name='q' value='$qry' />\n";
 
@@ -4116,7 +4123,7 @@ sub unit {
 sub units {
   my $rec = shift;
   my $extended = shift || "";
-  my $s = "<b>". unit($rec->{vol}, "cl") . "</b>";
+  my $s = "[$rec->{glassid}] " .  "<b>". unit($rec->{vol}, "cl") . "</b>";
   $s .= unit($rec->{pr},".-");
   if ($extended) {
     if ($rec->{pr} && $rec->{vol}) {
