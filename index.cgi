@@ -3788,9 +3788,11 @@ sub fulllist {
     { # Input fields to simulate the new input form
       my $brewid = $rec->{brewid} || "";
       my $locid = $rec->{locid} || "";
-      print "<input type='hidden' name='Location'  value='$locid' />\n";
+      #print "<input type='hidden' name='Location'  value='$locid' />\n";
+      # TODO - Copied the location too, have to change manually
       print "<input type='hidden' name='Brew'  value='$brewid' />\n";
       print "<input type='hidden' name='selbrewtype'  value='$rec->{type}' />\n";
+      # TODO - Geo location ??
     }
     print "<input type='hidden' name='o' value='$op' />\n";  # Stay on page
     print "<input type='hidden' name='q' value='$qry' />\n";

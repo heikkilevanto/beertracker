@@ -19,6 +19,7 @@ use POSIX qw(strftime localtime locale_h);
 # special considerations.
 # TODO - Del button to go back to here, with an option to ask if sure
 #        Could also ask to delete otherwise unused locations and brews
+# TODO - JS Magic to get geolocation to work
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
@@ -187,7 +188,7 @@ sub getvalues {
   $glass->{BrewType} =  util::param($c, "selbrewtype") || $glass->{BrewType} || $brew->{BrewType} || "WRONG";
   $brew->{BrewType} = util::param($c, "selbrewtype")  || $brew->{BrewType} || $glass->{BrewType} || "WRONG";
     # TODO - The "WRONG" is just a placeholder for missing value, should not happen.
-  $glass->{Location} = util::param($c, "Location", undef);
+  $glass->{Location} = util::param($c, "Location", undef) || $glass->{Location};
   $glass->{Brew} = util::param($c, "Brew");
   $glass->{Price} = util::paramnumber($c, "pr");
   $glass->{Volume} = util::paramnumber($c, "vol", "0");
