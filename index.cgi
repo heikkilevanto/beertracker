@@ -4281,9 +4281,10 @@ sub seenline {
   return "" unless ($seenkey =~ /[a-z]/ );  # At least some real text in it
   my $countsql = q{
     select brews.id, count(glasses.id)
-    from brews, glasses
+    from brews, glasses, locations
     where brews.id = glasses.brew
-    and brews.producer = ?
+    and locations.id = brews.producerlocation
+    and locations.name = ?
     and brews.name = ?
   };
   my $get_sth = $dbh->prepare($countsql);
