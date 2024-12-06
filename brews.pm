@@ -141,6 +141,42 @@ sub postbrew {
 } # postbrew
 
 ################################################################################
+# Helper to insert a brew record from old-style params
+# Happens when the user clicks on the beer board
+################################################################################
+# TODO - Delete this once we have a new style beer board
+sub insert_old_style_brew {
+  my $c = shift;
+  my $type = util::param($c, "type");
+  my $name = util::param($c, "name");
+  my $maker = util::param($c, "maker");
+  my $style = util::param($c, "style");
+  my $subtype = "Ale"; # TODO Calculate subtype properly
+
+  my $sql = "Select Id from LOCATIONS where Name = ? collate nocase";
+  my $get_sth = $c->{dbh}->prepare($sql);
+  $get_sth->execute($maker);
+  my $prodlocid = $get_sth->fetchrow_array;
+  if ( ! $prodlocid ) {
+    $sql = "Insert into LOCATIONS ( Name, SubType ) values (?, 'Beer-Maker')";
+    my $loc_sth = $c->{dbh}->prepare($sql);
+    $loc_sth->execute($maker);
+    $prodlocid = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
+    print STDERR "insert_old_style_brew: Inserted location '$maker' as id '$prodlocid' \n";
+  }
+
+
+  $sql = "insert into BREWS
+    ( Name, BrewType, SubType, BrewStyle, ProducerLocation )
+    values ( ?, ?, ?, ?, ? ) ";
+  my $ins_sth = $c->{dbh}->prepare($sql);
+  $ins_sth->execute( $name, $type, $subtype, $style, $prodlocid);
+  my $id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
+  print STDERR "Inserted '$name' into BREWS as id '$id' \n";
+  return $id;
+
+}
+################################################################################
 # Helper to get a brew record
 ################################################################################
 sub getbrew {

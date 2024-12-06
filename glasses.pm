@@ -189,7 +189,7 @@ sub getvalues {
   $brew->{BrewType} = util::param($c, "selbrewtype")  || $brew->{BrewType} || $glass->{BrewType} || "WRONG";
     # TODO - The "WRONG" is just a placeholder for missing value, should not happen.
   $glass->{Location} = util::param($c, "Location", undef) || $glass->{Location};
-  $glass->{Brew} = util::param($c, "Brew");
+  $glass->{Brew} = util::param($c, "Brew") || $glass->{Brew};
   $glass->{Price} = util::paramnumber($c, "pr");
   $glass->{Volume} = util::paramnumber($c, "vol", "0");
   $glass->{Alc} = util::paramnumber($c, "alc", $brew->{Alc} || "0");
@@ -241,6 +241,11 @@ sub postglass {
 
   my $glass = findrec($c); # Get defaults from last glass or the record we are editing
   my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
+  if (! $brew) {  # Can happen with the beer board
+     my $brewid  = brews::insert_old_style_brew($c);
+     $brew = brews::getbrew($c, $brewid);
+     $glass->{Brew} = $brewid;
+  }
 
   # Get input values into $glass
   getvalues($c, $glass, $brew, $sub);

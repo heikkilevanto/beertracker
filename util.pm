@@ -94,7 +94,7 @@ sub datestr {
   }
   my $dstr = strftime ($form, localtime($usetime + $delta *60*60*24));
   return $dstr;
-}
+} # datestr
 
 
 ################################################################################
