@@ -98,13 +98,8 @@ sub postlocation {
 # For now, just produces a pull-down list. Later we can add filtering, options
 # for sort order and some geo coord magic
 # TODO - Add a few more fields.
-# TODO - Drop the newlocfield, at most a boolean to say we want that option with fixed name(s)
 # TODO - Add the current location as the first real one in the list, never mind if duplicates
 
-# TODO SOON - Move CSS into its own helper.
-# TODO SOON - Clean and parametrisize input names
-# TODO - Use the new helper for persons
-# TODO - And brews, with all the extras those need (brewstyle filtering)
 sub selectlocation {
   my $c = shift; # context
   my $fieldname = shift || "Location";
@@ -119,7 +114,8 @@ sub selectlocation {
   my $sql = "
   select
     LOCATIONS.Id,
-    LOCATIONS.Name
+    LOCATIONS.Name,
+    LOCATIONS.SubType
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.id
@@ -130,8 +126,8 @@ sub selectlocation {
   my $opts = "";
 
   my $current = "";
-  while ( my ($id, $name ) = $list_sth->fetchrow_array ) {
-    $opts .= "      <div class='dropdown-item' id='$id'>$name</div>\n";
+  while ( my ($id, $name, $type ) = $list_sth->fetchrow_array ) {
+    $opts .= "      <div class='dropdown-item' id='$id'>$name [$type]</div>\n";
     if ( $id eq $selected ) {
       $current = $name;
     }

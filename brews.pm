@@ -1,9 +1,9 @@
 # Part of my beertracker
 # Stuff for listing, selecting, adding, and editing brews
 
-# TODO SOON - Edit a brew, maybe insert a new
 
 package brews;
+
 use strict;
 use warnings;
 use feature 'unicode_strings';

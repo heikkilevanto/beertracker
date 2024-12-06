@@ -49,8 +49,8 @@ sub inputform {
     $date =" $date";  # Mark the time as speculative
     $time =" $time";
   }
-  print "<input name='date' id='date' value='$date' $sz8 $clr/> &nbsp;\n";
-  print "<input name='time' id='time' value='$time' $sz8 $clr/> &nbsp;\n";
+  print "<input name='date' id='date' value='$date' placeholder='YYYY-MM-DD' $sz8 $clr/> &nbsp;\n";
+  print "<input name='time' id='time' value='$time' placeholder='HH:MM' $sz8 $clr/> &nbsp;\n";
   print "<tr><td>Location</td>\n";
   print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname") . "</td></tr>\n";
 
@@ -103,12 +103,6 @@ sub inputform {
         if ( inputs[i].type == "text" )
           inputs[i].value = "";
       }
-      const ids = [ "brewsel" ];
-      for ( var i = 0; i < ids.length; i++) {
-        var r = document.getElementById(ids[i]);
-        if (r)
-          r.value = "";
-      };
    }
 
     function setdate() {  // Set date and time, if not already set by the user
