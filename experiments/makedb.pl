@@ -15,6 +15,17 @@ use DBI;
 # numbers, I use DECIMAL or such. This is a bit dirty, but makes it easier
 # to generate forms with suitable magic for such fields.
 
+# TODO - How to handle producers. For now I just create a location entry, but
+# that is wasteful for those that only have a name - most of them. Alternatives:
+#  - Keep producer name in the brew record, and link to location only if needed
+#  - Create a spearate table for producers, with name and link
+#    Could add info like when started and stopped, etc
+
+# TODO - Comments. Now they always refer to a glass, which serves to bind them
+# into brews, locations, etc. We might as well have a generic Id, and make more
+# systematic use of the RefersTo field, so a comment could point directly to
+# a person, location (producer?), etc.
+
 # Connect to SQLite database (or create it if it doesn't exist)
 my $databasefile = "../beerdata/beertracker.db";
 #die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );

@@ -278,10 +278,22 @@ sub get_or_insert_person {
 
 
 # Helper to get or insert a Brew record
-# TODO - Pass $rec, insert year and region as well
-# TODO - Check country and region in matching
-# TODO SOON - Producer deduplication fails, compares names to numbers. Look up
-#        in Locations. Watch out for nulls
+# TODO Deduplicating problems
+# Especially in the old days, I entered beer styles quite randomly
+# So I can have the same beer as IPA, SIPA, and NEIPA
+# Split the matching in two: Beers and the rest.
+# For beers:
+#  - Ignore the subtype
+#  - Always update the style (and why not alc), since the values are more
+#    likely to come from a beer board, and to be correct
+#  - Find a way to catch closely spelled typos (soundex seems not to work)
+#  - Maybe a hash of heavily normalized names (cases, remove spaces and specials)
+# For the rest
+#  - Do compare subtypes
+#  - Ignore punctuation when comparing names
+#  - Compare also country/region and Flavor - often same name with different grapes
+#  - Get year, age,  and details from name as well
+#
 sub get_or_insert_brew {
     my $rec = shift;
     my $id;
@@ -300,7 +312,7 @@ sub get_or_insert_brew {
         Id, ProducerLocation, Brewstyle, Alc
       FROM BREWS
       WHERE Name = ? COLLATE NOCASE
-      AND ProducerLocation = ?
+      AND ( ProducerLocation = ? OR  ProducerLocation is null )
       AND BrewType = ?
       LIMIT 1
     };
@@ -310,7 +322,7 @@ sub get_or_insert_brew {
     $sth->execute($rec->{name}, $rec->{producer}, $rec->{type});
     if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
       # Found the brew, check optional fields
-      if ( !$prod && $rec->{producer} )  {  # TODO
+      if ( !$prod && $rec->{producer} )  {
         my $update_sth = $dbh->prepare("UPDATE BREWS SET ProducerLocation = ? WHERE Id = ?");
         $update_sth->execute($rec->{producer}, $id);
       }
