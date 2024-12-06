@@ -193,8 +193,6 @@ sub listsmenu {
 # Omit the "new" line if you don't want it
 # Returns a string ready to be printed in a form
 
-# TODO - Add a little space between the options
-
 # TODO - Reset the filter when blurring the field
 # Otherwise it gets remembered, but not displayed when opening again
 
@@ -227,7 +225,7 @@ sub dropdown {
         .dropdown-list {
             position: absolute;
             width: 100%;
-            max-height: 200px;
+            max-height: 300px;
             overflow-y: auto;
             border: 1px solid #ccc;
             z-index: 1000;
@@ -235,6 +233,7 @@ sub dropdown {
         }
         .dropdown-item {
             cursor: pointer;
+            padding: 3px;
         }
         .dropdown-item:hover {
             background-color: #005000;
@@ -282,6 +281,7 @@ sub dropdown {
             dropdownList$inputname .style.display = 'block';
             filterinput$inputname.oldvalue = filterinput$inputname.value;
             filterinput$inputname.value = "";
+            filter$inputname();
         });
 
         filterinput$inputname.addEventListener('blur', () => {
@@ -294,16 +294,24 @@ sub dropdown {
             }, 200);
         });
 
-        // Filter dropdown items as the user types
-        filterinput$inputname.addEventListener('input', () => {
+        // Filter dropdown items
+        function filter$inputname() {
+            const selbrewtype = document.getElementById("selbrewtype");
             const filter = filterinput$inputname.value.toLowerCase();
             Array.from(dropdownList$inputname .children).forEach(item => {
-                if (item.textContent.toLowerCase().includes(filter)) {
+                var brewtype = item.getAttribute("brewtype");
+                if (item.textContent.toLowerCase().includes(filter) &&
+                    (selbrewtype && brewtype && brewtype == selbrewtype.value ) ) {
                     item.style.display = '';
                 } else {
                     item.style.display = 'none';
                 }
             });
+        };
+
+        // Filter dropdown items as the user types
+        filterinput$inputname.addEventListener('input', () => {
+          filter$inputname();
         });
 
         // Handle Esc to close the dropdown
