@@ -267,6 +267,12 @@ sub dropdown {
               if (event.target.getAttribute("id") == "new" ) {
                 wholedropdown$inputname.hidden = true;
                 newdiv$inputname.hidden = false;
+              } else { // update alc if selected a brew
+                const alcinp = document.getElementById("alc");
+                const selalc = event.target.getAttribute("alc");
+                if ( alcinp && selalc ) {
+                  alcinp.value = selalc;
+                }
               }
             }
         });

@@ -108,7 +108,7 @@ sub selectbrew {
     $disptype .= $bt unless ($su);
     $disp .= " [$disptype]";
     #$disp = substr($disp, 0, 30);
-    $opts .= "<div class='dropdown-item' id='$id'>$disp</div>\n";
+    $opts .= "<div class='dropdown-item' id='$id' alc='$alc' >$disp</div>\n";
   }
   my $s = util::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew" );
 
