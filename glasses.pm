@@ -240,10 +240,12 @@ sub postglass {
   } # delete
 
   my $glass = findrec($c); # Get defaults from last glass or the record we are editing
-  my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
+  # my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
+  my $brew = util::getrecord($c, "BREWS", scalar $c->{cgi}->param("Brew") );
   if (! $brew) {  # Can happen with the beer board
      my $brewid  = brews::insert_old_style_brew($c);
-     $brew = brews::getbrew($c, $brewid);
+     $brew = util::getrecord($c, "BREWS", scalar $c->{cgi}->param("Brew") );
+     #$brew = brews::getbrew($c, $brewid);
      $glass->{Brew} = $brewid;
   }
 
@@ -255,6 +257,12 @@ sub postglass {
   $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "WRONG";
      # TODO - That WRONG is just to catch cases where I don't have any
      # Should not happen.
+  print STDERR "postglass: L='" . util::param($c,"Location")  ."' l='" .util::param($c,"loc") . "'\n";
+  if ( ! util::param($c,"Location") && util::param($c,"loc") ) { # Old style loc name
+    my $location = util::findrecord($c, "LOCATIONS", "Name", util::param($c,"loc")) ;
+    $glass->{Location} = $location->{Id} if ($location);
+    print STDERR "Fixed location " . util::param($c,"loc") . " to $location->{Id} \n";
+  }
 
   # New Location and/or Brew
   if ( $glass->{Location} eq "new" ) {
