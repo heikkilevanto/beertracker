@@ -1,4 +1,3 @@
-# Part of my beertracker
 # Small helper routines
 
 package util;
@@ -482,6 +481,37 @@ sub updaterecord {
       " $table records for id '$id' : " . join(", ", @values) ." \n";
 } # updaterecord
 
+
+############ Get a single record by Id
+sub getrecord {
+  my $c = shift;
+  my $table = shift;
+  my $id = shift;
+  return undef unless ($id);
+  my $sql = "select * from $table where id = ? ";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($id);
+  my $rec = $sth->fetchrow_hashref;
+  $sth->finish;
+  return $rec;
+} # getrecord
+
+############ Find a single record by a given field
+sub findrecord {
+  my $c = shift;
+  my $table = shift;
+  my $field = shift;
+  my $val = shift;
+  return undef unless ($val);
+  my $sql = "select * from $table where $field = ? ";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($val);
+  my $rec = $sth->fetchrow_hashref;
+  $sth->finish;
+  return $rec;
+
+} # getrecord
+
 ############ Produce a list of records
 # Has some heuristics for adjusting the display for some selected fields
 # Tune these here or in the view definition
@@ -541,7 +571,7 @@ sub listrecords {
     $s .= "</tr>";
   }
   $s .= "</table>\n";
-
+  $list_sth->finish;
 }
 
 ################################################################################
