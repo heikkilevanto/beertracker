@@ -146,7 +146,7 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
 my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero should not be used!
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect");  # 9 is the top
 
-my %volumes = ( # Comment is displayed on the About page
+my %volumes = ( # Comment is displayed on the About page  # TODO - Copy to glasses.pm
   'T' => " 2 Taster, sizes vary, always small",
   'G' => "16 Glass of wine - 12 in places, at home 16 is more realistic",
   'S' => "25 Small, usually 25",
@@ -356,6 +356,7 @@ require "./persons.pm";   # List of people, their details, editing, helpers
 require "./locations.pm"; # Locations stuff
 require "./brews.pm";  # Lists of various brews, etc
 require "./glasses.pm"; # Main input for and the full list
+require "./comments.pm"; # Stuff for comments, ratings, and photos
 require "./util.pm"; # Various helper functions
 
 ################################################################################

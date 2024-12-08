@@ -20,6 +20,8 @@ use POSIX qw(strftime localtime locale_h);
 # TODO - Del button to go back to here, with an option to ask if sure
 #        Could also ask to delete otherwise unused locations and brews
 # TODO - JS Magic to get geolocation to work
+# TODO - Display comments for the current glass. Also persons and photos
+# TODO - Form to add a new comment, or edit one
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
@@ -86,6 +88,8 @@ sub inputform {
   print "</td></tr>\n";
   print "</table>\n";
   print "</form>\n";
+  print comments::listcomments($c, $rec->{Id} );
+  print "(Here should be a form to add a new comment, or to edit an existing one)<br/>\n";
   print "<hr>\n";
 
   # Javascript trickery
