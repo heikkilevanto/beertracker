@@ -425,8 +425,8 @@ htmlhead($datafilecomment); # Ok, now we can commit to making a HTML page
 
 # We display a graph for some pages
 if ( $op =~ /Board/i ) {
+  glasses::inputform($context);
   oldstuff();
-  inputform();
   graph();
   beerboard();
   fulllist();
@@ -472,8 +472,8 @@ if ( $op =~ /Board/i ) {
   fulllist();
 } else { # Default to the graph
   $op = "Graph" unless $op;
+  glasses::inputform($context);
   oldstuff();
-  inputform();
   graph();
   fulllist();
 }
