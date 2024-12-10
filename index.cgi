@@ -475,9 +475,9 @@ if ( $op =~ /Board/i ) {
   fulllist();
 } else { # Default to the graph
   $op = "Graph" unless $op;
-  glasses::inputform($context);
   oldstuff();
   graph();
+  glasses::inputform($context);
   fulllist();
 }
 
