@@ -337,6 +337,7 @@ my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 # Collect all 'global' variables here in one context
 my $context = {
   'username' => $username,
+  'datadir'  => $datadir,
   'dbh'      => $dbh,
   'url'      => $url,
   'cgi'      => $q,
@@ -358,6 +359,7 @@ require "./brews.pm";  # Lists of various brews, etc
 require "./glasses.pm"; # Main input for and the full list
 require "./comments.pm"; # Stuff for comments, ratings, and photos
 require "./util.pm"; # Various helper functions
+require "./graph.pm"; # The daily graph
 
 ################################################################################
 # Main program
@@ -519,7 +521,7 @@ sub copyproddata {
   #error("$prodfile not readable") if ( ! -r $prodfile);
   #system("cat $datafile > $bakfile");
   #system("cat $prodfile > $datafile");
-  clearcachefiles();
+  graph::clearcachefiles( $context );
   system("cp ../beertracker/$photodir/* $photodir");
   print $q->redirect( "$url" );
   exit();
@@ -1103,7 +1105,7 @@ sub postdata {
 
   # Clear the cached files from the data dir.
   # All graphs for this user can now be out of date
-  clearcachefiles();
+  graph::clearcachefiles( $context );
 
   # if POSTing a restaurant, return to editing the record, so we can add
   # more relevant stuff like foods, people etc.
@@ -1118,18 +1120,6 @@ sub postdata {
 } # POST data itself
 
 
-# Helper to clear the cached files from the data dir.
-sub clearcachefiles {
-  foreach my $pf ( glob($datadir."*") ) {
-    next if ( $pf =~ /\.data$/ ); # .data files are the only really important ones
-    next if ( -d $pf ); # Skip subdirs, if we have such
-    if ( $pf =~ /\/$username.*png/ ||   # All png files for this user
-         -M $pf > 7 ) {  # And any file older than a week
-      unlink ($pf)
-        or error ("Could not unlink $pf $!");
-      }
-  }
-} # clearcachefiles
 
 
 #

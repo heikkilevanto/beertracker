@@ -325,7 +325,7 @@ sub postglass {
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
   }
-   print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
+  graph::clearcachefiles($c);
 } # postglass
 
 ################################################################################
