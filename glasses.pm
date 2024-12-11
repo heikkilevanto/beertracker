@@ -45,8 +45,14 @@ sub inputform {
     $date =" $date";  # Mark the time as speculative
     $time =" $time";
   }
-  print "<input name='date' id='date' value='$date' placeholder='YYYY-MM-DD' $sz8 $clr/> &nbsp;\n";
-  print "<input name='time' id='time' value='$time' placeholder='HH:MM' $sz8 $clr/> &nbsp;\n";
+  print "<input name='date' id='date' value='$date' " .
+        "pattern=' ?([LlYy])?(\\d\\d\\d\\d-\\d\\d-\\d\\d)?' " .
+        "placeholder='YYYY-MM-DD' $sz8 /> &nbsp;\n";
+        # Could not make alternative pattern work, so I use a sequence of L/Y
+        # and a valid date. Note also the leading space
+  print "<input name='time' id='time' value='$time' " .
+        "pattern=' ?\\d\\d(:?\\d\\d)?(:?\\d\\d)?' ".
+        "placeholder='HH:MM' $sz8/> &nbsp;\n";
   print "<tr><td>Location</td>\n";
   print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname") . "</td></tr>\n";
 
@@ -163,7 +169,9 @@ sub gettimestamp {
   # matter much.
 
   # "Y" means date of yesterday
-  $d = util::datestr("%F", -1,1) if ( $d =~ /^Y/i );
+  if ( $d =~ /^Y/i ) {
+    $d = util::datestr("%F", -1,1) ;
+  }
 
   # "L" in date or time means 5 minutes after the previous one
   if ( $d =~ /^L/i || $t =~ /^L/i ) {
