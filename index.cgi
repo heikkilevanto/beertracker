@@ -922,10 +922,10 @@ sub imagefilename {
 sub image {
   my $rec = shift;
   my $width = shift; # One of the keys in %imagesizes
-  return "" unless ( $rec->{photo} );
+  return "" unless ( $rec->{photo} && $rec->{photo} =~ /^2/);
   my $orig = imagefilename($rec->{photo}, "orig");
   if ( ! -r $orig ) {
-    print STDERR "Photo file $orig not found for record $rec->{stamp} \n";
+    print STDERR "Photo file '$orig' not found for record $rec->{stamp} \n";
     return "";
   }
   my $fn = imagefilename($rec->{photo}, $width);
@@ -1363,6 +1363,9 @@ sub htmlhead {
   print "  * { font-size: small; }\n";
   print "  a { color: #666666; }\n";  # Almost invisible grey. Applies only to the
             # underline, if the content is in a span of its own.
+  print "  input:valid { border: 1px solid white; } \n";
+  print "  input:invalid { border: 1px solid red; } \n";
+  print "  select { border: 1px solid white; } \n";
   print "}\n";
   print '@media screen and (max-width: 700px){';
   print "  .only-wide, .only-wide * { display: none !important; }\n";
@@ -3397,7 +3400,7 @@ sub fulllist {
           print " <b>'$rec->{rate}' - $ratings[$rec->{rate}]</b>";
           print ": " if ($rec->{com});
         }
-        print "<i>$rec->{com}</i>" if ($rec->{com});
+        print "<i>$rec->{com}</i>" if ($rec->{com} =~ /\w/);
         print "<br/>\n";
       }
       $ratecounts[$rec->{rate}] ++ if ($rec->{rate});
