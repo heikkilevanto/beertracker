@@ -203,7 +203,7 @@ sub insert_data {
     my $glass_id = $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 
     # Insert a COMMENT record if there is a 'com' field
-    if ($rec->{com}||$rec->{photo}) {
+    if ($rec->{com}||$rec->{photo}||$rec->{com}) {
         insert_comment({
             glass_id  => $glass_id,
             refer_to  => $type,              # Use record type as ReferTo
@@ -350,10 +350,14 @@ sub get_or_insert_brew {
 
 
 # Helper to insert a Comment record
-my $insert_comment = $dbh->prepare("INSERT INTO COMMENTS (Glass, ReferTo, Comment, Rating, Person, Photo) VALUES (?, ?, ?, ?, ?, ?)");
 sub insert_comment {
     my ($data) = @_;
-    $insert_comment->execute($data->{glass_id}, $data->{refer_to}, $data->{comment}, $data->{rating}, $data->{person}, $data->{photo});
+    my $sql = "INSERT INTO COMMENTS
+      (Glass, ReferTo, Comment, Rating, Person, Photo)
+      VALUES (?, ?, ?, ?, ?, ?)";
+    my $sth = $dbh->prepare($sql);
+    $sth->execute($data->{glass_id}, $data->{refer_to},
+      $data->{comment} || "", $data->{rating} || "", $data->{person} || "", $data->{photo} || "");
     return $dbh->last_insert_id(undef, undef, "COMMENTS", undef);
 }
 
