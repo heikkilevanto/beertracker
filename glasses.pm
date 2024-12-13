@@ -248,6 +248,7 @@ sub postglass {
     print STDERR "Deleted " . $sth->rows .
       " Glass records for id '$c->{edit}'  \n";
     $c->{edit} = ""; # don't try to edit it any more
+    graph::clearcachefiles($c);
     return;
   } # delete
 
