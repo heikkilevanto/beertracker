@@ -11,6 +11,19 @@ use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
 
+
+my %volumes = ( # Comment is displayed on the About page
+  'T' => " 2 Taster, sizes vary, always small",
+  'G' => "16 Glass of wine - 12 in places, at home 16 is more realistic",
+  'S' => "25 Small, usually 25",
+  'M' => "33 Medium, typically a bottle beer",
+  'L' => "40 Large, 40cl in most places I frequent",
+  'C' => "44 A can of 44 cl",
+  'W' => "75 Bottle of wine",
+  'B' => "75 Bottle of wine",
+);
+
+
 ################################################################################
 # The input form
 ################################################################################
@@ -203,7 +216,7 @@ sub getvalues {
   $glass->{Location} = util::param($c, "Location", undef) || $glass->{Location};
   $glass->{Brew} = util::param($c, "Brew") || $glass->{Brew};
   $glass->{Price} = util::paramnumber($c, "pr");
-  $glass->{Volume} = util::paramnumber($c, "vol", "0");
+  $glass->{Volume} = util::param($c, "vol", "L");  # Default to a large one
   $glass->{Alc} = util::paramnumber($c, "alc", $brew->{Alc} || "0");
   if ( $sub =~ /Copy (\d+)/ ) {
     $glass->{Volume} = $1;
@@ -212,7 +225,6 @@ sub getvalues {
 } # getvalues
 
 ############## Helper for alc, volume, etc
-# TODO - Named volumes
 # TODO - Guess volume from previous glass (same location, brew)
 # TODO - Guess price from previous glass (same location, size, brew - in that order)
 sub fixvol {
@@ -222,11 +234,27 @@ sub fixvol {
   if ( $glass->{BrewType} =~ /Restaurant|Night/ ) { # those don't have volumes
     $glass->{Volume} = "";
     $glass->{Alc} = "";
-    $glass->{Price} = $glass->{Price} || "";
+    $glass->{Price} = $glass->{Price} || "";  # but may have a price
     $glass->{StDrinks} = 0;
     $glass->{Brew} = undef;
   } else {
-    $glass->{Volume} = $glass->{Volume} || "0";
+    my $vol = $glass->{Volume} ||"0";
+    my $half;  # Volumes can be prefixed with 'h' for half measures.
+    if ( $vol =~ s/^(H)(.+)$/$2/i ) {
+      $half = $1;
+    }
+    my $volunit = uc(substr($vol,0,1)); # S or L or such
+    if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
+      my $actvol = $1;
+      $vol =~s/$volunit/$actvol/i;
+    }
+    if ($half) {
+      $vol = int($vol / 2) ;
+    }
+    if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
+      $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
+    }
+    $glass->{Volume} = $vol;
     $glass->{Alc} =~ s/[.,]+/./;  # I may enter a comma occasionally
     my $std = $glass->{Volume} * $glass->{Alc} / $c->{onedrink};
     $glass->{StDrinks} = sprintf("%6.2f", $std );
