@@ -359,6 +359,9 @@ sub postglass {
       $glass->{Alc},
       $glass->{StDrinks}
       );
+      #or error($DBI::errstr);
+      # This fails if the database is locked by Sqlitebrowser.
+      # TODO - Better error handling with db errors. Make a dedicated module for the db!
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
   }
