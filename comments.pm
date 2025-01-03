@@ -33,14 +33,20 @@ sub listcomments {
   $sth->execute($glass);
 
   $s .= "&nbsp;<br/>\n";
+  my $editcommentid = util::param($c, "ec");
+  my $editcommentrec;
   while ( my $cr = $sth->fetchrow_hashref ) {
-    $s .= "Rating: $cr->{Rating}: $ratings[$cr->{Rating}]\n" if ( $cr->{Rating} );
+    $s .= "Rating: <b>$cr->{Rating}</b>: $ratings[$cr->{Rating}]\n" if ( $cr->{Rating} );
     $s .= "$cr->{Person}\n" if ( $cr->{Person} );
     $s .= "<br/>\n" if ( $s );
     $s .= "<i>$cr->{Comment} </i><br/>\n" if ( $cr->{Comment} );
     $s .= "Photo $cr->{Photo} <br/>\n" if ( $cr->{Photo} );  # TODO - Show the photo itself
-    $s .= commentform($c, $cr);
+    $s .= "Comment id: $cr->{Id} <a href='$c->{url}?o=$c->{op}&e=$c->{edit}&ce=$cr->{Id}'><span>Edit</span></a><br/>\n";
+    if ( $cr->{Id} == $editcommentid ) {
+      $editcommentrec = $cr;
+    }
   }
+  $s .= commentform($c, $editcommentrec);
 
   return $s;
 } # listcomments
