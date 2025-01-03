@@ -2179,6 +2179,9 @@ sub beerboard {
         $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
       my $buttons="";
       #foreach my $sp ( sort( {($a->{"vol"} <=> $b->{"vol"}) || ($a->{"vol"} cmp $b->{"vol"}) } @$sizes) ) {
+      while ( scalar(@$sizes) < 2 ) {
+        push @$sizes, { "vol" => "", "price" => "" };
+      }
       foreach my $sp ( @$sizes ) {
         my $vol = $sp->{"vol"} || "";
         my $pr = $sp->{"price"} || "";
@@ -2197,7 +2200,7 @@ sub beerboard {
           } elsif ( $vol ) {
             $lbl = "&nbsp; $vol &nbsp;";
           } else {
-            $lbl = "???";
+            $lbl = " ";
           }
           $buttons .= "<td>";
         }
