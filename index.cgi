@@ -346,6 +346,8 @@ my $context = {
   'op'       => $op,
   'sort'     => $sort,
   'onedrink' => $onedrink,
+  'bgcolor'  => $bgcolor,
+
 };
 
 ################################################################################
@@ -1722,8 +1724,10 @@ sub graph {
           }
         }
         if ( $wkday == 6 ) {
+          my $wkendcolor = $bgcolor;
+          $wkendcolor =~ s/003/005/;
           $weekends .= "set object $wkendtag rect at \"$date\",50 " .
-            "size $threedays,200 behind  fc rgbcolor \"#005000\"  fillstyle solid noborder \n";
+            "size $threedays,200 behind  fc rgbcolor \"$wkendcolor\"  fillstyle solid noborder \n";
           $wkendtag++;
         }
 
@@ -1797,7 +1801,7 @@ sub graph {
         my @xweek = ( $oneweek, "\"%d\\n%b\"" ); # 15 Jan
         my $pointsize = "";
         my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
-        my $fillstyleborder = "fill solid border linecolor \"#003000\""; # Small gap around each drink
+        my $fillstyleborder = "fill solid border linecolor \"$bgcolor\""; # Small gap around each drink
         if ( $bigimg eq "B" ) {  # Big image
           $maxd = $maxd *7 + 4; # Make room at the top of the graph for the legend
           if ( $startoff - $endoff > 365*4 ) {  # "all"
@@ -1847,7 +1851,7 @@ sub graph {
             "set key left top horizontal textcolor \"white\" \n" .
             "set grid xtics y2tics  linewidth 0.1 linecolor \"white\" \n".
             "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
-              "behind fc \"#003000\" fillstyle solid border \n";  # green bkg
+              "behind fc \"$bgcolor\" fillstyle solid border \n";  # green bkg
         for (my $m=6; $m<$maxd-7; $m+= 21) {
           $cmd .= "set arrow from \"$startdate\", $m to \"$enddate\", $m nohead linewidth 1 linecolor \"#00dd10\" \n"
             if ( $maxd > $m + 7 );
@@ -2740,7 +2744,7 @@ sub monthstat {
        "set xrange [\"2000-$firstm\" : ] \n " .
        "set key right top horizontal textcolor \"white\" \n " .
        "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
-          "behind fc \"#003000\" fillstyle solid border \n".  # green bkg
+          "behind fc \"$bgcolor\" fillstyle solid border \n".  # green bkg
        "set border linecolor \"white\" \n" .
        "set arrow from \"2000-$firstm\", 1 to \"2001-$lastm\", 1 nohead linewidth 0.1 linecolor \"white\" \n" .
        "set arrow from \"2000-$firstm\", 4 to \"2001-$lastm\", 4 nohead linewidth 0.1 linecolor \"white\" \n" .
