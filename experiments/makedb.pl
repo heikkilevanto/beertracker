@@ -253,7 +253,7 @@ $dbh->do(q{
         AVG(comments.Rating) AS rate,
         GROUP_CONCAT(comments.Comment, ' | ') AS com,
         COUNT(comments.Id) AS com_cnt,
-        GROUP_CONCAT(comments.Photo, ' | ') AS photo,
+        GROUP_CONCAT(comments.Photo, '') AS photo,
         COUNT(comments.Id) AS com_cnt,
         GROUP_CONCAT(persons.name, ', ') AS people,
         COUNT(persons.Id) AS pers_cnt

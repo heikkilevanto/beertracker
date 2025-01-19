@@ -407,6 +407,8 @@ if ( $q->request_method eq "POST" ) {
     locations::postlocation($context);
   } elsif ( $op =~ /Beer|Brew/i ) {
     brews::postbrew($context);
+  } elsif ( util::param($context, "commentedit") ) {
+    comments::postcomment($context);
   } else { # Default to posting a glass
     glasses::postglass($context);
   }

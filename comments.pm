@@ -1,5 +1,5 @@
 # Part of my beertracker
-# Stuff for comment records
+# Stuff for comment records and photos (TODO)
 
 
 package comments;
@@ -33,20 +33,21 @@ sub listcomments {
   $sth->execute($glass);
 
   $s .= "&nbsp;<br/>\n";
-  my $editcommentid = util::param($c, "ec");
+  my $editcommentid = util::param($c, "ec", 0);
   my $editcommentrec;
   while ( my $cr = $sth->fetchrow_hashref ) {
     $s .= "Rating: <b>$cr->{Rating}</b>: $ratings[$cr->{Rating}]\n" if ( $cr->{Rating} );
-    $s .= "$cr->{Person}\n" if ( $cr->{Person} );
-    $s .= "<br/>\n" if ( $s );
-    $s .= "<i>$cr->{Comment} </i><br/>\n" if ( $cr->{Comment} );
+    $s .= "With <b>$cr->{Person}</b>\n" if ( $cr->{Person} );
+    $s .= "<br/><i>$cr->{Comment} </i><br/>\n" if ( $cr->{Comment} );
     $s .= "Photo $cr->{Photo} <br/>\n" if ( $cr->{Photo} );  # TODO - Show the photo itself
-    $s .= "Comment id: $cr->{Id} <a href='$c->{url}?o=$c->{op}&e=$c->{edit}&ce=$cr->{Id}'><span>Edit</span></a><br/>\n";
-    if ( $cr->{Id} == $editcommentid ) {
+      # TODO - Move the image file name routines here from index.cgi:929 or so.
+    $s .= "<span style='font-size: x-small'> Comment id: $cr->{Id} </span>" .
+          "<a href='$c->{url}?o=$c->{op}&e=$c->{edit}&ec=$cr->{Id}'><span font-size: x-small>Edit</span></a><br/>\n";
+    if ( $editcommentid && $cr->{Id} == $editcommentid ) {
       $editcommentrec = $cr;
     }
   }
-  $s .= commentform($c, $editcommentrec);
+  $s .= commentform($c, $editcommentrec, $glass);
 
   return $s;
 } # listcomments
@@ -54,19 +55,83 @@ sub listcomments {
 ################################################################################
 # Form to enter or edit a comment
 ################################################################################
+
 sub commentform {
   my $c = shift;
   my $com = shift;
+  my $glass = shift;
 
-  my $s = "";
-  my $rating = $com->{Rating} || "";
+  my $s="";
+  $s .= "<hr><br>\n";
+  $s .= "<form method='post' action='$c->{url}'>\n";
+  $s .= "<input type='hidden' name='o' value='$c->{op}'>\n";
+  $s .= "<input type='hidden' name='e' value='$c->{edit}'>\n";
+  $s .= "<input type='hidden' name='ce' value='$com->{Id}'>\n" if ( $com->{Id} );
+  $s .= "<input type='hidden' name='commentedit' value='1'>\n";
+  $s .= "<input type='hidden' name='glass' value='$glass'>\n";
+
+  # If editing, include the comment ID
+  if ($com && $com->{Id}) {
+    $s .= "<input type='hidden' name='comment_id' value='$com->{Id}'>\n";
+    $s .= "Editing comment $com->{Id} <br/>\n";
+  }
+
+  # Comment text area
   my $comment = $com->{Comment} || "";
-  my $person = $com->{Person} || "";
-  my $photo = $com->{Photo} || "";
+  my $pl = "Add a new comment" ;
+  $s .= "<textarea name='comment' rows='3' cols='40' placeholder='$pl' $clr>$comment</textarea><br/>\n";
 
-  # TODO - Build an input form
-  # Either with util::inputform (with ratings pulldown from here, and photo),
-  # or directly here
+  # TODO - Select person pulldown
+  # TODO - Photo button
+
+  # Submit button
+  my $button_text = $com->{Id} ? "Update Comment" : "Add Comment";
+  $s .= "<input type='submit' value='$button_text'>\n";
+
+  # Rating dropdown
+  $s .= "<select name='rating'>\n";
+  $s .= "<option value=''>Rating</option>\n";
+  my $r = $com->{Rating} || 0;
+  for my $i (1 .. $#ratings) {  # Skip "Zero"
+    my $selected = ($r == $i) ? " selected" : "";
+    $s .= "<option value='$i'$selected>$i: $ratings[$i]</option>\n";
+  }
+  $s .= "</select>\n";
+
+
+  $s .= "</form>\n";
+  return $s;
+}
+
+################################################################################
+# Handle submitted comment form
+################################################################################
+sub postcomment {
+  my $c = shift;
+
+  my $glass = util::param($c, "glass");
+  my $comment_id = util::param($c, "comment_id");
+  my $rating = util::param($c, "rating") || 0;
+  my $comment = util::param($c, "comment") || "";
+  my $person = util::param($c, "person") || "";  # Person is now from input field
+
+  if ($comment_id) {
+    # Update existing comment
+    my $sql = "UPDATE comments SET Rating = ?, Comment = ?, Person = ? WHERE Id = ? AND Glass = ?";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute($rating, $comment, $person, $comment_id, $glass);
+    print STDERR "Updated comment '$comment_id' for glass '$glass' \n";
+  } else {
+    # Insert new comment
+    my $sql = "INSERT INTO comments (Glass, Rating, Comment, Person) VALUES (?, ?, ?, ?)";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute($glass, $rating, $comment, $person);
+    print STDERR "Inserted comment '$comment_id' for glass '$glass' \n";
+  }
+
+  # Redirect to avoid duplicate form submission on refresh
+  $c->{redirect} = "$c->{url}?o=$c->{op}&e=$c->{edit}&glass=$glass";
+  return "";
 }
 
 

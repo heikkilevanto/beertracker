@@ -108,7 +108,6 @@ sub inputform {
   print "</table>\n";
   print "</form>\n";
   print comments::listcomments($c, $rec->{Id} );
-  print "<br/>(Here should be a form to add a new comment, or to edit an existing one)<br/>\n";
   print "<hr>\n";
 
   # Javascript trickery
