@@ -107,7 +107,7 @@ sub inputform {
   print "</td></tr>\n";
   print "</table>\n";
   print "</form>\n";
-  print comments::listcomments($c, $rec->{Id} );
+  print comments::listcomments($c, $rec->{Id}, $rec->{BrewType});
   print "<hr>\n";
 
   # Javascript trickery
