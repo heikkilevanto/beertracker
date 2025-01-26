@@ -73,7 +73,8 @@ sub commentform {
   # If editing, include the comment ID
   if ($com && $com->{Id}) {
     $s .= "<input type='hidden' name='comment_id' value='$com->{Id}'>\n";
-    $s .= "Editing comment $com->{Id} <br/>\n";
+    $s .= "Editing comment $com->{Id} ";
+    $s .= "<a href=$c->{url}?o=$c->{op}&e=$c->{edit}><span>Cancel</span></a><br/>\n";
   }
 
   # Comment text area
@@ -81,7 +82,9 @@ sub commentform {
   my $pl = "Add a new comment" ;
   $s .= "<textarea name='comment' rows='3' cols='40' placeholder='$pl' $clr>$comment</textarea><br/>\n";
 
-  # TODO - Select person pulldown
+  # Person involved in the comment
+  $s .= persons::selectperson($c, 'person', $com->{person} );
+
   # TODO - Photo button
 
   # Submit button
