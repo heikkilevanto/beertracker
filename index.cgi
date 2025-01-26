@@ -3462,7 +3462,7 @@ sub fulllist {
       $vols{40} = 1;
     }
     print "<form method='POST' style='display: inline;' class='no-print' >\n";
-    print "<a href='$url?o=$op&q=$qry&e=" . uri_escape_utf8($rec->{stamp}) ."' ><span>Edit</span></a> \n";
+    print "<a href='$url?o=$op&q=$qry&e=" . uri_escape_utf8($rec->{glassid}) ."' ><span>Edit</span></a> \n";
 
     # Copy values
     my $fieldnamelistref = $datalinetypes{$rec->{type}};
