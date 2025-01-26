@@ -118,7 +118,7 @@ sub readfile {
       # Check timestamp, confuses SqLite if impossible
       my ($yy,$mm,$dd, $ho,$mi,$se) = $rec->{stamp}=~/^(\d+)-(\d\d)-(\d\d) (\d\d+):(\d\d):(\d\d)$/;
       if ( !$yy || !$se ||  # didn't match
-           length($yy) != 4 || $yy<2016 || $yy>2025 ||
+           length($yy) != 4 || $yy<2016 || $yy>2026 ||
            length($mm) != 2 || $mm<01 || $mm>12 ||
            length($dd) != 2 || $dd<01 || $dd>31 ||
            length($ho) != 2 || $ho<00 || $ho>23 ||
@@ -214,13 +214,15 @@ sub insert_data {
     }
     # Insert a COMMENT record for every person mentioned
     if ($rec->{people}) {
-        for my $pers ( split ( / *, */, $rec->{people} ) ) {
-          insert_comment({
-              glass_id  => $glass_id,
-              refer_to  => $type,              # Use record type as ReferTo
-              person    => get_or_insert_person($pers) ,
-          });
-        }
+      my $ppl = $rec->{people};
+      $ppl =~ s/\band\b/,/ig;
+      for my $pers ( split ( / *[,&] */, $ppl ) ) {
+        insert_comment({
+            glass_id  => $glass_id,
+            refer_to  => $type,              # Use record type as ReferTo
+            person    => get_or_insert_person($pers) ,
+        });
+      }
     }
 
     $dbh->do("COMMIT");
