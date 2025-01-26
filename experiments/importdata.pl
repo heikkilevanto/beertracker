@@ -420,6 +420,10 @@ sub winestyle {
   if ($sty =~ /^misc/i ) {
     $rec->{style} = "";  # Drop the misc stuff
   }
+  if ( ! $rec->{name} && $rec->{subtype} =~ /^ *(red|white|port|bubbly) *$/i ) {
+    $rec->{name} = $rec->{subtype}; # It happens I only filed "Wine, Red" with no name
+    #print "Faked a wine: $rec->{name} on $rec->{stamp} \n";
+  }
   $rec->{style} =~ s/_//g; # Remove underscores
   $rec->{year} = $1
     if ( $rec->{style} =~ s/\b(20\d\d)\b// ); #Fails 1900's and 2100's Never mind
@@ -481,7 +485,7 @@ sub winestyle {
   }
   if ( $rec->{flavor} ) {
     $rec->{flavor} =~ s/Cab[ -]+Sau?v/Cabernet Sauvignon/i ;
-    $rec->{flavor} =~ s/Sav Blacn/Sauvignon Blacn/i ;
+    $rec->{flavor} =~ s/Sav Blanc/Sauvignon Blanc/i ;
     $rec->{flavor} =~ s/Gr[uü]n(er?) Veltliner/Grüner Veltliner/i;
     $rec->{flavor} =~ s/[ ,]*$//; # trim
   }
@@ -498,6 +502,10 @@ sub winestyle {
   );
   for my $d ( @details ) {
     $rec->{details} .= "$d " if ( $rec->{style} =~ s/\b($d)\b//i );  # There can be more than one
+  }
+
+  if ( ! $rec->{style} && $rec->{type} ) {   # Unspecified red or white wines
+    $rec->{style} = $rec->{type} ;
   }
 
   # Clean up what is left of the stype
