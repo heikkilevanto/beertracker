@@ -24,7 +24,7 @@ sub listcomments {
 
   my $s = "";
 
-  my $sql = "select COMMENTS.*, PERSONS.Name as Person
+  my $sql = "select COMMENTS.*, PERSONS.Name as PersName, PERSONS.Id as PersId
     from comments
     left join PERSONS on persons.id = comments.person
     where glass = ?
@@ -37,7 +37,7 @@ sub listcomments {
   my $editcommentrec;
   while ( my $cr = $sth->fetchrow_hashref ) {
     $s .= "Rating: <b>$cr->{Rating}</b>: $ratings[$cr->{Rating}]\n" if ( $cr->{Rating} );
-    $s .= "With <b>$cr->{Person}</b>\n" if ( $cr->{Person} );
+    $s .= "With <b>$cr->{PersName}</b>\n" if ( $cr->{Person} );
     $s .= "<br/><i>$cr->{Comment} </i><br/>\n" if ( $cr->{Comment} );
     $s .= "Photo $cr->{Photo} <br/>\n" if ( $cr->{Photo} );  # TODO - Show the photo itself
       # TODO - Move the image file name routines here from index.cgi:929 or so.
@@ -83,7 +83,8 @@ sub commentform {
   $s .= "<textarea name='comment' rows='3' cols='40' placeholder='$pl' $clr>$comment</textarea><br/>\n";
 
   # Person involved in the comment
-  $s .= persons::selectperson($c, 'person', $com->{person} );
+  #print STDERR "cform: pn='$com->{PersName}' pi=$com->{PersId} \n";
+  $s .= persons::selectperson($c, 'person', $com->{PersId} );
 
   # TODO - Photo button
 
