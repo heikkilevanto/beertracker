@@ -119,6 +119,20 @@ sub postcomment {
   my $comment = util::param($c, "comment") || "";
   my $person = util::param($c, "person") || "";  # Person is now from input field
 
+  if ( $person eq "new" ) {  # Adding a new person
+    my $newname = util::param($c,"newpersonName");
+    my $newfull = util::param($c,"newpersonFullName");
+    my $newdesc = util::param($c,"newpersonDescription");
+    my $newcont = util::param($c,"newpersonContact");
+    error ("A Person must have a name" )
+       unless $newname;
+    my $sql = "INSERT INTO persons (Name, FullName, Description, Contact) VALUES (?, ?, ?, ?)";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute($newname, $newfull, $newdesc, $newcont);
+    my $newid = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
+    print STDERR "Inserted person '$newid' for comment '$comment_id' \n";
+    $person = $newid;
+  }
   if ($comment_id) {
     # Update existing comment
     my $sql = "UPDATE comments SET Rating = ?, Comment = ?, Person = ? WHERE Id = ? AND Glass = ?";
