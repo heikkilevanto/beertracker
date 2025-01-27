@@ -413,26 +413,35 @@ sub shortbeerstyle {
 sub winestyle {
   my $rec = shift;
   return unless $rec;
-  $rec->{style} = "" unless ( $rec->{style} );
+  #$rec->{style} = "" unless ( $rec->{style} );
+  $rec->{style} = $rec->{style} || $rec->{name} || "";
   my $sty = $rec->{style};
   if ($sty =~ /^misc/i ) {
     $rec->{style} = "";  # Drop the misc stuff
   }
-  if ( ! $rec->{name} && $rec->{subtype} =~ /^ *(red|white|port|bubbly) *$/i ) {
-    $rec->{name} = $rec->{subtype}; # It happens I only filed "Wine, Red" with no name
-    #print "Faked a wine: $rec->{name} on $rec->{stamp} \n";
+
+  if ( ! $rec->{name} ) { # Guess a fake name for the wine
+    if ( $rec->{style} ) { # Often I have filed a style
+      $rec->{name} = $rec->{style};
+    } elsif( $rec->{subtype} =~ /^ *(red|white|port|bubbly|sweet) *$/i ) {
+      $rec->{name} = $rec->{subtype}; # It happens I only filed "Wine, Red" with no name
+    }
+    #print "Faked a wine: '$rec->{name}' [$rec->{style}] on $rec->{stamp} \n";
   }
-  $rec->{style} =~ s/_//g; # Remove underscores
+  $rec->{name} =~ s/[?+*]//g; # These fould matching later
+  $rec->{style} =~ s/[_?+*]//g; # Remove underscores
+
   $rec->{year} = $1
     if ( $rec->{style} =~ s/\b(20\d\d)\b// ); #Fails 1900's and 2100's Never mind
-  my @countries = ( # Country, alt regexp, region...
+
+  my @countries = ( # Country, alt regexp, region (as regexp)
     [ "Argentina" ],
     [ "Australia", "Australian" ],
     [ "Austria",   "Austrian" ],
     [ "Canada" ],
     [ "Chile" ],
     [ "France", "French", "Bordeaux", "Bourgogne", "Alsace", "Chateauneuf du Pape",
-                          "Cotes du Rhone", "Haut.Medoc", "La Bourgondie", "Langedoc",
+                          "Cotes du Rhone", "Cotes De Provance", "Haut.Medoc", "La Bourgondie", "Langedoc",
                           "Loire", "Pays d Oc", "Pomerol", "Rhone", "Saint Emillion",
                           "Champagne", "Chablis", "Corbieres", "Sancerre", "Anjou",
                           "Vouvray" ],
@@ -446,10 +455,10 @@ sub winestyle {
     [ "New Zealand", "NZ" ],
     [ "Portugal", "Portugese", "Douro" ],
     [ "South Africa", "South African", "Stellenbosh" ],
-    [ "Spain", "Spanish", "Rioja", "Priorat", "Ribera del Duero", "Gordoba",
+    [ "Spain", "Spanish", "Rioja", "Priorat", "Priorato", "Ribera del Duero", "Gordoba",
                           "Sierra de Malaga", "Malaga", "Catalonia", "Navarra",
                           "Penedes", "Ronda", "Valdepenas"],
-    [ "Switzerland", "Swiss", "Sudtirol" ],
+    [ "Switzerland", "Swiss", "Sudtirol", "Südtirol" ],
     [ "United States", "US",  "California" ],
     [ "Mexico", "Mexican" ],
   );
@@ -489,7 +498,7 @@ sub winestyle {
   }
   my @details = (
      # Classifications
-     "Gran Reserva", "Reserva", "Crianza",
+     "Grand? Reserv[ae]", "Reserv[ae]", "Crianza",
      "Riserva",
      "Grand Cru", "1er Cru",
      "Lbv",
@@ -507,6 +516,9 @@ sub winestyle {
   }
 
   # Clean up what is left of the stype
+  $rec->{style} =~ s/Wine//i; # We know it is wine, may have sneaked in earlier
+  $rec->{style} =~ s/$rec->{subtype}//i; # Don't repeat it
+  $rec->{style} =~ s/$rec->{name}//i; # Don't repeat it
   $rec->{style} =~ s/^\s*(d|di|de|dei)\s*$//;  # Remains of barb di asti etc
   $rec->{style} =~ s/^\W+//; # Trim non-word characters away
   $rec->{style} =~ s/\W+$//;
