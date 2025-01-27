@@ -111,13 +111,14 @@ $dbh->do(q{
 
 # Create COMMENTS table
 # Comments always refer to a glass, even if an "empty" one, since the glass has
-# the username needed to keep users separate.
+# the username needed to keep users separate. Useful for nights and restaurants.
+# Special case: If the comment has both a person and a comment, the comment
+# refers to the person, not the glass.
 $dbh->do("DROP TABLE IF EXISTS COMMENTS");
 $dbh->do(q{
     CREATE TABLE COMMENTS (
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Glass INTEGER not null,
-        ReferTo TEXT DEFAULT "Beer",  /* What the comment is about */
         Comment TEXT default '',
         Rating INTEGER default '',
         Person INTEGER,

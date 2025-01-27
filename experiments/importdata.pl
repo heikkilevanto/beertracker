@@ -206,7 +206,6 @@ sub insert_data {
     if ($rec->{com}||$rec->{photo}||$rec->{com}) {
         insert_comment({
             glass_id  => $glass_id,
-            refer_to  => $type,              # Use record type as ReferTo
             comment   => $rec->{com},
             rating    => $rec->{rate},
             photo     => $rec->{photo},
@@ -219,7 +218,6 @@ sub insert_data {
       for my $pers ( split ( / *[,&] */, $ppl ) ) {
         insert_comment({
             glass_id  => $glass_id,
-            refer_to  => $type,              # Use record type as ReferTo
             person    => get_or_insert_person($pers) ,
         });
       }
@@ -355,11 +353,11 @@ sub get_or_insert_brew {
 sub insert_comment {
     my ($data) = @_;
     my $sql = "INSERT INTO COMMENTS
-      (Glass, ReferTo, Comment, Rating, Person, Photo)
-      VALUES (?, ?, ?, ?, ?, ?)";
+      (Glass, Comment, Rating, Person, Photo)
+      VALUES (?, ?, ?, ?, ?)";
     my $sth = $dbh->prepare($sql);
-    $sth->execute($data->{glass_id}, $data->{refer_to},
-      $data->{comment} || "", $data->{rating} || "", $data->{person} || "", $data->{photo} || "");
+    $sth->execute($data->{glass_id}, $data->{comment} || "",
+    $data->{rating} || "", $data->{person} || "", $data->{photo} || "");
     return $dbh->last_insert_id(undef, undef, "COMMENTS", undef);
 }
 

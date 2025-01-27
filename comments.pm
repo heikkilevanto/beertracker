@@ -21,7 +21,6 @@ my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero 
 sub listcomments {
   my $c = shift; # context
   my $glass = shift;
-  my $brewtype = shift;
 
   my $s = "";
 
@@ -50,7 +49,7 @@ sub listcomments {
       $editcommentrec = $cr;
     }
   }
-  $s .= commentform($c, $editcommentrec, $glass, $brewtype);
+  $s .= commentform($c, $editcommentrec, $glass);
 
   return $s;
 } # listcomments
@@ -63,7 +62,6 @@ sub commentform {
   my $c = shift;
   my $com = shift;
   my $glass = shift;
-  my $brewtype = shift || "";
 
   my $s="";
   $s .= "<hr><br>\n";
@@ -73,7 +71,6 @@ sub commentform {
   $s .= "<input type='hidden' name='e' value='$c->{edit}'>\n";
   $s .= "<input type='hidden' name='ce' value='$com->{Id}'>\n" if ( $com->{Id} );
   $s .= "<input type='hidden' name='glass' value='$glass'>\n";
-  $s .= "<input type='hidden' name='referto' value='$brewtype'>\n";
 
   # If editing, include the comment ID
   if ($com && $com->{Id}) {
@@ -123,7 +120,6 @@ sub postcomment {
   my $rating = util::param($c, "rating") || 0;
   my $comment = util::param($c, "comment") || "";
   my $person = util::param($c, "person") || "";
-  my $referto = util::param($c, "referto") || "";
 
   if ( $person eq "new" ) {  # Adding a new person
     my $newname = util::param($c,"newpersonName");
@@ -139,20 +135,17 @@ sub postcomment {
     print STDERR "Inserted person '$newid' for comment '$comment_id' \n";
     $person = $newid;
   }
-  if ( $person && $comment ) { # If both person and comment filled
-    $referto = "Person"; # the comment refers to the person
-  } # Otherwise the comment refers to the brewtype, which can be 'Night' or 'Restaurant'
 
   if ($comment_id) { # Update existing comment
-    my $sql = "UPDATE comments SET Rating = ?, Comment = ?, Person = ?, ReferTo = ?
+    my $sql = "UPDATE comments SET Rating = ?, Comment = ?, Person = ?
                WHERE Id = ? AND Glass = ?";
     my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute($rating, $comment, $person, $comment_id, $glass, $referto );
-    print STDERR "Updated comment '$comment_id' for $referto glass  '$glass' \n";
+    $sth->execute($rating, $comment, $person, $comment_id, $glass );
+    print STDERR "Updated comment '$comment_id' for glass  '$glass' \n";
   } else { # Insert new comment
-    my $sql = "INSERT INTO comments (Glass, Rating, Comment, Person, Referto) VALUES (?, ?, ?, ?, ?)";
+    my $sql = "INSERT INTO comments (Glass, Rating, Comment, Person) VALUES (?, ?, ?, ?,)";
     my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute($glass, $rating, $comment, $person, $referto);
+    $sth->execute($glass, $rating, $comment, $person);
     print STDERR "Inserted comment '$comment_id' for glass '$glass' \n";
   }
 
