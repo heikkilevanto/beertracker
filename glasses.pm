@@ -283,6 +283,7 @@ sub postglass {
   # my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
   my $brew = util::getrecord($c, "BREWS", scalar $c->{cgi}->param("Brew") );
   if (! $brew) {  # Can happen with the beer board
+    # TODO - Happens also with Rest/Night buttons, which go wrong here !
      my $brewid  = brews::insert_old_style_brew($c);
      $brew = util::getrecord($c, "BREWS", scalar $c->{cgi}->param("Brew") );
      #$brew = brews::getbrew($c, $brewid);

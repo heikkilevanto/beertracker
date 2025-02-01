@@ -145,6 +145,7 @@ sub postbrew {
 # Happens when the user clicks on the beer board
 ################################################################################
 # TODO - Delete this once we have a new style beer board
+# TODO - Behaves funny with Restaurants and NIghts
 sub insert_old_style_brew {
   my $c = shift;
   my $type = util::param($c, "type");
@@ -155,7 +156,7 @@ sub insert_old_style_brew {
 
   my $sql = "Select Id from LOCATIONS where Name = ? collate nocase";
   my $get_sth = $c->{dbh}->prepare($sql);
-  $get_sth->execute($maker);
+  $get_sth->execute($maker);  # Maker ??? Loc
   my $prodlocid = $get_sth->fetchrow_array;
   if ( ! $prodlocid ) {
     $sql = "Insert into LOCATIONS ( Name, SubType ) values (?, 'Beer-Maker')";

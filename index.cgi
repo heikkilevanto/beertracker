@@ -502,15 +502,6 @@ sub oldstuff {
 }
 
 ################################################################################
-# Dump of the data file
-# Needs to be done before the HTML head, since we output text/plain
-# Dump directly from the data file, so we get comments too
-################################################################################
-sub dumpdatafile {
-  error ("Data file dump disabled, moving away from text files");
-} # Dump of data file
-
-################################################################################
 # Copy production data to dev file
 # Needs to be before the HTML head, as it forwards back to the page
 ################################################################################
@@ -705,19 +696,6 @@ sub bloodalcohol {
 # Try to guess missing values from last entries
 ################################################################################
 
-# Helper to convert input parameters into a rough estimation of a record
-# Just takes all named parameters into rec. There will be some extras, and
-# likely important things missing
-sub inputrecord {
-  my $rec = {};
-  my @pnames = $q->param;
-  foreach my $p ( @pnames ) {
-    my $pv = $q->param($p);
-    #print STDERR "param: '$p' : '$pv'\n";
-    $rec->{$p} = "$pv";
-  }
-  return $rec;
-}
 
 # Helper to fix the time, date, effdate, and wkday in the record
 # Several special cases
@@ -981,147 +959,6 @@ sub savefile {
 }
 
 ########################
-# POST itself
-sub postdata {
-
-  my $sub = $q->param("submit") || "";
-
-  # Input parameters, only used here in POST
-  my $rec = inputrecord();  # Get an approximation of a record from the params
-
-  $edit = $rec->{edit}; # Tell findrec what we are editing
-  findrec(); # Get some defaults in $foundrec
-
-  # Fix record type.
-  $rec->{type} = "None" unless $rec->{type};
-  if ( !$datalinetypes{$rec->{type} }) {
-    error("Trying to POST a record of unknown type: '$rec->{type}' sub='$sub' op='$op'");
-  }
-
-  nullfields($rec);  # set all undefined fields to "", to avoid warnings
-  my $lastrec = getrecord(scalar(@lines)-1);
-  # dumprec($rec, "raw");
-
-  fixtimes($rec, $lastrec, $sub);
-  fixvol($rec, $sub);
-  guessvalues($rec);
-  if ( $rec->{newphoto} ) { # Uploaded a new photo
-    savefile($rec);
-  }
-  $sub = "Record" if ( $sub =~ /^Copy|\d/ );
-
-  my $lasttimestamp = $lastrec->{stamp};
-
-  # Keep geo and loc unless explicitly changed
-  # ( the js trickery can change these from under us)
-  if ( $sub eq "Save" ) {
-    if ( $rec->{loc} =~ /^ / && $foundrec->{loc} ){
-      $rec->{loc} = $foundrec->{loc};
-    }
-    if ( $rec->{geo} =~ /^ / && $foundrec->{geo} ){
-      $rec->{geo} = $foundrec->{geo};
-    }
-  }
-  # Clean the location
-  if ($rec->{loc}) {
-    $rec->{loc} =~ s/ *\[.*$//; # Drop the distance from geolocation
-  } else {
-    $rec->{loc} = $foundrec->{loc}; # default to previous loc
-  }
-
-
-  # Manually entered date/time indicate we are filling the data after the fact
-  # so do not trust the current geo coordinates
-  if ( $sub eq "Record"  &&
-      ($rec->{date} =~ /^\d/ || $rec->{time} =~ /^\d/ )
-      && ( $rec->{geo} =~ /^ / )) {  # And geo is autofilled
-    $rec->{geo} = "";   # Do not remember the suspicious location
-  }
-
-  # Sanity check, do not accept conflicting locations
-  # Happens typically when entering data at home
-  # TODO - Check also if we have a geo for the given location, and the guess is
-  # too far from it, don't save a conflicting geo
-  if ( $rec->{geo} =~ / *\d+/) { # Have a (guessed?) geo location
-    # TODO - check only on recording new records
-    if ( $rec->{loc} && $geolocations{$rec->{loc}} ) {
-      my $dist = geodist( $rec->{geo}, $geolocations{$rec->{loc}} );
-      if ( $dist && $dist > 50 ) {
-        print STDERR "Refusing to store geo '$rec->{geo}' for '$rec->{loc}', " .
-          "it is $dist m from its known location $geolocations{$rec->{loc}} '\n";
-        $rec->{geo} = "";  # Ignore the suspect geo coords
-      }
-    }
-    my  ($guess, $dist) = guessloc($rec->{geo});
-    if ( $rec->{loc} && $guess  # We have location name, and geo guess
-        && $dist < 20  # and the guess is good enough
-        && $rec->{loc} !~ /$guess/i ) { # And they differ
-      print STDERR "Refusing to store geo '$rec->{geo}' for '$rec->{loc}', " .
-        "it is closer to '$guess' at $dist m\n";
-      $rec->{geo} = "";  # Ignore the suspect geo coords
-    }
-  }
-
-  (undef, undef, $rec->{geo})  = geo($rec->{geo});  # Skip bad ones, format right
-
-  # Fix record type
-  if ( $rec->{type} eq "Beer" && !$rec->{name} ) { # Not a real line
-    print STDERR "Not POSTing record. t='$rec->{type}' n='$rec->{name}' \n";
-    $rec->{type} = "None";
-  }
-  if ($rec->{subtype}) { # Convert subtypes like "Wine, Red" into rectype "Wine", subtype "Red"
-    for  my $rt ( sort(keys(%datalinetypes)) ) {
-      if ($rec->{subtype} =~ /^($rt) *, *(.*)$/i ) {
-        $rec->{type} = $1;
-        $rec->{subtype} = $2;
-      }
-    }
-  }
-
-  $rec->{edit} = "" unless defined($rec->{edit});
-  $rec->{oldstamp} = $rec->{stamp}; # Remember the stamp for the edit link
-
-  #dumprec($rec, "final");
-  my $line = makeline($rec);
-  #print STDERR "Saving $line \n";
-
-  if ( $sub eq "Record" ) {  # Want to create a new record
-    $rec->{edit} = ""; # so don't edit the current one
-  }
-  if ( $lasttimestamp gt $rec->{stamp} && $sub ne "Del" ) {
-    $sub = "Save"; # force this to be an updating save, so the record goes into its right place
-  }
-
-  # Update the database
-  $dbh->do("BEGIN TRANSACTION");
-  if ( $sub eq "Record" ) {
-    saverecord( $rec );
-  } elsif ( $sub eq "Del" ) {
-    deleterecord( $rec );
-  } elsif ( $sub eq "Save" ) {
-    # Dirty way to update a record: Delete it all, and insert again
-    deleterecord( $rec );
-    saverecord( $rec );
-  } else {
-    error ("OOps, unhandled sub '$sub' ");
-  }
-  $dbh->do("COMMIT");
-
-  # Clear the cached files from the data dir.
-  # All graphs for this user can now be out of date
-  graph::clearcachefiles( $context );
-
-  # if POSTing a restaurant, return to editing the record, so we can add
-  # more relevant stuff like foods, people etc.
-  my $editit = "";
-  if ( $rec->{type} =~ /Restaurant|Night/i && $sub ne "Del" && $rec->{oldstamp}) {
-    $editit = $rec->{oldstamp};
-  }
-  # Redirect to the same script, without the POST, so we see the results
-  # But keep $op and $qry (maybe also filters?)
-  print $q->redirect( "$url?o=$op&e=$editit&q=$qry#here" );
-
-} # POST data itself
 
 
 
@@ -4175,42 +4012,6 @@ sub checkgeoerror {
   }
 }
 
-# Split a data line into a hash. Precalculate some fields
-sub parseline {
-  my $line = shift;
-  my @datafields = split(/ *; */, $line);
-  my $linetype = $datafields[1]; # This is either the type, or the weekday for old format lines (or comment)
-  my $rec = {};
-  return $rec unless ($linetype); # Can be an empty line, BOM mark, or other funny stuff
-  return $rec if ( $line =~/^#/ ); # skip comment lines
-  $rec->{type} = $linetype; # Likely to be overwritten below, this is just in case (Old)
-  $rec->{rawline} = $line; # for filtering
-  $rec->{name} = ""; # Default, make sure we always have something
-  $rec->{maker} = "";
-  $rec->{style} = "";
-  my $fieldnamelist = $datalinetypes{$linetype} || "";
-  if ( $fieldnamelist ) {
-    my @fnames = @{$fieldnamelist};
-    for ( my $i = 0; $fieldnamelist->[$i]; $i++ ) {
-      $rec->{$fieldnamelist->[$i]} = $datafields[$i] || "";
-    }
-  } else {
-    error ("Unknown line type '$linetype' in $line");
-  }
-  # Normalize some common fields
-  $rec->{alc} = number( $rec->{alc} );
-  $rec->{vol} = number( $rec->{vol} );
-  $rec->{pr} = price( $rec->{pr} );
-  # Precalculate some things we often need
-  ( $rec->{date}, $rec->{year}, $rec->{time} ) = $rec->{stamp} =~ /^(([0-9]+)[0-9-]+) +([0-9:]+)/;
-  my $alcvol = $rec->{alc} * $rec->{vol} || 0 ;
-  $alcvol = 0 if ( $rec->{pr} < 0  );  # skip box wines
-  $rec->{alcvol} = $alcvol;
-  $rec->{drinks} = $alcvol / $onedrink;
-  nullfields($rec); # Make sure we accept missing values for fields
-  $rec->{seenkey} = seenkey($rec);
-  return $rec;
-}
 
 
 # Helper to fix a record after getting it from the database
@@ -4305,18 +4106,6 @@ sub fieldnames {
   return @fields;
 }
 
-# Create a line out of a record
-sub makeline {
-  my $rec = shift;
-  my $linetype = $rec->{type};
-  my $line = "";
-  return "" if (!$linetype || $linetype eq "None"); # Not worth saving
-  foreach my $f ( fieldnames($linetype) ) {
-    $line .=  $rec->{$f} || "";
-    $line .= "; ";
-  }
-  return trim($line);
-}
 
 # Make sure we have all fields defined, even as empty strings
 sub nullfields {
@@ -4354,13 +4143,3 @@ sub hasfield {
 }
 
 
-# Debug dump of record into STDERR
-sub dumprec {
-  my $rec = shift;
-  my $msg = shift || "";
-  print STDERR "$msg -- ";
-  for my $k ( sort(keys( %{$rec} ) ) )  {
-    print STDERR "$k:'$rec->{$k}'  ";
-  }
-  print STDERR "\n";
-}
