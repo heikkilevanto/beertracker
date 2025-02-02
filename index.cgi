@@ -3103,7 +3103,7 @@ sub fulllist {
       # loc summary: if nonzero, and diff from daysummary
       # or there is a new loc coming,
       if ( $locdrinks > 0.1) {
-        print "<br/>$lastwday ";
+        print "<br/>=== $lastwday ";
         print "$lastloc2: " . unit($locdrinks,"d"). unit($locmsum, ".-"). "\n";
         if ($averages{$lastdate} && $locdrinks eq $daydrinks && $lastdate ne $rec->{effdate}) {
           print " (a=" . unit($averages{$lastdate},"d"). " )\n";
@@ -3112,35 +3112,12 @@ sub fulllist {
           }
           print "<br/>\n";
         } # fl avg on loc line, if not going to print a day summary line
-        # Restaurant copy button
-        my $rtype = $restaurants{$lastloc2}->{subtype}|| "";
-        $rtype =~ s/Restaurant, //;
-        my $rtime = $1 . ":" . sprintf("%02d",$2-1) if ( $lastrec->{time} =~ /^(\d+):(\d+)/ );
-        my $hiddeninputs =
-          "<input type='hidden' name='loc' value='$lastloc2' />\n" .
-          "<input type='hidden' name='pr' value='$locmsum.-' />\n" .
-          #"<input type='hidden' name='geo' value='' />\n" .  # no geo, we already have it on a drink, can get wrong
-          "<input type='hidden' name='date' value='$lastrec->{date}' />\n" .
-          "<input type='hidden' name='time' value='$rtime' />\n" ;
-        print "<form method='POST' style='display: inline;' class='no-print'>\n";
-        print $hiddeninputs;
-        print "<input type='hidden' name='type' value='Restaurant' />\n";
-        print "<input type='hidden' name='subtype' value='$rtype' />\n";
-        print "<input type='submit' name='submit' value='Rest'
-                    style='display: inline; font-size: x-small' />\n";
-        print "</form>\n";
-        print "<form method='POST' style='display: inline;' class='no-print'>\n";
-        print $hiddeninputs;
-        print "<input type='hidden' name='type' value='Night' />\n";
-        print "<input type='submit' name='submit' value='Night'
-                    style='display: inline; font-size: x-small' />\n";
-        print "</form>\n";
-        print "<br/>\n";
+        # Restaurant copy button was here
       }
       # day summary
       if ($lastdate ne $rec->{effdate} ) {
         if ( $locdrinks ne $daydrinks) {
-          print " <b>$lastwday</b>: ". unit($daydrinks,"d"). unit($daymsum,".-");
+          print "<br/> === <b>$lastwday</b>: ". unit($daydrinks,"d"). unit($daymsum,".-");
           if ($averages{$lastdate}) {
             print " (a=" . unit($averages{$lastdate},"d"). " )\n";
           }
