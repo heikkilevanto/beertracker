@@ -69,18 +69,26 @@ sub inputform {
   print "<tr><td>Location</td>\n";
   print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname") . "</td></tr>\n";
 
-  # Brew style and brew selection
+  # Brew style
   print "<tr><td style='vertical-align:top'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
-  print "<td>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</td></tr>\n";
+  my $isemptyglass = 0;
+  if ( $rec->{BrewType} =~ /(Restaurant|Night)/i ) {
+    $isemptyglass = 1;  # Mark this as an empty glass
+    # TODO - Select subtypes for rest/night, once we know where to put them
+  } else { # A drinkable glass, select a brew
+    print "<td>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</td></tr>\n";
+  }
 
   # Vol, Alc, and Price
   print "<tr><td>&nbsp;</td><td id='avp'>\n";
-  my $vol = $rec->{Volume} || "";
-  $vol .= "c" if ($vol);
-  print "<input name='vol' placeholder='vol' $sz4 value='$vol' />\n";
-  my $alc = $rec->{Alc} || "";
-  $alc .= "%" if ($alc);
-  print "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' />\n";
+  if ( ! $isemptyglass ) {
+    my $vol = $rec->{Volume} || "";
+    $vol .= "c" if ($vol);
+    print "<input name='vol' placeholder='vol' $sz4 value='$vol' />\n";
+    my $alc = $rec->{Alc} || "";
+    $alc .= "%" if ($alc);
+    print "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' />\n";
+  }
   my $pr = $rec->{Price} || "";
   $pr .= ".-" if ($pr);
   print "<input name='pr' placeholder='pr' $sz4 value='$pr' />\n";
@@ -380,8 +388,7 @@ sub selectbrewtype {
   my $sql = "select distinct BrewType from Glasses";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( );
-  my $s = "<select name='selbrewtype' id='selbrewtype'  >\n";
-    # onchange='populatebrews(this.value)'
+  my $s = "<select name='selbrewtype' id='selbrewtype' >\n";
   while ( my $bt = $sth->fetchrow_array ) {
     my $se = "";
     $se = "selected" if ( $bt eq $selected );

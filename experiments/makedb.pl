@@ -71,7 +71,7 @@ $dbh->do(q{
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT,
         BrewType TEXT not null,  /* Wine, Beer, Restaurant */
-        SubType TEXT default '',  /* Wines: Red, Booze: Rum, Restaurant: Pizza */
+        SubType TEXT default '',  /* Wines: Red, Booze: Rum. But not Restaurant: Pizza   TODO */
         BrewStyle TEXT default '', /* What ever style we get in, "IPA Hazy" */
         ProducerLocation INTEGER,  /* points to a LOCATION rec of the producer */
         Alc DECIMAL default 0.0,
@@ -247,11 +247,12 @@ $dbh->do(q{
 # Create vier COMPERS that combines comments and persons
 # TODO - Drop this when we no longer need getrecord_com
 $dbh->do("DROP VIEW IF EXISTS COMPERS");
+
 $dbh->do(q{
     CREATE VIEW COMPERS AS
       select
         comments.glass as id,
-        AVG(comments.Rating) AS rate,
+        AVG(NULLIF(comments.rating, 0)) AS rate,
         GROUP_CONCAT(comments.Comment, ' | ') AS com,
         COUNT(comments.Id) AS com_cnt,
         GROUP_CONCAT(comments.Photo, '') AS photo,
