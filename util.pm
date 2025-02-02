@@ -502,8 +502,9 @@ sub findrecord {
   my $table = shift;
   my $field = shift;
   my $val = shift;
+  my $collate = shift || "";
   return undef unless ($val);
-  my $sql = "select * from $table where $field = ? ";
+  my $sql = "select * from $table where $field = ? $collate";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($val);
   my $rec = $sth->fetchrow_hashref;

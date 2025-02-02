@@ -128,7 +128,7 @@ sub postbrew {
     #util::error ("A brew must have a type" ) unless util::param($c, "newbrewBrewType");
 
     my $defaults = {};
-    $defaults->{BrewType} = util::param($c,"selbrewtype") || util::param($c, "selbrewtype") || "Cider";
+    $defaults->{BrewType} = util::param($c, "selbrewtype") || "WRONG"; # Signals a bad type. Should not happen
     $id = util::insertrecord($c,  "BREWS", "newbrew", $defaults);
     return $id;
 
@@ -145,18 +145,31 @@ sub postbrew {
 # Happens when the user clicks on the beer board
 ################################################################################
 # TODO - Delete this once we have a new style beer board
-# TODO - Behaves funny with Restaurants and NIghts
+# TODO - Behaves funny with Restaurants and Nights
 sub insert_old_style_brew {
   my $c = shift;
   my $type = util::param($c, "type");
   my $name = util::param($c, "name");
   my $maker = util::param($c, "maker");
   my $style = util::param($c, "style");
-  my $subtype = "Ale"; # TODO Calculate subtype properly
+  my $subtype = util::param($c, "subtype") || "Ale"; # TODO Calculate subtype properly
 
+  if ( ! $name ){  # Sanity check
+    print STDERR "insert_old_style_brew: NO NAME! t='$type' st='$subtype' n='$name' m='$maker' \n";
+    return undef;
+  }
+
+  # Check if we have it already
+  my $brew = util::findrecord($c, "BREWS", "Name", $name, "collate nocase" );
+    print STDERR "insert_old_style_brew: Found brew: Id=$brew->{Id} t='$type' st='$subtype' n='$name' m='$maker' \n";
+  if ( $brew) {
+    return $brew->{Id}
+  }
+
+  # Get the producer (as location)
   my $sql = "Select Id from LOCATIONS where Name = ? collate nocase";
   my $get_sth = $c->{dbh}->prepare($sql);
-  $get_sth->execute($maker);  # Maker ??? Loc
+  $get_sth->execute($maker);
   my $prodlocid = $get_sth->fetchrow_array;
   if ( ! $prodlocid ) {
     $sql = "Insert into LOCATIONS ( Name, SubType ) values (?, 'Beer-Maker')";
@@ -165,7 +178,7 @@ sub insert_old_style_brew {
     $prodlocid = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
     print STDERR "insert_old_style_brew: Inserted location '$maker' as id '$prodlocid' \n";
   }
-
+  print STDERR "insert_old_style_brew: t='$type' st='$subtype' n='$name' m='$maker' =  '$prodlocid' \n";
 
   $sql = "insert into BREWS
     ( Name, BrewType, SubType, BrewStyle, ProducerLocation )
@@ -173,7 +186,7 @@ sub insert_old_style_brew {
   my $ins_sth = $c->{dbh}->prepare($sql);
   $ins_sth->execute( $name, $type, $subtype, $style, $prodlocid);
   my $id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
-  print STDERR "Inserted '$name' into BREWS as id '$id' \n";
+  print STDERR "insert_old_style_brew: Inserted '$name' into BREWS as id '$id' \n";
   return $id;
 
 }

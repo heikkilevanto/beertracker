@@ -119,7 +119,7 @@ sub inputform {
         if ( inputs[i].type == "text" )
           inputs[i].value = "";
       }
-   }
+    }
 
     function setdate() {  // Set date and time, if not already set by the user
       var di = document.getElementById("date");
@@ -285,10 +285,11 @@ sub postglass {
   if (! $brew) {  # Can happen with the beer board
     # TODO - Happens also with Rest/Night buttons, which go wrong here !
      my $brewid  = brews::insert_old_style_brew($c);
-     $brew = util::getrecord($c, "BREWS", scalar $c->{cgi}->param("Brew") );
-     #$brew = brews::getbrew($c, $brewid);
+     $brew = util::getrecord($c, "BREWS", $brewid );
      $glass->{Brew} = $brewid;
+     $glass->{BrewType} = $brew->{BrewType};
   }
+  #print STDERR "postglass: sel='" . util::param($c, "selbrewtype") . "' glt='$glass->{BrewType}'  brt='$brew->{BrewType}' \n";
 
   # Get input values into $glass
   getvalues($c, $glass, $brew, $sub);
@@ -298,7 +299,7 @@ sub postglass {
   $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "WRONG";
      # TODO - That WRONG is just to catch cases where I don't have any
      # Should not happen.
-  print STDERR "postglass: L='" . util::param($c,"Location")  ."' l='" .util::param($c,"loc") . "'\n";
+  #print STDERR "postglass: L='" . util::param($c,"Location")  ."' l='" .util::param($c,"loc") . "'\n";
   if ( ! util::param($c,"Location") && util::param($c,"loc") ) { # Old style loc name
     my $location = util::findrecord($c, "LOCATIONS", "Name", util::param($c,"loc")) ;
     $glass->{Location} = $location->{Id} if ($location);

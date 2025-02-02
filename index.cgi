@@ -1944,7 +1944,11 @@ sub beerboard {
       my $country = $e->{'country'} || "";
       my $sizes = $e->{"sizePrice"};
       my $hiddenbuttons = "";
-        $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
+        if ( $sty =~ /Cider/i ) {
+          $hiddenbuttons .= "<input type='hidden' name='type' value='Cider' />\n" ;
+        } else {
+          $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
+        }
         $hiddenbuttons .= "<input type='hidden' name='subtype' value='$country' />\n"
           if ($country) ;
         $hiddenbuttons .= "<input type='hidden' name='maker' value='$mak' />\n" ;
