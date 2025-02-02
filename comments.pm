@@ -143,9 +143,10 @@ sub postcomment {
     $sth->execute($rating, $comment, $person, $comment_id, $glass );
     print STDERR "Updated comment '$comment_id' for glass  '$glass' \n";
   } else { # Insert new comment
-    my $sql = "INSERT INTO comments (Glass, Rating, Comment, Person) VALUES (?, ?, ?, ?,)";
+    my $sql = "INSERT INTO comments (Glass, Rating, Comment, Person) VALUES (?, ?, ?, ?)";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($glass, $rating, $comment, $person);
+    $comment_id = $c->{dbh}->last_insert_id(undef, undef, "COMMENTS", undef) || undef;
     print STDERR "Inserted comment '$comment_id' for glass '$glass' \n";
   }
 

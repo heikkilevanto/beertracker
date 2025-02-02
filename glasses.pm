@@ -306,10 +306,10 @@ sub postglass {
   }
 
   # New Location and/or Brew
-  if ( $glass->{Location} eq "new" ) {
+  if ($glass->{Location} && $glass->{Location} eq "new" ) {
     $glass->{Location} = locations::postlocation($c, "new" );
   }
-  if ( $glass->{Brew} eq "new" ) {
+  if ($glass->{Brew} && $glass->{Brew} eq "new" ) {
     $glass->{Brew} = brews::postbrew($c, "new" );
   }
 
