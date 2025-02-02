@@ -114,6 +114,7 @@ sub readfile {
       for (my $i = 0; $fieldnamelist->[$i]; $i++) {
           $rec->{$fieldnamelist->[$i]} = $datafields[$i] || "";
       }
+      $rec->{line} = $line;
 
       # Check timestamp, confuses SqLite if impossible
       my ($yy,$mm,$dd, $ho,$mi,$se) = $rec->{stamp}=~/^(\d+)-(\d\d)-(\d\d) (\d\d+):(\d\d):(\d\d)$/;
@@ -202,6 +203,13 @@ sub insert_data {
        $brew_id, $rec->{pr},  $rec->{vol}, $rec->{alc}, $rec->{stdrinks} );
     my $glass_id = $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 
+    # Insert a food comment for restaurants
+    if ( $rec->{type} =~ /Restaurant/i && $rec->{food} ) {
+        insert_comment({
+            glass_id  => $glass_id,
+            comment   => $rec->{food},
+        });
+    }
     # Insert a COMMENT record if there is a 'com' field
     if ($rec->{com}||$rec->{photo}||$rec->{com}) {
         insert_comment({
