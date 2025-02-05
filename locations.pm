@@ -115,7 +115,8 @@ sub selectlocation {
   select
     LOCATIONS.Id,
     LOCATIONS.Name,
-    LOCATIONS.SubType
+    LOCATIONS.LocType,
+    LOCATIONS.LocSubType
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.id

@@ -300,7 +300,7 @@ sub dropdown {
             const filter = filterinput$inputname.value.toLowerCase();
             Array.from(dropdownList$inputname .children).forEach(item => {
                 var brewtype = item.getAttribute("brewtype");
-                // ´console.log("filter$inputname: s='" + selbrewtype.value + "' b='" + brewtype +"'");
+                // console.log("filter$inputname: s='" + selbrewtype.value + "' b='" + brewtype +"'");
                 if (item.textContent.toLowerCase().includes(filter) &&
                     (selbrewtype && ( ! brewtype || brewtype == selbrewtype.value ) ) ) {
                     item.style.display = '';

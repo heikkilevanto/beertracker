@@ -191,7 +191,7 @@ sub insert_data {
     $dbh->do("BEGIN TRANSACTION");
 
     # Determine the location and brew IDs.
-    my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo}, $type);
+    my $location_id = get_or_insert_location($rec->{loc}, $rec->{geo}, $type, $rec->{subtype} );
 
     my $brew_id = get_or_insert_brew($rec);
 
@@ -237,26 +237,47 @@ sub insert_data {
 
 # Helper to get or insert a Location record
 sub get_or_insert_location {
-    my ($location_name, $geo, $type) = @_;
+    my ($locname, $geo, $type, $subtype) = @_;
 
-    return undef unless $location_name;
+    return undef unless $locname;
+
+    # Fix location type and subtype
+    my $loctype = $type;
+    my $locsub = $subtype;
+    if ($locname =~ /s place|home/i ) {  # Ibens Place, and such
+      $loctype = "Home";
+      $locsub = "";
+    } elsif ( $type =~ /^(Beer|Wine|Cider|Spirit)$/ ) {
+      $loctype = "Bar";  # Assume I drink mostly in bars
+      $locsub = $type;
+    } elsif ( $type =~ /Restaurant/ && $subtype =~ /Beer|Wine/ ) {
+      $loctype = "Bar";
+    }
+    # Restaurants and nights are ok
 
     # Check if the location already exists
-    my $sth_check = $dbh->prepare("SELECT Id, GeoCoordinates FROM LOCATIONS WHERE Name = ? COLLATE nocase");
-    $sth_check->execute($location_name);
+    my $sql = "SELECT Id, GeoCoordinates, LocType, LocSubType FROM LOCATIONS WHERE Name = ? COLLATE nocase";
+    my $sth_check = $dbh->prepare($sql);
+    $sth_check->execute($locname);
 
-    if (my ($location_id, $old_geo) = $sth_check->fetchrow_array) {
-        if (!$old_geo && $geo) {
-          my $usth = $dbh->prepare("UPDATE LOCATIONS ".
-            "set GeoCoordinates = ? " .
-            "where id = ? ");
+    if (my ($location_id, $old_geo, $rtype, $rsub) = $sth_check->fetchrow_array) {
+        if (!$old_geo && $geo) { # Update geo coords if we have for the location. Latest wins.
+          $sql = "UPDATE LOCATIONS set GeoCoordinates = ? where id = ? ";
+          my $usth = $dbh->prepare($sql);
           $usth->execute($geo, $location_id);
         }
+        if ( $type =~ /Restaurant|Home/ &&  # Restaurant entries override any previous types
+               ! ( $rtype =~ /Restaurant/ && $rsub && ! $locsub ) ) {
+            # But not if that would remove a locsubtype from a restaurant
+            $sql = "UPDATE LOCATIONS set LocType = ? , LocSubType = ? where id = ? ";
+            my $usth = $dbh->prepare($sql);
+            $usth->execute($loctype, $locsub, $location_id);
+          }
         return $location_id;
     } else {  # Insert new location record if it does not exist
-        my $sql = "INSERT INTO LOCATIONS (Name, GeoCoordinates, SubType) VALUES (?, ?, ?)";
+        $sql = "INSERT INTO LOCATIONS (Name, GeoCoordinates, LocType, LocSubType) VALUES (?, ?, ?, ?)";
         my $insert_loc = $dbh->prepare($sql);
-        $insert_loc->execute($location_name, $geo, $type);
+        $insert_loc->execute($locname, $geo, $loctype, $locsub);
         return $dbh->last_insert_id(undef, undef, "LOCATIONS", undef);
     }
 }
@@ -311,8 +332,8 @@ sub get_or_insert_brew {
     return undef if ( !$rec->{name} || $rec->{name} =~ /misc/i );
 
     # ProducerLocation
-    $rec->{producer} = get_or_insert_location( $rec->{maker},"", "$rec->{type}-Maker" );
-    # Mark its subtype as a producer. Not using that yet, but could come in handy in filtering
+    $rec->{producer} = get_or_insert_location( $rec->{maker},$rec->{geo},
+        "Producer", "$rec->{type}" );
 
     # Check if the brew exists in the BREWS table
     my $sql = q{
@@ -539,9 +560,9 @@ sub winestyle {
 # Insert known geo coords for my home
 # They tend to be far away from the actual location, esp on my desktop machine
 # Note the trailing spaces to make the names different. The UI will strip those
-get_or_insert_location("Home ", "55.6588 12.0825"); # Special case for FF.
-get_or_insert_location("Home  ", "55.6531712 12.5042688"); # Chrome
-get_or_insert_location("Home   ", "55.6717389 12.5563058"); # Chrome on my phone
+get_or_insert_location("Home ", "55.6588 12.0825", "Home", "Heikki"); # Special case for FF.
+get_or_insert_location("Home  ", "55.6531712 12.5042688", "Home", "Heikki"); # Chrome
+get_or_insert_location("Home   ", "55.6717389 12.5563058", "Home", "Heikki"); # Chrome on my phone
 
 readwines();
 readfile();

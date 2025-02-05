@@ -167,13 +167,15 @@ $dbh->do(q{
 
 
 # Create LOCATIONS table
-# These are mostly bars and restaurants, but can also be homes of Persons, and
-# other things that need an address, geo coordinates, and such.
+# These are mostly bars and restaurants, but can also be breweries,
+# homes of Persons, and other things that need an address, geo coordinates
+# and such.
+# Examples or types and subtypes:
+# Restaurant: Italian, Tapas
+# Bar: Beer, Wine
+# Producer: Wine, Beer
+# Home - maybe no subtypes needed.
 #
-# TODO - Rename SubType to LocationType.  Values like Brewery, Bar, Restaurant, Home.
-# Maybe Beerbar as a special case, as I tend to frequent those. Do we need subtypes?
-# "Restaurant, Thai?"
-# Some locations may belong to multiple types, never mind for now.
 $dbh->do("DROP TABLE IF EXISTS LOCATIONS");
 $dbh->do(q{
     CREATE TABLE LOCATIONS (
@@ -181,7 +183,8 @@ $dbh->do(q{
         Name TEXT NOT NULL,  /* The name I know it by. Used in pulldowns */
         OfficialName TEXT default '',  /* Official long name */
         Description TEXT default '',
-        SubType TEXT default '', /* Restaurant/Bar type (Thai, Beer), etc */
+        LocType TEXT default '', /* Location type: Bar, Restaurant, Producer, etc */
+        LocSubType TEXT default '', /* Beer, Italian, Wine, etc */
         GeoCoordinates TEXT default '',
         Website TEXT default '',
         Contact TEXT default '', /* Phone, email, or such */
@@ -197,7 +200,8 @@ $dbh->do(q{
     LOCATIONS.Id,
     LOCATIONS.Name,
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as Last,
-    LOCATIONS.SubType as Sub,
+    LOCATIONS.LocType as LocType,
+    LOCATIONS.LocSubType as LocSubType,
     LOCATIONS.Description as Desc
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
