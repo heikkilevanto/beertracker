@@ -469,10 +469,10 @@ if ( $op =~ /Board/i ) {
   brews::listbrews($context);
 } elsif ( $op =~ /Persons/i ) {
   persons::listpersons($context);
-} elsif ( $op =~ /Persons/i ) {
-  persons::listpersons($context);
 } elsif ( $op =~ /Location/i ) {
   locations::listlocations($context);
+} elsif ( $op =~ /Producer/i ) {
+  locations::listproducers($context);
 } elsif ( $op =~ /Full/i ) {
   glasses::inputform($context);
   oldstuff();

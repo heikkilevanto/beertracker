@@ -23,7 +23,7 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 #my $sz = "size='4' style='text-align:right' $clr";
 
 ################################################################################
-# List of locations
+# Lists of locations
 ################################################################################
 sub listlocations {
   my $c = shift; # context
@@ -35,9 +35,23 @@ sub listlocations {
   }
 
   my $sort = $c->{sort} || "Last-";
-  print util::listrecords($c, "LOCATIONS_LIST", $sort );
+  print util::listrecords($c, "LOCATIONS_LIST", $sort, "LocType <> 'Producer'" );
   return;
 } # listlocations
+
+sub listproducers {
+  my $c = shift; # context
+  print util::listsmenu($c), util::showmenu($c);
+
+  if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
+    editlocation($c);
+    return;
+  }
+
+  my $sort = $c->{sort} || "Last-";
+  print util::listrecords($c, "LOCATIONS_LIST", $sort, "LocType = 'Producer'" );
+  return;
+} # listproducers
 
 ################################################################################
 # Editlocation - Show a form for editing a location record

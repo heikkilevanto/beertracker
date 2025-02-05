@@ -168,7 +168,7 @@ sub listsmenu {
   my $s = "";
   $s .= " <select  style='width:7em;' " .
               "onchange='document.location=\"$c->{url}?\"+this.value;' >";
-  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");
+  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Producer", "Restaurant", "Style", "Persons");
   for my $l ( @ops ) {
     my $sel = "";
     $sel = "selected" if ($l eq $c->{op});
@@ -520,6 +520,7 @@ sub listrecords {
   my $c = shift;
   my $table = shift;
   my $sort = shift;
+  my $where = shift || "";
 
   my @fields = tablefields($c, $table, "", 1);
   my $order = "";
@@ -529,7 +530,9 @@ sub listrecords {
     # Note, no user-provided data goes into $order, only field names and DESC
   }
 
-  my $sql = "select * from $table $order";
+  $where = "where $where" if ($where);
+
+  my $sql = "select * from $table $where $order";
   print STDERR "listrecords: $sql \n";
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute();
