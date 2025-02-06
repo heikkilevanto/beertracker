@@ -197,9 +197,9 @@ sub insert_data {
 
     # Insert the GLASSES record itself
     my $insert_glass = $dbh->prepare("INSERT INTO GLASSES " .
-        "(Username, Timestamp, Location, BrewType, Brew, Price, Volume, Alc, StDrinks) " .
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-    $insert_glass->execute($username, $rec->{stamp}, $location_id, $type,
+        "(Username, Timestamp, Location, BrewType, SubType, Brew, Price, Volume, Alc, StDrinks) " .
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $insert_glass->execute($username, $rec->{stamp}, $location_id, $type, $rec->{subtype},
        $brew_id, $rec->{pr},  $rec->{vol}, $rec->{alc}, $rec->{stdrinks} );
     my $glass_id = $dbh->last_insert_id(undef, undef, "GLASSES", undef);
 
@@ -552,6 +552,7 @@ sub winestyle {
   $rec->{style} =~ s/^\W+//; # Trim non-word characters away
   $rec->{style} =~ s/\W+$//;
   $rec->{style} =~ s/\s+$/ /g; # And space sequences
+  $rec->{subtype} = ucfirst($rec->{subtype}); # 'Red'
 }
 
 ############
