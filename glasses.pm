@@ -218,11 +218,13 @@ sub getvalues {
   my $brew = shift;
   my $sub = shift;
   $glass->{BrewType} =  util::param($c, "selbrewtype") || $glass->{BrewType} || $brew->{BrewType} || "WRONG";
-  util:error("getvalues.1: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
+  util::error("getvalues.1: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
   $brew->{BrewType} = util::param($c, "selbrewtype")  || $brew->{BrewType} || $glass->{BrewType} || "WRONG";
-  util:error("getvalues.2: No Brew Type for brew $brew->{Id}") if ( $brew->{BrewType} eq "WRONG" );
-
+  util::error("getvalues.2: No Brew Type for brew $brew->{Id}") if ( $brew->{BrewType} eq "WRONG" );
+  $glass->{SubType} = util::param($c, "subtype") || $glass->{SubType} || $brew->{SubType} || "WRONG";
+  util::error("getvalues.3: No Brew SubType for glass $glass->{Id}") if ( $brew->{SubType} eq "WRONG" );
     # TODO - The "WRONG" is just a placeholder for missing value, should not happen.
+
   $glass->{Location} = util::param($c, "Location", undef) || $glass->{Location};
   $glass->{Brew} = util::param($c, "Brew") || $glass->{Brew};
   $glass->{Price} = util::paramnumber($c, "pr");
@@ -299,6 +301,7 @@ sub postglass {
      $brew = util::getrecord($c, "BREWS", $brewid );
      $glass->{Brew} = $brewid;
      $glass->{BrewType} = $brew->{BrewType};
+     $glass->{SubType} = $brew->{SubType};
   }
   #print STDERR "postglass: sel='" . util::param($c, "selbrewtype") . "' glt='$glass->{BrewType}'  brt='$brew->{BrewType}' \n";
 
@@ -308,9 +311,9 @@ sub postglass {
   fixvol($c, $glass, $brew);
 
   $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "WRONG";
-  if ( $glass->{BrewType} eq "WRONG" ) {
-    util:error("Post: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
-  }
+  util::error("Post: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
+  $glass->{SubType} = $glass->{SubType} || $brew->{SubType} || "WRONG";
+  util::error("Post: No Brew SubType for glass $glass->{Id}") if ( $brew->{SubType} eq "WRONG" );
      # TODO - That WRONG is just to catch cases where I don't have any
      # Should not happen.
   #print STDERR "postglass: L='" . util::param($c,"Location")  ."' l='" .util::param($c,"loc") . "'\n";
@@ -333,6 +336,7 @@ sub postglass {
     my $sql = "update GLASSES set
         TimeStamp = ?,
         BrewType = ?,
+        SubType = ?,
         Location = ?,
         Brew = ?,
         Price = ?,
@@ -345,6 +349,7 @@ sub postglass {
   $sth->execute(
     $glass->{Timestamp},
     $glass->{BrewType},
+    $glass->{SubType},
     $glass->{Location},
     $glass->{Brew},
     $glass->{Price},
@@ -358,15 +363,16 @@ sub postglass {
   } else { # Create a new glass
 
     my $sql = "insert into GLASSES
-      ( Username, TimeStamp, BrewType,
+      ( Username, TimeStamp, BrewType, SubType,
         Location, Brew, Price, Volume, Alc, StDrinks )
-      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ? )
+      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ? )
       ";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute(
       $c->{username},
       $glass->{Timestamp},
       $glass->{BrewType},
+      $glass->{SubType},
       $glass->{Location},
       $glass->{Brew},
       $glass->{Price},
