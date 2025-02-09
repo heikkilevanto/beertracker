@@ -218,7 +218,10 @@ sub getvalues {
   my $brew = shift;
   my $sub = shift;
   $glass->{BrewType} =  util::param($c, "selbrewtype") || $glass->{BrewType} || $brew->{BrewType} || "WRONG";
+  util:error("getvalues.1: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
   $brew->{BrewType} = util::param($c, "selbrewtype")  || $brew->{BrewType} || $glass->{BrewType} || "WRONG";
+  util:error("getvalues.2: No Brew Type for brew $brew->{Id}") if ( $brew->{BrewType} eq "WRONG" );
+
     # TODO - The "WRONG" is just a placeholder for missing value, should not happen.
   $glass->{Location} = util::param($c, "Location", undef) || $glass->{Location};
   $glass->{Brew} = util::param($c, "Brew") || $glass->{Brew};
@@ -305,6 +308,9 @@ sub postglass {
   fixvol($c, $glass, $brew);
 
   $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "WRONG";
+  if ( $glass->{BrewType} eq "WRONG" ) {
+    util:error("Post: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
+  }
      # TODO - That WRONG is just to catch cases where I don't have any
      # Should not happen.
   #print STDERR "postglass: L='" . util::param($c,"Location")  ."' l='" .util::param($c,"loc") . "'\n";
