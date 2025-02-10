@@ -172,7 +172,7 @@ sub insert_old_style_brew {
   $get_sth->execute($maker);
   my $prodlocid = $get_sth->fetchrow_array;
   if ( ! $prodlocid ) {
-    $sql = "Insert into LOCATIONS ( Name, SubType ) values (?, 'Beer-Maker')";
+    $sql = "Insert into LOCATIONS ( Name, LocType, LocSubType ) values (?, 'Producer', 'Beer')";
     my $loc_sth = $c->{dbh}->prepare($sql);
     $loc_sth->execute($maker);
     $prodlocid = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);

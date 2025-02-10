@@ -314,8 +314,6 @@ sub postglass {
   util::error("Post: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
   $glass->{SubType} = $glass->{SubType} || $brew->{SubType} || "WRONG";
   util::error("Post: No Brew SubType for glass $glass->{Id}") if ( $brew->{SubType} eq "WRONG" );
-     # TODO - That WRONG is just to catch cases where I don't have any
-     # Should not happen.
   #print STDERR "postglass: L='" . util::param($c,"Location")  ."' l='" .util::param($c,"loc") . "'\n";
   if ( ! util::param($c,"Location") && util::param($c,"loc") ) { # Old style loc name
     my $location = util::findrecord($c, "LOCATIONS", "Name", util::param($c,"loc")) ;
