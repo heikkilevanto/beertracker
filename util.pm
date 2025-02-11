@@ -129,8 +129,14 @@ sub error {
   print "\n\n";  # Works if have sent headers or not
   print "<hr/>\n";
   print "ERROR   <br/>\n";
-  print $msg;
+  print "$msg <br/>\n";
   print STDERR "ERROR: $msg\n";
+  my $i = 0;
+  while (my($pkg,$fname,$lineno,$subroutine) = caller($i++)) {
+    my $s = "  [$i]: $pkg:$lineno: $subroutine";
+    print "$s  <br/>\n";
+    print STDERR "$s \n";
+  }
   exit();
 }
 
