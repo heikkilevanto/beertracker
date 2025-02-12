@@ -148,16 +148,6 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
 my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero should not be used!
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect");  # 9 is the top
 
-my %volumes = ( # Comment is displayed on the About page  # TODO - Copy to glasses.pm
-  'T' => " 2 Taster, sizes vary, always small",
-  'G' => "16 Glass of wine - 12 in places, at home 16 is more realistic",
-  'S' => "25 Small, usually 25",
-  'M' => "33 Medium, typically a bottle beer",
-  'L' => "40 Large, 40cl in most places I frequent",
-  'C' => "44 A can of 44 cl",
-  'W' => "75 Bottle of wine",
-  'B' => "75 Bottle of wine",
-);
 
 # Links to beer lists at the most common locations and breweries
 my %links; # TODO - Kill this, get them from the database
@@ -782,7 +772,7 @@ sub fixvol {
     $half = $1;
   }
   my $volunit = uc(substr($rec->{vol},0,1)); # S or L or such
-  if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
+  if ( $glasses::volumes{$volunit} && $glasses::volumes{$volunit} =~ /^ *(\d+)/ ) {
     my $actvol = $1;
     $rec->{vol} =~s/$volunit/$actvol/i;
   }
@@ -1965,7 +1955,7 @@ sub beerboard {
         my $lbl;
         if ($extraboard == $id || $extraboard == -2) {
           my $dispvol = $vol;
-          $dispvol = $1 if ( $volumes{$vol} && $volumes{$vol} =~ /(^\d+)/);   # Translate S and L
+          $dispvol = $1 if ( $glasses::volumes{$vol} && $glasses::volumes{$vol} =~ /(^\d+)/);   # Translate S and L
           $lbl = "$dispvol cl  ";
           $lbl .= sprintf( "%3.1fd", $dispvol * $alc / $onedrink);
           $lbl .= "\n$pr.- " . sprintf( "%d/l ", $pr * 100 / $vol ) if ($pr);
