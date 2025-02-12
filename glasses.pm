@@ -12,7 +12,7 @@ use utf8;  # Source code and string literals are utf-8
 use POSIX qw(strftime localtime locale_h);
 
 
-my %volumes = ( # Comment is displayed on the About page
+our %volumes = ( # Comment is displayed on the About page
   'T' => " 2 Taster, sizes vary, always small",
   'G' => "16 Glass of wine - 12 in places, at home 16 is more realistic",
   'S' => "25 Small, usually 25",
@@ -22,7 +22,6 @@ my %volumes = ( # Comment is displayed on the About page
   'W' => "75 Bottle of wine",
   'B' => "75 Bottle of wine",
 );
-
 
 ################################################################################
 # The input form

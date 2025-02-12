@@ -20,6 +20,7 @@
 # At the moment we are somewhere in the middle. Using SqLite all right, but
 # faking the old line-based things for many of the lists etc. TODO
 #
+#
 # The code consists of one very long main function that produces whatever
 # output we need, and a small number of helpers. (Ought to be refactored
 # in version 2). Sections are delimited by comment blocks like above.
@@ -67,7 +68,8 @@
 # - Formatting dates
 # - Producing the "last seen" line
 # - Color coding and shortening beer styles
-
+#
+# End of outdated comment
 
 
 
@@ -158,7 +160,7 @@ my %volumes = ( # Comment is displayed on the About page  # TODO - Copy to glass
 );
 
 # Links to beer lists at the most common locations and breweries
-my %links;
+my %links; # TODO - Kill this, get them from the database
 $links{"Ølbaren"} = "http://oelbaren.dk/oel/";
 $links{"Ølsnedkeren"} = "https://www.olsnedkeren.dk/";
 $links{"Fermentoren"} = "http://fermentoren.com/index";
@@ -457,10 +459,6 @@ if ( $op =~ /Board/i ) {
   # The about page went from 500ms to under 100 when dropping the oldstuff
   print util::showmenu($context);
   about();
-} elsif ( $op eq "geo" ) { # TODO - This makes no sense any more
-  oldstuff();
-  print util::showmenu($context);
-  geodebug();
 } elsif ( $op =~ /Brewery|Wine|Booze|Restaurant|Style/i ) {
   oldstuff();
   #listsmenubar();
@@ -1810,7 +1808,6 @@ sub beerboard {
     $extraboard = $1;
   }
   my $locparam = param("loc") || $foundrec->{loc} || "";
-
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
@@ -2721,7 +2718,7 @@ sub datastats {
 
 sub about {
   print "<hr/><h2>Beertracker</h2>\n";
-  print "Copyright 2016-2024 Heikki Levanto. <br/>";
+  print "Copyright 2016-2025 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
   print "It is Open Source.\n";
   print "<hr/>";
@@ -2733,7 +2730,7 @@ sub about {
   print aboutlink("User manual", "https://github.com/heikkilevanto/beertracker/blob/master/manual.md" );
   print "</ul><p>\n";
   print "Some of my favourite bars and breweries<ul>";
-  for my $k ( sort keys(%links) ) {
+  for my $k ( sort keys(%links) ) {  # TODO - Get these from the database somehow. Or skip
     print aboutlink($k, $links{$k});
   }
   print "</ul><p>\n";
@@ -2745,8 +2742,8 @@ sub about {
   print "<hr/>";
 
   print "Shorthand for drink volumes<br/><ul>\n";
-  for my $k ( sort { $volumes{$a} cmp $volumes{$b} } keys(%volumes) ) {
-    print "<li><b>$k</b> $volumes{$k}</li>\n";
+  for my $k ( keys(%glasses::volumes) ) {
+    print "<li><b>$k</b> $glasses::volumes{$k}</li>\n";
   }
   print "</ul>\n";
   print "You can prefix them with 'h' for half, as in HW = half wine = 37cl<br/>\n";
@@ -2758,103 +2755,13 @@ sub about {
 
 
   print "<p><hr/>\n";
-  print "<b>Debug info </b><br/>\n";
+  #print "<b>Debug info </b><br/>\n";  # TODO - Add new debug helpers here if needed
   #print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' ><span>Tail of the data file</span></a><br/>\n";
   #print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
-  print "&nbsp; <a href='$url?o=geo'><span>Geolocation debug</span></a><br/>\n";
   exit();
 } # About
 
 
-################################################################################
-# Geolocation debug
-################################################################################
-
-sub geodebug {
-  if (!$qry || $qry =~ /^ *[0-9 .]+ *$/ ) {  # numerical query
-    print "<hr><b>Geolocations</b> since $notbef<p>\n";
-    if ($qry) {
-      my ($guess, $gdist) = guessloc($qry);
-      if ($gdist < 2 ) {
-        print "Geo $qry seems to be $guess <br/>\n";
-      } else {
-        print "Geo $qry looks like $guess at $gdist m<br/>\n";
-      }
-    }
-
-    print "<table>\n";
-    print "<tr><td>Latitude</td><td>Longitude</td>";
-    print "<td>dist</td>" if ($qry);
-    print "<td>Location</td></tr>\n";
-    my %geodist;
-    foreach my $k (keys(%geolocations)) {
-      if ($qry) {
-        my $d = geodist($qry, $geolocations{$k});
-        $d = sprintf("%09d",$d);
-        $geodist{$k} = "$d $k";
-      } else {
-        $geodist{$k} = $k;
-      }
-    }
-
-    foreach my $k (sort { $geodist{$a} cmp $geodist{$b}} (keys(%geolocations))) {
-      print "<tr>\n";
-      my ($la,$lo, $g) = geo( $geolocations{$k} );
-      my $u = "m";
-      my ($dist) = $geodist{$k} =~ /^[ 0]*(\d+)/;
-      if ( !$dist ) {
-        $u ="";
-      } elsif ( $dist > 9999 ) {
-        $dist = int($dist / 1000) ;
-        $u = "km";
-      }
-      print "<td><a href=$url?o=geo&q=$la+$lo><span>$la</span></a></td>\n";
-      print "<td>$lo</td>\n";
-      print "<td>" . unit($dist,$u). "</td>\n" if ($qry);
-      print "<td><a href='$url?o=geo&q=$k' ><span>$k</span></a></td>\n";
-      print "</tr>\n";
-    }
-    print "</table>\n";
-    print "<hr/>\n" ;
-
-  } else { # loc given, list all occurrences of that location
-    print "<hr/>Geolocation for <b>$qry</b> &nbsp;";
-    print "<a href='$url?o=geo'><span>Back</span></a>";
-    print "<p>\n";
-    my (undef,undef,$defloc) = geo($geolocations{$qry});
-    print "$qry is at: $defloc " . maplink($defloc) . "<p> \n" if ($defloc);
-    print "<table>\n";
-    print "<tr><td>Latitude</td><td>Longitude</td><td>Dist</td></tr>\n";
-    my $i = scalar( @records );
-    while ( $i-- > 0 ){
-      my $rec = getrecord($i);
-      next unless $rec->{geo};
-      next unless ($rec->{loc} eq $qry);
-      my ($la, $lo, $g) = geo($rec->{geo});
-      next unless ($lo);
-      my $dist = geodist($defloc,$g);
-      my $ddist = unit($dist,"m");
-      my $gdist;
-      my $guess = "";
-      if ($dist > 15.0) {
-        $ddist = "<b>$ddist</b>";
-        ($guess, $gdist) = guessloc($g, $qry);
-        $gdist = unit($gdist,"m");
-      }
-      print "<tr>\n";
-      print "<td>$la &nbsp; </td><td>$lo &nbsp; </td>";
-      print "<td align='right'>$ddist" . maplink($g) . "</td>\n";
-      print "<td><a href='$url?o=$op&q=$qry&e=$rec->{stamp}' ><span>$rec->{stamp}</span></a> ";
-      if ($guess) {
-        print "<br>(<b>$guess $gdist ?)</b>\n" ;
-        print STDERR "Suspicious Geo: '$rec->{loc}' looks like '$guess'  for '$g' at '$rec->{stamp}' \n";
-      }
-      print "</td>\n";
-      print "</tr>\n";
-    }
-    print "</table>\n";
-  }
-}  # Geo debug
 
 
 ################################################################################
