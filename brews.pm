@@ -153,32 +153,34 @@ sub insert_old_style_brew {
   my $maker = util::param($c, "maker");
   my $style = util::param($c, "style");
   my $subtype = util::param($c, "subtype") || "Ale"; # TODO Calculate subtype properly
+  print STDERR "insert_old_style_brew: t='$type' st='$subtype' n='$name' m='$maker' sty='$style' \n";
 
   if ( ! $name ){  # Sanity check
-    print STDERR "insert_old_style_brew: NO NAME! t='$type' st='$subtype' n='$name' m='$maker' \n";
-    return undef;
+    util::error( "insert_old_style_brew: NO NAME! t='$type' st='$subtype' n='$name' m='$maker'");
   }
 
   # Check if we have it already
   my $brew = util::findrecord($c, "BREWS", "Name", $name, "collate nocase" );
-    print STDERR "insert_old_style_brew: Found brew: Id=$brew->{Id} t='$type' st='$subtype' n='$name' m='$maker' \n";
   if ( $brew) {
+    print STDERR "insert_old_style_brew: Found brew: Id=$brew->{Id}  \n";
     return $brew->{Id}
   }
 
+  util::error( "insert_old_style_brew: NO MAKER" ) unless ($maker);
   # Get the producer (as location)
   my $sql = "Select Id from LOCATIONS where Name = ? collate nocase";
   my $get_sth = $c->{dbh}->prepare($sql);
   $get_sth->execute($maker);
   my $prodlocid = $get_sth->fetchrow_array;
   if ( ! $prodlocid ) {
-    $sql = "Insert into LOCATIONS ( Name, LocType, LocSubType ) values (?, 'Producer', 'Beer')";
+    $sql = "Insert into LOCATIONS ( Name, LocType, LocSubType ) values (?, 'Producer', ?)";
     my $loc_sth = $c->{dbh}->prepare($sql);
-    $loc_sth->execute($maker);
+    $loc_sth->execute($maker, $style || "Beer");
     $prodlocid = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
-    print STDERR "insert_old_style_brew: Inserted location '$maker' as id '$prodlocid' \n";
+    print STDERR "insert_old_style_brew: Inserted producer location '$maker' as id '$prodlocid' \n";
+  } else {
+    print STDERR "insert_old_style_brew: Found maker  m='$maker'  as id = '$prodlocid' \n";
   }
-  print STDERR "insert_old_style_brew: t='$type' st='$subtype' n='$name' m='$maker' =  '$prodlocid' \n";
 
   $sql = "insert into BREWS
     ( Name, BrewType, SubType, BrewStyle, ProducerLocation )
