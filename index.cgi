@@ -105,7 +105,7 @@ my $databasefile = "beerdata/beertracker.db";
 die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
 
 our $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
-    or error($DBI::errstr);
+    or util::error($DBI::errstr);
 $dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
 $dbh->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
 #$dbh->trace(1);  # Lots of SQL logging in error.log
@@ -142,7 +142,7 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
   $cmdfile = $datadir . $username . ".cmd";
   $photodir = $datadir . $username. ".photo";
 } else {
-  error ("Bad username\n");
+  util::error ("Bad username\n");
 }
 
 my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero should not be used!
@@ -387,7 +387,7 @@ if ( $q->request_method eq "POST" ) {
   if ( 1 ) { # TODO LATER Remove this debug dumping of all CGI params
     foreach my $param ($context->{cgi}->param) { # Debug dump params while developing
       my $value = $context->{cgi}->param($param);
-      print STDERR "$param = '$value'\n";
+      print STDERR "p: $param = '$value'\n" if ($value);
     }
   }
 
@@ -497,11 +497,11 @@ sub oldstuff {
 # TODO - Only copies the text file, which needs to be imported into the db
 sub copyproddata {
   if (!$devversion) {
-    error ("Not allowed");
+    util::error ("Not allowed");
   }
   #my $bakfile = $datafile . ".bak";
   #my $prodfile = "../beertracker/$datafile";
-  #error("$prodfile not readable") if ( ! -r $prodfile);
+  #util::error("$prodfile not readable") if ( ! -r $prodfile);
   #system("cat $datafile > $bakfile");
   #system("cat $prodfile > $datafile");
   graph::clearcachefiles( $context );
@@ -1003,7 +1003,7 @@ sub deleterecord {
      "WHERE username = ? and timestamp = ?");
   $sth_get->execute($username, $rec->{stamp});
   my ($glassid, $locid, $brewid ) = $sth_get->fetchrow_array;
-  error ("Could not find record '$rec->{stamp}', can not delete it")
+  util::error ("Could not find record '$rec->{stamp}', can not delete it")
     unless ($glassid);
 
   # Delete comments, if any
@@ -1453,7 +1453,7 @@ sub graph {
       my $ndays = $startoff+35; # to get enough material for the running average
       my $date;
       open F, ">$plotfile"
-          or error ("Could not open $plotfile for writing");
+          or util::error ("Could not open $plotfile for writing");
       my $legend = "# Date  Drinks  Sum30  Sum7  Zeromark  Future  Drink Color Drink Color ...";
       print F "$legend \n".
         "# Plot $startdate ($startoff) to $enddate ($endoff) \n";
@@ -1720,7 +1720,7 @@ sub graph {
                   "using 1:5 with points lc \"#00dd10\" pointtype 11 axes x1y2 notitle \n" .  # zeroes (greenish)
               "";
         open C, ">$cmdfile"
-            or error ("Could not open $plotfile for writing");
+            or util::error ("Could not open $plotfile for writing");
         print C $cmd;
         close(C);
         system ("gnuplot $cmdfile ");
@@ -1837,7 +1837,7 @@ sub beerboard {
        && (-M $cachefile) * 24 * 60 < 20    # age in minutes
        && -s $cachefile > 256    # looks like a real file
        && $qrylim ne "f" ) {
-    open CF, $cachefile or error ("Could not open $cachefile for reading");
+    open CF, $cachefile or util::error ("Could not open $cachefile for reading");
     while ( <CF> ) {
       $json .= $_ ;
     }
@@ -1855,14 +1855,14 @@ sub beerboard {
     print "Result: '$json'\n -->\n";
   }else {
     if ($loaded) {
-      open CF, ">$cachefile" or error( "Could not open $cachefile for writing");
+      open CF, ">$cachefile" or util::error( "Could not open $cachefile for writing");
       print CF $json;
       close CF;
     }
     chomp($json);
     #print "<!--\nPage:\n$json\n-->\n";  # for debugging
     my $beerlist = JSON->new->utf8->decode($json)
-      or error("Json decode failed for $scrapers{$locparam} <pre>$json</pre>");
+      or util::error("Json decode failed for $scrapers{$locparam} <pre>$json</pre>");
     my $nbeers = 0;
     if ($qry) {
     print "Filter:<b>$qry</b> " .
@@ -2363,7 +2363,7 @@ sub monthstat {
   my $dayofmonth = datestr("%d");
 
   open F, ">$plotfile"
-      or error ("Could not open $plotfile for writing");
+      or util::error ("Could not open $plotfile for writing");
   my @ydays;
   my @ydrinks;
   my @yprice;
@@ -2601,7 +2601,7 @@ sub monthstat {
             "using 1:2 with points pt 6 lc \"$yearcolors[$lasty]\" lw 2 notitle," ;
   $cmd .= "\n";
   open C, ">$cmdfile"
-      or error ("Could not open $plotfile for writing");
+      or util::error ("Could not open $plotfile for writing");
   print C $cmd;
   close(C);
   system ("gnuplot $cmdfile ");
@@ -3347,7 +3347,7 @@ sub filtered {
     for my $k ( keys %{$rec} ) {
       $rec->{rawline} .= "; " . ( $rec->{$k} || "" ) ;
     }
-    #error ( "Made rawline '$rec->{rawline}' ");
+    #util::error ( "Made rawline '$rec->{rawline}' ");
   }
   if ( $qry ) {
     $rec->{$qryfield} = "" if ( !defined($rec->{$qryfield} ) );
@@ -3552,16 +3552,6 @@ sub units {
 }
 
 
-# Helper to make an error message
-sub error {
-  my $msg = shift;
-  print "\n\n";  # Works if have sent headers or not
-  print "<hr/>\n";
-  print "ERROR   <br/>\n";
-  print $msg;
-  print STDERR "ERROR: $msg\n";
-  exit();
-}
 
 # Helper to validate and split a geolocation string
 # Takes one string, in either new or old format
@@ -3926,12 +3916,12 @@ sub getrecord {
   $i++ unless $i; # trick to get around [0]
   if ( ! $records[$i] ) {
     my $ts = $lines[$i];
-    error ("No timestamp for record '$i' ") unless ($ts);
+    util::error ("No timestamp for record '$i' ") unless ($ts);
     my $sql = "select * from glassrec where username=? and stamp = ?";
     my $get_sth = $dbh->prepare($sql);
     $get_sth->execute($username, $ts);
     my $rec = $get_sth->fetchrow_hashref;
-    error("Got no record $i ($ts) for '$username'") unless ($rec);
+    util::error("Got no record $i ($ts) for '$username'") unless ($rec);
     #print STDERR "got rec $i: '$rec' : " ,  JSON->new->encode($rec), "\n";
     fixrecord($rec, $i);
     $records[$i] = $rec;
@@ -3990,7 +3980,7 @@ sub nullfields {
   my $rec = shift;
   my $linetype = shift || $rec->{type};
   my $fieldnamelistref = $datalinetypes{$linetype};
-  error ("Oops, no field list for '$linetype'") unless $fieldnamelistref;
+  util::error ("Oops, no field list for '$linetype'") unless $fieldnamelistref;
   my @fieldnamelist = @{$fieldnamelistref};
   foreach my $f ( fieldnames($linetype) ) {
     $rec->{$f} = ""
