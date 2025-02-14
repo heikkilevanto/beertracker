@@ -147,6 +147,14 @@ sub inputform {
       }
     }
     setdate();
+
+    // hide newBrewType, we use SelBrewType always
+    var nbt = document.getElementsByName("newbrewBrewType");
+    if ( nbt.length > 0 ) {
+      nbt[0].hidden = true;
+      var br = nbt[0].nextElementSibling;
+      br.hidden = true;
+    }
 SCRIPTEND
   print "<script defer>$script</script>\n";
 } # inputform
