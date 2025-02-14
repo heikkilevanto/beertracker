@@ -273,7 +273,7 @@ sub fixvol {
     if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
       $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
     }
-    $glass->{Volume} = $vol;
+    $glass->{Volume} = util::number($vol);
     $glass->{Alc} =~ s/[.,]+/./;  # I may enter a comma occasionally
     my $std = $glass->{Volume} * $glass->{Alc} / $c->{onedrink};
     $glass->{StDrinks} = sprintf("%6.2f", $std );
