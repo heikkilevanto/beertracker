@@ -372,7 +372,6 @@ if ( $devversion && $op eq "copyproddata" ) {
 my $datafilecomment = "";
 
 # # Default new users to the about page, we have nothing else to show
-# Not now, we don't have @lines set up yet, and never will
 # TODO - Make a better check, and force  the about page to show an input form
 # if ( !$op) {
 #   if ( !@lines) {
@@ -573,6 +572,9 @@ sub extractgeo {
 ################################################################################
 sub findrec {
   my $i = scalar( @lines ) -1;
+  if ( $i < 0 ) {  # no data
+    return;
+  }
   if ( ! $edit ) { # Usually the last one
     $foundrec = getrecord_com($i);
   }
@@ -2707,6 +2709,8 @@ sub datastats {
 ################################################################################
 
 sub about {
+
+
   print "<hr/><h2>Beertracker</h2>\n";
   print "Copyright 2016-2025 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";

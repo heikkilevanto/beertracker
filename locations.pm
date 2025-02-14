@@ -94,12 +94,12 @@ sub postlocation {
   my $id = shift || $c->{edit};
   if ( $id eq "new" ) {
     my $name = $c->{cgi}->param("newlocName");
-    main::error ("A Location must have a name" )
+    util::error ("A Location must have a name" )
       unless $name;
     $id = util::insertrecord($c, "LOCATIONS", "newloc");
   } else {
     my $name = $c->{cgi}->param("Name");
-    main::error ("A Location must have a name" )
+    util::error ("A Location must have a name" )
       unless $name;
     $id = util::updaterecord($c, "LOCATIONS", $id,  "");
   }

@@ -293,14 +293,18 @@ sub postglass {
 
   my $glass = findrec($c); # Get defaults from last glass or the record we are editing
   # my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
-  my $brew = util::getrecord($c, "BREWS", scalar $c->{cgi}->param("Brew") );
-  if (! $brew) {  # Can happen with the beer board
-    # TODO - Happens also with Rest/Night buttons, which go wrong here !
-     my $brewid  = brews::insert_old_style_brew($c);
-     $brew = util::getrecord($c, "BREWS", $brewid );
-     $glass->{Brew} = $brewid;
-     $glass->{BrewType} = $brew->{BrewType};
-     $glass->{SubType} = $brew->{SubType};
+  my $brew;
+  my $brewname = util::param($c,"Brew");
+  if ( $brewname && $brewname ne "new" ) {
+    $brew = util::getrecord($c, "BREWS", $brewname );
+    if (! $brew)  {  # Can happen with the beer board
+      # TODO - Happens also with Rest/Night buttons, which go wrong here !
+      my $brewid  = brews::insert_old_style_brew($c);
+      $brew = util::getrecord($c, "BREWS", $brewid );
+      $glass->{Brew} = $brewid;
+      $glass->{BrewType} = $brew->{BrewType};
+      $glass->{SubType} = $brew->{SubType};
+    }
   }
   #print STDERR "postglass: sel='" . util::param($c, "selbrewtype") . "' glt='$glass->{BrewType}'  brt='$brew->{BrewType}' \n";
 
@@ -431,7 +435,7 @@ sub findrec {
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( $id, $c->{username} );
   my $rec = $sth->fetchrow_hashref;
-  main::error ("Can not find record id '$id' for username '$c->{username}' ") unless ( $rec->{Timestamp} );
+  util::error ("Can not find record id '$id' for username '$c->{username}' ") unless ( $rec->{Timestamp} );
   return $rec;
 }
 

@@ -71,7 +71,7 @@ sub editperson {
 sub postperson {
   my $c = shift; # context
   my $id = $c->{edit};
-  main::error ("Bad id for updating a person '$id' ")
+  util::error ("Bad id for updating a person '$id' ")
     unless $id =~ /^\d+$/;
   my $name = $c->{cgi}->param("Name");
   error ("A Person must have a name" )
