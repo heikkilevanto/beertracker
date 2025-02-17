@@ -139,8 +139,6 @@ sub postperson {
 ################################################################################
 # Helper to select a person
 ################################################################################
-# For now, just produces a pull-down list. Later we can add filtering, options
-# for sort order etc
 sub selectperson {
   my $c = shift; # context
   my $fieldname = shift || "person";

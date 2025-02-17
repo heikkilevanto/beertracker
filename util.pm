@@ -213,7 +213,7 @@ sub dropdown {
                 #    "<div class='dropdown-item' id='6'>Ølbaren</div>\n" ...
   my $tablename = shift;  # Table to grab input fields for new records. Empty if not
   my $newfieldprefix = shift; # Prefix for new input fields, f.ex. newloc
-
+  print STDERR "dropdown: input='$inputname' sel='$selectedid' seln='$selectedname' table='$tablename' newpref='$newfieldprefix' \n";
 
   my $newdiv = "";
   if ($tablename) { # We want a way to add new records
@@ -360,11 +360,11 @@ sub inputform {
     my $val = "";
     $val = "value='$rec->{$f}'" if ( $rec && $rec->{$f} );
     if ( $special && $f =~ /location/i ) {
-      $form .= locations::selectlocation($c, $f, $rec->{$f}, "loc");
+      $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "loc");
     } elsif ($special && $f =~ /person/i ) {
       if ( $inputprefix !~ /newperson/ ) {
         # Allow editing of RelatedPerson, but only on top level
-        $form .= persons::selectperson($c, $f, $rec->{$f}, "pers");
+        $form .= persons::selectperson($c, $inputprefix.$f, $rec->{$f}, "pers");
         # Avoids endless recursion
       }
     } elsif ( $special ) {
@@ -417,11 +417,15 @@ sub insertrecord {
 
   my @sqlfields; # field names in sql
   my @values; # values to insert, in the same order
-  for my $f ( tablefields($c, $table)) {
+  for my $f ( tablefields($c, $table,undef,1)) {  # 1 indicates no -prefix
     my $val = param($c, $inputprefix.$f );
+    print STDERR "insertrecord: '$inputprefix' '$f' got value '$val' \n";
     if ( !$val ) {
       $val =  $defaults->{$f} || "";
-      print STDERR "insertrecord: '$f' defaults to '$val' \n";
+      print STDERR "insertrecord: '$f' defaults to '$val' \n" if ($val);
+    }
+    if ( $val eq "new" ) {
+      error ("insertrecord can not yet handle recursion to new types. f='$inputprefix.$f' ");
     }
     if ( $val ) {
       push @sqlfields, $f;
