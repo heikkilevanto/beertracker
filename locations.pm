@@ -119,6 +119,7 @@ sub selectlocation {
   my $selected = shift || "0";  # The id of the selected location
   my $newprefix = shift || ""; # Prefix for new-location fields. Enables the "new"
   my $prods = shift || "";  # "prod" for prod locs only, "non" for non-prods only. Defaults to all
+
   if ( $selected && $selected !~ /^\d+$/ ){
     print STDERR "selectlocation called with non-numerical 'selected' argument: '$selected' \n";
     $selected = 0;

@@ -66,7 +66,8 @@ sub inputform {
         "pattern=' ?\\d\\d(:?\\d\\d)?(:?\\d\\d)?' ".
         "placeholder='HH:MM' $sz8/> &nbsp;\n";
   print "<tr><td>Location</td>\n";
-  print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname") . "</td></tr>\n";
+  print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname", "non") .
+    "</td></tr>\n";
 
   # Brew style
   print "<tr><td style='vertical-align:top'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
@@ -224,12 +225,14 @@ sub getvalues {
   my $glass = shift;
   my $brew = shift;
   my $sub = shift;
+
   $glass->{BrewType} =  util::param($c, "selbrewtype") || $glass->{BrewType} || $brew->{BrewType} || "WRONG";
   util::error("getvalues.1: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
   $brew->{BrewType} = util::param($c, "selbrewtype")  || $brew->{BrewType} || $glass->{BrewType} || "WRONG";
   util::error("getvalues.2: No Brew Type for brew $brew->{Id}") if ( $brew->{BrewType} eq "WRONG" );
   $glass->{SubType} = util::param($c, "subtype") || $glass->{SubType} || $brew->{SubType} || "WRONG";
-  util::error("getvalues.3: No Brew SubType for glass $glass->{Id}") if ( $brew->{SubType} eq "WRONG" );
+  util::error("getvalues.3: No Brew SubType for glass $glass->{Id}")
+    if (! $brew->{SubType} || $brew->{SubType} eq "WRONG" );
     # TODO - The "WRONG" is just a placeholder for missing value, should not happen.
 
   $glass->{Location} = util::param($c, "Location", undef) || $glass->{Location};
