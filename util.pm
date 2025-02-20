@@ -275,6 +275,7 @@ sub dropdown {
               if (event.target.getAttribute("id") == "new" ) {
                 wholedropdown$inputname.hidden = true;
                 newdiv$inputname.hidden = false;
+                document.querySelector('#newdiv-$inputname input')?.focus();
               } else { // update alc and brewtype if selected a brew
                 const alcinp = document.getElementById("alc");
                 const selalc = event.target.getAttribute("alc");
