@@ -124,10 +124,12 @@ sub selectlocation {
     $selected = 0;
   }
   my $where = "";
+  my $skip = "Id";
   my $newfield = "newloc";
   if ( $prods eq "prod" ) {
     $where = "where LOCATIONS.LocType = \"Producer\" ";
     $newfield = "newprod";
+    $skip .= "|LocType|LocSubType";
   } elsif ( $prods eq "non" ) {
     $where = "where LOCATIONS.LocType <>  \"Producer\" ";
   }
@@ -159,7 +161,7 @@ sub selectlocation {
       $current = $name;
     }
   }
-  my $s = util::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield );
+  my $s = util::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield, $skip );
   return $s;
 
 } # seleclocation

@@ -213,17 +213,19 @@ sub dropdown {
                 #    "<div class='dropdown-item' id='6'>Ølbaren</div>\n" ...
   my $tablename = shift;  # Table to grab input fields for new records. Empty if not
   my $newfieldprefix = shift; # Prefix for new input fields, f.ex. newloc
+  my $skipnewfields = shift || "" ; # regexp. "Id|HiddenField|AlsoThis"
 
-  my $s = "";
-  print STDERR "dropdown: input='$inputname' sel='$selectedid' seln='$selectedname' table='$tablename' newpref='$newfieldprefix' \n";
-  $s .= "<!-- DROPDOWN START: input='$inputname' sel='$selectedid' seln='$selectedname' table='$tablename' newpref='$newfieldprefix' --> \n";
+  my $s = "input='$inputname' sel='$selectedid' " .
+     "seln='$selectedname' table='$tablename' newpref='$newfieldprefix' skip='$skipnewfields'";
+  print STDERR "DROPDOWN $s \n";
+  $s = "<!-- DROPDOWN START: $s -->\n";
 
   my $newdiv = "";
   if ($tablename) { # We want a way to add new records
     # Add an option to do so
     $options = "<div class='dropdown-item' id='new'>(new)</div>\n" . $options;
     $newdiv = "<div id='newdiv-$inputname' hidden>\n";
-    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname);
+    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname,"",$skipnewfields);
     $newdiv .= "</div>";
   }
 
@@ -332,7 +334,7 @@ sub dropdown {
 
     </script>
 JSEND
-  $s .= "<!-- DROPDOWN END : input='$inputname' sel='$selectedid' seln='$selectedname' table='$tablename' newpref='$newfieldprefix' -->\n";
+  $s .= "<!-- DROPDOWN END : input='$inputname' -->\n";
 
   return $s;
 } # dropdown
@@ -351,9 +353,10 @@ sub inputform {
   my $inputprefix = shift || "";
   my $placeholderprefix = shift || "";
   my $separatortag = shift || "<br/>";
-  my $skipfields = shift || "";
+  my $skipfields = shift || "Id"; # regexp. "Id|HiddenField|AlsoThis"  "all" for showing all
+
   my $form = "";
-  foreach my $f ( tablefields($c,$table) ) {
+  foreach my $f ( tablefields($c,$table,$skipfields) ) {
     my $special = $1 if ( $f =~ s/^(\W)// );
     my $pl = $f;
     $pl =~ s/([A-Z])/ $1/g; # Break words GeoCoord -> Geo Coord
@@ -375,7 +378,7 @@ sub inputform {
         # Avoids endless recursion
       }
     } elsif ( $special ) {
-      $form .= "Special field $f not handled yet";  # Sould not happen
+      util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
     } else {  # Regular input field
       my $pass = "";
       if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
@@ -435,7 +438,10 @@ sub insertrecord {
     if ( $val eq "new" ) {
       if ( $f eq "ProducerLocation" ) {
         print STDERR "Recursing to ProducerLocation \n";
-        $val = insertrecord($c, "LOCATIONS", "newprod" );
+        my $def = {};
+        $def->{LocType} = "Producer";
+        $def->{LocSubType} = util::param($c, "selbrewtype") || "Beer";
+        $val = insertrecord($c, "LOCATIONS", "newprod", $def );
         print STDERR "Returned from ProducerLocation, id='$val'  \n";
       }
       else {
