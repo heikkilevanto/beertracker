@@ -109,22 +109,28 @@ sub postlocation {
 ################################################################################
 # Helper to select a location
 ################################################################################
-# For now, just produces a pull-down list. Later we can add filtering, options
-# for sort order and some geo coord magic
-# TODO - Add a few more fields.
-# TODO - Add the current location as the first real one in the list, never mind if duplicates
+# Offers a list to select a location, or (optionally) to enter values for a
+# new one. The optional 5th parameter limits the locations to those that are
+# Producers, or those that are not. Default is not to limit at all.
 
 sub selectlocation {
   my $c = shift; # context
   my $fieldname = shift || "Location";
   my $selected = shift || "0";  # The id of the selected location
   my $newprefix = shift || ""; # Prefix for new-location fields. Enables the "new"
-
+  my $prods = shift || "";  # "prod" for prod locs only, "non" for non-prods only. Defaults to all
   if ( $selected && $selected !~ /^\d+$/ ){
     print STDERR "selectlocation called with non-numerical 'selected' argument: '$selected' \n";
     $selected = 0;
   }
-
+  my $where = "";
+  my $newfield = "newloc";
+  if ( $prods eq "prod" ) {
+    $where = "where LOCATIONS.LocType = \"Producer\" ";
+    $newfield = "newprod";
+  } elsif ( $prods eq "non" ) {
+    $where = "where LOCATIONS.LocType <>  \"Producer\" ";
+  }
   my $sql = "
   select
     LOCATIONS.Id,
@@ -133,6 +139,7 @@ sub selectlocation {
     LOCATIONS.LocSubType
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
+  $where
   group by LOCATIONS.id
   order by max(GLASSES.Timestamp) DESC
   ";
@@ -152,7 +159,7 @@ sub selectlocation {
       $current = $name;
     }
   }
-  my $s = util::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", "newloc" );
+  my $s = util::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield );
   return $s;
 
 } # seleclocation

@@ -213,7 +213,10 @@ sub dropdown {
                 #    "<div class='dropdown-item' id='6'>Ølbaren</div>\n" ...
   my $tablename = shift;  # Table to grab input fields for new records. Empty if not
   my $newfieldprefix = shift; # Prefix for new input fields, f.ex. newloc
+
+  my $s = "";
   print STDERR "dropdown: input='$inputname' sel='$selectedid' seln='$selectedname' table='$tablename' newpref='$newfieldprefix' \n";
+  $s .= "<!-- DROPDOWN START: input='$inputname' sel='$selectedid' seln='$selectedname' table='$tablename' newpref='$newfieldprefix' --> \n";
 
   my $newdiv = "";
   if ($tablename) { # We want a way to add new records
@@ -224,7 +227,6 @@ sub dropdown {
     $newdiv .= "</div>";
   }
 
-  my $s = "";
   $s .= <<JSEND;
   <style>
         .dropdown-list {
@@ -329,8 +331,9 @@ sub dropdown {
         });
 
     </script>
-
 JSEND
+  $s .= "<!-- DROPDOWN END : input='$inputname' sel='$selectedid' seln='$selectedname' table='$tablename' newpref='$newfieldprefix' -->\n";
+
   return $s;
 } # dropdown
 
@@ -355,11 +358,15 @@ sub inputform {
     my $pl = $f;
     $pl =~ s/([A-Z])/ $1/g; # Break words GeoCoord -> Geo Coord
     $pl = trim($placeholderprefix .$pl);
+    $pl =~ s/^([A-z])[a-z]+/$1/ if ( length($pl) > 20 );
+    while ( length($pl) > 20 && $pl =~ s/([A-Z])([a-z]+)/$1/ ) { } ;  # Shorten pl
     $pl .= $special if ($special) ;
     my $inpname = $inputprefix . $f;
     my $val = "";
     $val = "value='$rec->{$f}'" if ( $rec && $rec->{$f} );
-    if ( $special && $f =~ /location/i ) {
+    if ( $special && $f =~ /producerlocation/i ) {
+      $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "prodloc", "prod");
+    } elsif ( $special && $f =~ /location/i ) {
       $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "loc");
     } elsif ($special && $f =~ /person/i ) {
       if ( $inputprefix !~ /newperson/ ) {
@@ -409,6 +416,7 @@ sub tablefields {
 ######### Insert a record directly from CGI parameters
 # Takes the field names from the table.
 # Expects cgi inputs with same names with a prefix
+# TODO - The recursion does not yet handle all possible types
 sub insertrecord {
   my $c = shift;
   my $table = shift;
@@ -425,7 +433,14 @@ sub insertrecord {
       print STDERR "insertrecord: '$f' defaults to '$val' \n" if ($val);
     }
     if ( $val eq "new" ) {
-      error ("insertrecord can not yet handle recursion to new types. f='$inputprefix.$f' ");
+      if ( $f eq "ProducerLocation" ) {
+        print STDERR "Recursing to ProducerLocation \n";
+        $val = insertrecord($c, "LOCATIONS", "newprod" );
+        print STDERR "Returned from ProducerLocation, id='$val'  \n";
+      }
+      else {
+        error ("insertrecord can not yet handle recursion to this type. p='$inputprefix' f='$f' ");
+      }
     }
     if ( $val ) {
       push @sqlfields, $f;
@@ -438,6 +453,7 @@ sub insertrecord {
   my $sql = "insert into $table $fieldlist values $qlist";
   print STDERR "insertrecord: $sql \n";
   print STDERR "insertrecord: " . join (", ", @values ) . "\n";
+  error("insertrecord: Nothing to insert into $table") unless @values;
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @values );
   my $id = $c->{dbh}->last_insert_id(undef, undef, $table, undef) || undef;
