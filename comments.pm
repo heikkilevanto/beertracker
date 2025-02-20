@@ -113,6 +113,8 @@ sub commentform {
 # Handle submitted comment form
 ################################################################################
 sub postcomment {
+  # TODO - Use util helpers, to get recurstion right
+  # New person -> New Location and New RelatedPerson ?
   my $c = shift;
 
   my $glass = util::param($c, "glass");

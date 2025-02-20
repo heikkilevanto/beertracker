@@ -198,9 +198,6 @@ sub listsmenu {
 # Omit the "new" line if you don't want it
 # Returns a string ready to be printed in a form
 
-# TODO - Reset the filter when blurring the field
-# Otherwise it gets remembered, but not displayed when opening again
-
 # TODO SOON - Move the CSS away from here
 
 sub dropdown {
@@ -217,7 +214,7 @@ sub dropdown {
 
   my $s = "input='$inputname' sel='$selectedid' " .
      "seln='$selectedname' table='$tablename' newpref='$newfieldprefix' skip='$skipnewfields'";
-  print STDERR "DROPDOWN $s \n";
+  print STDERR "dropdown: $s \n";
   $s = "<!-- DROPDOWN START: $s -->\n";
 
   my $newdiv = "";
@@ -543,7 +540,22 @@ sub findrecord {
   my $rec = $sth->fetchrow_hashref;
   $sth->finish;
   return $rec;
+} # getrecord
 
+############ Get given fields from (first) record that matches the where clause
+sub getfieldswhere {
+  my $c = shift;
+  my $table = shift;
+  my $fields = shift;
+  my $where = shift;
+  my $order = shift || "";
+  my $sql = "select $fields from $table $where $order";
+  #print STDERR "getfieldswhere: $sql \n";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute();
+  my $rec = $sth->fetchrow_hashref;
+  $sth->finish;
+  return $rec;
 } # getrecord
 
 ############ Produce a list of records

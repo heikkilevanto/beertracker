@@ -67,7 +67,6 @@ sub editperson {
 ################################################################################
 # Update a person (posted from the form above)
 ################################################################################
-# TODO LATER - Insert new person here as well?
 sub postperson {
   my $c = shift; # context
   my $id = $c->{edit};
@@ -76,9 +75,14 @@ sub postperson {
   my $name = $c->{cgi}->param("Name");
   error ("A Person must have a name" )
     unless $name;
-  util::updaterecord($c, "PERSONS", $id);
+  if ( util::param($c,$id) ){
+    util::updaterecord($c, "PERSONS", $id);
+  } else {
+    util::insertrecord($c, "PERSONS" );
+  }
   return;
 
+  # OLD CODE
   my $full= $c->{cgi}->param("full") || "" ;
   my $desc= $c->{cgi}->param("desc") || "" ;
   my $cont= $c->{cgi}->param("cont") || "" ;

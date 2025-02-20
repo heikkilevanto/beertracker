@@ -227,12 +227,12 @@ sub getvalues {
   my $sub = shift;
 
   $glass->{BrewType} =  util::param($c, "selbrewtype") || $glass->{BrewType} || $brew->{BrewType} || "WRONG";
-  util::error("getvalues.1: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
+  #util::error("getvalues.1: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
   $brew->{BrewType} = util::param($c, "selbrewtype")  || $brew->{BrewType} || $glass->{BrewType} || "WRONG";
-  util::error("getvalues.2: No Brew Type for brew $brew->{Id}") if ( $brew->{BrewType} eq "WRONG" );
+  #util::error("getvalues.2: No Brew Type for brew $brew->{Id}") if ( $brew->{BrewType} eq "WRONG" );
   $glass->{SubType} = util::param($c, "subtype") || $glass->{SubType} || $brew->{SubType} || "WRONG";
-  util::error("getvalues.3: No Brew SubType for glass $glass->{Id}")
-    if (! $brew->{SubType} || $brew->{SubType} eq "WRONG" );
+  #util::error("getvalues.3: No Brew SubType for glass $glass->{Id}")
+  #  if (! $brew->{SubType} || $brew->{SubType} eq "WRONG" );
     # TODO - The "WRONG" is just a placeholder for missing value, should not happen.
 
   $glass->{Location} = util::param($c, "Location", undef) || $glass->{Location};
@@ -284,6 +284,55 @@ sub fixvol {
 } # fixvol
 
 
+############## Helper to fix the price
+sub guessprice {
+  my $c = shift;
+  my $glass = shift;
+  my $where = shift;
+  my $grec = util::getfieldswhere( $c, "GLASSES", "Price",
+      "WHERE Price > 0 AND $where",
+      "ORDER BY Timestamp DESC" );
+  if ( $grec && $grec->{Price} ) {
+    print STDERR "Found price '$grec->{Price}' with $where \n";
+    return $grec->{Price};
+  }
+  return 0;
+}
+
+sub fixprice {
+  my $c = shift;
+  my $glass = shift;
+
+  my $pr = $glass->{Price} || "";
+  return if  ( $pr =~ /^\d+$/ );  # Already a good price, only digits
+  # TODO - Currencies, next time I travel
+  if ( $pr =~ /^x/i ) {  # X indicates no price, no guessing
+    $glass->{Price} = "";
+    return;
+  }
+  print STDERR "No price, guessing\n";
+  # Sql where clause fragments
+  my $br = "Brew=$glass->{Brew}";
+  my $vo = "Volume=$glass->{Volume}";
+  my $lo = "Location=$glass->{Location}";
+  $pr = 0;
+  if ( $glass->{Brew} && $glass->{Brew} ne "new" && $glass->{Volume} ) {
+    # Have brew, try to find similar glasses
+    $pr = guessprice($c, $glass,"$br AND $lo AND $vo" );
+    if ( $pr == 0 ) {
+      $pr = guessprice($c, $glass,"$br AND $vo" );
+    }
+  }
+  if ( $pr == 0 ) {
+    $pr = guessprice($c, $glass, "$lo AND $vo" );
+  }
+  if ( $pr > 0 ) {
+    $glass->{Price} = $pr;
+  } else {
+    print STDERR "Could not guess a price with $br $vo $lo \n";
+  }
+}
+
 ############## postglass itself
 sub postglass {
   my $c = shift; # context
@@ -323,6 +372,7 @@ sub postglass {
   getvalues($c, $glass, $brew, $sub);
   gettimestamp($c, $glass);
   fixvol($c, $glass, $brew);
+  fixprice($c, $glass);
 
   $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "WRONG";
   util::error("Post: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
