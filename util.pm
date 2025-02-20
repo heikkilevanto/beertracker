@@ -381,16 +381,12 @@ sub inputform {
     } elsif ( $special ) {
       util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
     } else {  # Regular input field
-      my $nonempty = "";
-      if ( ( $table =~ /BREWS/i && $f =~ /Name|BrewType|SubType/i ) ) {
-        $nonempty = "required";
-      }
       my $pass = "";
       if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
         # (that is lowercase 'alc'). Pass it to glass.alc
         $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
       }
-      $form .= "<input name='$inpname' $val placeholder='$pl' $clr $pass $nonempty />\n";
+      $form .= "<input name='$inpname' $val placeholder='$pl' $clr $pass />\n";
       $form .= $separatortag;
     }
   }
