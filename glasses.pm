@@ -287,7 +287,6 @@ sub fixvol {
 ############## Helper to fix the price
 sub guessprice {
   my $c = shift;
-  my $glass = shift;
   my $where = shift;
   my $grec = util::getfieldswhere( $c, "GLASSES", "Price",
       "WHERE Price > 0 AND $where",
@@ -318,13 +317,13 @@ sub fixprice {
   $pr = 0;
   if ( $glass->{Brew} && $glass->{Brew} ne "new" && $glass->{Volume} ) {
     # Have brew, try to find similar glasses
-    $pr = guessprice($c, $glass,"$br AND $lo AND $vo" );
+    $pr = guessprice($c,"$br AND $lo AND $vo" );
     if ( $pr == 0 ) {
-      $pr = guessprice($c, $glass,"$br AND $vo" );
+      $pr = guessprice($c,"$br AND $vo" );
     }
   }
   if ( $pr == 0 ) {
-    $pr = guessprice($c, $glass, "$lo AND $vo" );
+    $pr = guessprice($c, "$lo AND $vo" );
   }
   if ( $pr > 0 ) {
     $glass->{Price} = $pr;

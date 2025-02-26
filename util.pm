@@ -543,6 +543,7 @@ sub findrecord {
 } # getrecord
 
 ############ Get given fields from (first) record that matches the where clause
+# Or undef if not found
 sub getfieldswhere {
   my $c = shift;
   my $table = shift;
