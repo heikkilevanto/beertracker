@@ -342,13 +342,13 @@ sub get_or_insert_brew {
       FROM BREWS
       WHERE Name = ? COLLATE NOCASE
       AND ( ProducerLocation = ? OR  ProducerLocation is null )
-      AND BrewType = ?
+      AND BrewType = ? AND ( SubType = ? OR SubType = '' )
       LIMIT 1
-    };
+    };  # TODO Check subtype, at least for wines
     my $sth = $dbh->prepare($sql);
     #$sth->execute($rec->{name}, $rec->{producer}, $rec->{type}, $rec->{subtype}, $rec->{subtype});
       # AND (subtype = ? OR ( subtype is null and ? is null ) )
-    $sth->execute($rec->{name}, $rec->{producer}, $rec->{type});
+    $sth->execute($rec->{name}, $rec->{producer}, $rec->{type}, $rec->{subtype} );
     if ( ($id, $prod, $sty, $al) = $sth->fetchrow_array) {
       # Found the brew, check optional fields
       if ( !$prod && $rec->{producer} )  {

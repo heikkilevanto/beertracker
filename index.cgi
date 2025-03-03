@@ -794,7 +794,9 @@ sub missing {
   return  (defined($rec->{$fld}) && $rec->{$fld} eq "" );
 }
 
+
 # Helper to guess missing values from previous lines
+# TODO - Should not be needed any more
 sub guessvalues {
   my $rec = shift;
   my $priceguess = "";
