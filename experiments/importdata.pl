@@ -482,7 +482,7 @@ sub winestyle {
                           "Chianti", "Corsica", "Langhe", "Salice Salentino",
                           "Sicily", "Veneto", "Val di Neto" ],
     [ "New Zealand", "NZ" ],
-    [ "Portugal", "Portugese", "Douro" ],
+    [ "Portugal", "Portugese", "Douro", "Ribera Del Duero" ],
     [ "South Africa", "South African", "Stellenbosh" ],
     [ "Spain", "Spanish", "Rioja", "Priorat", "Priorato", "Ribera del Duero", "Gordoba",
                           "Sierra de Malaga", "Malaga", "Catalonia", "Navarra",
