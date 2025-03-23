@@ -153,6 +153,8 @@ sub insert_old_style_brew {
   my $maker = util::param($c, "maker");
   my $style = util::param($c, "style");
   my $subtype = util::param($c, "subtype") || "Ale"; # TODO Calculate subtype properly
+  my $country = util::param($c, "country");
+  my $alc= util::param($c, "alc");
   print STDERR "insert_old_style_brew: t='$type' st='$subtype' n='$name' m='$maker' sty='$style' \n";
 
   if ( ! $name ){  # Sanity check
@@ -181,12 +183,11 @@ sub insert_old_style_brew {
   } else {
     print STDERR "insert_old_style_brew: Found maker  m='$maker'  as id = '$prodlocid' \n";
   }
-
   $sql = "insert into BREWS
-    ( Name, BrewType, SubType, BrewStyle, ProducerLocation )
-    values ( ?, ?, ?, ?, ? ) ";
+    ( Name, BrewType, SubType, BrewStyle, ProducerLocation, Alc, Country )
+    values ( ?, ?, ?, ?, ?, ?, ? ) ";
   my $ins_sth = $c->{dbh}->prepare($sql);
-  $ins_sth->execute( $name, $type, $subtype, $style, $prodlocid);
+  $ins_sth->execute( $name, $type, $subtype, $style, $prodlocid, $alc, $country);
   my $id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
   print STDERR "insert_old_style_brew: Inserted '$name' into BREWS as id '$id' \n";
   return $id;

@@ -1940,11 +1940,12 @@ sub beerboard {
         } else {
           $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
         }
-        $hiddenbuttons .= "<input type='hidden' name='subtype' value='$country' />\n"
+        $hiddenbuttons .= "<input type='hidden' name='country' value='$country' />\n"
           if ($country) ;
         $hiddenbuttons .= "<input type='hidden' name='maker' value='$mak' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='name' value='$beer' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='style' value='$origsty' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='subtype' value='$sty' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='alc' value='$alc' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='loc' value='$loc' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
