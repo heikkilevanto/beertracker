@@ -353,7 +353,7 @@ sub postglass {
   my $glass = findrec($c); # Get defaults from last glass or the record we are editing
   # my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
   my $brew;
-  my $brewname = util::param($c,"Brew");
+  my $brewname = util::param($c,"Brew") || util::param($c,"name") ;
   if ( $brewname && $brewname ne "new" ) {
     $brew = util::getrecord($c, "BREWS", $brewname );
     if (! $brew)  {  # Can happen with the beer board
