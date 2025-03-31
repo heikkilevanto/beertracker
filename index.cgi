@@ -92,7 +92,7 @@ my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
 my $workdir = cwd();
 my $devversion = 0;  # Changes a few display details if on the development version
 $devversion = 1 unless ( $ENV{"SCRIPT_NAME"} =~ /index.cgi/ );
-$devversion = 1 if ( $workdir =~ /-dev/ );
+$devversion = 1 if ( $workdir =~ /-dev|-old/ );
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.

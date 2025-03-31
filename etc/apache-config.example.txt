@@ -10,7 +10,7 @@
 
 #<Directory /home/heikki/proj/beertracker/>
 
-<DirectoryMatch /var/www/html/beertracker(-dev)?/>
+<DirectoryMatch /var/www/html/beertracker(-dev)?(-old)?/>
    AllowOverride All
    Options +FollowSymLinks +ExecCGI
 
