@@ -156,7 +156,7 @@ sub showmenu {
   $s .= "<option value='o=Graph' >Graph</option>\n";
   $s .= "<option value='o=board' >Beer Board</option>\n";
   $s .= "<option value='o=Months' >Stats</option>\n";
-  $s .= "<option value='o=Beer' >Lists</option>\n";
+  $s .= "<option value='o=Brew' >Lists</option>\n";
   $s .= "<option value='o=About' >About</option>\n";
   $s .= "</select>\n";
   $s .=  " &nbsp; &nbsp; &nbsp;";
