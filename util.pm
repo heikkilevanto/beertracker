@@ -174,7 +174,7 @@ sub listsmenu {
   my $s = "";
   $s .= " <select  style='width:7em;' " .
               "onchange='document.location=\"$c->{url}?\"+this.value;' >";
-  my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Producer", "Restaurant", "Style", "Persons");
+  my @ops = ( "Brew", "Brewery", "Location", "Producer", "Restaurant", "Style", "Persons");
   for my $l ( @ops ) {
     my $sel = "";
     $sel = "selected" if ($l eq $c->{op});

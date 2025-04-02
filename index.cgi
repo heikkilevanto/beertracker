@@ -448,11 +448,11 @@ if ( $op =~ /Board/i ) {
   # The about page went from 500ms to under 100 when dropping the oldstuff
   print util::showmenu($context);
   about();
-} elsif ( $op =~ /Brewery|Wine|Booze|Restaurant|Style/i ) {
+} elsif ( $op =~ /Brewery|Restaurant|Style/i ) {
   oldstuff();
   #listsmenubar();
   lists();
-} elsif ( $op =~ /Beer/i ) {
+} elsif ( $op =~ /Brew/i ) {
   brews::listbrews($context);
 } elsif ( $op =~ /Persons/i ) {
   persons::listpersons($context);
