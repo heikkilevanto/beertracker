@@ -96,7 +96,7 @@ $dbh->do(q{
     PLOC.Name as Producer,
     BREWS.Alc as Alc,
     BREWS.BrewType || ", " || BREWS.Subtype as Type,
-    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as Last,
+    strftime ( '%Y-%m-%d %w %H:%M', max(GLASSES.Timestamp), '-06:00' ) as Last,
     LOCATIONS.Name as Location,
     count(COMMENTS.Id) as Com,
     count(GLASSES.Id) as Count

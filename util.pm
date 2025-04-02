@@ -63,12 +63,12 @@ sub price {
 # The %w returns the number of the weekday.
 sub splitdate {
   my $stamp = shift || return ( "(never)", "" );
-  my ($date, $wd ) = split (' ', $stamp);
+  my ($date, $wd, $time ) = split (' ', $stamp);
   if (defined($wd)) {
     my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
     $wd = $weekdays[$wd];
   }
-  return ( $date, $wd || "" );
+  return ( $date, $wd || "", $time );
 }
 
 
@@ -613,8 +613,8 @@ sub listrecords {
         $v =~ s/[ ,]*$//;
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Last" ) {
-        my ($date, $wd) = util::splitdate($v);
-        $v = "$date $wd";
+        my ($date, $wd, $time) = util::splitdate($v);
+        $v = "$date $wd $time";
       }
       $s .= "<td $sty>$v</td>\n";
     }
