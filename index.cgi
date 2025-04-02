@@ -493,7 +493,7 @@ sub oldstuff {
 # Needs to be before the HTML head, as it forwards back to the page
 ################################################################################
 # Nice to see up to date data when developing
-# TODO - Only copies the text file, which needs to be imported into the db
+# TODO - Needs to copyu the DB
 sub copyproddata {
   if (!$devversion) {
     util::error ("Not allowed");

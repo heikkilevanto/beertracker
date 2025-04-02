@@ -82,7 +82,7 @@ sub commentform {
   # Comment text area
   my $comment = $com->{Comment} || "";
   my $pl = "Add a new comment" ;
-  $s .= "<textarea name='comment' rows='3' cols='40' placeholder='$pl' $clr>$comment</textarea><br/>\n";
+  $s .= "<textarea name='comment' rows='3' cols='40' placeholder='$pl' >$comment</textarea><br/>\n";
 
   # Person involved in the comment
   #print STDERR "cform: pn='$com->{PersName}' pi=$com->{PersId} \n";
