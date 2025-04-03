@@ -2823,62 +2823,6 @@ sub lists {
       "<td>$rec->{wday} $rec->{effdate} " . lst($op,$rec->{loc},"","","loc") . "\n $seentimes " .
             "<br class='no-wide'/> " . lst($op,$rec->{style},"","[$rec->{style}]","style") . " \n " .
             lst("full",$rec->{name},"b","","name")  ."</td>";
-
-    } elsif ( $op eq "Beer" ) {
-      next if ( $rec->{type} ne "Beer" );
-      next if filtered ( $rec, "name" );
-      my $beer = $rec->{name};
-      $beer =~ s"(/|%2f|\()+"<br/>&nbsp; $1"gi if (length($beer) > 25); # Split longer lines
-      $fld = $beer;
-      my $seentimes = "";
-      $seentimes = "$seen{$fld}" if ($seen{$fld} );
-      my $sterm = "$rec->{maker} $rec->{name}";
-      my $col = beercolorstyle($rec);
-      my $shortstyle = shortbeerstyle($rec->{style});
-      my $dispsty = "<span $col>$shortstyle</span>";
-      $line = "<td $maxwidth>" . filt($fld,"b",$beer,"full","name") ;
-      $line .= "<br/>&nbsp; " if ( $mobile || length($fld) > 25 );
-      $line .= "&nbsp; $seentimes &nbsp;\n" .
-            unit($rec->{alc},'%') .
-            glink($sterm,"G") . rblink($sterm,"R") . utlink($sterm,"U") . "</td>" .
-            "<td>$rec->{wday} $rec->{effdate} ".
-            lst($op,$rec->{loc},"","","loc") .  "\n <br class='no-wide'/> " .
-            lst($op,$shortstyle,"",$dispsty,"shortstyle"). "\n " .
-            lst($op,$rec->{maker},"i","","maker") . "&nbsp;</td>";
-
-    } elsif ( $op eq "Wine" ) {
-      next unless ( $rec->{type} eq "Wine" );
-      next if filtered ( $rec ); # new marks anywhere
-      my $wine = $rec->{name};
-      $fld = $wine;
-      next if ( $wine =~ /^Misc/i );
-      my $seentimes = "";
-      $seentimes = "($seen{$wine})" if ($seen{$wine} );
-      $line = "<td>" . filt($wine,"b","","full","name")  .
-            " [$rec->{subtype}] &nbsp; " . filt($rec->{maker},"i","","Wine","maker" ) .
-            "&nbsp;\n" . glink($wine, "G") . "</td>\n" .
-            "<td>$rec->{wday} $rec->{effdate} ".
-            lst($op,$rec->{loc},"","","loc") . "\n $seentimes \n" .
-            "<br class='no-wide'/> ";
-      $line .= lst($op,$rec->{style},"","[$rec->{style}]", "style") if ($rec->{style});
-      $line .= "</td>";
-
-    } elsif ( $op eq "Booze" ) {
-      next unless ( $rec->{type} eq "Booze" );
-      next if filtered ( $rec, "name" );
-      my $stylename = $rec->{subtype};
-      my $beer = $rec->{name};
-      $fld = $beer;
-      my $seentimes = "";
-      $seentimes = "($seen{$beer})" if ($seen{$beer} );
-      $line = "<td>" . filt($stylename,"", " [$stylename] ", "Booze", "subtype" ) .
-            filt($beer,"b","","full","name") . "\n&nbsp;" . glink($beer, "G") ."</td>\n" .
-            "<td>$rec->{wday} $rec->{effdate} ".
-            lst($op,$rec->{loc},"","","loc") ."\n $seentimes " .
-            "<br class='no-wide'/> " .
-            lst($op,$rec->{style},"","[$rec->{style}]","style"). " " . unit($rec->{alc},'%') .
-            "</td>\n";
-
     } elsif ( $op eq "Restaurant" ) {
       next unless ( $rec->{type} eq "Restaurant" );
       next if filtered ( $rec, "loc" );
