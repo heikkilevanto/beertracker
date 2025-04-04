@@ -62,13 +62,13 @@ sub price {
 # Get the date from Sqlite with a format like '%Y-%m-%d %w'
 # The %w returns the number of the weekday.
 sub splitdate {
-  my $stamp = shift || return ( "(never)", "" );
+  my $stamp = shift || return ( "(never)", "", "" );
   my ($date, $wd, $time ) = split (' ', $stamp);
   if (defined($wd)) {
     my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
     $wd = $weekdays[$wd];
   }
-  return ( $date, $wd || "", $time );
+  return ( $date, $wd || "", $time || "" );
 }
 
 
@@ -574,6 +574,8 @@ sub listrecords {
     $order = "Order by $f" if ( $sort =~ /$f(-?)/ );
     $order .= " DESC" if ($1);
     # Note, no user-provided data goes into $order, only field names and DESC
+    # (It is possible to give a bad sort parameter, but it won't match a field,
+    # so we never use it here!)
   }
 
   $where = "where $where" if ($where);
@@ -587,24 +589,41 @@ sub listrecords {
   my $op = $c->{op};
 
   my $s = "";
+  $s .= "<table>\n";
+
+  # Filter input
+  $s .= "<tr><td colspan=10> Filter " ;
+  # with the table name, in case we have two lists on the same screen
+  $s .= "<input type=text name=filtervalue oninput='changefilter(this);' />\n";
+  $s .= "</td></tr>\n";
+
   # Table headers
-  $s .= "<table><tr>\n";
+  $s .= "<tr>\n";
   for my $f ( @fields ) {
-    $f =~ s/^-//;
-    my $sf = $f;
-    $sf .= "-" if ( $f eq $sort );
-    $s .= "<td><a href='$url?o=$op&s=$sf'><i>$f</i></a></td>";
+    if ( $f eq "Filtervalue" ) {
+      $s .= "<td></td>\n";
+    } else {
+      $f =~ s/^-//;
+      my $sf = $f;
+      $sf .= "-" if ( $f eq $sort );
+      $s .= "<td><a href='$url?o=$op&s=$sf'><i>$f</i></a></td>\n";
+    }
   }
-  $s .= "</tr>";
+  $s .= "</tr>\n";
+
 
   while ( my @rec = $list_sth->fetchrow_array ) {
-    $s .= "<tr>\n";
+    my $tds = "";
+    my $fv = "";
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i] || "";
       my $fn = $fields[$i];
       my $sty = "style='max-width:200px'"; # default
       if ( $fn eq "Id" ) {
         $sty = "style='font-size: xx-small' align='right'";
+      } elsif ( $fn eq "Filtervalue" ) {
+        $fv = "filtervalue=\"$v\" ";
+        $v = "";
       } elsif ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><b>$v</b></a>";
       } elsif ( $fn eq "Sub" ) {
@@ -613,15 +632,47 @@ sub listrecords {
         $v =~ s/[ ,]*$//;
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Last" ) {
-        my ($date, $wd, $time) = util::splitdate($v);
+        my ($date, $wd, $time) = splitdate($v);
         $v = "$date $wd $time";
       }
-      $s .= "<td $sty>$v</td>\n";
+      $tds .= "<td $sty>$v</td>\n";
     }
-    $s .= "</tr>";
+
+    $s .= "<tr $fv>\n";
+    $s .= "$tds</tr>\n";
   }
   $s .= "</table>\n";
   $list_sth->finish;
+
+  # JS to do the filtering
+  # The script only operates within the TABLE where the input field is
+  # located, so it should be usable for multiplæe tables if we ever get such.
+  $s .= <<"SCRIPTEND";
+  <script>
+  function changefilter (inputElement) {
+    // Find the table from the input's ancestor
+    const table = inputElement.closest('table');
+    if (!table) return; // should not happen
+    const regex = new RegExp(inputElement.value, 'i');
+
+    // Get all table rows
+    const rows = table.querySelectorAll('tr');
+    //console.log("Table has " + rows.length + " rows. Filtering for '" + inputElement.value + "'");
+    for (let i = 0; i < rows.length; i++) {
+      var disp = ""; // default to showing the row
+      const row = rows[i];
+      const filt = row.getAttribute("filtervalue");
+      if ( filt ) {  // have a filter
+        if ( ! regex.test(filt) ) { // mismatch
+          disp = "none";
+        }
+      }
+      //console.log ("row " + i + " got '" + disp + "' for " + filt );
+      row.style.display = disp;
+    }
+  }
+  </script>
+SCRIPTEND
   return $s;
 }
 
