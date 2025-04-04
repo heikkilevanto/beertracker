@@ -649,7 +649,14 @@ sub listrecords {
   # located, so it should be usable for multiplæe tables if we ever get such.
   $s .= <<"SCRIPTEND";
   <script>
+  let filterTimeout;
   function changefilter (inputElement) {
+    clearTimeout(filterTimeout); // Cancel previous timeout
+    filterTimeout = setTimeout(() => {
+      dochangefilter(inputElement);
+    }, 150); // Adjust delay as needed}
+  }
+  function dochangefilter (inputElement) {
     // Find the table from the input's ancestor
     const table = inputElement.closest('table');
     if (!table) return; // should not happen
