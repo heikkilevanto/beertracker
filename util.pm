@@ -551,7 +551,7 @@ sub getfieldswhere {
   my $where = shift;
   my $order = shift || "";
   my $sql = "select $fields from $table $where $order";
-  #print STDERR "getfieldswhere: $sql \n";
+  print STDERR "getfieldswhere: $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute();
   my $rec = $sth->fetchrow_hashref;

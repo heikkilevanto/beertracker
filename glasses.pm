@@ -315,14 +315,17 @@ sub fixprice {
   my $vo = "Volume=$glass->{Volume}";
   my $lo = "Location=$glass->{Location}";
   $pr = 0;
-  if ( $glass->{Brew} && $glass->{Brew} ne "new" && $glass->{Volume} ) {
+  if ( $glass->{Brew} && $glass->{Brew} ne "new" &&
+       $glass->{Volume} ) {
     # Have brew, try to find similar glasses
-    $pr = guessprice($c,"$br AND $lo AND $vo" );
+    if ( $glass->{Location} ne "new" ) {
+      $pr = guessprice($c,"$br AND $lo AND $vo" );
+    }
     if ( $pr == 0 ) {
       $pr = guessprice($c,"$br AND $vo" );
     }
   }
-  if ( $pr == 0 ) {
+  if ( $pr == 0 && $glass->{Location} ne "new") {
     $pr = guessprice($c, "$lo AND $vo" );
   }
   if ( $pr > 0 ) {
