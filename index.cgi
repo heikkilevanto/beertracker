@@ -392,7 +392,7 @@ if ( $q->request_method eq "POST" ) {
 
   $dbh->do("BEGIN TRANSACTION");
 
-  if ( $op =~ /Persons/i ) {
+  if ( $op =~ /Person/i ) {
     persons::postperson($context);
   } elsif ( $op =~ /Location/i ) {
     locations::postlocation($context);

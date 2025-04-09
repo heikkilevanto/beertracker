@@ -15,8 +15,9 @@ use utf8;  # Source code and string literals are utf-8
 sub listpersons {
   my $c = shift; # context
   print util::showmenu($c);
+  print "&nbsp;<a href=$c->{url}?o=$c->{op}&e=new><span>(New)</span></a>";
 
-  if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
+  if ( $c->{edit} ) {
     editperson($c);
     return;
   }
@@ -35,33 +36,31 @@ sub listpersons {
 # associations with other people etc
 sub editperson {
   my $c = shift;
-  my $sql = "select * from Persons where id = ?";
-    # This Can leak info from persons filed by other users. Not a problem now
-  my $get_sth = $c->{dbh}->prepare($sql);
-  $get_sth->execute($c->{edit});
-  my $p = $get_sth->fetchrow_hashref;
-  for my $f ( "Location", "RelatedPerson" ) {
-    $p->{$f} = "" unless $p->{$f};  # Blank out null fields
+  my $p={};
+  if ( $c->{edit} !~ /^new/i ) {
+    $p = util::getrecord($c,"PERSONS", $c->{edit} );
+    util::error("Could not find person '$c->{edit}'" ) unless $p;
   }
-  if ( $p->{Id} ) {  # found the person
-    my $c2 = "colspan='2'";
-    print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
-        "enctype='multipart/form-data'>\n";
-    print "<input type='hidden' name='id' value='$p->{Id}' />\n";
-    print "<b>Editing Person $p->{Id}: $p->{Name}</b><br/>\n";
+  my $c2 = "colspan='2'";
+  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+      "enctype='multipart/form-data'>\n";
+  print "<input type='hidden' name='id' value='$p->{Id}' />\n";
+  print "<b>Editing Person $c->{edit}: $p->{Name}</b><br/>\n";
 
-    print util::inputform( $c, "PERSONS", $p );
-    print "<input type='submit' name='submit' value='Update Person' /><br/>\n";
-
-    # Come back to here after updating
-    print "<input type='hidden' name='o' value='$c->{op}' />\n";
-    print "<input type='hidden' name='e' value='$p->{Id}' />\n";
-    print "</form>\n";
-    print "<hr/>\n";
-    print "(This should show a list when the person seen, comments, and with whom)<br/>\n"; # TODO
+  print util::inputform( $c, "PERSONS", $p );
+  if ( $c->{edit} =~ /^new/i ) {
+    print "<br/><input type='submit' name='submit' value='Insert Person' />\n";
   } else {
-    print "Oops - Person id '$c->{edit}' not found <br/>\n";
+    print "<br/><input type='submit' name='submit' value='Update Person' />\n";
+    print "<br/><br/><input type='submit' name='submit' value='Create a Copy' />\n";
+    print "<input type='submit' name='submit' value='Delete Person' />\n";
   }
+  # Come back to here after updating
+  print "<input type='hidden' name='o' value='$c->{op}' />\n";
+  print "<input type='hidden' name='e' value='$p->{Id}' />\n";
+  print "</form>\n";
+  print "<hr/>\n";
+  print "(This should show a list when the person seen, comments, and with whom)<br/>\n"; # TODO
 } # editperson
 
 ################################################################################
@@ -69,75 +68,13 @@ sub editperson {
 ################################################################################
 sub postperson {
   my $c = shift; # context
-  my $id = $c->{edit};
-  util::error ("Bad id for updating a person '$id' ")
-    unless $id =~ /^\d+$/;
+  # Validate
   my $name = $c->{cgi}->param("Name");
   error ("A Person must have a name" )
     unless $name;
-  if ( util::param($c,$id) ){
-    util::updaterecord($c, "PERSONS", $id);
-  } else {
-    util::insertrecord($c, "PERSONS" );
-  }
+  util::postrecord($c, "PERSONS");
   return;
 
-  # OLD CODE
-  my $full= $c->{cgi}->param("full") || "" ;
-  my $desc= $c->{cgi}->param("desc") || "" ;
-  my $cont= $c->{cgi}->param("cont") || "" ;
-  my $loc=  $c->{cgi}->param("loc") || undef ;
-  my $rela= $c->{cgi}->param("rela") || "" ;
-  my $new = $c->{cgi}->param("newperson") || "" ;
-  my $newloc = $c->{cgi}->param("newloc") || "" ;
-  if ( $new ) {  # Want to add a new related person
-    my $insql = "
-      insert into PERSONS ( Name, RelatedPerson )
-      values ( ?, ? );
-    ";
-    my $insert_person = $c->{dbh}->prepare($insql);
-    $insert_person->execute($new, $id);
-    $rela = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
-    print STDERR "Inserted a new person as '$rela' as a relatedperson for '$id' \n";
-  }
-  if ( $newloc ) { # Create a new location
-    my $insql = "
-      insert into LOCATIONS ( Name )
-      values ( ? );
-    ";
-    my $insert_person = $c->{dbh}->prepare($insql);
-    $insert_person->execute($newloc);
-    $loc = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef) || undef;
-    print STDERR "Inserted a new location '$newloc' as '$loc' for '$id' \n";
-  }
-  my $sql = "
-    update PERSONS
-      set
-        Name = ?,
-        FullName = ?,
-        Description = ?,
-        Contact = ?,
-        Location = ?,
-        RelatedPerson = ?
-    where id = ? ";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( $name, $full, $desc, $cont, $loc, $rela, $id );
-  print STDERR "Updated " . $sth->rows .
-    " Person records for id '$id' : '$name' \n";
-  if ( $rela ) {  # Update Relation backlink, if not already set
-    my $sql = "
-      update PERSONS
-        set
-          RelatedPerson = ?
-      where id = ?
-      and RelatedPerson = ''
-      ";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute( $id, $rela );
-    print STDERR "Updated RelatedPerson of $rela to point back to $id \n"
-      if  ( $sth->rows > 0 );
-  }
-  print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
 } # postperson
 
 ################################################################################

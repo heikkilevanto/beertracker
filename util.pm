@@ -458,6 +458,8 @@ sub updaterecord {
   my $id = shift;
   my $inputprefix = shift || "";  # "newloc" means inputs are "newlocName" etc
 
+  error ( "Can not update a $table record without id ") unless ($id) ;
+  error ( "Bad id '$id' for updating a $table record ") unless ( $id =~ /^\d+$/ );
   my @sets;
   my @values;
   for my $f ( tablefields($c, $table)) {
@@ -497,6 +499,42 @@ sub updaterecord {
       " $table records for id '$id' : " . join(", ", @values) ." \n";
 } # updaterecord
 
+################### Delete a record
+sub deleterecord {
+  my $c = shift;
+  my $table = shift;
+  my $id = shift;
+  my $sql = "delete from $table " .
+    " where id = ?";
+  print STDERR "deleterecord: $sql \n";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( $id );
+   print STDERR "Deleted " . $sth->rows .
+      " $table records for id '$id' \n";
+} # deleterecord
+
+
+############################## post a record.
+#Looks at the submit parameter to decide to insert, update, or
+# delete a record. The submit label must start with the operation name
+# Assumes $c->{edit} has a proper id for ops that need one
+sub postrecord {
+  my $c = shift;
+  my $table = shift;
+  my $inputprefix = shift || "";  # "newloc" means inputs are "newlocName" etc
+  my $defaults = shift || {};
+
+  my $sub = param($c,"submit");
+  if ($sub =~ /^Update/i || $c->{edit} =~ /^New/i ) {
+    updaterecord( $c, $table, $c->{edit}, $inputprefix);
+  } elsif ( $sub =~ /^Create|^Insert/i ) {
+    $c->{edit} = insertrecord( $c, $table, $inputprefix, $defaults);
+  } elsif ($sub =~ /Delete/i ) {
+    deleterecord( $c, $table, $c->{edit});
+    $c->{edit} = "";
+  }
+}
+
 
 ############ Get a single record by Id
 sub getrecord {
@@ -505,6 +543,7 @@ sub getrecord {
   my $id = shift;
   return undef unless ($id);
   my $sql = "select * from $table where id = ? ";
+  print STDERR "getrecord: $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($id);
   my $rec = $sth->fetchrow_hashref;
