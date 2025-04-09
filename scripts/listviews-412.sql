@@ -21,7 +21,7 @@ CREATE VIEW BREWS_LIST AS select
   left join GLASSES on Glasses.Brew = BREWS.Id
   left join COMMENTS on COMMENTS.Glass = GLASSES.Id
   left join LOCATIONS on LOCATIONS.id = GLASSES.Location
-  group by BREWS.id
+  group by BREWS.id;
 
 
 DROP VIEW IF EXISTS PERSONS_LIST;
@@ -35,7 +35,7 @@ CREATE VIEW PERSONS_LIST AS select
   left join COMMENTS on COMMENTS.Person = PERSONS.Id
   left join GLASSES on COMMENTS.Glass = GLASSES.Id
   left join LOCATIONS on LOCATIONS.id = GLASSES.Location
-  group by Persons.id
+  group by Persons.id;
 
 DROP VIEW IF EXISTS "main"."LOCATIONS_LIST";
 CREATE VIEW LOCATIONS_LIST AS select
@@ -46,7 +46,7 @@ CREATE VIEW LOCATIONS_LIST AS select
     LOCATIONS.Description as Desc
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
-  group by LOCATIONS.Id
+  group by LOCATIONS.Id;
 
 
 -- This works, kind of, but uses a comma as separator
@@ -57,6 +57,6 @@ CREATE VIEW LOCATIONS_LIST AS select
  -- coalesce(Brewtype,"") || ", " || coalesce(SubType,"") as Type,
  -- GROUP_CONCAT( DISTINCT BREWSTYLE ) as Style
  -- from BREWS
- -- group by Type
+ -- group by Type;
 
 
