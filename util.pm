@@ -591,23 +591,39 @@ sub listrecords {
   my $s = "";
   $s .= "<table>\n";
 
-  # Filter input
-  $s .= "<tr><td colspan=10> Filter " ;
-  # with the table name, in case we have two lists on the same screen
-  $s .= "<input type=text name=filtervalue oninput='changefilter(this);' />\n";
-  $s .= "</td></tr>\n";
 
+  my @styles;  # One for each column
   # Table headers
   $s .= "<tr>\n";
-  for my $f ( @fields ) {
-    if ( $f eq "Filtervalue" ) {
-      $s .= "<td></td>\n";
-    } else {
-      $f =~ s/^-//;
-      my $sf = $f;
-      $sf .= "-" if ( $f eq $sort );
-      $s .= "<td><a href='$url?o=$op&s=$sf'><i>$f</i></a></td>\n";
+  for ( my $i=0; $i < scalar( @fields ); $i++ ) {
+    my $f = $fields[$i];
+    $f =~ s/^-//;
+    my $sty = "style='max-width:200px; min-width:0'"; # default
+    if ( $f eq "Id" ) {
+      $sty = "style='font-size: xx-small' text-align='right'";
+    } elsif ( $f =~ /Com|Alc|Count/ ) {
+      $sty = "style='text-align:right'";
     }
+    $styles[$i] = $sty;
+    my $sf = $f;
+    $sf .= "-" if ( $f eq $sort );
+    $s .= "<td $sty><a href='$url?o=$op&s=$sf'><i>$f</i></a></td>\n";
+  }
+  $s .= "</tr>\n";
+
+  # Filter inputs
+  $s .= "<tr>\n";
+  for ( my $i=0; $i < scalar( @fields ); $i++ ) {
+    $s .= "<td $styles[$i] >";
+    my $f = $fields[$i];
+    $f =~ s/^-//;
+    if ( $f =~ /Name|Last|Location|Type|Producer/ ) {
+      $s .= "<input type=text name=filter$i oninput='changefilter(this);' $styles[$i] />";
+      # Tried also with box-sizing: border-box; display: block;. Still extends the cell
+    } else {
+      $s .= "&nbsp;"
+    }
+    $s .= "</td>\n";
   }
   $s .= "</tr>\n";
 
@@ -619,23 +635,20 @@ sub listrecords {
       my $v = $rec[$i] || "";
       my $fn = $fields[$i];
       my $sty = "style='max-width:200px'"; # default
-      if ( $fn eq "Id" ) {
-        $sty = "style='font-size: xx-small' align='right'";
-      } elsif ( $fn eq "Filtervalue" ) {
-        $fv = "filtervalue=\"$v\" ";
-        $v = "";
-      } elsif ( $fn eq "Name" ) {
+      if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><b>$v</b></a>";
       } elsif ( $fn eq "Sub" ) {
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Type" ) {
         $v =~ s/[ ,]*$//;
         $v = "[$v]" if ($v);
+      } elsif ( $fn eq "Alc" ) {
+        $v = sprintf("%5.1f", $v)  if ($v);
       } elsif ( $fn eq "Last" ) {
         my ($date, $wd, $time) = splitdate($v);
         $v = "$date $wd $time";
       }
-      $tds .= "<td $sty>$v</td>\n";
+      $tds .= "<td $styles[$i]>$v</td>\n";
     }
 
     $s .= "<tr $fv>\n";
@@ -645,36 +658,46 @@ sub listrecords {
   $list_sth->finish;
 
   # JS to do the filtering
-  # The script only operates within the TABLE where the input field is
-  # located, so it should be usable for multiplæe tables if we ever get such.
   $s .= <<"SCRIPTEND";
   <script>
   let filterTimeout;
+
   function changefilter (inputElement) {
     clearTimeout(filterTimeout); // Cancel previous timeout
     filterTimeout = setTimeout(() => {
       dochangefilter(inputElement);
     }, 150); // Adjust delay as needed}
   }
+
   function dochangefilter (inputElement) {
     // Find the table from the input's ancestor
     const table = inputElement.closest('table');
     if (!table) return; // should not happen
-    const regex = new RegExp(inputElement.value, 'i');
 
-    // Get all table rows
+    // Get the filters
     const rows = table.querySelectorAll('tr');
-    //console.log("Table has " + rows.length + " rows. Filtering for '" + inputElement.value + "'");
-    for (let i = 0; i < rows.length; i++) {
+    const filtertds = rows[1].querySelectorAll('td');
+    let filters = [];
+    for ( let i=0; i<filtertds.length; i++) {
+      let filterinp = filtertds[i].querySelector('input');
+      if ( filterinp ) {
+        filters[i] = new RegExp(filterinp.value, 'i')
+      } else {
+        filters[i] = '';
+      }
+    }
+
+    for (let r = 2; r < rows.length; r++) { // 0 is col headers, 1 is filters
       var disp = ""; // default to showing the row
-      const row = rows[i];
-      const filt = row.getAttribute("filtervalue");
-      if ( filt ) {  // have a filter
-        if ( ! regex.test(filt) ) { // mismatch
-          disp = "none";
+      const row = rows[r];
+      const cols = rows[r].querySelectorAll('td');
+      for (let c = 0; c < cols.length; c++) {
+        if ( filters[c] )  {
+          console.log ( "Have filter for r=" + r + " c=" + c );
+          if ( !filters[c].test( cols[c].textContent ) )
+            disp = "none";
         }
       }
-      //console.log ("row " + i + " got '" + disp + "' for " + filt );
       row.style.display = disp;
     }
   }

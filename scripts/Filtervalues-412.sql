@@ -2,12 +2,12 @@
 -- Add Filtervalue fields to views used in lists
 -- See issue #412
 
+-- Removed the Filtervalue fields, not going to use them anyway
 
 DROP VIEW IF EXISTS BREWS_LIST;
 
 CREATE VIEW BREWS_LIST AS select
     BREWS.Id,
-    COALESCE(PLOC.Name,"") || ":" || COALESCE(BREWS.Name,"") as Filtervalue,
     BREWS.Name,
     PLOC.Name as Producer,
     BREWS.Alc as Alc,
@@ -27,7 +27,6 @@ CREATE VIEW BREWS_LIST AS select
 DROP VIEW IF EXISTS PERSONS_LIST;
 CREATE VIEW PERSONS_LIST AS select
     PERSONS.Id,
-    COALESCE(PERSONS.Name,"") as Filtervalue,
     PERSONS.Name,
     count(COMMENTS.Id) - 1 as Com,
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as Last,
