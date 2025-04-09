@@ -14,7 +14,7 @@ use utf8;  # Source code and string literals are utf-8
 # TODO - When editing, show the most recent dates, other people involved, etc
 sub listpersons {
   my $c = shift; # context
-  print util::listsmenu($c), util::showmenu($c);
+  print util::showmenu($c);
 
   if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
     editperson($c);

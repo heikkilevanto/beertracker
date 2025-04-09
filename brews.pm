@@ -20,7 +20,6 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 # TODO - Filtering by brew type, subtype, name, producer, etc
 sub listbrews {
   my $c = shift; # context
-  print util::listsmenu($c);
   print util::showmenu($c);
   print "<hr/>";
 

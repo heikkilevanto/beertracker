@@ -448,18 +448,15 @@ if ( $op =~ /Board/i ) {
   # The about page went from 500ms to under 100 when dropping the oldstuff
   print util::showmenu($context);
   about();
-} elsif ( $op =~ /Brewery|Restaurant|Style/i ) {
+} elsif ( $op =~ /Style/i ) {
   oldstuff();
-  #listsmenubar();
   lists();
 } elsif ( $op =~ /Brew/i ) {
   brews::listbrews($context);
-} elsif ( $op =~ /Persons/i ) {
+} elsif ( $op =~ /Person/i ) {
   persons::listpersons($context);
 } elsif ( $op =~ /Location/i ) {
   locations::listlocations($context);
-} elsif ( $op =~ /Producer/i ) {
-  locations::listproducers($context);
 } elsif ( $op =~ /Full/i ) {
   glasses::inputform($context);
   oldstuff();
@@ -2772,7 +2769,7 @@ sub lists {
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $qry;
   print "Filter: <a href='$url?y=$yrlim'><span>$yrlim</span></a> " .
      "(<a href='$url?o=$op'><span>clear</span></a>) <br/>" if $yrlim;
-  print util::listsmenu($context), util::showmenu($context);
+  print util::showmenu($context);
   print searchform();
 #   print "Other lists: " ;
 #   my @ops = ( "Beer",  "Brewery", "Wine", "Booze", "Location", "Restaurant", "Style", "Persons");

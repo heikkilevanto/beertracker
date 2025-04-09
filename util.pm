@@ -156,7 +156,10 @@ sub showmenu {
   $s .= "<option value='o=Graph' >Graph</option>\n";
   $s .= "<option value='o=board' >Beer Board</option>\n";
   $s .= "<option value='o=Months' >Stats</option>\n";
-  $s .= "<option value='o=Brew' >Lists</option>\n";
+  $s .= "<option value='o=Brew' >Brews</option>\n";
+  $s .= "<option value='o=Location' >Locations</option>\n";
+  $s .= "<option value='o=Style' >Styles</option>\n";
+  $s .= "<option value='o=Person' >Persons</option>\n";
   $s .= "<option value='o=About' >About</option>\n";
   $s .= "</select>\n";
   $s .=  " &nbsp; &nbsp; &nbsp;";
@@ -168,23 +171,6 @@ sub showmenu {
   return $s;
 }
 
-########## Menu for the various lists we have
-sub listsmenu {
-  my $c = shift or die ("No context for listsmenubar" );
-  my $s = "";
-  $s .= " <select  style='width:7em;' " .
-              "onchange='document.location=\"$c->{url}?\"+this.value;' >";
-  my @ops = ( "Brew", "Brewery", "Location", "Producer", "Restaurant", "Style", "Persons");
-  for my $l ( @ops ) {
-    my $sel = "";
-    $sel = "selected" if ($l eq $c->{op});
-    $s .= "<option value='o=$l' $sel >$l</option>\n"
-  }
-  $s .= "</select>\n";
-  $s .= "<a href='$c->{url}?o=$c->{op}'><span>List</span></a> ";
-  $s .= "&nbsp; &nbsp; &nbsp;";
-  return $s;
-} # listsmenubar
 
 
 ################################################################################
