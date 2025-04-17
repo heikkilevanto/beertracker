@@ -207,7 +207,7 @@ sub dropdown {
   if ($tablename) { # We want a way to add new records
     # Add an option to do so
     $options = "<div class='dropdown-item' id='new'>(new)</div>\n" . $options;
-    $newdiv = "<div id='newdiv-$inputname' hidden>\n";
+    $newdiv = "<div id='newdiv-$inputname' style='padding-left:10px;' hidden>\n";
     $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname,"",$skipnewfields);
     $newdiv .= "</div>";
   }
