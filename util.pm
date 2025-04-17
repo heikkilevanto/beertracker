@@ -294,13 +294,19 @@ sub dropdown {
             const filter = filterinput$inputname.value.toLowerCase();
             Array.from(dropdownList$inputname .children).forEach(item => {
                 var brewtype = item.getAttribute("brewtype");
-                // console.log("filter$inputname: s='" + selbrewtype.value + "' b='" + brewtype +"'");
-                if (item.textContent.toLowerCase().includes(filter) &&
-                    (selbrewtype && ( ! brewtype || brewtype == selbrewtype.value ) ) ) {
-                    item.style.display = '';
-                } else {
-                    item.style.display = 'none';
+                var disp = ''; // default to showing it
+                if ( selbrewtype && brewtype ) {
+                  if ( selbrewtype.value != brewtype ) {
+                    disp = 'none';
+                    //console.log( "HIDE '" + item.textContent + "' type '" + brewtype + "' != '" + selbrewtype.value + "'" );
+                  }
                 }
+                if (! item.textContent.toLowerCase().includes(filter) ) {
+                  disp = 'none';
+                  //console.log( "HIDE '" + item.textContent + "' filt '" + filter + "'" );
+                }
+                item.style.display = disp ;
+
             });
         };
 

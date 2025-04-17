@@ -15,7 +15,7 @@ use utf8;  # Source code and string literals are utf-8
 sub listpersons {
   my $c = shift; # context
   print util::showmenu($c);
-  print "&nbsp;<a href=$c->{url}?o=$c->{op}&e=new><span>(New)</span></a>";
+  print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
 
   if ( $c->{edit} ) {
     editperson($c);
