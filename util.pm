@@ -346,6 +346,11 @@ sub inputform {
   my $skipfields = shift || "Id"; # regexp. "Id|HiddenField|AlsoThis"  "all" for showing all
 
   my $form = "";
+  if ( $inputprefix ) { # Subheader for included records
+    my $hdr = $inputprefix;
+    $hdr =~ s/^(new)(.)(.*)/"New " . uc($2). "$3:"/ge; # "newloc" -> "New Loc:"
+    $form .= "<b>$hdr</b> $separatortag \n";
+  }
   foreach my $f ( tablefields($c,$table,$skipfields) ) {
     my $special = $1 if ( $f =~ s/^(\W)// );
     my $pl = $f;
@@ -360,7 +365,10 @@ sub inputform {
     if ( $special && $f =~ /producerlocation/i ) {
       $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "prodloc", "prod");
     } elsif ( $special && $f =~ /location/i ) {
-      $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "loc");
+      if ( $inputprefix !~ /newperson/ ) {
+        # Do no allow a relatedperson to have a location, comflicts with the persons own location
+        $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "loc");
+      }
     } elsif ($special && $f =~ /person/i ) {
       if ( $inputprefix !~ /newperson/ ) {
         # Allow editing of RelatedPerson, but only on top level
@@ -427,12 +435,22 @@ sub insertrecord {
     }
     if ( $val eq "new" ) {
       if ( $f eq "ProducerLocation" ) {
-        print STDERR "Recursing to ProducerLocation \n";
+        print STDERR "Recursing to ProducerLocation ($inputprefix) \n";
         my $def = {};
         $def->{LocType} = "Producer";
         $def->{LocSubType} = util::param($c, "selbrewtype") || "Beer";
         $val = insertrecord($c, "LOCATIONS", "newprod", $def );
         print STDERR "Returned from ProducerLocation, id='$val'  \n";
+      } elsif ( $f eq "Location" ) {
+        print STDERR "Recursing to Location ($inputprefix) \n";
+        my $def = {};
+        $val = insertrecord($c, "LOCATIONS", "newloc", $def );
+        print STDERR "Returned from Location, id='$val'  \n";
+      } elsif ( $f eq "RelatedPerson" ) {
+        print STDERR "Recursing to RelatedPerson ($inputprefix) \n";
+        my $def = {};
+        $val = insertrecord($c, "PERSONS", "newperson", $def );
+        print STDERR "Returned from NewPerson, id='$val'  \n";
       }
       else {
         error ("insertrecord can not yet handle recursion to this type. p='$inputprefix' f='$f' ");

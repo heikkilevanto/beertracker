@@ -37,15 +37,20 @@ sub listpersons {
 sub editperson {
   my $c = shift;
   my $p={};
+  $p->{Id} = "";  # to avoid undefs in insert case
+
+  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+      "enctype='multipart/form-data'>\n";
+
   if ( $c->{edit} !~ /^new/i ) {
     $p = util::getrecord($c,"PERSONS", $c->{edit} );
     util::error("Could not find person '$c->{edit}'" ) unless $p;
+    print "<input type='hidden' name='id' value='$p->{Id}' />\n";
+    print "<input type='hidden' name='e' value='$p->{Id}' />\n";
+    print "<b>Editing Person $c->{edit}: $p->{Name}</b><br/>\n";
+  } else {
+    print "<b>New Person:</b><br/>";
   }
-  my $c2 = "colspan='2'";
-  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
-      "enctype='multipart/form-data'>\n";
-  print "<input type='hidden' name='id' value='$p->{Id}' />\n";
-  print "<b>Editing Person $c->{edit}: $p->{Name}</b><br/>\n";
 
   print util::inputform( $c, "PERSONS", $p );
   if ( $c->{edit} =~ /^new/i ) {
@@ -57,7 +62,6 @@ sub editperson {
   }
   # Come back to here after updating
   print "<input type='hidden' name='o' value='$c->{op}' />\n";
-  print "<input type='hidden' name='e' value='$p->{Id}' />\n";
   print "</form>\n";
   print "<hr/>\n";
   print "(This should show a list when the person seen, comments, and with whom)<br/>\n"; # TODO
