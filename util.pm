@@ -144,6 +144,18 @@ sub error {
 # Drop-down menus for the Show menu and for selecting a list
 ################################################################################
 
+# The top bar, on every page
+sub topline {
+  my $c = shift; # context;
+  my $s = "";
+  $s .= "Beertracker";
+  if ( $c->{devversion} ) {
+    $s .= "-DEV";
+  }
+  $s .= "&nbsp;\n";
+  $s .= showmenu($c);
+  $s .= "<hr>\n";
+} # topline
 
 # The main "Show" menu
 sub showmenu {
@@ -161,6 +173,9 @@ sub showmenu {
 #  $s .= "<option value='o=Style' >Styles</option>\n";  # Disabled, see #417
   $s .= "<option value='o=Person' >Persons</option>\n";
   $s .= "<option value='o=About' >About</option>\n";
+  if ( $c->{devversion} ) {
+    $s .= "<option value='o=copyproddata'>Get Production Data</option>\n";
+  }
   $s .= "</select>\n";
   $s .=  " &nbsp; &nbsp; &nbsp;";
   if ( $c->{op} && $c->{op} !~ /graph/i ) {

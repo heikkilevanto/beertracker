@@ -339,6 +339,7 @@ my $context = {
   'sort'     => $sort,
   'onedrink' => $onedrink,
   'bgcolor'  => $bgcolor,
+  'devversion' => $devversion,
 
 };
 
@@ -365,6 +366,7 @@ if ($devversion) { # Print a line in error.log, to see what errors come from thi
 }
 
 if ( $devversion && $op eq "copyproddata" ) {
+  print STDERR "Copying prod data to dev \n";
   copyproddata();
   exit;
 }
@@ -415,13 +417,8 @@ if ( $q->request_method eq "POST" ) {
 
 htmlhead($datafilecomment); # Ok, now we can commit to making a HTML page
 
+print util::topline($context);
 
-
-# The input form is at the top of every page
-# TODO - No more, all the lists and special edits don't need it.
-
-
-# We display a graph for some pages
 if ( $op =~ /Board/i ) {
   glasses::inputform($context);
   oldstuff();
@@ -492,14 +489,15 @@ sub copyproddata {
   if (!$devversion) {
     util::error ("Not allowed");
   }
-  #my $bakfile = $datafile . ".bak";
-  #my $prodfile = "../beertracker/$datafile";
-  #util::error("$prodfile not readable") if ( ! -r $prodfile);
-  #system("cat $datafile > $bakfile");
-  #system("cat $prodfile > $datafile");
+  $dbh->disconnect;
+
+  system("rm $databasefile-*");  # Remove old -shm and -wal files
+  print STDERR "rm $databasefile-* \n";
+  system("cp ../beertracker/$databasefile* $datadir"); # And copy all such files over
+  print STDERR "cp ../beertracker/$databasefile* $datadir \n";
   graph::clearcachefiles( $context );
   system("cp ../beertracker/$photodir/* $photodir");
-  print $q->redirect( "$url" );
+  print $q->redirect( "$url" ); # without the o=, so we don't copy again and again
   exit();
 } # copyproddata
 
