@@ -7,9 +7,9 @@ use Exporter 'import';
 
 our %VERSION_INFO = (
     tag     => 'v2.1',
-    commits => 199,
-    date    => '2025-04-20 15:44:48 UTC',
-    commit  => 'a9ce37c',
+    commits => 200,
+    date    => '2025-04-20 15:46:39 UTC',
+    commit  => '1a4cdb2',
     branch  => 'master',
 );
 
