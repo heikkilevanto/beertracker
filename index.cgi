@@ -108,6 +108,7 @@ our $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError 
     or util::error($DBI::errstr);
 $dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
 $dbh->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
+# But watch out for file permissions on the -wal and -sha files
 #$dbh->trace(1);  # Lots of SQL logging in error.log
 
 ################################################################################
