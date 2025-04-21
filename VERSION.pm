@@ -3,16 +3,15 @@ package Version;
 
 use strict;
 use warnings;
-use Exporter 'import';
 
-our %VERSION_INFO = (
-    tag     => 'v2.1',
-    commits => 201,
-    date    => '2025-04-20 15:48:13 UTC',
-    commit  => 'aaa7378',
-    branch  => 'master',
-);
-
-our @EXPORT_OK = qw(%VERSION_INFO);
+sub version_info {
+    return {
+        tag     => 'v2.1',
+        commits => 203,
+        date    => '2025-04-21 16:09:32 ',
+        commit  => 'b94bb68',
+        branch  => 'master',
+    };
+}
 
 1;

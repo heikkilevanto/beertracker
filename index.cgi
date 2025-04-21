@@ -356,6 +356,7 @@ require "./glasses.pm"; # Main input for and the full list
 require "./comments.pm"; # Stuff for comments, ratings, and photos
 require "./util.pm"; # Various helper functions
 require "./graph.pm"; # The daily graph
+require "./VERSION.pm"; # auto-generated version info
 
 ################################################################################
 # Main program
@@ -2712,6 +2713,14 @@ sub about {
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
   print "It is Open Source.\n";
   print "<hr/>";
+
+  my $v = Version::version_info();
+  print "Version $v->{tag} ";
+  print "plus $v->{commits} commits " if ( $v->{commits} );
+  print "<br>\n";
+  print "commit $v->{commit} from $v->{date} ";
+  print "on '$v->{branch}' " if ( $v->{branch} ne "master" );
+  print "<hr/>\n";
 
   print "Beertracker on GitHub: <ul>";
   print aboutlink("GitHub","https://github.com/heikkilevanto/beertracker");

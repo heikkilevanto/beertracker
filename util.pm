@@ -152,6 +152,9 @@ sub topline {
   if ( $c->{devversion} ) {
     $s .= "-DEV";
   }
+  my $v = Version::version_info();
+  $s .= "&nbsp;\n";
+  $s .= "$v->{tag}+$v->{commits}";
   $s .= "&nbsp;\n";
   $s .= showmenu($c);
   $s .= "<hr>\n";
@@ -177,12 +180,13 @@ sub showmenu {
     $s .= "<option value='o=copyproddata'>Get Production Data</option>\n";
   }
   $s .= "</select>\n";
-  $s .=  " &nbsp; &nbsp; &nbsp;";
-  if ( $c->{op} && $c->{op} !~ /graph/i ) {
-    $s .= "<a href='$c->{url}'><b>G</b></a>\n";
-  } else {
-    $s .= "<a href='$c->{url}?o=board'><b>B</b></a>\n";
-  }
+#  $s .=  " &nbsp; &nbsp; &nbsp;";
+#  if ( $c->{op} && $c->{op} !~ /graph/i ) {
+#    $s .= "<a href='$c->{url}'><b>G</b></a>\n";
+#  } else {
+#    $s .= "<a href='$c->{url}?o=board'><b>B</b></a>\n";
+#  }
+
   return $s;
 }
 
