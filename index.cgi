@@ -2711,7 +2711,7 @@ sub about {
   print "<hr/><h2>Beertracker</h2>\n";
   print "Copyright 2016-2025 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
-  print "It is Open Source, undet GPL v2\n";
+  print "It is Open Source (GPL v2)\n";
   print "<hr/>";
 
   my $v = Version::version_info();
