@@ -27,7 +27,6 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 ################################################################################
 sub listlocations {
   my $c = shift; # context
-  print util::showmenu($c);
 
   if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
     editlocation($c);

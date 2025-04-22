@@ -14,7 +14,6 @@ use utf8;  # Source code and string literals are utf-8
 # TODO - When editing, show the most recent dates, other people involved, etc
 sub listpersons {
   my $c = shift; # context
-  print util::showmenu($c);
   print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
 
   if ( $c->{edit} ) {

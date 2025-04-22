@@ -429,23 +429,18 @@ if ( $op =~ /Board/i ) {
   fulllist();
 } elsif ( $op =~ /Years(d?)/i ) {
   oldstuff();
-  print util::showmenu($context);
   yearsummary($1); # $1 indicates sort order
 } elsif ( $op =~ /short/i ) {
   oldstuff();
-  print util::showmenu($context);
   shortlist();
 } elsif ( $op =~ /Months([BS])?/ ) {
   oldstuff();
-  print util::showmenu($context);
   monthstat($1);
 } elsif ( $op =~ /DataStats/i ) {
   oldstuff();
-  print util::showmenu($context);
   datastats();
 } elsif ( $op eq "About" ) {
   # The about page went from 500ms to under 100 when dropping the oldstuff
-  print util::showmenu($context);
   about();
 } elsif ( $op =~ /Brew/i ) {
   brews::listbrews($context);
