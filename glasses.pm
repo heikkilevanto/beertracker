@@ -114,6 +114,7 @@ sub inputform {
   print "</table>\n";
   print "</form>\n";
   print comments::listcomments($c, $rec->{Id});
+  print "<br/>";
 
   # Javascript trickery
   my $script = <<'SCRIPTEND';
