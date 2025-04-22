@@ -1720,7 +1720,6 @@ sub graph {
       } # havedata
     } # Have to plot
 
-    print "<hr/>\n";
     my ( $imw,$imh ) = $imgsz =~ /(\d+),(\d+)/;
     my $htsize = "width=$imw height=$imh" if ($imh) ;
     if ($bigimg eq "B") {
@@ -1776,6 +1775,8 @@ sub graph {
       print "<td>Avg</td><td>Week</td></tr>\n";
       print "$futable</table><hr/>\n";
     }
+    print "<hr/>\n";
+
   } # have data
 } # graph
 
