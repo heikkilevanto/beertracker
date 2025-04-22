@@ -38,16 +38,17 @@ sub listcomments {
   my $editcommentid = util::param($c, "ec", 0);
   my $editcommentrec;
   while ( my $cr = $sth->fetchrow_hashref ) {
-    $s .= "Rating: <b>$cr->{Rating}</b>: $ratings[$cr->{Rating}]\n" if ( $cr->{Rating} );
+    $s .= "<span style='font-size: xx-small'> Comment id: $cr->{Id} </span>" .
+          "<a href='$c->{url}?o=$c->{op}&e=$glass&ec=$cr->{Id}'><span style='font-size: xx-small'>(Edit)</span></a>\n";
+    $s .= "Rating: <b>$cr->{Rating}</b>: $ratings[$cr->{Rating}].\n" if ( $cr->{Rating} );
     $s .= "With <b>$cr->{PersName}</b>\n" if ( $cr->{Person} );
-    $s .= "<br/><i>$cr->{Comment} </i><br/>\n" if ( $cr->{Comment} );
+    $s .= "<br/><i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
     $s .= "Photo $cr->{Photo} <br/>\n" if ( $cr->{Photo} );  # TODO - Show the photo itself
       # TODO - Move the image file name routines here from index.cgi:929 or so.
-    $s .= "<span style='font-size: x-small'> Comment id: $cr->{Id} </span>" .
-          "<a href='$c->{url}?o=$c->{op}&e=$glass&ec=$cr->{Id}'><span font-size: x-small>Edit</span></a><br/>\n";
     if ( $editcommentid && $cr->{Id} == $editcommentid ) {
       $editcommentrec = $cr;
     }
+    $s .= "<br/>\n";
   }
   $s .= commentform($c, $editcommentrec, $glass);
 
@@ -64,7 +65,14 @@ sub commentform {
   my $glass = shift;
 
   my $s="";
-  $s .= "<hr><br>\n";
+  $s .= "<!-- Comment editing form -->\n";
+
+  my $hidden = "hidden";
+  if ( $com ) {
+    $hidden = "";
+  }
+  $s .= "<span onclick='document.getElementById(\"commentform\").hidden ^= true'>(Add comment)</span>\n";
+  $s .= "<div  id='commentform' $hidden>\n";
   $s .= "<form method='post' action='$c->{url}'>\n";
   $s .= "<input type='hidden' name='commentedit' value='1'>\n"; # To distinguish from glass submit
   $s .= "<input type='hidden' name='o' value='$c->{op}'>\n";
@@ -106,6 +114,7 @@ sub commentform {
 
 
   $s .= "</form>\n";
+  $s .= "</div>\n";
   return $s;
 }
 

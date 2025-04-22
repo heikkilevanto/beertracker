@@ -110,12 +110,10 @@ sub inputform {
     print " <input type='button' value='Clr' onclick='clearinputs()'/>\n";
   }
   print "&nbsp;" ;
-
   print "</td></tr>\n";
   print "</table>\n";
   print "</form>\n";
   print comments::listcomments($c, $rec->{Id});
-  print "<hr>\n";
 
   # Javascript trickery
   my $script = <<'SCRIPTEND';
