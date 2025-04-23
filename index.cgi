@@ -2712,8 +2712,8 @@ sub about {
 
   my $v = Version::version_info();
   print "This is ";
-  print "DEV-" if ( $context->{devversion} );
-  print "Version $v->{tag} ";
+  print "DEVELOPMENT " if ( $context->{devversion} );
+  print "version $v->{tag} ";
   print "plus $v->{commits} commits " if ( $v->{commits} );
   print "<br>\n";
   print "commit $v->{commit} from $v->{date} ";
@@ -2726,7 +2726,7 @@ sub about {
     print "The development version is ";
     $v = util::getversioninfo("../beertracker-dev");
   }
-  print "Version $v->{tag} ";
+  print "$v->{tag} ";
   print "plus $v->{commits} commits " if ( $v->{commits} );
   print "<br>\n";
   print "commit $v->{commit} from $v->{date} ";

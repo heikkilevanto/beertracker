@@ -142,14 +142,30 @@ sub error {
 
 # Helper to get version info
 # Takes a relative dir path, defaults to the current one
+# A bit tricky code, but seems to work
 sub getversioninfo {
-  my $c = shift;
-  my $path = shift || ".";  # "../beertracker" or "../beertracker-dev"
-  local @INC = ( $path );
-  delete $INC{"VERSION.pm"};
-  require VERSION;
-  return  Version::version_info();
+    my ($file, $namespace) = @_;
+    $file = "$file/VERSION.pm";
+    $namespace ||= 'VersionTemp' . int(rand(1000000));
+
+    my $code = do {
+        open my $fh, '<', $file or die "Can't open $file: $!";
+        local $/;
+        <$fh>;
+    };
+
+    # Replace package name with unique one
+    $code =~ s/\bpackage\s+Version\b/package $namespace/;
+
+    my $full = "package main; no warnings; eval q{$code};";
+    my $ok = eval $full;
+    die "Error loading $file: $@" if $@;
+
+    no strict 'refs';
+    my $func = "${namespace}::version_info";
+    return $func->();
 }
+
 ################################################################################
 # Drop-down menus for the Show menu and for selecting a list
 ################################################################################
