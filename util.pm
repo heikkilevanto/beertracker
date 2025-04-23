@@ -140,6 +140,16 @@ sub error {
   exit();
 }
 
+# Helper to get version info
+# Takes a relative dir path, defaults to the current one
+sub getversioninfo {
+  my $c = shift;
+  my $path = shift || ".";  # "../beertracker" or "../beertracker-dev"
+  local @INC = ( $path );
+  delete $INC{"VERSION.pm"};
+  require VERSION;
+  return  Version::version_info();
+}
 ################################################################################
 # Drop-down menus for the Show menu and for selecting a list
 ################################################################################

@@ -2711,6 +2711,21 @@ sub about {
   print "<hr/>";
 
   my $v = Version::version_info();
+  print "This is ";
+  print "DEV-" if ( $context->{devversion} );
+  print "Version $v->{tag} ";
+  print "plus $v->{commits} commits " if ( $v->{commits} );
+  print "<br>\n";
+  print "commit $v->{commit} from $v->{date} ";
+  print "on '$v->{branch}' " if ( $v->{branch} ne "master" );
+  print "<br/><br/>\n";
+  if ( $context->{devversion} ) {
+    print "The production version is ";
+    $v = util::getversioninfo("../beertracker");
+  } else {
+    print "The development version is ";
+    $v = util::getversioninfo("../beertracker-dev");
+  }
   print "Version $v->{tag} ";
   print "plus $v->{commits} commits " if ( $v->{commits} );
   print "<br>\n";
