@@ -471,7 +471,6 @@ exit();  # The rest should be subs only
 # above, so we can skip it for modern things
 sub oldstuff {
   readdatalines();
-  findrec(); # Find the default record for display and geo
   extractgeo(); # Extract geo coords
   javascript(); # with some javascript trickery in it
 }
@@ -554,28 +553,6 @@ sub extractgeo {
 
 }
 
-################################################################################
-# Helper to find the record we should prefill in the input form
-# Sets $foundrec to it, as it may be used elsewhere
-# Does not parse all the redcords
-# TODO - Drop this when possible
-################################################################################
-sub findrec {
-  my $i = scalar( @lines ) -1;
-  #print STDERR "findrec called with e='$edit' \n";
-  if ( $i < 0 ) {  # no data
-    return;
-  }
-  if ( ! $edit ) { # Usually the last one
-    $foundrec = getrecord_com($i);
-  }
-  while ( ! $foundrec && $i > 0) { # Or the one we are editing
-    if ( $lines[$i] =~ /^$edit/ ) {
-      $foundrec = getrecord_com($i);
-    }
-    $i--;
-  }
-}
 
 
 ################################################################################
@@ -1387,6 +1364,17 @@ sub beerboard {
   if ( $op =~ /board(-?\d+)/i ) {
     $extraboard = $1;
   }
+  if ( ! $foundrec ) {
+    my $sql = "select * from glassrec " .
+              "where username = ? " .
+              "order by stamp desc ".
+              "limit 1";
+    my $sth = $context->{dbh}->prepare($sql);
+    $sth->execute( $context->{username} );
+    $foundrec = $sth->fetchrow_hashref;
+    $sth->finish;
+  }
+
   my $locparam = param("loc") || $foundrec->{loc} || "";
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
   print "<hr/>\n"; # Pull-down for choosing the bar
