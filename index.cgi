@@ -558,9 +558,11 @@ sub extractgeo {
 # Helper to find the record we should prefill in the input form
 # Sets $foundrec to it, as it may be used elsewhere
 # Does not parse all the redcords
+# TODO - Drop this when possible
 ################################################################################
 sub findrec {
   my $i = scalar( @lines ) -1;
+  #print STDERR "findrec called with e='$edit' \n";
   if ( $i < 0 ) {  # no data
     return;
   }
