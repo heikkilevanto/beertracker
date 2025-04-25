@@ -575,33 +575,6 @@ sub findrec {
   }
 }
 
-################################################################################
-# A helper to preload the last few years of records, to get seen marks in
-# %seen and %lastseen. Also %ratesum and %ratecount
-################################################################################
-# TODO - This should be killed once all lists get their seen details
-# directly from the database
-sub getseen{
-  my $limit = shift || datestr( "%F", -2*365 ) ; # When to stop scannig
-  my $i = scalar( @lines )-1;
-  while ($i > 0) { # normall we exit when we hit the limit
-    my $rec = getrecord($i);
-    last if ( ! $rec);
-    $seen{$rec->{maker}}++ if($rec->{maker});
-    $seen{$rec->{name}}++ if($rec->{name});
-    $seen{$rec->{style}}++ if($rec->{style});
-    $seen{$rec->{loc}}++ if($rec->{loc});
-    $seen{$rec->{seenkey}}++;
-    $lastseen{$rec->{seenkey}} .= "$rec->{effdate} ";
-    if ( $rec->{rate} ) {
-      $ratesum{$rec->{seenkey}} += $rec->{rate};
-      $ratecount{$rec->{seenkey}}++;
-      #print STDERR "'$rec->{seenkey}' : $rec->{rate} = $ratesum{$rec->{seenkey}} / $ratecount{$rec->{seenkey}} \n";
-    }
-    last if ( $rec->{stamp} lt $limit );
-    $i--;
-  }
-}
 
 ################################################################################
 # A helper to calculate blood alcohol for a given effdate
