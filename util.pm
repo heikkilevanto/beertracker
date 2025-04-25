@@ -181,6 +181,7 @@ sub topline {
   my $v = Version::version_info();
   $s .= "&nbsp;\n";
   $s .= "$v->{tag}+$v->{commits}";
+  $s .= "+" if ($v->{dirty});
   $s .= "&nbsp;\n";
   $s .= showmenu($c);
   $s .= "<hr>\n";
