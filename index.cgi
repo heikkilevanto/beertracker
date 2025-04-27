@@ -488,13 +488,14 @@ sub copyproddata {
     util::error ("Not allowed");
   }
   $dbh->disconnect;
-
+  print STDERR "Before: \n" . `ls -l $databasefile* ` . `ls -l ../beertracker/$databasefile*`;
   system("rm $databasefile-*");  # Remove old -shm and -wal files
   print STDERR "rm $databasefile-* \n";
   system("cp ../beertracker/$databasefile* $datadir"); # And copy all such files over
   print STDERR "cp ../beertracker/$databasefile* $datadir \n";
   graph::clearcachefiles( $context );
   system("cp ../beertracker/$photodir/* $photodir");
+  print STDERR "After: \n" . `ls -l $databasefile* ` . ` ls -l ../beertracker/$databasefile*`;
   print $q->redirect( "$url" ); # without the o=, so we don't copy again and again
   exit();
 } # copyproddata

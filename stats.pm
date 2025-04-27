@@ -57,6 +57,12 @@ sub datastats {
   }
   $sth->finish;
 
+  # TODO: Glass record types
+  # TODO: Comments, ratings, photos
+  # TODO: Brews (also those with one or none glasses?)
+  # TODO: Locations
+  # TODO: Persons
+
 
   print "</table>\n";
   return;  # The rest is old style lines array stuff, kept here just
