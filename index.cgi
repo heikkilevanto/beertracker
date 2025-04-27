@@ -331,6 +331,7 @@ my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 my $context = {
   'username' => $username,
   'datadir'  => $datadir,
+  'databasefile' => $databasefile,
   'dbh'      => $dbh,
   'url'      => $url,
   'cgi'      => $q,
@@ -356,6 +357,7 @@ require "./glasses.pm"; # Main input for and the full list
 require "./comments.pm"; # Stuff for comments, ratings, and photos
 require "./util.pm"; # Various helper functions
 require "./graph.pm"; # The daily graph
+require "./stats.pm"; # Various statistics
 require "./VERSION.pm"; # auto-generated version info
 
 ################################################################################
@@ -437,8 +439,8 @@ if ( $op =~ /Board/i ) {
   oldstuff();
   monthstat($1);
 } elsif ( $op =~ /DataStats/i ) {
-  oldstuff();
-  datastats();
+  #oldstuff();
+  stats::datastats($context);
 } elsif ( $op eq "About" ) {
   # The about page went from 500ms to under 100 when dropping the oldstuff
   about();
@@ -714,16 +716,6 @@ sub savefile {
 }
 
 ########################
-
-
-
-
-#
-# Helpers to save the record in the database
-
-
-
-
 
 
 ################################################################################
@@ -2193,92 +2185,6 @@ sub monthstat {
   exit();
 } # Monthly stats
 
-
-################################################################################
-# Statistics of the data file
-################################################################################
-# TODO - Get stuff from the database
-sub datastats {
-  print "<hr/>Other stats: \n";
-  print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
-  print "<a href='$url?o=Months'><span>Months</span></a>&nbsp;\n";
-  print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
-  print "<a href='$url?o=DataStats'><b>Datafile</b></a>&nbsp;\n";
-  print "<hr/>\n";
-
-  print "<table>\n";
-  print "<tr><td></td><td><b>Data file stats</b></td></tr>\n";
-  print "<tr><td></td><td>" . searchform() . "</td></tr>\n";
-
-  print "<tr><td></td><td><b>General</b></td></tr>\n";
-  #my $dfsize = -s $datafile;
-  #$dfsize = int($dfsize / 1024);
-  #print "<tr><td align='right'>$dfsize</td><td>kb in $datafile </td></tr>\n";
-  my $datarecords = scalar(@records);
-  # The following have been calculated when reading the file, without parsing it
-  my $totallines = $datarecords + $commentlines + $commentedrecords;
-  print "<tr><td align='right'>$totallines</td><td> lines</td></tr>\n";
-  print "<tr><td align='right'>$commentlines</td><td> lines of comments</td></tr>\n";
-  print "<tr><td align='right'>$commentedrecords</td><td> record lines commented out</td></tr>\n";
-  print "<tr><td align='right'>$datarecords</td><td> real data records</td></tr>\n";
-
-  my %rectypes;
-  my %distinct;
-  my %seen;
-  my $oldrecs = 0;
-  my $badrecs = 0;
-  my $comments = 0;
-  my @rates = ( 0,0,0,0,0,0,0,0,0,0 );
-  my $ratesum = 0;
-  my $ratecount = 0;
-
-  for ( my $i = 0 ; $i < scalar(@lines); $i++) {
-    my $rec = getrecord($i);
-    next if filtered ( $rec );
-    if ( ! $rec ) {
-      $badrecs++;
-      next;
-    }
-    my $rt = $rec->{type};
-    $rectypes{$rt} ++;
-    $oldrecs ++ if ($rec->{rawline} && $rec->{rawline} !~ /; *$rt *;/ );
-    $comments++ if ( $rec->{com} );
-    if (defined($rec->{rate}) && $rec->{rate} =~ /\d/ ) {
-      $rates[ $rec->{rate} ] ++;
-      $ratesum += $rec->{rate};
-      $ratecount++;
-    }
-    if ( ! $seen{$rec->{seenkey}} ) {
-      $seen{$rec->{seenkey}} = 1;
-      $distinct{$rec->{type}}++;
-    }
-  }
-  print "<tr><td align='right'>$oldrecs</td><td> old type lines</td></tr>\n";
-  print "<tr><td>&nbsp;</td></tr>\n";
-  print "<tr><td>&nbsp;</td><td><b>Record types</b></td></tr>\n";
-  foreach my $rt ( sort  { $rectypes{$b} <=> $rectypes{$a} } keys(%rectypes) )  {
-    print "<tr><td align='right'>$rectypes{$rt}</td>" .
-    "<td> $rt ($distinct{$rt} different)</td></tr>\n";
-  }
-  if ( $badrecs ) {
-    print "<tr><td align='right'>$badrecs</td><td>Bad</td></tr>\n";
-  }
-  print "<tr><td>&nbsp;</td></tr>\n";
-  print "<tr><td>&nbsp;</td><td><b>Ratings</b></td></tr>\n";
-  my $i = 1;
-  while ( $ratings[$i] ){
-    print "<tr><td align='right'>$rates[$i]</td><td>'$ratings[$i]' ($i)</td></tr>\n";
-    $i++;
-  }
-  print "<tr><td align='right'>$ratecount</td><td>Records with ratings</td></tr>\n";
-  if ( $ratecount ) {
-    my $avg = sprintf("%3.1f", $ratesum / $ratecount);
-    print "<tr><td align='right'>$avg</td><td>Average rating</td></tr>\n";
-  }
-  print "<tr><td align='right'>$comments</td><td>Records with comments</td></tr>\n";
-
-  print "</table>\n";
-}
 
 
 ################################################################################
