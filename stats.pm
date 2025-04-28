@@ -57,11 +57,76 @@ sub datastats {
   }
   $sth->finish;
 
-  # TODO: Glass record types
+  print "<tr><td>&nbsp;</td></tr>\n";
+  print "<tr><td></td><td><b>Glasses </b></td></tr>\n";
+  $sql = "select brewtype, count(*) as count from glasses " .
+         "group by brewtype order by count desc";
+  $sth = $c->{dbh}->prepare($sql);
+  $sth->execute();
+  while ( my $rec = $sth->fetchrow_hashref ) {
+    #print STDERR "U: ", JSON->new->encode($rec), "\n";
+    print "<tr>\n";
+    print "<td><b>$rec->{BrewType}</b> </td>\n";
+    print "<td>$rec->{count} glasses</td>\n";
+    print "</tr>\n";
+  }
+  $sth->finish;
+
+  print "<tr><td>&nbsp;</td></tr>\n";
+  print "<tr><td></td><td><b>Brews </b></td></tr>\n";
+  $sql = "select brewtype, count(*) as count from brews " .
+         "group by brewtype order by count desc";
+  $sth = $c->{dbh}->prepare($sql);
+  $sth->execute();
+  while ( my $rec = $sth->fetchrow_hashref ) {
+    #print STDERR "U: ", JSON->new->encode($rec), "\n";
+    print "<tr>\n";
+    print "<td><b>$rec->{BrewType}</b> </td>\n";
+    print "<td>$rec->{count} brews</td>\n";
+    print "</tr>\n";
+  }
+  $sth->finish;
+  # TODO: Find brews that have one or no glasses associated with them
+
+  print "<tr><td>&nbsp;</td></tr>\n";
+  print "<tr><td></td><td><b>Producers</b></td></tr>\n";
+  $sql = "select LocType, LocSubType, count(name) as count ".
+         "from locations where LocType = 'Producer' " .
+         "group by LocType, LocSubType " .
+         "order by LocType, count desc,  LocSubType ";
+  $sth = $c->{dbh}->prepare($sql);
+  $sth->execute();
+  while ( my $rec = $sth->fetchrow_hashref ) {
+    #print STDERR "U: ", JSON->new->encode($rec), "\n";
+    print "<tr>\n";
+    print "<td><b>$rec->{LocSubType}</b> </td>\n";
+    print "<td>$rec->{count} producers</td>\n";
+    print "</tr>\n";
+  }
+  $sth->finish;
+
+  print "<tr><td>&nbsp;</td></tr>\n";
+  print "<tr><td></td><td><b>Locations</b></td></tr>\n";
+  $sql = "select LocType, LocSubType, count(name) as count ".
+         "from locations where LocType <> 'Producer' " .
+         "group by LocType, LocSubType " .
+         "order by LocType, count desc,  LocSubType ";
+  $sth = $c->{dbh}->prepare($sql);
+  $sth->execute();
+  while ( my $rec = $sth->fetchrow_hashref ) {
+    #print STDERR "U: ", JSON->new->encode($rec), "\n";
+    print "<tr>\n";
+    print "<td><b>$rec->{LocType}, $rec->{LocSubType}</b> </td>\n";
+    print "<td>$rec->{count} locations</td>\n";
+    print "</tr>\n";
+  }
+  $sth->finish;
+
   # TODO: Comments, ratings, photos
-  # TODO: Brews (also those with one or none glasses?)
-  # TODO: Locations
-  # TODO: Persons
+  # TODO: Comments, on brew type, night, restaurant
+  # TODO: Ratings, min/max/avg/count, on brewtype
+  # TODO: Photos, on brewtype (night/rest) or person
+  # TODO: Persons - what to say of them? Have no categories.
 
 
   print "</table>\n";
