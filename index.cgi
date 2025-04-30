@@ -31,6 +31,10 @@
 # that have to wait a little. Maybe I invite more labeling in time. In the end
 # all TODOs should be resolved, or moved into github issues
 
+# TODO - Switch to using
+#  - FIXME instead of TODO SOON
+#  - NOTE instead TODO LATER
+
 # Sections of the main function:
 # - Init and setup
 #   - Modules and UTF-8 stuff
@@ -433,13 +437,11 @@ if ( $op =~ /Board/i ) {
   oldstuff();
   yearsummary($1); # $1 indicates sort order
 } elsif ( $op =~ /short/i ) {
-  oldstuff();
-  shortlist();
+  stats::dailystats($context);
 } elsif ( $op =~ /Months([BS])?/ ) {
   oldstuff();
   monthstat($1);
 } elsif ( $op =~ /DataStats/i ) {
-  #oldstuff();
   stats::datastats($context);
 } elsif ( $op eq "About" ) {
   # The about page went from 500ms to under 100 when dropping the oldstuff
@@ -482,7 +484,9 @@ sub oldstuff {
 # Needs to be before the HTML head, as it forwards back to the page
 ################################################################################
 # Nice to see up to date data when developing
-# TODO - Needs to copyu the DB
+# NOTE Had some problems with file permissions and the -wal and -shm files. Now I
+# delete those first, and copy over if they exist. Seems to work. But I leave
+# noted to STDERR so I can look in the log if I run into problems later.
 sub copyproddata {
   if (!$devversion) {
     util::error ("Not allowed");
@@ -1618,140 +1622,6 @@ sub beerboard {
   $qry = "" if ($qry =~ /PA/i );   # But not 'PA', it is only for the board
 } # beerboard
 
-################################################################################
-# Short list, aka daily statistics
-################################################################################
-# TODO  Use Sql, something like this:
-# my $sumsql = q{
-#   select
-#     strftime ('%Y-%m-%d %w', timestamp,'-06:00') as effdate,
-#   	sum(abs(price)) as pr,
-#    	sum ( stdrinks ) as stdrinks,
-#     GROUP_CONCAT(Locations.Name, ';')
-#   from glasses, Locations
-#   where Locations.id = Glasses.location
-#   group by eff
-#   };
-#   my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-#   And separate and dedup the locations
-#   Add Julianday(timestamp) to detect zero days and longer gaps
-
-sub shortlist{
-  my $entry = "";
-  my $places = "";
-  my $lastdate = "";
-  my $lastloc = "";
-  my $daysum = 0.0;
-  my $daymsum = 0.0;
-  my %locseen;
-  my $month = "";
-  print "<hr/>Other stats: \n";
-  print "<a href='$url?o=short'><b>Days</b></a>&nbsp;\n";
-  print "<a href='$url?o=Months'><span>Months</span></a>&nbsp;\n";
-  print "<a href='$url?o=Years'><span>Years</span></a>&nbsp;\n";
-  print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
-  print "<hr/>\n";
-  print "<a href='$url?o=$op'><span>(Recent)</span></a>&nbsp;\n";
-  for ( my $y = datestr("%Y"); $y >= 2016; $y-- ) {
-    my $tag = "span";
-    $tag = "b" if ( $yrlim eq $y );
-    print "<a href='$url?o=$op&y=$y'><$tag>$y</$tag></a>&nbsp;\n";
-  }
-  print "<a href='$url?o=$op&maxl=-1'><span>(all)</span></a>&nbsp;\n";
-  print "<hr/>\n";
-  my $filts = splitfilter($qry);
-  print "Filter: <b>$yrlim $filts</b> (<a href='$url?o=short'><span>Clear</span></a>)" .
-    "&nbsp;(<a href='$url?q=$qry'><span>Full</span></a>)<hr/>" if ($qry||$yrlim);
-  print searchform(). "<hr/>" if $qry;
-  my $i = scalar( @lines );
-  while ( $i > 0 ) {
-    $i--;
-    if ( $yrlim ) {  # Quick filter on the year, without parsing
-      next if ( $lines[$i] !~ /^$yrlim/ );
-    }
-    my $rec = getrecord($i);
-    next if filtered ( $rec ); # TODO - Does this make any sense
-    if ( $i == 0 ) {
-      $lastdate = "";
-      if (!$entry) { # make sure to count the last entry too
-        $entry = filt($rec->{effdate}, "") . " " . $rec->{wday} ;
-        $daysum += $rec->{alcvol};
-        $daymsum += $rec->{pr} if ( $rec->{pr} > 0 );
-        if ( $places !~ /$rec->{loc}/ ) {
-          $places .= " " . filt($rec->{loc}, "", $rec->{loc}, "short");
-          $locseen{$rec->{loc}} = 1;
-        }
-      }
-    }
-    if ( $lastdate ne $rec->{effdate} ) {
-      if ( $entry ) {
-        my $daydrinks = sprintf("%3.1f", $daysum / $onedrink) ;
-        $entry .= " " . unit($daydrinks,"d") . " " . unit($daymsum,".-");
-        $entry .= " " . unit(sprintf("%0.2f",$bloodalc{$lastdate}), "‰")
-          if ( ( $bloodalc{$lastdate} || 0 ) > 0.01 );
-        print "<span style='white-space: nowrap'>$entry";
-        print "$places</span><br/>\n";
-        $maxlines--;
-        last if ($maxlines == 0); # if negative, will go for ever
-        last if ( $lines[$i] lt $yrlim );  # Past the selected year
-      }
-      # Check for empty days in between
-      if (!$qry) {
-        my $ndays = 1;
-        my $zerodate;
-        do { # TODO - Do this in perl, with datestr()
-            # TODO - Make this like the graph, build an array of entries first
-            # At the moment this is too slow to use in filtered lists.
-          $zerodate = `date +%F -d "$lastdate + $ndays days ago" `;
-          $ndays++;  # that seems to work even without $lastdate, takes today!
-          if ($yrlim && $zerodate !~ /$yrlim/) {
-            $ndays = 0;
-            $zerodate = $rec->{effdate}; # force the loop to end
-          }
-        } while ( $zerodate gt $rec->{effdate} && $i > 1);
-        $ndays-=3;
-        if ( $ndays == 1 ) {
-          print ". . . <br/>\n";
-        } elsif ( $ndays > 1) {
-          print ". . . ($ndays days) . . .<br/>\n";
-        }
-      }
-      my $thismonth = substr($rec->{effdate},0,7); #yyyy-mm
-      my $bold = "";
-      if ( $thismonth ne $month ) {
-        $bold = "b";
-        $month = $thismonth;
-      }
-      my $wday = $rec->{wday};
-      $wday = "<b>$wday</b>" if ($wday =~ /Fri|Sat|Sun/);  # mark wkends
-      $entry = filt($rec->{effdate}, $bold) . " " . $wday ;
-      $places = "";
-      $lastdate = $rec->{effdate};
-      $lastloc = "";
-      $daysum = 0.0;
-      $daymsum = 0.0;
-    }
-    next if ($rec->{type} eq "Restaurant" );
-    if ( $lastloc ne $rec->{loc} ) {
-      # Abbreviate some location names
-      my $sloc=$rec->{loc};
-      for my $k ( keys(%shortnames) ) {  # TODO - no need to scan
-        my $s = $shortnames{$k};
-        $sloc =~ s/$k/$s/i;
-      }
-      $sloc =~ s/ place$//i;  # Dorthes Place => Dorthes
-      $sloc =~ s/ /&nbsp;/gi;   # Prevent names breaking in the middle
-      if ( $places !~ /$sloc/ ) {
-        $places .= "," if ($places);
-        $places .= " " . filt($rec->{loc}, "", $sloc, "short", "loc");
-        $locseen{$rec->{loc}} = 1;
-        }
-      $lastloc = $sloc;
-    }
-    $daysum += $rec->{'alcvol'};
-    $daymsum += $rec->{pr} if ( $rec->{pr} > 0 );
-  }
-} # Short list
 
 ################################################################################
 # Annual summary

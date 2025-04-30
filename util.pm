@@ -71,6 +71,13 @@ sub splitdate {
   return ( $date, $wd || "", $time || "" );
 }
 
+# helper to make a unit displayed in smaller font
+sub unit {
+  my $v = shift;
+  my $u = shift || "XXX";  # Indicate missing units so I see something is wrong
+  return "" unless $v;
+  return "$v<span style='font-size: xx-small'>$u</span> ";
+}
 
 ################################################################################
 # Helpers for date and timestamps
