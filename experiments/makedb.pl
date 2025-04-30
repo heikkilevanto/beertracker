@@ -26,8 +26,14 @@ use DBI;
 # systematic use of the RefersTo field, so a comment could point directly to
 # a person, location (producer?), etc.
 
+
+
 # Connect to SQLite database (or create it if it doesn't exist)
 my $databasefile = "../beerdata/beertracker.db";
+
+# Safety catch. Comment this out if you really need to create a new database!
+die("Database '$databasefile' exists already. Will not overwrite it") if ( -e $databasefile );
+
 #die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
 
 

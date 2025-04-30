@@ -24,7 +24,7 @@ sub statsmenu {
     my $tag= "span";
     $tag = "b" if ( $k =~ /$c->{op}/i ) ;
     my $name = $stats{$k} || $k;
-    print "<a href='$c->{url}?o=k'><$tag>$name</$tag></a>&nbsp;\n";
+    print "<a href='$c->{url}?o=$k'><$tag>$name</$tag></a>&nbsp;\n";
   }
   print "<hr/>\n";
 }
@@ -51,14 +51,14 @@ sub datastats {
 
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td></td><td><b>Users</b></td></tr>\n";
-  my $sql = "select username as username, count(*) as recs from glasses group by username";
+  my $sql = "select username as username, count(*) as recs from glasses group by username order by username";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute();
   while ( my $rec = $sth->fetchrow_hashref ) {
     #print STDERR "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
-    print "<td><b>$rec->{username}</b> </td>\n";
-    print "<td>$rec->{recs} glasses</td>\n";
+    print "<td align='right'>$rec->{recs}</td>\n";
+    print "<td> glasses for <b>$rec->{username}</b> </td>\n";
     print "</tr>\n";
   }
   $sth->finish;
@@ -72,8 +72,8 @@ sub datastats {
   while ( my $rec = $sth->fetchrow_hashref ) {
     #print STDERR "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
-    print "<td><b>$rec->{BrewType}</b> </td>\n";
-    print "<td>$rec->{count} glasses</td>\n";
+    print "<td align='right'>$rec->{count}</td>\n";
+    print "<td>glasses of <b>$rec->{BrewType}</b> </td>\n";
     print "</tr>\n";
   }
   $sth->finish;
@@ -87,8 +87,8 @@ sub datastats {
   while ( my $rec = $sth->fetchrow_hashref ) {
     #print STDERR "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
-    print "<td><b>$rec->{BrewType}</b> </td>\n";
-    print "<td>$rec->{count} brews</td>\n";
+    print "<td align='right'>$rec->{count}</td>\n";
+    print "<td>types of <b>$rec->{BrewType}</b> </td>\n";
     print "</tr>\n";
   }
   $sth->finish;
@@ -105,8 +105,8 @@ sub datastats {
   while ( my $rec = $sth->fetchrow_hashref ) {
     #print STDERR "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
-    print "<td><b>$rec->{LocSubType}</b> </td>\n";
-    print "<td>$rec->{count} producers</td>\n";
+    print "<td align='right'>$rec->{count}</td>\n";
+    print "<td> producers of <b>$rec->{LocSubType}</b> </td>\n";
     print "</tr>\n";
   }
   $sth->finish;
@@ -116,14 +116,14 @@ sub datastats {
   $sql = "select LocType, LocSubType, count(name) as count ".
          "from locations where LocType <> 'Producer' " .
          "group by LocType, LocSubType " .
-         "order by LocType, count desc,  LocSubType ";
+         "order by LocType, count desc,  LocSubType COLLATE NOCASE";
   $sth = $c->{dbh}->prepare($sql);
   $sth->execute();
   while ( my $rec = $sth->fetchrow_hashref ) {
     #print STDERR "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
+    print "<td align='right'>$rec->{count}</td>\n";
     print "<td><b>$rec->{LocType}, $rec->{LocSubType}</b> </td>\n";
-    print "<td>$rec->{count} locations</td>\n";
     print "</tr>\n";
   }
   $sth->finish;
