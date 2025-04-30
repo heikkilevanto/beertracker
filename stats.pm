@@ -18,14 +18,13 @@ sub statsmenu {
   my $c = shift;
   print "Other stats: \n";
   my %stats;
-  $stats{"short"} = "Days";
-  $stats{"Months"} = "Months";
-  $stats{"Years"} = "Years";
+  $stats{"Short"} = "Days";
   $stats{"DataStats"} = "Datafile";
-  for my $k ( keys(%stats) ) {
+  for my $k ("Short","Months","Years","DataStats" ) {
     my $tag= "span";
     $tag = "b" if ( $k =~ /$c->{op}/i ) ;
-    print "<a href='$c->{url}?o=k'><$tag>$stats{$k}</$tag></a>&nbsp;\n";
+    my $name = $stats{$k} || $k;
+    print "<a href='$c->{url}?o=k'><$tag>$name</$tag></a>&nbsp;\n";
   }
   print "<hr/>\n";
 }
