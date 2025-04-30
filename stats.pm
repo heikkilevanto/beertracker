@@ -10,6 +10,7 @@ use warnings;
 
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use File::Basename;
 
 ################################################################################
 # Sub-menu for the various statistics pages
@@ -47,7 +48,8 @@ sub datastats {
   print "<tr><td></td><td><b>General</b></td></tr>\n";
   my $dfsize = -s $c->{databasefile};
   $dfsize = int($dfsize / 1024);
-  print "<tr><td align='right'>$dfsize</td><td>kb in $c->{databasefile}</td></tr>\n";
+  my $dbname = basename($c->{databasefile});
+  print "<tr><td align='right'>$dfsize</td><td>kb in <b>$dbname</b></td></tr>\n";
 
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td></td><td><b>Users</b></td></tr>\n";
@@ -119,14 +121,25 @@ sub datastats {
          "order by LocType, count desc,  LocSubType COLLATE NOCASE";
   $sth = $c->{dbh}->prepare($sql);
   $sth->execute();
+  my $singles = "";
   while ( my $rec = $sth->fetchrow_hashref ) {
     #print STDERR "U: ", JSON->new->encode($rec), "\n";
-    print "<tr>\n";
-    print "<td align='right'>$rec->{count}</td>\n";
-    print "<td><b>$rec->{LocType}, $rec->{LocSubType}</b> </td>\n";
-    print "</tr>\n";
+    if ( $rec->{LocType} =~ /Restaurant/i && $rec->{count} == 1 ) {
+      $singles .= "$rec->{LocSubType}, ";
+    } else {
+      print "<tr>\n";
+      print "<td align='right'>$rec->{count}</td>\n";
+      print "<td><b>$rec->{LocType}, $rec->{LocSubType}</b> </td>\n";
+      print "</tr>\n";
+    }
   }
   $sth->finish;
+  if ( $singles ){
+    $singles =~ s/, *$//; # remove trailing comma
+    print "<tr><td></td><td>And <b>one</b> of each of these:</td></tr> \n";
+    print "<tr><td></td><td>$singles</td></tr> \n";
+  }
+
 
   # TODO: Comments, on brew type, night, restaurant
   # TODO: Ratings, min/max/avg/count, on brewtype
