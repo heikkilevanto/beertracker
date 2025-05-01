@@ -439,7 +439,6 @@ if ( $op =~ /Board/i ) {
 } elsif ( $op =~ /short/i ) {
   stats::dailystats($context);
 } elsif ( $op =~ /Months([BS])?/ ) {
-  oldstuff();
   monthstat($1);
 } elsif ( $op =~ /DataStats/i ) {
   stats::datastats($context);
@@ -1768,11 +1767,7 @@ sub monthstat {
   print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
   print "<hr/>\n";
 
-  if ( getrecord(0)->{date} !~ /^(\d\d\d\d)/ ) { # Should not happen
-    print "Oops, no start year found <br/>\n";
-    return;
-  }
-  my $firsty=$1;
+  my $firsty="";
 
   my %monthdrinks;
   my %monthprices;
@@ -1786,6 +1781,7 @@ sub monthstat {
  	  max( strftime ('%d', timestamp,'-06:00')) as last
   from glasses
   group by calmon
+  order by calmon
   };
 
   my $sum_sth = $dbh->prepare($sumsql);
@@ -1794,8 +1790,14 @@ sub monthstat {
     $monthdrinks{$calmon} = $drinks;
     $monthprices{$calmon} = $pr; # negative prices for buying box wines
     $lastmonthday = $last;  # Remember the last day
+    if ( !$firsty ) {
+      $firsty = $1 if ( $calmon =~ /^(\d\d\d\d)/ );
+    }
   }
 
+  if ( !$firsty ) {
+    util::error("No data found");
+  }
 
   my $pngfile = $plotfile;
   $pngfile =~ s/\.plot/-stat.png/;
