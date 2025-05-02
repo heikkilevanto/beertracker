@@ -434,8 +434,7 @@ if ( $op =~ /Board/i ) {
   beerboard();
   fulllist();
 } elsif ( $op =~ /Years(d?)/i ) {
-  oldstuff();
-  yearsummary($1); # $1 indicates sort order
+  stats::yearsummary($context,$1); # $1 indicates sort order
 } elsif ( $op =~ /short/i ) {
   stats::dailystats($context);
 } elsif ( $op =~ /Months([BS])?/ ) {
@@ -1622,135 +1621,6 @@ sub beerboard {
 } # beerboard
 
 
-################################################################################
-# Annual summary
-################################################################################
-
-sub yearsummary {
-  my $sortdr = shift;
-  my %sum;
-  my %alc;
-  my $ysum = 0;
-  my $yalc = 0;
-  my $thisyear = "";
-  my $sofar = "so far";
-  my $y;
-  if ( $qry ) {
-    $sofar = "";
-  }
-  print "<hr/>Other stats: \n";
-  print "<a href='$url?o=short'><span>Days</span></a>&nbsp;\n";
-  print "<a href='$url?o=Months'><span>Months</span></a>&nbsp;\n";
-  print "<a href='$url?o=Years'><b>Years</b></a>&nbsp;\n";
-  print "<a href='$url?o=DataStats'><span>Datafile</span></a>&nbsp;\n";
-  print "<hr/>\n";
-  my $nlines = param("maxl") || 10;
-  if ($sortdr) {
-    print "Sorting by drinks (<a href='$url?o=Years&q=" . uri_escape_utf8($qry) .
-       "' class='no-print'><span>Sort by money</span></a>)\n";
-  } else {
-    print "Sorting by money (<a href='$url?o=YearsD&q=" . uri_escape_utf8($qry) .
-       "' class='no-print'><span>Sort by drinks</span></a>)\n";
-  }
-  print "<table border=1>\n";
-  my $i = scalar( @lines );
-  while ( $i > 0 ) {
-    $i--;
-    my $rec = getrecord($i);
-    next unless ($rec);
-    next if ($rec->{type} =~ "Restaurant|Night" );
-    my $loc = $rec->{loc};
-    $y = substr($rec->{effdate},0,4);
-    #print "  y=$y, ty=$thisyear <br/>\n";
-
-    if ($i == 0) { # count also the last line
-      $thisyear = $y unless ($thisyear);
-      $y = "END";
-      $sum{$loc} += abs($rec->{pr});
-      $alc{$loc} += $rec->{alcvol};
-      $ysum += abs($rec->{pr});
-      $yalc += $rec->{alcvol};
-    }
-    if ( $y ne $thisyear ) {
-      if ($thisyear && (!$qry || $thisyear == $qry) ) {
-        if ( $thisyear ne datestr("%Y") ) { # We are in the next year already
-          $sofar = "";
-        }
-        my $yrlink = $thisyear;
-        if (!$qry) {
-          $yrlink = "<a href='$url?o=$op&q=$thisyear&maxl=20'><span>$thisyear</span></a>";
-        }
-        print "<tr><td colspan='3'><br/>Year <b>$yrlink</b> $sofar</td></tr>\n";
-        my @kl;
-        if ($sortdr) {
-          @kl = sort { $alc{$b} <=> $alc{$a} }  keys %alc;
-        } else {
-          @kl = sort { $sum{$b} <=> $sum{$a} }  keys %sum;
-        }
-        my $k = 0;
-        while ( $k < $nlines && $kl[$k] ) {
-          my $loc = $kl[$k];
-          my $alc = unit(sprintf("%5.0f", $alc{$loc} / $onedrink),"d");
-          my $pr = unit(sprintf("%6.0f", $sum{$loc}),".-");
-          print "<tr><td align='right'>$pr&nbsp;</td>\n" .
-            "<td align=right>$alc&nbsp;</td>" .
-            "<td>&nbsp;". filt($loc)."</td></tr>\n";
-          $k++;
-        }
-        my $alc = unit(sprintf("%5.0f", $yalc / $onedrink),"d");
-        my $pr = unit(sprintf("%6.0f", $ysum),".-");
-        print "<tr><td align=right>$pr&nbsp;</td>" .
-          "<td align=right>$alc&nbsp;</td>" .
-          "<td> &nbsp;  = TOTAL for $thisyear $sofar</td></tr> \n";
-        my $daynum = 365;
-        if ($sofar) {
-          $daynum = datestr("%j"); # day number in year
-          my $alcp = unit(sprintf("%5.0f", $yalc / $onedrink / $daynum * 365),"d");
-          my $prp = unit(sprintf("%6.0f", $ysum / $daynum * 365),".-");
-          print "<tr><td align=right>$prp&nbsp;</td>".
-            "<td align=right>$alcp&nbsp;</td>".
-            "<td>&nbsp; = PROJECTED for whole $thisyear</td></tr>\n";
-        }
-        my $alcday = $yalc / $onedrink / $daynum;
-        my $prday = $ysum / $daynum;
-        my $alcdayu = unit(sprintf("%5.1f", $alcday),"d");
-        my $prdayu = unit(sprintf("%6.0f", $prday),".-");
-        print "<tr><td align=right>$prdayu&nbsp;</td>" .
-          "<td align=right>$alcdayu&nbsp;</td>" .
-          "<td>&nbsp; = per day</td></tr>\n";
-        $alcday = unit(sprintf("%5.1f", $alcday *7),"d");
-        $prday = unit(sprintf("%6.0f", $prday *7),".-");
-        print "<tr><td align=right>$prday&nbsp;</td>" .
-          "<td align=right>$alcday&nbsp;</td>" .
-          "<td>&nbsp; = per week</td></tr>\n";
-        $sofar = "";
-      }
-      %sum = ();
-      %alc = ();
-      $ysum = 0;
-      $yalc = 0;
-      $thisyear = $y;
-      last if ($y eq "END");
-    } # new year
-    $sum{$loc} = 0.1 / ($i+1) unless $sum{$loc}; # $i keeps sort order
-    $sum{$loc} += abs($rec->{pr}) ;
-    $alc{$loc} += $rec->{alcvol};
-    $ysum += abs($rec->{pr});
-    $yalc += $rec->{alcvol};
-  }
-  print "</table>\n";
-  print "Show ";
-  for my $top ( 5, 10, 20, 50, 100, 999999 ) {
-    print  "&nbsp; <a href='$url?o=$op&q=" . uri_escape($qry) . "&maxl=$top'><span>Top-$top</span></a>\n";
-  }
-  if ($qry) {
-    my $prev = "<a href=$url?o=Years&q=" . ($qry - 1) . "&maxl=" . param('maxl') ."><span>Prev</span></a> \n";
-    my $all = "<a href=$url?o=Years&&maxl=" . param('maxl') ."><span>All</span></a> \n";
-    my $next = "<a href=$url?o=Years&q=" . ($qry + 1) . "&maxl=" . param('maxl') ."><span>Next</span></a> \n";
-    print "<br/> $prev &nbsp; $all &nbsp; $next \n";
-  }
-  print  "<hr/>\n";
-} # yearsummary
 
 ################################################################################
 # Monthly statistics
