@@ -241,9 +241,10 @@ sub yearsummary {
   } else {
     my $sqly = "select distinct strftime('%Y',Timestamp) as yy " .
       " from glasses " .
+      " where username = ? " .
       " order by yy desc";
     my $sthy = $c->{dbh}->prepare($sqly);
-    $sthy->execute;
+    $sthy->execute($c->{username});
     my $years_ref = $c->{dbh}->selectcol_arrayref($sqly);
     @years = @$years_ref;
   }
@@ -251,20 +252,22 @@ sub yearsummary {
   my $sql = "
     select
       locations.Name as name,
-      sum(glasses.Price) as price,
+      sum(abs(glasses.Price)) as price,
       sum(glasses.StDrinks) as drinks,
       count(distinct(strftime('%Y-%m-%d',glasses.timestamp, '-06:00'))) as visits
     from glasses
     left join locations on glasses.Location = LOCATIONS.Id
     where strftime('%Y', glasses.Timestamp, '-06:00') = ?
+    and glasses.Username = ?
     and glasses.BrewType <> 'Restaurant'
     and glasses.BrewType <> 'Night'
     group by name ";
   if ( $sortdr ) {
-    $sql .= "order by drinks desc, name";
+    $sql .= "order by drinks desc, name COLLATE NOCASE";
   } else {
-    $sql .= "order by price desc, name";
+    $sql .= "order by price desc, name COLLATE NOCASE";
   }
+  print STDERR "u='$c->{username}' $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
 
   my $nlines = util::param($c,"maxl") || 10;
@@ -288,7 +291,7 @@ sub yearsummary {
     print "<tr><td align='right'>Kroner &nbsp;</td>" .
           "<td align='right'>Drinks &nbsp;</td>".
           "<td align='right'>Visits&nbsp;</td><td></td></tr>\n";
-    $sth->execute("$y" );
+    $sth->execute("$y", $c->{username} );
     my $ln = $nlines;
     while (1) {
       my ( $name, $price, $drinks, $visits )  = $sth->fetchrow_array;
