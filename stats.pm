@@ -174,7 +174,8 @@ sub dailystats {
     where Username = ?
     GROUP BY date
     ORDER BY date desc";
-
+  # Unfortunately group_concat will not take a delimiter. If a place name
+  # has a comma, it looks a bit silly. Usually clear enough from context.
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($c->{username});
   my $prev = 0;

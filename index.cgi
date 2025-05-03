@@ -176,15 +176,15 @@ $scrapers{"Fermentoren"} = "fermentoren.pl";
 # See #368
 
 # Short names for the most commong watering holes
-my %shortnames;
-$shortnames{"Home"} = "H";
-$shortnames{"Fermentoren"} = "F";
-$shortnames{"Ølbaren"} = "Øb";
-$shortnames{"Ølsnedkeren"} = "Øls";
-$shortnames{"Hooked, Vesterbro"} = "Hooked Vbro";
-$shortnames{"Hooked, Nørrebro"} = "Hooked Nbro";
-$shortnames{"Dennis Place"} = "Dennis";
-$shortnames{"Væskebalancen"} = "VB";
+# my %shortnames;
+# $shortnames{"Home"} = "H";
+# $shortnames{"Fermentoren"} = "F";
+# $shortnames{"Ølbaren"} = "Øb";
+# $shortnames{"Ølsnedkeren"} = "Øls";
+# $shortnames{"Hooked, Vesterbro"} = "Hooked Vbro";
+# $shortnames{"Hooked, Nørrebro"} = "Hooked Nbro";
+# $shortnames{"Dennis Place"} = "Dennis";
+# $shortnames{"Væskebalancen"} = "VB";
 
 # currency conversions
 my %currency;
