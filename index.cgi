@@ -1650,12 +1650,13 @@ sub monthstat {
   	sum(stdrinks) as drinks,
  	  max( strftime ('%d', timestamp,'-06:00')) as last
   from glasses
+  where Username = ?
   group by calmon
   order by calmon
   };
 
   my $sum_sth = $dbh->prepare($sumsql);
-  $sum_sth->execute();
+  $sum_sth->execute($context->{username});
   while ( my ( $calmon, $pr, $drinks, $last ) = $sum_sth->fetchrow_array ) {
     $monthdrinks{$calmon} = $drinks;
     $monthprices{$calmon} = $pr; # negative prices for buying box wines

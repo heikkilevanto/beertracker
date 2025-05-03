@@ -171,11 +171,12 @@ sub dailystats {
     GROUP_CONCAT(DISTINCT locations.name) AS locations
     FROM glasses
     LEFT JOIN locations ON glasses.location = locations.id
+    where Username = ?
     GROUP BY date
     ORDER BY date desc";
 
   my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute();
+  $sth->execute($c->{username});
   my $prev = 0;
   while ( my $rec = $sth->fetchrow_hashref ) {
     my $jul = $rec->{julian};
@@ -241,11 +242,9 @@ sub yearsummary {
   } else {
     my $sqly = "select distinct strftime('%Y',Timestamp) as yy " .
       " from glasses " .
-      " where username = ? " .
+      " where Username = ? " .
       " order by yy desc";
-    my $sthy = $c->{dbh}->prepare($sqly);
-    $sthy->execute($c->{username});
-    my $years_ref = $c->{dbh}->selectcol_arrayref($sqly);
+    my $years_ref = $c->{dbh}->selectcol_arrayref($sqly,undef,$c->{username});
     @years = @$years_ref;
   }
 
@@ -267,7 +266,7 @@ sub yearsummary {
   } else {
     $sql .= "order by price desc, name COLLATE NOCASE";
   }
-  print STDERR "u='$c->{username}' $sql \n";
+  print STDERR "u='$c->{username}' y=" . join('-',@years). " $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
 
   my $nlines = util::param($c,"maxl") || 10;
