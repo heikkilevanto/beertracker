@@ -186,12 +186,6 @@ $scrapers{"Fermentoren"} = "fermentoren.pl";
 # $shortnames{"Dennis Place"} = "Dennis";
 # $shortnames{"Væskebalancen"} = "VB";
 
-# currency conversions
-my %currency;
-$currency{"eur"} = 7.5;
-$currency{"e"} = 7.5;
-$currency{"usd"} = 6.3;  # Varies bit over time
-#$currency{"\$"} = 6.3;  # € and $ don't work, get filtered away in param
 
 my $bodyweight;  # in kg, for blood alc calculations
 $bodyweight = 120 if ( $username eq "heikki" );
@@ -631,13 +625,6 @@ sub bloodalcohol {
 #     $gone -= 24 if ( $gone > 24 );
 #     $allgone = sprintf( "%02d:%02d", int($gone), ( $gone - int($gone) ) * 60 );
 
-
-# Helper to see if a field is missing
-sub missing {
-  my $rec = shift;
-  my $fld = shift;
-  return  (defined($rec->{$fld}) && $rec->{$fld} eq "" );
-}
 
 
 ###############################################
@@ -2062,21 +2049,6 @@ sub filt {
   return $link;
 }
 
-# Helper to make a link to a list
-# TODO - Is this needed, wouldn't filt() above do the same?
-sub lst {
-  my $op = shift; # The kind of list
-  my $qry = shift || ""; # Optional query to filter the list
-  my $tag = shift || "nop";
-  my $dsp = shift || $qry || "???";
-  my $fld = shift || "";
-  $fld = "&qf=$fld" if ($fld);
-  $qry = "&q=" . uri_escape_utf8($qry) if $qry;
-  $op = uri_escape_utf8($op);
-  my $link = "<a href='$url?o=$op$qry$fld' ><$tag>$dsp</$tag></a>";
-  return $link;
-}
-
 
 # Helper to split the filter string into individual words, each of which is
 # a new filter link. Useful with long beer names etc
@@ -2261,20 +2233,6 @@ sub price {
   return $v;
 }
 
-# Convert prices to DKK if in other currencies
-sub curprice {
-  my $v = shift;
-  #print STDERR "Checking '$v' for currency";
-  for my $c (keys(%currency)) {
-    if ( $v =~ /^(-?[0-9.]+) *$c/i ) {
-      #print STDERR "Found currency $c, worth " . $currency{$c};
-      my $dkk = int(0.5 + $1 * $currency{$c});
-      #print STDERR "That makes $dkk";
-      return $dkk;
-    }
-  }
-  return "";
-}
 
 # helper to make a unit displayed in smaller font
 sub unit {
@@ -2761,16 +2719,5 @@ sub nullallfields{
   }
 }
 
-# Check if a given record type should have this field
-sub hasfield {
-  my $linetype = shift;
-  if ( ref($linetype) ) {
-    $linetype = $linetype->{type};
-  }
-  my $field = shift;
-  print STDERR "hasfield: bad params linetype='$linetype' field='$field' \n"
-     if (!$linetype || !$field);
-  return grep( /^$field$/, fieldnames($linetype) );
-}
 
 

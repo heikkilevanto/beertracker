@@ -23,6 +23,13 @@ our %volumes = ( # Comment is displayed on the About page
   'B' => "75 Bottle of wine",
 );
 
+# currency conversions
+my %currency;
+$currency{"eur"} = 7.5;
+$currency{"e"} = 7.5;
+$currency{"usd"} = 6.3;  # Varies bit over time
+#$currency{"\$"} = 6.3;  # € and $ don't work, get filtered away in param
+
 ################################################################################
 # The input form
 ################################################################################
@@ -296,6 +303,21 @@ sub guessprice {
   return 0;
 }
 
+# Convert prices to DKK if in other currencies
+sub curprice {
+  my $v = shift;
+  #print STDERR "Checking '$v' for currency";
+  for my $c (keys(%currency)) {
+    if ( $v =~ /^(-?[0-9.]+) *$c/i ) {
+      #print STDERR "Found currency $c, worth " . $currency{$c};
+      my $dkk = int(0.5 + $1 * $currency{$c});
+      #print STDERR "That makes $dkk";
+      return $dkk;
+    }
+  }
+  return "";
+}
+
 sub fixprice {
   my $c = shift;
   my $glass = shift;
@@ -331,7 +353,7 @@ sub fixprice {
   } else {
     print STDERR "Could not guess a price with $br $vo $lo \n";
   }
-}
+} # fixprice
 
 ############## postglass itself
 sub postglass {
