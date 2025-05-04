@@ -360,6 +360,7 @@ require "./comments.pm"; # Stuff for comments, ratings, and photos
 require "./util.pm"; # Various helper functions
 require "./graph.pm"; # The daily graph
 require "./stats.pm"; # Various statistics
+require "./mainlist.pm"; # The main "full" list
 require "./VERSION.pm"; # auto-generated version info
 
 ################################################################################
@@ -450,8 +451,7 @@ if ( $op =~ /Board/i ) {
   locations::listlocations($c);
 } elsif ( $op =~ /Full/i ) {
   glasses::inputform($c);
-  oldstuff();
-  fulllist();
+  mainlist::mainlist($c);
 } else { # Default to the graph
   $op = "Graph" unless $op;
   oldstuff();

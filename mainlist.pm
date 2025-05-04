@@ -1,0 +1,245 @@
+
+# Part of my beertracker
+# Routines for displaying the full list
+
+package mainlist;
+use strict;
+use warnings;
+use feature 'unicode_strings';
+use utf8;  # Source code and string literals are utf-8
+
+
+# TODO - This is not at all ready, for now it is mostly a design document
+
+my $design_ideas = q{
+
+  Use Sqlite for the whole processing
+
+  While writing this, leave the old mainlist in place for graph/board pages,
+  and use the new one only for explicitly asked full list.
+
+  Make a helper to get the next line, with a one-record buffer, so I can unget
+  the latest record if it is for a different location or date
+
+
+  Is it better to make a view like glassrec, or just iterate over glass records
+  and fetch the additional data separately? Or a compromise, fetch brew and
+  producer in the view, but get location and comments separately?
+
+  Probably easier to make individual calls, at least to begin with. Optimize
+  later, if needed.
+
+  Make a helper to get the beer colors right. Use them when displaying the short
+  style [Beer, NEIPA].
+
+  Drop the -x modifier. Make the location headline with a section for more data,
+  initially hidden, expanded when clicking on the name. In that section
+    - Geo coords
+    - Links to web page and google/untappd search
+    - Maybe a count of visits and comments on the location
+
+  Likewise, hide some brew details, like full style name, how many times and
+  when seen.
+
+  Add rating avg on the visible section, after name
+
+
+};
+
+################################################################################
+# Db helpers
+################################################################################
+
+# The sql query that gets the glass records we are interested in.
+# TODO - Various filters
+sub glassquery {
+  my $c = shift;
+  my $sql = q {
+    select
+      glasses.id as id,
+      strftime('%Y-%m-%d %w', timestamp, '-06:00') as effdate,
+      strftime('%H:%M', timestamp) as time,
+      timestamp,
+      glasses.price as price,
+      glasses.volume as vol,
+      glasses.alc as alc,
+      glasses.stdrinks as drinks,
+      location as loc,
+      glasses.Brewtype as brewtype,
+      glasses.Subtype as subtype,
+      brews.Name as brewname,
+      locations.name as producer,
+      (select count(*) from comments where comments.glass = glasses.id) as comcount
+    from glasses
+    left join brews on brews.id = glasses.brew
+    left join locations on locations.id = brews.producerlocation
+    where Username = ?
+    order by timestamp desc
+  };
+  print STDERR "u='$c->{username}' sql='$sql' \n";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($c->{username});
+  return $sth;
+}
+
+################################################################################
+# Db reader
+# Keeps a one-record buffer, so we can take a record, look at it, and put it
+# back to be processed.
+################################################################################
+
+sub startlist {
+  my $c = shift;
+  my $reader = {};
+  $reader->{sth} = glassquery($c);
+  $reader->{bufrec} = undef;
+  $c->{reader} = $reader;
+
+}
+
+# Get the next glass record. Either via the sth, or from the buffered value
+sub getnext {
+  my $c = shift;
+  my $rec;
+  if ( $c->{reader}->{bufrec} ) {
+    $rec = $c->{reader}->{bufrec};
+    $c->{reader}->{bufrec} = undef;
+    print STDERR "getnext got $rec->{id} from buf \n";
+  } else {
+    $rec = $c->{reader}->{sth}->fetchrow_hashref();
+    print STDERR "getnext got $rec->{id} from db\n";
+    print STDERR JSON->new->encode($rec) , "\n";
+  }
+  return $rec;
+}
+
+# Put the record back in the reader, so we will get it again on getnext
+sub pushback {
+  my $c = shift;
+  my $rec = shift;
+  error ("Can not push back more than one record")
+    if ( $c->{reader}->{bufrec} );
+  print STDERR "pushback '$rec->{id}' \n";
+  $c->{reader}->{bufrec} = $rec;
+}
+
+# Return a copy of the next record, without consuming it
+sub peekrec {
+  my $c = shift;
+  my $rec = getnext($c);
+  pushback($c,$rec);
+  return $rec;
+}
+
+################################################################################
+# List glasses for one day
+################################################################################
+
+sub locationhead {
+  my $c = shift;
+  my $rec = peekrec($c);
+  my $loc = util::getrecord($c,"LOCATIONS", $rec->{loc});
+  my ( $date, $wd ) = util::splitdate($rec->{effdate} );
+  print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
+  print "<hr/>";
+  print "<b>$wd $date $loc->{Name} </b><br/>";
+  return ( $rec->{effdate}, $rec->{loc} );
+}
+
+sub nameline {
+  # 22:19 [Beer,NEIPA] Gamma: Freak Wave
+  my $c = shift;
+  my $rec = shift;
+  my $style = $rec->{brewtype};
+  $style .= ",$rec->{subtype}" if ($rec->{subtype});
+  # TODO - Get a color for the style
+  my $time = $rec->{time};
+  $time = "($time)" if ($time lt "0600");
+  print "$time ";
+  print "[$style] \n";
+  print "<i>$rec->{producer}:</i> " if ( $rec->{producer} );
+  print "<b>$rec->{brewname} </b>";
+  print "<br/>\n"
+}
+sub numbersline {
+  # [14951] 40cl 70.- 6.2% 1.63d 0.93/₀₀
+  my $c = shift;
+  my $rec = shift;
+  print "[$rec->{id}] ";
+  print "<b>".util::unit($rec->{vol},"c")."</b>";
+  print util::unit($rec->{price},",-");
+  print util::unit($rec->{alc},"%");
+  print util::unit($rec->{drinks},"d");
+  #TODO Blood alc
+  print "<br/>\n"
+}
+
+sub commentlines {
+  my $c = shift;
+  my $rec = shift;
+  if ( $rec->{comcount} ) {
+    my $ratingline = "";
+    my $peopleline = "";
+    my $commentlines = "";
+    my $sql = "select * from comments where glass = ?";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute($rec->{id});
+    while ( my $com = $sth->fetchrow_hashref() ) {
+      if ( $com->{Rating} ) {
+        $ratingline .= "&nbsp; &nbsp; <b>" . comments::ratingline($com->{Rating}) . "</b>";
+      }
+      if ( $com->{Person} ) {
+        my $pers = util::getrecord($c,"PERSONS",$com->{Person});
+        $peopleline .= "<i>$pers->{Name}</i>&nbsp; ";
+      }
+      if ( $com->{Comment} ) {
+        $commentlines .= "&nbsp; &nbsp; <i>$com->{Comment} </i><br/>";
+      }
+    }
+    print "$ratingline <br/>" if ($ratingline);
+    print "&nbsp; &nbsp; with $peopleline <br/>" if ($peopleline);
+    print "$commentlines" if ($commentlines);
+  }
+}
+
+sub buttonline {
+  # edit (copy 25) (copy 40)
+  my $c = shift;
+  my $rec = shift;
+  print "<a href=$c->{url}?o=$c->{op}&e=$rec->{id}><span>edit</span></a>";
+  print "<br/>\n"
+}
+
+sub oneday {
+  my $c = shift;
+  my ($effdate, $loc) = locationhead($c);
+  my $rec;
+  while ( $rec = getnext($c) ) {
+    if ( $rec->{effdate} ne $effdate || $rec->{loc} != $loc ) {
+      pushback($c,$rec);
+      last;
+    }
+    print "<p>";
+    nameline($c,$rec);
+    numbersline($c,$rec);
+    commentlines($c,$rec);
+    buttonline($c,$rec);
+    print "</p>\n";
+  }
+}
+
+################################################################################
+# mainlist itself
+################################################################################
+
+sub mainlist {
+  my $c = shift;
+  startlist($c);
+  oneday($c);
+
+  $c->{reader}->{sth}->finish;
+}
+
+################################################################################
+1; # Tell perl that the module loaded fine
+

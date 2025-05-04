@@ -16,6 +16,15 @@ my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero 
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect");  # 9 is the top
 
 ################################################################################
+# Get a displayable line with a rating
+################################################################################
+sub ratingline {
+  my $rating = shift;
+  return "" unless $rating;
+  return "'$rating' - $ratings[$rating]";
+}
+
+################################################################################
 # List of comments for a given glass record
 ################################################################################
 sub listcomments {
