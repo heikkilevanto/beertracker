@@ -583,7 +583,7 @@ sub deleterecord {
   my $id = shift;
   my $sql = "delete from $table " .
     " where id = ?";
-  print STDERR "deleterecord: $sql \n";
+  print STDERR "deleterecord: $sql '$id' \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( $id );
    print STDERR "Deleted " . $sth->rows .
@@ -620,11 +620,12 @@ sub getrecord {
   my $id = shift;
   return undef unless ($id);
   my $sql = "select * from $table where id = ? ";
-  print STDERR "getrecord: $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($id);
   my $rec = $sth->fetchrow_hashref;
   $sth->finish;
+  my $name = $rec->{Name} || "";
+  print STDERR "getrecord: $sql '$id' -> '$name'\n";
   return $rec;
 } # getrecord
 

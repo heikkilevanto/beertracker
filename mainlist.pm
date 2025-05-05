@@ -104,11 +104,11 @@ sub getnext {
   if ( $c->{reader}->{bufrec} ) {
     $rec = $c->{reader}->{bufrec};
     $c->{reader}->{bufrec} = undef;
-    print STDERR "getnext got $rec->{id} from buf \n";
+    #print STDERR "getnext got $rec->{id} from buf \n";
   } else {
     $rec = $c->{reader}->{sth}->fetchrow_hashref();
-    print STDERR "getnext got $rec->{id} from db\n";
-    print STDERR JSON->new->encode($rec) , "\n";
+    #print STDERR "getnext got $rec->{id} from db\n";
+    #print STDERR JSON->new->encode($rec) , "\n";
   }
   return $rec;
 }
@@ -119,7 +119,7 @@ sub pushback {
   my $rec = shift;
   error ("Can not push back more than one record")
     if ( $c->{reader}->{bufrec} );
-  print STDERR "pushback '$rec->{id}' \n";
+  #print STDERR "pushback '$rec->{id}' \n";
   $c->{reader}->{bufrec} = $rec;
 }
 
@@ -140,10 +140,9 @@ sub locationhead {
   my $rec = peekrec($c);
   my $loc = util::getrecord($c,"LOCATIONS", $rec->{loc});
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
-  print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
-  print "<hr/>";
+  #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<b>$wd $date $loc->{Name} </b><br/>";
-  return ( $rec->{effdate}, $rec->{loc} );
+  return ( $rec->{effdate}, $rec->{loc}, $loc->{Name}, "$wd $date" );
 }
 
 sub nameline {
@@ -158,7 +157,7 @@ sub nameline {
   print "$time ";
   print "[$style] \n";
   print "<i>$rec->{producer}:</i> " if ( $rec->{producer} );
-  print "<b>$rec->{brewname} </b>";
+  print "<b>$rec->{brewname} </b>" if ( $rec->{brewname} );
   print "<br/>\n"
 }
 sub numbersline {
@@ -208,17 +207,46 @@ sub buttonline {
   my $rec = shift;
   print "<a href=$c->{url}?o=$c->{op}&e=$rec->{id}><span>edit</span></a>";
   print "<br/>\n"
+  # TODO Make those buttons
+}
+
+sub sumline {
+  my $c = shift;
+  my $txt = shift;
+  my $drinksum = shift;
+  my $prsum = shift;
+  print "<table border=0 style='table-layout: fixed' > <tr>";
+  print "<td>===</td>";
+  my $attr = "align='right' width='50px' ";
+  print "<td $attr><b>" . util::unit($prsum,"kr") . "</b></td>\n";
+  print "<td $attr><b>" . util::unit($drinksum, "d") . "</b></td>\n";
+  print "<td> Total for <b>$txt</b></td>";
+  print "</tr></table>";
 }
 
 sub oneday {
   my $c = shift;
-  my ($effdate, $loc) = locationhead($c);
+  my ($effdate, $loc, $locname,$weekday ) = locationhead($c);
   my $rec;
+  my $locdrsum = 0;  # drinks for the location
+  my $locprsum = 0;  # price for the location
+  my $daydrsum = 0;  # drinks for the whole day
+  my $dayprsum = 0;  # price for the whole day
   while ( $rec = getnext($c) ) {
-    if ( $rec->{effdate} ne $effdate || $rec->{loc} != $loc ) {
+    if ( $rec->{effdate} ne $effdate ) {
       pushback($c,$rec);
       last;
     }
+    if ( $rec->{loc} != $loc ) {
+      sumline($c, $locname, $locdrsum, $locprsum);
+      ($effdate, $loc, $locname, $weekday) = locationhead($c);
+      $locdrsum = 0;
+      $locprsum = 0;
+    }
+    $dayprsum += abs($rec->{price});
+    $daydrsum += $rec->{drinks};
+    $locprsum += abs($rec->{price});
+    $locdrsum += $rec->{drinks};
     print "<p>";
     nameline($c,$rec);
     numbersline($c,$rec);
@@ -226,6 +254,10 @@ sub oneday {
     buttonline($c,$rec);
     print "</p>\n";
   }
+  sumline($c, $locname, $locdrsum, $locprsum) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
+  sumline($c, $weekday, $daydrsum, $dayprsum);
+  print "<hr/>";
+
 }
 
 ################################################################################
@@ -235,6 +267,12 @@ sub oneday {
 sub mainlist {
   my $c = shift;
   startlist($c);
+  oneday($c);
+  oneday($c);
+  oneday($c);
+  oneday($c);
+  oneday($c);
+  oneday($c);
   oneday($c);
 
   $c->{reader}->{sth}->finish;
