@@ -155,7 +155,8 @@ sub nameline {
   my $time = $rec->{time};
   $time = "($time)" if ($time lt "0600");
   print "$time ";
-  print "[$style] \n";
+  my $dispstyle = brews::brewtextstyle($c,$style);
+  print "<span $dispstyle>[$style]</span> \n";
   print "<i>$rec->{producer}:</i> " if ( $rec->{producer} );
   print "<b>$rec->{brewname} </b>" if ( $rec->{brewname} );
   print "<br/>\n"

@@ -14,6 +14,74 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 
 
 ################################################################################
+# Brew colors
+################################################################################
+
+
+
+# Returns the background color for the brew
+# Takes a style string as the argument. That way it can also
+# be used for the few non-brew items that need special color, like restaurants
+# Returns just the color string with no prefix.
+sub brewcolor {
+  my $brew = shift;
+
+  # TODO - Add prefixes for beers
+  # TODO - Check against actual brew styles in the db
+  my @drinkcolors = (   # color, pattern. First match counts, so order matters
+      "003000", "restaurant,", # regular bg color, no highlight
+      "eac4a6", "wine[, ]+white",
+      "801414", "wine[, ]+red",
+      "4f1717", "wine[, ]+port",
+      "aa7e7e", "wine",
+      "f2f21f", "Pils|Lager|Keller|Bock|Helles|IPL",
+      "e5bc27", "Classic|dunkel|shcwarz|vienna",
+      "adaa9d", "smoke|rauch|sc?h?lenkerla",
+      "350f07", "stout|port",  # imp comes later
+      "1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
+      "8cf2ed", "booze|sc?h?nap+s|whisky",
+      "e07e1d", "cider",
+      "eaeac7", "weiss|wit|wheat|weizen",
+      "66592c", "Black IPA|BIPA",
+      "9ec91e", "NEIPA|New England",
+      "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
+      "d8d80f", "Pale Ale|PA",
+      "b7930e", "Old|Brown|Red|Dark|Ale|Belgian||Tripel|Dubbel|IDA",   # Any kind of ales (after Pale Ale)
+      "350f07", "Imp",
+      "dbb83b", "misc|mix|random",
+      "9400d3", ".",   # # dark-violet, aggressive pink to show we don't have a color
+      );
+
+  my $type;
+  if ( $brew =~ /^\[?(\w+)(,(\w+))\]?$/i ) {
+    $type = "$1,$3";
+  } else {
+    util::error("Can not get style color for '$brew')");
+  }
+  for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
+    my $pat = $drinkcolors[$i+1];
+    if ( $type =~ /$pat/i ) {
+      return $drinkcolors[$i] ;
+    }
+  }
+  error ("Can not get color for '$brew': '$type'");
+}
+
+# Returns a HTML style definition for the brew or style string
+# Guesses a contrasting foreground color
+sub brewtextstyle {
+  my $c = shift;
+  my $brew = shift;
+  my $bkg = brewcolor($brew);
+  my $lum = ( hex($1) + hex($2) + hex($3) ) /3  if ($bkg =~ /^(..)(..)(..)/i );
+  my $fg = $c->{bgcolor};
+  if ($lum < 64) {  # If a fairly dark color
+    $fg = "#ffffff"; # put white text on it
+  }
+  return "style='background-color:#$bkg;color:$fg;'";
+}
+
+################################################################################
 # List of brews
 ################################################################################
 # TODO - More display fields. Country, region, etc
