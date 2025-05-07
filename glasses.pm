@@ -388,7 +388,9 @@ sub postglass {
       $glass->{SubType} = $brew->{SubType};
     }
   }
-  #print STDERR "postglass: sel='" . util::param($c, "selbrewtype") . "' glt='$glass->{BrewType}'  brt='$brew->{BrewType}' \n";
+  print STDERR "postglass: sel='" . util::param($c, "selbrewtype") . "'  ".
+     "gl.brewtype='$glass->{BrewType}'  br.brewtype='$brew->{BrewType}'" .
+     "gl.subtype='$glass->{SubType}' br.subtype='$brew->{SubType}' \n";
 
   # Get input values into $glass
   getvalues($c, $glass, $brew, $sub);

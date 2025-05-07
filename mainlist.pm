@@ -67,6 +67,7 @@ sub glassquery {
       location as loc,
       glasses.Brewtype as brewtype,
       glasses.Subtype as subtype,
+      brews.Id as brewid,
       brews.Name as brewname,
       locations.name as producer,
       (select count(*) from comments where comments.glass = glasses.id) as comcount
@@ -159,13 +160,14 @@ sub nameline {
   print "<span $dispstyle>[$style]</span> \n";
   print "<i>$rec->{producer}:</i> " if ( $rec->{producer} );
   print "<b>$rec->{brewname} </b>" if ( $rec->{brewname} );
+  print "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
   print "<br/>\n"
 }
 sub numbersline {
   # [14951] 40cl 70.- 6.2% 1.63d 0.93/₀₀
   my $c = shift;
   my $rec = shift;
-  print "[$rec->{id}] ";
+  print "<span style='font-size: x-small;'>[$rec->{id}] </span>";
   print "<b>".util::unit($rec->{vol},"c")."</b>";
   print util::unit($rec->{price},",-");
   print util::unit($rec->{alc},"%");
@@ -197,8 +199,8 @@ sub commentlines {
       }
     }
     print "$ratingline <br/>" if ($ratingline);
-    print "&nbsp; &nbsp; with $peopleline <br/>" if ($peopleline);
-    print "$commentlines" if ($commentlines);
+    print "&nbsp; &nbsp; with $peopleline <br/>\n" if ($peopleline);
+    print "$commentlines\n" if ($commentlines);
   }
 }
 
@@ -206,10 +208,46 @@ sub buttonline {
   # edit (copy 25) (copy 40)
   my $c = shift;
   my $rec = shift;
-  print "<a href=$c->{url}?o=$c->{op}&e=$rec->{id}><span>edit</span></a>";
-  print "<br/>\n"
-  # TODO Make those buttons
-}
+  my %vols;     # guess sizes for small/large beers
+  $vols{$rec->{vol}} = 1 if ($rec->{vol});
+  # TODO - more logic, if 20, say 20/30, if 25, say 25/40,
+  if ( $rec->{brewtype} =~ /Night|Restaurant/) {
+    %vols=(); # nothing to copy
+  } elsif ( $rec->{brewtype}  eq "Wine" ) {
+    $vols{12} = 1;
+    $vols{16} = 1 unless ( $rec->{vol} == 15 );
+    $vols{37} = 1;
+    $vols{75} = 1;
+  } elsif ( $rec->{brewtype}  eq "Spirit" ) {
+    $vols{2} = 1;
+    $vols{4} = 1;
+  } else { # Default to beer, usual sizes in craft beer world
+    $vols{25} = 1;
+    $vols{40} = 1;
+  }
+  print "<form method='POST' style='display: inline;' class='no-print' >\n";
+  # Edit link
+  print "<a href='$c->{url}?o=$c->{op}&e=$rec->{id}'><span>edit</span></a>";
+
+  # Hidden fields to post
+  my $brewid = $rec->{brewid} || "";
+  my $locid = $rec->{loc} || "";
+  print "<input type='hidden' name='Location'  value='$locid' />\n";
+  print "<input type='hidden' name='Brew'  value='$brewid' />\n";
+  print "<input type='hidden' name='selbrewtype'  value='$rec->{brewtype}' />\n";
+  print "<input type='hidden' name='o' value='$c->{op}' />\n";  # Stay on page
+  print "<input type='hidden' name='q' value='$c->{qry}' />\n";
+
+  # Actual copy buttons
+  foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
+    # The sort order defaults to numerical, but if that fails, takes
+    # alphabetical ('R' for restaurant). Note the "no warnings".
+    print "<input type='submit' name='submit' value='Copy $volx'
+                style='display: inline; font-size: small' />\n";
+  }
+  print "</form>\n";
+  print "<br/>\n";
+} # buttonline
 
 sub sumline {
   my $c = shift;
@@ -234,6 +272,7 @@ sub oneday {
   my $daydrsum = 0;  # drinks for the whole day
   my $dayprsum = 0;  # price for the whole day
   while ( $rec = getnext($c) ) {
+    #print JSON->new->encode($rec) . "<br>";
     if ( $rec->{effdate} ne $effdate ) {
       pushback($c,$rec);
       last;
