@@ -121,7 +121,7 @@ sub inputform {
   print "</table>\n";
   print "</form>\n";
   print comments::listcomments($c, $rec->{Id});
-  print "<br/>";
+  print "<hr/>";
 
   # Javascript trickery
   my $script = <<'SCRIPTEND';
@@ -356,6 +356,14 @@ sub fixprice {
 } # fixprice
 
 ############## postglass itself
+# TODO - Rethink the logic here:
+# - No worry about old style input form
+# - Detect beer board entries from a special input name
+# - Handle new brew and location
+# - Get brew and location
+# - If 'empty' glass, clear fields, set subtype from loc
+# - else set subtype from brew, guess volume, alc, price
+
 sub postglass {
   my $c = shift; # context
 
@@ -381,6 +389,7 @@ sub postglass {
     $brew = util::getrecord($c, "BREWS", $brewname );
     if (! $brew)  {  # Can happen with the beer board
       # TODO - Happens also with Rest/Night buttons, which go wrong here !
+      # TODO - And with the copy buttons
       my $brewid  = brews::insert_old_style_brew($c);
       $brew = util::getrecord($c, "BREWS", $brewid );
       $glass->{Brew} = $brewid;

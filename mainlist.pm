@@ -131,6 +131,80 @@ sub peekrec {
   pushback($c,$rec);
   return $rec;
 }
+################################################################################
+# A helper to calculate blood alcohol for a given effdate
+# Returns a hash with bloodalcs for each timestamp for the effdate
+#  $bloodalc{"max"} = max ba for the date
+#  $bloodalc{$id} = ba after ingesting that glass
+################################################################################
+# TODO: Change this to return a list of values: ( date, max, hashref ). Add time when gone
+
+sub bloodalc {
+  my $c = shift;
+  my $effdate = shift; # effdate we are interested in
+  my $bodyweight;  # in kg, for blood alc calculations
+  $bodyweight = 120 if ( $c->{username} eq "heikki" );  # TODO - Move these somewhere else
+  $bodyweight =  83 if ( $c->{username} eq "dennis" );
+  my $burnrate = .10; # g of alc pr kg of weight (.10 to .15)
+    # Assume .10 as a pessimistic value. Would need an alc meter to calibrate
+
+  if ( !$bodyweight ) {
+    print STDERR "Can not calculate alc for $c->{username}, don't know body weight \n";
+    return undef;
+  }
+  #print STDERR "Bloodalc for '$effdate' bw='$bodyweight'\n";
+  my $bloodalc = {};
+  $bloodalc->{"date"} = $effdate;
+  my $sql = q(
+    select
+      id,
+      strftime ('%Y-%m-%d', timestamp,'-06:00') as effdate,
+      stdrinks as stdrinks,
+      timestamp as stamp
+    from glasses
+    where effdate = ?
+      and stdrinks > 0
+      and volume > 0
+    order by timestamp
+  );
+  my $get_sth = $c->{dbh}->prepare($sql);
+  $get_sth->execute($effdate);
+  my $alcinbody = 0;
+  my $balctime = 0;
+  $bloodalc->{"max"} = 0 ;
+  while ( my ($id, $eff, $stdrinks, $stamp) = $get_sth->fetchrow_array ) {
+    next unless $stdrinks;
+    my $drtime = $1 + $2/60 if ($stamp =~/ (\d?\d):(\d\d)/ ); # frac hrs
+    $drtime += 24 if ( $drtime < $balctime ); # past midnight
+    my $timediff = $drtime - $balctime;
+    $balctime = $drtime;
+    $alcinbody -= $burnrate * $bodyweight * $timediff;
+    $alcinbody = 0 if ( $alcinbody < 0);
+    $alcinbody += $stdrinks * 12 ; # grams of alc in std drink
+    my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+    $bloodalc->{"max"} = $ba if ( $ba > $bloodalc->{"max"} );
+    $bloodalc->{$id} = sprintf("%0.2f",$ba);
+    #print STDERR "BA:  '$id' '$stamp' : $ba \n";
+  }
+  #print STDERR "BA:  max:'$bloodalc->{max}' \n";
+  $bloodalc->{"max"} = sprintf("%0.2f", $bloodalc->{"max"} );
+  return $bloodalc;
+
+}
+
+#     # Get allgone  TODO
+#     my $now = datestr( "%H:%M", 0, 1);
+#     my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs
+#     $drtime += 24 if ( $drtime < $balctime ); # past midnight
+#     my $timediff = $drtime - $balctime;
+#     $alcinbody -= $burnrate * $bodyweight * $timediff;
+#     $alcinbody = 0 if ( $alcinbody < 0);
+#     $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+#     my $lasts = $alcinbody / ( $burnrate * $bodyweight );
+#     my $gone = $drtime + $lasts;
+#     $gone -= 24 if ( $gone > 24 );
+#     $allgone = sprintf( "%02d:%02d", int($gone), ( $gone - int($gone) ) * 60 );
+
 
 ################################################################################
 # List glasses for one day
@@ -143,7 +217,7 @@ sub locationhead {
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<b>$wd $date $loc->{Name} </b><br/>";
-  return ( $rec->{effdate}, $rec->{loc}, $loc->{Name}, "$wd $date" );
+  return ( $rec->{effdate}, $rec->{loc}, $loc->{Name}, "$wd $date", $date );
 }
 
 sub nameline {
@@ -167,12 +241,15 @@ sub numbersline {
   # [14951] 40cl 70.- 6.2% 1.63d 0.93/₀₀
   my $c = shift;
   my $rec = shift;
+  my $bloodalc = shift;
   print "<span style='font-size: x-small;'>[$rec->{id}] </span>";
   print "<b>".util::unit($rec->{vol},"c")."</b>";
   print util::unit($rec->{price},",-");
   print util::unit($rec->{alc},"%");
   print util::unit($rec->{drinks},"d");
-  #TODO Blood alc
+  my $ba = $bloodalc->{ $rec->{id} } || "";
+  #print STDERR "'$rec->{id}' ba=$ba \n";
+  print util::unit($ba,"/₀₀");
   print "<br/>\n"
 }
 
@@ -254,18 +331,21 @@ sub sumline {
   my $txt = shift;
   my $drinksum = shift;
   my $prsum = shift;
+  my $balc = shift;
   print "<table border=0 style='table-layout: fixed' > <tr>";
   print "<td>===</td>";
   my $attr = "align='right' width='50px' ";
   print "<td $attr><b>" . util::unit($prsum,"kr") . "</b></td>\n";
   print "<td $attr><b>" . util::unit($drinksum, "d") . "</b></td>\n";
+  print "<td $attr><b>" . util::unit($balc, "/₀₀") . "</b></td>\n";
   print "<td> Total for <b>$txt</b></td>";
   print "</tr></table>";
 }
 
 sub oneday {
   my $c = shift;
-  my ($effdate, $loc, $locname,$weekday ) = locationhead($c);
+  my ($effdate, $loc, $locname,$weekday, $date ) = locationhead($c);
+  my $balc = bloodalc($c,$date);
   my $rec;
   my $locdrsum = 0;  # drinks for the location
   my $locprsum = 0;  # price for the location
@@ -279,7 +359,7 @@ sub oneday {
     }
     if ( $rec->{loc} != $loc ) {
       sumline($c, $locname, $locdrsum, $locprsum);
-      ($effdate, $loc, $locname, $weekday) = locationhead($c);
+      ($effdate, $loc, $locname, $weekday, $date) = locationhead($c);
       $locdrsum = 0;
       $locprsum = 0;
     }
@@ -289,13 +369,13 @@ sub oneday {
     $locdrsum += $rec->{drinks};
     print "<p>";
     nameline($c,$rec);
-    numbersline($c,$rec);
+    numbersline($c,$rec,$balc);
     commentlines($c,$rec);
     buttonline($c,$rec);
     print "</p>\n";
   }
-  sumline($c, $locname, $locdrsum, $locprsum) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
-  sumline($c, $weekday, $daydrsum, $dayprsum);
+  sumline($c, $locname, $locdrsum, $locprsum, $balc->{"max"}) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
+  sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
   print "<hr/>";
 
 }
