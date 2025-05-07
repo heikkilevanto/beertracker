@@ -302,7 +302,7 @@ sub buttonline {
     $vols{25} = 1;
     $vols{40} = 1;
   }
-  print "<form method='POST' style='display: inline;' class='no-print' >\n";
+  print "<form method='POST' style='display: inline;' class='no-print' onClick='setdate()';>\n";
   # Edit link
   print "<a href='$c->{url}?o=$c->{op}&e=$rec->{id}'><span>edit</span></a>";
 
@@ -312,6 +312,8 @@ sub buttonline {
   print "<input type='hidden' name='Location'  value='$locid' />\n";
   print "<input type='hidden' name='Brew'  value='$brewid' />\n";
   print "<input type='hidden' name='selbrewtype'  value='$rec->{brewtype}' />\n";
+  print "<input type='hidden' name='date' id='date' value=' ' />\n";
+  print "<input type='hidden' name='time' id='time' value=' ' />\n";
   print "<input type='hidden' name='o' value='$c->{op}' />\n";  # Stay on page
   print "<input type='hidden' name='q' value='$c->{qry}' />\n";
 

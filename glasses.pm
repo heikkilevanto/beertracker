@@ -135,21 +135,25 @@ sub inputform {
     }
 
     function setdate() {  // Set date and time, if not already set by the user
-      var di = document.getElementById("date");
-      var ti = document.getElementById("time");
+      const dis = document.getElementsByName("date");
+      const tis = document.getElementsByName("time");
       const now = new Date();
-      if ( di.value && di.value.startsWith(" ") ) {
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0'); // Zero-padded month
-        const day = String(now.getDate()).padStart(2, '0'); // Zero-padded day
-        const dat = `${year}-${month}-${day}`;
-        di.value = " " + dat;
+      for ( const di of dis ) {
+        if ( di.value && di.value.startsWith(" ") ) {
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0'); // Zero-padded month
+          const day = String(now.getDate()).padStart(2, '0'); // Zero-padded day
+          const dat = `${year}-${month}-${day}`;
+          di.value = " " + dat;
+        }
       }
-      if ( ti.value && ti.value.startsWith(" ") ) {
-        const hh = String(now.getHours()).padStart(2, '0');
-        const mm = String(now.getMinutes()).padStart(2, '0');
-        const tim = `${hh}:${mm}`;
-        ti.value = " " + tim;
+      for ( const ti of tis ) {
+        if ( ti.value && ti.value.startsWith(" ") ) {
+          const hh = String(now.getHours()).padStart(2, '0');
+          const mm = String(now.getMinutes()).padStart(2, '0');
+          const tim = `${hh}:${mm}`;
+          ti.value = " " + tim;
+        }
       }
     }
     setdate();
