@@ -303,9 +303,9 @@ sub buttonline {
     $vols{25} = 1;
     $vols{40} = 1;
   }
-  print "<form method='POST' style='display: inline;' class='no-print' onClick='setdate()';>\n";
+  print "<form method='POST' style='display:inline;' class='no-print' onClick='setdate();'>\n";
   # Edit link
-  print "<a href='$c->{url}?o=$c->{op}&e=$rec->{id}'><span>edit</span></a>";
+  print "<a href='$c->{url}?o=$c->{op}&e=$rec->{id}'><span>edit</span></a>\n";
 
   # Hidden fields to post
   my $brewid = $rec->{brewid} || "";
@@ -322,8 +322,8 @@ sub buttonline {
   foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
     # The sort order defaults to numerical, but if that fails, takes
     # alphabetical ('R' for restaurant). Note the "no warnings".
-    print "<input type='submit' name='submit' value='Copy $volx'
-                style='display: inline; font-size: small' />\n";
+    print "<input type='submit' name='submit' value='Copy $volx' " .
+                "style='display: inline; font-size: small' />\n";
   }
   print "</form>\n";
   print "<br/>\n";

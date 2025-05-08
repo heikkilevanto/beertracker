@@ -1494,22 +1494,25 @@ sub beerboard {
       # If there are strange beers, take a 'view source' and look
       my $country = $e->{'country'} || "";
       my $sizes = $e->{"sizePrice"};
+      my $locrec = util::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
+      my $locid = $locrec->{Id};
       my $hiddenbuttons = "";
-        if ( $sty =~ /Cider/i ) {
-          $hiddenbuttons .= "<input type='hidden' name='type' value='Cider' />\n" ;
-        } else {
-          $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
-        }
-        $hiddenbuttons .= "<input type='hidden' name='country' value='$country' />\n"
-          if ($country) ;
-        $hiddenbuttons .= "<input type='hidden' name='maker' value='$mak' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='name' value='$beer' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='style' value='$origsty' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='subtype' value='$sty' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='alc' value='$alc' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='loc' value='$loc' />\n" ;
-        $hiddenbuttons .= "<input type='hidden' name='tap' value='$id#' />\n" ; # Signalss this comes from a beer board
-        $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
+      if ( $sty =~ /Cider/i ) {
+        $hiddenbuttons .= "<input type='hidden' name='type' value='Cider' />\n" ;
+      } else {
+        $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
+      }
+      $hiddenbuttons .= "<input type='hidden' name='country' value='$country' />\n"
+        if ($country) ;
+      $hiddenbuttons .= "<input type='hidden' name='maker' value='$mak' />\n" ;
+      $hiddenbuttons .= "<input type='hidden' name='name' value='$beer' />\n" ;
+      $hiddenbuttons .= "<input type='hidden' name='style' value='$origsty' />\n" ;
+      $hiddenbuttons .= "<input type='hidden' name='subtype' value='$sty' />\n" ;
+      $hiddenbuttons .= "<input type='hidden' name='alc' value='$alc' />\n" ;
+      $hiddenbuttons .= "<input type='hidden' name='loc' value='$loc' />\n" ;
+      $hiddenbuttons .= "<input type='hidden' name='Location' value='$locid' />\n" ;
+      $hiddenbuttons .= "<input type='hidden' name='tap' value='$id#' />\n" ; # Signalss this comes from a beer board
+      $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
       my $buttons="";
       #foreach my $sp ( sort( {($a->{"vol"} <=> $b->{"vol"}) || ($a->{"vol"} cmp $b->{"vol"}) } @$sizes) ) {
       while ( scalar(@$sizes) < 2 ) {

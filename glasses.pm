@@ -230,22 +230,11 @@ sub gettimestamp {
 
 ############## Helper to get input values into $glass with some defaults
 sub getvalues {
+  # TODO - So little left here, move into fix routines
   my $c = shift;
   my $glass = shift;
   my $brew = shift;
   my $sub = shift;
-
-  $glass->{BrewType} =  util::param($c, "selbrewtype") || $glass->{BrewType} || $brew->{BrewType} || "WRONG";
-  #util::error("getvalues.1: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
-  $brew->{BrewType} = util::param($c, "selbrewtype")  || $brew->{BrewType} || $glass->{BrewType} || "WRONG";
-  #util::error("getvalues.2: No Brew Type for brew $brew->{Id}") if ( $brew->{BrewType} eq "WRONG" );
-  $glass->{SubType} = util::param($c, "subtype") || $brew->{SubType} || $glass->{SubType} || "WRONG";
-  #util::error("getvalues.3: No Brew SubType for glass $glass->{Id}")
-  #  if (! $brew->{SubType} || $brew->{SubType} eq "WRONG" );
-    # TODO - The "WRONG" is just a placeholder for missing value, should not happen.
-
-  $glass->{Location} = util::param($c, "Location", undef) || $glass->{Location};
-  $glass->{Brew} = util::param($c, "Brew") || $glass->{Brew};
   $glass->{Price} = util::paramnumber($c, "pr");
   $glass->{Volume} = util::param($c, "vol", "L");  # Default to a large one
   $glass->{Alc} = util::paramnumber($c, "alc", $brew->{Alc} || "0");
@@ -262,34 +251,32 @@ sub fixvol {
   my $c = shift;
   my $glass = shift;
   my $brew = shift;
-  if ( $glass->{BrewType} =~ /Restaurant|Night/ ) { # those don't have volumes
-    $glass->{Volume} = "";
-    $glass->{Alc} = "";
-    $glass->{Price} = $glass->{Price} || "";  # but may have a price
-    $glass->{StDrinks} = 0;
-    $glass->{Brew} = undef;
-  } else {
-    my $vol = $glass->{Volume} ||"0";
-    my $half;  # Volumes can be prefixed with 'h' for half measures.
-    if ( $vol =~ s/^(H)(.+)$/$2/i ) {
-      $half = $1;
-    }
-    my $volunit = uc(substr($vol,0,1)); # S or L or such
-    if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
-      my $actvol = $1;
-      $vol =~s/$volunit/$actvol/i;
-    }
-    if ($half) {
-      $vol = int($vol / 2) ;
-    }
-    if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
-      $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
-    }
-    $glass->{Volume} = util::number($vol);
-    $glass->{Alc} =~ s/[.,]+/./;  # I may enter a comma occasionally
-    my $std = $glass->{Volume} * $glass->{Alc} / $c->{onedrink};
-    $glass->{StDrinks} = sprintf("%6.2f", $std );
+  my $vol = $glass->{Volume} ||"0";
+  if ( $vol =~ /^x/i ) { # 'X' means no volume
+    $vol = 0;
   }
+  my $half;  # Volumes can be prefixed with 'h' for half measures.
+  if ( $vol =~ s/^(H)(.+)$/$2/i ) {
+    $half = $1;
+  }
+  my $volunit = uc(substr($vol,0,1)); # S or L or such
+  if ( $volumes{$volunit} && $volumes{$volunit} =~ /^ *(\d+)/ ) {
+    my $actvol = $1;
+    $vol =~s/$volunit/$actvol/i;
+  }
+  if ($half) {
+    $vol = int($vol / 2) ;
+  }
+  if ( $vol =~ /([0-9]+) *oz/i ) {  # Convert (us) fluid ounces
+    $vol = $1 * 3;   # Actually, 2.95735 cl, no need to mess with decimals
+  }
+  $glass->{Volume} = util::number($vol);
+  $glass->{Alc} =~ s/[.,]+/./;  # I may enter a comma occasionally
+  if ( $glass->{Alc} =~ /^X/i ) {
+    $glass->{Alc} = "0";
+  }
+  my $std = $glass->{Volume} * $glass->{Alc} / $c->{onedrink};
+  $glass->{StDrinks} = sprintf("%6.2f", $std );
 } # fixvol
 
 
@@ -308,6 +295,7 @@ sub guessprice {
 }
 
 # Convert prices to DKK if in other currencies
+# TODO - Not in use at the moment
 sub curprice {
   my $v = shift;
   #print STDERR "Checking '$v' for currency";
@@ -330,10 +318,9 @@ sub fixprice {
   return if  ( $pr =~ /^\d+$/ );  # Already a good price, only digits
   # TODO - Currencies, next time I travel
   if ( $pr =~ /^x/i ) {  # X indicates no price, no guessing
-    $glass->{Price} = "";
+    $glass->{Price} = "0";
     return;
   }
-  return if ( $glass->{BrewType} =~ /Restaurant|Night/i );
 
   print STDERR "No price, guessing\n";
   # Sql where clause fragments
@@ -370,6 +357,16 @@ sub fixprice {
 # - If 'empty' glass, clear fields, set subtype from loc
 # - else set subtype from brew, guess volume, alc, price
 
+# This is a bit tricky. We can get called in many ways:
+# - Beer board button, simulating an old-style input form, detected with 'tap' field
+# - Copy beer button, simulating an input form
+# - Input form, "Record" a new glass
+# - Input form, "Save" an existing glass record
+# - Both "Record" and "Save" can have "new" brew and/or location
+# - The input form can have an 'empty' glass in SelBrewType
+#   - in that case we have no brew, but must take brew style and substyle from
+#     the (possibly new) location
+
 sub postglass {
   my $c = shift; # context
 
@@ -387,51 +384,59 @@ sub postglass {
     return;
   } # delete
 
+
   my $glass = findrec($c); # Get defaults from last glass or the record we are editing
-  # my $brew = brews::getbrew($c, scalar $c->{cgi}->param("Brew") );
-  my $brew;
-  my $brewname = util::param($c,"Brew") || util::param($c,"name") ;
-  if ( $brewname && $brewname ne "new" ) {
-    $brew = util::findrecord($c, "BREWS", "Name", $brewname, "Collate Nocase" );
-    if (! $brew)  {  # Can happen with the beer board
-      # TODO - Happens also with Rest/Night buttons, which go wrong here !
-      # TODO - And with the copy buttons
-      my $brewid  = brews::insert_old_style_brew($c);
-      $brew = util::getrecord($c, "BREWS", $brewid );
-      $glass->{Brew} = $brewid;
-      $glass->{BrewType} = $brew->{BrewType};
-      $glass->{SubType} = $brew->{SubType};
+    # TODO Is this needed?
+  my $brewid = "???";
+  if ( util::param($c,"tap") ) { # Comes from the beer board, old style inputs
+    $brewid  = brews::insert_old_style_brew($c);
+  } else { # Modern style input form or a copy button
+    $brewid = util::param($c,"Brew");
+    if ( $brewid eq "new" ) {
+      $brewid = brews::postbrew($c, "new" );
     }
   }
-  print STDERR "postglass: sel='" . util::param($c, "selbrewtype") . "'  ".
-     "gl.brewtype='$glass->{BrewType}'  br.brewtype='$brew->{BrewType} '" .
-     "gl.subtype='$glass->{SubType}' br.subtype='$brew->{SubType}' \n";
-
-  # Get input values into $glass
-  getvalues($c, $glass, $brew, $sub);
-  gettimestamp($c, $glass);
-  fixvol($c, $glass, $brew);
-  fixprice($c, $glass);
-
-  $glass->{BrewType} = $glass->{BrewType} || $brew->{BrewType} || "WRONG";
-  util::error("Post: No Brew Type for glass $glass->{Id}") if ( $glass->{BrewType} eq "WRONG" );
-  $glass->{SubType} = $glass->{SubType} || $brew->{SubType} || "WRONG";
-  util::error("Post: No Brew SubType for glass $glass->{Id}") if ( $brew->{SubType} eq "WRONG" );
-  #print STDERR "postglass: L='" . util::param($c,"Location")  ."' l='" .util::param($c,"loc") . "'\n";
-  if ( ! util::param($c,"Location") && util::param($c,"loc") ) { # Old style loc name
-    my $location = util::findrecord($c, "LOCATIONS", "Name", util::param($c,"loc")) ;
-    $glass->{Location} = $location->{Id} if ($location);
-    print STDERR "Fixed location " . util::param($c,"loc") . " to $location->{Id} \n";
+  my $brew = util::getrecord($c, "BREWS", $brewid );
+  print STDERR "postglass: Got brew '$brewid' = '$brew->{Name}' \n";
+  my $locid = util::param($c,"Location");
+  if ( !$locid ) { # Should not happen
+    util::error ("postglass: No 'Location' parameter! ");
   }
-
-  # New Location and/or Brew
-  if ($glass->{Location} && $glass->{Location} eq "new" ) {
-    $glass->{Location} = locations::postlocation($c, "new" );
+  if ( $locid eq "new" ) {
+    $locid = locations::postlocation($c, "new" );
   }
-  if ($glass->{Brew} && $glass->{Brew} eq "new" ) {
-    $glass->{Brew} = brews::postbrew($c, "new" );
-  }
+  my $location = util::getrecord($c, "LOCATIONS", $locid);
 
+  my $selbrewtype = util::param($c,"selbrewtype") || $brew->{BrewType};
+  $glass->{BrewType} = $selbrewtype;  # Trust the input more than location
+  if ( $selbrewtype =~ /Restaurant|Bar|Night/i ) { # 'empty' glass
+    $glass->{Brew} = "";
+    # TODO - Make an input field to select subtype
+    $glass->{SubType} = $location->{LocSubType};
+  } else { # real glass
+    $glass->{Brew} = $brewid;
+    $glass->{SubType} = $brew->{SubType} || $glass->{SubType};
+    {
+      no warnings;
+      print STDERR "postglass: sel='$selbrewtype'  ".
+      "gl.brewtype='$glass->{BrewType}'  br.brewtype='$brew->{BrewType} '" .
+      "gl.subtype='$glass->{SubType}' br.subtype='$brew->{SubType}' \n";
+    }
+
+    # Get input values into $glass
+    getvalues($c, $glass, $brew, $sub);
+    gettimestamp($c, $glass);
+    fixvol($c, $glass, $brew);
+    fixprice($c, $glass);
+
+  } # normal glass
+
+  { no warnings;
+    print STDERR "postglass: Op:'$sub' U:'$c->{username},' " .
+      "Bt:'$glass->{BrewType}' Su:'$glass->{SubType}' Br:'$glass->{Brew}' " .
+      "Lo:'$glass->{Location}' ".
+      "Pr:'$glass->{Price}' Vo:'$glass->{Volume}' Al:'$glass->{Alc}' dr:'$glass->{StDrinks}' \n";
+  }
 
   if ( $sub eq "Save" ) {  # Update existing glass
     my $sql = "update GLASSES set
@@ -462,7 +467,6 @@ sub postglass {
     " Glass records for id '$c->{edit}'  \n";
 
   } else { # Create a new glass
-
     my $sql = "insert into GLASSES
       ( Username, TimeStamp, BrewType, SubType,
         Location, Brew, Price, Volume, Alc, StDrinks )
