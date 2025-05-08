@@ -216,6 +216,7 @@ sub locationhead {
   my $loc = util::getrecord($c,"LOCATIONS", $rec->{loc});
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
+  print "<br/>";
   print "<b>$wd $date $loc->{Name} </b><br/>";
   return ( $rec->{effdate}, $rec->{loc}, $loc->{Name}, "$wd $date", $date );
 }
@@ -369,12 +370,13 @@ sub oneday {
     $daydrsum += $rec->{drinks};
     $locprsum += abs($rec->{price});
     $locdrsum += $rec->{drinks};
-    print "<p>";
+    #print "<p>";
     nameline($c,$rec);
     numbersline($c,$rec,$balc);
     commentlines($c,$rec);
     buttonline($c,$rec);
-    print "</p>\n";
+    #print "</p>\n";
+    print "<br/>\n";
   }
   sumline($c, $locname, $locdrsum, $locprsum, $balc->{"max"}) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
   sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});

@@ -1508,6 +1508,7 @@ sub beerboard {
         $hiddenbuttons .= "<input type='hidden' name='subtype' value='$sty' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='alc' value='$alc' />\n" ;
         $hiddenbuttons .= "<input type='hidden' name='loc' value='$loc' />\n" ;
+        $hiddenbuttons .= "<input type='hidden' name='tap' value='$id#' />\n" ; # Signalss this comes from a beer board
         $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
       my $buttons="";
       #foreach my $sp ( sort( {($a->{"vol"} <=> $b->{"vol"}) || ($a->{"vol"} cmp $b->{"vol"}) } @$sizes) ) {

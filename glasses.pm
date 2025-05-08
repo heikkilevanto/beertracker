@@ -392,7 +392,7 @@ sub postglass {
   my $brew;
   my $brewname = util::param($c,"Brew") || util::param($c,"name") ;
   if ( $brewname && $brewname ne "new" ) {
-    $brew = util::getrecord($c, "BREWS", $brewname );
+    $brew = util::findrecord($c, "BREWS", "Name", $brewname, "Collate Nocase" );
     if (! $brew)  {  # Can happen with the beer board
       # TODO - Happens also with Rest/Night buttons, which go wrong here !
       # TODO - And with the copy buttons
