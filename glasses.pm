@@ -406,12 +406,16 @@ sub postglass {
     $locid = locations::postlocation($c, "new" );
   }
   my $location = util::getrecord($c, "LOCATIONS", $locid);
+  $glass->{Location} = $locid;
 
   my $selbrewtype = util::param($c,"selbrewtype") || $brew->{BrewType};
   $glass->{BrewType} = $selbrewtype;  # Trust the input more than location
   if ( $selbrewtype =~ /Restaurant|Bar|Night/i ) { # 'empty' glass
     $glass->{Brew} = "";
-    # TODO - Make an input field to select subtype
+    $glass->{Volume} = "";
+    $glass->{Alc} = "";
+    $glass->{StDrinks} = "";
+    # TODO - Make an input field to select subtype. For now we trust the location
     $glass->{SubType} = $location->{LocSubType};
   } else { # real glass
     $glass->{Brew} = $brewid;

@@ -54,7 +54,8 @@ sub brewcolor {
 
   my $type;
   if ( $brew =~ /^\[?(\w+)(,(\w+))?\]?$/i ) {
-    $type = "$1,$3";
+    $type = "$1";
+    $type .= ",$3" if ( $3 );
   } else {
     util::error("Can not get style color for '$brew')");
   }

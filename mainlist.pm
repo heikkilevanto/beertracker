@@ -366,11 +366,11 @@ sub oneday {
       $locdrsum = 0;
       $locprsum = 0;
     }
-    $dayprsum += abs($rec->{price});
-    $daydrsum += $rec->{drinks};
-    $locprsum += abs($rec->{price});
-    $locdrsum += $rec->{drinks};
-    #print "<p>";
+    $dayprsum += abs($rec->{price}) if ($rec->{price});
+      # TODO - Do we still have old negative prices from boxes?
+    $daydrsum += $rec->{drinks} if ($rec->{drinks});
+    $locprsum += abs($rec->{price})  if ($rec->{price});
+    $locdrsum += $rec->{drinks} if ($rec->{drinks});
     nameline($c,$rec);
     numbersline($c,$rec,$balc);
     commentlines($c,$rec);

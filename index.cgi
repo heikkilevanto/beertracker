@@ -431,7 +431,7 @@ if ( $op =~ /Board/i ) {
   oldstuff();
   graph();
   beerboard();
-  fulllist();
+  mainlist::mainlist($c);
 } elsif ( $op =~ /Years(d?)/i ) {
   stats::yearsummary($c,$1); # $1 indicates sort order
 } elsif ( $op =~ /short/i ) {
@@ -457,7 +457,7 @@ if ( $op =~ /Board/i ) {
   oldstuff();
   graph();
   glasses::inputform($c);
-  fulllist();
+  mainlist::mainlist($c);
 }
 
 $dbh->disconnect;
