@@ -417,6 +417,7 @@ sub postglass {
     $glass->{StDrinks} = "";
     # TODO - Make an input field to select subtype. For now we trust the location
     $glass->{SubType} = $location->{LocSubType};
+    gettimestamp($c, $glass);
   } else { # real glass
     $glass->{Brew} = $brewid;
     $glass->{SubType} = $brew->{SubType} || $glass->{SubType};

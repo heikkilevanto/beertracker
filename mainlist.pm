@@ -212,7 +212,7 @@ sub bloodalc {
 
 sub locationhead {
   my $c = shift;
-  my $rec = shift || peekrec($c);
+  my $rec = shift;
   my $loc = util::getrecord($c,"LOCATIONS", $rec->{loc});
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
@@ -348,9 +348,9 @@ sub sumline {
 
 sub oneday {
   my $c = shift;
-  my ($effdate, $loc, $locname,$weekday, $date ) = locationhead($c);
+  my $rec = peekrec($c);
+  my ($effdate, $loc, $locname,$weekday, $date ) = locationhead($c, $rec);
   my $balc = bloodalc($c,$date);
-  my $rec;
   my $locdrsum = 0;  # drinks for the location
   my $locprsum = 0;  # price for the location
   my $daydrsum = 0;  # drinks for the whole day
