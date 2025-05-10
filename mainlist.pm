@@ -212,12 +212,13 @@ sub bloodalc {
 
 sub locationhead {
   my $c = shift;
-  my $rec = peekrec($c);
+  my $rec = shift || peekrec($c);
   my $loc = util::getrecord($c,"LOCATIONS", $rec->{loc});
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<br/>";
   print "<b>$wd $date $loc->{Name} </b><br/>";
+  print "<br/>";
   return ( $rec->{effdate}, $rec->{loc}, $loc->{Name}, "$wd $date", $date );
 }
 
@@ -360,9 +361,10 @@ sub oneday {
       pushback($c,$rec);
       last;
     }
+    print STDERR "oneday: id='$rec->{id} l='$rec->{loc}' \n";
     if ( $rec->{loc} != $loc ) {
       sumline($c, $locname, $locdrsum, $locprsum);
-      ($effdate, $loc, $locname, $weekday, $date) = locationhead($c);
+      ($effdate, $loc, $locname, $weekday, $date) = locationhead($c, $rec);
       $locdrsum = 0;
       $locprsum = 0;
     }
