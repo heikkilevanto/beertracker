@@ -361,7 +361,7 @@ sub oneday {
       pushback($c,$rec);
       last;
     }
-    print STDERR "oneday: id='$rec->{id} l='$rec->{loc}' \n";
+    #print STDERR "oneday: id='$rec->{id} l='$rec->{loc}' \n";
     if ( $rec->{loc} != $loc ) {
       sumline($c, $locname, $locdrsum, $locprsum);
       ($effdate, $loc, $locname, $weekday, $date) = locationhead($c, $rec);
