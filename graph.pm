@@ -9,11 +9,11 @@ use strict;
 use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use Time::Piece;
 
-
-# TODO LATER - Move the graph here. Use db instead of @records.
-
+################################################################################
 # Helper to clear the cached files from the data dir.
+################################################################################
 sub clearcachefiles {
   my $c = shift;
   my $datadir = $c->{datadir};
@@ -28,6 +28,228 @@ sub clearcachefiles {
       }
   }
 } # clearcachefiles
+
+################################################################################
+# The graph itself
+################################################################################
+
+# Helper for the 30 day weighted average and the 7 day sum
+sub addsums {
+  my $g = shift;
+  my $v = shift;
+  push( @{ $g->{last7} }, $v);
+  $g->{sum7} += $v;
+  if ( scalar(@{ $g->{last7} } > 7 ) ) {
+    $g->{sum7} -= shift( @{$g->{last7} } );
+  }
+  # TODO 30 weighted or exponential average
+} # addsums
+
+# Make a data file line for one day
+sub oneday {
+  my $g = shift;
+  my $day = shift;
+  my $c = $g->{c};
+  my $sql = "
+    SELECT
+      Id,
+      strftime('%Y-%m-%d', Timestamp, '-06:00') as EffDate,
+      strftime('%H:%M', Timestamp ) as Time,
+      BrewType,
+      SubType,
+      StDrinks
+    from GLASSES
+    where effdate = ?
+    order by effdate ";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( $day );
+  my $sum = 0;
+  while ( my $rec = $sth->fetchrow_hashref ) {
+    #print "$rec->{Id}: $rec->{EffDate} $rec->{BrewType}/$rec->{SubType} =$rec->{StDrinks} <br/>";
+    $sum += $rec->{StDrinks};
+  }
+  $sth->finish;
+  addsums($g,$sum);
+  #print "=== $sum $day s7=$g->{sum7} = @{$g->{last7}}";
+  $sum = sprintf("%5.1f", $sum);
+  my $s7 = sprintf("%5.1f", $g->{sum7}/7);
+  my $a30 = "  1.0";
+  my $line = "$day $sum $a30 $s7 \n";
+  #print "<br/>";
+  return $line;
+}
+
+# Create the data file for plotting
+sub makedatafile {
+  my $g = shift;
+  my $c = $g->{c};
+  my $oneday = 24 * 60 * 60;
+  my $start = Time::Piece->strptime( $g->{start}, "%Y-%m-%d" );
+  my $end = Time::Piece->strptime( $g->{end}, "%Y-%m-%d" );
+  $g->{range} = ($end - $start) / $oneday;
+  my $date = $start;
+  $date -= 7 * $oneday; # Start earlier to prime the average
+  open F, ">$g->{plotfile}"
+      or util::error ("Could not open $g->{plotfile} for writing");
+  my $legend = "# Date    Drinks  Avg30 Sum7 Balc Zero Fut   Drink Color Drink Color ...";
+  print F "$legend \n".
+    "# Plot $start to $end \n";
+
+  $g->{last7} = [];
+  $g->{sum7} = 0;
+  $g->{last30} = [];
+  $g->{avg30} = 0;
+  print "Making data file for " . $start->ymd . " to " . $end->ymd . "<br/>\n";
+  while ( $date <= $end ) {
+    my $line = oneday( $g, $date->ymd );
+    print F $line;
+    $date += $oneday;
+  }
+  print F "$legend \n";
+  close(F);
+} # makedatafile
+
+
+
+# Helper to do the acual plotting
+sub plotgraph {
+  my $g = shift;
+  my $c = $g->{c};
+  my $white = "textcolor \"white\" ";
+  $g->{imgsz}="320,250";
+  if ( $g->{bigimg} eq "B" ) {  # Big image
+    $g->{imgsz} = "640,480";
+  }
+  my $oneday = 24 * 60 * 60 ; # in seconds
+  my $threedays = 3 * $oneday;
+  my $oneweek = 7 * $oneday ;
+  my $oneyear = 365.24 * $oneday;
+  my $onemonth = $oneyear / 12;
+  my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
+  my $weekline = "";
+  my $batitle = "notitle" ;
+  $batitle =  "title \"ba\" " if ( $g->{bigimg} eq "B" );
+  #my $plotweekline =
+  #  "\"$plotfile\" using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$lastwk\", " .
+  #  "\"$plotfile\" using 1:7 with points lc \"red\" pointtype 1 pointsize 0.2 axes x1y2 $batitle, ";
+  my $xtic = 1;
+  # Different range grasphs need different options
+  my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
+  my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
+  my @xmonth = ( $onemonth, "\"%b\\n%y\"" ); # Jan 24
+  my @xweek = ( $oneweek, "\"%d\\n%b\"" ); # 15 Jan
+  my $pointsize = "";
+  my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
+  my $fillstyleborder = "fill solid border linecolor \"$c->{bgcolor}\""; # Small gap around each drink
+  my $maxd = 21; # TODO
+  if ( $g->{bigimg} eq "B" ) {  # Big image
+    $maxd = $maxd + 4; # Make room at the top of the graph for the legend
+    if ( $g->{range} > 365*4 ) {  # "all"
+      ( $xtic, $xformat ) = @xyear;
+    } elsif ( $g->{range} > 400 ) { # "2y"
+      ( $xtic, $xformat ) = @xquart;
+    } elsif ( $g->{range} > 120 ) { # "y", "6m"
+      ( $xtic, $xformat ) = @xmonth;
+    } else { # 3m, m, 2w
+      ( $xtic, $xformat ) = @xweek;
+      #$weekline = $plotweekline;
+      $fillstyle = $fillstyleborder;
+    }
+  } else { # Small image
+    $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
+    $maxd = $maxd + 8; # Make room at the top of the graph for the legend
+    if ( $g->{range} > 365*4 ) {  # "all"
+      ( $xtic, $xformat ) = @xyear;
+    } elsif ( $g->{range} > 360 ) { # "2y", "y"
+      ( $xtic, $xformat ) = @xquart;
+    } elsif ( $g->{range} > 80 ) { # "6m", "3m"
+      ( $xtic, $xformat ) = @xmonth;
+      #$weekline = $plotweekline;
+    } else { # "m", "2w"
+      ( $xtic, $xformat ) = @xweek;
+      $fillstyle = $fillstyleborder;
+      #$weekline = $plotweekline;
+    }
+  }
+
+  my $cmd = "" .
+      "set term png small size $g->{imgsz} \n".
+      $pointsize .
+      "set out \"$g->{pngfile}\" \n".
+      "set xdata time \n".
+      "set timefmt \"%Y-%m-%d\" \n".
+      "set xrange [ \"$g->{start}\" : \"$g->{end}\" ] \n".
+      "set yrange [ -.5 : $maxd ] \n" .
+      "set format x $xformat \n" .
+      #"set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
+      "set border linecolor \"white\" \n" .
+      "set ytics nomirror 7 $white \n" .
+      "set y2tics nomirror 7 $white \n" .
+      "set mytics 7 \n" .
+      "set y2range [-.5:*] \n" .
+      #"set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
+      "set xtics \"2007-01-01\", $xtic out $white \n" .  # Happens to be sunday, and first of year/month
+      "set style $fillstyle \n" .
+      "set boxwidth 0.7 relative \n" .
+      "set key left top horizontal textcolor \"white\" \n" .
+      "set grid xtics ytics  linewidth 0.1 linecolor \"white\" \n".
+      "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
+        "behind fc \"$c->{bgcolor}\" fillstyle solid border \n";  # green bkg
+
+    $cmd .= "plot " .
+                  # note the order of plotting, later ones get on top
+                  # so we plot weekdays, avg line, zeroes
+      "'$g->{plotfile}' using 1:2 with boxes notitle, " .
+      "'' using 1:4 with linespoints notitle \n";
+
+    open C, ">$g->{cmdfile}"
+          or util::error ("Could not open $g->{cmdfile} for writing: $!");
+    print C $cmd;
+    close(C);
+    system ("gnuplot $g->{cmdfile} ");
+}
+
+
+# The graph itself
+sub graph {
+  my $c = shift;
+  my $g = {};  # Collects all graph-related parameters
+  $g->{c} = $c;
+  # Parameters.
+  $g->{bigimg} = $c->{mobile} ? "S" : "B";
+  $g->{reload} = 0;
+  if ($c->{op} =~ /Graph([BS]?)(X?)/ ) {
+    $g->{bigimg} = $1 if ($1);
+    $g->{reload} = $2;
+  }
+  # Date range, default to 30 days leading to tomorrow
+  $g->{start} = util::param($c,"gstart", util::datestr("%F",-30) );
+  $g->{end} = util::param($c,"gend", util::datestr("%F",1) );
+
+  $g->{plotfile} = $c->{datadir} . $c->{username} . ".plot";
+  $g->{cmdfile} = $c->{datadir} . $c->{username} . ".cmd";
+  $g->{pngfile} = $c->{datadir} . $c->{username} . "$g->{start}-$g->{end}-$g->{bigimg}.png";
+  # TODO Check cache
+
+  print  "graph: b='$g->{bigimg}' r='$g->{reload}' gs='$g->{start}' ge='$g->{end}' <br/>\n";
+  makedatafile($g);
+  plotgraph($g);
+
+  # Finally, prine the HTML to display the graph
+  my ( $imw,$imh ) = $g->{imgsz} =~ /(\d+),(\d+)/;
+  my $htsize = "width=$imw height=$imh" if ($imh) ;
+  if ($g->{bigimg} eq "B") {
+    print "<a href='$c->{url}?o=GraphS&gstart=$g->{start}&end=$g->{end}'><img src=\"$g->{pngfile}\" $htsize/></a><br/>\n";
+  } else {
+    print "<a href='$c->{url}?o=GraphB'&gstart=$g->{start}&end=$g->{end}'><img src=\"$g->{pngfile}\" $htsize/></a><br/>\n";
+  }
+
+  print "<hr/>\n";
+
+
+} # graph
+
+
 
 ################################################################################
 # Report module loaded ok

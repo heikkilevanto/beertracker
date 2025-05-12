@@ -454,8 +454,9 @@ if ( $op =~ /Board/i ) {
   mainlist::mainlist($c);
 } else { # Default to the graph
   $op = "Graph" unless $op;
-  oldstuff();
-  graph();
+  #oldstuff();
+  #graph();
+  graph::graph($c);
   glasses::inputform($c);
   mainlist::mainlist($c);
 }

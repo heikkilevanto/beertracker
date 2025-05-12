@@ -77,7 +77,7 @@ sub glassquery {
     where Username = ?
     order by timestamp desc
   };
-  print STDERR "u='$c->{username}' sql='$sql' \n";
+  #print STDERR "u='$c->{username}' sql='$sql' \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($c->{username});
   return $sth;
