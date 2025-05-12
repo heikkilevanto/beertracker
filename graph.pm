@@ -47,18 +47,18 @@ sub addsums {
   }
   push( @{ $g->{last30} }, $v);
   if ( scalar(@{ $g->{last30} } > 30 ) ) {
-    $g->{sum30} -= shift( @{$g->{last30} } );
+    shift( @{$g->{last30} } );
   }
-  my $w = scalar(@{ $g->{last30} });
+  my $w = 1;
   my $sum = 0.0001; # to avoid division by zero
   my $wsum = 0;
   for my $v ( @{ $g->{last30} } ) {
     $sum += $v * $w;
     $wsum += $w;
-    $w--;
+    $w++;
   }
   $g->{avg30} = $sum / $wsum;
-  # TODO 30 weighted or exponential average
+  # TODO check exponential average
 } # addsums
 
 # Make a data file line for one day
@@ -66,6 +66,14 @@ sub oneday {
   my $g = shift;
   my $day = shift;
   my $c = $g->{c};
+  my $alc = "NaN";
+  if ( $g->{range} < 95 ) { # Over 3m we don't show them anyway.
+    my $bloodalc = mainlist::bloodalc($c,$day);
+    $alc = $bloodalc->{max} * 10 ; # scale to display
+    $alc = "NaN" if ($alc < 0.1 );
+    # TODO - Refactor the stepwise calculation into its own routine in mainlist,
+    # and use that wihtin in the loop below.
+  }
   my $sql = "
     SELECT
       Id,
@@ -108,9 +116,19 @@ sub oneday {
   my $a30 = sprintf("%5.1f", $g->{avg30});
   $g->{lastavg} = $a30; # Save the last for legend
   $g->{lastwk} = $s7;
-  my $ba = "  2.0";
   my $zero = " NaN ";
-  my $line = "$day $sum $a30 $s7 $ba $zero $drinksline\n";
+  if ( $sum > 0.4 || $s7 < 0.1) {
+    $g->{zeroheight} = 0.1;
+  } else {
+    $zero = $g->{zeroheight};
+    $g->{zeroheight} += 0.3; # Fits nicely with 7 marks in a week
+    if ( $g->{zeroheight} > 2 ) {
+      $g->{zeroheight} = 0.1;
+    }
+  }
+  $s7 = "NaN" if ( $s7 < 0.1 );  # Hide zero lines
+  $a30 = "NaN" if ( $a30 < 0.1 );
+  my $line = "$day $sum $a30 $s7 $alc $zero $drinksline\n";
   return $line;
 }
 
@@ -135,6 +153,7 @@ sub makedatafile {
   $g->{last30} = [];
   $g->{avg30} = 0;
   $g->{maxd} = 0;
+  $g->{zeroheight} = 0;
   print "Making data file for " . $start->ymd . " to " . $end->ymd . "<br/>\n";
   while ( $date <= $end ) {
     my $line = oneday( $g, $date->ymd );
@@ -167,7 +186,7 @@ sub plotgraph {
   $batitle =  "title \"ba\" " if ( $g->{bigimg} eq "B" );
   my $plotweekline =
     "'$g->{plotfile}' using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$g->{lastwk} wk\", " . #weekly
-    "'' using 1:5 with points lc \"red\" pointtype 1 pointsize 0.2 axes x1y2 $batitle, ";  # bloodacl
+    "'' using 1:5 with points lc \"red\" pointtype 1 pointsize 0.5 axes x1y2 $batitle, ";  # bloodacl
   my $xtic = 1;
   # Different range grasphs need different options
   my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
