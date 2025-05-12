@@ -37,11 +37,27 @@ sub clearcachefiles {
 sub addsums {
   my $g = shift;
   my $v = shift;
+  if ( $v > $g->{maxd} ) {
+    $g->{maxd} = $v;   # Max y for scaling the graph
+  }
   push( @{ $g->{last7} }, $v);
   $g->{sum7} += $v;
   if ( scalar(@{ $g->{last7} } > 7 ) ) {
     $g->{sum7} -= shift( @{$g->{last7} } );
   }
+  push( @{ $g->{last30} }, $v);
+  if ( scalar(@{ $g->{last30} } > 30 ) ) {
+    $g->{sum30} -= shift( @{$g->{last30} } );
+  }
+  my $w = scalar(@{ $g->{last30} });
+  my $sum = 0.0001; # to avoid division by zero
+  my $wsum = 0;
+  for my $v ( @{ $g->{last30} } ) {
+    $sum += $v * $w;
+    $wsum += $w;
+    $w--;
+  }
+  $g->{avg30} = $sum / $wsum;
   # TODO 30 weighted or exponential average
 } # addsums
 
@@ -57,7 +73,8 @@ sub oneday {
       strftime('%H:%M', Timestamp ) as Time,
       BrewType,
       SubType,
-      StDrinks
+      StDrinks,
+      Location
     from GLASSES
     where effdate = ?
     order by effdate ";
@@ -73,8 +90,11 @@ sub oneday {
   #print "=== $sum $day s7=$g->{sum7} = @{$g->{last7}}";
   $sum = sprintf("%5.1f", $sum);
   my $s7 = sprintf("%5.1f", $g->{sum7}/7);
-  my $a30 = "  1.0";
-  my $line = "$day $sum $a30 $s7 \n";
+  my $a30 = sprintf("%5.1f", $g->{avg30});
+  $g->{lastavg} = $a30; # Save the last for legend
+  $g->{lastwk} = $s7;
+  my $ba = "  2.0";
+  my $line = "$day $sum $a30 $s7 $ba\n";
   #print "<br/>";
   return $line;
 }
@@ -91,7 +111,7 @@ sub makedatafile {
   $date -= 7 * $oneday; # Start earlier to prime the average
   open F, ">$g->{plotfile}"
       or util::error ("Could not open $g->{plotfile} for writing");
-  my $legend = "# Date    Drinks  Avg30 Sum7 Balc Zero Fut   Drink Color Drink Color ...";
+  my $legend = "# Date    Drinks Avg30 Avg7  Balc Zero Fut   Drink Color Drink Color ...";
   print F "$legend \n".
     "# Plot $start to $end \n";
 
@@ -99,6 +119,7 @@ sub makedatafile {
   $g->{sum7} = 0;
   $g->{last30} = [];
   $g->{avg30} = 0;
+  $g->{maxd} = 0;
   print "Making data file for " . $start->ymd . " to " . $end->ymd . "<br/>\n";
   while ( $date <= $end ) {
     my $line = oneday( $g, $date->ymd );
@@ -129,9 +150,9 @@ sub plotgraph {
   my $weekline = "";
   my $batitle = "notitle" ;
   $batitle =  "title \"ba\" " if ( $g->{bigimg} eq "B" );
-  #my $plotweekline =
-  #  "\"$plotfile\" using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$lastwk\", " .
-  #  "\"$plotfile\" using 1:7 with points lc \"red\" pointtype 1 pointsize 0.2 axes x1y2 $batitle, ";
+  my $plotweekline =
+    "'$g->{plotfile}' using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$g->{lastwk} wk\", " . #weekly
+    "'' using 1:5 with points lc \"red\" pointtype 1 pointsize 0.2 axes x1y2 $batitle, ";  # bloodacl
   my $xtic = 1;
   # Different range grasphs need different options
   my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
@@ -141,9 +162,8 @@ sub plotgraph {
   my $pointsize = "";
   my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
   my $fillstyleborder = "fill solid border linecolor \"$c->{bgcolor}\""; # Small gap around each drink
-  my $maxd = 21; # TODO
   if ( $g->{bigimg} eq "B" ) {  # Big image
-    $maxd = $maxd + 4; # Make room at the top of the graph for the legend
+    $g->{maxd} = $g->{maxd} + 3; # Make room at the top of the graph for the legend
     if ( $g->{range} > 365*4 ) {  # "all"
       ( $xtic, $xformat ) = @xyear;
     } elsif ( $g->{range} > 400 ) { # "2y"
@@ -152,23 +172,23 @@ sub plotgraph {
       ( $xtic, $xformat ) = @xmonth;
     } else { # 3m, m, 2w
       ( $xtic, $xformat ) = @xweek;
-      #$weekline = $plotweekline;
+      $weekline = $plotweekline;
       $fillstyle = $fillstyleborder;
     }
   } else { # Small image
     $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
-    $maxd = $maxd + 8; # Make room at the top of the graph for the legend
+    $g->{maxd} = $g->{maxd} + 6; # Make room at the top of the graph for the legend
     if ( $g->{range} > 365*4 ) {  # "all"
       ( $xtic, $xformat ) = @xyear;
     } elsif ( $g->{range} > 360 ) { # "2y", "y"
       ( $xtic, $xformat ) = @xquart;
     } elsif ( $g->{range} > 80 ) { # "6m", "3m"
       ( $xtic, $xformat ) = @xmonth;
-      #$weekline = $plotweekline;
+      $weekline = $plotweekline;
     } else { # "m", "2w"
       ( $xtic, $xformat ) = @xweek;
       $fillstyle = $fillstyleborder;
-      #$weekline = $plotweekline;
+      $weekline = $plotweekline;
     }
   }
 
@@ -179,14 +199,15 @@ sub plotgraph {
       "set xdata time \n".
       "set timefmt \"%Y-%m-%d\" \n".
       "set xrange [ \"$g->{start}\" : \"$g->{end}\" ] \n".
-      "set yrange [ -.5 : $maxd ] \n" .
       "set format x $xformat \n" .
+      "set yrange [ -.5 : $g->{maxd} ] \n" .
+      "set y2range [ -.5 : $g->{maxd} ] \n" .
       #"set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
       "set border linecolor \"white\" \n" .
-      "set ytics nomirror 7 $white \n" .
-      "set y2tics nomirror 7 $white \n" .
+      "set ytics out nomirror 7 $white \n" .
+      "set y2tics out nomirror 7 $white \n" .
       "set mytics 7 \n" .
-      "set y2range [-.5:*] \n" .
+      "set my2tics 7 \n" .
       #"set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
       "set xtics \"2007-01-01\", $xtic out $white \n" .  # Happens to be sunday, and first of year/month
       "set style $fillstyle \n" .
@@ -195,12 +216,21 @@ sub plotgraph {
       "set grid xtics ytics  linewidth 0.1 linecolor \"white\" \n".
       "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
         "behind fc \"$c->{bgcolor}\" fillstyle solid border \n";  # green bkg
+    for (my $m=1; $m<$g->{maxd}; $m+= 4) {
+      $cmd .= "set arrow from \"$g->{start}\", $m to \"$g->{end}\", $m nohead linewidth 1 linecolor \"#00dd10\" \n"
+        if ( $g->{maxd} > $m + 1 );
+    }
 
-    $cmd .= "plot " .
+    $cmd .= "plot ";
                   # note the order of plotting, later ones get on top
                   # so we plot weekdays, avg line, zeroes
-      "'$g->{plotfile}' using 1:2 with boxes notitle, " .
-      "'' using 1:4 with linespoints notitle \n";
+    $cmd .=
+      "'$g->{plotfile}' using 1:2 with boxes notitle , " .
+      "'' using 1:3 axes x1y2 with lines  lc \"#FfFfFf\" lw 3  title \"$g->{lastavg} 30d\" , " .   # monthly avg
+#      "'' using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"Wk: $g->{lastwk}\" " .   # Week sum
+    $weekline .
+      "\n";
+
 
     open C, ">$g->{cmdfile}"
           or util::error ("Could not open $g->{cmdfile} for writing: $!");
@@ -239,9 +269,9 @@ sub graph {
   my ( $imw,$imh ) = $g->{imgsz} =~ /(\d+),(\d+)/;
   my $htsize = "width=$imw height=$imh" if ($imh) ;
   if ($g->{bigimg} eq "B") {
-    print "<a href='$c->{url}?o=GraphS&gstart=$g->{start}&end=$g->{end}'><img src=\"$g->{pngfile}\" $htsize/></a><br/>\n";
+    print "<a href='$c->{url}?o=GraphS&gstart=$g->{start}&gend=$g->{end}'><img src=\"$g->{pngfile}\" $htsize/></a><br/>\n";
   } else {
-    print "<a href='$c->{url}?o=GraphB'&gstart=$g->{start}&end=$g->{end}'><img src=\"$g->{pngfile}\" $htsize/></a><br/>\n";
+    print "<a href='$c->{url}?o=GraphB'&gstart=$g->{start}&gend=$g->{end}'><img src=\"$g->{pngfile}\" $htsize/></a><br/>\n";
   }
 
   print "<hr/>\n";
