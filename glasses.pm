@@ -349,23 +349,6 @@ sub fixprice {
 } # fixprice
 
 ############## postglass itself
-# TODO - Rethink the logic here:
-# - No worry about old style input form
-# - Detect beer board entries from a special input name
-# - Handle new brew and location
-# - Get brew and location
-# - If 'empty' glass, clear fields, set subtype from loc
-# - else set subtype from brew, guess volume, alc, price
-
-# This is a bit tricky. We can get called in many ways:
-# - Beer board button, simulating an old-style input form, detected with 'tap' field
-# - Copy beer button, simulating an input form
-# - Input form, "Record" a new glass
-# - Input form, "Save" an existing glass record
-# - Both "Record" and "Save" can have "new" brew and/or location
-# - The input form can have an 'empty' glass in SelBrewType
-#   - in that case we have no brew, but must take brew style and substyle from
-#     the (possibly new) location
 
 sub postglass {
   my $c = shift; # context

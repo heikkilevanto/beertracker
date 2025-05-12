@@ -81,21 +81,36 @@ sub oneday {
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( $day );
   my $sum = 0;
+  my $drinksline = ""; # Individual drinks
+  my @drinks;
   while ( my $rec = $sth->fetchrow_hashref ) {
     #print "$rec->{Id}: $rec->{EffDate} $rec->{BrewType}/$rec->{SubType} =$rec->{StDrinks} <br/>";
     $sum += $rec->{StDrinks};
+    push (@drinks, $rec);
   }
-  $sth->finish;
+  my $top = $sum;
+  my $cnt = 20;
+  for my $r ( reverse(@drinks) ){
+    my $style = $r->{BrewType};
+    $style .= ",$r->{SubType}" if ($r->{SubType});
+    my $color = brews::brewcolor($style);
+    $drinksline .= "$top 0x$color ";
+    $top -= $r->{StDrinks};
+    $cnt--;
+  }
+  while ( $cnt-- > 0 ) {
+    $drinksline .= "NaN 0x0 "; # Unused values
+  }
   addsums($g,$sum);
-  #print "=== $sum $day s7=$g->{sum7} = @{$g->{last7}}";
+  #print "=== $sum $day s7=$g->{sum7} = @{$g->{last7}} <br/>\n";
   $sum = sprintf("%5.1f", $sum);
   my $s7 = sprintf("%5.1f", $g->{sum7}/7);
   my $a30 = sprintf("%5.1f", $g->{avg30});
   $g->{lastavg} = $a30; # Save the last for legend
   $g->{lastwk} = $s7;
   my $ba = "  2.0";
-  my $line = "$day $sum $a30 $s7 $ba\n";
-  #print "<br/>";
+  my $zero = " NaN ";
+  my $line = "$day $sum $a30 $s7 $ba $zero $drinksline\n";
   return $line;
 }
 
@@ -113,7 +128,7 @@ sub makedatafile {
       or util::error ("Could not open $g->{plotfile} for writing");
   my $legend = "# Date    Drinks Avg30 Avg7  Balc Zero Fut   Drink Color Drink Color ...";
   print F "$legend \n".
-    "# Plot $start to $end \n";
+    "# Plot $g->{start} to $g->{end} \n";
 
   $g->{last7} = [];
   $g->{sum7} = 0;
@@ -162,6 +177,8 @@ sub plotgraph {
   my $pointsize = "";
   my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
   my $fillstyleborder = "fill solid border linecolor \"$c->{bgcolor}\""; # Small gap around each drink
+  #my $fillstyleborder = "fill solid border linecolor \"$c->{bgcolor}\""; # Small gap around each drink
+  #my $fillstyleborder = "fill solid noborder ";# Small gap around each drink
   if ( $g->{bigimg} eq "B" ) {  # Big image
     $g->{maxd} = $g->{maxd} + 3; # Make room at the top of the graph for the legend
     if ( $g->{range} > 365*4 ) {  # "all"
@@ -204,14 +221,14 @@ sub plotgraph {
       "set y2range [ -.5 : $g->{maxd} ] \n" .
       #"set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
       "set border linecolor \"white\" \n" .
-      "set ytics out nomirror 7 $white \n" .
-      "set y2tics out nomirror 7 $white \n" .
-      "set mytics 7 \n" .
-      "set my2tics 7 \n" .
+      "set ytics out nomirror 1 $white \n" .
+      "set y2tics out nomirror 1 $white \n" .
+#      "set mytics 7 \n" .
+#      "set my2tics 7 \n" .
       #"set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
       "set xtics \"2007-01-01\", $xtic out $white \n" .  # Happens to be sunday, and first of year/month
       "set style $fillstyle \n" .
-      "set boxwidth 0.7 relative \n" .
+      "set boxwidth 86400*0.7 absolute \n" .
       "set key left top horizontal textcolor \"white\" \n" .
       "set grid xtics ytics  linewidth 0.1 linecolor \"white\" \n".
       "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
@@ -223,13 +240,15 @@ sub plotgraph {
 
     $cmd .= "plot ";
                   # note the order of plotting, later ones get on top
-                  # so we plot weekdays, avg line, zeroes
-    $cmd .=
-      "'$g->{plotfile}' using 1:2 with boxes notitle , " .
-      "'' using 1:3 axes x1y2 with lines  lc \"#FfFfFf\" lw 3  title \"$g->{lastavg} 30d\" , " .   # monthly avg
-#      "'' using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"Wk: $g->{lastwk}\" " .   # Week sum
-    $weekline .
-      "\n";
+                  # so we plot weekdays, avg line
+    $cmd .=  "'$g->{plotfile}' using 1:6 with points lc \"#00dd10\" pointtype 11 notitle, "; # zero days
+    my $col = 7; # Column of the first value
+    while ( $col < 20 ) {
+      $cmd .= "'' using 1:" . $col++ . ":" . $col++ . " with boxes lc rgbcolor variable notitle, ";
+    }
+
+    $cmd .=   "'' using 1:3 axes x1y2 with lines  lc \"#FfFfFf\" lw 3  title \"$g->{lastavg} 30d\" , ";   # monthly avg
+    $cmd .= $weekline . "\n";
 
 
     open C, ">$g->{cmdfile}"
@@ -254,7 +273,7 @@ sub graph {
   }
   # Date range, default to 30 days leading to tomorrow
   $g->{start} = util::param($c,"gstart", util::datestr("%F",-30) );
-  $g->{end} = util::param($c,"gend", util::datestr("%F",1) );
+  $g->{end} = util::param($c,"gend", util::datestr("%F",0) );
 
   $g->{plotfile} = $c->{datadir} . $c->{username} . ".plot";
   $g->{cmdfile} = $c->{datadir} . $c->{username} . ".cmd";

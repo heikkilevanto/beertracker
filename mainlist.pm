@@ -13,36 +13,6 @@ use utf8;  # Source code and string literals are utf-8
 
 my $design_ideas = q{
 
-  Use Sqlite for the whole processing
-
-  While writing this, leave the old mainlist in place for graph/board pages,
-  and use the new one only for explicitly asked full list.
-
-  Make a helper to get the next line, with a one-record buffer, so I can unget
-  the latest record if it is for a different location or date
-
-
-  Is it better to make a view like glassrec, or just iterate over glass records
-  and fetch the additional data separately? Or a compromise, fetch brew and
-  producer in the view, but get location and comments separately?
-
-  Probably easier to make individual calls, at least to begin with. Optimize
-  later, if needed.
-
-  Make a helper to get the beer colors right. Use them when displaying the short
-  style [Beer, NEIPA].
-
-  Drop the -x modifier. Make the location headline with a section for more data,
-  initially hidden, expanded when clicking on the name. In that section
-    - Geo coords
-    - Links to web page and google/untappd search
-    - Maybe a count of visits and comments on the location
-
-  Likewise, hide some brew details, like full style name, how many times and
-  when seen.
-
-  Add rating avg on the visible section, after name
-
 
 };
 
@@ -228,7 +198,6 @@ sub nameline {
   my $rec = shift;
   my $style = $rec->{brewtype};
   $style .= ",$rec->{subtype}" if ($rec->{subtype});
-  # TODO - Get a color for the style
   my $time = $rec->{time};
   $time = "($time)" if ($time lt "0600");
   print "$time ";
