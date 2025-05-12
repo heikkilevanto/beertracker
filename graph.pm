@@ -11,6 +11,14 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use Time::Piece;
 
+# Useful constants
+my $oneday = 24 * 60 * 60 ; # in seconds
+my $halfday = $oneday / 2;
+my $threedays = 3 * $oneday;
+my $oneweek = 7 * $oneday ;
+my $oneyear = 365.24 * $oneday;
+my $onemonth = $oneyear / 12;
+
 ################################################################################
 # Helper to clear the cached files from the data dir.
 ################################################################################
@@ -37,7 +45,8 @@ sub clearcachefiles {
 sub addsums {
   my $g = shift;
   my $v = shift;
-  if ( $v > $g->{maxd} ) {
+  my $day = shift;
+  if ( $v > $g->{maxd} && $day ge $g->{start} ) {
     $g->{maxd} = $v;   # Max y for scaling the graph
   }
   push( @{ $g->{last7} }, $v);
@@ -74,42 +83,47 @@ sub oneday {
     # TODO - Refactor the stepwise calculation into its own routine in mainlist,
     # and use that wihtin in the loop below.
   }
-  my $sql = "
-    SELECT
-      Id,
-      strftime('%Y-%m-%d', Timestamp, '-06:00') as EffDate,
-      strftime('%H:%M', Timestamp ) as Time,
-      BrewType,
-      SubType,
-      StDrinks,
-      Location
-    from GLASSES
-    where effdate = ?
-    order by effdate ";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( $day );
+  $g->{sth}->execute( $day );
   my $sum = 0;
   my $drinksline = ""; # Individual drinks
   my @drinks;
-  while ( my $rec = $sth->fetchrow_hashref ) {
+  while ( my $rec = $g->{sth}->fetchrow_hashref ) {
     #print "$rec->{Id}: $rec->{EffDate} $rec->{BrewType}/$rec->{SubType} =$rec->{StDrinks} <br/>";
     $sum += $rec->{StDrinks};
     push (@drinks, $rec);
   }
   my $top = $sum;
   my $cnt = 20;
-  for my $r ( reverse(@drinks) ){
+  my $loc = "";
+  for (my $i= scalar(@drinks)-1; $i >= 0; $i--){
+    my $r = $drinks[$i];
     my $style = $r->{BrewType};
     $style .= ",$r->{SubType}" if ($r->{SubType});
+    #print "i=$i top=$top r=$r->{Id} $r->{EffDate} $r->{Location} sty='$style' <br/>";
+    if ( $loc && $r->{Location} ne $loc ) {
+      my $y = $top +.2 ;
+      #print "$r->{Id} $r->{Location} top=$top y=$y<br/>";
+      $drinksline .= "$y 0xffffff "; # White separator for locaton changes
+      $cnt--;
+    }
     my $color = brews::brewcolor($style);
-    $drinksline .= "$top 0x$color ";
+    my $y = $top;
+    if ( $r->{StDrinks} < 0.2 ) {
+      $y = $top + 0.2; # Show at least something visible
+    } # without messing with total height
+    $drinksline .= "$y 0x$color ";
     $top -= $r->{StDrinks};
+    $loc = $r->{Location};
     $cnt--;
+  }
+  if ( $cnt < 0 ) {
+    print STDERR "graph::oneday: Day '$day' has too many drinks. " .
+        "Increase here and in the plot command\n";
   }
   while ( $cnt-- > 0 ) {
     $drinksline .= "NaN 0x0 "; # Unused values
   }
-  addsums($g,$sum);
+  addsums($g,$sum,$day);
   #print "=== $sum $day s7=$g->{sum7} = @{$g->{last7}} <br/>\n";
   $sum = sprintf("%5.1f", $sum);
   my $s7 = sprintf("%5.1f", $g->{sum7}/7);
@@ -130,16 +144,31 @@ sub oneday {
   $a30 = "NaN" if ( $a30 < 0.1 );
   my $line = "$day $sum $a30 $s7 $alc $zero $drinksline\n";
   return $line;
-}
+} # oneday
 
 # Create the data file for plotting
 sub makedatafile {
   my $g = shift;
   my $c = $g->{c};
-  my $oneday = 24 * 60 * 60;
+
   my $start = Time::Piece->strptime( $g->{start}, "%Y-%m-%d" );
   my $end = Time::Piece->strptime( $g->{end}, "%Y-%m-%d" );
   $g->{range} = ($end - $start) / $oneday;
+  my $sql = "
+    SELECT
+      Id,
+      strftime('%Y-%m-%d', Timestamp, '-06:00') as EffDate,
+      strftime('%H:%M', Timestamp ) as Time,
+      BrewType,
+      SubType,
+      StDrinks,
+      Location
+    from GLASSES
+    where effdate = ?
+      and StDrinks > 0
+    order by effdate, Time ";
+  $g->{sth} = $c->{dbh}->prepare($sql);
+
   my $date = $start;
   $date -= 7 * $oneday; # Start earlier to prime the average
   open F, ">$g->{plotfile}"
@@ -154,10 +183,23 @@ sub makedatafile {
   $g->{avg30} = 0;
   $g->{maxd} = 0;
   $g->{zeroheight} = 0;
-  print "Making data file for " . $start->ymd . " to " . $end->ymd . "<br/>\n";
+  $g->{wkendtag} = 2; # 1 is for the global background
+  $g->{weekends} = "";
+  #print "Making data file for " . $start->ymd . " to " . $end->ymd . "<br/>\n";
   while ( $date <= $end ) {
-    my $line = oneday( $g, $date->ymd );
+    my $line = oneday( $g, $date->ymd);
     print F $line;
+    if ( $date->wday == 6 ) { # Sat
+      my $wkendcolor = $c->{bgcolor};
+      $wkendcolor =~ s/003/005/;
+      my $fri = $date->epoch - $halfday;
+      my $sun = ($date + $oneday*2.5)->epoch;
+      #$g->{weekends} .= "set object $g->{wkendtag} rect from \"$fri\",-0.5 to \"$sun\",50 " .
+      $g->{weekends} .= "set object $g->{wkendtag} rect from $fri,-0.5 to $sun,50 " .
+        #"size $threedays,200
+        "behind  fc rgbcolor \"$wkendcolor\"  fillstyle solid noborder \n";
+      $g->{wkendtag}++;
+      }
     $date += $oneday;
   }
   print F "$legend \n";
@@ -175,11 +217,6 @@ sub plotgraph {
   if ( $g->{bigimg} eq "B" ) {  # Big image
     $g->{imgsz} = "640,480";
   }
-  my $oneday = 24 * 60 * 60 ; # in seconds
-  my $threedays = 3 * $oneday;
-  my $oneweek = 7 * $oneday ;
-  my $oneyear = 365.24 * $oneday;
-  my $onemonth = $oneyear / 12;
   my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
   my $weekline = "";
   my $batitle = "notitle" ;
@@ -199,7 +236,7 @@ sub plotgraph {
   #my $fillstyleborder = "fill solid border linecolor \"$c->{bgcolor}\""; # Small gap around each drink
   #my $fillstyleborder = "fill solid noborder ";# Small gap around each drink
   if ( $g->{bigimg} eq "B" ) {  # Big image
-    $g->{maxd} = $g->{maxd} + 3; # Make room at the top of the graph for the legend
+    $g->{maxd} = $g->{maxd} + 1; # Make room at the top of the graph for the legend
     if ( $g->{range} > 365*4 ) {  # "all"
       ( $xtic, $xformat ) = @xyear;
     } elsif ( $g->{range} > 400 ) { # "2y"
@@ -213,7 +250,7 @@ sub plotgraph {
     }
   } else { # Small image
     $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
-    $g->{maxd} = $g->{maxd} + 6; # Make room at the top of the graph for the legend
+    $g->{maxd} = $g->{maxd} + 2; # Make room at the top of the graph for the legend
     if ( $g->{range} > 365*4 ) {  # "all"
       ( $xtic, $xformat ) = @xyear;
     } elsif ( $g->{range} > 360 ) { # "2y", "y"
@@ -234,7 +271,7 @@ sub plotgraph {
       "set out \"$g->{pngfile}\" \n".
       "set xdata time \n".
       "set timefmt \"%Y-%m-%d\" \n".
-      "set xrange [ \"$g->{start}\" : \"$g->{end}\" ] \n".
+      "set xrange [ \"$g->{start} 12:00\" : \"$g->{end} 12:00\" ] \n".
       "set format x $xformat \n" .
       "set yrange [ -.5 : $g->{maxd} ] \n" .
       "set y2range [ -.5 : $g->{maxd} ] \n" .
@@ -256,13 +293,13 @@ sub plotgraph {
       $cmd .= "set arrow from \"$g->{start}\", $m to \"$g->{end}\", $m nohead linewidth 1 linecolor \"#00dd10\" \n"
         if ( $g->{maxd} > $m + 1 );
     }
-
+    $cmd .= $g->{weekends};
     $cmd .= "plot ";
                   # note the order of plotting, later ones get on top
                   # so we plot weekdays, avg line
     $cmd .=  "'$g->{plotfile}' using 1:6 with points lc \"#00dd10\" pointtype 11 notitle, "; # zero days
     my $col = 7; # Column of the first value
-    while ( $col < 20 ) {
+    while ( $col < 45 ) {
       $cmd .= "'' using 1:" . $col++ . ":" . $col++ . " with boxes lc rgbcolor variable notitle, ";
     }
 
@@ -292,14 +329,14 @@ sub graph {
   }
   # Date range, default to 30 days leading to tomorrow
   $g->{start} = util::param($c,"gstart", util::datestr("%F",-30) );
-  $g->{end} = util::param($c,"gend", util::datestr("%F",0) );
+  $g->{end} = util::param($c,"gend", util::datestr("%F",1) );
 
   $g->{plotfile} = $c->{datadir} . $c->{username} . ".plot";
   $g->{cmdfile} = $c->{datadir} . $c->{username} . ".cmd";
   $g->{pngfile} = $c->{datadir} . $c->{username} . "$g->{start}-$g->{end}-$g->{bigimg}.png";
   # TODO Check cache
 
-  print  "graph: b='$g->{bigimg}' r='$g->{reload}' gs='$g->{start}' ge='$g->{end}' <br/>\n";
+  #print  "graph: b='$g->{bigimg}' r='$g->{reload}' gs='$g->{start}' ge='$g->{end}' <br/>\n";
   makedatafile($g);
   plotgraph($g);
 
