@@ -335,6 +335,7 @@ my $c = {
   'photodir' => $photodir,
   'dbh'      => $dbh,
   'url'      => $url,
+  'href'     => "$url?o=$op",
   'cgi'      => $q,
   'edit'     => $edit,
   'qry'      => $qry,
@@ -429,7 +430,7 @@ print util::topline($c);
 if ( $op =~ /Board/i ) {
   glasses::inputform($c);
   oldstuff();
-  graph();
+  graph::graph($c);
   beerboard();
   mainlist::mainlist($c);
 } elsif ( $op =~ /Years(d?)/i ) {
@@ -454,8 +455,6 @@ if ( $op =~ /Board/i ) {
   mainlist::mainlist($c);
 } else { # Default to the graph
   $op = "Graph" unless $op;
-  #oldstuff();
-  #graph();
   graph::graph($c);
   glasses::inputform($c);
   mainlist::mainlist($c);

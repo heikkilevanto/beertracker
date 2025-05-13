@@ -53,7 +53,7 @@ sub brewcolor {
       );
 
   my $type;
-  if ( $brew =~ /^\[?(\w+)(,(\w+))?\]?$/i ) {
+  if ( $brew =~ /^\[?(\w+)(,(.+))?\]?$/i ) {
     $type = "$1";
     $type .= ",$3" if ( $3 );
   } else {

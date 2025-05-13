@@ -48,7 +48,7 @@ sub addsums {
   my $day = shift;
   if ( $v > $g->{maxd} && $day ge $g->{start} ) {
     $g->{maxd} = $v;   # Max y for scaling the graph
-  }
+  } # But only on the visible part.
   push( @{ $g->{last7} }, $v);
   $g->{sum7} += $v;
   if ( scalar(@{ $g->{last7} } > 7 ) ) {
@@ -213,30 +213,24 @@ sub plotgraph {
   my $g = shift;
   my $c = $g->{c};
   my $white = "textcolor \"white\" ";
-  $g->{imgsz}="320,250";
-  if ( $g->{bigimg} eq "B" ) {  # Big image
-    $g->{imgsz} = "640,480";
-  }
   my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
   my $weekline = "";
   my $batitle = "notitle" ;
   $batitle =  "title \"ba\" " if ( $g->{bigimg} eq "B" );
   my $plotweekline =
     "'$g->{plotfile}' using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$g->{lastwk} wk\", " . #weekly
-    "'' using 1:5 with points lc \"red\" pointtype 1 pointsize 0.5 axes x1y2 $batitle, ";  # bloodacl
+    "'' using 1:5 with points lc \"red\" pointtype 3  axes x1y2 $batitle, ";  # bloodacl
   my $xtic = 1;
   # Different range grasphs need different options
   my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
   my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
   my @xmonth = ( $onemonth, "\"%b\\n%y\"" ); # Jan 24
   my @xweek = ( $oneweek, "\"%d\\n%b\"" ); # 15 Jan
-  my $pointsize = "";
+  my $pointsize = "set pointsize 1\n";
   my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
   my $fillstyleborder = "fill solid border linecolor \"$c->{bgcolor}\""; # Small gap around each drink
-  #my $fillstyleborder = "fill solid border linecolor \"$c->{bgcolor}\""; # Small gap around each drink
-  #my $fillstyleborder = "fill solid noborder ";# Small gap around each drink
   if ( $g->{bigimg} eq "B" ) {  # Big image
-    $g->{maxd} = $g->{maxd} + 1; # Make room at the top of the graph for the legend
+    $g->{maxd} = $g->{maxd} + 1.5; # Make room at the top of the graph for the legend
     if ( $g->{range} > 365*4 ) {  # "all"
       ( $xtic, $xformat ) = @xyear;
     } elsif ( $g->{range} > 400 ) { # "2y"
@@ -282,9 +276,9 @@ sub plotgraph {
 #      "set mytics 7 \n" .
 #      "set my2tics 7 \n" .
       #"set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
-      "set xtics \"2007-01-01\", $xtic out $white \n" .  # Happens to be sunday, and first of year/month
+      "set xtics \"2007-01-01\", $xtic out nomirror $white \n" .  # Happens to be sunday, and first of year/month
       "set style $fillstyle \n" .
-      "set boxwidth 86400*0.7 absolute \n" .
+      "set boxwidth 86400 * 0.9 absolute \n" .
       "set key left top horizontal textcolor \"white\" \n" .
       "set grid xtics ytics  linewidth 0.1 linecolor \"white\" \n".
       "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
@@ -315,6 +309,40 @@ sub plotgraph {
 }
 
 
+# Helper to produce one link under the graph
+sub onelink {
+  my $g = shift;
+  my $txt = shift;
+  my $start = shift || "";
+  my $end = shift || "" ;
+  $start = "&gstart=$start" if ($start);
+  $end = "&gend=$end" if ($end);
+  my $c = $g->{c};
+  print "<a href='$c->{href}".$start.$end. "' >" .
+    #"<span>$txt</span></a>\n";
+    "<span style='border:1px solid white; padding: 1px 4px; color: white' >$txt</span></a>\n";
+}
+
+# Helper to produce the links under the graph
+sub graphlinks {
+  my $g = shift;
+  my $width = shift;
+  my $c = $g->{c};
+  my $t = localtime;
+  my $start = Time::Piece->strptime($g->{start},"%F");
+  my $end = Time::Piece->strptime($g->{end},"%F");
+  my $range = $end - $start;
+  onelink($g, "<<", ($start-$range)->ymd, ($end-$range)->ymd );
+  onelink($g, ">>", ($start+$range)->ymd, ($end+$range)->ymd );
+  onelink($g, "2w", ($t-14*$oneday)->ymd );
+  onelink($g, "Month"); # default values
+  onelink($g, "3m", $t->add_months(-3)->ymd );
+  onelink($g, "6m", $t->add_months(-6)->ymd );
+  onelink($g, "Year", $t->add_years(-1)->ymd );
+  onelink($g, "2y", $t->add_years(-2)->ymd );
+  onelink($g, "all", "2016-01-01",$t->ymd );  # Earlest known data in the system
+}
+
 # The graph itself
 sub graph {
   my $c = shift;
@@ -322,24 +350,33 @@ sub graph {
   $g->{c} = $c;
   # Parameters.
   $g->{bigimg} = $c->{mobile} ? "S" : "B";
-  $g->{reload} = 0;
+  my $reload = 0;
   if ($c->{op} =~ /Graph([BS]?)(X?)/ ) {
     $g->{bigimg} = $1 if ($1);
-    $g->{reload} = $2;
+    $reload = $2;
+  }
+  $g->{imgsz}="320,250";
+  if ( $g->{bigimg} eq "B" ) {  # Big image
+    $g->{imgsz} = "640,480";
   }
   # Date range, default to 30 days leading to tomorrow
   $g->{start} = util::param($c,"gstart", util::datestr("%F",-30) );
   $g->{end} = util::param($c,"gend", util::datestr("%F",1) );
+  # TODO - Keep start and stop as Time::Piece refs in g
 
   $g->{plotfile} = $c->{datadir} . $c->{username} . ".plot";
   $g->{cmdfile} = $c->{datadir} . $c->{username} . ".cmd";
   $g->{pngfile} = $c->{datadir} . $c->{username} . "$g->{start}-$g->{end}-$g->{bigimg}.png";
-  # TODO Check cache
 
-  #print  "graph: b='$g->{bigimg}' r='$g->{reload}' gs='$g->{start}' ge='$g->{end}' <br/>\n";
-  makedatafile($g);
-  plotgraph($g);
-
+  if (  -r $g->{pngfile} && !$reload ) { # Have a cached file
+    print "\n<!-- Cached graph op='$c->{op}' file='$g->{pngfile}' -->\n";
+    print STDERR "graph: Reusing a cached file $g->{pngfile} \n";
+  } else { # Have to plot a new one
+    print STDERR "graph: Generating $g->{pngfile} for $c->{op} \n";
+    #print  "graph: b='$g->{bigimg}' r='$g->{reload}' gs='$g->{start}' ge='$g->{end}' <br/>\n";
+    makedatafile($g);
+    plotgraph($g);
+  }
   # Finally, prine the HTML to display the graph
   my ( $imw,$imh ) = $g->{imgsz} =~ /(\d+),(\d+)/;
   my $htsize = "width=$imw height=$imh" if ($imh) ;
@@ -348,7 +385,7 @@ sub graph {
   } else {
     print "<a href='$c->{url}?o=GraphB'&gstart=$g->{start}&gend=$g->{end}'><img src=\"$g->{pngfile}\" $htsize/></a><br/>\n";
   }
-
+  graphlinks($g, $imw);
   print "<hr/>\n";
 
 
