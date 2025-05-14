@@ -66,8 +66,9 @@ $dbh->do(q{
 });
 $dbh->do("CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE)");  # Username, Id?
 $dbh->do("CREATE INDEX idx_glasses_location ON GLASSES (Location)");
-$dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)"); # Also effdate?
-
+$dbh->do("CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp)");
+$dbh->do("CREATE INDEX idx_effdate ON Glasses(strftime('%Y-%m-%d', Timestamp, '-06:00'))");
+# The effdate index speeds things up a lot!
 
 # Create BREWS table
 # A Brew is a definition of a beer or other stuff, whereas a Glass is the
