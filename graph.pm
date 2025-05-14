@@ -83,7 +83,7 @@ sub oneday {
     # TODO - Refactor the stepwise calculation into its own routine in mainlist,
     # and use that wihtin in the loop below.
   }
-  $g->{sth}->execute( $day );
+  $g->{sth}->execute( $c->{username}, $day );
   my $sum = 0;
   my $drinksline = ""; # Individual drinks
   my @drinks;
@@ -164,7 +164,8 @@ sub makedatafile {
       StDrinks,
       Location
     from GLASSES
-    where effdate = ?
+    where username = ?
+      and effdate = ?
       and StDrinks > 0
     order by effdate, Time ";
   $g->{sth} = $c->{dbh}->prepare($sql);
@@ -351,7 +352,7 @@ sub graph {
   # Parameters.
   $g->{bigimg} = $c->{mobile} ? "S" : "B";
   my $reload = 0;
-  if ($c->{op} =~ /Graph([BS]?)(X?)/ ) {
+  if ($c->{op} =~ /Graph([BS]?)(X?)/i ) {
     $g->{bigimg} = $1 if ($1);
     $reload = $2;
   }
@@ -372,7 +373,7 @@ sub graph {
     print "\n<!-- Cached graph op='$c->{op}' file='$g->{pngfile}' -->\n";
     print STDERR "graph: Reusing a cached file $g->{pngfile} \n";
   } else { # Have to plot a new one
-    print STDERR "graph: Generating $g->{pngfile} for $c->{op} \n";
+    print STDERR "graph: Generating $g->{pngfile} for op '$c->{op}' \n";
     #print  "graph: b='$g->{bigimg}' r='$g->{reload}' gs='$g->{start}' ge='$g->{end}' <br/>\n";
     makedatafile($g);
     plotgraph($g);
