@@ -101,7 +101,7 @@ use Time::Piece;
 
 use URI::Escape;
 use CGI qw( -utf8 );
-our $q = CGI->new;
+my $q = CGI->new;
 $q->charset( "UTF-8" );
 
 
@@ -110,12 +110,28 @@ use DBI;
 my $databasefile = "beerdata/beertracker.db";
 die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
 
-our $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
+my $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
     or util::error($DBI::errstr);
 $dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
 $dbh->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
 # But watch out for file permissions on the -wal and -sha files
 #$dbh->trace(1);  # Lots of SQL logging in error.log
+
+################################################################################
+# Program modules
+################################################################################
+# TODO - More modules, more stuff away from the main script
+require "./persons.pm";   # List of people, their details, editing, helpers
+require "./locations.pm"; # Locations stuff
+require "./brews.pm";  # Lists of various brews, etc
+require "./glasses.pm"; # Main input for and the full list
+require "./comments.pm"; # Stuff for comments, ratings, and photos
+require "./util.pm"; # Various helper functions
+require "./graph.pm"; # The daily graph
+require "./stats.pm"; # Various statistics
+require "./mainlist.pm"; # The main "full" list
+require "./VERSION.pm"; # auto-generated version info
+
 
 ################################################################################
 # Constants and setup
@@ -139,7 +155,7 @@ my $scriptdir = "./scripts/";  # screen scraping scripts
 my $plotfile = "";
 my $cmdfile = "";
 my $photodir = "";
-our $username = ($q->remote_user()||"");
+my $username = ($q->remote_user()||"");
 
 # Sudo mode, normally commented out
 #$username = "dennis" if ( $username eq "heikki" );  # Fake user to see one with less data
@@ -214,12 +230,11 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
 # These are used is so many places that it is OK to have them as globals
 # TODO - Check if all are used, after refactoring
 my $edit= param("e");  # Record to edit
-my $type = param("type"); # Switch record type
-our $qry = param("q");  # filter query, greps the list
+my $qry = param("q");  # filter query, greps the list
 my $qrylim = param("f"); # query limit, "x" for extra info, "f" for forcing refresh of board
 my $yrlim = param("y"); # Filter by year
-our $op  = param("o");  # operation, to list breweries, locations, etc
-our $url = $q->url;
+my $op  = param("o");  # operation, to list breweries, locations, etc
+my $url = $q->url;
 my $sort = param("s");  # Sort key
 # the POST routine reads its own input parameters
 
@@ -241,7 +256,7 @@ my $c = {
   'cmdfile'  => $cmdfile,
   'photodir' => $photodir,
   'dbh'      => $dbh,
-  'url'      => $url,
+  'url'      => $q->url,
   'href'     => "$url?o=$op",
   'cgi'      => $q,
   'edit'     => $edit,
@@ -255,21 +270,6 @@ my $c = {
 
 };
 
-################################################################################
-# Program modules
-################################################################################
-# After declaring 'our' variables, before calling any functions
-# TODO - More modules, more stuff away from the main script
-require "./persons.pm";   # List of people, their details, editing, helpers
-require "./locations.pm"; # Locations stuff
-require "./brews.pm";  # Lists of various brews, etc
-require "./glasses.pm"; # Main input for and the full list
-require "./comments.pm"; # Stuff for comments, ratings, and photos
-require "./util.pm"; # Various helper functions
-require "./graph.pm"; # The daily graph
-require "./stats.pm"; # Various statistics
-require "./mainlist.pm"; # The main "full" list
-require "./VERSION.pm"; # auto-generated version info
 
 ################################################################################
 # Main program
