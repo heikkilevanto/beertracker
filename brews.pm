@@ -62,6 +62,7 @@ sub brewcolor {
   for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
     my $pat = $drinkcolors[$i+1];
     if ( $type =~ /$pat/i ) {
+      #print STDERR "brewcolor: got '$drinkcolors[$i]' for '$type' via '$pat' \n";
       return $drinkcolors[$i] ;
     }
   }

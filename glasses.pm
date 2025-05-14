@@ -56,7 +56,7 @@ sub inputform {
   print "<table>\n";
 
   print "<tr><td>Id $rec->{Id}</td>\n";
-  my $stamp = main::datestr("%F %T");
+  my $stamp = util::datestr("%F %T");
   print "<td>" ; # <input name='stamp' value='$stamp' size=25 $clr/>";
   my ($date,$time) = ( "", "");
   ($date,$time) = split ( ' ',$rec->{Timestamp} ) if ($rec->{Timestamp} );

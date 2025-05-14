@@ -97,6 +97,8 @@ use open ':encoding(UTF-8)';  # Data files are in utf-8
 binmode STDOUT, ":utf8"; # Stdout only. Not STDIN, the CGI module handles that
 binmode STDERR, ":utf8"; #
 
+use Time::Piece;
+
 use URI::Escape;
 use CGI qw( -utf8 );
 our $q = CGI->new;
@@ -187,12 +189,6 @@ $scrapers{"Fermentoren"} = "fermentoren.pl";
 # $shortnames{"Væskebalancen"} = "VB";
 
 
-my $bodyweight;  # in kg, for blood alc calculations
-$bodyweight = 120 if ( $username eq "heikki" );
-$bodyweight =  83 if ( $username eq "dennis" );
-my $burnrate = .10; # g of alc pr kg of weight (.10 to .15)
-  # Assume .10 as a pessimistic value. Would need an alc meter to calibrate
-
 # Default image sizes (width in pixels)
 my %imagesizes;
 $imagesizes{"thumb"} = 90;
@@ -211,75 +207,6 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
   # That gets filtered away before saving.
   # (This could be saved in each users config, if we had such)
 
-# Data line types - These define the field names on the data line for that type
-# as well as which input fields will be visible.
-my %datalinetypes;
-# Pseudo-type "None" indicates a line not worth saving, f.ex. no beer on it
-
-my %subtypes;
-
-# The old style lines with no type.
-
-# A dedicated beer entry. Almost like above. But with a type and subtype
-$datalinetypes{"Beer"} = [
-  "stamp", "type", "wday", "effdate", "loc",
-  "maker",  # Brewery
-  "name",   # Name of the beer
-  "vol", "style", "alc", "pr", "rate", "com", "geo",
-  "subtype", # Taste of the beer, could be fruits, special hops, or type of barrel
-  "photo" ]; # Image file name
-
-# Wine
-$datalinetypes{"Wine"} = [ "stamp", "type", "wday", "effdate", "loc",
-  "subtype", # Red, White, Bubbly, etc
-  "maker", # brand or house
-  "name", # What it says on the label
-  "style", # Can be grape (chardonnay) or country/region (rioja)
-  "vol", "alc", "pr", "rate", "com", "geo", "photo"];
-
-$subtypes{"Wine"} = [ "Red", "White", "Sweet", "Bubbly" ];
-
-# Spirits, Booze. Also used for coctails
-$datalinetypes{"Spirit"} = [ "stamp", "type", "wday", "effdate", "loc",
-  "subtype",   # whisky, snaps
-  "maker", # brand or house
-  "name",  # What it says on the label
-  "style", # can be coctail, country/(region, or flavor
-  "vol", "alc",  # These are for the alcohol itself
-  "pr", "rate", "com", "geo", "photo"];
-$datalinetypes{"Booze"} = $datalinetypes{"Spirit"};
-
-$datalinetypes{"Cider"} = [
-  "stamp", "type", "wday", "effdate", "loc",
-  "maker",  # Brewery
-  "name",   # Name of the beer
-  "vol", "style", "alc", "pr", "rate", "com", "geo",
-  "subtype", # Taste of the beer, could be fruits, special hops, or type of barrel
-  "photo" ]; # Image file name
-
-
-# A comment on a night out.
-$datalinetypes{"Night"} = [ "stamp", "type", "wday", "effdate", "loc",
-  "subtype",# bar discussion, concert, lunch party, etc
-  "com",    # Any comments on the night
-  "people", # Who else was here
-  "geo", "photo" ];
-
-# Restaurants and bars
-$datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
-  "subtype",  # Type of restaurant, "Thai"
-  "rate", "pr", # price for the night, per person
-  "food",   # Food and drink
-  "people",
-  "com", "geo",
-  "photo"];
-
-# To add a new record type, define it here
-
-# To add new input fields, add them to the end of the field list, so they
-# will default to empty in old records that don't have them.
-# You probably want to add special code in the input form, record POST, and
-# to the various lists.
 
 ################################################################################
 # Input Parameters
@@ -289,14 +216,9 @@ $datalinetypes{"Restaurant"} = [ "stamp", "type", "wday", "effdate", "loc",
 my $edit= param("e");  # Record to edit
 my $type = param("type"); # Switch record type
 our $qry = param("q");  # filter query, greps the list
-my $qryfield = param("qf") || "rawline"; # Which field to match $qry to
 my $qrylim = param("f"); # query limit, "x" for extra info, "f" for forcing refresh of board
 my $yrlim = param("y"); # Filter by year
 our $op  = param("o");  # operation, to list breweries, locations, etc
-my $maxlines = param("maxl") || "$yrlim$yrlim" || "45";  # negative = unlimited
-   # Defaults to 25, unless we have a year limit, in which case defaults to something huge.
-my $sortlist = param("sort") || 0; # default to unsorted, chronological lists
-my $notbef = param("notbef") || ""; # Skip parsing records older than this
 our $url = $q->url;
 my $sort = param("s");  # Sort key
 # the POST routine reads its own input parameters
@@ -306,26 +228,11 @@ my $sort = param("s");  # Sort key
 # Mostly from reading the file, used in various places
 ################################################################################
 # TODO - Remove most of these
-my $foundrec;  # The record we found, either the last one or one defined by edit param
-my @records; # All data records, parsed
-my @lines; # All data lines, unparsed
-my %seen; # Count how many times various names seen before (for NEW marks)
-my $todaydrinks = "";  # For a hint in the comment box
 my %ratesum; # sum of ratings for every beer
 my %ratecount; # count of ratings for every beer, for averaging
-my %restaurants; # maps location name to restaurant records, mostly for the type
-my %bloodalc; # max blood alc for each day
-my %lastseen; # Last time I have seen a given beer
-my %monthdrinks; # total drinks for each calendar month
-my %monthprices; # total money spent. Indexed with "yyyy-mm"
-my %averages; # floating average by effdate. Calculated in graph, used in extended full list
-my $starttime = "";  # For the datestr helper
-my %lastdateindex; # index of last record for each effdate
-my $commentlines = 0; # Number of comment lines in the data file
-my $commentedrecords = 0; # Number of commented-out data lines
-my $efftoday = datestr( "%F", -0.3, 1); #  today's date
 
-# Collect all 'global' variables here in one context
+# Collect all 'global' variables here in one context that gets passed around
+# a lot.
 my $c = {
   'username' => $username,
   'datadir'  => $datadir,
@@ -370,7 +277,9 @@ require "./VERSION.pm"; # auto-generated version info
 
 
 if ($devversion) { # Print a line in error.log, to see what errors come from this invocation
-  print STDERR datestr() . " " . $q->request_method . " " .  $ENV{'QUERY_STRING'} . " \n";
+  my $now = localtime;
+  print STDERR  "\n" . $now->ymd . " " . $now->hms . " " .
+     $q->request_method . " " . $ENV{'QUERY_STRING'}. " \n";
 }
 
 if ( $devversion && $op eq "copyproddata" ) {
@@ -379,7 +288,6 @@ if ( $devversion && $op eq "copyproddata" ) {
   exit;
 }
 
-my $datafilecomment = "";
 
 # # Default new users to the about page, we have nothing else to show
 # TODO - Make a better check, and force  the about page to show an input form
@@ -423,13 +331,12 @@ if ( $q->request_method eq "POST" ) {
 }
 
 
-htmlhead($datafilecomment); # Ok, now we can commit to making a HTML page
+htmlhead(); # Ok, now we can commit to making a HTML page
 
 print util::topline($c);
 
 if ( $op =~ /Board/i ) {
   glasses::inputform($c);
-  oldstuff();
   graph::graph($c);
   beerboard();
   mainlist::mainlist($c);
@@ -442,7 +349,6 @@ if ( $op =~ /Board/i ) {
 } elsif ( $op =~ /DataStats/i ) {
   stats::datastats($c);
 } elsif ( $op eq "About" ) {
-  # The about page went from 500ms to under 100 when dropping the oldstuff
   about();
 } elsif ( $op =~ /Brew/i ) {
   brews::listbrews($c);
@@ -466,14 +372,6 @@ exit();  # The rest should be subs only
 
 # End of main
 
-# Helper to do all the 'global' stuff needed by old form pages
-# Used to be called in the beginning, but separated for different pages
-# above, so we can skip it for modern things
-sub oldstuff {
-  readdatalines();
-  extractgeo(); # Extract geo coords
-  javascript(); # with some javascript trickery in it
-}
 
 ################################################################################
 # Copy production data to dev file
@@ -501,215 +399,90 @@ sub copyproddata {
 } # copyproddata
 
 
-################################################################################
-# Read the records
-# Reads all the records into @lines, to simulate the old way of reading the
-# whole file. Puts the whole records in @records
-# This costs some 400ms for every page, but speeds up the really slow ones, like
-# full list filtering from 30 seconds to 3.
-################################################################################
-# TODO - At some point we won't need this at all, when each function reads its
-# own things from the database.
-
-sub readdatalines {
-  my $nlines = 0;
-  $lines[0] = "";
-  my $sql = "select * from glassrec where username = ? order by stamp";
-  my $get_sth = $dbh->prepare($sql);
-  $get_sth->execute($username);
-  my $rn = 1;
-
- while ( my $rec = $get_sth->fetchrow_hashref ) {
-    $lines[$rn] = $rec->{stamp};
-    fixrecord($rec, $rn);
-    $records[$rn] = $rec;
-    $rn++;
-  }
-  my $ndatalines = scalar(@lines)-1;
-  return "<!-- Read $ndatalines records from the database to the lines array-->\n";
-}
-
-################################################################################
-# Get all geo locations
-# TODO - Don't use this for the javascript, send also the 'last' time
-################################################################################
-sub extractgeo {
-#  Earlier version of the sql, with last seen and sorting
-#     select name, GeoCoordinates, max(timestamp) as last
-#     from Locations, glasses
-#     where  LOCATIONS.id = GLASSES.Location
-#       and GeoCoordinates is not null
-#     group by location
-#     order by last desc
-  my $sql = q(
-    select name, GeoCoordinates
-    from Locations, glasses
-    where  LOCATIONS.id = GLASSES.Location
-      and GeoCoordinates is not null
-    group by location
-  ); # No need to sort here, since put it all in a hash.
-  my $get_sth = $dbh->prepare($sql);
-  $get_sth->execute();
-  while ( my ($name, $geo, $last) = $get_sth->fetchrow_array ) {
-    $geolocations{$name} = $geo;
-  }
-
-}
-
-
-
-################################################################################
-# A helper to calculate blood alcohol for a given effdate
-# Returns a hash with bloodalcs for each timestamp for the effdate
-#  $bloodalc{"max"} = max ba for the date
-#  $bloodacl{"date"} = the effdate we calculated for
-#  $bloodalc{$timestamp} = ba after ingesting that glass
-################################################################################
-# TODO: Change this to return a list of values: ( date, max, hashref ). Add time when gone
-
-sub bloodalcohol {
-  my $effdate = shift; # effdate we are interested in
-  if ( !$bodyweight ) {
-    print STDERR "Can not calculate alc for $username, don't know body weight \n";
-    return undef;
-  }
-  #print STDERR "Bloodalc for '$effdate' \n";
-  my $bloodalc = {};
-  $bloodalc->{"date"} = $effdate;
-  my $sql = q(
-    select
-      timestamp,
-      strftime ('%Y-%m-%d', timestamp,'-06:00') as effdate,
-      alc * volume as alcvol
-    from glasses
-    where effdate = ?
-      and alc > 0
-      and volume > 0
-    order by timestamp
-  ); # No need to sort here, since put it all in a hash.
-  my $get_sth = $dbh->prepare($sql);
-  $get_sth->execute($effdate);
-  my $alcinbody = 0;
-  my $balctime = 0;
-  my $maxba = 0;
-  while ( my ($stamp, $eff, $alcvol) = $get_sth->fetchrow_array ) {
-    next unless $alcvol;
-    my $drtime = $1 + $2/60 if ($stamp =~/ (\d?\d):(\d\d)/ ); # frac hrs
-    $drtime += 24 if ( $drtime < $balctime ); # past midnight
-    my $timediff = $drtime - $balctime;
-    $balctime = $drtime;
-    $alcinbody -= $burnrate * $bodyweight * $timediff;
-    $alcinbody = 0 if ( $alcinbody < 0);
-    $alcinbody += $alcvol / $onedrink * 12 ; # grams of alc in std drink
-    my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-    $maxba = $ba if ( $ba > $maxba );
-    $bloodalc->{$stamp} = $ba;
-    #print STDERR "  $stamp : $ba \n";
-  }
-  $bloodalc->{"max"} = $maxba ;
-  #print STDERR "  max : $maxba \n";
-  return $bloodalc;
-
-}
-
-#     # Get allgone  TODO
-#     my $now = datestr( "%H:%M", 0, 1);
-#     my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs
-#     $drtime += 24 if ( $drtime < $balctime ); # past midnight
-#     my $timediff = $drtime - $balctime;
-#     $alcinbody -= $burnrate * $bodyweight * $timediff;
-#     $alcinbody = 0 if ( $alcinbody < 0);
-#     $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-#     my $lasts = $alcinbody / ( $burnrate * $bodyweight );
-#     my $gone = $drtime + $lasts;
-#     $gone -= 24 if ( $gone > 24 );
-#     $allgone = sprintf( "%02d:%02d", int($gone), ( $gone - int($gone) ) * 60 );
-
-
 
 ###############################################
 # TODO - Move the photo handling into its own module.
 # At the moment not used at all, kept here as an example
 
-
-# Get image file name. Width can be in pixels, or special values like
-# "orig" for the original image, "" for the plain name to be saved in the record,
-# or "thumb", "mob", "pc" for default sizes
-sub imagefilename {
-  my $fn = shift; # The raw file name
-  my $width = shift; # How wide we want it, or "orig" or ""
-  $fn =~ s/(\.?\+?orig)?\.jpe?g$//i; # drop extension if any
-  return $fn if (!$width); # empty width for saving the clean filename in $rec
-  $fn = "$photodir/$fn"; # a real filename
-  if ( $width =~ /\.?orig/ ) {
-    $fn .= "+orig.jpg";
-    return $fn;
-  }
-  $width = $imagesizes{$width} || "";
-  return "" unless $width;
-  $width .= "w"; # for easier deleting *w.jpg
-  $fn .= "+$width.jpg";
-  return $fn;
-}
-
-# Produce the image tag
-sub image {
-  my $rec = shift;
-  my $width = shift; # One of the keys in %imagesizes
-  return "" unless ( $rec->{photo} && $rec->{photo} =~ /^2/);
-  my $orig = imagefilename($rec->{photo}, "orig");
-  if ( ! -r $orig ) {
-    print STDERR "Photo file '$orig' not found for record $rec->{stamp} \n";
-    return "";
-  }
-  my $fn = imagefilename($rec->{photo}, $width);
-  return "" unless $fn;
-  if ( ! -r $fn ) { # Need to resize it
-    my $size = $imagesizes{$width};
-    $size = $size . "x". $size .">";
-    system ("convert $orig -resize '$size' $fn");
-    print STDERR "convert $orig -resize '$size' $fn \n";
-  }
-  my $w = $imagesizes{$width};
-  my $itag = "<img src='$fn' width='$w' />";
-  my $tag = "<a href='$orig'>$itag</a>";
-  return $tag;
-
-}
-# - Make a routine to scale to any given width. Check if already there.
-# - Use that when displaying
-# - When clearing the cache, delete scaled images over a month old, but not .orig
-sub savefile {
-  my $rec = shift;
-  my $fn = $rec->{stamp};
-  $fn =~ s/ /+/; # Remove spaces
-  $fn .= ".jpg";
-  if ( ! -d $photodir ) {
-    print STDERR "Creating photo dir $photodir - FIX PERMISSIONS \n";
-    print STDERR "chgrp heikki $photodir; chmod g+sw $photodir \n";
-    mkdir($photodir);
-  }
-  my $savefile = "$photodir/$fn";
-  my ( $base, $sec ) = $fn =~ /^(.*):(\d\d)/;
-  $sec--;
-  do {
-    $sec++;
-    $fn = sprintf("%s:%02d", $base,$sec);
-    $savefile = imagefilename($fn,"orig");
-  }  while ( -e $savefile ) ;
-  $rec->{photo} = imagefilename($fn,"");
-
-  my $filehandle = $q->upload('newphoto');
-  my $tmpfilename = $q->tmpFileName( $filehandle );
-  my $conv = `/usr/bin/convert $tmpfilename -auto-orient -strip $savefile`;
-    # -auto-orient turns them upside up. -strip removes the orientation, so
-    # they don't get turned again when displaying.
-  print STDERR "Conv returned '$conv' \n" if ($conv); # Can this happen
-  my $fsz = -s $savefile;
-  print STDERR "Uploaded $fsz bytes into '$savefile' \n";
-}
-
-########################
+#
+# # Get image file name. Width can be in pixels, or special values like
+# # "orig" for the original image, "" for the plain name to be saved in the record,
+# # or "thumb", "mob", "pc" for default sizes
+# sub XXXimagefilename {
+#   my $fn = shift; # The raw file name
+#   my $width = shift; # How wide we want it, or "orig" or ""
+#   $fn =~ s/(\.?\+?orig)?\.jpe?g$//i; # drop extension if any
+#   return $fn if (!$width); # empty width for saving the clean filename in $rec
+#   $fn = "$photodir/$fn"; # a real filename
+#   if ( $width =~ /\.?orig/ ) {
+#     $fn .= "+orig.jpg";
+#     return $fn;
+#   }
+#   $width = $imagesizes{$width} || "";
+#   return "" unless $width;
+#   $width .= "w"; # for easier deleting *w.jpg
+#   $fn .= "+$width.jpg";
+#   return $fn;
+# }
+#
+# # Produce the image tag
+# sub XXXimage {
+#   my $rec = shift;
+#   my $width = shift; # One of the keys in %imagesizes
+#   return "" unless ( $rec->{photo} && $rec->{photo} =~ /^2/);
+#   my $orig = imagefilename($rec->{photo}, "orig");
+#   if ( ! -r $orig ) {
+#     print STDERR "Photo file '$orig' not found for record $rec->{stamp} \n";
+#     return "";
+#   }
+#   my $fn = imagefilename($rec->{photo}, $width);
+#   return "" unless $fn;
+#   if ( ! -r $fn ) { # Need to resize it
+#     my $size = $imagesizes{$width};
+#     $size = $size . "x". $size .">";
+#     system ("convert $orig -resize '$size' $fn");
+#     print STDERR "convert $orig -resize '$size' $fn \n";
+#   }
+#   my $w = $imagesizes{$width};
+#   my $itag = "<img src='$fn' width='$w' />";
+#   my $tag = "<a href='$orig'>$itag</a>";
+#   return $tag;
+#
+# }
+# # - Make a routine to scale to any given width. Check if already there.
+# # - Use that when displaying
+# # - When clearing the cache, delete scaled images over a month old, but not .orig
+# sub XXXsavefile {
+#   my $rec = shift;
+#   my $fn = $rec->{stamp};
+#   $fn =~ s/ /+/; # Remove spaces
+#   $fn .= ".jpg";
+#   if ( ! -d $photodir ) {
+#     print STDERR "Creating photo dir $photodir - FIX PERMISSIONS \n";
+#     print STDERR "chgrp heikki $photodir; chmod g+sw $photodir \n";
+#     mkdir($photodir);
+#   }
+#   my $savefile = "$photodir/$fn";
+#   my ( $base, $sec ) = $fn =~ /^(.*):(\d\d)/;
+#   $sec--;
+#   do {
+#     $sec++;
+#     $fn = sprintf("%s:%02d", $base,$sec);
+#     $savefile = imagefilename($fn,"orig");
+#   }  while ( -e $savefile ) ;
+#   $rec->{photo} = imagefilename($fn,"");
+#
+#   my $filehandle = $q->upload('newphoto');
+#   my $tmpfilename = $q->tmpFileName( $filehandle );
+#   my $conv = `/usr/bin/convert $tmpfilename -auto-orient -strip $savefile`;
+#     # -auto-orient turns them upside up. -strip removes the orientation, so
+#     # they don't get turned again when displaying.
+#   print STDERR "Conv returned '$conv' \n" if ($conv); # Can this happen
+#   my $fsz = -s $savefile;
+#   print STDERR "Uploaded $fsz bytes into '$savefile' \n";
+# }
+#
+# ########################
 
 
 ################################################################################
@@ -717,7 +490,6 @@ sub savefile {
 ################################################################################
 
 sub htmlhead {
-  my $datafilecomment = shift || "";
   print $q->header(
     -type => "text/html;charset=UTF-8",
     -Cache_Control => "no-cache, no-store, must-revalidate",
@@ -763,7 +535,6 @@ sub htmlhead {
   print "</head>\n";
   print "<body>\n";
   print "\n";
-  print $datafilecomment;
 } # htmlhead
 
 
@@ -772,174 +543,6 @@ sub htmlfooter {
   print "</body></html>\n";
 }
 
-
-
-
-################################################################################
-# Javascript trickery. Most of the logic is on the server side, but a few
-# things have to be done in the browser.
-################################################################################
-sub javascript {
-  my $script = "";
-
-  # Debug div to see debug output on my phone
-  $script .= <<'SCRIPTEND';
-    function db(msg) {
-      var d = document.getElementById("debug");
-      if (d) {
-        d.hidden = false;
-        d.innerHTML += msg + "<br/>";
-      }
-    };
-SCRIPTEND
-
-  $script .= <<'SCRIPTEND';
-    function clearinputs() {  // Clear all inputs, used by the 'clear' button
-      var inputs = document.getElementsByTagName('input');  // all regular input fields
-      for (var i = 0; i < inputs.length; i++ ) {
-        if ( inputs[i].type == "text" )
-          inputs[i].value = "";
-      }
-      const ids = [ "rate", "com" ];
-      for ( var i = 0; i < ids.length; i++) {
-        var r = document.getElementById(ids[i]);
-        if (r)
-          r.value = "";
-      };
-
-      // Hide the 'save' button, we are about to create a new entry
-      var save = document.getElementById("save");
-      save.hidden = true;  //
-
-    };
-SCRIPTEND
-
-  # Simple script to show the normally hidden lines for entering date, time,
-  # and geolocation
-  $script .= <<'SCRIPTEND';
-    function showrows() {
-      var rows = [ "td1", "td2", "td3"];
-      for (i=0; i<rows.length; i++) {
-        var r = document.getElementById(rows[i]);
-        //console.log("Unhiding " + i + ":" + rows[i], r);
-        if (r) {
-          r.hidden = ! r.hidden;
-        }
-      }
-    };
-SCRIPTEND
-
-  # A simple two-liner to redirect to a new page from the 'Show' menu when
-  # that changes
-  $script .= <<'SCRIPTEND';
-    var changeop = function(to) {
-      document.location = to;
-    };
-SCRIPTEND
-
-
-  # Try to get the geolocation. Async function, to wait for the user to give
-  # permission (for good, we hope)
-  # (Note, on FF I needed to uninstall the geoclue package before I could get
-  # locations on my desktop machine)
-
-  $script .= "var geolocations = [ \n";
-  for my $k (sort keys(%geolocations) ) {
-    my ($lat,$lon, undef) = geo($geolocations{$k});
-    if ( $lat && $lon ) {  # defensive coding
-      $script .= " { name: '$k', lat: $lat, lon: $lon }, \n";
-    }
-  }
-  $script .= " ]; \n";
-
-  $script .= "var origloc=\" $foundrec->{loc}\"; \n"
-    if ( $foundrec );
-
-  $script .= <<'SCRIPTEND';
-    var geoloc = "";
-
-    function savelocation (myposition) {
-    }
-
-    function OLDsavelocation (myposition) {  // TODO - Geo disabled for now
-      geoloc = " " + myposition.coords.latitude + " " + myposition.coords.longitude;
-      var gf = document.getElementById("geo");
-      if (! gf) {
-        return;
-      }
-      console.log ("Geo field: '" + gf.value + "'" );
-      if ( ! gf.value ||  gf.value.match( /^ / )) { // empty, or starts with a space
-        var el = document.getElementsByName("geo");
-        if (el) {
-          for ( i=0; i<el.length; i++) {
-            el[i].value=geoloc;
-          }
-        }
-        console.log("Saved the location '" + geoloc + "' in " + el.length + " inputs");
-        var loc = document.getElementById("loc");
-        if (! loc)
-          return;
-        var locval = loc.value + " ";
-        if ( locval.startsWith(" ")) {
-          const R = 6371e3; // earth radius in meters
-          var latcorr = Math.cos(myposition.coords.latitude * Math.PI/180);
-          var bestdist = 20;  // max acceptable distance
-          var bestloc = "";
-          for (var i in geolocations) {
-            var dlat = (myposition.coords.latitude - geolocations[i].lat) * Math.PI / 180 * latcorr;
-            var dlon = (myposition.coords.longitude - geolocations[i].lon) * Math.PI / 180;
-            var dist = Math.round(Math.sqrt((dlat * dlat) + (dlon * dlon)) * R);
-            if ( dist < bestdist ) {
-              bestdist = dist;
-              bestloc = geolocations[i].name;
-            }
-          }
-          console.log("Best match: " + bestloc + " at " + bestdist );
-
-          if (bestloc) {
-            loc.value = " " + bestloc + " [" + bestdist + "m]";
-          } else {
-            loc.value = origloc;
-          }
-          if ( origloc.trim() != bestloc.trim() ) {
-            var of = document.getElementById("oldloc");
-            of.hidden = false;  // display the original location
-          }
-        }
-      }
-    }
-
-    function geoerror(err) {
-      console.log("GeoError" );
-      console.log(err);
-    }
-
-    function getlocation () {
-      if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(savelocation,geoerror);
-        } else {
-          console.log("No geoloc support");
-        }
-    }
-
-    // Get the location in the beginning, when ever window gets focus
-    window.addEventListener('focus', getlocation);
-    // Do not use document.onload(), or a timer. FF on Android does not like
-    // often-repeated location requests, and will disallow location for the page
-    // see #272
-
-SCRIPTEND
-
-  # Take a photo
-  $script .= <<'SCRIPTEND';
-  function takephoto() {
-    var inp = document.getElementsByName("newphoto");
-    inp[0].click();
-  }
-SCRIPTEND
-
-  print "<script>\n$script</script>\n";
-}
 
 
 
@@ -953,16 +556,14 @@ sub beerboard {
   if ( $op =~ /board(-?\d+)/i ) {
     $extraboard = $1;
   }
-  if ( ! $foundrec ) {
-    my $sql = "select * from glassrec " .
-              "where username = ? " .
-              "order by stamp desc ".
-              "limit 1";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute( $c->{username} );
-    $foundrec = $sth->fetchrow_hashref;
-    $sth->finish;
-  }
+  my $sql = "select * from glassrec " .
+            "where username = ? " .
+            "order by stamp desc ".
+            "limit 1";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( $c->{username} );
+  my $foundrec = $sth->fetchrow_hashref;
+  $sth->finish;
 
   my $locparam = param("loc") || $foundrec->{loc} || "";
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
@@ -1302,15 +903,6 @@ sub about {
 # Various small helpers
 ################################################################################
 
-# Helper to trim leading and trailing spaces
-sub trim {
-  my $val = shift || "";
-  $val =~ s/^ +//; # Trim leading spaces
-  $val =~ s/ +$//; # and trailing
-  $val =~ s/\s+/ /g; # and repeated spaces in the middle
-  return $val;
-}
-
 # Helper to sanitize input data
 sub param {
   my $tag = shift;
@@ -1340,92 +932,6 @@ sub filt {
   my $link = "<a href='$url?$op$param$fld' $style>" .
     "<$tag>$dsp</$endtag></a>";
   return $link;
-}
-
-
-# Helper to split the filter string into individual words, each of which is
-# a new filter link. Useful with long beer names etc
-sub splitfilter {
-  my $f = shift || "";  # current filter term
-  my $ret = "";
-  for my $w ( split ( /\W+/, $f) ) {
-    $ret .= "<a href='$url?o=$op&q=".uri_escape_utf8($w)."'><span>$w</span></a> ";
-  }
-  return $ret;
-}
-
-
-# Helper to filter out records
-# Checks them against $qry, $qryfield and $yrlim
-#    next if filtered ( $rec );
-# returns 0 if the record should be displayed
-sub filtered {
-  my $rec = shift;
-  my $newfield = shift; # the field to check for new mark. Defaults to all relevant
-  my $skip = 0; # default to displaying it
-  return 1 if ( !$rec ); # nothing to show
-  if ( $qryfield eq "shortstyle" ) {
-    checkshortstyle($rec); # Make sure we have a short style
-  } elsif ( $qryfield eq "new" ) {
-    checknew($rec, $newfield);
-  } elsif ( $qryfield eq "geoerror" ) {
-    checkgeoerror($rec);
-  }
-  if ( $qryfield eq "rawline" && ! $rec->{rawline} ) {
-    for my $k ( keys %{$rec} ) {
-      $rec->{rawline} .= "; " . ( $rec->{$k} || "" ) ;
-    }
-    #util::error ( "Made rawline '$rec->{rawline}' ");
-  }
-  if ( $qry ) {
-    $rec->{$qryfield} = "" if ( !defined($rec->{$qryfield} ) );
-    $skip = 1 if ( $rec->{$qryfield} !~ /\b$qry\b/i ) ;
-  } else {
-    if (  $qryfield !~ /rawline/i ) {
-      if ( ! defined($rec->{$qryfield}) || ! $rec->{$qryfield} ) {
-        $skip = 1;
-      }
-    }
-  }
-  if ( $yrlim ) {
-    $skip = 1 if ( $rec->{stamp} !~ /^$yrlim/ );
-  }
-  return $skip;
-}
-
-# Helper to pring a search form
-sub searchform {
-  my $rectype = shift || "Beer";
-  my $r = "" .
-    "<form method=GET accept-charset='UTF-8'> " .
-    "<input type=hidden name='o' value=$op />\n" .
-    "<input type=text name='q' value='$qry' />  \n " .
-    "<select name='qf' style='width:6em;'> \n";
-  $r .=  "<option value='rawline'>(any)</option>\n";
-
-  foreach my $fn ( fieldnames(), "shortstyle", "new", "geoerror" ) {
-    my $dsp = ucfirst($fn);
-    my $sel = "";
-    $sel = "selected" if ( $fn eq $qryfield );
-    $r .=  "<option value='$fn' $sel>$dsp</option>\n";
-  }
-  $r .= "</select> \n" ;
-  $r .=  "<input type=hidden name=notbef value='$notbef' />\n" if ( $notbef gt "2000" );
-  $r .=  "<input type=hidden name=f value='$qrylim' />\n" if ( $qrylim);
-  $r .=  "<input type=submit value='Search'/> \n " .
-    "</form> \n";
-  return $r;
-}
-
-# Helper to print "(NEW)" in case we never seen the entry before
-sub newmark {
-  my $v = shift;
-  my $rest = shift || "";
-  return "" if ( $rest =~ /^Restaurant/);
-  return "" if ($seen{$v} && $seen{$v} != 1);
-  return "" if ( $v =~ /mixed|misc/i );  # We don't collect those in seen
-  return "" if ( scalar(keys(%seen)) < 2); # No seen marks collected
-  return " <i>new</i> ";
 }
 
 
@@ -1464,184 +970,155 @@ sub aboutlink {
   "</a></$tag>\n";
 }
 
-# Helper to make a google link
-sub glink {
-  my $qry = shift;
-  my $txt = shift || "Google";
-  return "" unless $qry;
-  $qry = uri_escape_utf8($qry);
-  my $lnk = "&nbsp;<i>(<a href='https://www.google.com/search?q=$qry'" .
-    " target='_blank' class='no-print'><span>$txt</span></a>)</i>\n";
-  return $lnk;
-}
+# TODO - These link functions should live in util
+# For now they are not used at all. Kept here for future reference
+# # Helper to make a google link
+#sub glink {
+#   my $qry = shift;
+#   my $txt = shift || "Google";
+#   return "" unless $qry;
+#   $qry = uri_escape_utf8($qry);
+#   my $lnk = "&nbsp;<i>(<a href='https://www.google.com/search?q=$qry'" .
+#     " target='_blank' class='no-print'><span>$txt</span></a>)</i>\n";
+#   return $lnk;
+# }
 
-# Helper to make a Ratebeer search link
-sub rblink {
-  my $qry = shift;
-  my $txt = shift || "Ratebeer";
-  return "" unless $qry;
-  $qry = uri_escape_utf8($qry);
-  my $lnk = "<i>(<a href='https://www.ratebeer.com/search?q=$qry' " .
-    " target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
-  return $lnk;
-}
+# # Helper to make a Ratebeer search link
+#sub XXrblink {
+#   my $qry = shift;
+#   my $txt = shift || "Ratebeer";
+#   return "" unless $qry;
+#   $qry = uri_escape_utf8($qry);
+#   my $lnk = "<i>(<a href='https://www.ratebeer.com/search?q=$qry' " .
+#     " target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
+#   return $lnk;
+# }
+#
+# # Helper to make a Untappd search link
+#sub XXutlink {
+#   my $qry = shift;
+#   my $txt = shift || "Untappd";
+#   return "" unless $qry;
+#   $qry = uri_escape_utf8($qry);
+#   my $lnk = "<i>(<a href='https://untappd.com/search?q=$qry'" .
+#     " target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
+#   return $lnk;
+# }
 
-# Helper to make a Untappd search link
-sub utlink {
-  my $qry = shift;
-  my $txt = shift || "Untappd";
-  return "" unless $qry;
-  $qry = uri_escape_utf8($qry);
-  my $lnk = "<i>(<a href='https://untappd.com/search?q=$qry'" .
-    " target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
-  return $lnk;
-}
-
-sub maplink {
-  my $g = shift;
-  my $txt = shift || "Map";
-  return "" unless $g;
-  my ( $la, $lo, undef ) = geo($g);
-  my $lnk = "<a href='https://www.google.com/maps/place/$la,$lo' " .
-  "target='_blank' class='no-print'><span>$txt</span></a>";
-  return $lnk;
-}
-
-# Helper to sanitize numbers
-sub number {
-  my $v = shift || "";
-  $v =~ s/,/./g;  # occasionally I type a decimal comma
-  $v =~ s/[^0-9.-]//g; # Remove all non-numeric chars
-  $v =~ s/-$//; # No trailing '-', as in price 45.-
-  $v =~ s/\.$//; # Nor trailing decimal point
-  $v = 0 unless $v;
-  return $v;
-}
-
-# Sanitize prices to whole ints
-sub price {
-  my $v = shift || "";
-  $v = number($v);
-  $v =~ s/[^0-9-]//g; # Remove also decimal points etc
-  return $v;
-}
+#sub XXmaplink {
+#   my $g = shift;
+#   my $txt = shift || "Map";
+#   return "" unless $g;
+#   my ( $la, $lo, undef ) = geo($g);
+#   my $lnk = "<a href='https://www.google.com/maps/place/$la,$lo' " .
+#   "target='_blank' class='no-print'><span>$txt</span></a>";
+#   return $lnk;
+# }
 
 
-# helper to make a unit displayed in smaller font
-sub unit {
-  my $v = shift;
-  my $u = shift || "XXX";  # Indicate missing units so I see something is wrong
-  return "" unless $v;
-  return "$v<span style='font-size: xx-small'>$u</span> ";
-}
 
 
-# helper to display the units string
-# price (literprice), alc, vol, drinks, (bloodalc)
-sub units {
-  my $rec = shift;
-  my $extended = shift || "";
-  my $s = "[$rec->{glassid}] " .  "<b>". unit($rec->{vol}, "cl") . "</b>";
-  $s .= unit($rec->{pr},".-");
-  if ($extended) {
-    if ($rec->{pr} && $rec->{vol}) {
-      my $lpr = int($rec->{pr} / $rec->{vol} * 100);
-      $s .= "(" . unit($lpr, "/l") . ") ";
-    }
-  }
-  $s .=  unit($rec->{alc},'%');
-  if ( $rec->{drinks} && $rec->{pr} >= 0) {
-    my $dr = sprintf("%1.2f", $rec->{drinks} );
-    $s .= unit($dr, "d") if ($dr > 0.1);
-  }
-  if ($rec->{bloodalc}) {
-    my $tag = "nop";
-    $tag = "b" if ( $rec->{bloodalc} > 0.5 );
-    $s .= "<$tag>" . unit( sprintf("%0.2f",$rec->{bloodalc}), "/₀₀"). "</$tag>";
-    # The promille sign '‰' is hard to read on a phone. Experimenting wiht alternatives:
-    # from https://en.wikipedia.org/wiki/List_of_Unicode_characters
-    # ⁂ ₀  /₀₀ ◎ ➿ 。🜽
-  }
-  return $s;
-}
-
-
+# TODO - Geo stuff not (re)implemented in the new code.
+# Kept here as an example
 
 # Helper to validate and split a geolocation string
 # Takes one string, in either new or old format
 # returns ( lat, long, string ), or all "" if not valid coord
-sub geo {
-  my $g = shift || "";
-  return ("","","") unless ($g =~ /^ *\[?\d+/ );
-  $g =~ s/\[([-0-9.]+)\/([-0-9.]+)\]/$1 $2/ ;  # Old format geo string
-  my ($la,$lo) = $g =~ /([0-9.-]+) ([0-9.-]+)/;
-  return ($la,$lo,$g) if ($lo);
-  return ("","","");
-}
+# sub geo {
+#   my $g = shift || "";
+#   return ("","","") unless ($g =~ /^ *\[?\d+/ );
+#   $g =~ s/\[([-0-9.]+)\/([-0-9.]+)\]/$1 $2/ ;  # Old format geo string
+#   my ($la,$lo) = $g =~ /([0-9.-]+) ([0-9.-]+)/;
+#   return ($la,$lo,$g) if ($lo);
+#   return ("","","");
+# }
 
-# Helper to return distance between 2 geolocations
-sub geodist {
-  my $g1 = shift;
-  my $g2 = shift;
-  return "" unless ($g1 && $g2);
-  my ($la1, $lo1, undef) = geo($g1);
-  my ($la2, $lo2, undef) = geo($g2);
-  return "" unless ($la1 && $la2 && $lo1 && $lo2);
-  my $pi = 3.141592653589793238462643383279502884197;
-  my $earthR = 6371e3; # meters
-  my $latcorr = cos($la1 * $pi/180 );
-  my $dla = ($la2 - $la1) * $pi / 180 * $latcorr;
-  my $dlo = ($lo2 - $lo1) * $pi / 180;
-  my $dist = sqrt( ($dla*$dla) + ($dlo*$dlo)) * $earthR;
-  return sprintf("%3.0f", $dist);
-}
+# # Helper to return distance between 2 geolocations
+# sub geodist {
+#   my $g1 = shift;
+#   my $g2 = shift;
+#   return "" unless ($g1 && $g2);
+#   my ($la1, $lo1, undef) = geo($g1);
+#   my ($la2, $lo2, undef) = geo($g2);
+#   return "" unless ($la1 && $la2 && $lo1 && $lo2);
+#   my $pi = 3.141592653589793238462643383279502884197;
+#   my $earthR = 6371e3; # meters
+#   my $latcorr = cos($la1 * $pi/180 );
+#   my $dla = ($la2 - $la1) * $pi / 180 * $latcorr;
+#   my $dlo = ($lo2 - $lo1) * $pi / 180;
+#   my $dist = sqrt( ($dla*$dla) + ($dlo*$dlo)) * $earthR;
+#   return sprintf("%3.0f", $dist);
+# }
 
-# Helper to guess the closest location
-sub guessloc {
-  my $g = shift;
-  my $def = shift || ""; # def value, not good as a guess
-  $def =~ s/ *$//;
-  $def =~ s/^ *//;
-  return ("",0) unless $g;
-  my $dist = 200;
-  my $guess = "";
-  foreach my $k ( sort(keys(%geolocations)) ) {
-    my $d = geodist( $g, $geolocations{$k} );
-    if ( $d && $d < $dist ) {
-      $dist = $d;
-      $guess = $k;
-      $guess =~ s/ *$//;
-      $guess =~ s/^ *//;
-    }
-  }
-  if ($def eq $guess ){
-    $guess = "";
-    $dist = 0;
-  }
-  return ($guess,$dist);
-}
+# # Helper to guess the closest location
+#sub guessloc {
+#   my $g = shift;
+#   my $def = shift || ""; # def value, not good as a guess
+#   $def =~ s/ *$//;
+#   $def =~ s/^ *//;
+#   return ("",0) unless $g;
+#   my $dist = 200;
+#   my $guess = "";
+#   foreach my $k ( sort(keys(%geolocations)) ) {
+#     my $d = geodist( $g, $geolocations{$k} );
+#     if ( $d && $d < $dist ) {
+#       $dist = $d;
+#       $guess = $k;
+#       $guess =~ s/ *$//;
+#       $guess =~ s/^ *//;
+#     }
+#   }
+#   if ($def eq $guess ){
+#     $guess = "";
+#     $dist = 0;
+#   }
+#   return ($guess,$dist);
+# }
 
 
-# Helper to get a date string, with optional delta (in days)
-sub datestr {
-  my $form = shift || "%F %T";  # "YYYY-MM-DD hh:mm:ss"
-  my $delta = shift || 0;  # in days, may be fractional. Negative for ealier
-  my $exact = shift || 0;  # Pass non-zero to use the actual clock, not starttime
-  if (!$starttime) {
-    $starttime = time();
-    my $clockhours = strftime("%H", localtime($starttime));
-    $starttime = $starttime - $clockhours*3600 + 12 * 3600;
-    # Adjust time to the noon of the same date
-    # This is to fix dates jumping when script running close to miodnight,
-    # when we switch between DST and normal time. See issue #153
-  }
-  my $usetime = $starttime;
-  if ( $form =~ /%T/ || $exact ) { # If we want the time (when making a timestamp),
-    $usetime = time();   # base it on unmodified time
-  }
-  my $dstr = strftime ($form, localtime($usetime + $delta *60*60*24));
-  return $dstr;
-}
+# # Check if the record has problematic geo coords
+# # That is, coords and loc don't match
+#sub XXcheckgeoerror {
+#   my $rec = shift;
+#   return unless $rec;
+#   return unless ( $rec->{loc} );
+#   return unless ( $rec->{geo} );
+#   my ( $guess, $dist ) = guessloc($rec->{geo});
+#   if ( $guess ne $rec->{loc} ) {
+#     $rec->{geoerror} = "$guess [$dist]m";
+#     #print STDERR "Possible geo error for $rec->{stamp}: '$rec->{loc}' " .
+#     # "is not at $rec->{geo}, '$guess' is at $dist m from it\n";
+#   }
+# }
+#
+
+# ################################################################################
+# # Get all geo locations
+# # TODO - Don't use this for the javascript, send also the 'last' time
+# ################################################################################
+# sub XXextractgeo {
+# #  Earlier version of the sql, with last seen and sorting
+# #     select name, GeoCoordinates, max(timestamp) as last
+# #     from Locations, glasses
+# #     where  LOCATIONS.id = GLASSES.Location
+# #       and GeoCoordinates is not null
+# #     group by location
+# #     order by last desc
+#   my $sql = q(
+#     select name, GeoCoordinates
+#     from Locations, glasses
+#     where  LOCATIONS.id = GLASSES.Location
+#       and GeoCoordinates is not null
+#     group by location
+#   ); # No need to sort here, since put it all in a hash.
+#   my $get_sth = $dbh->prepare($sql);
+#   $get_sth->execute();
+#   while ( my ($name, $geo, $last) = $get_sth->fetchrow_array ) {
+#     $geolocations{$name} = $geo;
+#   }
+# }
+#
+
 
 # Helper to make a seenkey, an index to %lastseen and %seen
 # Normalizes the names a bit, to catch some misspellings etc
@@ -1851,166 +1328,11 @@ sub shortbeerstyle {
   return $sty;
 }
 
-# Check that the record has a short style
-sub checkshortstyle {
-  my $rec = shift;
-  return unless $rec;
-  return unless ( $rec->{style} );
-  return if $rec->{shortstyle}; # already have it
-  $rec->{shortstyle} = shortbeerstyle($rec->{style});
-}
-
-# Check if the record should have a NEW marker
-# Only considers fields in the given list
-sub checknew {
-  my $rec = shift;
-  my $field = shift;
-  my @fields = ( $field );
-  @fields = ( "name", "maker", "style" ) unless ( $field );
-  return if defined($rec->{new}) ; # already checked
-  $rec->{new} = ""; # default not new
-  return if ( scalar(%seen) < 2); # no new marks to check
-  for my $f ( @fields ) {
-    next unless ( $rec->{$f} );
-    my $s = $seen{ $rec->{$f} };
-    next if ( $s &&  $s > 1 );
-    $rec->{new} = $f;
-    last;
-  }
-}
-
-# Check if the record has problematic geo coords
-# That is, coords and loc don't match
-sub checkgeoerror {
-  my $rec = shift;
-  return unless $rec;
-  return unless ( $rec->{loc} );
-  return unless ( $rec->{geo} );
-  my ( $guess, $dist ) = guessloc($rec->{geo});
-  if ( $guess ne $rec->{loc} ) {
-    $rec->{geoerror} = "$guess [$dist]m";
-    #print STDERR "Possible geo error for $rec->{stamp}: '$rec->{loc}' " .
-    # "is not at $rec->{geo}, '$guess' is at $dist m from it\n";
-  }
-}
 
 
 
-# Helper to fix a record after getting it from the database
-sub fixrecord {
-  my $rec = shift;
-  my $recindex = shift || "";
-  # Normalize some common fields
-  $rec->{alc} = number( $rec->{alc} );
-  $rec->{vol} = number( $rec->{vol} );
-  $rec->{pr} = price( $rec->{pr} );
-  if (! $rec->{stamp} ) {   # Should never happen
-    # Only when working with the timestamp code. Make the error visible, but don't crash
-    print STDERR "fixrecord: Missing stamp in $recindex: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}' \n";
-    print "fixrecord: Missing stamp in $recindex: '$rec->{stamp}'  on '$rec->{effdate}' '$rec->{name}' \n";
-
-  }
-  # Precalculate some things we often need
-  my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-  $rec->{wday} = $weekdays[ $rec->{wdaynumber} ] ;
-  my $alcvol = $rec->{alc} * $rec->{vol} || 0 ;
-  $alcvol = 0 if ( $rec->{pr} < 0  );  # skip box wines
-  $rec->{alcvol} = $alcvol;
-  $rec->{drinks} = $alcvol / $onedrink;
-  nullfields($rec); # Make sure we accept missing values for fields
-  $rec->{seenkey} = seenkey($rec);
-}
 
 
-# Helper to get a record from the database by array index
-# Does not get comments, that's too slow, and often not needed. But does get
-# brew names and locations.
-sub getrecord {
-  my $i = shift;
-  $i++ unless $i; # trick to get around [0]
-  if ( ! $records[$i] ) {
-    my $ts = $lines[$i];
-    util::error ("No timestamp for record '$i' ") unless ($ts);
-    my $sql = "select * from glassrec where username=? and stamp = ?";
-    my $get_sth = $dbh->prepare($sql);
-    $get_sth->execute($username, $ts);
-    my $rec = $get_sth->fetchrow_hashref;
-    util::error("Got no record $i ($ts) for '$username'") unless ($rec);
-    #print STDERR "got rec $i: '$rec' : " ,  JSON->new->encode($rec), "\n";
-    fixrecord($rec, $i);
-    $records[$i] = $rec;
-  }
-  return $records[$i];
-}
-
-
-# Helper to get a full record with comments
-sub getrecord_com {
-  my $i = shift;
-  my $rec = getrecord($i);
-  if ( ! defined($rec->{com_cnt} ) ) {  # no comments yet, get them
-    my $get_sth = $dbh->prepare("select * from compers where id = ?");
-    $get_sth->execute($rec->{glassid});
-    my $com = $get_sth->fetchrow_hashref;
-    if ( ! $com ) {
-      $rec->{com_cnt} = 0; # Mark that we have tried
-    } else {
-      for my $k ( keys(%$com) ) {
-        $rec->{$k} = $com->{$k};
-      }
-    }
-  }
-  return $records[$i];
-}
-
-
-
-# Get all field names for a type, or all
-sub fieldnames {
-  my $type = shift || "";
-  my @fields;
-  my @typelist;
-  if ( $type ) {
-    @typelist = ( $type ) ;
-  } else {
-    @typelist = sort( keys ( %datalinetypes ) );
-  }
-  my %seen;
-  foreach my $t ( @typelist ) {
-    next if ( $t =~ /Old/i );
-    my $fieldnamelistref = $datalinetypes{$t};
-    my @fieldnamelist = @{$fieldnamelistref};
-    foreach my $f ( @fieldnamelist ) {
-      push @fields, $f unless ( $seen{$f} );
-      $seen{$f} = 1;
-    }
-  }
-  return @fields;
-}
-
-
-# Make sure we have all fields defined, even as empty strings
-sub nullfields {
-  my $rec = shift;
-  my $linetype = shift || $rec->{type};
-  my $fieldnamelistref = $datalinetypes{$linetype};
-  util::error ("Oops, no field list for '$linetype'") unless $fieldnamelistref;
-  my @fieldnamelist = @{$fieldnamelistref};
-  foreach my $f ( fieldnames($linetype) ) {
-    $rec->{$f} = ""
-      unless defined($rec->{$f});
-  }
-}
-
-# Make sure we have all possible fields defined, for all types
-# otherwise the user changing record type would hit us with undefined values
-# in the input form
-sub nullallfields{
-  my $rec = shift;
-  for my $k ( keys(%datalinetypes) ) {
-    nullfields($rec, $k);
-  }
-}
 
 
 
