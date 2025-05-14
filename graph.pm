@@ -46,9 +46,6 @@ sub addsums {
   my $g = shift;
   my $v = shift;
   my $day = shift;
-  if ( $v > $g->{maxd} && $day ge $g->{start} ) {
-    $g->{maxd} = $v;   # Max y for scaling the graph
-  } # But only on the visible part.
   push( @{ $g->{last7} }, $v);
   $g->{sum7} += $v;
   if ( scalar(@{ $g->{last7} } > 7 ) ) {
@@ -68,6 +65,12 @@ sub addsums {
   }
   $g->{avg30} = $sum / $wsum;
   # TODO check exponential average
+  if ( $v > $g->{maxd} && $day ge $g->{start} ) {
+    $g->{maxd} = $v;   # Max y for scaling the graph
+  } # But only on the visible part.
+  if ( $g->{avg30} > $g->{maxd} ) { # Scale for the avg graph as well
+    $g->{maxd} = $g->{avg30}; # so future graphs look fair
+  } # Count also the hidden part of the graph here.
 } # addsums
 
 # Make a data file line for one day
@@ -131,7 +134,7 @@ sub oneday {
   $g->{lastavg} = $a30; # Save the last for legend
   $g->{lastwk} = $s7;
   my $zero = " NaN ";
-  if ( $sum > 0.4 || $s7 < 0.1) {
+  if ( $sum > 0.4 || $s7 < 0.1 || $g->{range} > 93 ) {
     $g->{zeroheight} = 0.1;
   } else {
     $zero = $g->{zeroheight};
@@ -220,7 +223,7 @@ sub plotgraph {
   $batitle =  "title \"ba\" " if ( $g->{bigimg} eq "B" );
   my $plotweekline =
     "'$g->{plotfile}' using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$g->{lastwk} wk\", " . #weekly
-    "'' using 1:5 with points lc \"red\" pointtype 3  axes x1y2 $batitle, ";  # bloodacl
+    "'' using 1:5 with points lc \"red\" pointtype 3 axes x1y2 $batitle, ";  # bloodalc
   my $xtic = 1;
   # Different range grasphs need different options
   my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
@@ -244,7 +247,7 @@ sub plotgraph {
       $fillstyle = $fillstyleborder;
     }
   } else { # Small image
-    $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
+    $pointsize = "set pointsize 0.3\n" ;  # Smaller zeroday marks, etc
     $g->{maxd} = $g->{maxd} + 2; # Make room at the top of the graph for the legend
     if ( $g->{range} > 365*4 ) {  # "all"
       ( $xtic, $xformat ) = @xyear;
