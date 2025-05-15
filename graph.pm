@@ -171,6 +171,7 @@ sub makedatafile {
     where username = ?
       and effdate = ?
       and StDrinks > 0
+      and Brew is not null
     order by effdate, Time ";
   #print STDERR "$sql \n";
   $g->{sth} = $c->{dbh}->prepare($sql);
