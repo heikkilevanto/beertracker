@@ -91,7 +91,8 @@ sub oneday {
   my $drinksline = ""; # Individual drinks
   my @drinks;
   while ( my $rec = $g->{sth}->fetchrow_hashref ) {
-    #print "$rec->{Id}: $rec->{EffDate} $rec->{BrewType}/$rec->{SubType} =$rec->{StDrinks} <br/>";
+    print STDERR "$rec->{Id}: $rec->{EffDate} $rec->{BrewType}/$rec->{SubType} ='$rec->{StDrinks}' \n"
+      if ( ! $rec->{StDrinks}) ;
     $sum += $rec->{StDrinks};
     push (@drinks, $rec);
   }
@@ -171,6 +172,7 @@ sub makedatafile {
       and effdate = ?
       and StDrinks > 0
     order by effdate, Time ";
+  #print STDERR "$sql \n";
   $g->{sth} = $c->{dbh}->prepare($sql);
 
   my $date = $start;
