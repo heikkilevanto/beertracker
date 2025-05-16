@@ -404,7 +404,9 @@ sub inputform {
     $hdr =~ s/^(new)(.)(.*)/"New " . uc($2). "$3:"/ge; # "newloc" -> "New Loc:"
     $form .= "<b>$hdr</b> $separatortag \n";
   }
+  $form .= "<table>\n";
   foreach my $f ( tablefields($c,$table,$skipfields) ) {
+    $form .= "<tr>\n";
     my $special = $1 if ( $f =~ s/^(\W)// );
     my $pl = $f;
     $pl =~ s/([A-Z])/ $1/g; # Break words GeoCoord -> Geo Coord
@@ -415,6 +417,11 @@ sub inputform {
     my $inpname = $inputprefix . $f;
     my $val = "";
     $val = "value='$rec->{$f}'" if ( $rec && $rec->{$f} );
+    if ( $special ) {
+      $form .= "<td colspan=2>\n";
+    } else {
+      $form .= "<td>$pl</td>\n";
+    }
     if ( $special && $f =~ /producerlocation/i ) {
       $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "prodloc", "prod");
     } elsif ( $special && $f =~ /location/i ) {
@@ -436,10 +443,14 @@ sub inputform {
         # (that is lowercase 'alc'). Pass it to glass.alc
         $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
       }
-      $form .= "<input name='$inpname' $val placeholder='$pl' $clr $pass />\n";
+      $form .= "<td>\n";
+      $form .= "<input name='$inpname' $val $clr $pass />\n";
       $form .= $separatortag;
     }
+    $form .= "</td></tr>\n";
   }
+  $form .= "</table>\n";
+
   return $form;
 } # inputform
 
