@@ -171,7 +171,7 @@ sub makedatafile {
     where username = ?
       and effdate = ?
       and StDrinks > 0
-      and Brew is not null
+      and Brew <> ''
     order by effdate, Time ";
   # The Brew clause filters out 'empty' glasses like Restaurants.
   #print STDERR "$sql \n";
