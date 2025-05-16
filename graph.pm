@@ -173,6 +173,7 @@ sub makedatafile {
       and StDrinks > 0
       and Brew is not null
     order by effdate, Time ";
+  # The Brew clause filters out 'empty' glasses like Restaurants.
   #print STDERR "$sql \n";
   $g->{sth} = $c->{dbh}->prepare($sql);
 
@@ -274,8 +275,8 @@ sub plotgraph {
       "set timefmt \"%Y-%m-%d\" \n".
       "set xrange [ \"$g->{start} 12:00\" : \"$g->{end} 12:00\" ] \n".
       "set format x $xformat \n" .
-      "set yrange [ -.5 : $g->{maxd} ] \n" .
-      "set y2range [ -.5 : $g->{maxd} ] \n" .
+      "set yrange [ -.2 : $g->{maxd} ] \n" .
+      "set y2range [ -.2 : $g->{maxd} ] \n" .
       #"set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
       "set border linecolor \"white\" \n" .
       "set ytics out nomirror 1 $white \n" .
