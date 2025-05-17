@@ -90,7 +90,6 @@ sub brewtextstyle {
 # TODO - Filtering by brew type, subtype, name, producer, etc
 sub listbrews {
   my $c = shift; # context
-  print "<hr/>";
 
   if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
     editbrew($c);
@@ -115,7 +114,7 @@ sub editbrew {
   for my $f ( "ProducerLocation" ) {
     $p->{$f} = "" unless $p->{$f};  # Blank out null fields
   }
-  if ( $p->{Id} ) {  # found the person
+  if ( $p->{Id} ) {  # found the brew
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";

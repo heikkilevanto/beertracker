@@ -291,7 +291,7 @@ sub plotgraph {
       "set grid xtics ytics  linewidth 0.1 linecolor \"white\" \n".
       "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
         "behind fc \"$c->{bgcolor}\" fillstyle solid border \n";  # green bkg
-    for (my $m=1; $m<$g->{maxd}; $m+= 4) {
+    for (my $m=1; $m<$g->{maxd}; $m+= 3) {
       $cmd .= "set arrow from \"$g->{start}\", $m to \"$g->{end}\", $m nohead linewidth 1 linecolor \"#00dd10\" \n"
         if ( $g->{maxd} > $m + 1 );
     }
@@ -299,7 +299,7 @@ sub plotgraph {
     $cmd .= "plot ";
                   # note the order of plotting, later ones get on top
                   # so we plot weekdays, avg line
-    $cmd .=  "'$g->{plotfile}' using 1:6 with points lc \"#00dd10\" pointtype 11 notitle, "; # zero days
+    $cmd .=  "'$g->{plotfile}' using 1:6 with points lc \"green\" pointtype 11 notitle, "; # zero days
     my $col = 7; # Column of the first value
     while ( $col < 45 ) {
       $cmd .= "'' using 1:" . $col++ . ":" . $col++ . " with boxes lc rgbcolor variable notitle, ";
