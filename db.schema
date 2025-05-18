@@ -1,0 +1,157 @@
+PRAGMA foreign_keys=OFF;
+BEGIN TRANSACTION;
+CREATE TABLE GLASSES (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Username TEXT not null, /* every user has his own glasses - the rest are shared */
+        Timestamp DATETIME not null,
+        BrewType TEXT not null,  /* Wine, Beer, Restaurant */
+        SubType TEXT not null default '', /* for drinks, simplified type. Restaurant types like 'Pizza', etc */
+        Location INTEGER,
+        Brew INTEGER, /* Can be null for "empty glasses" which should not have alc nor vol */
+        Price DECIMAL default 0,
+        Volume DECIMAL default 0,
+        Alc DECIMAL default 0.0,
+        StDrinks DECIMAL default 0.0, /* pre-calculated Alc * Vol / OneDrink, zero for box wines etc */
+        FOREIGN KEY (Location) REFERENCES LOCATIONS(Id),
+        FOREIGN KEY (Brew) REFERENCES BREWS(Id)
+    );
+CREATE TABLE BREWS (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Name TEXT,
+        BrewType TEXT not null,  /* Wine, Beer, Restaurant */
+        SubType TEXT default '',  /* Wines: Red, Booze: Rum. But not Restaurant: Pizza   TODO */
+        BrewStyle TEXT default '', /* What ever style we get in, "IPA Hazy" */
+        ProducerLocation INTEGER,  /* points to a LOCATION rec of the producer */
+        Alc DECIMAL default 0.0,
+        Country TEXT default '',
+        Region TEXT default '',
+        Flavor TEXT default '',  /* hops, grapes, fruits, cask */
+        Year DECIMAL default '',
+        Details TEXT default '', /* Classification: Reserva, DOCG, 20y; Edition: Anniversary */
+        FOREIGN KEY (ProducerLocation) REFERENCES LOCATIONS(Id)
+    );
+CREATE TABLE COMMENTS (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Glass INTEGER not null,
+        Comment TEXT default '',
+        Rating INTEGER default '',
+        Person INTEGER,
+        Photo TEXT default '',
+        FOREIGN KEY (Glass) REFERENCES GLASSES(Id),
+        FOREIGN KEY (Person) REFERENCES PERSONS(Id)
+    );
+CREATE TABLE PERSONS (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Name TEXT NOT NULL, /* The name I know the person by. Should be unique */
+        FullName TEXT default '', /* Full name, if I know it */
+        Description TEXT default '',  /* Small comment on the person to distinguish all SÃ¸rens */
+        Contact TEXT default '', /* Email, phone, or such. If I need more, I can create a Location */
+        Location INTEGER,  /* persons home, or possibly a bar or such connected with the person */
+        RelatedPerson INTEGER default '',  /* Persons partner or such */
+        FOREIGN KEY (RelatedPerson) REFERENCES PERSONS(Id),
+        FOREIGN KEY (Location) REFERENCES LOCATIONS(Id)
+    );
+CREATE TABLE LOCATIONS (
+        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Name TEXT NOT NULL,  /* The name I know it by. Used in pulldowns */
+        OfficialName TEXT default '',  /* Official long name */
+        Description TEXT default '',
+        LocType TEXT default '', /* Location type: Bar, Restaurant, Producer, etc */
+        LocSubType TEXT default '', /* Beer, Italian, Wine, etc */
+        GeoCoordinates TEXT default '',
+        Website TEXT default '',
+        Contact TEXT default '', /* Phone, email, or such */
+        Address TEXT default ''  /* Street, zip, city. Or just a description of where I found it */
+    );
+DELETE FROM sqlite_sequence;
+CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE);
+CREATE INDEX idx_glasses_location ON GLASSES (Location);
+CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp);
+CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE);
+CREATE INDEX idx_brews_producer_location ON BREWS(ProducerLocation);
+CREATE INDEX idx_comments_person ON COMMENTS (Person);
+CREATE INDEX idx_comments_glass ON COMMENTS (Glass);
+CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE);
+CREATE INDEX idx_locations_name ON LOCATIONS (Name COLLATE NOCASE);
+CREATE VIEW GLASSREC AS
+      select
+        glasses.id as glassid,
+        glasses.username as username,
+        datetime(glasses.timestamp) as stamp,
+        strftime ('%w', glasses.timestamp, '-06:00' ) as wdaynumber,  /* as number, monday=1 */
+        strftime ('%Y-%m-%d', glasses.timestamp) as date,
+        strftime ('%Y', glasses.timestamp) as year,
+        strftime ('%H:%M:%S', glasses.timestamp) as time,
+        glasses.brewtype as type,
+        COALESCE(brews.subtype, brews.country) as subtype,
+        strftime ('%Y-%m-%d', glasses.timestamp,'-06:00') as effdate,
+        LOCATIONS.Id as locid,
+        LOCATIONS.name as loc,
+        PLOC.name as maker,
+        BREWS.Id as brewid,
+        BREWS.name as name,
+        volume as vol,
+        coalesce(Brews.brewstyle,'') || ' ' ||
+          coalesce(Brews.region,'')  || ' ' ||
+          coalesce(Brews.country,'') || ' ' ||
+          coalesce(Brews.details,'') || ' ' ||
+          coalesce(Brews.year,'')
+          as style,
+        glasses.alc as alc,
+        price as pr,
+        locations.geocoordinates as geo
+      from GLASSES , LOCATIONS
+      left join BREWS  on glasses.Brew = Brews.id
+      left join LOCATIONS PLOC on PLOC.id = Brews.ProducerLocation
+      where glasses.Location = Locations.id;
+CREATE VIEW COMPERS AS
+      select
+        comments.glass as id,
+        AVG(NULLIF(comments.rating, 0)) AS rate,
+        GROUP_CONCAT(comments.Comment, ' | ') AS com,
+        COUNT(comments.Id) AS com_cnt,
+        GROUP_CONCAT(comments.Photo, '') AS photo,
+        COUNT(comments.Id) AS com_cnt,
+        GROUP_CONCAT(persons.name, ', ') AS people,
+        COUNT(persons.Id) AS pers_cnt
+      from COMMENTS
+      LEFT JOIN PERSONS on PERSONS.id = COMMENTS.Person
+      GROUP BY comments.glass;
+CREATE VIEW BREWS_LIST AS select
+    BREWS.Id,
+    BREWS.Name,
+    PLOC.Name as Producer,
+    BREWS.Alc as Alc,
+    BREWS.BrewType || ", " || BREWS.Subtype as Type,
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
+    LOCATIONS.Name as Location,
+    count(COMMENTS.Id) as Com,
+    count(GLASSES.Id) as Count
+  from BREWS
+  left join LOCATIONS PLOC on PLOC.id = BREWS.ProducerLocation
+  left join GLASSES on Glasses.Brew = BREWS.Id
+  left join COMMENTS on COMMENTS.Glass = GLASSES.Id
+  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
+  group by BREWS.id;
+CREATE VIEW PERSONS_LIST AS select
+    PERSONS.Id,
+    PERSONS.Name,
+    count(COMMENTS.Id) - 1 as Com,
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
+    LOCATIONS.Name as Location
+  from PERSONS
+  left join COMMENTS on COMMENTS.Person = PERSONS.Id
+  left join GLASSES on COMMENTS.Glass = GLASSES.Id
+  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
+  group by Persons.id;
+CREATE VIEW LOCATIONS_LIST AS select
+    LOCATIONS.Id,
+    LOCATIONS.Name,
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
+    LOCATIONS.LocType || ", " || LOCATIONS.LocSubType as Type,
+    LOCATIONS.Description as Desc
+  from LOCATIONS
+  left join GLASSES on GLASSES.Location = LOCATIONS.Id
+  group by LOCATIONS.Id;
+CREATE INDEX idx_effdate ON Glasses(strftime('%Y-%m-%d', Timestamp, '-06:00'));
+COMMIT;
