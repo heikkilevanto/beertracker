@@ -7,7 +7,7 @@ echo "Updating the database structure from db.schema"
 cd beerdata
 #set -euo pipefail
 
-sqlite3 beertracker.db ".dump" | grep "INSERT INTO" > beerdata/data.dump
+sqlite3 beertracker.db ".dump" | grep "INSERT INTO" > data.dump
 
 rm -f beertracker.*.bak
 for F in beertracker.db*
