@@ -1,50 +1,62 @@
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 CREATE TABLE GLASSES (
+/* A glass of anything I can drink, or special "empty" glasses for */
+/* restaurants etc. The main table. These are keyed by the username, */
+/* so each user has his own history. */
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Username TEXT not null, /* every user has his own glasses - the rest are shared */
-        Timestamp DATETIME not null,
+        Timestamp DATETIME not null, /* Actual time, local to the users browser */
         BrewType TEXT not null,  /* Wine, Beer, Restaurant */
-        SubType TEXT not null default '', /* for drinks, simplified type. Restaurant types like 'Pizza', etc */
-        Location INTEGER,
-        Brew INTEGER, /* Can be null for "empty glasses" which should not have alc nor vol */
-        Price DECIMAL default 0,
-        Volume DECIMAL default 0,
-        Alc DECIMAL default 0.0,
-        StDrinks DECIMAL default 0.0, /* pre-calculated Alc * Vol / OneDrink, zero for box wines etc */
+        SubType TEXT not null default '', /* 'NEIPA', 'Red'. Restaurant types like 'Pizza', etc */
+        Location INTEGER,  /* ->LOCATIONS */
+        Brew INTEGER, /* ->BREWS Can be null for "empty glasses" which should not have alc nor vol */
+        Price DECIMAL default 0, /* In local currency, DKK in my case */
+        Volume DECIMAL default 0, /* In cl */
+        Alc DECIMAL default 0.0, /* In % by vol */
+        StDrinks DECIMAL default 0.0, /* pre-calculated Alc * Vol / OneDrink, zero for 'empty' glasses*/
         FOREIGN KEY (Location) REFERENCES LOCATIONS(Id),
         FOREIGN KEY (Brew) REFERENCES BREWS(Id)
     );
 CREATE TABLE BREWS (
+/* A Brew is a definition of a beer or other stuff, whereas a Glass is the */
+/* event of one being drunk. These can be shared between users. */
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name TEXT,
+        Name TEXT, /* Official name, or the name I know it by */
         BrewType TEXT not null,  /* Wine, Beer, Restaurant */
         SubType TEXT default '',  /* Wines: Red, Booze: Rum. But not Restaurant: Pizza   TODO */
         BrewStyle TEXT default '', /* What ever style we get in, "IPA Hazy" */
-        ProducerLocation INTEGER,  /* points to a LOCATION rec of the producer */
+        ProducerLocation INTEGER,  /* ->LOCATION rec of the producer */
         Alc DECIMAL default 0.0,
-        Country TEXT default '',
-        Region TEXT default '',
+        Country TEXT default '', /* Country code */
+        Region TEXT default '',  /* Mostly for wines */
         Flavor TEXT default '',  /* hops, grapes, fruits, cask */
         Year DECIMAL default '',
         Details TEXT default '', /* Classification: Reserva, DOCG, 20y; Edition: Anniversary */
         FOREIGN KEY (ProducerLocation) REFERENCES LOCATIONS(Id)
     );
 CREATE TABLE COMMENTS (
+/* Comments always refer to a glass, even if an "empty" one, since the glass has */
+/* the username needed to keep users separate. Useful for nights and restaurants. */
+/* Special case: If the comment has both a person and a comment, the comment */
+/* refers to the person, not the glass. */
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Glass INTEGER not null,
         Comment TEXT default '',
-        Rating INTEGER default '',
+        Rating INTEGER default '',  /* 1 (worst) to 9 (best) */
         Person INTEGER,
-        Photo TEXT default '',
+        Photo TEXT default '',  /* File name of the photo image */
         FOREIGN KEY (Glass) REFERENCES GLASSES(Id),
         FOREIGN KEY (Person) REFERENCES PERSONS(Id)
     );
 CREATE TABLE PERSONS (
+/* All the people I want to remember.  These are personal to the username, but */
+/* that comes from Glasses, via comments. Persons connected to Producer Locations */
+/* and such can be shared between users */
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT NOT NULL, /* The name I know the person by. Should be unique */
         FullName TEXT default '', /* Full name, if I know it */
-        Description TEXT default '',  /* Small comment on the person to distinguish all SÃ¸rens */
+        Description TEXT default '',  /* Small comment on the person to distinguish all Sørens */
         Contact TEXT default '', /* Email, phone, or such. If I need more, I can create a Location */
         Location INTEGER,  /* persons home, or possibly a bar or such connected with the person */
         RelatedPerson INTEGER default '',  /* Persons partner or such */
@@ -52,6 +64,9 @@ CREATE TABLE PERSONS (
         FOREIGN KEY (Location) REFERENCES LOCATIONS(Id)
     );
 CREATE TABLE LOCATIONS (
+/* These are mostly bars and restaurants, but can also be breweries, */
+/* homes of Persons, and other things that need an address, geo coordinates */
+/* and such. */
         Id INTEGER PRIMARY KEY AUTOINCREMENT,
         Name TEXT NOT NULL,  /* The name I know it by. Used in pulldowns */
         OfficialName TEXT default '',  /* Official long name */
@@ -67,6 +82,7 @@ DELETE FROM sqlite_sequence;
 CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE);
 CREATE INDEX idx_glasses_location ON GLASSES (Location);
 CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp);
+CREATE INDEX idx_effdate ON GLASSES(strftime('%Y-%m-%d', Timestamp, '-06:00')); /* The effdate index speeds things up a lot! */
 CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE);
 CREATE INDEX idx_brews_producer_location ON BREWS(ProducerLocation);
 CREATE INDEX idx_comments_person ON COMMENTS (Person);
@@ -153,5 +169,4 @@ CREATE VIEW LOCATIONS_LIST AS select
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id;
-CREATE INDEX idx_effdate ON Glasses(strftime('%Y-%m-%d', Timestamp, '-06:00'));
 COMMIT;
