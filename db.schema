@@ -173,7 +173,7 @@ CREATE VIEW BREWCOMMENTS as
 SELECT 
 	COMMENTS.Id as Xid,
 	strftime("%Y-%m-%d", GLASSES.Timestamp,'-06:00') as Date,
-	comments.Rating,
+	comments.Rating as Rate,
 	COMMENTS.Comment,
 	PERSONS.Name as Person,
 	COMMENTS.Photo as XPhoto,

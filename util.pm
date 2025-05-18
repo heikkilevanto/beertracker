@@ -723,7 +723,7 @@ sub listrecords {
       $sty = "style='font-size: xx-small' text-align='right'";
     } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
       $sty = "style='text-align:right'";
-    } elsif ( $f =~ /Rating/ ) {
+    } elsif ( $f =~ /Rate/ ) {
       $sty = "style='text-align:center'";
     } elsif ( $f =~ /Comment/ ) {
       $sty = "style='max-width:400px; min-width:0'";
