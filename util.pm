@@ -703,20 +703,32 @@ sub listrecords {
   my $op = $c->{op};
 
   my $s = "";
+  #$s .= "<div style='overflow-x: auto;'>";
+  #$s .= "<table style='white-space: nowrap;'>\n";
   $s .= "<table>\n";
 
 
   my @styles;  # One for each column
   # Table headers
   $s .= "<tr>\n";
+  my $dofilters = 0;
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
     $f =~ s/^-//;
+    if ( $f =~ /Name|Last|Location|Type|Producer/ ) {
+      $dofilters = 1;
+    }
     my $sty = "style='max-width:200px; min-width:0'"; # default
     if ( $f eq "Id" ) {
       $sty = "style='font-size: xx-small' text-align='right'";
-    } elsif ( $f =~ /Com|Alc|Count/ ) {
+    } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
       $sty = "style='text-align:right'";
+    } elsif ( $f =~ /Rating/ ) {
+      $sty = "style='text-align:center'";
+    } elsif ( $f =~ /Comment/ ) {
+      $sty = "style='max-width:400px; min-width:0'";
+    } elsif ( $f =~ /^X/ ) {
+      $sty = "style='display:none'";
     }
     $styles[$i] = $sty;
     my $sf = $f;
@@ -726,21 +738,22 @@ sub listrecords {
   $s .= "</tr>\n";
 
   # Filter inputs
-  $s .= "<tr>\n";
-  for ( my $i=0; $i < scalar( @fields ); $i++ ) {
-    $s .= "<td $styles[$i] >";
-    my $f = $fields[$i];
-    $f =~ s/^-//;
-    if ( $f =~ /Name|Last|Location|Type|Producer/ ) {
-      $s .= "<input type=text name=filter$i oninput='changefilter(this);' $styles[$i] />";
-      # Tried also with box-sizing: border-box; display: block;. Still extends the cell
-    } else {
-      $s .= "&nbsp;"
+  if ( $dofilters ) {
+    $s .= "<tr>\n";
+    for ( my $i=0; $i < scalar( @fields ); $i++ ) {
+      $s .= "<td $styles[$i] >";
+      my $f = $fields[$i];
+      $f =~ s/^-//;
+      if ( $f =~ /Name|Last|Location|Type|Producer/ ) {
+        $s .= "<input type=text name=filter$i oninput='changefilter(this);' $styles[$i] />";
+        # Tried also with box-sizing: border-box; display: block;. Still extends the cell
+      } else {
+        $s .= "&nbsp;"
+      }
+      $s .= "</td>\n";
     }
-    $s .= "</td>\n";
+    $s .= "</tr>\n";
   }
-  $s .= "</tr>\n";
-
 
   while ( my @rec = $list_sth->fetchrow_array ) {
     my $tds = "";
@@ -760,7 +773,7 @@ sub listrecords {
         $v = sprintf("%5.1f", $v)  if ($v);
       } elsif ( $fn eq "Last" ) {
         my ($date, $wd, $time) = splitdate($v);
-        $v = "$date $wd $time";
+        $v = "$wd $date $time";
       }
       $tds .= "<td $styles[$i]>$v</td>\n";
     }
@@ -769,6 +782,7 @@ sub listrecords {
     $s .= "$tds</tr>\n";
   }
   $s .= "</table>\n";
+  $s .= "</div>\n";
   $list_sth->finish;
 
   # JS to do the filtering

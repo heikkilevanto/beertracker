@@ -82,7 +82,7 @@ DELETE FROM sqlite_sequence;
 CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE);
 CREATE INDEX idx_glasses_location ON GLASSES (Location);
 CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp);
-CREATE INDEX idx_effdate ON GLASSES(strftime('%Y-%m-%d', Timestamp, '-06:00')); /* The effdate index speeds things up a lot! */
+CREATE INDEX idx_effdate ON GLASSES(strftime('%Y-%m-%d', Timestamp, '-06:00'));
 CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE);
 CREATE INDEX idx_brews_producer_location ON BREWS(ProducerLocation);
 CREATE INDEX idx_comments_person ON COMMENTS (Person);
@@ -169,4 +169,17 @@ CREATE VIEW LOCATIONS_LIST AS select
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id;
+CREATE VIEW brewcomments as 
+SELECT 
+	COMMENTS.Id as Xid,
+	strftime("%Y-%m-%d", GLASSES.Timestamp,'-06:00') as Date,
+	comments.Rating,
+	COMMENTS.Comment,
+	PERSONS.Name as Person,
+	COMMENTS.Photo as XPhoto,
+	GLASSES.Brew as Xbrew
+from COMMENTS, GLASSES
+LEFT JOIN PERSONS on PERSONS.id = COMMENTS.Person
+where COMMENTS.glass = GLASSES.id
+order by GLASSES.Timestamp Desc;
 COMMIT;

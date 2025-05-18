@@ -88,6 +88,7 @@ sub brewtextstyle {
 ################################################################################
 # TODO - More display fields. Country, region, etc
 # TODO - Filtering by brew type, subtype, name, producer, etc
+
 sub listbrews {
   my $c = shift; # context
 
@@ -103,6 +104,13 @@ sub listbrews {
 ################################################################################
 # Editbrew - Show a form for editing a brew record
 ################################################################################
+
+sub listbrewcomments {
+  my $c = shift; # context
+  my $sort = $c->{sort} || "Last-";
+  print util::listrecords($c, "BREWCOMMENTS", $sort, "XBrew=$c->{edit}" );
+} # listbrewcomments
+
 
 sub editbrew {
   my $c = shift;
@@ -128,7 +136,7 @@ sub editbrew {
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "</form>\n";
     print "<hr/>\n";
-    print "(This should show when I had the brew last, comments, ratings, etc)<br/>\n"; # TODO
+    listbrewcomments($c);
   } else {
     print "Oops - location id '$c->{edit}' not found <br/>\n";
   }
