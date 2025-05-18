@@ -82,7 +82,7 @@ sub oneday {
   if ( $g->{range} < 95 ) { # Over 3m we don't show them anyway.
     my $bloodalc = mainlist::bloodalc($c,$day);
     $alc = $bloodalc->{max} * 10 ; # scale to display
-    $alc = "NaN" if ($alc < 0.1 );
+    $alc = "NaN" if ($alc < 0.2 );
     # TODO - Refactor the stepwise calculation into its own routine in mainlist,
     # and use that wihtin in the loop below.
   }
@@ -227,14 +227,14 @@ sub plotgraph {
   $batitle =  "title \"ba\" " if ( $g->{bigimg} eq "B" );
   my $plotweekline =
     "'$g->{plotfile}' using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$g->{lastwk} wk\", " . #weekly
-    "'' using 1:5 with points lc \"red\" pointtype 3 axes x1y2 $batitle, ";  # bloodalc
+    "'' using 1:5 with points lc \"red\" pointtype 6 axes x1y2 $batitle, ";  # bloodalc
   my $xtic = 1;
   # Different range grasphs need different options
   my @xyear = ( $oneyear, "\"%y\"" );   # xtics value and xformat
   my @xquart = ( $oneyear / 4, "\"%b\\n%y\"" );  # Jan 24
   my @xmonth = ( $onemonth, "\"%b\\n%y\"" ); # Jan 24
   my @xweek = ( $oneweek, "\"%d\\n%b\"" ); # 15 Jan
-  my $pointsize = "set pointsize 1\n";
+  my $pointsize = "set pointsize 1.2\n";
   my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
   my $fillstyleborder = "fill solid border linecolor \"$c->{bgcolor}\""; # Small gap around each drink
   if ( $g->{bigimg} eq "B" ) {  # Big image
