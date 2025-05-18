@@ -169,7 +169,7 @@ CREATE VIEW LOCATIONS_LIST AS select
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id;
-CREATE VIEW brewcomments as 
+CREATE VIEW BREWCOMMENTS as 
 SELECT 
 	COMMENTS.Id as Xid,
 	strftime("%Y-%m-%d", GLASSES.Timestamp,'-06:00') as Date,
