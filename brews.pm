@@ -102,9 +102,8 @@ sub listbrews {
 } # listbrews
 
 ################################################################################
-# Editbrew - Show a form for editing a brew record
+# List all comments for the given brew
 ################################################################################
-
 sub listbrewcomments {
   my $c = shift; # context
   my $brew = shift;
@@ -134,7 +133,6 @@ sub listbrewcomments {
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id});
   print "<div style='overflow-x: auto;'>";
-  #print "<table style='white-space: nowrap;' >\n";
   print "<table >\n";
   my $ratesum = 0;
   my $ratecount = 0;
@@ -153,7 +151,7 @@ sub listbrewcomments {
     print "</span></a>\n";
     print "</td>\n";
 
-    print "<td>\n";
+    print "<td style='border-bottom: 1px solid white'>\n";
     if ( $com->{Rating} ) {
       print "<b>($com->{Rating})</b>\n";
       $ratesum += $com->{Rating};
@@ -203,8 +201,83 @@ sub listbrewcomments {
     }
     </script>";
   $sth->finish;
+  print "<hr/>";
 
 } # listbrewcomments
+
+
+################################################################################
+# List all glasses for the given brew
+################################################################################
+sub listbrewglasses {
+  my $c = shift; # context
+  my $brew = shift;
+  my $sql = "
+    SELECT
+      COMMENTS.Id as Cid,
+      strftime('%Y-%m-%d', GLASSES.Timestamp,'-06:00') as Date,
+      strftime('%H:%M', GLASSES.Timestamp) as Time,
+      comments.Rating as Rating,
+      COMMENTS.Comment,
+      GLASSES.Id as Gid,
+      GLASSES.Brew as Brew,
+      Glasses.Volume,
+      Glasses.Price,
+      Locations.Name as Loc,
+      Locations.Id as Lid
+      from GLASSES
+      LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
+      LEFT JOIN COMMENTS on COMMENTS.Glass = GLASSES.Id
+      WHERE Brew = ?
+      order by GLASSES.Timestamp Desc ";
+  #print STDERR "listbrewcomments: id='$brew->{Id}': $sql \n";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($brew->{Id});
+  my $glcount = 0;
+  print "<div style='overflow-x: auto;'>";
+  print "<table  style='white-space: nowrap;'>\n";
+  while ( my $com = $sth->fetchrow_hashref ) {
+    $glcount++;
+    print "<tr><td>\n";
+    print "<span style='font-size: xx-small'>" .
+          "[$com->{Gid}]</span></td>";
+    print "<td><a href='$c->{url}?o=full&e=$com->{Gid}'><span>";
+    print "$com->{Date} ";
+    my $tim = $com->{Time};
+    $tim = "($tim)" if ($tim lt "06:00");
+    print "$tim\n";
+    print "</td>\n";
+
+    print "<td>\n";
+    print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
+    print "</td><td>\n";
+
+    print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
+    print "</td><td>\n";
+
+    if ( $com->{Rating} ) {
+      print "<b>($com->{Rating})</b>" ;
+    } elsif ( $com->{Comment} ) {
+      print "<b>(*)</b>\n"  ;
+    }
+    print "</td><td>\n";
+
+    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b><span></a> &nbsp;";
+    print "</td>\n";
+    print "</tr>\n";
+  }
+  print "</table></div>\n";
+  print "<div onclick='toggleCommentTable(this);'><br/>";
+  print "$glcount Glasses ";
+  print "</div>";
+  $sth->finish;
+  print "<hr/>";
+
+} # listbrewcomments
+
+################################################################################
+# Editbrew - Show a form for editing a brew record
+################################################################################
 
 
 sub editbrew {
@@ -229,6 +302,7 @@ sub editbrew {
     print "</form>\n";
     print "<hr/>\n";
     listbrewcomments($c, $p);
+    listbrewglasses($c, $p);
   } else {
     print "Oops - Brew id '$c->{edit}' not found <br/>\n";
   }
