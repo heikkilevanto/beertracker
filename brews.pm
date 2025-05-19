@@ -386,26 +386,20 @@ sub selectbrew {
 sub dedupbrews {
   my $c = shift;
   my $id = $c->{edit}; # The brew we keep
-  my @dups; # The ones we aim to remove
   foreach my $paramname ($c->{cgi}->param) {
     if ( $paramname =~ /^Chk(\d+)$/ ) {
-      push @dups, $1;
+      my $dup = $1;
+      my $sql = "UPDATE GLASSES set Brew = ? where Brew = ?  ";
+      print STDERR "$sql with '$id' and '$dup' \n";
+      my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      util::error("Deduplicate brews: Failed to update glasses") unless $rows;
+      print STDERR "Updated $rows glasses from $dup to $id\n";
+      $sql = "DELETE FROM Brews WHERE Id = ? ";
+      $rows = $c->{dbh}->do($sql, undef, $dup);
+      util::error("Deduplicate brews: Failed to delete brew '$dup'") unless $rows;
+      print STDERR "Deleted $rows brews with id  $dup\n";
     }
   }
-  print STDERR "dedupbrews: Deduplicating (@dups) to '$id' \n";
-  for my $dup ( @dups ) {
-    my $sql = "UPDATE GLASSES set Brew = ? where Brew = ?  ";
-    print STDERR "$sql with '$id' and '$dup' \n";
-    my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
-    util::error("Deduplicate brews: Failed to update glasses") unless $rows;
-    print STDERR "Updated $rows glasses from $dup to $id\n";
-    $sql = "DELETE FROM Brews WHERE Id = ? ";
-    $rows = $c->{dbh}->do($sql, undef, $dup);
-    util::error("Deduplicate brews: Failed to delete brew '$dup'") unless $rows;
-    print STDERR "Deleted $rows brews with id  $dup\n";
-
-  }
-
 } # dedupbrews
 
 ################################################################################

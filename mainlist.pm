@@ -40,6 +40,7 @@ sub glassquery {
       brews.Id as brewid,
       brews.Name as brewname,
       locations.name as producer,
+      locations.Id as prodid,
       (select count(*) from comments where comments.glass = glasses.id) as comcount
     from glasses
     left join brews on brews.id = glasses.brew
@@ -187,7 +188,8 @@ sub locationhead {
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<br/>";
-  print "<b>$wd $date $loc->{Name} </b><br/>";
+  print "<b>$wd $date " .
+    "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$loc->{Name}</span></a> </b><br/>";
   print "<br/>";
   return ( $rec->{effdate}, $rec->{loc}, $loc->{Name}, "$wd $date", $date );
 }
@@ -203,8 +205,8 @@ sub nameline {
   print "$time ";
   my $dispstyle = brews::brewtextstyle($c,$style);
   print "<span $dispstyle>[$style]</span> \n";
-  print "<i>$rec->{producer}:</i> " if ( $rec->{producer} );
-  print "<b>$rec->{brewname} </b>" if ( $rec->{brewname} );
+  print "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
+  print "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " if ( $rec->{brewname} );
   print "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
   print "<br/>\n"
 }
@@ -228,27 +230,19 @@ sub commentlines {
   my $c = shift;
   my $rec = shift;
   if ( $rec->{comcount} ) {
-    my $ratingline = "";
-    my $peopleline = "";
-    my $commentlines = "";
-    my $sql = "select * from comments where glass = ?";
+  my $sql = "select COMMENTS.*,
+    PERSONS.Name as PersName,
+    PERSONS.Id as PersId
+    from comments
+    left join PERSONS on persons.id = comments.person
+    where glass = ?
+    order by Id"; # To keep the order consistent
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($rec->{id});
     while ( my $com = $sth->fetchrow_hashref() ) {
-      if ( $com->{Rating} ) {
-        $ratingline .= "&nbsp; &nbsp; <b>" . comments::ratingline($com->{Rating}) . "</b>";
-      }
-      if ( $com->{Person} ) {
-        my $pers = util::getrecord($c,"PERSONS",$com->{Person});
-        $peopleline .= "<i>$pers->{Name}</i>&nbsp; ";
-      }
-      if ( $com->{Comment} ) {
-        $commentlines .= "&nbsp; &nbsp; <i>$com->{Comment} </i><br/>";
-      }
+      print "<div style='padding-left: 20px;'>* \n";
+      print comments::commentline($c, $com). "</div>\n";
     }
-    print "$ratingline <br/>" if ($ratingline);
-    print "&nbsp; &nbsp; with $peopleline <br/>\n" if ($peopleline);
-    print "$commentlines\n" if ($commentlines);
   }
 }
 
@@ -362,7 +356,7 @@ sub oneday {
 sub mainlist {
   my $c = shift;
   startlist($c);
-  oneday($c);
+  oneday($c); # TODO - Make params for the list length and start date
   oneday($c);
   oneday($c);
   oneday($c);

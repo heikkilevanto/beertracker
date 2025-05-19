@@ -20,16 +20,39 @@ my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero 
 ################################################################################
 sub ratingline {
   my $rating = shift;
+  my $tag1 = shift || "nop";  # "b" to bold the number
+  my $tag2 = shift || $tag1;  # "i" to get italic text
   return "" unless $rating;
-  return "'$rating' - $ratings[$rating]";
+  return "<$tag1>($rating)</$tag1> - <$tag2>$ratings[$rating]</$tag2>";
 }
+
+################################################################################
+# Display a comment on a single line
+################################################################################
+sub commentline {
+  my $c = shift;
+  my $cr = shift; # The comment to display, from sql like one in listcomments
+  my $glid = shift || ""; # The glass id, empty if no edit link wanted
+  my $s = "";
+  if ( $glid ) {
+    $s .= "<a href='$c->{url}?o=$c->{op}&e=$glid&ec=$cr->{Id}'>" .
+          "<span style='font-size: xx-small'>[$cr->{Id}]</span></a>\n";
+  }
+  $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );
+  $s .= "<b>$cr->{PersName}:</b>\n" if ( $cr->{Person} );
+  $s .= "<i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
+  #$s .= "Photo $cr->{Photo} <br/>\n" if ( $cr->{Photo} );  # TODO - Show photo
+    # Once I have a photo module
+
+  return $s;
+} # commentline
 
 ################################################################################
 # List of comments for a given glass record
 ################################################################################
 sub listcomments {
   my $c = shift; # context
-  my $glass = shift;
+  my $glassid = shift;
 
   my $s = "";
 
@@ -41,25 +64,19 @@ sub listcomments {
     where glass = ?
     order by Id"; # To keep the order consistent
   my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($glass);
+  $sth->execute($glassid);
 
   $s .= "&nbsp;<br/>\n";
   my $editcommentid = util::param($c, "ec", 0);
   my $editcommentrec;
   while ( my $cr = $sth->fetchrow_hashref ) {
-    $s .= "<span style='font-size: xx-small'> Comment id: $cr->{Id} </span>" .
-          "<a href='$c->{url}?o=$c->{op}&e=$glass&ec=$cr->{Id}'><span style='font-size: xx-small'>(Edit)</span></a>\n";
-    $s .= "Rating: <b>$cr->{Rating}</b>: $ratings[$cr->{Rating}].\n" if ( $cr->{Rating} );
-    $s .= "With <b>$cr->{PersName}</b>\n" if ( $cr->{Person} );
-    $s .= "<br/><i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
-    $s .= "Photo $cr->{Photo} <br/>\n" if ( $cr->{Photo} );  # TODO - Show the photo itself
-      # TODO - Move the image file name routines here from index.cgi:929 or so.
+    $s .= commentline($c,$cr,$glassid);
     if ( $editcommentid && $cr->{Id} == $editcommentid ) {
       $editcommentrec = $cr;
     }
     $s .= "<br/>\n";
   }
-  $s .= commentform($c, $editcommentrec, $glass);
+  $s .= commentform($c, $editcommentrec, $glassid);
 
   return $s;
 } # listcomments
@@ -71,7 +88,7 @@ sub listcomments {
 sub commentform {
   my $c = shift;
   my $com = shift;
-  my $glass = shift;
+  my $glassid = shift;
 
   my $s="";
   $s .= "<!-- Comment editing form -->\n";
@@ -87,7 +104,7 @@ sub commentform {
   $s .= "<input type='hidden' name='o' value='$c->{op}'>\n";
   $s .= "<input type='hidden' name='e' value='$c->{edit}'>\n";
   $s .= "<input type='hidden' name='ce' value='$com->{Id}'>\n" if ( $com->{Id} );
-  $s .= "<input type='hidden' name='glass' value='$glass'>\n";
+  $s .= "<input type='hidden' name='glass' value='$glassid'>\n";
 
   # If editing, include the comment ID
   if ($com && $com->{Id}) {
