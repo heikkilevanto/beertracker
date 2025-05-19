@@ -169,17 +169,4 @@ CREATE VIEW LOCATIONS_LIST AS select
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id;
-CREATE VIEW BREWCOMMENTS as 
-SELECT 
-	COMMENTS.Id as Xid,
-	strftime("%Y-%m-%d", GLASSES.Timestamp,'-06:00') as Date,
-	comments.Rating as Rate,
-	COMMENTS.Comment,
-	PERSONS.Name as Person,
-	COMMENTS.Photo as XPhoto,
-	GLASSES.Brew as Xbrew
-from COMMENTS, GLASSES
-LEFT JOIN PERSONS on PERSONS.id = COMMENTS.Person
-where COMMENTS.glass = GLASSES.id
-order by GLASSES.Timestamp Desc;
 COMMIT;

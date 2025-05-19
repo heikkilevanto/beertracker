@@ -176,12 +176,32 @@ sub listbrewcomments {
       $perscount++;
     }
     print "</td>\n";
-
-    # TODO - Photo
-
+    # TODO - Photo thumbnail in its own TD
     print "</tr>\n";
   }
   print "</table></div>\n";
+  print "<div onclick='toggleCommentTable(this);'><br/>";
+  if ( $comcount == 0 ) {
+    print "(No Comments)";
+  } else {
+    if ( $ratecount == 1) {
+      print "One rating: <b>" . comments::ratingline($ratesum) . "</b> ";
+    } elsif ( $ratecount > 0 ) {
+      my $avg = sprintf( "%3.1f", $ratesum / $ratecount);
+      print "$ratecount Ratings averaging <b>" . comments::ratingline($avg) . "</b>. ";
+    } else {
+      print "Comments: $comcount. ";
+    }
+  }
+  print "</div>";
+  print "<script>
+    function toggleCommentTable(div) {
+      let table = div.previousElementSibling;
+      if (table) {
+        table.style.display = (table.style.display === 'none') ? 'table' : 'none';
+      }
+    }
+    </script>";
   $sth->finish;
 
 } # listbrewcomments
