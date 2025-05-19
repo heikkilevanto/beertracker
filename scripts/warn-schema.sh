@@ -10,5 +10,5 @@ WATCHED_FILE="db.schema"
 if git diff --name-only ORIG_HEAD HEAD | grep -q "^$WATCHED_FILE$"; then
   echo
   echo "WARNING: The database script '$WATCHED_FILE' has changed. "
-  echo "Please run scripts/bchange.sh"
+  echo "Please run scripts/dbchange.sh"
 fi

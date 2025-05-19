@@ -107,8 +107,83 @@ sub listbrews {
 
 sub listbrewcomments {
   my $c = shift; # context
-  my $sort = $c->{sort} || "Last-";
-  print util::listrecords($c, "BREWCOMMENTS", $sort, "XBrew=$c->{edit}" );
+  my $brew = shift;
+  my $sql = "
+    SELECT
+      COMMENTS.Id as Cid,
+      strftime('%Y-%m-%d', GLASSES.Timestamp,'-06:00') as Date,
+      strftime('%H:%M', GLASSES.Timestamp) as Time,
+      comments.Rating as Rating,
+      COMMENTS.Comment,
+      PERSONS.Id as Pid,
+      PERSONS.Name as Person,
+      COMMENTS.Photo as XPhoto,
+      GLASSES.Id as Gid,
+      GLASSES.Brew as Brew,
+      Glasses.Volume,
+      Glasses.Price,
+      Locations.Name as Loc,
+      Locations.Id as Lid
+      from COMMENTS, GLASSES
+      LEFT JOIN PERSONS on PERSONS.id = COMMENTS.Person
+      LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
+      where COMMENTS.glass = GLASSES.id
+       and Brew = ?
+      order by GLASSES.Timestamp Desc ";
+  #print STDERR "listbrewcomments: id='$brew->{Id}': $sql \n";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($brew->{Id});
+  print "<div style='overflow-x: auto;'>";
+  #print "<table style='white-space: nowrap;' >\n";
+  print "<table >\n";
+  my $ratesum = 0;
+  my $ratecount = 0;
+  my $comcount = 0;
+  my $perscount = 0;
+  my $sty = "style='border-bottom: 1px solid white; vertical-align: top;' ";
+  while ( my $com = $sth->fetchrow_hashref ) {
+    print "<tr><td $sty>\n";
+    print "<a href='$c->{url}?o=full&e=$com->{Gid}&ec=$com->{Cid}'><span>";
+    print "$com->{Date}<br/>";
+    my $tim = $com->{Time};
+    $tim = "($tim)" if ($tim lt "06:00");
+    print "$tim\n";
+    print "<span style='font-size: xx-small'>" .
+          "[$com->{Cid}]</span><br/>";
+    print "</span></a>\n";
+    print "</td>\n";
+
+    print "<td>\n";
+    if ( $com->{Rating} ) {
+      print "<b>($com->{Rating})</b>\n";
+      $ratesum += $com->{Rating};
+      $ratecount++;
+    }
+    print "</td>\n";
+
+    print "<td style='border-bottom: 1px solid white; vertical-align: top; white-space:normal'>\n";
+    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b><span></a> &nbsp;";
+    print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
+    print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
+    print "<br/>";
+    print "<i>$com->{Comment}</i>";
+    $comcount++ if ($com->{Comment});
+    print "</td>\n";
+
+    print "<td $sty>\n";
+    if ( $com->{Person} ) {
+      print "<a href='$c->{url}?o=Person&e=$com->{Pid}'><span style='font-weight: bold;'>$com->{Person}</span></a>\n";
+      $perscount++;
+    }
+    print "</td>\n";
+
+    # TODO - Photo
+
+    print "</tr>\n";
+  }
+  print "</table></div>\n";
+  $sth->finish;
+
 } # listbrewcomments
 
 
@@ -119,9 +194,6 @@ sub editbrew {
   my $get_sth = $c->{dbh}->prepare($sql);
   $get_sth->execute($c->{edit});
   my $p = $get_sth->fetchrow_hashref;
-  for my $f ( "ProducerLocation" ) {
-    $p->{$f} = "" unless $p->{$f};  # Blank out null fields
-  }
   if ( $p->{Id} ) {  # found the brew
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
@@ -136,10 +208,11 @@ sub editbrew {
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "</form>\n";
     print "<hr/>\n";
-    listbrewcomments($c);
+    listbrewcomments($c, $p);
   } else {
-    print "Oops - location id '$c->{edit}' not found <br/>\n";
+    print "Oops - Brew id '$c->{edit}' not found <br/>\n";
   }
+  $get_sth->finish;
 } # editbrew
 
 
