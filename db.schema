@@ -169,4 +169,21 @@ CREATE VIEW LOCATIONS_LIST AS select
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id;
+CREATE VIEW BREWS_DEDUP_LIST AS select
+    BREWS.Id,
+	"Chk" as Chk,
+    BREWS.Name,
+    PLOC.Name as Producer,
+    BREWS.Alc as Alc,
+    BREWS.BrewType || ", " || BREWS.Subtype as Type,
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
+    LOCATIONS.Name as Location,
+    count(COMMENTS.Id) as Com,
+    count(GLASSES.Id) as Count
+  from BREWS
+  left join LOCATIONS PLOC on PLOC.id = BREWS.ProducerLocation
+  left join GLASSES on Glasses.Brew = BREWS.Id
+  left join COMMENTS on COMMENTS.Glass = GLASSES.Id
+  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
+  group by BREWS.id;
 COMMIT;

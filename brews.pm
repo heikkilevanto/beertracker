@@ -86,9 +86,6 @@ sub brewtextstyle {
 ################################################################################
 # List of brews
 ################################################################################
-# TODO - More display fields. Country, region, etc
-# TODO - Filtering by brew type, subtype, name, producer, etc
-
 sub listbrews {
   my $c = shift; # context
 
@@ -107,6 +104,7 @@ sub listbrews {
 sub listbrewcomments {
   my $c = shift; # context
   my $brew = shift;
+  print "<!-- listbrewcomments -->\n";
   my $sql = "
     SELECT
       COMMENTS.Id as Cid,
@@ -142,13 +140,12 @@ sub listbrewcomments {
   while ( my $com = $sth->fetchrow_hashref ) {
     print "<tr><td $sty>\n";
     print "<a href='$c->{url}?o=full&e=$com->{Gid}&ec=$com->{Cid}'><span>";
-    print "$com->{Date}<br/>";
+    print "$com->{Date}</span></a><br/> \n";
     my $tim = $com->{Time};
     $tim = "($tim)" if ($tim lt "06:00");
     print "$tim\n";
     print "<span style='font-size: xx-small'>" .
-          "[$com->{Cid}]</span><br/>";
-    print "</span></a>\n";
+          "[$com->{Cid}]</span>";
     print "</td>\n";
 
     print "<td style='border-bottom: 1px solid white'>\n";
@@ -160,7 +157,7 @@ sub listbrewcomments {
     print "</td>\n";
 
     print "<td style='border-bottom: 1px solid white; vertical-align: top; white-space:normal'>\n";
-    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b><span></a> &nbsp;";
+    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b></span></a> &nbsp;";
     print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
     print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
     print "<br/>";
@@ -199,9 +196,11 @@ sub listbrewcomments {
         table.style.display = (table.style.display === 'none') ? 'table' : 'none';
       }
     }
-    </script>";
+    </script>
+    ";
   $sth->finish;
-  print "<hr/>";
+  print "<!-- listbrewcomments end -->\n";
+  print "<hr/>\n";
 
 } # listbrewcomments
 
@@ -212,6 +211,7 @@ sub listbrewcomments {
 sub listbrewglasses {
   my $c = shift; # context
   my $brew = shift;
+  print "<!-- listbrewglasses -->\n";
   my $sql = "
     SELECT
       COMMENTS.Id as Cid,
@@ -240,9 +240,9 @@ sub listbrewglasses {
     $glcount++;
     print "<tr><td>\n";
     print "<span style='font-size: xx-small'>" .
-          "[$com->{Gid}]</span></td>";
+          "[$com->{Gid}]</span></td>\n";
     print "<td><a href='$c->{url}?o=full&e=$com->{Gid}'><span>";
-    print "$com->{Date} ";
+    print "$com->{Date} </span></a>";
     my $tim = $com->{Time};
     $tim = "($tim)" if ($tim lt "06:00");
     print "$tim\n";
@@ -262,7 +262,7 @@ sub listbrewglasses {
     }
     print "</td><td>\n";
 
-    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b><span></a> &nbsp;";
+    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b></span></a> &nbsp;";
     print "</td>\n";
     print "</tr>\n";
   }
@@ -271,9 +271,32 @@ sub listbrewglasses {
   print "$glcount Glasses ";
   print "</div>";
   $sth->finish;
-  print "<hr/>";
+  print "<!-- listbrewglasses end -->\n";
+  print "<hr/>\n";
 
 } # listbrewcomments
+
+################################################################################
+# brewdeduplist - List all brews, for selecting those that duplicate the current
+################################################################################
+sub brewdeduplist {
+  my $c = shift; # context
+  my $brew = shift;
+  print "<!-- brewdeduplist -->\n";
+  print "<form method='POST' accept-charset='UTF-8' class='no-print' >\n";
+  print "Mark brews that are duplicates of [$brew->{Id}] $brew->{Name} ";
+  print "and click here: \n";
+  print "<input type=submit name=submit value='Deduplicate' />\n";
+  print "<input type=hidden name='o' value='$c->{op}' />\n";
+  print "<input type=hidden name='e' value='$c->{edit}' />\n";
+  print "<input type=hidden name='dedup' value='1' />\n";
+  print "<br/>\n";
+  my $sort = $c->{sort} || "Last-";
+  print util::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id}" );
+  print "</form>\n";
+  print "<!-- brewdeduplist end -->\n";
+  print "<hr/>\n";
+} # brewdeduplist
 
 ################################################################################
 # Editbrew - Show a form for editing a brew record
@@ -303,6 +326,7 @@ sub editbrew {
     print "<hr/>\n";
     listbrewcomments($c, $p);
     listbrewglasses($c, $p);
+    brewdeduplist($c, $p);
   } else {
     print "Oops - Brew id '$c->{edit}' not found <br/>\n";
   }
@@ -356,6 +380,33 @@ sub selectbrew {
   return $s;
 }
 
+################################################################################
+# Deduplicate brews
+################################################################################
+sub dedupbrews {
+  my $c = shift;
+  my $id = $c->{edit}; # The brew we keep
+  my @dups; # The ones we aim to remove
+  foreach my $paramname ($c->{cgi}->param) {
+    if ( $paramname =~ /^Chk(\d+)$/ ) {
+      push @dups, $1;
+    }
+  }
+  print STDERR "dedupbrews: Deduplicating (@dups) to '$id' \n";
+  for my $dup ( @dups ) {
+    my $sql = "UPDATE GLASSES set Brew = ? where Brew = ?  ";
+    print STDERR "$sql with '$id' and '$dup' \n";
+    my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+    util::error("Deduplicate brews: Failed to update glasses") unless $rows;
+    print STDERR "Updated $rows glasses from $dup to $id\n";
+    $sql = "DELETE FROM Brews WHERE Id = ? ";
+    $rows = $c->{dbh}->do($sql, undef, $dup);
+    util::error("Deduplicate brews: Failed to delete brew '$dup'") unless $rows;
+    print STDERR "Deleted $rows brews with id  $dup\n";
+
+  }
+
+} # dedupbrews
 
 ################################################################################
 # Update a brew, posted from the form in the selection above
@@ -364,6 +415,10 @@ sub selectbrew {
 sub postbrew {
   my $c = shift; # context
   my $id = shift || $c->{edit};
+  if ( util::param($c,"dedup") ) {
+    dedupbrews($c);
+    return;
+  }
   if ( $id eq "new" ) {
     my $name = util::param($c, "newbrewName");
     util::error ("A brew must have a name" ) unless $name;

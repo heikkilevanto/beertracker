@@ -711,6 +711,7 @@ sub listrecords {
   my @styles;  # One for each column
   # Table headers
   $s .= "<tr>\n";
+  my $chkfield = -1;  # index of the checkmark field, if any
   my $dofilters = 0;
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
@@ -723,8 +724,11 @@ sub listrecords {
       $sty = "style='font-size: xx-small' text-align='right'";
     } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
       $sty = "style='text-align:right'";
-    } elsif ( $f =~ /Rate/ ) {
+    } elsif ( $f =~ /Rate/) {
       $sty = "style='text-align:center'";
+    } elsif ( $f =~ /Chk/) {
+      $sty = "style='text-align:center'";
+      $chkfield = $i; # Remember where it is
     } elsif ( $f =~ /Comment/ ) {
       $sty = "style='max-width:400px; min-width:0'";
     } elsif ( $f =~ /^X/ ) {
@@ -733,7 +737,7 @@ sub listrecords {
     $styles[$i] = $sty;
     my $sf = $f;
     $sf .= "-" if ( $f eq $sort );
-    $s .= "<td $sty><a href='$url?o=$op&s=$sf'><i>$f</i></a></td>\n";
+    $s .= "<td $sty><a href='$url?o=$op&e=$c->{edit}&s=$sf'><i>$f</i></a></td>\n";
   }
   $s .= "</tr>\n";
 
@@ -758,6 +762,7 @@ sub listrecords {
   while ( my @rec = $list_sth->fetchrow_array ) {
     my $tds = "";
     my $fv = "";
+    my $id = $rec[0]; # Id has to be first if using the Check pseudofield
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i] || "";
       my $fn = $fields[$i];
@@ -771,6 +776,8 @@ sub listrecords {
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Alc" ) {
         $v = sprintf("%5.1f", $v)  if ($v);
+      } elsif ( $fn eq "Chk" ) {
+        $v = "<input type=checkbox name=Chk$id />";
       } elsif ( $fn eq "Last" ) {
         my ($date, $wd, $time) = splitdate($v);
         $v = "$wd $date $time";
@@ -786,6 +793,8 @@ sub listrecords {
   $list_sth->finish;
 
   # JS to do the filtering
+  # TODO - Never filter records that have the Chk box checked
+  # TODO - Do the sorting in JS as well, so we can keep the checked rows at top
   $s .= <<"SCRIPTEND";
   <script>
   let filterTimeout;
