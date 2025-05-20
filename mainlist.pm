@@ -202,6 +202,7 @@ sub locationhead {
   my $locname = "@" . $loc->{Name};
   print "<b>$wd $date " .
     "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$locname</span></a> </b>";
+  print " <span style='font-size: x-small;'>[$rec->{loc}]</span>\n";
   print "<a href='$loc->{Website}' target='_blank'><span style='font-size: x-small;'>www</span></a>"
     if ( $loc->{Website} );
   print "<br/><br/>";
@@ -237,7 +238,9 @@ sub numbersline {
   my $c = shift;
   my $rec = shift;
   my $bloodalc = shift;
-  print "<span style='font-size: x-small;'>[$rec->{id}] </span>";
+  print "<a href='$c->{url}?o=$c->{op}&e=$rec->{id}'>" .
+        "<span>edit [$rec->{id}]</span></a>\n";
+  #print "<span style='font-size: x-small;'>[$rec->{id}] </span>";
   print "<b>".util::unit($rec->{vol},"c")."</b>";
   print util::unit($rec->{price},",-");
   print util::unit($rec->{alc},"%");
@@ -301,8 +304,6 @@ sub buttonline {
     $vols{40} = 1;
   }
   print "<form method='POST' style='display:inline;' class='no-print' onClick='setdate();'>\n";
-  # Edit link
-  print "<a href='$c->{url}?o=$c->{op}&e=$rec->{id}'><span>edit</span></a>\n";
 
   # Hidden fields to post
   my $brewid = $rec->{brewid} || "";
