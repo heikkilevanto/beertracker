@@ -189,7 +189,7 @@ sub locationhead {
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<br/>";
   print "<b>$wd $date " .
-    "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$loc->{Name}</span></a> </b><br/>";
+    "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>@ $loc->{Name}</span></a> </b><br/>";
   print "<br/>";
   return ( $rec->{effdate}, $rec->{loc}, $loc->{Name}, "$wd $date", $date );
 }
@@ -211,7 +211,7 @@ sub nameline {
   if ( $rec->{brewname} ) {
     print "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;
   } else {
-    print "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>$locationname</b></span></a> " ;
+    print "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>@ $locationname</b></span></a> " ;
   }
   print "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
   print "<br/>\n"

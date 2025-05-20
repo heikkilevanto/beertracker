@@ -722,6 +722,7 @@ sub listrecords {
 
   my @styles;  # One for each column
   # Table headers
+  $s .= "<thead>";
   $s .= "<tr>\n";
   my $chkfield = -1;  # index of the checkmark field, if any
   my $dofilters = 0;
@@ -747,9 +748,10 @@ sub listrecords {
       $sty = "style='display:none'";
     }
     $styles[$i] = $sty;
+    my $click = "onclick='sortTable(this,$i)'";
     my $sf = $f;
     $sf .= "-" if ( $f eq $sort );
-    $s .= "<td $sty><a href='$url?o=$op&e=$c->{edit}&s=$sf'><i>$f</i></a></td>\n";
+    $s .= "<td $sty $click data-label='$f'>$f</td>\n";
   }
   $s .= "</tr>\n";
 
@@ -771,6 +773,7 @@ sub listrecords {
     }
     $s .= "</tr>\n";
   }
+  $s .= "</thead><tbody>\n";
 
   while ( my @rec = $list_sth->fetchrow_array ) {
     my $tds = "";
@@ -806,7 +809,7 @@ sub listrecords {
     $s .= "<tr $fv>\n";
     $s .= "$tds</tr>\n";
   }
-  $s .= "</table>\n";
+  $s .= "</tbody></table>\n";
   $s .= "</div>\n";
   $list_sth->finish;
 
@@ -887,6 +890,41 @@ sub listrecords {
       }
     }
     dochangefilter(el);
+  }
+
+  function sortTable(el, col) {
+    const table = el.closest('table');
+    const tbody = table.tBodies[0];
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    const isAscending = table.dataset.sortCol == col && table.dataset.sortDir !== "desc";
+    const dir = isAscending ? -1 : 1;
+    const decorated = rows.map(row => {
+      const text = row.children[col].textContent.trim() || "";
+      const match = text.match(/20[0-9: -]+/);
+      let value;
+      value = (match || isNaN(text)) ? text.toLowerCase() : parseFloat(text);
+      return { row, value };
+    });
+    decorated.sort((a, b) => {
+      if (a.value < b.value) return -1 * dir;
+      if (a.value > b.value) return 1 * dir;
+      return 0;
+    });
+
+    decorated.forEach(({ row }) => tbody.appendChild(row));
+    const headers = table.tHead.rows[0].cells;
+    for (let th of headers) {  // Clear arrows
+      const label = th.dataset.label;
+      if (label) {
+        th.textContent = label;
+      }
+    }
+
+    const headerCell = table.tHead.rows[0].cells[col];
+    headerCell.textContent = headerCell.textContent.trim() + (dir === 1 ? " ▲" : " ▼");
+
+    table.dataset.sortCol = col;
+    table.dataset.sortDir = isAscending ? "desc" : "asc";
   }
   </script>
 SCRIPTEND

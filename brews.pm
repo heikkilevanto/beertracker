@@ -96,8 +96,7 @@ sub listbrews {
   print "<b>Brews</b> ";
   print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
   print "<br/>\n";
-  my $sort = $c->{sort} || "Last-";
-  print util::listrecords($c, "BREWS_LIST", $sort );
+  print util::listrecords($c, "BREWS_LIST", "Last-" );
   return;
 } # listbrews
 
