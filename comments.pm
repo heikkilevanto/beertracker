@@ -32,12 +32,10 @@ sub ratingline {
 sub commentline {
   my $c = shift;
   my $cr = shift; # The comment to display, from sql like one in listcomments
-  my $glid = shift || ""; # The glass id, empty if no edit link wanted
+  my $glid = $cr->{Glass};
   my $s = "";
-  if ( $glid ) {
-    $s .= "<a href='$c->{url}?o=$c->{op}&e=$glid&ec=$cr->{Id}'>" .
+  $s .= "<a href='$c->{url}?o=$c->{op}&e=$glid&ec=$cr->{Id}'>" .
           "<span style='font-size: xx-small'>[$cr->{Id}]</span></a>\n";
-  }
   $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );
   $s .= "<b>$cr->{PersName}:</b>\n" if ( $cr->{Person} );
   $s .= "<i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
@@ -110,8 +108,7 @@ sub commentform {
   # If editing, include the comment ID
   if ($com && $com->{Id}) {
     $s .= "<input type='hidden' name='comment_id' value='$com->{Id}'>\n";
-    $s .= "Editing comment $com->{Id} ";
-    $s .= "<a href=$c->{url}?o=$c->{op}&e=$c->{edit}><span>Cancel</span></a><br/>\n";
+    $s .= "<br/>Editing comment $com->{Id} <br/>";
   }
 
   # Comment text area
@@ -122,12 +119,7 @@ sub commentform {
   # Person involved in the comment
   #print STDERR "cform: pn='$com->{PersName}' pi=$com->{PersId} \n";
   $s .= persons::selectperson($c, 'person', $com->{PersId} );
-
-  # TODO - Photo button
-
-  # Submit button
-  my $button_text = $com->{Id} ? "Update Comment" : "Add Comment";
-  $s .= "<input type='submit' value='$button_text'>\n";
+  #$s .= "<br/>";
 
   # Rating dropdown
   $s .= "<select name='rating'>\n";
@@ -138,6 +130,14 @@ sub commentform {
     $s .= "<option value='$i'$selected>$i: $ratings[$i]</option>\n";
   }
   $s .= "</select>\n";
+  $s .= "&nbsp; (photo) <br/>\n";
+  # TODO - Photo button
+
+  # Submit button
+  my $button_text = $com->{Id} ? "Update Comment" : "Add Comment";
+  $s .= "<input type='submit' name='submit' value='$button_text'>\n";
+  $s .= "<a href=$c->{url}?o=$c->{op}&e=$c->{edit}><span>Cancel</span></a>\n";
+  $s .= "<input type='submit' name='submit' value='Delete Comment'>\n" if ( $com->{Id} );
 
 
   $s .= "</form>\n";
@@ -175,11 +175,16 @@ sub postcomment {
   }
 
   if ($comment_id) { # Update existing comment
-    my $sql = "UPDATE comments SET Rating = ?, Comment = ?, Person = ?
-               WHERE Id = ? AND Glass = ?";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute($rating, $comment, $person, $comment_id, $glass );
-    print STDERR "Updated comment '$comment_id' for glass  '$glass' \n";
+    if ( util::param($c,"submit") =~ /Delete Comment/i ) {
+      my $rows = $c->{dbh}->do("DELETE FROM COMMENTS WHERE ID = ?", undef, $comment_id);
+      print STDERR "Deleted comment id '$comment_id' (rows=$rows) \n";
+    } else { # must be a real update
+      my $sql = "UPDATE comments SET Rating = ?, Comment = ?, Person = ?
+                WHERE Id = ? AND Glass = ?";
+      my $sth = $c->{dbh}->prepare($sql);
+      $sth->execute($rating, $comment, $person, $comment_id, $glass );
+      print STDERR "Updated comment '$comment_id' for glass  '$glass' \n";
+    }
   } else { # Insert new comment
     my $sql = "INSERT INTO comments (Glass, Rating, Comment, Person) VALUES (?, ?, ?, ?)";
     my $sth = $c->{dbh}->prepare($sql);
