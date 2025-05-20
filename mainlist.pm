@@ -190,8 +190,10 @@ sub locationhead {
   print "<br/>";
   my $locname = "@" . $loc->{Name};
   print "<b>$wd $date " .
-    "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$locname</span></a> </b><br/>";
-  print "<br/>";
+    "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$locname</span></a> </b>";
+  print "<a href='$loc->{Website}' target='_blank'><span style='font-size: x-small;'>www</span></a>"
+    if ( $loc->{Website} );
+  print "<br/><br/>";
   return ( $rec->{effdate}, $rec->{loc}, "@".$loc->{Name}, "$wd $date", $date );
 }
 
@@ -249,6 +251,7 @@ sub commentlines {
     print "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
       #print "<div style='padding-left: 20px;'>* \n";
+      $com->{Id} = ""; # Disable the edit link with id
       print "<li>". comments::commentline($c, $com). "</li>\n  ";  # </div>\n";
     }
     print "</ul>\n";
