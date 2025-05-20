@@ -89,12 +89,14 @@ sub brewtextstyle {
 sub listbrews {
   my $c = shift; # context
 
-  if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
+  if ( $c->{edit} ) {
     editbrew($c);
     return;
   }
+  print "<b>Brews</b> ";
+  print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
+  print "<br/>\n";
   my $sort = $c->{sort} || "Last-";
-  print "<b>Brews</b><br/>\n";
   print util::listrecords($c, "BREWS_LIST", $sort );
   return;
 } # listbrews
@@ -306,32 +308,46 @@ sub brewdeduplist {
 
 sub editbrew {
   my $c = shift;
-  my $sql = "select * from BREWS where id = ?";
-    # This Can leak info from persons filed by other users. Not a problem now
-  my $get_sth = $c->{dbh}->prepare($sql);
-  $get_sth->execute($c->{edit});
-  my $p = $get_sth->fetchrow_hashref;
+  my $p = {};
+  my $submit = "Update";
+  if ( $c->{edit} =~ /new/i ) {
+    $p->{Id} = "new";
+    $p->{BrewType} = "Beer"; # Some decent defaults
+    $p->{SubType} = "NEIPA"; # More for guiding the input than true values
+    $p->{Country} = "DK";
+    print "<b>Inserting a new brew<br/>\n";
+    $submit = "Insert";
+  } else {
+    my $sql = "select * from BREWS where id = ?";
+    my $get_sth = $c->{dbh}->prepare($sql);
+    $get_sth->execute($c->{edit});
+    $p = $get_sth->fetchrow_hashref;
+    $get_sth->finish;
+    print "<b>Editing Brew $p->{Id}: $p->{Name}</b><br/>\n";
+  }
   if ( $p->{Id} ) {  # found the brew
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
+    print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
-    print "<b>Editing Brew $p->{Id}: $p->{Name}</b><br/>\n";
 
     print util::inputform($c, "BREWS", $p );
-    print "<input type='submit' name='submit' value='Update Brew' /><br/>\n";
+    print "<input type='submit' name='submit' value='$submit Brew' />\n";
+    print "<a href='$c->{url}?o=$c->{op}'><span>Cancel</span></a>\n";
+    print "<br/>\n";
 
     # Come back to here after updating
     print "<input type='hidden' name='o' value='$c->{op}' />\n";
-    print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "</form>\n";
     print "<hr/>\n";
-    listbrewcomments($c, $p);
-    listbrewglasses($c, $p);
-    brewdeduplist($c, $p);
+    if ( $p->{Id} ne "new" ) {
+      listbrewcomments($c, $p);
+      listbrewglasses($c, $p);
+      brewdeduplist($c, $p);
+    }
   } else {
     print "Oops - Brew id '$c->{edit}' not found <br/>\n";
   }
-  $get_sth->finish;
 } # editbrew
 
 
@@ -415,13 +431,19 @@ sub postbrew {
     return;
   }
   if ( $id eq "new" ) {
+    my $section = "newbrew"; # as when inserted from main list
     my $name = util::param($c, "newbrewName");
+    if ( !$name ) {
+      $name = util::param($c, "Name");
+      $section = "";
+    }
     util::error ("A brew must have a name" ) unless $name;
     #util::error ("A brew must have a type" ) unless util::param($c, "newbrewBrewType");
 
     my $defaults = {};
     $defaults->{BrewType} = util::param($c, "selbrewtype") || "WRONG"; # Signals a bad type. Should not happen
-    $id = util::insertrecord($c,  "BREWS", "newbrew", $defaults);
+    $id = util::insertrecord($c,  "BREWS", $section, $defaults);
+    $c->{edit} = $id; # come back to the new beer
     return $id;
 
   } else {

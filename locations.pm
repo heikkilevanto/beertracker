@@ -32,7 +32,7 @@ sub listlocations {
     editlocation($c);
     return;
   }
-
+  print "<b>Locations</b><br/>\n";
   my $sort = $c->{sort} || "Last-";
   # print util::listrecords($c, "LOCATIONS_LIST", $sort, "Type NOT LIKE  'Producer%'" );
   print util::listrecords($c, "LOCATIONS_LIST", $sort );
