@@ -188,10 +188,11 @@ sub locationhead {
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<br/>";
+  my $locname = "@" . $loc->{Name};
   print "<b>$wd $date " .
-    "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>@ $loc->{Name}</span></a> </b><br/>";
+    "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$locname</span></a> </b><br/>";
   print "<br/>";
-  return ( $rec->{effdate}, $rec->{loc}, $loc->{Name}, "$wd $date", $date );
+  return ( $rec->{effdate}, $rec->{loc}, "@".$loc->{Name}, "$wd $date", $date );
 }
 
 sub nameline {
@@ -211,7 +212,7 @@ sub nameline {
   if ( $rec->{brewname} ) {
     print "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;
   } else {
-    print "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>@ $locationname</b></span></a> " ;
+    print "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>$locationname</b></span></a> " ;
   }
   print "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
   print "<br/>\n"
@@ -313,7 +314,7 @@ sub sumline {
   print "<td $attr><b>" . util::unit($prsum,"kr") . "</b></td>\n";
   print "<td $attr><b>" . util::unit($drinksum, "d") . "</b></td>\n";
   print "<td $attr><b>" . util::unit($balc, "/₀₀") . "</b></td>\n";
-  print "<td> Total for <b>$txt</b></td>";
+  print "<td> Total <b>$txt</b></td>";
   print "</tr></table>";
 }
 
@@ -351,8 +352,8 @@ sub oneday {
     #print "</p>\n";
     print "<br/>\n";
   }
-  sumline($c, $locname, $locdrsum, $locprsum, $balc->{"max"}) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
-  sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
+  sumline($c, $locname, $locdrsum, $locprsum) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
+  sumline($c, "for $weekday", $daydrsum, $dayprsum, $balc->{"max"});
   print "<hr/>";
 
 }
