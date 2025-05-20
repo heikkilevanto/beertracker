@@ -311,6 +311,10 @@ sub dropdown {
               if (event.target.getAttribute("id") == "new" ) {
                 wholedropdown$inputname.hidden = true;
                 newdiv$inputname.hidden = false;
+                const inputs = newdiv$inputname.querySelectorAll('[data-required="1"]');
+                for (let i = 0; i < inputs.length; i++) {
+                  inputs[i].setAttribute('required', 'required');
+                }
                 document.querySelector('#newdiv-$inputname input')?.focus();
               } else { // update alc and brewtype if selected a brew
                 const alcinp = document.getElementById("alc");
@@ -443,8 +447,16 @@ sub inputform {
         # (that is lowercase 'alc'). Pass it to glass.alc
         $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
       }
+      my $required = "";
+      if ( $f =~ /Name|BrewType|SubType|LocType/i && $f !~ /OfficialName/i) {
+        if ( $inputprefix ) {
+          $required = "data-required='1'";
+        } else {
+          $required = "required";
+        }
+      }
       $form .= "<td>\n";
-      $form .= "<input name='$inpname' $val $clr $pass />\n";
+      $form .= "<input name='$inpname' $val $clr $pass $required/>\n";
       $form .= $separatortag;
     }
     $form .= "</td></tr>\n";
