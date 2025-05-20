@@ -198,6 +198,8 @@ sub nameline {
   # 22:19 [Beer,NEIPA] Gamma: Freak Wave
   my $c = shift;
   my $rec = shift;
+  my $locationid = shift; # The location we are at, not producer of current drink
+  my $locationname = shift;
   my $style = $rec->{brewtype};
   $style .= ",$rec->{subtype}" if ($rec->{subtype});
   my $time = $rec->{time};
@@ -206,7 +208,11 @@ sub nameline {
   my $dispstyle = brews::brewtextstyle($c,$style);
   print "<span $dispstyle>[$style]</span> \n";
   print "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
-  print "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " if ( $rec->{brewname} );
+  if ( $rec->{brewname} ) {
+    print "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;
+  } else {
+    print "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>$locationname</b></span></a> " ;
+  }
   print "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
   print "<br/>\n"
 }
@@ -338,7 +344,7 @@ sub oneday {
     $daydrsum += $rec->{drinks} if ($rec->{drinks});
     $locprsum += abs($rec->{price})  if ($rec->{price});
     $locdrsum += $rec->{drinks} if ($rec->{drinks});
-    nameline($c,$rec);
+    nameline($c, $rec, $loc, $locname);
     numbersline($c,$rec,$balc);
     commentlines($c,$rec);
     buttonline($c,$rec);
