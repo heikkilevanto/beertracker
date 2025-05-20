@@ -251,7 +251,7 @@ sub plotgraph {
       $fillstyle = $fillstyleborder;
     }
   } else { # Small image
-    $pointsize = "set pointsize 0.3\n" ;  # Smaller zeroday marks, etc
+    $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
     $g->{maxd} = $g->{maxd} + 2; # Make room at the top of the graph for the legend
     if ( $g->{range} > 365*4 ) {  # "all"
       ( $xtic, $xformat ) = @xyear;
