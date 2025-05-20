@@ -94,6 +94,7 @@ sub listbrews {
     return;
   }
   my $sort = $c->{sort} || "Last-";
+  print "<b>Brews</b><br/>\n";
   print util::listrecords($c, "BREWS_LIST", $sort );
   return;
 } # listbrews

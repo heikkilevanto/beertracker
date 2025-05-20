@@ -726,7 +726,7 @@ sub listrecords {
       $sty = "style='text-align:right'";
     } elsif ( $f =~ /Rate/) {
       $sty = "style='text-align:center'";
-    } elsif ( $f =~ /Chk/) {
+    } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
       $sty = "style='text-align:center'";
       $chkfield = $i; # Remember where it is
     } elsif ( $f =~ /Comment/ ) {
@@ -744,7 +744,8 @@ sub listrecords {
   # Filter inputs
   if ( $dofilters ) {
     $s .= "<tr>\n";
-    for ( my $i=0; $i < scalar( @fields ); $i++ ) {
+    $s .= "<td onclick='clearfilters(this);'>Clr</td>\n";
+    for ( my $i=1; $i < scalar( @fields ); $i++ ) {
       $s .= "<td $styles[$i] >";
       my $f = $fields[$i];
       $f =~ s/^-//;
@@ -767,22 +768,27 @@ sub listrecords {
       my $v = $rec[$i] || "";
       my $fn = $fields[$i];
       my $sty = "style='max-width:200px'"; # default
+      my $onclick = "onclick='fieldclick(this,$i);'";
       if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><b>$v</b></a>";
+        $onclick = "";
       } elsif ( $fn eq "Sub" ) {
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Type" ) {
-        $v =~ s/[ ,]*$//;
+        $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Alc" ) {
         $v = sprintf("%5.1f", $v)  if ($v);
       } elsif ( $fn eq "Chk" ) {
         $v = "<input type=checkbox name=Chk$id />";
+        $onclick = "";
       } elsif ( $fn eq "Last" ) {
         my ($date, $wd, $time) = splitdate($v);
         $v = "$wd $date $time";
+        # TODO - "Sun 21:15" or "Sun 2023-05-25", depending on how recent
+        # Will save a few chars on the phone
       }
-      $tds .= "<td $styles[$i]>$v</td>\n";
+      $tds .= "<td $styles[$i] $onclick>$v</td>\n";
     }
 
     $s .= "<tr $fv>\n";
@@ -830,13 +836,45 @@ sub listrecords {
       const cols = rows[r].querySelectorAll('td');
       for (let c = 0; c < cols.length; c++) {
         if ( filters[c] )  {
-          console.log ( "Have filter for r=" + r + " c=" + c );
+          //console.log ( "Have filter for r=" + r + " c=" + c );
           if ( !filters[c].test( cols[c].textContent ) )
             disp = "none";
         }
       }
       row.style.display = disp;
     }
+  }
+
+  function fieldclick(el,index) {
+    var filtertext = el.textContent;
+    filtertext = filtertext.replace( /\\[|\\]/g , ""); // Remove brackets [Beer,IPA]
+    filtertext = filtertext.replace( /^.*(20[0-9-]+) .*\$/ , "\$1"); // Just the date
+      // Note the double escapes, since this is still a perl string
+    //console.log("Click on element " + el + ": '" + el.textContent + "' i=" + index + " f='" + filtertext + "'" );
+
+    // Get the filters
+    const table = el.closest('table');
+    const rows = table.querySelectorAll('tr');
+    const filtertds = rows[1].querySelectorAll('td');
+    const filterinp = filtertds[index].querySelector('input');
+    if ( filterinp ) {
+      filterinp.value = filtertext;
+      dochangefilter(el);
+    }
+  }
+
+  function clearfilters(el) {
+    // Get the filters
+    const table = el.closest('table');
+    const rows = table.querySelectorAll('tr');
+    const filtertds = rows[1].querySelectorAll('td');
+    for ( let i=0; i<filtertds.length; i++) {
+      let filterinp = filtertds[i].querySelector('input');
+      if ( filterinp ) {
+        filterinp.value = '';
+      }
+    }
+    dochangefilter(el);
   }
   </script>
 SCRIPTEND
