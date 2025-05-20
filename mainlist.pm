@@ -230,19 +230,21 @@ sub commentlines {
   my $c = shift;
   my $rec = shift;
   if ( $rec->{comcount} ) {
-  my $sql = "select COMMENTS.*,
-    PERSONS.Name as PersName,
-    PERSONS.Id as PersId
-    from comments
-    left join PERSONS on persons.id = comments.person
-    where glass = ?
-    order by Id"; # To keep the order consistent
+    my $sql = "select COMMENTS.*,
+      PERSONS.Name as PersName,
+      PERSONS.Id as PersId
+      from comments
+      left join PERSONS on persons.id = comments.person
+      where glass = ?
+      order by Id"; # To keep the order consistent
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($rec->{id});
+    print "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
-      print "<div style='padding-left: 20px;'>* \n";
-      print comments::commentline($c, $com). "</div>\n";
+      #print "<div style='padding-left: 20px;'>* \n";
+      print "<li>". comments::commentline($c, $com). "</li>\n  ";  # </div>\n";
     }
+    print "</ul>\n";
   }
 }
 

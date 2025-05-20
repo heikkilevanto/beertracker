@@ -69,13 +69,14 @@ sub listcomments {
   $s .= "&nbsp;<br/>\n";
   my $editcommentid = util::param($c, "ec", 0);
   my $editcommentrec;
+  $s .= "<ul style='margin:0; padding-left:1.2em;'>\n";
   while ( my $cr = $sth->fetchrow_hashref ) {
-    $s .= commentline($c,$cr,$glassid);
+    $s .= "<li>" . commentline($c,$cr,$glassid) . "</li>\n";
     if ( $editcommentid && $cr->{Id} == $editcommentid ) {
       $editcommentrec = $cr;
     }
-    $s .= "<br/>\n";
   }
+  $s .= "</ul>\n";
   $s .= commentform($c, $editcommentrec, $glassid);
 
   return $s;
