@@ -9,12 +9,6 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
 
-# TODO - This is not at all ready, for now it is mostly a design document
-
-my $design_ideas = q{
-
-
-};
 
 ################################################################################
 # Db helpers
@@ -25,6 +19,18 @@ my $design_ideas = q{
 sub glassquery {
   my $c = shift;
   my $sql = q {
+    WITH brew_stats AS (
+      SELECT
+        g.brew,
+        COUNT(CASE WHEN c.rating > 0 THEN 1 END) AS ratingcount,
+        SUM(CASE WHEN c.rating > 0 THEN c.rating END) AS ratingsum,
+        AVG(CASE WHEN c.rating > 0 THEN c.rating END) AS ratingavg,
+        COUNT(CASE WHEN c.comment != '' THEN 1 END) AS commentcount
+      FROM comments c
+      JOIN glasses g ON c.glass = g.id
+      WHERE g.brew != ''
+      GROUP BY g.brew
+      )
     select
       glasses.id as id,
       strftime('%Y-%m-%d %w', timestamp, '-06:00') as effdate,
@@ -41,18 +47,22 @@ sub glassquery {
       brews.Name as brewname,
       locations.name as producer,
       locations.Id as prodid,
-      (select count(*) from comments where comments.glass = glasses.id) as comcount
+      (select count(*) from comments where comments.glass = glasses.id) as comcount,
+      bs.ratingcount,
+      bs.ratingsum,
+      bs.ratingavg,
+      bs.commentcount
     from glasses
     left join brews on brews.id = glasses.brew
     left join locations on locations.id = brews.producerlocation
+    left join brew_stats bs on glasses.brew = bs.brew
     where Username = ?
     order by timestamp desc
   };
-  #print STDERR "u='$c->{username}' sql='$sql' \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($c->{username});
   return $sth;
-}
+} # glassquery
 
 ################################################################################
 # Db reader
@@ -102,6 +112,7 @@ sub peekrec {
   pushback($c,$rec);
   return $rec;
 }
+
 ################################################################################
 # A helper to calculate blood alcohol for a given effdate
 # Returns a hash with bloodalcs for each timestamp for the effdate
@@ -220,7 +231,9 @@ sub nameline {
   print "<br/>\n"
 }
 sub numbersline {
-  # [14951] 40cl 70.- 6.2% 1.63d 0.93/₀₀
+  # [14951] 40cl 70.- 6.2% 1.63d 0.93/₀₀ (7.5)/2 3*
+  # id, vol, price, alc, drinks, blood alc, avg rating /count, comment count
+  # The ratings and comments are globally for that brew.
   my $c = shift;
   my $rec = shift;
   my $bloodalc = shift;
@@ -232,6 +245,15 @@ sub numbersline {
   my $ba = $bloodalc->{ $rec->{id} } || "";
   #print STDERR "'$rec->{id}' ba=$ba \n";
   print util::unit($ba,"/₀₀");
+  my $rc = $rec->{ratingcount};
+  if ( $rc ) {
+    if ( $rc == 1 ) {
+      print " <b>($rec->{ratingavg})</b>";
+    } else {
+      print sprintf(" <b>(%3.1f)</b>/%d", $rec->{ratingavg}, $rec->{ratingcount} );
+    }
+  }
+  print " $rec->{commentcount}•" if ( $rec->{commentcount} );
   print "<br/>\n"
 }
 
@@ -250,7 +272,6 @@ sub commentlines {
     $sth->execute($rec->{id});
     print "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
-      #print "<div style='padding-left: 20px;'>* \n";
       $com->{Id} = ""; # Disable the edit link with id
       print "<li>". comments::commentline($c, $com). "</li>\n  ";  # </div>\n";
     }
