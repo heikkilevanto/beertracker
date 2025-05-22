@@ -373,7 +373,7 @@ sub selectbrew {
     order by max(GLASSES.Timestamp) DESC
     ";
   my $list_sth = $c->{dbh}->prepare($sql);
-  $list_sth->execute(); # username ?
+  $list_sth->execute();
 
   my $opts = "";
   my $current = "";

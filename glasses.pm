@@ -493,13 +493,16 @@ sub selectbrewtype {
   my $sql = "select distinct BrewType from Glasses";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( );
-  my $s = "<select name='selbrewtype' id='selbrewtype' >\n";
+  my $s = "";
   while ( my $bt = $sth->fetchrow_array ) {
     my $se = "";
     $se = "selected" if ( $bt eq $selected );
     $s .= "<option value='$bt' $se>$bt</option>\n";
   }
-  $s .= "</select>\n";
+  util::error ("No brew types in the database. Insert some dummy glasses")
+    unless ($s);
+  $s = "<select name='selbrewtype' id='selbrewtype' >\n" .
+    $s . "</select>\n";
   return $s;
 }
 
