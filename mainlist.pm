@@ -59,6 +59,8 @@ sub glassquery {
     where Username = ?
     order by timestamp desc
   };
+  # TODO - Move the brew_stat into a separate query. Make one for locations as
+  # well.
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($c->{username});
   return $sth;
@@ -333,13 +335,14 @@ sub sumline {
   my $drinksum = shift;
   my $prsum = shift;
   my $balc = shift;
-  print "<table border=0 style='table-layout: fixed' > <tr>";
-  print "<td>===</td>";
-  my $attr = "align='right' width='50px' ";
-  print "<td $attr><b>" . util::unit($prsum,"kr") . "</b></td>\n";
-  print "<td $attr><b>" . util::unit($drinksum, "d") . "</b></td>\n";
-  print "<td $attr><b>" . util::unit($balc, "/₀₀") . "</b></td>\n";
-  print "<td> Total <b>$txt</b></td>";
+  #print "<table border=0 style='table-layout: fixed' > <tr>";
+  print "<table border=0 > <tr>";
+  my $attr = "align='right'  ";
+  print "<td>=</td>\n";
+  print "<td $attr width='50px' ><b>" . util::unit($prsum,"kr") . "</b></td>\n";
+  print "<td $attr width='50px' ><b>" . util::unit($drinksum, "d") . "</b></td>\n";
+  print "<td $attr width='53px' ><b>" . util::unit($balc, "/₀₀") . "</b></td>\n";
+  print "<td>&nbsp <b>$txt</b></td>";
   print "</tr></table>";
 }
 
@@ -378,7 +381,7 @@ sub oneday {
     print "<br/>\n";
   }
   sumline($c, $locname, $locdrsum, $locprsum) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
-  sumline($c, "for $weekday", $daydrsum, $dayprsum, $balc->{"max"});
+  sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
   print "<hr/>";
 
 }
