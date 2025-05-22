@@ -207,6 +207,7 @@ sub showmenu {
   $s .= "<option value='o=Months' >Stats</option>\n";
   $s .= "<option value='o=Brew' >Brews</option>\n";
   $s .= "<option value='o=Location' >Locations</option>\n";
+  $s .= "<option value='o=Comment' >Comments</option>\n";
 #  $s .= "<option value='o=Style' >Styles</option>\n";  # Disabled, see #417
   $s .= "<option value='o=Person' >Persons</option>\n";
   $s .= "<option value='o=About' >About</option>\n";

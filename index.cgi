@@ -354,6 +354,8 @@ if ( $op =~ /Board/i ) {
   brews::listbrews($c);
 } elsif ( $op =~ /Person/i ) {
   persons::listpersons($c);
+} elsif ( $op =~ /Comment/i ) {
+  comments::listallcomments($c);
 } elsif ( $op =~ /Location/i ) {
   locations::listlocations($c);
 } elsif ( $op =~ /Full/i ) {

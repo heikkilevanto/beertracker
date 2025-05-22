@@ -47,6 +47,23 @@ sub commentline {
 } # commentline
 
 ################################################################################
+# List of all comments
+################################################################################
+sub listallcomments {
+  my $c = shift; # context
+
+  if ( $c->{edit} ) {
+    editbrew($c);
+    return;
+  }
+  print "<b>Comments</b> ";
+  #print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
+  print "<br/>\n";
+  print util::listrecords($c, "COMMENTS", "Last-" );
+  return;
+} # listallcomments
+
+################################################################################
 # List of comments for a given glass record
 ################################################################################
 sub listcomments {
