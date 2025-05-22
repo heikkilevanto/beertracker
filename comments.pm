@@ -137,7 +137,7 @@ sub commentform {
   # Submit button
   my $button_text = $com->{Id} ? "Update Comment" : "Add Comment";
   $s .= "<input type='submit' name='submit' value='$button_text'>\n";
-  $s .= "<a href=$c->{url}?o=$c->{op}&e=$c->{edit}><span>Cancel</span></a>\n";
+  $s .= "<a href='$c->{url}?o=$c->{op}&e=$c->{edit}'><span>Cancel</span></a>\n";
   $s .= "<input type='submit' name='submit' value='Delete Comment'>\n" if ( $com->{Id} );
 
 

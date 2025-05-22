@@ -77,6 +77,7 @@ sub addsums {
 sub oneday {
   my $g = shift;
   my $day = shift;
+  my $today = shift;
   my $c = $g->{c};
   my $alc = "NaN";
   if ( $g->{range} < 95 ) { # Over 3m we don't show them anyway.
@@ -135,8 +136,8 @@ sub oneday {
   $g->{lastavg} = $a30; # Save the last for legend
   $g->{lastwk} = $s7;
   my $zero = " NaN ";
-  if ( $sum > 0.4 || $s7 < 0.1 || $g->{range} > 93 ) {
-    $g->{zeroheight} = 0.1;
+  if ( $sum > 0.4 || $s7 < 0.1 || $g->{range} > 93 || $day ge $today ) {
+    $g->{zeroheight} = 0.1; # no mark, start next at bottom
   } else {
     $zero = $g->{zeroheight};
     $g->{zeroheight} += 0.3; # Fits nicely with 7 marks in a week
@@ -155,6 +156,7 @@ sub makedatafile {
   my $g = shift;
   my $c = $g->{c};
 
+  my $today = util::datestr("%F");
   my $start = Time::Piece->strptime( $g->{start}, "%Y-%m-%d" );
   my $end = Time::Piece->strptime( $g->{end}, "%Y-%m-%d" );
   $g->{range} = ($end - $start) / $oneday;
@@ -195,8 +197,9 @@ sub makedatafile {
   $g->{weekends} = "";
   #print "Making data file for " . $start->ymd . " to " . $end->ymd . "<br/>\n";
   while ( $date <= $end ) {
-    my $line = oneday( $g, $date->ymd);
+    my $line = oneday( $g, $date->ymd, $today);
     print F $line;
+    print F "\n" if ( $date->ymd ge $today); # split curves at today
     if ( $date->wday == 6 ) { # Sat
       my $wkendcolor = $c->{bgcolor};
       $wkendcolor =~ s/003/005/;
@@ -340,8 +343,8 @@ sub graphlinks {
   my $start = Time::Piece->strptime($g->{start},"%F");
   my $end = Time::Piece->strptime($g->{end},"%F");
   my $range = $end - $start;
-  onelink($g, "<<", ($start-$range)->ymd, ($end-$range)->ymd );
-  onelink($g, ">>", ($start+$range)->ymd, ($end+$range)->ymd );
+  onelink($g, "&lt;&lt;", ($start-$range)->ymd, ($end-$range)->ymd ); # <<
+  onelink($g, "&gt;&gt;", ($start+$range)->ymd, ($end+$range)->ymd ); # >>
   onelink($g, "2w", ($t-14*$oneday)->ymd );
   onelink($g, "Month"); # default values
   onelink($g, "3m", $t->add_months(-3)->ymd );
