@@ -314,7 +314,12 @@ sub dropdown {
                 newdiv$inputname.hidden = false;
                 const inputs = newdiv$inputname.querySelectorAll('[data-required="1"]');
                 for (let i = 0; i < inputs.length; i++) {
-                  inputs[i].setAttribute('required', 'required');
+                if (inputs[i].offsetWidth || inputs[i].offsetHeight || inputs[i].getClientRects().length) {
+                    // A trick to see if a field is visible
+                    inputs[i].setAttribute('required', 'required');
+                  } else {
+                    inputs[i].removeAttribute("required");
+                  }
                 }
                 document.querySelector('#newdiv-$inputname input')?.focus();
               } else { // update alc and brewtype if selected a brew
