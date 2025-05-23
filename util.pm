@@ -314,7 +314,8 @@ sub dropdown {
                 newdiv$inputname.hidden = false;
                 const inputs = newdiv$inputname.querySelectorAll('[data-required="1"]');
                 for (let i = 0; i < inputs.length; i++) {
-                if (inputs[i].offsetWidth || inputs[i].offsetHeight || inputs[i].getClientRects().length) {
+                //if (inputs[i].offsetWidth || inputs[i].offsetHeight || inputs[i].getClientRects().length) {
+                if (inputs[i].offsetParent != null ) {
                     // A trick to see if a field is visible
                     inputs[i].setAttribute('required', 'required');
                   } else {
