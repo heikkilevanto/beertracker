@@ -324,8 +324,8 @@ if ( $q->request_method eq "POST" ) {
 
   $dbh->do("COMMIT");
 
-  # Redirect back to the edit page. Clear Set up $c as needed
-  print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}&e=$c->{edit}" );
+  # Redirect back to the op, but not editing
+  print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}" );
   $dbh->disconnect;
   exit;
 }

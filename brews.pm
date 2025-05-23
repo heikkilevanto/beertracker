@@ -442,7 +442,6 @@ sub postbrew {
     my $defaults = {};
     $defaults->{BrewType} = util::param($c, "selbrewtype") || "WRONG"; # Signals a bad type. Should not happen
     $id = util::insertrecord($c,  "BREWS", $section, $defaults);
-    $c->{edit} = $id; # come back to the new beer
     return $id;
 
   } else {
