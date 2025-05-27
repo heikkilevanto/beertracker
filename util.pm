@@ -750,7 +750,7 @@ sub listrecords {
 
   # Table headers
   $s .= "<thead>";
-  $s .= "<tr>\n";
+  $s .= "<tr class='top-border'>\n";
   my $chkfield = -1;  # index of the checkmark field, if any
   my $dofilters = 0;
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
@@ -763,6 +763,7 @@ sub listrecords {
       next;
     }
     $f =~ s/^-//;
+    $f =~ s/'//g;
     if ( $f =~ /Name|Last|Location|Type|Producer/ ) {
       $dofilters = 1;
     }
@@ -770,8 +771,8 @@ sub listrecords {
       $sty = "style='font-size: xx-small' text-align='right'";
     } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
       $sty = "style='text-align:right'";
-    } elsif ( $f =~ /Rate/) {
-      $sty = "style='text-align:center'";
+    } elsif ( $f =~ /Rate|Rating/) {
+      $sty = "style='text-align:center; font-weight:bold; max-width:50px'";
     } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
       $sty = "style='text-align:center'";
       $chkfield = $i; # Remember where it is
@@ -779,7 +780,7 @@ sub listrecords {
       $sty = "style='font-weight: bold;' ";
     } elsif ( $f =~ /Comment/ ) {
       $sty = "style='max-width:400px; min-width:0; font-style: italic' colspan='3' ";
-    } elsif ( $f =~ /^X/ ) {
+    } elsif ( $f =~ /^X|''/ ) {
       $sty = "style='display:none'";
     }
     $styles[$i] = $sty;
@@ -790,19 +791,19 @@ sub listrecords {
 
   # Filter inputs
   if ( $dofilters ) {
-    $s .= "<tr>\n";
+    $s .= "<tr class='top-border'>\n";
     $s .= "<td onclick='clearfilters(this);'>Clr</td>\n";
     for ( my $i=1; $i < scalar( @fields ); $i++ ) {
-      $s .= "<td $styles[$i] >";
       my $f = $fields[$i];
       my $break = linebreak($c,$f);
       if ( $break ) {
         $s .= $break;
         next;
       }
+      $s .= "<td $styles[$i] >";
       $f =~ s/^-//;
-      if ( $f =~ /Name|Last|Location|Type|Producer/ ) {
-        $s .= "<input type=text name='filter-$i' data-col=$i oninput='changefilter(this);' $styles[$i] />";
+      if ( $f =~ /Name|Last|Location|Type|Prod|Rating/ ) {
+        $s .= "<input type=text name='filter-$i' data-col=$i oninput='changefilter(this);'  placeholder='$f'/>";
         # Tried also with box-sizing: border-box; display: block;. Still extends the cell
       } else {
         $s .= "&nbsp;"
@@ -843,6 +844,8 @@ sub listrecords {
         $v = "@" . $v  if ($v);
       } elsif ( $fn eq "PersonName" ) {
         $v .= ":" if ($v);
+      } elsif ( $fn eq "Rating" ) {
+        $v = "($v)" if ($v);
       } elsif ( $fn eq "Chk" ) {
         $v = "<input type=checkbox name=Chk$id />";
         $onclick = "";
@@ -887,14 +890,12 @@ sub listrecords {
     if (!table) return; // should not happen
 
     const filterinputs = table.querySelectorAll('thead input');
-    //console.log("Got filters", filterinputs );
 
     // Get the filters
     let filters = [];
     for ( let i=0; i<filterinputs.length; i++) {
       let filterinp = filterinputs[i];
       if ( filterinp ) {
-        //console.log("Filter " + i + " '" + filterinp.value + "' col='" + filterinp.getAttribute("data-col") + "'" );
         const col = filterinp.getAttribute("data-col");
         filters[col] = new RegExp(filterinp.value, 'i')
       }
@@ -912,7 +913,6 @@ sub listrecords {
               const re = filters[col];
               if ( !re.test( cols[c].textContent, 'i' ) ) {
                 disp = "none";
-                //console.log("Filter mismatch on '" + col+ "' " + cols[c].textContent );
               }
             }
           }
@@ -934,7 +934,6 @@ sub listrecords {
     filtertext = filtertext.replace( /\\[|\\]/g , ""); // Remove brackets [Beer,IPA]
     filtertext = filtertext.replace( /^.*(20[0-9-]+) .*\$/ , "\$1"); // Just the date
       // Note the double escapes, since this is still a perl string
-    //console.log("Click on element " + el + ": '" + el.textContent + "' i=" + index + " f='" + filtertext + "'" );
 
     // Get the filters
     const table = el.closest('table');
@@ -959,41 +958,80 @@ sub listrecords {
     dochangefilter(el);
   }
 
+
   function sortTable(el, col) {
     const table = el.closest('table');
     const tbody = table.tBodies[0];
-    console.log ("TODO - Sorting is still wrong! ");
-    const rows = Array.from(tbody.querySelectorAll("tr"));
-    const isAscending = table.dataset.sortCol == col && table.dataset.sortDir !== "desc";
-    const dir = isAscending ? -1 : 1;
-    const decorated = rows.map(row => {
-      const text = row.children[col].textContent.trim() || "";
-      const match = text.match(/20[0-9: -]+/);
-      let value;
-      value = (match || isNaN(text)) ? text.toLowerCase() : parseFloat(text);
-      return { row, value };
-    });
-    decorated.sort((a, b) => {
-      if (a.value < b.value) return -1 * dir;
-      if (a.value > b.value) return 1 * dir;
-      return 0;
+    const ascending = table.dataset.sortCol == col && table.dataset.sortDir !== "desc";
+    const columnIndex = el.getAttribute("data-col");
+
+    // Group rows into records
+    const rows = Array.from(tbody.rows);
+    const records = [];
+    let currentRecord = [];
+
+    for (const row of rows) {
+        if (row.dataset.first === "1") {
+            if (currentRecord.length) records.push(currentRecord);
+            currentRecord = [row];
+        } else {
+            currentRecord.push(row);
+        }
+    }
+    if (currentRecord.length) records.push(currentRecord);
+
+    // Precompute sort keys
+    const sortableRecords = records.map(record => {
+      const key = extractSortKey(record, columnIndex);
+      return { key, record };
     });
 
-    decorated.forEach(({ row }) => tbody.appendChild(row));
-    const headers = table.tHead.rows[0].cells;
-    for (let th of headers) {  // Clear arrows
+
+    // Sort the cached records
+    sortableRecords.sort((a, b) => {
+        if (a.key < b.key) return ascending ? -1 : 1;
+        if (a.key > b.key) return ascending ? 1 : -1;
+        return 0;
+    });
+
+    // Rebuild tbody
+    tbody.innerHTML = "";
+    for (const { record } of sortableRecords) {
+        for (const row of record) {
+            tbody.appendChild(row);
+        }
+    }
+
+   // Clear arrows
+   for (let th of table.querySelectorAll('thead tr td[data-label]') ) {
       const label = th.dataset.label;
       if (label) {
         th.textContent = label;
       }
     }
 
-    const headerCell = table.tHead.rows[0].cells[col];
-    headerCell.textContent = headerCell.textContent.trim() + (dir === 1 ? " ▲" : " ▼");
+    el.textContent = el.textContent.trim() + (ascending ? " ▲" : " ▼");
 
     table.dataset.sortCol = col;
-    table.dataset.sortDir = isAscending ? "desc" : "asc";
+    table.dataset.sortDir = ascending ? "desc" : "asc";
+
   }
+
+  function extractSortKey(recordRows, columnIndex) {
+    for (const row of recordRows) {
+        const sel = "[data-col='" + columnIndex +"']";
+        const cell = row.querySelector(sel);
+        if (cell) {
+          const text = cell.textContent;
+          const match = text.match(/20[0-9: -]+/);
+          let value= (match || isNaN(text)) ? text.toLowerCase() : parseFloat(text);
+          return value;
+        }
+    }
+    return ""; // fallback key
+  }
+
+
   </script>
 SCRIPTEND
   return $s;
