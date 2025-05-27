@@ -692,9 +692,29 @@ sub getfieldswhere {
   return $rec;
 } # getrecord
 
+
 ############ Produce a list of records
 # Has some heuristics for adjusting the display for some selected fields
 # Tune these here or in the view definition
+
+# Helper to decide to make a line break in the display format
+# Returns the string to do so, or nothing if not a TR field
+sub linebreak {
+  my $c = shift;
+  my $field = shift;
+  my $tags = "</tr>\n<tr>\n";  # Stop previous line and start a new one
+  if ( $field =~ /^TRMOB/i ) {  # break for mobile display only
+    if ( $c->{mobile} ) {
+      return $tags;
+    } else {
+      return " "; # non-empty, but not a line break
+    }
+  } elsif ( $field =~ /^TR/i ) { # unconditional break
+    return $tags;
+  }
+  return ""; # Not a line break at all
+}
+
 sub listrecords {
   my $c = shift;
   my $table = shift;
@@ -722,12 +742,12 @@ sub listrecords {
   my $op = $c->{op};
 
   my $s = "";
-  #$s .= "<div style='overflow-x: auto;'>";
-  #$s .= "<table style='white-space: nowrap;'>\n";
+  $s .= "<style>
+    .top-border td { border-top: 2px solid white; }
+    </style>\n";
   $s .= "<table>\n";
-
-
   my @styles;  # One for each column
+
   # Table headers
   $s .= "<thead>";
   $s .= "<tr>\n";
@@ -735,11 +755,17 @@ sub listrecords {
   my $dofilters = 0;
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
+    my $sty = "style='max-width:200px; min-width:0'"; # default
+    my $break = linebreak($c,$f);
+    if ( $break ) {
+      $s .= $break;
+      $styles[$i] ="";
+      next;
+    }
     $f =~ s/^-//;
     if ( $f =~ /Name|Last|Location|Type|Producer/ ) {
       $dofilters = 1;
     }
-    my $sty = "style='max-width:200px; min-width:0'"; # default
     if ( $f eq "Id" ) {
       $sty = "style='font-size: xx-small' text-align='right'";
     } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
@@ -749,16 +775,16 @@ sub listrecords {
     } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
       $sty = "style='text-align:center'";
       $chkfield = $i; # Remember where it is
+    } elsif ( $f =~ /LocName|PersonName/ ) {
+      $sty = "style='font-weight: bold;' ";
     } elsif ( $f =~ /Comment/ ) {
-      $sty = "style='max-width:400px; min-width:0'";
+      $sty = "style='max-width:400px; min-width:0; font-style: italic' colspan='3' ";
     } elsif ( $f =~ /^X/ ) {
       $sty = "style='display:none'";
     }
     $styles[$i] = $sty;
     my $click = "onclick='sortTable(this,$i)'";
-    my $sf = $f;
-    $sf .= "-" if ( $f eq $sort );
-    $s .= "<td $sty $click data-label='$f'>$f</td>\n";
+    $s .= "<td $sty $click data-label='$f' data-col=$i >$f</td>\n";
   }
   $s .= "</tr>\n";
 
@@ -769,9 +795,14 @@ sub listrecords {
     for ( my $i=1; $i < scalar( @fields ); $i++ ) {
       $s .= "<td $styles[$i] >";
       my $f = $fields[$i];
+      my $break = linebreak($c,$f);
+      if ( $break ) {
+        $s .= $break;
+        next;
+      }
       $f =~ s/^-//;
       if ( $f =~ /Name|Last|Location|Type|Producer/ ) {
-        $s .= "<input type=text name=filter$i oninput='changefilter(this);' $styles[$i] />";
+        $s .= "<input type=text name='filter-$i' data-col=$i oninput='changefilter(this);' $styles[$i] />";
         # Tried also with box-sizing: border-box; display: block;. Still extends the cell
       } else {
         $s .= "&nbsp;"
@@ -782,15 +813,22 @@ sub listrecords {
   }
   $s .= "</thead><tbody>\n";
 
+  my $first = 1;
   while ( my @rec = $list_sth->fetchrow_array ) {
     my $tds = "";
-    my $fv = "";
     my $id = $rec[0]; # Id has to be first if using the Check pseudofield
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i] || "";
       my $fn = $fields[$i];
+      my $linebreak = linebreak($c,$fn);
+      if ( $linebreak ) {
+        $tds .= $linebreak;
+        $first = 0;
+        next;
+      }
       my $sty = "style='max-width:200px'"; # default
       my $onclick = "onclick='fieldclick(this,$i);'";
+      my $data = "data-col=$i";
       if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><b>$v</b></a>";
         $onclick = "";
@@ -801,6 +839,10 @@ sub listrecords {
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Alc" ) {
         $v = sprintf("%5.1f", $v)  if ($v);
+      } elsif ( $fn eq "LocName" ) {
+        $v = "@" . $v  if ($v);
+      } elsif ( $fn eq "PersonName" ) {
+        $v .= ":" if ($v);
       } elsif ( $fn eq "Chk" ) {
         $v = "<input type=checkbox name=Chk$id />";
         $onclick = "";
@@ -809,11 +851,13 @@ sub listrecords {
         $v = "$wd $date $time";
         # TODO - "Sun 21:15" or "Sun 2023-05-25", depending on how recent
         # Will save a few chars on the phone
+      } elsif ( $fn eq "Comment" ) {
+        $v = "$v";
       }
-      $tds .= "<td $styles[$i] $onclick>$v</td>\n";
+      $tds .= "<td $styles[$i] $data $onclick>$v</td>\n";
     }
 
-    $s .= "<tr $fv>\n";
+    $s .= "<tr data-first=1 class='top-border'>\n"; # in-between TRs don't have data_first
     $s .= "$tds</tr>\n";
   }
   $s .= "</tbody></table>\n";
@@ -822,7 +866,10 @@ sub listrecords {
 
   # JS to do the filtering
   # TODO - Never filter records that have the Chk box checked
-  # TODO - Do the sorting in JS as well, so we can keep the checked rows at top
+
+  # TODO - I now have named inputs for filters, use them
+  # TODO - How to handle row groups. Mark the first lines somehow, and
+  # process all the following ones as if they were one.
   $s .= <<"SCRIPTEND";
   <script>
   let filterTimeout;
@@ -839,34 +886,49 @@ sub listrecords {
     const table = inputElement.closest('table');
     if (!table) return; // should not happen
 
+    const filterinputs = table.querySelectorAll('thead input');
+    //console.log("Got filters", filterinputs );
+
     // Get the filters
-    const rows = table.querySelectorAll('tr');
-    const filtertds = rows[1].querySelectorAll('td');
     let filters = [];
-    for ( let i=0; i<filtertds.length; i++) {
-      let filterinp = filtertds[i].querySelector('input');
+    for ( let i=0; i<filterinputs.length; i++) {
+      let filterinp = filterinputs[i];
       if ( filterinp ) {
-        filters[i] = new RegExp(filterinp.value, 'i')
-      } else {
-        filters[i] = '';
+        //console.log("Filter " + i + " '" + filterinp.value + "' col='" + filterinp.getAttribute("data-col") + "'" );
+        const col = filterinp.getAttribute("data-col");
+        filters[col] = new RegExp(filterinp.value, 'i')
       }
     }
-
-    for (let r = 2; r < rows.length; r++) { // 0 is col headers, 1 is filters
+    const firstrows = table.querySelectorAll('tbody tr[data-first]');
+    for (let r = 0; r < firstrows.length; r++) {
       var disp = ""; // default to showing the row
-      const row = rows[r];
-      const cols = rows[r].querySelectorAll('td');
-      for (let c = 0; c < cols.length; c++) {
-        if ( filters[c] )  {
-          //console.log ( "Have filter for r=" + r + " c=" + c );
-          if ( !filters[c].test( cols[c].textContent ) )
-            disp = "none";
+      let row = firstrows[r];
+      do {
+        const cols = row.querySelectorAll('td');
+        for (let c = 0; c < cols.length; c++) {
+          const col = cols[c].getAttribute('data-col');
+          if ( col ) {
+            if ( filters[col] ) {
+              const re = filters[col];
+              if ( !re.test( cols[c].textContent, 'i' ) ) {
+                disp = "none";
+                //console.log("Filter mismatch on '" + col+ "' " + cols[c].textContent );
+              }
+            }
+          }
         }
-      }
-      row.style.display = disp;
+        row = row.nextElementSibling;
+      } while ( row && ! row.hasAttribute("data-first") );
+      let ro = firstrows[r];
+      do {
+        ro.style.display = disp;
+        ro = ro.nextElementSibling;
+      } while ( ro && ! ro.hasAttribute("data-first") );
+
     }
   }
 
+  // Clicking on a data field sets the filter
   function fieldclick(el,index) {
     var filtertext = el.textContent;
     filtertext = filtertext.replace( /\\[|\\]/g , ""); // Remove brackets [Beer,IPA]
@@ -876,9 +938,8 @@ sub listrecords {
 
     // Get the filters
     const table = el.closest('table');
-    const rows = table.querySelectorAll('tr');
-    const filtertds = rows[1].querySelectorAll('td');
-    const filterinp = filtertds[index].querySelector('input');
+    const col = el.getAttribute("data-col");
+    const filterinp = table.querySelector('input[data-col="'+col+'"]');
     if ( filterinp ) {
       filterinp.value = filtertext;
       dochangefilter(el);
@@ -888,10 +949,9 @@ sub listrecords {
   function clearfilters(el) {
     // Get the filters
     const table = el.closest('table');
-    const rows = table.querySelectorAll('tr');
-    const filtertds = rows[1].querySelectorAll('td');
-    for ( let i=0; i<filtertds.length; i++) {
-      let filterinp = filtertds[i].querySelector('input');
+    const filters = table.querySelectorAll('thead td input[data-col]');
+    for ( let i=0; i<filters.length; i++) {
+      const filterinp = filters[i];
       if ( filterinp ) {
         filterinp.value = '';
       }
@@ -902,6 +962,7 @@ sub listrecords {
   function sortTable(el, col) {
     const table = el.closest('table');
     const tbody = table.tBodies[0];
+    console.log ("TODO - Sorting is still wrong! ");
     const rows = Array.from(tbody.querySelectorAll("tr"));
     const isAscending = table.dataset.sortCol == col && table.dataset.sortDir !== "desc";
     const dir = isAscending ? -1 : 1;

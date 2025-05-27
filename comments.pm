@@ -38,7 +38,7 @@ sub commentline {
           "<span style='font-size: xx-small'>[$cr->{Id}]</span></a>\n"
         if ( $cr->{Id} );
   $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );
-  $s .= "<b>$cr->{PersName}:</b>\n" if ( $cr->{Person} );
+  $s .= "<b>$cr->{PersName}:</b>\n" if ( $cr->{PersName} );
   $s .= "<i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
   #$s .= "Photo $cr->{Photo} <br/>\n" if ( $cr->{Photo} );  # TODO - Show photo
     # Once I have a photo module
@@ -59,7 +59,7 @@ sub listallcomments {
   print "<b>Comments</b> ";
   #print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
   print "<br/>\n";
-  print util::listrecords($c, "COMMENTS", "Last-" );
+  print util::listrecords($c, "COMMENTS_LIST", "Last-" );
   return;
 } # listallcomments
 
