@@ -765,7 +765,7 @@ sub listrecords {
     }
     my $sty = "style='max-width:200px; min-width:0'"; # default
     if ( $f =~ /Id/ ) {
-      $sty = "style='max-width:50px; font-size:xx-small; text-align:right'";
+      $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
       $sty = "style='text-align:right'";
     } elsif ( $f =~ /Rate|Rating|Clr/) {
@@ -774,9 +774,9 @@ sub listrecords {
       $sty = "style='text-align:center'";
       $chkfield = $i; # Remember where it is
     } elsif ( $f =~ /LocName|PersonName/ ) {
-      $sty = "style='font-weight: bold;' ";
+      $sty = "style='font-weight: bold; max-width:200px;' ";
     } elsif ( $f =~ /Comment/ ) {
-      $sty = "style='max-width:400px; min-width:0; font-style: italic' colspan='3' ";
+      $sty = "style='max-width:200px; min-width:0; font-style: italic' ";
     } elsif ( $f =~ /^X/ ) {
       $sty = "style='display:none'";
     }
@@ -787,7 +787,7 @@ sub listrecords {
 
     $s .= "<td $sty >";
     if ( $f =~ /Clr/i ) { # Clear filters button
-      $s .= "<span $sty onclick='clearfilters(this);' >Clr</span";
+      $s .= "<span $sty onclick='clearfilters(this);' >Clr</span>";
     } elsif ( $f  ) {
       my $on = "oninput='changefilter(this);' ondblclick=sortTable(this,$i)";
       $s .= "<input type=text data-col=$i $sty $on placeholder='$f'/>";
@@ -830,7 +830,7 @@ sub listrecords {
         $v = "@" . $v  if ($v);
       } elsif ( $fn eq "PersonName" ) {
         $v .= ":" if ($v);
-      } elsif ( $fn eq "Rating" ) {
+      } elsif ( $fn eq "Rate" ) {
         $v = "($v)" if ($v);
       } elsif ( $fn eq "Chk" ) {
         $v = "<input type=checkbox name=Chk$id />";
@@ -989,14 +989,11 @@ sub listrecords {
     }
 
    // Clear arrows
-   for (let th of table.querySelectorAll('thead tr td[data-label]') ) {
-      const label = th.dataset.label;
-      if (label) {
-        th.textContent = label;
-      }
+   for (let th of table.querySelectorAll('thead input ') ) {
+      th.value = th.value.replace(/[▲▼]/,"").trim();
     }
 
-    el.textContent = el.textContent.trim() + (ascending ? " ▲" : " ▼");
+    el.value = ascending ? " ▲" : " ▼";
 
     table.dataset.sortCol = col;
     table.dataset.sortDir = ascending ? "desc" : "asc";
