@@ -750,28 +750,25 @@ sub listrecords {
 
   # Table headers
   $s .= "<thead>";
+
+  # Filter inputs also work as column headers, and sort buttons on dbl-click
   $s .= "<tr class='top-border'>\n";
-  my $chkfield = -1;  # index of the checkmark field, if any
-  my $dofilters = 0;
+  #$s .= "<td onclick='clearfilters(this);'>Clr</td>\n";
+  my $chkfield = "";
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
-    my $sty = "style='max-width:200px; min-width:0'"; # default
     my $break = linebreak($c,$f);
     if ( $break ) {
       $s .= $break;
-      $styles[$i] ="";
+      $styles[$i] = "";
       next;
     }
-    $f =~ s/^-//;
-    $f =~ s/'//g;
-    if ( $f =~ /Name|Last|Location|Type|Producer/ ) {
-      $dofilters = 1;
-    }
-    if ( $f eq "Id" ) {
-      $sty = "style='font-size: xx-small' text-align='right'";
+    my $sty = "style='max-width:200px; min-width:0'"; # default
+    if ( $f =~ /Id/ ) {
+      $sty = "style='max-width:50px; font-size:xx-small; text-align:right'";
     } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
       $sty = "style='text-align:right'";
-    } elsif ( $f =~ /Rate|Rating/) {
+    } elsif ( $f =~ /Rate|Rating|Clr/) {
       $sty = "style='text-align:center; font-weight:bold; max-width:50px'";
     } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
       $sty = "style='text-align:center'";
@@ -780,38 +777,27 @@ sub listrecords {
       $sty = "style='font-weight: bold;' ";
     } elsif ( $f =~ /Comment/ ) {
       $sty = "style='max-width:400px; min-width:0; font-style: italic' colspan='3' ";
-    } elsif ( $f =~ /^X|''/ ) {
+    } elsif ( $f =~ /^X/ ) {
       $sty = "style='display:none'";
     }
+    #print STDERR "i=$i f='$f' s='$sty' \n";
     $styles[$i] = $sty;
-    my $click = "onclick='sortTable(this,$i)'";
-    $s .= "<td $sty $click data-label='$f' data-col=$i >$f</td>\n";
+    $f =~ s/^-//;
+    $f =~ s/'//g;
+
+    $s .= "<td $sty >";
+    if ( $f =~ /Clr/i ) { # Clear filters button
+      $s .= "<span $sty onclick='clearfilters(this);' >Clr</span";
+    } elsif ( $f  ) {
+      my $on = "oninput='changefilter(this);' ondblclick=sortTable(this,$i)";
+      $s .= "<input type=text data-col=$i $sty $on placeholder='$f'/>";
+      # Tried also with box-sizing: border-box; display: block;. Still extends the cell
+    } else {
+      $s .= "&nbsp;"
+    }
+    $s .= "</td>\n";
   }
   $s .= "</tr>\n";
-
-  # Filter inputs
-  if ( $dofilters ) {
-    $s .= "<tr class='top-border'>\n";
-    $s .= "<td onclick='clearfilters(this);'>Clr</td>\n";
-    for ( my $i=1; $i < scalar( @fields ); $i++ ) {
-      my $f = $fields[$i];
-      my $break = linebreak($c,$f);
-      if ( $break ) {
-        $s .= $break;
-        next;
-      }
-      $s .= "<td $styles[$i] >";
-      $f =~ s/^-//;
-      if ( $f =~ /Name|Last|Location|Type|Prod|Rating/ ) {
-        $s .= "<input type=text name='filter-$i' data-col=$i oninput='changefilter(this);'  placeholder='Filter $f'/>";
-        # Tried also with box-sizing: border-box; display: block;. Still extends the cell
-      } else {
-        $s .= "&nbsp;"
-      }
-      $s .= "</td>\n";
-    }
-    $s .= "</tr>\n";
-  }
   $s .= "</thead><tbody>\n";
 
   my $first = 1;
@@ -833,7 +819,7 @@ sub listrecords {
       if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><b>$v</b></a>";
         $onclick = "";
-      } elsif ( $fn eq "Sub" ) {
+      } elsif ( $fn =~ /Sub|Id/ ) {
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Type" ) {
         $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype

@@ -197,7 +197,7 @@ select
 	strftime ( '%Y-%m-%d %w ', GLASSES.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', GLASSES.Timestamp) as Last,
 	LOCATIONS.Name as LocName, 
 	"TR" as TR,
-	'' , 
+	'' as Clr, 
 
 	BREWS.Name as BrewName,   
 	PLOC.Name as Prod,
