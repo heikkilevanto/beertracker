@@ -948,8 +948,8 @@ sub listrecords {
   function sortTable(el, col) {
     const table = el.closest('table');
     const tbody = table.tBodies[0];
-    const ascending = table.dataset.sortCol == col && table.dataset.sortDir !== "desc";
-    const columnIndex = el.getAttribute("data-col");
+    const ascending = ( el.value == " ▼" );
+    const columnIndex = col;
 
     // Group rows into records
     const rows = Array.from(tbody.rows);
@@ -975,6 +975,8 @@ sub listrecords {
 
     // Sort the cached records
     sortableRecords.sort((a, b) => {
+        if (a.key === "" ) return 1;
+        if (b.key === "" ) return -1;
         if (a.key < b.key) return ascending ? -1 : 1;
         if (a.key > b.key) return ascending ? 1 : -1;
         return 0;
@@ -993,7 +995,7 @@ sub listrecords {
       th.value = th.value.replace(/[▲▼]/,"").trim();
     }
 
-    el.value = ascending ? " ▲" : " ▼";
+    el.value = ascending ? " ▲" : " ▼" ;
 
     table.dataset.sortCol = col;
     table.dataset.sortDir = ascending ? "desc" : "asc";
@@ -1005,10 +1007,18 @@ sub listrecords {
         const sel = "[data-col='" + columnIndex +"']";
         const cell = row.querySelector(sel);
         if (cell) {
-          const text = cell.textContent;
-          const match = text.match(/20[0-9: -]+/);
-          let value= (match || isNaN(text)) ? text.toLowerCase() : parseFloat(text);
-          return value;
+          let text = cell.textContent;
+          const match = text.match(/20[0-9][0-9]-[0-9 :-]+/);
+          if ( match ) { text = match[0]; }
+          text = text.replace( /^\\[/, "");
+          text = text.replace( /\\]\$/, "");
+          if ( isNaN(text) || ! text) {
+            text = text.toLowerCase().trim();
+          } else {
+            text = parseFloat(text);
+          }
+          // console.log("sortkey for col " + columnIndex + " of '" + cell.textContent + "' is '" + text + "' m=" + match);
+          return text;
         }
     }
     return ""; // fallback key
