@@ -803,7 +803,7 @@ sub listrecords {
       $s .= "<td $styles[$i] >";
       $f =~ s/^-//;
       if ( $f =~ /Name|Last|Location|Type|Prod|Rating/ ) {
-        $s .= "<input type=text name='filter-$i' data-col=$i oninput='changefilter(this);'  placeholder='$f'/>";
+        $s .= "<input type=text name='filter-$i' data-col=$i oninput='changefilter(this);'  placeholder='Filter $f'/>";
         # Tried also with box-sizing: border-box; display: block;. Still extends the cell
       } else {
         $s .= "&nbsp;"

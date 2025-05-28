@@ -191,4 +191,28 @@ CREATE VIEW BREWS_DEDUP_LIST AS select
   left join COMMENTS on COMMENTS.Glass = GLASSES.Id
   left join LOCATIONS on LOCATIONS.id = GLASSES.Location
   group by BREWS.id;
+CREATE VIEW COMMENTS_LIST AS 
+select
+    COMMENTS.Id,
+	strftime ( '%Y-%m-%d %w ', GLASSES.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', GLASSES.Timestamp) as Last,
+	LOCATIONS.Name as LocName, 
+	"TR" as TR,
+	'' , 
+
+	BREWS.Name as BrewName,   
+	PLOC.Name as Prod,
+
+	"TR" as TR,
+	
+	COMMENTS.Rating as Rate,
+    PERSONS.Name as PersonName,
+	COMMENTS.Comment as Comment
+	
+  from COMMENTS
+  left join GLASSES on Glasses.Id = COMMENTS.Glass
+  left join BREWS on BREWS.Id = GLASSES.Brew
+  left join PERSONS on PERSONS.Id = COMMENTS.Person
+  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
+  left join LOCATIONS PLOC on PLOC.id = BREWS.ProducerLocation
+  order by Last desc;
 COMMIT;
