@@ -164,7 +164,7 @@ sub makedatafile {
     SELECT
       Id,
       strftime('%Y-%m-%d', Timestamp, '-06:00') as EffDate,
-      strftime('%H:%M', Timestamp ) as Time,
+      strftime('%H:%M', Timestamp, '-06:00' ) as Time,
       BrewType,
       SubType,
       StDrinks,
@@ -176,6 +176,7 @@ sub makedatafile {
       and Brew <> ''
     order by effdate, Time ";
   # The Brew clause filters out 'empty' glasses like Restaurants.
+  # The time offset is to sort records right, we don't use it for anything else
   #print STDERR "$sql \n";
   $g->{sth} = $c->{dbh}->prepare($sql);
 
