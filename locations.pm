@@ -28,11 +28,12 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 sub listlocations {
   my $c = shift; # context
 
-  if ( $c->{edit} =~ /^\d+$/ ) {  # Id for full info
+  if ( $c->{edit} ) {  # Id for full info
     editlocation($c);
     return;
   }
-  print "<b>Locations</b><br/>\n";
+  print "<b>Locations</b>";
+  print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>\n";
   my $sort = $c->{sort} || "Last-";
   # print util::listrecords($c, "LOCATIONS_LIST", $sort, "Type NOT LIKE  'Producer%'" );
   print util::listrecords($c, "LOCATIONS_LIST", $sort );
@@ -47,21 +48,29 @@ sub listlocations {
 
 sub editlocation {
   my $c = shift;
-  my $sql = "select * from Locations where id = ?";
-    # This Can leak info from persons filed by other users. Not a problem now
-  my $get_sth = $c->{dbh}->prepare($sql);
-  $get_sth->execute($c->{edit});
-  my $p = $get_sth->fetchrow_hashref;
-  for my $f ( "Location", "RelatedPerson" ) {
-    $p->{$f} = "" unless $p->{$f};  # Blank out null fields
+  my $submit = "Update";
+  my $p = {};
+  if ( $c->{edit} =~ /new/i ) {
+    $p->{Id} = "new";
+    $p->{LocType} = "Bar"; # Some decent defaults
+    $p->{LocSubType} = "Beer"; # More for guiding the input than true values
+    print "<b>Inserting a new location<br/>\n";
+    $submit = "Insert";
+  } else {
+    my $sql = "select * from Locations where id = ?";
+    my $get_sth = $c->{dbh}->prepare($sql);
+    $get_sth->execute($c->{edit});
+    $p = $get_sth->fetchrow_hashref;
+    $get_sth->finish;
+    print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
   }
+
   if ( $p->{Id} ) {  # found the person
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
-    print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
     print util::inputform($c, "LOCATIONS", $p );
-    print "<input type='submit' name='submit' value='Update Location' /><br/>\n";
+    print "<input type='submit' name='submit' value='$submit Location' /><br/>\n";
 
     # Come back to here after updating
     print "<input type='hidden' name='o' value='$c->{op}' />\n";
@@ -82,9 +91,14 @@ sub postlocation {
   my $id = shift || $c->{edit};
   if ( $id eq "new" ) {
     my $name = $c->{cgi}->param("newlocName");
+    my $section = "newloc";
+    if ( ! $name ) {
+      $name = $c->{cgi}->param("Name");
+      $section = "";
+    }
     util::error ("A Location must have a name" )
       unless $name;
-    $id = util::insertrecord($c, "LOCATIONS", "newloc");
+    $id = util::insertrecord($c, "LOCATIONS", $section);
   } else {
     my $name = $c->{cgi}->param("Name");
     util::error ("A Location must have a name" )

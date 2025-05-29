@@ -764,7 +764,7 @@ sub listrecords {
       next;
     }
     my $sty = "style='max-width:200px; min-width:0'"; # default
-    if ( $f =~ /Id/ ) {
+    if ( $f =~ /Id|Alc|Com|Count/ ) {
       $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
       $sty = "style='text-align:right'";
@@ -825,7 +825,7 @@ sub listrecords {
         $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Alc" ) {
-        $v = sprintf("%5.1f", $v)  if ($v);
+        $v = util::unit($v,"%") if ($v);
       } elsif ( $fn eq "LocName" ) {
         $v = "@" . $v  if ($v);
       } elsif ( $fn eq "PersonName" ) {
