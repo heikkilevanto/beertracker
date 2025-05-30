@@ -138,22 +138,6 @@ CREATE VIEW COMPERS AS
       from COMMENTS
       LEFT JOIN PERSONS on PERSONS.id = COMMENTS.Person
       GROUP BY comments.glass;
-CREATE VIEW BREWS_LIST AS select
-    BREWS.Id,
-    BREWS.Name,
-    PLOC.Name as Producer,
-    BREWS.Alc as Alc,
-    BREWS.BrewType || ", " || BREWS.Subtype as Type,
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
-    LOCATIONS.Name as Location,
-    count(COMMENTS.Id) as Com,
-    count(GLASSES.Id) as Count
-  from BREWS
-  left join LOCATIONS PLOC on PLOC.id = BREWS.ProducerLocation
-  left join GLASSES on Glasses.Brew = BREWS.Id
-  left join COMMENTS on COMMENTS.Glass = GLASSES.Id
-  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
-  group by BREWS.id;
 CREATE VIEW PERSONS_LIST AS select
     PERSONS.Id,
     PERSONS.Name,
@@ -215,4 +199,37 @@ select
   left join LOCATIONS on LOCATIONS.id = GLASSES.Location
   left join LOCATIONS PLOC on PLOC.id = BREWS.ProducerLocation
   order by Last desc;
+CREATE VIEW BREWS_LIST AS select
+    BREWS.Id,
+    BREWS.Name,
+    PLOC.Name as Producer,
+	"TR" as TR,
+    BREWS.Alc as Alc,
+    BREWS.BrewType || ", " || BREWS.Subtype as Type,
+    count(COMMENTS.Id) as Com,
+    count(GLASSES.Id) as Count,
+	"TR" as TR,
+	'' as '',
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
+    LOCATIONS.Name as Location
+  from BREWS
+  left join LOCATIONS PLOC on PLOC.id = BREWS.ProducerLocation
+  left join GLASSES on Glasses.Brew = BREWS.Id
+  left join COMMENTS on COMMENTS.Glass = GLASSES.Id
+  left join LOCATIONS on LOCATIONS.id = GLASSES.Location
+  group by BREWS.id;
+CREATE VIEW BREW_RATINGS AS
+SELECT
+    g.brew,
+    count(g.brew) as glass_count,
+    COUNT(CASE WHEN c.rating IS NOT NULL AND c.rating != '' THEN 1 END) AS rating_count,
+    AVG(CASE WHEN c.rating IS NOT NULL AND c.rating != '' THEN c.rating END) AS average_rating,
+    COUNT(CASE WHEN c.comment IS NOT NULL AND c.comment != '' THEN 1 END) AS comment_count
+FROM
+    glasses g
+LEFT JOIN
+    comments c ON c.glass = g.id
+where g.brew is not null 
+GROUP BY
+    g.brew;
 COMMIT;

@@ -40,7 +40,110 @@ sub listlocations {
   return;
 } # listlocations
 
+################################################################################
+# List comments for the given location
+################################################################################
+sub listlocationcomments {
+  my $c = shift;
+  my $loc = shift;
+  print "<!-- listlocationcomments -->\n";
+  my $sql = "
+    SELECT
+      COMMENTS.* ,
+      strftime('%Y-%m-%d', GLASSES.Timestamp,'-06:00') as Date,
+      strftime('%H:%M', GLASSES.Timestamp) as Time,
+      comments.Rating as Rating,
+      COMMENTS.Comment,
+      PERSONS.Name as PersName,
+      PERSONS.ID as Pid,
+      GLASSES.Id as Gid
+      from GLASSES, COMMENTS
+      LEFT JOIN PERSONS on PERSONS.ID = COMMENTS.Person
+      where Comments.glass = glasses.id
+      and ( glasses.brew = '' OR glasses.brew = NULL )
+      and glasses.username = ?
+      and Glasses.location = ?
+  ";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($c->{username}, $loc->{Id});
+  print "<div style='overflow-x: auto;'>";
+  print "<table  style='white-space: nowrap;'>\n";
+  my $ratesum = 0;
+  my $ratecount = 0;
+  my $comcount = 0;
+  my $perscount = 0;
+  my $lastglass = "";
+  while ( my $com = $sth->fetchrow_hashref ) {
+    my $sty = "style='border-top: 1px solid white; vertical-align: top;' ";
+    if ( $lastglass ne $com->{Gid} ) {
+      print "<tr><td $sty>\n";
+      print "<a href='$c->{url}?o=full&e=$com->{Glass}&ec=$com->{Id}'><span>";
+      print "$com->{Date}</span></a><br/> \n";
+      my $tim = $com->{Time};
+      $tim = "($tim)" if ($tim lt "06:00");
+      print "$tim\n";
+      print "<span style='font-size: xx-small'>" .
+            "[$com->{Id}]</span>";
+      $lastglass = $com->{Gid};
+    } else {
+      $sty = "";
+      print "<tr><td>\n"; # without the top line
+    }
 
+    print "</td>\n";
+
+    print "<td $sty>\n";
+    if ( $com->{Rating} ) {
+      print "<b>($com->{Rating})</b>\n";
+      $ratesum += $com->{Rating};
+      $ratecount++;
+    }
+    print "</td>\n";
+
+    print "<td $sty>\n";
+    print "<br/>";
+    print "<i>$com->{Comment}</i>";
+    $comcount++ if ($com->{Comment});
+    print "</td>\n";
+
+    print "<td $sty>\n";
+    if ( $com->{PersName} ) {
+      print "<a href='$c->{url}?o=Person&e=$com->{Pid}'><span style='font-weight: bold;'>$com->{PersName}</span></a>\n";
+      $perscount++;
+    }
+    print "</td>\n";
+    # TODO - Photo thumbnail in its own TD
+    print "</tr>\n";
+  }
+  print "</table></div>\n";
+  print "<div onclick='toggleCommentTable(this);'><br/>";
+  if ( $comcount == 0 ) {
+    print "(No Comments)";
+  } else {
+    if ( $ratecount == 1) {
+      print "One rating: <b>" . comments::ratingline($ratesum) . "</b> ";
+    } elsif ( $ratecount > 0 ) {
+      my $avg = sprintf( "%3.1f", $ratesum / $ratecount);
+      print "$ratecount Ratings averaging <b>" . comments::ratingline($avg) . "</b>. ";
+    } else {
+      print "Comments: $comcount. ";
+    }
+  }
+  print "</div>";
+  print "<script>
+    function toggleCommentTable(div) {
+      let table = div.previousElementSibling;
+      if (table) {
+        table.style.display = (table.style.display === 'none') ? 'table' : 'none';
+      }
+    }
+    </script>
+    ";
+  $sth->finish;
+  print "<!-- listbrewcomments end -->\n";
+  print "<hr/>\n";
+
+}
 
 ################################################################################
 # Editlocation - Show a form for editing a location record
@@ -77,7 +180,9 @@ sub editlocation {
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "</form>\n";
     print "<hr/>\n";
-    print "(This should show the last n visits to the location, etc)<br/>\n"; # TODO
+    if ( $p->{Id} ne "new" ) {
+      listlocationcomments($c,$p);
+    }
   } else {
     print "Oops - location id '$c->{edit}' not found <br/>\n";
   }
