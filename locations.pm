@@ -142,8 +142,29 @@ sub listlocationcomments {
   $sth->finish;
   print "<!-- listbrewcomments end -->\n";
   print "<hr/>\n";
+} # listlocationcomments
 
-}
+################################################################################
+# locationdeduplist - List all locations, for selecting those that duplicate the current
+################################################################################
+sub locationdeduplist {
+  my $c = shift; # context
+  my $loc = shift;
+  print "<!-- locationdeduplist -->\n";
+  print "<form method='POST' accept-charset='UTF-8' class='no-print' >\n";
+  print "Mark locations that are duplicates of <b>[$loc->{Id}] $loc->{Name}</b> ";
+  print "and click here: \n";
+  print "<input type=submit name=submit value='Deduplicate' />\n";
+  print "<input type=hidden name='o' value='$c->{op}' />\n";
+  print "<input type=hidden name='e' value='$c->{edit}' />\n";
+  print "<input type=hidden name='dedup' value='1' />\n";
+  print "<br/>\n";
+  my $sort = $c->{sort} || "Last-";
+  print util::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}" );
+  print "</form>\n";
+  print "<!-- locationdeduplist end -->\n";
+  print "<hr/>\n";
+} # brewdeduplist
 
 ################################################################################
 # Editlocation - Show a form for editing a location record
@@ -182,6 +203,7 @@ sub editlocation {
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
       listlocationcomments($c,$p);
+      locationdeduplist($c,$p);
     }
   } else {
     print "Oops - location id '$c->{edit}' not found <br/>\n";
@@ -189,11 +211,50 @@ sub editlocation {
 } # editlocation
 
 ################################################################################
+# Deduplicate location
+################################################################################
+sub deduplocations {
+  my $c = shift; # context
+  my $id = shift; # The id of the location we keep
+  foreach my $paramname ($c->{cgi}->param) {
+    if ( $paramname =~ /^Chk(\d+)$/ ) {
+      my $dup = $1;
+      my $sql = "UPDATE GLASSES set Location = ? where Location = ?  ";
+      print STDERR "$sql with '$id' and '$dup' \n";
+      my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      util::error("Deduplicate Locations: Failed to update glasses") unless $rows;
+      print STDERR "Updated $rows glasses from $dup to $id\n";
+
+      $sql = "UPDATE PERSONS set Location = ? where Location = ?  ";
+      print STDERR "$sql with '$id' and '$dup' \n";
+      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      print STDERR "Updated $rows glasses from $dup to $id\n";
+
+      $sql = "UPDATE BREWS set ProducerLocation = ? where ProducerLocation = ?  ";
+      print STDERR "$sql with '$id' and '$dup' \n";
+      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      print STDERR "Updated $rows brews from $dup to $id\n";
+
+      $sql = "DELETE FROM LOCATIONS WHERE Id = ? ";
+      $rows = $c->{dbh}->do($sql, undef, $dup);
+      util::error("Deduplicate Locations: Failed to delete brew '$dup'") unless $rows;
+      print STDERR "Deleted $rows brews with id  $dup\n";
+    }
+  }
+
+} # deduplocations
+
+################################################################################
 # Update a location (posted from the form above)
 ################################################################################
 sub postlocation {
   my $c = shift; # context
   my $id = shift || $c->{edit};
+  if ( util::param($c,"dedup") ) {
+    deduplocations($c,$id);
+    return;
+  }
+
   if ( $id eq "new" ) {
     my $name = $c->{cgi}->param("newlocName");
     my $section = "newloc";

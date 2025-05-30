@@ -232,4 +232,13 @@ LEFT JOIN
 where g.brew is not null 
 GROUP BY
     g.brew;
+CREATE VIEW LOCATIONS_DEDUP_LIST AS select
+    LOCATIONS.Id,
+	"Chk" as Chk,
+    LOCATIONS.Name,
+    LOCATIONS.LocType || ", " || LOCATIONS.LocSubType as Type,
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last
+  from LOCATIONS
+  left join GLASSES on GLASSES.Location = LOCATIONS.Id
+  group by LOCATIONS.Id;
 COMMIT;
