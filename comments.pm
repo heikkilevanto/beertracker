@@ -34,7 +34,7 @@ sub commentline {
   my $cr = shift; # The comment to display, from sql like one in listcomments
   my $glid = $cr->{Glass};
   my $s = "";
-  $s .= "<a href='$c->{url}?o=$c->{op}&e=$glid&ec=$cr->{Id}'>" .
+  $s .= "<a href='$c->{url}?o=full&e=$glid&ec=$cr->{Id}'>" .
           "<span style='font-size: xx-small'>[$cr->{Id}]</span></a>\n"
         if ( $cr->{Id} );
   $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );

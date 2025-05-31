@@ -52,22 +52,27 @@ sub listlocationcomments {
       COMMENTS.* ,
       strftime('%Y-%m-%d', GLASSES.Timestamp,'-06:00') as Date,
       strftime('%H:%M', GLASSES.Timestamp) as Time,
-      comments.Rating as Rating,
-      COMMENTS.Comment,
       PERSONS.Name as PersName,
       PERSONS.ID as Pid,
-      GLASSES.Id as Gid
+      GLASSES.Id as Gid,
+      GLASSES.BrewType,
+      GLASSES.SubType
       from GLASSES, COMMENTS
       LEFT JOIN PERSONS on PERSONS.ID = COMMENTS.Person
       where Comments.glass = glasses.id
-      and ( glasses.brew = '' OR glasses.brew = NULL )
+      and (glasses.brew IS NULL or glasses.brew = '')
+      and glasses.BrewType in ( 'Restaurant', 'Night')
       and glasses.username = ?
       and Glasses.location = ?
+      order by Glasses.Timestamp desc
   ";
+#        and ( glasses.brew = '' OR glasses.brew = NULL )
+
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($c->{username}, $loc->{Id});
   print "<div style='overflow-x: auto;'>";
-  print "<table  style='white-space: nowrap;'>\n";
+  #print "<table  style='white-space: nowrap;'>\n";
+  print "<table>\n";
   my $ratesum = 0;
   my $ratecount = 0;
   my $comcount = 0;
@@ -77,40 +82,30 @@ sub listlocationcomments {
     my $sty = "style='border-top: 1px solid white; vertical-align: top;' ";
     if ( $lastglass ne $com->{Gid} ) {
       print "<tr><td $sty>\n";
-      print "<a href='$c->{url}?o=full&e=$com->{Glass}&ec=$com->{Id}'><span>";
-      print "$com->{Date}</span></a><br/> \n";
+      print "<a href='$c->{url}?o=full&e=$com->{Glass}&ec=$com->{Id}'><b>";
+      print "$com->{Date}</b></a>\n";
       my $tim = $com->{Time};
       $tim = "($tim)" if ($tim lt "06:00");
       print "$tim\n";
-      print "<span style='font-size: xx-small'>" .
-            "[$com->{Id}]</span>";
+      print "<span style='font-size: xx-small'>[$com->{Glass}]</span>\n";
+      print "[$com->{BrewType}/$com->{SubType}]\n";
       $lastglass = $com->{Gid};
+      print "</td></tr>\n";
     } else {
-      $sty = "";
-      print "<tr><td>\n"; # without the top line
     }
+    print "<tr>\n";
 
-    print "</td>\n";
 
-    print "<td $sty>\n";
+    print "<td>\n";
+    print comments::commentline($c,$com);
+
+    $perscount++ if ( $com->{PersName} );
+    $comcount++ if ($com->{Comment});
     if ( $com->{Rating} ) {
-      print "<b>($com->{Rating})</b>\n";
       $ratesum += $com->{Rating};
       $ratecount++;
     }
-    print "</td>\n";
 
-    print "<td $sty>\n";
-    print "<br/>";
-    print "<i>$com->{Comment}</i>";
-    $comcount++ if ($com->{Comment});
-    print "</td>\n";
-
-    print "<td $sty>\n";
-    if ( $com->{PersName} ) {
-      print "<a href='$c->{url}?o=Person&e=$com->{Pid}'><span style='font-weight: bold;'>$com->{PersName}</span></a>\n";
-      $perscount++;
-    }
     print "</td>\n";
     # TODO - Photo thumbnail in its own TD
     print "</tr>\n";
