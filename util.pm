@@ -771,7 +771,7 @@ sub listrecords {
     } elsif ( $f =~ /Rate|Rating|Clr/) {
       $sty = "style='text-align:center; font-weight:bold; max-width:50px'";
     } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
-      $sty = "style='text-align:center'";
+      $sty = "style='text-align:center;max-width:50px'";
       $chkfield = $i; # Remember where it is
     } elsif ( $f =~ /LocName|PersonName/ ) {
       $sty = "style='font-weight: bold; max-width:200px;' ";
@@ -790,6 +790,7 @@ sub listrecords {
       $s .= "<span $sty onclick='clearfilters(this);' >Clr</span>";
     } elsif ( $f  ) {
       my $on = "oninput='changefilter(this);' ondblclick=sortTable(this,$i)";
+      $on = "" if ($f=~/Chk/);
       $s .= "<input type=text data-col=$i $sty $on placeholder='$f'/>";
       # Tried also with box-sizing: border-box; display: block;. Still extends the cell
     } else {
@@ -883,6 +884,7 @@ sub listrecords {
       let filterinp = filterinputs[i];
       if ( filterinp ) {
         const col = filterinp.getAttribute("data-col");
+        filterinp.value = filterinp.value.replace(/[▲▼]/,"");
         filters[col] = new RegExp(filterinp.value, 'i')
       }
     }
