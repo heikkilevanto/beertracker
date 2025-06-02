@@ -64,11 +64,10 @@ sub selectbrewtype {
   my $script = <<'SCRIPT';
     <script>
       function selbrewchange(el) {
-        const val = el.value;
-        console.log("SelBrewChange to " + val );
+        const selbrew = document.getElementById("selbrewtype");
+        const val = selbrew.value;
         const selected = el.options[el.selectedIndex];
         const isempty = selected.getAttribute("data-isempty");
-        console.log("empty: " + isempty );
         const table = el.closest('table');
         for ( const td of table.querySelectorAll("[data-empty]") ) {
           const te = td.getAttribute("data-empty");
@@ -118,7 +117,7 @@ sub selectbrewsubtype {
     my $em = "data-empty=\"$bt->{BrewType}\" ";
     $s .= "<option value='$bt->{SubType}' $em $sel>$bt->{SubType}</option>\n";
   }
-  $s = "<select name='selbrewsubtype' id='selbrewsubtype' onChange='selbrewchange(this);'>\n" .
+  $s = "<select name='selbrewsubtype' id='selbrewsubtype'>\n" .
     $s . "</select>\n";
   return $s;
 } # selectbrewsubtype
@@ -169,11 +168,21 @@ sub inputform {
   print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname", "non") .
     "</td></tr>\n";
 
-  # Brew style / empty glass subtype
+  # Brew style
   print "<tr><td style='vertical-align:top'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
   print "<td>\n";
-  print "<span data-empty=2>". selectbrewsubtype($c,$rec). "</span>";
-  print "<span data-empty=1>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</span>";
+
+  # Brew, or  subtype
+  my $hidesub = "";
+  my $hidebrew = "";
+  if (isemptyglass($rec->{BrewType}) ) {
+    $hidebrew = "style=display:none";
+  } else {
+    $hidesub = "style=display:none";
+  }
+  "style=display:none" if ( isemptyglass($rec->{BrewType}) );
+  print "<span $hidesub data-empty=2>". selectbrewsubtype($c,$rec). "</span>";
+  print "<span $hidebrew data-empty=1>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</span>";
   print "</td>\n";
 
   print "</tr>\n";
@@ -489,8 +498,7 @@ sub postglass {
     $glass->{Volume} = "";
     $glass->{Alc} = "";
     $glass->{StDrinks} = "0";
-    # TODO - Make an input field to select subtype. For now we trust the location
-    $glass->{SubType} = $location->{LocSubType};
+    $glass->{SubType} = util::param($c,"selbrewsubtype") ;
     gettimestamp($c, $glass);
   } else { # real glass
     $glass->{Brew} = $brewid;
