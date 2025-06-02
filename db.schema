@@ -149,15 +149,6 @@ CREATE VIEW PERSONS_LIST AS select
   left join GLASSES on COMMENTS.Glass = GLASSES.Id
   left join LOCATIONS on LOCATIONS.id = GLASSES.Location
   group by Persons.id;
-CREATE VIEW LOCATIONS_LIST AS select
-    LOCATIONS.Id,
-    LOCATIONS.Name,
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
-    LOCATIONS.LocType || ", " || LOCATIONS.LocSubType as Type,
-    LOCATIONS.Description as Desc
-  from LOCATIONS
-  left join GLASSES on GLASSES.Location = LOCATIONS.Id
-  group by LOCATIONS.Id;
 CREATE VIEW BREWS_DEDUP_LIST AS select
     BREWS.Id,
 	"Chk" as Chk,
@@ -240,5 +231,17 @@ CREATE VIEW LOCATIONS_DEDUP_LIST AS select
     strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
+  group by LOCATIONS.Id;
+CREATE VIEW LOCATIONS_LIST AS 
+select
+    LOCATIONS.Id,
+    LOCATIONS.Name,
+	 count(COMMENTS.Id) - 1 as Com,
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
+    LOCATIONS.LocType || ", " || LOCATIONS.LocSubType as Type
+  from LOCATIONS
+  left join GLASSES on GLASSES.Location = LOCATIONS.Id
+  left join COMMENTS on COMMENTS.Glass = GLASSES.Id
+  where COMMENTS.Comment > '' and ( GLASSES.Brew IS NULL or GLASSES.Brew = '')
   group by LOCATIONS.Id;
 COMMIT;

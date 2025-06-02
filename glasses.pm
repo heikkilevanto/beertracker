@@ -31,6 +31,99 @@ $currency{"usd"} = 6.3;  # Varies bit over time
 #$currency{"\$"} = 6.3;  # € and $ don't work, get filtered away in param
 
 ################################################################################
+# Helper to decide if a glass is "empty"
+################################################################################
+sub isemptyglass {
+  my $type = shift;
+  return $type =~ /Restaurant|Night|Bar/;
+}
+
+################################################################################
+# Helper to select a brew type
+################################################################################
+# Selecting from glasses, not brews, so that we get 'empty' glasses as well,
+# f.ex. "Restaurant"
+sub selectbrewtype {
+  my $c = shift;
+  my $selected = shift || "";
+  my $sql = "select distinct BrewType from Glasses";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( );
+  my $s = "";
+  while ( my $bt = $sth->fetchrow_array ) {
+    my $se = "";
+    $se = "selected" if ( $bt eq $selected );
+    my $em = "data-isempty=1";
+    $em = "" if ( ! isemptyglass($bt) );
+    $s .= "<option value='$bt' $em $se>$bt</option>\n";
+  }
+  util::error ("No brew types in the database. Insert some dummy glasses")
+    unless ($s);
+  $s = "<select name='selbrewtype' id='selbrewtype' onChange='selbrewchange(this);'>\n" .
+    $s . "</select>\n";
+  my $script = <<'SCRIPT';
+    <script>
+      function selbrewchange(el) {
+        const val = el.value;
+        console.log("SelBrewChange to " + val );
+        const selected = el.options[el.selectedIndex];
+        const isempty = selected.getAttribute("data-isempty");
+        console.log("empty: " + isempty );
+        const table = el.closest('table');
+        for ( const td of table.querySelectorAll("[data-empty]") ) {
+          const te = td.getAttribute("data-empty");
+          if ( te == 1 ) {
+            if ( isempty )
+              td.style.display = 'none';
+            else
+              td.style.display = '';
+          } else if ( te == 2 ) {
+              if ( isempty )
+                td.style.display = '';
+              else
+                td.style.display = 'none';
+            }
+          else if ( te ) {
+            if ( te == val )
+                td.style.display = '';
+              else
+                td.style.display = 'none';
+          }
+        }
+      }
+    </script>
+SCRIPT
+  $s .= $script;
+  return $s;
+} # selectbrewtype
+
+################################################################################
+# Select a glass subtype
+################################################################################
+sub selectbrewsubtype {
+  my $c = shift;
+  my $rec = shift;
+  my $sql = 'SELECT BrewType, SubType, MAX(timestamp) AS last_time
+    FROM glasses
+    WHERE BrewType in ("Restaurant","Night", "Bar")
+    GROUP BY brewtype,SubType
+    ORDER BY last_time DESC ';
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( );
+  my $s = "";
+  while ( my $bt = $sth->fetchrow_hashref ) {
+    next unless ( $bt->{SubType} );
+    my $sel = "";
+    $sel = "selected" if ( $rec->{SubType} eq $bt->{SubType} );
+    my $em = "data-empty=\"$bt->{BrewType}\" ";
+    $s .= "<option value='$bt->{SubType}' $em $sel>$bt->{SubType}</option>\n";
+  }
+  $s = "<select name='selbrewsubtype' id='selbrewsubtype' onChange='selbrewchange(this);'>\n" .
+    $s . "</select>\n";
+  return $s;
+} # selectbrewsubtype
+
+################################################################################
 # The input form
 ################################################################################
 # This is a fairly small, but rather complex form. For now it is hard coded,
@@ -76,26 +169,24 @@ sub inputform {
   print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname", "non") .
     "</td></tr>\n";
 
-  # Brew style
+  # Brew style / empty glass subtype
   print "<tr><td style='vertical-align:top'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
-  my $isemptyglass = 0;
-  if ( $rec->{BrewType} =~ /(Restaurant|Night)/i ) {
-    $isemptyglass = 1;  # Mark this as an empty glass
-    # TODO - Select subtypes for rest/night, once we know where to put them
-  } else { # A drinkable glass, select a brew
-    print "<td>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</td></tr>\n";
-  }
+  print "<td>\n";
+  print "<span data-empty=2>". selectbrewsubtype($c,$rec). "</span>";
+  print "<span data-empty=1>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</span>";
+  print "</td>\n";
+
+  print "</tr>\n";
 
   # Vol, Alc, and Price
-  print "<tr><td>&nbsp;</td><td id='avp'>\n";
-  if ( ! $isemptyglass ) {
-    my $vol = $rec->{Volume} || "";
-    $vol .= "c" if ($vol);
-    print "<input name='vol' placeholder='vol' $sz4 value='$vol' />\n";
-    my $alc = $rec->{Alc} || "";
-    $alc .= "%" if ($alc);
-    print "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' />\n";
-  }
+  print "<tr><td>&nbsp;</td>";
+  print "<td id='avp' >\n";
+  my $vol = $rec->{Volume} || "";
+  $vol .= "c" if ($vol);
+  print "<input name='vol' placeholder='vol' $sz4 value='$vol' data-empty=1 />\n";
+  my $alc = $rec->{Alc} || "";
+  $alc .= "%" if ($alc);
+  print "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' data-empty=1 />\n";
   my $pr = $rec->{Price} || "";
   $pr .= ".-" if ($pr);
   print "<input name='pr' placeholder='pr' $sz4 value='$pr' />\n";
@@ -393,7 +484,7 @@ sub postglass {
 
   my $selbrewtype = util::param($c,"selbrewtype") || $brew->{BrewType};
   $glass->{BrewType} = $selbrewtype;  # Trust the input more than location
-  if ( $selbrewtype =~ /Restaurant|Bar|Night/i ) { # 'empty' glass
+  if ( isemptyglass($selbrewtype) ) { # 'empty' glass
     $glass->{Brew} = "";
     $glass->{Volume} = "";
     $glass->{Alc} = "";
@@ -482,29 +573,6 @@ sub postglass {
   graph::clearcachefiles($c);
 } # postglass
 
-################################################################################
-# Helper to select a brew type
-################################################################################
-# Selecting from glasses, not brews, so that we get 'empty' glasses as well,
-# f.ex. "Restaurant"
-sub selectbrewtype {
-  my $c = shift;
-  my $selected = shift || "";
-  my $sql = "select distinct BrewType from Glasses";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( );
-  my $s = "";
-  while ( my $bt = $sth->fetchrow_array ) {
-    my $se = "";
-    $se = "selected" if ( $bt eq $selected );
-    $s .= "<option value='$bt' $se>$bt</option>\n";
-  }
-  util::error ("No brew types in the database. Insert some dummy glasses")
-    unless ($s);
-  $s = "<select name='selbrewtype' id='selbrewtype' >\n" .
-    $s . "</select>\n";
-  return $s;
-}
 
 ################################################################################
 # Helper to get the latest glasss record for editing or defaults
