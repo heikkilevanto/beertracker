@@ -669,7 +669,7 @@ sub beerboard {
         $extraboard = $id; # Default to expanding the beer currently in the input fields
       }
       my $dispmak = $mak;
-      $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu)\b//ig; #stop words
+      $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu|Brauerei)\b//ig; #stop words
       $dispmak =~ s/.*(Schneider).*/$1/i;
       $dispmak =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
       $dispmak =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
