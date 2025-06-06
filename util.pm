@@ -113,7 +113,7 @@ sub param {
   my $tag = shift;
   my $def = shift || "";
   my $val = $c->{cgi}->param($tag) || $def;
-  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
+  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%-]/_/g;
   return $val;
 }
 
