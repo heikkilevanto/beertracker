@@ -2,6 +2,14 @@
 # Routines for displaying the beer list (board) for the current bar
 # and buttons for quickly marking a beer has been drunk
 
+# TODO - Rethink the whole beer board system, keep them all in the database,
+# etc. See #390
+# Basically, when scraping a list
+#  - create missing brews and producers
+#  - Add tap records showing when we have seen said beer at which tap
+#  - Rewrite the list to use brew and producer records, even if looking the same
+#  - Use helpers from util.pm and brews.pm for short names, colors, etc
+
 package beerboard;
 use strict;
 use warnings;
@@ -37,8 +45,6 @@ $links{"Penyllan"} = "https://penyllan.com/";
 # Scraped from their website
 ################################################################################
 # TODO - This is one long routine. Refactor it to something manageable
-# TODO - Rethink the whole beer board system, keep them all in the database,
-# etc. See #390
 
 sub beerboard {
   my $c = shift;
