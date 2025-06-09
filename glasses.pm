@@ -180,7 +180,6 @@ sub inputform {
   } else {
     $hidesub = "style=display:none";
   }
-  "style=display:none" if ( isemptyglass($rec->{BrewType}) );
   print "<span $hidesub data-empty=2>". selectbrewsubtype($c,$rec). "</span>";
   print "<span $hidebrew data-empty=1>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</span>";
   print "</td>\n";
