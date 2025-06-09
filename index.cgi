@@ -658,7 +658,7 @@ sub aboutlink {
 # }
 
 # # Helper to make a Ratebeer search link
-#sub XXrblink {
+#sub rblink {
 #   my $qry = shift;
 #   my $txt = shift || "Ratebeer";
 #   return "" unless $qry;
@@ -669,7 +669,7 @@ sub aboutlink {
 # }
 #
 # # Helper to make a Untappd search link
-#sub XXutlink {
+#sub utlink {
 #   my $qry = shift;
 #   my $txt = shift || "Untappd";
 #   return "" unless $qry;
@@ -679,7 +679,7 @@ sub aboutlink {
 #   return $lnk;
 # }
 
-#sub XXmaplink {
+#sub maplink {
 #   my $g = shift;
 #   my $txt = shift || "Map";
 #   return "" unless $g;
@@ -750,21 +750,6 @@ sub aboutlink {
 # }
 
 
-# # Check if the record has problematic geo coords
-# # That is, coords and loc don't match
-#sub XXcheckgeoerror {
-#   my $rec = shift;
-#   return unless $rec;
-#   return unless ( $rec->{loc} );
-#   return unless ( $rec->{geo} );
-#   my ( $guess, $dist ) = guessloc($rec->{geo});
-#   if ( $guess ne $rec->{loc} ) {
-#     $rec->{geoerror} = "$guess [$dist]m";
-#     #print STDERR "Possible geo error for $rec->{stamp}: '$rec->{loc}' " .
-#     # "is not at $rec->{geo}, '$guess' is at $dist m from it\n";
-#   }
-# }
-#
 
 # ################################################################################
 # # Get all geo locations
