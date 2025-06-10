@@ -6,9 +6,10 @@
 # etc. See #390
 # Basically, when scraping a list
 #  - create missing brews and producers
-#  - Add tap records showing when we have seen said beer at which tap
-#  - Rewrite the list to use brew and producer records, even if looking the same
+#  - Rewrite the list to use brew and producer records,
 #  - Use helpers from util.pm and brews.pm for short names, colors, etc
+# Later
+#  - Add tap records showing when we have seen said beer at which tap
 
 package beerboard;
 use strict;

@@ -169,23 +169,6 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
   util::error ("Bad username\n");
 }
 
-my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero should not be used!
-"Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect");  # 9 is the top
-
-
-
-# Short names for the most commong watering holes
-# my %shortnames;
-# $shortnames{"Home"} = "H";
-# $shortnames{"Fermentoren"} = "F";
-# $shortnames{"Ølbaren"} = "Øb";
-# $shortnames{"Ølsnedkeren"} = "Øls";
-# $shortnames{"Hooked, Vesterbro"} = "Hooked Vbro";
-# $shortnames{"Hooked, Nørrebro"} = "Hooked Nbro";
-# $shortnames{"Dennis Place"} = "Dennis";
-# $shortnames{"Væskebalancen"} = "VB";
-
-
 # Default image sizes (width in pixels)
 my %imagesizes;
 $imagesizes{"thumb"} = 90;
