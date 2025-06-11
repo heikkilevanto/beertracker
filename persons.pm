@@ -51,7 +51,7 @@ sub editperson {
     print "<b>New Person:</b><br/>";
   }
 
-  print util::inputform( $c, "PERSONS", $p );
+  print inputs::inputform( $c, "PERSONS", $p );
   if ( $c->{edit} =~ /^new/i ) {
     print "<br/><input type='submit' name='submit' value='Insert Person' />\n";
   } else {
@@ -112,7 +112,7 @@ sub selectperson {
       $current = $name;
     }
   }
-  my $s = util::dropdown( $c, $fieldname, $selected, $current, $opts, "PERSONS", "newperson" );
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "PERSONS", "newperson" );
   return $s;
 } # selectperson
 

@@ -330,7 +330,7 @@ sub editbrew {
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
 
-    print util::inputform($c, "BREWS", $p );
+    print inputs::inputform($c, "BREWS", $p );
     print "<input type='submit' name='submit' value='$submit Brew' />\n";
     print "<a href='$c->{url}?o=$c->{op}'><span>Cancel</span></a>\n";
     print "<br/>\n";
@@ -391,7 +391,7 @@ sub selectbrew {
     #$disp = substr($disp, 0, 30);
     $opts .= "<div class='dropdown-item' id='$id' alc='$alc' brewtype='$bt' >$disp</div>\n";
   }
-  my $s = util::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew" );
+  my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew" );
 
   return $s;
 }

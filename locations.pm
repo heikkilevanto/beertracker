@@ -188,7 +188,7 @@ sub editlocation {
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
-    print util::inputform($c, "LOCATIONS", $p );
+    print inputs::inputform($c, "LOCATIONS", $p );
     print "<input type='submit' name='submit' value='$submit Location' /><br/>\n";
 
     # Come back to here after updating
@@ -325,7 +325,7 @@ sub selectlocation {
       $current = $name;
     }
   }
-  my $s = util::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield, $skip );
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield, $skip );
   return $s;
 
 } # seleclocation
