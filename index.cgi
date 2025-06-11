@@ -131,6 +131,7 @@ require "./graph.pm"; # The daily graph
 require "./stats.pm"; # Various statistics
 require "./mainlist.pm"; # The main "full" list
 require "./beerboard.pm"; # The beer board for the current bar
+require "./inputs.pm"; # Helper routines for input forms
 require "./VERSION.pm"; # auto-generated version info
 
 
