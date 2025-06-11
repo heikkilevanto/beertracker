@@ -96,7 +96,7 @@ sub listbrews {
   print "<b>Brews</b> ";
   print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
   print "<br/>\n";
-  print util::listrecords($c, "BREWS_LIST", "Last-" );
+  print listrecords::listrecords($c, "BREWS_LIST", "Last-" );
   return;
 } # listbrews
 
@@ -294,7 +294,7 @@ sub brewdeduplist {
   print "<input type=hidden name='dedup' value='1' />\n";
   print "<br/>\n";
   my $sort = $c->{sort} || "Last-";
-  print util::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id}" );
+  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id}" );
   print "</form>\n";
   print "<!-- brewdeduplist end -->\n";
   print "<hr/>\n";

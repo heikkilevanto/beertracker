@@ -22,7 +22,7 @@ sub listpersons {
   print "&nbsp;Persons <a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
 
   my $sort = $c->{sort} || "Last-";
-  print util::listrecords($c, "PERSONS_LIST", $sort );
+  print listrecords::listrecords($c, "PERSONS_LIST", $sort );
   return;
 
 } # listpersons

@@ -132,6 +132,7 @@ require "./stats.pm"; # Various statistics
 require "./mainlist.pm"; # The main "full" list
 require "./beerboard.pm"; # The beer board for the current bar
 require "./inputs.pm"; # Helper routines for input forms
+require "./listrecords.pm"; # A way to produce a nice list from db records
 require "./VERSION.pm"; # auto-generated version info
 
 

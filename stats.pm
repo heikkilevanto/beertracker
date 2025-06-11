@@ -1,7 +1,7 @@
 package stats;
 
 ################################################################################
-# Variosu statistics of my beer database
+# Various statistics of my beer database
 ################################################################################
 
 

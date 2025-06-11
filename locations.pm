@@ -36,7 +36,7 @@ sub listlocations {
   print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>\n";
   my $sort = $c->{sort} || "Last-";
   # print util::listrecords($c, "LOCATIONS_LIST", $sort, "Type NOT LIKE  'Producer%'" );
-  print util::listrecords($c, "LOCATIONS_LIST", $sort );
+  print listrecords::listrecords($c, "LOCATIONS_LIST", $sort );
   return;
 } # listlocations
 

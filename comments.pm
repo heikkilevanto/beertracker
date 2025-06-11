@@ -57,7 +57,7 @@ sub listallcomments {
   print "<b>Comments</b> ";
   #print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
   print "<br/>\n";
-  print util::listrecords($c, "COMMENTS_LIST", "Last-" );
+  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-" );
   return;
 } # listallcomments
 

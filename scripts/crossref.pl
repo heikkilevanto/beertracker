@@ -37,13 +37,13 @@ for my $file (@files) {
     my $sub_name = "";
     my $filesub = $file;
     while (my $line = <$fh>) {
+        $line_num++;
         if ( $line =~ /^\s*sub\s+([\w]+)/ ) { # Skip sub itself
           $sub_name = $1;
           $filesub = "$file: $sub_name()";
           print "Found sub $filesub on line $line_num\n" if ( $line=~/$trace/ );
           next;
         }
-        $line_num++;
         while ($line =~ /\b([\w]+::)?([\w]+)\s*\(/g) {
             my $name = $2;
             push @{ $calls{$name}{$filesub} }, $line_num;
