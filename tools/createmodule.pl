@@ -1,60 +1,66 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 use strict;
 use warnings;
 
-# Usage: createmodule.pl <modulename>
-my $mod = shift or die "Usage: $0 <modulename>\n";
-my $modfile = "./${mod}.pm";
-my $utilfile = "util.pm";
-my $indexfile = "index.cgi";
+my $newmod = shift or die "Usage: $0 modulename\n";
+my $newfile = "$newmod.pm";
 
-# 1. Fail if module exists
-if (-e $modfile) {
-    die "Module '$modfile' already exists. Aborting.\n";
+# Abort if file already exists
+if (-e $newfile) {
+    die "$newfile already exists.\n";
 }
 
-# 2. Read util.pm up through marker
-open my $u, '<', $utilfile or die "Cannot open '$utilfile': $!\n";
-my @boiler;
-my $marker = qr/^# --- FUNCTIONS BELOW ---/;
-while (my $line = <$u>) {
-    push @boiler, $line;
-    last if $line =~ $marker;
+# Read util.pm up to and including the marker line
+open my $in, "<", "util.pm" or die "Cannot open util.pm: $!\n";
+my @lines;
+my $found_marker = 0;
+while (<$in>) {
+    s/^package util;/package $newmod;/ ;
+    push @lines, $_;
+    if (/^# --- insert new functions here ---/) {
+        $found_marker = 1;
+        last;
+    }
 }
-close $u;
+close $in;
+die "Marker not found in util.pm\n" unless $found_marker;
 
-# Replace package util; with package <mod>;
-$boiler[0] =~ s/^package\s+\w+;/package $mod;/;
-
-# Append placeholder
-push @boiler, "# insert functions below\n";
+# Add trailer
+push @lines, "\n";
+push @lines, "################################################################################\n";
+push @lines, "# Report module loaded ok\n";
+push @lines, "1;\n";
 
 # Write new module
-open my $out, '>', $modfile or die "Cannot write '$modfile': $!\n";
-print $out @boiler;
+open my $out, ">", $newfile or die "Cannot write $newfile: $!\n";
+print $out @lines;
 close $out;
-print "Created module '$modfile'.\n";
+print "Created $newfile\n";
 
-# 3. Update index.cgi
-open my $in, '<', $indexfile or die "Cannot open '$indexfile': $!\n";
-my @lines = <$in>;
-close $in;
+# Update index.cgi
+open my $idx, "<", "index.cgi" or die "Cannot read index.cgi: $!\n";
+my @idx_lines = <$idx>;
+close $idx;
 
-# Find last require of ".pm"
-my $last;
-for my $i (0..$#lines) {
-    $last = $i if $lines[$i] =~ /require\s+"\.\/.*\.pm"/;
+my $inserted = 0;
+for (my $i = 0; $i < @idx_lines; $i++) {
+    if ($idx_lines[$i] =~ /^require\s+"\.\/.*?\.pm";\s*$/) {
+        my $j = $i + 1;
+        while ($j < @idx_lines && $idx_lines[$j] =~ /^require\s+"\.\/.*?\.pm";\s*$/) {
+            $i = $j++;
+        }
+        splice @idx_lines, $i + 1, 0, qq{require "./$newfile";\n};
+        $inserted = 1;
+        last;
+    }
+}
+unless ($inserted) {
+    die "Could not find require block in index.cgi to insert new module.\n";
 }
 
-# Prepare require line
-my $req = "require \"./$mod.pm\";\n";
-# Check for duplicate
-unless (grep { \$_ eq \$req } @lines) {
-    splice(@lines, $last+1, 0, $req);
-    open my $out2, '>', $indexfile or die "Cannot write '$indexfile': $!\n";
-    print $out2 @lines;
-    close $out2;
-    print "Updated '$indexfile' to require './$mod.pm'.\n";
-} else {
-    print "Require line already exists in '$indexfile'.\n";
-}
+open my $idx_out, ">", "index.cgi" or die "Cannot write index.cgi: $!\n";
+print $idx_out @idx_lines;
+close $idx_out;
+
+print "Added require './$newfile'; to index.cgi\n";
+print "Remember to: git add $newfile index.cgi\n";
