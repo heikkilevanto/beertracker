@@ -9,6 +9,10 @@ use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
 
+
+# --- FUNCTIONS BELOW ---/
+# This is a marker for the refactoring scripts
+
 ################################################################################
 # Table of contents
 #
