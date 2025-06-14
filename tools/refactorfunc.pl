@@ -2,122 +2,115 @@
 use strict;
 use warnings;
 
-# Usage: refactorfunc.pl <subname> <sourcefile> <destfile> [<files>...]
-my ($sub, $src, $dst, @files) = @ARGV;
-die "Usage: $0 <subname> <sourcefile> <destfile> [<file1> ...]\n" unless $sub && $src && $dst;
+my ($sub, $from, $to) = @ARGV;
+die "Usage: $0 subname fromfile.pm tofile.pm\n" unless $sub && $from && $to;
 
-# Read and modify source file
-open my $in, '<', $src or die "Cannot open '$src': $!\n";
-my @src_lines = <$in>;
-close $in;
+# Read source file
+open my $fh, '<', $from or die "Cannot open $from: $!";
+my @lines = <$fh>;
+close $fh;
 
-my @func_block;
+# Extract function with attached comments
+my @func;
+my @new_lines;
 my $in_func = 0;
-my $found = 0;
-for (my $i = 0; $i <= $#src_lines; $i++) {
-    if (!$in_func) {
-        # Detect leading comments + sub
-        if ($src_lines[$i] =~ /^sub\s+$sub\s*\{/) {
-            $in_func = 1;
-            $found = 1;
-            # include preceding comments
-            my $j = $i - 1;
-            while ($j >= 0 && $src_lines[$j] =~ /^\s*#/) {
-                unshift @func_block, splice(@src_lines, $j, 1);
-                $i--;
-                $j--;
-            }
+my $brace_count = 0;
+my $func_found = 0;
+
+for (my $i = 0; $i < @lines; $i++) {
+    my $line = $lines[$i];
+
+    if (!$in_func && $line =~ /^\s*sub\s+\Q$sub\E\s*\{/) {
+        # Capture preceding comments
+        my $j = $i - 1;
+        while ($j >= 0 && $lines[$j] =~ /^\s*#/) {
+            unshift @func, $lines[$j];
+            $j--;
         }
+
+        push @func, $line;
+        $in_func = 1;
+        $func_found = 1;
+        $brace_count = ($line =~ tr/{//) - ($line =~ tr/}//);
+        next;
     }
+
     if ($in_func) {
-        # Stop before next sub or EOF
-        if ($i > 0 && $src_lines[$i] =~ /^sub\s+\w+\s*\{/ && $src_lines[$i] !~ /^sub\s+$sub\s*\{/) {
+        push @func, $line;
+        $brace_count += ($line =~ tr/{//) - ($line =~ tr/}//);
+
+        if ($brace_count == 0) {
+            # Function ended — remove trailing comments
+            while (@func && $func[-1] =~ /^\s*#/) {
+                pop @func;
+            }
             $in_func = 0;
-            $i--;
-            next;
         }
-        push @func_block, splice(@src_lines, $i, 1);
-        $i--;
+    } else {
+        push @new_lines, $line;
     }
 }
 
-unless ($found) {
-    die "Function 'sub $sub' not found in '$src'.\n";
-}
+die "Function $sub not found in $from\n" unless $func_found;
 
-# Write updated source file
-open my $out_src, '>', $src or die "Cannot write '$src': $!\n";
-print $out_src @src_lines;
-close $out_src;
-print "Removed 'sub $sub' from '$src'.\n";
+# Check for marker before modifying files
+my $marker = "# --- insert new functions here ---";
+open my $fh_to_check, '<', $to or die "Cannot open $to: $!";
+my @to_lines = <$fh_to_check>;
+close $fh_to_check;
 
-# Insert into destination
-open my $in2, '<', $dst or die "Cannot open '$dst': $!\n";
-my @dst_lines = <$in2>;
-close $in2;
-
-my $marker = qr/^# --- FUNCTIONS BELOW ---/;
-my $pos;
-for my $i (0..$#dst_lines) {
-    if ($dst_lines[$i] =~ $marker) {
-        $pos = $i;
+my $marker_line = undef;
+for (0..$#to_lines) {
+    if ($to_lines[$_] =~ /\Q$marker\E/) {
+        $marker_line = $_;
         last;
     }
 }
- die "Marker '# --- FUNCTIONS BELOW ---' not found in '$dst'\n" unless defined $pos;
+die "Marker '$marker' not found in $to\n" unless defined $marker_line;
 
-splice(@dst_lines, $pos, 0, @func_block);
+# Rewrite source file
+open my $fh_out, '>', $from or die "Cannot write $from: $!";
+print $fh_out @new_lines;
+close $fh_out;
+print "Deleted $sub() from $from\n";
 
-open my $out_dst, '>', $dst or die "Cannot write '$dst': $!\n";
-print $out_dst @dst_lines;
-close $out_dst;
-print "Inserted 'sub $sub' into '$dst'.\n";
-
-# Determine files to update calls in
-if (!@files) {
-    opendir my $dh, '.' or die $!;
-    @files = grep { /\.pm\$|\.cgi\$/ && -f \$_ } readdir $dh;
-    closedir $dh;
-}
-
-my $total = 0;
-my $oldpkg = ''; # derive from src filename
-if ($src =~ m{([\w_]+)\.pm\$}) {
-    $oldpkg = $1;
-}
-my $newpkg = '';
-if ($dst =~ m{([\w_]+)\.pm\$}) {
-    $newpkg = $1;
-}
-
-foreach my $file (@files) {
-    open my $fh, '<', $file or next;
-    my @lines = <$fh>;
-    close $fh;
-    my $count = 0;
-    for my $line (@lines) {
-        # Skip comment lines
-        next if $line =~ /^\s*#/;
-        # Skip if inside quotes naively
-        next if $line =~ /['"].*\b$sub\s*\(/;
-        # Replace oldpkg::sub(), unqualified sub()
-        my $orig = $line;
-        $line =~ s{\b\Q$oldpkg\E::\Q$sub\E\s*\(}{$newpkg::$sub(}g if $oldpkg;
-        $line =~ s{\b\Q$sub\E\s*\(}{$newpkg::$sub(}g;
-        $count++ if $line ne $orig;
+# Insert function into destination file
+open my $fh_to_out, '>', $to or die "Cannot write $to: $!";
+for my $i (0 .. $#to_lines) {
+    print $fh_to_out $to_lines[$i];
+    if ($i == $marker_line) {
+        print $fh_to_out "\n", @func, "\n";
+        print "Inserted $sub() into $to\n";
     }
-    if ($count) {
-        open my $fo, '>', $file or warn "Cannot write '$file': $!";
-        print $fo @lines;
-        close $fo;
-        print "$file: updated $count calls.\n";
-        $total += $count;
+}
+close $fh_to_out;
+
+# Update callers
+my @files = @ARGV[3..$#ARGV];
+@files = grep { -f $_ } glob("*.pm *.cgi") unless @files;
+
+my $newpkg = $to;
+$newpkg =~ s/\.pm$//;
+
+for my $file (@files) {
+    print "Processing $file";
+    open my $in, '<', $file or die "Cannot open $file: $!";
+    my @lines = <$in>;
+    close $in;
+
+    my $changes = 0;
+    for (@lines) {
+        $changes += s{\b\Q$sub\E\s*\(}{$newpkg\::$sub(}g;
+    }
+
+    if ($changes) {
+        open my $out, '>', $file or die "Cannot write $file: $!";
+        print $out @lines;
+        close $out;
+        print "  $changes replacements\n";
+    } else {
+      print "\n";
     }
 }
 
-if ($total) {
-    print "Total replacements: $total\n";
-    exit 0;
-} else {
-    die "No call sites updated.\n";
-}
+print "Done. Remember to: git add $from $to\n";
