@@ -13,17 +13,20 @@ my @files = glob($fileglobs);
 #my $trace = "selectbrewsubtype";
 my $trace = "NO TRACE";
 
-my (%definitions, %calls);
+my (%definitions, %calls, %lengths);
 
 # First pass: find all sub definitions
 for my $file (@files) {
     open my $fh, '<', $file or die "Can't open $file: $!";
     my $line_num = 0;
+    my $name = "";
     while (my $line = <$fh>) {
         $line_num++;
+        $lengths{$name}++;
         if ($line =~ /^\s*sub\s+([\w:]+)/) {
-            my $name = $1;
+            $name = $1;
             $definitions{$name} = [$file, $line_num];
+            $lengths{$name} = 0;
             print "Definition of $name at $file: $line_num \n" if ( $name=~/$trace/ );
         }
     }
@@ -57,7 +60,7 @@ for my $file (@files) {
 # Print cross reference
 for my $func (sort keys %definitions) {
     my ($file, $line) = @{ $definitions{$func} };
-    print "Function '$func' defined in $file: $line\n";
+    print "Function '$func' defined in $file: $line ($lengths{$func} lines long)\n";
     if ($calls{$func}) {
         #print "  Called from:\n";
         for my $caller (sort keys %{ $calls{$func} }) {
