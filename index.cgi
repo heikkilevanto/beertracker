@@ -136,6 +136,7 @@ require "./listrecords.pm"; # A way to produce a nice list from db records
 require "./aboutpage.pm"; # The About page
 require "./VERSION.pm"; # auto-generated version info
 require "./copyproddata.pm";
+require "./db.pm";
 
 
 

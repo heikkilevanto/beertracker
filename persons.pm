@@ -42,7 +42,7 @@ sub editperson {
       "enctype='multipart/form-data'>\n";
 
   if ( $c->{edit} !~ /^new/i ) {
-    $p = util::getrecord($c,"PERSONS", $c->{edit} );
+    $p = db::getrecord($c,"PERSONS", $c->{edit} );
     util::error("Could not find person '$c->{edit}'" ) unless $p;
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
@@ -75,7 +75,7 @@ sub postperson {
   my $name = $c->{cgi}->param("Name");
   error ("A Person must have a name" )
     unless $name;
-  util::postrecord($c, "PERSONS");
+  db::postrecord($c, "PERSONS");
   return;
 
 } # postperson

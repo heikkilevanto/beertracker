@@ -44,7 +44,7 @@ sub listrecords {
   my $sort = shift;
   my $where = shift || "";
 
-  my @fields = util::tablefields($c, $table, "", 1);
+  my @fields = db::tablefields($c, $table, "", 1);
   my $order = "";
   for my $f ( @fields ) {
     $order = "Order by $f" if ( $sort =~ /$f(-?)/ );

@@ -201,7 +201,7 @@ sub inputform {
     $form .= "<b>$hdr</b> $separatortag \n";
   }
   $form .= "<table>\n";
-  foreach my $f ( util::tablefields($c,$table,$skipfields) ) {
+  foreach my $f ( db::tablefields($c,$table,$skipfields) ) {
     $form .= "<tr>\n";
     my $special = $1 if ( $f =~ s/^(\W)// );
     my $pl = $f;

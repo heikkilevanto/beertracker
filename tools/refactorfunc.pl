@@ -91,6 +91,8 @@ my @files = @ARGV[3..$#ARGV];
 
 my $newpkg = $to;
 $newpkg =~ s/\.pm$//;
+my $oldpkg = $from;
+$oldpkg =~ s/\.pm$//;
 
 for my $file (@files) {
     print "Processing $file";
@@ -100,7 +102,7 @@ for my $file (@files) {
 
     my $changes = 0;
     for (@lines) {
-        $changes += s{\b\Q$sub\E\s*\(}{$newpkg\::$sub(}g;
+        $changes += s{\b(\Q$oldpkg\E::)?\Q$sub\E\s*\(}{$newpkg\::$sub(}g;
     }
 
     if ($changes) {
@@ -111,6 +113,14 @@ for my $file (@files) {
     } else {
       print "\n";
     }
+}
+
+# Warn about function calls to without module prefix
+for my $line ( @func) {
+  chomp($line);
+  next if ( $line =~ /^[\s{}]*(if|else|unless)/ );
+  next if ( $line =~ /->/ );
+  print "Raw function call: $line \n" if ( $line =~ /[^:>]\w+\s*\(/ );
 }
 
 print "Done. Remember to: git add $from $to\n";

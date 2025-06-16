@@ -383,7 +383,7 @@ sub fixvol {
 sub guessprice {
   my $c = shift;
   my $where = shift;
-  my $grec = util::getfieldswhere( $c, "GLASSES", "Price",
+  my $grec = db::getfieldswhere( $c, "GLASSES", "Price",
       "WHERE Price > 0 AND $where",
       "ORDER BY Timestamp DESC" );
   if ( $grec && $grec->{Price} ) {
@@ -478,7 +478,7 @@ sub postglass {
       $brewid = brews::postbrew($c, "new" );
     }
   }
-  my $brew = util::getrecord($c, "BREWS", $brewid );
+  my $brew = db::getrecord($c, "BREWS", $brewid );
   print STDERR "postglass: Got brew '$brewid' = '$brew->{Name}' \n";
   my $locid = util::param($c,"Location");
   if ( !$locid ) { # Should not happen
@@ -487,7 +487,7 @@ sub postglass {
   if ( $locid eq "new" ) {
     $locid = locations::postlocation($c, "new" );
   }
-  my $location = util::getrecord($c, "LOCATIONS", $locid);
+  my $location = db::getrecord($c, "LOCATIONS", $locid);
   $glass->{Location} = $locid;
 
   my $selbrewtype = util::param($c,"selbrewtype") || $brew->{BrewType};

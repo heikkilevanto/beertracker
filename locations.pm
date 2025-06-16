@@ -259,12 +259,12 @@ sub postlocation {
     }
     util::error ("A Location must have a name" )
       unless $name;
-    $id = util::insertrecord($c, "LOCATIONS", $section);
+    $id = db::insertrecord($c, "LOCATIONS", $section);
   } else {
     my $name = $c->{cgi}->param("Name");
     util::error ("A Location must have a name" )
       unless $name;
-    $id = util::updaterecord($c, "LOCATIONS", $id,  "");
+    $id = db::updaterecord($c, "LOCATIONS", $id,  "");
   }
   return $id;
 } # postlocation

@@ -441,13 +441,13 @@ sub postbrew {
 
     my $defaults = {};
     $defaults->{BrewType} = util::param($c, "selbrewtype") || "WRONG"; # Signals a bad type. Should not happen
-    $id = util::insertrecord($c,  "BREWS", $section, $defaults);
+    $id = db::insertrecord($c,  "BREWS", $section, $defaults);
     return $id;
 
   } else {
     util::error ("A brew must have a name" ) unless util::param($c, "Name");
     util::error ("A brew must have a type" ) unless util::param($c, "BrewType");
-    $id = util::updaterecord($c, "BREWS", $id,  "");
+    $id = db::updaterecord($c, "BREWS", $id,  "");
   }
   return $id;
 } # postbrew
@@ -474,7 +474,7 @@ sub insert_old_style_brew {
   }
 
   # Check if we have it already
-  my $brew = util::findrecord($c, "BREWS", "Name", $name, "collate nocase" );
+  my $brew = db::findrecord($c, "BREWS", "Name", $name, "collate nocase" );
   if ( $brew) {
     print STDERR "insert_old_style_brew: Found brew: Id=$brew->{Id}  \n";
     return $brew->{Id}

@@ -197,7 +197,7 @@ sub bloodalc {
 sub locationhead {
   my $c = shift;
   my $rec = shift;
-  my $loc = util::getrecord($c,"LOCATIONS", $rec->{loc});
+  my $loc = db::getrecord($c,"LOCATIONS", $rec->{loc});
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<br/>";

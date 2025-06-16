@@ -198,7 +198,7 @@ sub beerboard {
       # If there are strange beers, take a 'view source' and look
       my $country = $e->{'country'} || "";
       my $sizes = $e->{"sizePrice"};
-      my $locrec = util::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
+      my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
       my $locid = $locrec->{Id};
       my $hiddenbuttons = "";
       if ( $sty =~ /Cider/i ) {
