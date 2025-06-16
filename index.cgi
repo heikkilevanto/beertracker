@@ -200,13 +200,13 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
 ################################################################################
 # These are used is so many places that it is OK to have them as globals
 # TODO - Check if all are used, after refactoring
-my $edit= param("e");  # Record to edit
-my $qry = param("q");  # filter query, greps the list
-my $qrylim = param("f"); # query limit, "x" for extra info, "f" for forcing refresh of board
-my $yrlim = param("y"); # Filter by year
-my $op  = param("o");  # operation, to list breweries, locations, etc
+my $edit= util::param($c,"e");  # Record to edit
+my $qry = util::param($c,"q");  # filter query, greps the list
+my $qrylim = util::param($c,"f"); # query limit, "x" for extra info, "f" for forcing refresh of board
+my $yrlim = util::param($c,"y"); # Filter by year
+my $op  = util::param($c,"o");  # operation, to list breweries, locations, etc
 my $url = $q->url;
-my $sort = param("s");  # Sort key
+my $sort = util::param($c,"s");  # Sort key
 # the POST routine reads its own input parameters
 
 ################################################################################
@@ -275,7 +275,7 @@ if ( $q->request_method eq "POST" ) {
 
   if ( 1 ) { # TODO LATER Remove this debug dumping of all CGI params
     foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
-      my $value = $c->{cgi}->param($param);
+      my $value = $c->{cgi}->util::param($c,$param);
       print STDERR "   p: $param = '$value'\n" if ($value);
     }
   }
@@ -288,7 +288,7 @@ if ( $q->request_method eq "POST" ) {
     locations::postlocation($c);
   } elsif ( $op =~ /Beer|Brew/i ) {
     brews::postbrew($c);
-  } elsif ( util::param($c, "commentedit") ) {
+  } elsif ( util::util::param($c,$c, "commentedit") ) {
     comments::postcomment($c);
   } else { # Default to posting a glass
     glasses::postglass($c);
@@ -400,24 +400,5 @@ sub htmlhead {
 sub htmlfooter {
   print "</body></html>\n";
 }
-
-
-
-
-
-
-################################################################################
-# Various small helpers
-################################################################################
-# TODO - These should be in util.pm, or dropped altogether
-
-# Helper to sanitize input data
-sub param {
-  my $tag = shift;
-  my $val = $q->param($tag) || "";
-  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀ\/ 0-9.,&:\(\)\[\]?%-]/_/g;
-  return $val;
-}
-
 
 
