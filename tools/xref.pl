@@ -2,13 +2,20 @@
 
 # Perl cross-refernce. Created with ChatGtp and modified by myself
 
+# TODO - Check loose (unqualified) calls, if made in a module that is not
+# where the func is defined (probably after refactoring the func to its
+# own module, it may make calls to its prev module)
+
+
 use strict;
 use warnings;
 use File::Basename;
 
+my $targetsub = $ARGV[0] || "";
 my $dir = '.';
-my $fileglobs = $ARGV[0] || "$dir/*.cgi $dir/*.pm" ;
+my $fileglobs = "$dir/*.cgi $dir/*.pm" ;
 my @files = glob($fileglobs);
+
 
 #my $trace = "selectbrewsubtype";
 my $trace = "NO TRACE";
@@ -59,6 +66,7 @@ for my $file (@files) {
 
 # Print cross reference
 for my $func (sort keys %definitions) {
+    next if ( $targetsub && $targetsub ne $func );
     my ($file, $line) = @{ $definitions{$func} };
     print "Function '$func' defined in $file: $line ($lengths{$func} lines long)\n";
     if ($calls{$func}) {
