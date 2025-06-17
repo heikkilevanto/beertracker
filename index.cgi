@@ -195,18 +195,6 @@ $geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
   # (This could be saved in each users config, if we had such)
 
 
-################################################################################
-# Input Parameters
-################################################################################
-# These are used is so many places that it is OK to have them as globals
-# TODO - Check if all are used, after refactoring
-my $edit= util::param($c,"e");  # Record to edit
-my $qry = util::param($c,"q");  # filter query, greps the list
-my $qrylim = util::param($c,"f"); # query limit, "x" for extra info, "f" for forcing refresh of board
-my $yrlim = util::param($c,"y"); # Filter by year
-my $op  = util::param($c,"o");  # operation, to list breweries, locations, etc
-my $url = $q->url;
-my $sort = util::param($c,"s");  # Sort key
 # the POST routine reads its own input parameters
 
 ################################################################################
@@ -229,18 +217,19 @@ my $c = {
   'photodir' => $photodir,
   'dbh'      => $dbh,
   'url'      => $q->url,
-  'href'     => "$url?o=$op",
   'cgi'      => $q,
-  'edit'     => $edit,
-  'qry'      => $qry,
-  'op'       => $op,
-  'sort'     => $sort,
   'onedrink' => $onedrink,
   'bgcolor'  => $bgcolor,
   'devversion' => $devversion,
   'mobile'   => $mobile,
-
 };
+# Input Parameters. Need to have a $c to get them.
+$c->{edit}= util::param($c,"e");  # Record to edit
+$c->{qry} = util::param($c,"q");  # filter query, greps the list
+$c->{op}  = util::param($c,"o");  # operation, to list breweries, locations, etc
+$c->{sort} = util::param($c,"s");  # Sort key
+$c->{href} = "$c->{url}?o=$c->{op}";
+
 
 
 ################################################################################
@@ -254,7 +243,7 @@ if ($devversion) { # Print a line in error.log, to see what errors come from thi
      $q->request_method . " " . $ENV{'QUERY_STRING'}. " \n";
 }
 
-if ( $devversion && $op eq "copyproddata" ) {
+if ( $devversion && $c->{op} eq "copyproddata" ) {
   print STDERR "Copying prod data to dev \n";
   copyproddata::copyproddata($c);
   exit;
@@ -263,11 +252,11 @@ if ( $devversion && $op eq "copyproddata" ) {
 
 # # Default new users to the about page, we have nothing else to show
 # TODO - Make a better check, and force  the about page to show an input form
-# if ( !$op) {
+# if ( !$c->{op}) {
 #   if ( !@lines) {
-#     $op = "About";
+#     $c->{op} = "About";
 #   } else {
-#     $op = "Graph";  # Default to showing the graph
+#     $c->{op} = "Graph";  # Default to showing the graph
 #   }
 # }
 
@@ -282,11 +271,11 @@ if ( $q->request_method eq "POST" ) {
 
   $dbh->do("BEGIN TRANSACTION");
 
-  if ( $op =~ /Person/i ) {
+  if ( $c->{op} =~ /Person/i ) {
     persons::postperson($c);
-  } elsif ( $op =~ /Location/i ) {
+  } elsif ( $c->{op} =~ /Location/i ) {
     locations::postlocation($c);
-  } elsif ( $op =~ /Beer|Brew/i ) {
+  } elsif ( $c->{op} =~ /Beer|Brew/i ) {
     brews::postbrew($c);
   } elsif ( util::util::param($c,$c, "commentedit") ) {
     comments::postcomment($c);
@@ -307,34 +296,34 @@ htmlhead(); # Ok, now we can commit to making a HTML page
 
 print util::topline($c);
 
-if ( $op =~ /Board/i ) {
+if ( $c->{op} =~ /Board/i ) {
   glasses::inputform($c);
   graph::graph($c);
   beerboard::beerboard($c);
   mainlist::mainlist($c);
-} elsif ( $op =~ /Years(d?)/i ) {
+} elsif ( $c->{op} =~ /Years(d?)/i ) {
   stats::yearsummary($c,$1); # $1 indicates sort order
-} elsif ( $op =~ /short/i ) {
+} elsif ( $c->{op} =~ /short/i ) {
   stats::dailystats($c);
-} elsif ( $op =~ /Months([BS])?/ ) {
+} elsif ( $c->{op} =~ /Months([BS])?/ ) {
   stats::monthstat($c,$1);
-} elsif ( $op =~ /DataStats/i ) {
+} elsif ( $c->{op} =~ /DataStats/i ) {
   stats::datastats($c);
-} elsif ( $op eq "About" ) {
+} elsif ( $c->{op} eq "About" ) {
   aboutpage::about($c);
-} elsif ( $op =~ /Brew/i ) {
+} elsif ( $c->{op} =~ /Brew/i ) {
   brews::listbrews($c);
-} elsif ( $op =~ /Person/i ) {
+} elsif ( $c->{op} =~ /Person/i ) {
   persons::listpersons($c);
-} elsif ( $op =~ /Comment/i ) {
+} elsif ( $c->{op} =~ /Comment/i ) {
   comments::listallcomments($c);
-} elsif ( $op =~ /Location/i ) {
+} elsif ( $c->{op} =~ /Location/i ) {
   locations::listlocations($c);
-} elsif ( $op =~ /Full/i ) {
+} elsif ( $c->{op} =~ /Full/i ) {
   glasses::inputform($c);
   mainlist::mainlist($c);
 } else { # Default to the graph
-  $op = "Graph" unless $op;
+  $c->{op} = "Graph" unless $c->{op};
   graph::graph($c);
   glasses::inputform($c);
   mainlist::mainlist($c);

@@ -330,7 +330,7 @@ sub onelink {
   $start = "&gstart=$start" if ($start);
   $end = "&gend=$end" if ($end);
   my $c = $g->{c};
-  print "<a href='$c->{href}".$start.$end. "' >" .
+  print "<a href='$c->{url}?o=$c->{op}".$start.$end. "' >" .
     #"<span>$txt</span></a>\n";
     "<span style='border:1px solid white; padding: 1px 4px; color: white' >$txt</span></a>\n";
 }
@@ -343,7 +343,7 @@ sub graphlinks {
   my $t = localtime;
   my $start = Time::Piece->strptime($g->{start},"%F");
   my $end = Time::Piece->strptime($g->{end},"%F");
-  my $range = $end - $start;
+  my $range = int( ($end - $start) * 0.9 );
   onelink($g, "&lt;&lt;", ($start-$range)->ymd, ($end-$range)->ymd ); # <<
   onelink($g, "&gt;&gt;", ($start+$range)->ymd, ($end+$range)->ymd ); # >>
   onelink($g, "2w", ($t-14*$oneday)->ymd );
