@@ -223,6 +223,7 @@ sub nameline {
   $time = "($time)" if ($time lt "0600");
   print "$time ";
   my $dispstyle = brews::brewtextstyle($c,$style);
+  print "<span style='white-space: nowrap;'>\n";
   print "<span $dispstyle>[$style]</span> \n";
   print "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
   if ( $rec->{brewname} ) {
@@ -231,6 +232,7 @@ sub nameline {
     print "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>$locationname</b></span></a> " ;
   }
   print "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
+  print "</span>\n";
   print "<br/>\n"
 }
 sub numbersline {
