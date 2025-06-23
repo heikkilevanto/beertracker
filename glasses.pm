@@ -352,7 +352,9 @@ sub fixvol {
   my $brew = shift;
   my $vol = $glass->{Volume} ||"0";
   if ( $vol =~ /^x/i ) { # 'X' means no volume
-    $vol = 0;
+    $glass->{Volume} = 0;
+    $glass->{StDrinks} = 0;
+    return;
   }
   my $half;  # Volumes can be prefixed with 'h' for half measures.
   if ( $vol =~ s/^(H)(.+)$/$2/i ) {
@@ -421,7 +423,7 @@ sub fixprice {
     return;
   }
 
-  print STDERR "No price, guessing\n";
+  print STDERR "No price, guessing p='$glass->{Price}'\n";
   # Sql where clause fragments
   my $br = "Brew=$glass->{Brew}";
   my $vo = "Volume=$glass->{Volume}";

@@ -42,6 +42,7 @@ sub trim {
 sub number {
   my $v = shift || "";
   $v =~ s/,/./g;  # occasionally I type a decimal comma
+  return $v if ( $v =~ /^ *x/i ); # X means explicit clearing of the field
   $v =~ s/[^0-9.-]//g; # Remove all non-numeric chars
   $v =~ s/[-.]*$//; # No trailing '.' or '-', as in price 45.-
   $v = 0 unless $v;
