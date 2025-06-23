@@ -263,7 +263,7 @@ if ( $q->request_method eq "POST" ) {
 
   if ( 1 ) { # TODO LATER Remove this debug dumping of all CGI params
     foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
-      my $value = $c->{cgi}->util::param($c,$param);
+      my $value = $c->{cgi}->param($c,$param);
       print STDERR "   p: $param = '$value'\n" if ($value);
     }
   }

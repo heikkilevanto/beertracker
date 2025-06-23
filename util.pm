@@ -110,6 +110,8 @@ sub param {
   my $c = shift;
   my $tag = shift;
   my $def = shift || "";
+  util::error("No context c ") unless $c;
+  util::error("No cgi in c") unless $c->{cgi};
   my $val = $c->{cgi}->param($tag) || $def;
   $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%-]/_/g;
   return $val;
