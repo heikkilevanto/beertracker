@@ -19,18 +19,6 @@ use utf8;  # Source code and string literals are utf-8
 sub glassquery {
   my $c = shift;
   my $sql = q {
-    WITH brew_stats AS (
-      SELECT
-        g.brew,
-        COUNT(CASE WHEN c.rating > 0 THEN 1 END) AS ratingcount,
-        SUM(CASE WHEN c.rating > 0 THEN c.rating END) AS ratingsum,
-        AVG(CASE WHEN c.rating > 0 THEN c.rating END) AS ratingavg,
-        COUNT(CASE WHEN c.comment != '' THEN 1 END) AS commentcount
-      FROM comments c
-      JOIN glasses g ON c.glass = g.id
-      WHERE g.brew != ''
-      GROUP BY g.brew
-      )
     select
       glasses.id as id,
       strftime('%Y-%m-%d %w', timestamp, '-06:00') as effdate,
@@ -48,14 +36,13 @@ sub glassquery {
       locations.name as producer,
       locations.Id as prodid,
       (select count(*) from comments where comments.glass = glasses.id) as comcount,
-      bs.ratingcount,
-      bs.ratingsum,
-      bs.ratingavg,
-      bs.commentcount
+      br.rating_count,
+      br.average_rating,
+      br.comment_count
     from glasses
     left join brews on brews.id = glasses.brew
     left join locations on locations.id = brews.producerlocation
-    left join brew_stats bs on glasses.brew = bs.brew
+    left join brew_ratings br on glasses.brew = br.brew
     where Username = ?
     order by timestamp desc
   };
@@ -252,15 +239,15 @@ sub numbersline {
   my $ba = $bloodalc->{ $rec->{id} } || "";
   #print STDERR "'$rec->{id}' ba=$ba \n";
   print util::unit($ba,"/₀₀");
-  my $rc = $rec->{ratingcount};
+  my $rc = $rec->{rating_count};
   if ( $rc ) {
     if ( $rc == 1 ) {
-      print " <b>($rec->{ratingavg})</b>";
+      print " <b>($rec->{average_rating})</b>";
     } else {
-      print sprintf(" <b>(%3.1f)</b>/%d", $rec->{ratingavg}, $rec->{ratingcount} );
+      print sprintf(" <b>(%3.1f)</b>/%d", $rec->{average_rating}, $rec->{rating_count} );
     }
   }
-  print " $rec->{commentcount}•" if ( $rec->{commentcount} );
+  print " $rec->{comment_count}•" if ( $rec->{comment_count} );
   print "<br/>\n"
 }
 
