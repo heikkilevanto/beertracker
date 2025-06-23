@@ -211,7 +211,7 @@ sub insertrecord {
         print STDERR "Recursing to ProducerLocation ($inputprefix) \n";
         my $def = {};
         $def->{LocType} = "Producer";
-        $def->{LocSubType} = util::util::param($c, "selbrewtype") || "Beer";
+        $def->{LocSubType} = util::param($c, "selbrewtype") || "Beer";
         $val = db::insertrecord($c, "LOCATIONS", "newprod", $def );
         print STDERR "Returned from ProducerLocation, id='$val'  \n";
       } elsif ( $f eq "Location" ) {

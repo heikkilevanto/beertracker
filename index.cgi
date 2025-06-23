@@ -263,7 +263,7 @@ if ( $q->request_method eq "POST" ) {
 
   if ( 1 ) { # TODO LATER Remove this debug dumping of all CGI params
     foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
-      my $value = $c->{cgi}->param($c,$param);
+      my $value = $c->{cgi}->param($param);
       print STDERR "   p: $param = '$value'\n" if ($value);
     }
   }
@@ -276,7 +276,7 @@ if ( $q->request_method eq "POST" ) {
     locations::postlocation($c);
   } elsif ( $c->{op} =~ /Beer|Brew/i ) {
     brews::postbrew($c);
-  } elsif ( util::util::param($c,$c, "commentedit") ) {
+  } elsif ( util::param($c, "commentedit") ) {
     comments::postcomment($c);
   } else { # Default to posting a glass
     glasses::postglass($c);
