@@ -155,7 +155,7 @@ sub locationdeduplist {
   print "<input type=hidden name='dedup' value='1' />\n";
   print "<br/>\n";
   my $sort = $c->{sort} || "Last-";
-  print util::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}" );
+  print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}" );
   print "</form>\n";
   print "<!-- locationdeduplist end -->\n";
   print "<hr/>\n";
