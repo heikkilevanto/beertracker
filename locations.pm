@@ -140,6 +140,47 @@ sub listlocationcomments {
 } # listlocationcomments
 
 ################################################################################
+# List location visits
+################################################################################
+# TODO - Make the month+count a link to the mainlist, with filtering for the
+# location and date range in that month
+sub locationvisits {
+  my $c = shift;
+  my $locrec = shift;
+  my @monthnames = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+  print "<b>Visits to $locrec->{Name}</b> [$locrec->{Id}]";
+  my $listsql = q{
+    select
+       strftime ('%Y-%m', timestamp,'-06:00') as month,
+       count( distinct( strftime( '%d', timestamp, '-06:00' ) ) ) as daycount
+    from glasses
+    where Location = ?
+    group by month
+    order by timestamp
+  };
+  my $sth = db::query($c, $listsql, $locrec->{Id} );
+  my $currentyear = "";
+  my ( $y, $m, $d );
+  my $totalvisits = 0;
+  while ( my $visit = db::nextrow($sth)) {
+    my $eff = $visit->{month};
+    ( $y, $m ) = split('-', $eff );
+    if ( $y ne $currentyear ) {
+      print "<br>\n";
+      print "<b>$y:</b> ";
+      $currentyear=$y;
+    }
+    print "$monthnames[$m-1]: <b>$visit->{daycount}</b> ";
+    $totalvisits += $visit->{daycount};
+  }
+  print "<br/>\n";
+  print "Total $totalvisits visits \n";
+
+  print "<hr/>\n";
+
+} # locationvisits
+
+################################################################################
 # locationdeduplist - List all locations, for selecting those that duplicate the current
 ################################################################################
 sub locationdeduplist {
@@ -189,7 +230,8 @@ sub editlocation {
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
     print inputs::inputform($c, "LOCATIONS", $p );
-    print "<input type='submit' name='submit' value='$submit Location' /><br/>\n";
+    print "<input type='submit' name='submit' value='$submit Location' />\n";
+    print "<a href='$c->{url}?o=$c->{op}&e='><span>Cancel</span></a><br/>\n";
 
     # Come back to here after updating
     print "<input type='hidden' name='o' value='$c->{op}' />\n";
@@ -198,6 +240,7 @@ sub editlocation {
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
       listlocationcomments($c,$p);
+      locationvisits($c, $p );
       locationdeduplist($c,$p);
     }
   } else {

@@ -8,6 +8,7 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
 
+
 # --- insert new functions here ---
 
 
@@ -36,6 +37,45 @@ sub tablefields {
   return @fields;
 }
 
+# Run a simple DB query
+# Returns a st-handle for fetchrows
+sub query {
+  my $c = shift;
+  my $sql = shift;
+  my @params = @_;
+  print STDERR "$sql ", @params, "\n" if ( $c->{devversion} );
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( @params );
+  return $sth;
+}
+
+# Simple buffered read of records. Keeps exactly one record in buffer, so
+# we can peek at it, and consume it late. For example, peek to see if the
+# year has changed, and print a header if yes.
+# Bit dirty, keeps the buffered record inside $sth
+sub nextrow {
+    my ($sth) = @_;
+    if (exists $sth->{my_buffered_row}) {
+        my $row = $sth->{my_buffered_row};
+        delete $sth->{my_buffered_row};
+        return $row;
+    }
+    return $sth->fetchrow_hashref;
+} # nextrow
+
+sub peekrow {
+    my ($sth) = @_;
+    return $sth->{my_buffered_row} if exists $sth->{my_buffered_row};
+    my $row = $sth->fetchrow_hashref;
+    $sth->{my_buffered_row} = $row if $row;
+    return $row;
+} # peekrow
+
+sub pushback_row {
+    my ($sth, $row) = @_;
+    die "Buffer already occupied" if exists $sth->{my_buffered_row};
+    $sth->{my_buffered_row} = $row;
+} # pushback_row
 
 ################################################################################
 # Helpers to get records
