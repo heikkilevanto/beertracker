@@ -70,18 +70,25 @@ sub listlocationcomments {
 
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($c->{username}, $loc->{Id});
+  print "<div onclick='toggleCommentTable(this.nextElementSibling);'>" .
+        "<b>Comments for $loc->{Name}</b> [$loc->{Id}]</div>\n";
   print "<div style='overflow-x: auto;'>";
-  #print "<table  style='white-space: nowrap;'>\n";
-  print "<table>\n";
+
   my $ratesum = 0;
   my $ratecount = 0;
   my $comcount = 0;
   my $perscount = 0;
+  my $count = 0;
   my $lastglass = "";
   while ( my $com = $sth->fetchrow_hashref ) {
-    my $sty = "style='border-top: 1px solid white; vertical-align: top;' ";
     if ( $lastglass ne $com->{Gid} ) {
-      print "<tr><td $sty>\n";
+      $count++;
+      if ( $count == 8 ) {
+        print "<div onclick='this.style=\"display:none\"; toggleCommentTable(this.nextElementSibling)'>More...</div>";
+        print "<div style='display:none'>";
+        # TODO - Hide the following entries in a div
+      }
+      print "<p>\n";
       print "<a href='$c->{url}?o=full&e=$com->{Glass}&ec=$com->{Id}'><b>";
       print "$com->{Date}</b></a>\n";
       my $tim = $com->{Time};
@@ -90,15 +97,10 @@ sub listlocationcomments {
       print "<span style='font-size: xx-small'>[$com->{Glass}]</span>\n";
       print "[$com->{BrewType}/$com->{SubType}]\n";
       $lastglass = $com->{Gid};
-      print "</td></tr>\n";
-    } else {
+      print "<br/>";
     }
-    print "<tr>\n";
-
-
-    print "<td>\n";
     print comments::commentline($c,$com);
-
+    print "<br/>";
     $perscount++ if ( $com->{PersName} );
     $comcount++ if ($com->{Comment});
     if ( $com->{Rating} ) {
@@ -106,12 +108,13 @@ sub listlocationcomments {
       $ratecount++;
     }
 
-    print "</td>\n";
-    # TODO - Photo thumbnail in its own TD
-    print "</tr>\n";
+    # TODO - Photo thumbnail in its own row
+  }
+  if ( $count >= 8 ) {
+    print "</div>\n";
   }
   print "</table></div>\n";
-  print "<div onclick='toggleCommentTable(this);'><br/>";
+  print "<div onclick='toggleCommentTable(this.previousElementSibling);'><br/>";
   if ( $comcount == 0 ) {
     print "(No Comments)";
   } else {
@@ -127,9 +130,8 @@ sub listlocationcomments {
   print "</div>";
   print "<script>
     function toggleCommentTable(div) {
-      let table = div.previousElementSibling;
-      if (table) {
-        table.style.display = (table.style.display === 'none') ? 'table' : 'none';
+      if (div) {
+        div.style.display = (div.style.display === 'none') ? 'table' : 'none';
       }
     }
     </script>
