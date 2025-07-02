@@ -27,6 +27,45 @@ sub listpersons {
 
 } # listpersons
 
+################################################################################
+# Person details
+################################################################################
+# Show when and where we have seen that person, and comments
+sub showpersondetails {
+  my $c = shift;
+  my $pers = shift;
+
+  my $pers_seen_sql = "
+  select
+    comments.*,
+    PERSONS.Name as PersName,
+    PERSONS.Id as PersId,
+    strftime('%Y-%m-%d %w %H:%M', g.timestamp, '-06:00') as effdate,
+    l.Name as locname
+  from comments
+  left join persons on persons.id = comments.person
+  left join glasses g on g.id = comments.glass
+  left join locations l on l.id = g.location
+  where
+  comments.Glass in  ( select Glass from comments c2 where c2.person = ? )
+    order by g.Timestamp desc, comments.id desc
+  ";
+  my $sth = db::query($c, $pers_seen_sql, $pers->{Id} );
+  my $curgl = "";
+  while ( my $rec = $sth->fetchrow_hashref) {
+    if ( $curgl ne $rec->{Glass} ) {
+      $curgl = $rec->{Glass};
+      print "<br/>\n";
+      my ( $date, $wday, $time ) = util::splitdate($rec->{effdate} );
+      print "$wday $date $time ";
+      print "@", "$rec->{locname}";
+      print "<span style='font-size: xx-small;'> [$rec->{Glass}]</span></br>\n";
+    }
+    print comments::commentline($c,$rec), "<br/>\n";
+  }
+
+} # showpersondetails
+
 
 ################################################################################
 # Editperson - Show a form for editing a person record
@@ -63,8 +102,10 @@ sub editperson {
   print "<input type='hidden' name='o' value='$c->{op}' />\n";
   print "</form>\n";
   print "<hr/>\n";
-  print "(This should show a list when the person seen, comments, and with whom)<br/>\n"; # TODO
+
+  showpersondetails($c,$p);
 } # editperson
+
 
 ################################################################################
 # Update a person (posted from the form above)
