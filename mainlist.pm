@@ -59,6 +59,8 @@ sub glassquery {
 # back to be processed.
 ################################################################################
 
+# TODO Use the one in db.pm
+
 sub startlist {
   my $c = shift;
   my $reader = {};
@@ -194,7 +196,8 @@ sub locationhead {
   print " <span style='font-size: x-small;'>[$rec->{loc}]</span>\n";
   print "<a href='$loc->{Website}' target='_blank'><span style='font-size: x-small;'>www</span></a>"
     if ( $loc->{Website} );
-  print "<br/><br/>";
+  print "<br/>";
+  print "<br/>" unless ( $rec->{PersName} ); # not for person detail list
   return ( $rec->{effdate}, $rec->{loc}, "@".$loc->{Name}, "$wd $date", $date );
 }
 
@@ -215,7 +218,7 @@ sub nameline {
   print "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
   if ( $rec->{brewname} ) {
     print "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;
-  } else {
+  } elsif ($locationid) {
     print "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>$locationname</b></span></a> " ;
   }
   print "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});

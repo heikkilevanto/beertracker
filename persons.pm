@@ -31,6 +31,7 @@ sub listpersons {
 # Person details
 ################################################################################
 # Show when and where we have seen that person, and comments
+# TODO - Make a link to the main list for the date, possibly editing the glass.
 sub showpersondetails {
   my $c = shift;
   my $pers = shift;
@@ -40,8 +41,11 @@ sub showpersondetails {
     comments.*,
     PERSONS.Name as PersName,
     PERSONS.Id as PersId,
-    strftime('%Y-%m-%d %w %H:%M', g.timestamp, '-06:00') as effdate,
-    l.Name as locname
+    strftime('%Y-%m-%d %w', g.timestamp, '-06:00') as effdate,
+    strftime('%H:%M', g.timestamp, '-06:00') as time,
+    g.Location as loc,
+    g.brewtype as brewtype,
+    g.subtype as subtype
   from comments
   left join persons on persons.id = comments.person
   left join glasses g on g.id = comments.glass
@@ -55,11 +59,8 @@ sub showpersondetails {
   while ( my $rec = $sth->fetchrow_hashref) {
     if ( $curgl ne $rec->{Glass} ) {
       $curgl = $rec->{Glass};
-      print "<br/>\n";
-      my ( $date, $wday, $time ) = util::splitdate($rec->{effdate} );
-      print "$wday $date $time ";
-      print "@", "$rec->{locname}";
-      print "<span style='font-size: xx-small;'> [$rec->{Glass}]</span></br>\n";
+      mainlist::locationhead($c,$rec);
+      mainlist::nameline($c,$rec);
     }
     print comments::commentline($c,$rec), "<br/>\n";
   }
