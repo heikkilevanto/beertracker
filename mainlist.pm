@@ -211,7 +211,11 @@ sub nameline {
   $style .= ",$rec->{subtype}" if ($rec->{subtype});
   my $time = $rec->{time};
   $time = "($time)" if ($time lt "0600");
-  print "$time ";
+  my $op = $c->{op};
+  $op = "Graph" if ( $op eq "Person" ); # Edit the glass, even if coming from persons
+  print "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
+        "<span>$time</span></a> \n";
+  #print "$time ";
   my $dispstyle = brews::brewtextstyle($c,$style);
   print "<span style='white-space: nowrap;'>\n";
   print "<span $dispstyle>[$style]</span> \n";
@@ -232,8 +236,6 @@ sub numbersline {
   my $c = shift;
   my $rec = shift;
   my $bloodalc = shift;
-  print "<a href='$c->{url}?o=$c->{op}&e=$rec->{id}'>" .
-        "<span>edit [$rec->{id}]</span></a>\n";
   #print "<span style='font-size: x-small;'>[$rec->{id}] </span>";
   print "<b>".util::unit($rec->{vol},"c")."</b>";
   print util::unit($rec->{price},",-");

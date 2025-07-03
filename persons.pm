@@ -45,7 +45,8 @@ sub showpersondetails {
     strftime('%H:%M', g.timestamp, '-06:00') as time,
     g.Location as loc,
     g.brewtype as brewtype,
-    g.subtype as subtype
+    g.subtype as subtype,
+    g.id as id
   from comments
   left join persons on persons.id = comments.person
   left join glasses g on g.id = comments.glass
