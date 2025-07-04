@@ -161,7 +161,7 @@ sub listrecords {
         $onclick = "";
       } elsif ( $fn eq "Last" ) {
         my ($date, $wd, $time) = util::splitdate($v);
-        $v = "$wd $date $time";
+        $v = "<a href='$c->{url}?o=Full&date=$date'><span>$wd $date $time</span></a>";
         # TODO - "Sun 21:15" or "Sun 2023-05-25", depending on how recent
         # Will save a few chars on the phone
       } elsif ( $fn eq "Comment" ) {

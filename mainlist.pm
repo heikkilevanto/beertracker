@@ -18,6 +18,8 @@ use utf8;  # Source code and string literals are utf-8
 # TODO - Various filters
 sub glassquery {
   my $c = shift;
+  my $date = shift;
+  $date .= " 9"; # fake a weekday number to get comparable effdate
   my $sql = q {
     select
       glasses.id as id,
@@ -44,12 +46,13 @@ sub glassquery {
     left join locations on locations.id = brews.producerlocation
     left join brew_ratings br on glasses.brew = br.brew
     where Username = ?
+      and effdate <= ?
     order by timestamp desc
   };
   # TODO - Move the brew_stat into a separate query. Make one for locations as
   # well.
   my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($c->{username});
+  $sth->execute($c->{username}, $date);
   return $sth;
 } # glassquery
 
@@ -63,11 +66,11 @@ sub glassquery {
 
 sub startlist {
   my $c = shift;
+  my $date = shift;
   my $reader = {};
-  $reader->{sth} = glassquery($c);
+  $reader->{sth} = glassquery($c, $date);
   $reader->{bufrec} = undef;
   $c->{reader} = $reader;
-
 }
 
 # Get the next glass record. Either via the sth, or from the buffered value
@@ -191,7 +194,7 @@ sub locationhead {
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<br/>";
   my $locname = "@" . $loc->{Name};
-  print "<b>$wd $date " .
+  print "<b><a href='$c->{url}?o=$c->{op}&date=$date'><span>$wd $date</span></a> " .
     "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$locname</span></a> </b>";
   print " <span style='font-size: x-small;'>[$rec->{loc}]</span>\n";
   print "<a href='$loc->{Website}' target='_blank'><span style='font-size: x-small;'>www</span></a>"
@@ -336,7 +339,7 @@ sub sumline {
   print "<td $attr width='50px' ><b>" . util::unit($prsum,"kr") . "</b></td>\n";
   print "<td $attr width='50px' ><b>" . util::unit($drinksum, "d") . "</b></td>\n";
   print "<td $attr width='53px' ><b>" . util::unit($balc, "/₀₀") . "</b></td>\n";
-  print "<td>&nbsp <b>$txt</b></td>";
+  print "<td>&nbsp; <b>$txt</b></td>";
   print "</tr></table>";
 }
 
@@ -386,14 +389,13 @@ sub oneday {
 
 sub mainlist {
   my $c = shift;
-  startlist($c);
-  oneday($c); # TODO - Make params for the list length and start date
-  oneday($c);
-  oneday($c);
-  oneday($c);
-  oneday($c);
-  oneday($c);
-  oneday($c);
+  my $date = util::param($c,"date",util::datestr("%F", 365) );
+  my $ndays = util::param($c, "ndays", 14 );
+  print STDERR "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
+  startlist($c, $date);
+  while ( $ndays-- ) {
+    oneday($c);
+  }
 
   $c->{reader}->{sth}->finish;
 }
