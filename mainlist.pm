@@ -285,7 +285,7 @@ sub buttonline {
   my %vols;     # guess sizes for small/large beers
   $vols{$rec->{vol}} = 1 if ($rec->{vol});
   # TODO - more logic, if 20, say 20/30, if 25, say 25/40,
-  if ( $rec->{brewtype} =~ /Night|Restaurant/) {
+  if ( $rec->{brewtype} =~ /Night|Restaurant|Feedback/i) {
     %vols=(); # nothing to copy
   } elsif ( $rec->{brewtype}  eq "Wine" ) {
     $vols{12} = 1;

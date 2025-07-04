@@ -599,6 +599,8 @@ sub yearsummary {
     and glasses.Username = ?
     and glasses.BrewType <> 'Restaurant'
     and glasses.BrewType <> 'Night'
+    and glasses.BrewType <> 'Bar'
+    and glasses.BrewType <> 'Feedback'
     group by name ";
   if ($sortdr) {
     $sql .= "order by drinks desc, name COLLATE NOCASE";

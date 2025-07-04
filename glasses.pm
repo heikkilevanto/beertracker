@@ -35,7 +35,7 @@ $currency{"usd"} = 6.3;  # Varies bit over time
 ################################################################################
 sub isemptyglass {
   my $type = shift;
-  return $type =~ /Restaurant|Night|Bar/;
+  return $type =~ /Restaurant|Night|Bar|Feedback/;
 }
 
 ################################################################################
@@ -104,7 +104,7 @@ sub selectbrewsubtype {
   my $rec = shift;
   my $sql = 'SELECT BrewType, SubType, MAX(timestamp) AS last_time
     FROM glasses
-    WHERE BrewType in ("Restaurant","Night", "Bar")
+    WHERE BrewType in ("Restaurant","Night", "Bar","Feedback")
     GROUP BY brewtype,SubType
     ORDER BY last_time DESC ';
   my $sth = $c->{dbh}->prepare($sql);
