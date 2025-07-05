@@ -132,12 +132,16 @@ sub listbrewcomments {
   #print STDERR "listbrewcomments: id='$brew->{Id}': $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id});
+  print "<div onclick='toggleCommentTable(this.nextElementSibling);'>";
+  print "Comments and ratings for <b>$brew->{Name}</b> <br/>\n";
+  print "</div>\n";
   print "<div style='overflow-x: auto;'>";
   print "<table >\n";
   my $ratesum = 0;
   my $ratecount = 0;
   my $comcount = 0;
   my $perscount = 0;
+  my $count = 0;
   my $sty = "style='border-bottom: 1px solid white; vertical-align: top;' ";
   while ( my $com = $sth->fetchrow_hashref ) {
     print "<tr><td $sty>\n";
@@ -177,7 +181,7 @@ sub listbrewcomments {
     print "</tr>\n";
   }
   print "</table></div>\n";
-  print "<div onclick='toggleCommentTable(this);'><br/>";
+  print "<div onclick='toggleCommentTable(this.previousElementSibling);'><br/>";
   if ( $comcount == 0 ) {
     print "(No Comments)";
   } else {
@@ -192,8 +196,7 @@ sub listbrewcomments {
   }
   print "</div>";
   print "<script>
-    function toggleCommentTable(div) {
-      let table = div.previousElementSibling;
+    function toggleCommentTable(table) {
       if (table) {
         table.style.display = (table.style.display === 'none') ? 'table' : 'none';
       }
