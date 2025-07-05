@@ -346,6 +346,7 @@ sub sumline {
 sub oneday {
   my $c = shift;
   my $rec = peekrec($c);
+  return unless ($rec);
   my ($effdate, $loc, $locname,$weekday, $date ) = locationhead($c, $rec);
   my $balc = bloodalc($c,$date);
   my $locdrsum = 0;  # drinks for the location

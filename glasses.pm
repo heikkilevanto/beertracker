@@ -113,7 +113,7 @@ sub selectbrewsubtype {
   while ( my $bt = $sth->fetchrow_hashref ) {
     next unless ( $bt->{SubType} );
     my $sel = "";
-    $sel = "selected" if ( $rec->{SubType} eq $bt->{SubType} );
+    $sel = "selected" if ( $rec->{SubType} && $rec->{SubType} eq $bt->{SubType} );
     my $em = "data-empty=\"$bt->{BrewType}\" ";
     $s .= "<option value='$bt->{SubType}' $em $sel>$bt->{SubType}</option>\n";
   }
@@ -602,12 +602,11 @@ sub findrec {
             "where id = ? and username = ? ";
   if ( $id =~ /^\d\d\d\d-\d\d/ ) { # Called with old-style timestamp
     $sql =~ s/id =/timestamp =/;   # TODO - Drop this when no longer needed
-    #print STDERR "glasses::findrec called with timestamp '$id' instead of proper id\n";
+    print STDERR "glasses::findrec called with timestamp '$id' instead of proper id\n";
   }
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( $id, $c->{username} );
   my $rec = $sth->fetchrow_hashref;
-  util::error ("Can not find record id '$id' for username '$c->{username}' ") unless ( $rec->{Timestamp} );
   return $rec;
 }
 
