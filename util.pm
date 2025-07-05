@@ -184,7 +184,7 @@ sub topline {
   my $s = "";
   $s .= "Beertracker";
   if ( $c->{devversion} ) {
-    $s .= "-DEV";
+    $s =~ s/tracker/-DEV/;
   }
   my $v = Version::version_info();
   $s .= "&nbsp;\n";
