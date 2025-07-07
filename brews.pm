@@ -239,10 +239,16 @@ sub listbrewglasses {
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id});
   my $glcount = 0;
-  print "<div style='overflow-x: auto;'>";
+  print "<div onclick='toggleCommentTable(this.nextElementSibling);'><br/>";
+  print "When and where: </div>\n";
+  print "<div style='overflow-x: auto; display:none'>";
   print "<table  style='white-space: nowrap;'>\n";
+  my $firstrec;
+  my $lastrec;
   while ( my $com = $sth->fetchrow_hashref ) {
     $glcount++;
+    $firstrec = $com unless($firstrec);
+    $lastrec = $com;
     print "<tr><td>\n";
     print "<span style='font-size: xx-small'>" .
           "[$com->{Gid}]</span></td>\n";
@@ -267,13 +273,18 @@ sub listbrewglasses {
     }
     print "</td><td>\n";
 
-    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b></span></a> &nbsp;";
+    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span>@<b>$com->{Loc}</b></span></a> &nbsp;";
     print "</td>\n";
     print "</tr>\n";
   }
   print "</table></div>\n";
-  print "<div onclick='toggleCommentTable(this);'><br/>";
-  print "$glcount Glasses ";
+  print "<div onclick='toggleCommentTable(this.previousElementSibling);'><br/>";
+  if ( $glcount) {
+    print "$glcount Glasses between ";
+    print "$firstrec->{Date} and $lastrec->{Date}\n"
+  } else {
+    print "Not a single glass";
+  }
   print "</div>";
   $sth->finish;
   print "<!-- listbrewglasses end -->\n";
