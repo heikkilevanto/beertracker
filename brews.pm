@@ -403,6 +403,7 @@ sub selectbrew {
     $disptype .= $bt unless ($su);
     $disp .= " [$disptype]";
     #$disp = substr($disp, 0, 30);
+    $alc = $alc || "";
     $opts .= "<div class='dropdown-item' id='$id' alc='$alc' brewtype='$bt' >$disp</div>\n";
   }
   my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew" );

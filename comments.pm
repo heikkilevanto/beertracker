@@ -171,11 +171,11 @@ sub postcomment {
 
   my $glass = util::param($c, "glass");
   my $comment_id = util::param($c, "comment_id");
-  my $rating = util::param($c, "rating") || 0;
-  my $comment = util::param($c, "comment") || "";
-  my $person = util::param($c, "person") || "";
+  my $rating = util::param($c, "rating") || undef;
+  my $comment = util::param($c, "comment") || undef;
+  my $person = util::param($c, "person") || undef;
 
-  if ( $person eq "new" ) {  # Adding a new person
+  if ( $person && $person eq "new" ) {  # Adding a new person
     my $newname = util::param($c,"newpersonName");
     my $newfull = util::param($c,"newpersonFullName");
     my $newdesc = util::param($c,"newpersonDescription");
