@@ -16,7 +16,7 @@ do
 done
 
 
-ls -l data.dump ../db.schema
+ls -l ../db.schema  data.dump
 
 echo `date "+%F %X"` Importing schema
 if ! sqlite3 beertracker.db < ../db.schema
