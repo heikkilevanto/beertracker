@@ -4,6 +4,7 @@
 # So that sum() and avg() will work correctly
 # It needs to drop and recreate all views and foreign keys, or sqlite gets
 # confused...
+# Also drops AUTOINCREMENT from the primary keys, that is not needed
 
 use strict;
 use warnings;
@@ -24,22 +25,22 @@ $dbh->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrows
 
 
 
-# Step 1: Save all views
+# Save all views
 my $views = $dbh->selectall_arrayref(
     "SELECT name, sql FROM sqlite_master WHERE type='view'",
     { Slice => {} }
 );
 
-# Step 2: Drop all views
+# Drop all views
 for my $view (@$views) {
     print "Dropping view: $view->{name}\n";
     $dbh->do("DROP VIEW IF EXISTS $view->{name}");
 }
 
-# Step 3: Disable FK checks
+#  Disable FK checks
 $dbh->do("PRAGMA foreign_keys = OFF");
 
-# Step 4: Process each table
+#  Process each table
 my $tables = $dbh->selectall_arrayref(
     "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
     { Slice => {} }
@@ -67,6 +68,7 @@ for my $table (@$tables) {
 
     my $new_table = "${name}_new";
     my $create_sql = "CREATE TABLE $new_table (\n    " . join(",\n    ", @col_defs) . "\n)";
+    $create_sql =~ s/\bAUTOINCREMENT\b//g;
     print "  Creating new table\n";
     $dbh->do($create_sql);
 
@@ -103,10 +105,13 @@ for my $table (@$tables) {
     }
 }
 
-# Step 5: Re-enable foreign keys
+#  Re-enable foreign keys
 $dbh->do("PRAGMA foreign_keys = ON");
 
-# Step 6: Recreate views
+# Remove the sqllite_sequences, as we don't need them any more
+$dbh->do("DELETE FROM sqlite_sequence");
+
+#  Recreate views
 for my $view (@$views) {
     print "Recreating view: $view->{name}\n";
     $dbh->do($view->{sql});

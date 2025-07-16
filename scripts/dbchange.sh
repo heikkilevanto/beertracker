@@ -4,7 +4,7 @@
 # Keeping the data
 
 echo "Updating the database structure from db.schema"
-cd beerdata
+cd beerdata || exit 1
 #set -euo pipefail
 
 sqlite3 beertracker.db ".dump" | grep "INSERT INTO" > data.dump
@@ -18,13 +18,14 @@ done
 
 ls -l data.dump ../db.schema
 
-echo `date "+%F %X"` Importing...
+echo `date "+%F %X"` Importing schema
 if ! sqlite3 beertracker.db < ../db.schema
 then
   echo "Errors importing the schema"
   exit 1
 fi
 
+echo `date "+%F %X"` Importing data
 sqlite3 beertracker.db << EOF
 PRAGMA synchronous = OFF;
 PRAGMA journal_mode = MEMORY;

@@ -1,89 +1,61 @@
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
-CREATE TABLE GLASSES (
-
-/* A glass of anything I can drink, or special "empty" glasses for */
-/* restaurants etc. The main table. These are keyed by the username, */
-/* so each user has his own history. */
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Username TEXT not null, /* every user has his own glasses - the rest are shared */
-        Timestamp DATETIME not null, /* Actual time, local to the users browser */
-        BrewType TEXT not null,  /* Wine, Beer, Restaurant */
-        SubType TEXT not null default '', /* 'NEIPA', 'Red'. Restaurant types like 'Pizza', etc */
-        Location INTEGER,  /* ->LOCATIONS */
-        Brew INTEGER, /* ->BREWS Can be null for "empty glasses" which should not have alc nor vol */
-        Price DECIMAL default 0, /* In local currency, DKK in my case */
-        Volume DECIMAL default 0, /* In cl */
-        Alc DECIMAL default 0.0, /* In % by vol */
-        StDrinks DECIMAL default 0.0, /* pre-calculated Alc * Vol / OneDrink, zero for 'empty' glasses*/
-        FOREIGN KEY (Location) REFERENCES LOCATIONS(Id),
-        FOREIGN KEY (Brew) REFERENCES BREWS(Id)
-
-    );
-CREATE TABLE BREWS (
-
-/* A Brew is a definition of a beer or other stuff, whereas a Glass is the */
-/* event of one being drunk. These can be shared between users. */
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name TEXT, /* Official name, or the name I know it by */
-        BrewType TEXT not null,  /* Wine, Beer, Restaurant */
-        SubType TEXT default '',  /* Wines: Red, Booze: Rum. But not Restaurant: Pizza   TODO */
-        BrewStyle TEXT default '', /* What ever style we get in, "IPA Hazy" */
-        ProducerLocation INTEGER,  /* ->LOCATION rec of the producer */
-        Alc DECIMAL default 0.0,
-        Country TEXT default '', /* Country code */
-        Region TEXT default '',  /* Mostly for wines */
-        Flavor TEXT default '',  /* hops, grapes, fruits, cask */
-        Year DECIMAL default '',
-        Details TEXT default '', /* Classification: Reserva, DOCG, 20y; Edition: Anniversary */
-        FOREIGN KEY (ProducerLocation) REFERENCES LOCATIONS(Id)
-
-    );
-CREATE TABLE COMMENTS (
-
-/* Comments always refer to a glass, even if an "empty" one, since the glass has */
-/* the username needed to keep users separate. Useful for nights and restaurants. */
-
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Glass INTEGER not null,
-        Comment TEXT default '',
-        Rating INTEGER default '',  /* 1 (worst) to 9 (best) */
-        Person INTEGER,
-        Photo TEXT default '',  /* File name of the photo image */
-        FOREIGN KEY (Glass) REFERENCES GLASSES(Id),
-        FOREIGN KEY (Person) REFERENCES PERSONS(Id)
-
-    );
-CREATE TABLE PERSONS (
-/* All the people I want to remember.  These are personal to the username, but */
-/* that comes from Glasses, via comments. Persons connected to Producer Locations */
-/* and such can be shared between users */
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name TEXT NOT NULL, /* The name I know the person by. Should be unique */
-        FullName TEXT default '', /* Full name, if I know it */
-        Description TEXT default '',  /* Small comment on the person to distinguish all Sørens */
-        Contact TEXT default '', /* Email, phone, or such. If I need more, I can create a Location */
-        Location INTEGER,  /* persons home, or possibly a bar or such connected with the person */
-        RelatedPerson INTEGER default '',  /* Persons partner or such */
-        FOREIGN KEY (RelatedPerson) REFERENCES PERSONS(Id),
-        FOREIGN KEY (Location) REFERENCES LOCATIONS(Id)
-    );
-CREATE TABLE LOCATIONS (
-/* These are mostly bars and restaurants, but can also be breweries, */
-/* homes of Persons, and other things that need an address, geo coordinates */
-/* and such. */
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
-        Name TEXT NOT NULL,  /* The name I know it by. Used in pulldowns */
-        OfficialName TEXT default '',  /* Official long name */
-        Description TEXT default '',
-        LocType TEXT default '', /* Location type: Bar, Restaurant, Producer, etc */
-        LocSubType TEXT default '', /* Beer, Italian, Wine, etc */
-        GeoCoordinates TEXT default '',
-        Website TEXT default '',
-        Contact TEXT default '', /* Phone, email, or such */
-        Address TEXT default ''  /* Street, zip, city. Or just a description of where I found it */
-    );
-DELETE FROM sqlite_sequence;
+CREATE TABLE IF NOT EXISTS "GLASSES" (
+    Id INTEGER PRIMARY KEY,
+    Username TEXT NOT NULL,
+    Timestamp DATETIME NOT NULL,
+    BrewType TEXT NOT NULL,
+    SubType TEXT NOT NULL,
+    Location INTEGER,
+    Brew INTEGER,
+    Price DECIMAL,
+    Volume DECIMAL,
+    Alc DECIMAL,
+    StDrinks DECIMAL
+);
+CREATE TABLE IF NOT EXISTS "BREWS" (
+    Id INTEGER PRIMARY KEY,
+    Name TEXT,
+    BrewType TEXT NOT NULL,
+    SubType TEXT,
+    BrewStyle TEXT,
+    ProducerLocation INTEGER,
+    Alc DECIMAL,
+    Country TEXT,
+    Region TEXT,
+    Flavor TEXT,
+    Year DECIMAL,
+    Details TEXT
+);
+CREATE TABLE IF NOT EXISTS "COMMENTS" (
+    Id INTEGER PRIMARY KEY,
+    Glass INTEGER NOT NULL,
+    Comment TEXT,
+    Rating INTEGER,
+    Person INTEGER,
+    Photo TEXT
+);
+CREATE TABLE IF NOT EXISTS "PERSONS" (
+    Id INTEGER PRIMARY KEY,
+    Name TEXT NOT NULL,
+    FullName TEXT,
+    Description TEXT,
+    Contact TEXT,
+    Location INTEGER,
+    RelatedPerson INTEGER
+);
+CREATE TABLE IF NOT EXISTS "LOCATIONS" (
+    Id INTEGER PRIMARY KEY,
+    Name TEXT NOT NULL,
+    OfficialName TEXT,
+    Description TEXT,
+    LocType TEXT,
+    LocSubType TEXT,
+    GeoCoordinates TEXT,
+    Website TEXT,
+    Contact TEXT,
+    Address TEXT
+);
 CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE);
 CREATE INDEX idx_glasses_location ON GLASSES (Location);
 CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp);
@@ -166,23 +138,23 @@ CREATE VIEW BREWS_DEDUP_LIST AS select
   left join COMMENTS on COMMENTS.Glass = GLASSES.Id
   left join LOCATIONS on LOCATIONS.id = GLASSES.Location
   group by BREWS.id;
-CREATE VIEW COMMENTS_LIST AS 
+CREATE VIEW COMMENTS_LIST AS
 select
     COMMENTS.Id,
 	strftime ( '%Y-%m-%d %w ', GLASSES.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', GLASSES.Timestamp) as Last,
-	LOCATIONS.Name as LocName, 
+	LOCATIONS.Name as LocName,
 	"TR" as TR,
-	'' as Clr, 
+	'' as Clr,
 
-	BREWS.Name as BrewName,   
+	BREWS.Name as BrewName,
 	PLOC.Name as Prod,
 
 	"TR" as TR,
-	
+
 	COMMENTS.Rating as Rate,
     PERSONS.Name as PersonName,
 	COMMENTS.Comment as Comment
-	
+
   from COMMENTS
   left join GLASSES on Glasses.Id = COMMENTS.Glass
   left join BREWS on BREWS.Id = GLASSES.Brew
@@ -220,7 +192,7 @@ FROM
     glasses g
 LEFT JOIN
     comments c ON c.glass = g.id
-where g.brew is not null 
+where g.brew is not null
 GROUP BY
     g.brew;
 CREATE VIEW LOCATIONS_DEDUP_LIST AS select
@@ -232,7 +204,7 @@ CREATE VIEW LOCATIONS_DEDUP_LIST AS select
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id;
-CREATE VIEW LOCATIONS_LIST AS 
+CREATE VIEW LOCATIONS_LIST AS
 select
     LOCATIONS.Id,
     LOCATIONS.Name,
