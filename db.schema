@@ -216,4 +216,20 @@ select
   left join COMMENTS on COMMENTS.Glass = GLASSES.Id
   where COMMENTS.Comment > '' and ( GLASSES.Brew IS NULL or GLASSES.Brew = '')
   group by LOCATIONS.Id;
+CREATE VIEW LOC_RATINGS as 
+SELECT
+  l.id,
+  avg(CASE WHEN g.brew IS NOT NULL THEN c.rating END) as brew_avg,
+  count(CASE WHEN g.brew IS NOT NULL THEN c.rating END) as brew_count,
+  count(CASE WHEN g.brew IS NOT NULL THEN c.comment END) as brew_comments,
+  avg(CASE WHEN g.brew IS NULL THEN c.rating END) as loc_avg,
+  count(CASE WHEN g.brew IS NULL THEN c.rating END) as loc_count,
+  count(CASE WHEN g.brew IS NULL THEN c.comment END) as loc_comments
+from COMMENTS c,
+  LOCATIONS l,
+  GLASSES g
+WHERE c.glass = g.id
+and l.id = g.location 
+and l.loctype <> "Producer"
+group by g.location;
 COMMIT;

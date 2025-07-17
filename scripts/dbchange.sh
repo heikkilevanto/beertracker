@@ -32,8 +32,12 @@ PRAGMA journal_mode = MEMORY;
 PRAGMA foreign_keys = OFF;
 BEGIN TRANSACTION;
 .read data.dump
+UPDATE COMMENTS SET Rating = NULL where Rating = 0 or Rating = '';
 COMMIT;
+PRAGMA OPTIMIZE;
 EOF
+
+# The rating trick can be removed in near future, when we no longer need it
 
 chmod g+w beertracker.db
 echo `date "+%F %X"` Done!
