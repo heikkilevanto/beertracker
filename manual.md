@@ -5,6 +5,8 @@ This is a simple script to track the beers I drink. I also use it for other
 purposes, like remembering restaurants, tracking wines and booze, and displaying
 nice graphs.
 
+## WARNING - This manual is badly out of date, and needs an almost complete rewrite
+
 ---
 
 ## Getting started
