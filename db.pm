@@ -73,7 +73,7 @@ sub peekrow {
 
 sub pushback_row {
     my ($sth, $row) = @_;
-    die "Buffer already occupied" if exists $sth->{my_buffered_row};
+    error( "Buffer already occupied" ) if exists $sth->{my_buffered_row};
     $sth->{my_buffered_row} = $row;
 } # pushback_row
 

@@ -157,7 +157,7 @@ sub getversioninfo {
     $namespace ||= 'VersionTemp' . int(rand(1000000));
 
     my $code = do {
-        open my $fh, '<', $file or die "Can't open $file: $!";
+        open my $fh, '<', $file or error("Can't open $file: $!");
         local $/;
         <$fh>;
     };
@@ -167,7 +167,7 @@ sub getversioninfo {
 
     my $full = "package main; no warnings; eval q{$code};";
     my $ok = eval $full;
-    die "Error loading $file: $@" if $@;
+    error( "Error loading $file: $@") if $@;
 
     no strict 'refs';
     my $func = "${namespace}::version_info";

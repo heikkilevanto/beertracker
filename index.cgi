@@ -9,72 +9,6 @@
 #
 
 
-################################################################################
-# Overview
-################################################################################
-#
-# THIS IS OUTDATED - I am in the middle of a complex rewrite that
-#  - uses SqLite for the back end
-#  - Splits the code into several dedicated modules
-#  - Should simplify this script to something pretty small
-# At the moment we are somewhere in the middle. Using SqLite all right, but
-# faking the old line-based things for many of the lists etc. TODO
-#
-#
-# The code consists of one very long main function that produces whatever
-# output we need, and a small number of helpers. (Ought to be refactored
-# in version 2). Sections are delimited by comment blocks like above.
-
-# While working on everything at once, I can not maintain github issues for
-# everything, so I put TODO markers in the code. The word may be followed by
-# SOON for things that should be done in the near future, or LATER for those
-# that have to wait a little. Maybe I invite more labeling in time. In the end
-# all TODOs should be resolved, or moved into github issues
-
-# TODO - Switch to using
-#  - FIXME instead of TODO SOON
-#  - NOTE instead TODO LATER
-
-# Sections of the main function:
-# - Init and setup
-#   - Modules and UTF-8 stuff
-#   - Constants and setup
-#
-# - Early processing
-#   - Dump of the data file
-#   - Read the data file
-#   - POST data into the file
-#   - HTML head
-#   - Javascript trickery for the browser-side stuff
-#
-# - Various sections of the output page. Mostly conditional on $op
-#   - Main input form, always there
-#   - Graph. There for some selected $ops: graph, board
-#   - Beer board (list) for the location.
-#   - Short list, aka daily statistics
-#   - Annual summary
-#   - Monthly statistics
-#   - About page
-#   - Geolocation debug
-#   - various lists (beer, wine, booze, location, resturant, etc)
-#   - Regular full list. Shown by itself, or after graph, board
-
-# Helper functions. These can be grouped into
-# - String manipulation (trim)
-# - Input parameter normalizing
-# - Stuff for the main list filters
-# - Making a NEW marker for things not seen before
-# - Making various links
-# - Prices. Normalizing, currency conversions
-# - Displaying units
-# - Error handling
-# - Geo coordinate stuff
-# - Formatting dates
-# - Producing the "last seen" line
-# - Color coding and shortening beer styles
-#
-# End of outdated comment
-
 
 
 ################################################################################
@@ -120,7 +54,7 @@ $dbh->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrows
 ################################################################################
 # Program modules
 ################################################################################
-# TODO - More modules, more stuff away from the main script
+# All actual code should be in the modules
 require "./persons.pm";   # List of people, their details, editing, helpers
 require "./locations.pm"; # Locations stuff
 require "./brews.pm";  # Lists of various brews, etc
@@ -135,8 +69,8 @@ require "./inputs.pm"; # Helper routines for input forms
 require "./listrecords.pm"; # A way to produce a nice list from db records
 require "./aboutpage.pm"; # The About page
 require "./VERSION.pm"; # auto-generated version info
-require "./copyproddata.pm";
-require "./db.pm";
+require "./copyproddata.pm"; # Copy production database into the dev version
+require "./db.pm"; # Various database helpers
 
 
 
