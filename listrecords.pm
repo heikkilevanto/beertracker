@@ -89,6 +89,8 @@ sub listrecords {
     my $sty = "style='max-width:200px; min-width:0'"; # default
     if ( $f =~ /Id|Alc|Com|Count/ ) {
       $sty = "style='max-width:55px; text-align:center'";
+    } elsif ( $f =~ /^(Stats)$/ ) {
+      $sty = "style='max-width:100px; text-align:center'";
     } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
       $sty = "style='text-align:right'";
     } elsif ( $f =~ /Rate|Rating|Clr/) {
@@ -154,6 +156,9 @@ sub listrecords {
         $v = "@" . $v  if ($v);
       } elsif ( $fn eq "PersonName" ) {
         $v .= ":" if ($v);
+      } elsif ( $fn eq "Stats" ) {  # Combined ratings averages
+        my ( $cnt, $avg, $com ) = split (";", $v);
+        $v = comments::avgratings($c, $cnt, $avg, $com);
       } elsif ( $fn eq "Rate" ) {
         $v = "($v)" if ($v);
       } elsif ( $fn eq "Chk" ) {

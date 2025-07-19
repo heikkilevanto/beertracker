@@ -204,18 +204,6 @@ CREATE VIEW LOCATIONS_DEDUP_LIST AS select
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id;
-CREATE VIEW LOCATIONS_LIST AS
-select
-    LOCATIONS.Id,
-    LOCATIONS.Name,
-	 count(COMMENTS.Id) - 1 as Com,
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
-    LOCATIONS.LocType || ", " || LOCATIONS.LocSubType as Type
-  from LOCATIONS
-  left join GLASSES on GLASSES.Location = LOCATIONS.Id
-  left join COMMENTS on COMMENTS.Glass = GLASSES.Id
-  where COMMENTS.Comment > '' and ( GLASSES.Brew IS NULL or GLASSES.Brew = '')
-  group by LOCATIONS.Id;
 CREATE VIEW LOC_RATINGS as 
 SELECT
   l.id,
@@ -232,4 +220,29 @@ WHERE c.glass = g.id
 and l.id = g.location 
 and l.loctype <> "Producer"
 group by g.location;
+CREATE VIEW LOCATION_RATINGS as 
+SELECT
+  l.id,
+  count(c.rating) as rating_count,
+  avg(c.rating) as rating_average,
+  count(c.comment) as comment_count
+from COMMENTS c,
+  LOCATIONS l,
+  GLASSES g
+WHERE  g.brew IS NULL
+and c.glass = g.id
+and l.id = g.location 
+and l.loctype <> "Producer"
+group by g.location;
+CREATE VIEW LOCATIONS_LIST AS
+select
+    LOCATIONS.Id,
+    LOCATIONS.Name,
+	r.rating_count || ";" || r.rating_average || ";" || r.comment_count as Stats,
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
+    LOCATIONS.LocType || ", " || LOCATIONS.LocSubType as Type
+  from LOCATIONS
+  left join GLASSES on GLASSES.Location = LOCATIONS.Id
+  left join LOCATION_RATINGS r on r.id  = GLASSES.Id
+  group by LOCATIONS.Id;
 COMMIT;
