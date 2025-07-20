@@ -46,21 +46,23 @@ sub commentline {
 
 
 ################################################################################
-# Produce a simple string with average ratings. Something like (2:6.5) 3*
+# Produce a simple string with average ratings. Something like (6.5/2) 3•
 ################################################################################
+
 sub avgratings {
   my ($c, $cnt, $avg, $com) = @_ ;
   my $s = "";
   if ( $avg ) {
     $s .= "(" ;
     if ( $cnt > 1) {
-      $s .= "<span style='font-size: x-small;'>";
-      $s .= "$cnt:" . "</span>" ;
-      $s .= sprintf("<b>%2.1f)</b>", $avg);
+      $s .= sprintf("<b>%2.1f</b>", $avg);
+      $s .= "<span style='font-size: xx-small;'>";
+      $s .= "/$cnt" . "</span>" ;
     } else {
       $avg = int($avg);
-      $s .= "<b>$avg</b>)";
+      $s .= "<b>$avg</b>";
     }
+    $s .= ")";
   }
   if ( $com ) {
     $s .= " $cnt•";
