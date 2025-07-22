@@ -120,23 +120,24 @@ CREATE VIEW PERSONS_LIST AS select
   left join COMMENTS on COMMENTS.Person = PERSONS.Id
   left join GLASSES on COMMENTS.Glass = GLASSES.Id
   left join LOCATIONS on LOCATIONS.id = GLASSES.Location
-  group by Persons.id;
+  group by Persons.id
+  ;
 CREATE VIEW COMMENTS_LIST AS
 select
     COMMENTS.Id,
-	strftime ( '%Y-%m-%d %w ', GLASSES.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', GLASSES.Timestamp) as Last,
-	LOCATIONS.Name as LocName,
-	"TR" as TR,
-	'' as Clr,
+    strftime ( '%Y-%m-%d %w ', GLASSES.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', GLASSES.Timestamp) as Last,
+    LOCATIONS.Name as LocName,
+    "TR" as TR,
+    '' as Clr,
 
-	BREWS.Name as BrewName,
-	PLOC.Name as Prod,
+    BREWS.Name as BrewName,
+    PLOC.Name as Prod,
 
-	"TR" as TR,
+    "TR" as TR,
 
-	COMMENTS.Rating as Rate,
+    COMMENTS.Rating as Rate,
     PERSONS.Name as PersonName,
-	COMMENTS.Comment as Comment
+    COMMENTS.Comment as Comment
 
   from COMMENTS
   left join GLASSES on Glasses.Id = COMMENTS.Glass
@@ -168,7 +169,7 @@ CREATE VIEW LOCATIONS_DEDUP_LIST AS select
   from LOCATIONS
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   group by LOCATIONS.Id;
-CREATE VIEW LOC_RATINGS as 
+CREATE VIEW LOC_RATINGS as
 SELECT
   l.id,
   avg(CASE WHEN g.brew IS NOT NULL THEN c.rating END) as brew_avg,
@@ -181,10 +182,10 @@ from COMMENTS c,
   LOCATIONS l,
   GLASSES g
 WHERE c.glass = g.id
-and l.id = g.location 
+and l.id = g.location
 and l.loctype <> "Producer"
 group by g.location;
-CREATE VIEW LOCATION_RATINGS as 
+CREATE VIEW LOCATION_RATINGS as
 SELECT
   l.id,
   count(c.rating) as rating_count,
@@ -195,7 +196,7 @@ from COMMENTS c,
   GLASSES g
 WHERE  g.brew IS NULL
 and c.glass = g.id
-and l.id = g.location 
+and l.id = g.location
 and l.loctype <> "Producer"
 group by g.location;
 CREATE VIEW LOCATIONS_LIST AS
@@ -209,7 +210,7 @@ select
   left join GLASSES on GLASSES.Location = LOCATIONS.Id
   left join LOCATION_RATINGS r on r.id  = GLASSES.Id
   group by LOCATIONS.Id;
-CREATE VIEW BREWS_LIST AS 
+CREATE VIEW BREWS_LIST AS
 select
     BREWS.Id,
     BREWS.Name,
@@ -229,7 +230,7 @@ select
   left join LOCATIONS on LOCATIONS.id = GLASSES.Location
   left join BREW_RATINGS r on r.Brew = Brews.Id
   group by BREWS.id;
-CREATE VIEW BREWS_DEDUP_LIST AS 
+CREATE VIEW BREWS_DEDUP_LIST AS
 SELECT
     BREWS.Id,
 	"Chk" as Chk,
