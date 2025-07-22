@@ -10,8 +10,6 @@ use utf8;  # Source code and string literals are utf-8
 ################################################################################
 # List of persons
 ################################################################################
-# TODO - Filtering by location or date  (not just last seen)
-# TODO - When editing, show the most recent dates, other people involved, etc
 sub listpersons {
   my $c = shift; # context
 
@@ -31,7 +29,6 @@ sub listpersons {
 # Person details
 ################################################################################
 # Show when and where we have seen that person, and comments
-# TODO - Make a link to the main list for the date, possibly editing the glass.
 sub showpersondetails {
   my $c = shift;
   my $pers = shift;

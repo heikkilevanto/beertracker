@@ -178,10 +178,17 @@ sub getversioninfo {
 # Top line, including the Show menu
 ################################################################################
 
+# Return the current stats: Drinks, blood alc, and money for today
+# TODO
+sub topstats {
+
+} # topstats
+
 # The top bar, on every page
 sub topline {
   my $c = shift; # context;
   my $s = "";
+  $s .= "<span style='white-space: nowrap;'>\n";
   $s .= "Beertracker";
   if ( $c->{devversion} ) {
     $s =~ s/tracker/-DEV/;
@@ -192,6 +199,7 @@ sub topline {
   $s .= "+" if ($v->{dirty});
   $s .= "&nbsp;\n";
   $s .= showmenu($c);
+  $s .= "</span>";
   $s .= "<hr>\n";
 } # topline
 

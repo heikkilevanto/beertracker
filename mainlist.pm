@@ -183,6 +183,7 @@ sub nameline {
   print "</span>\n";
   print "<br/>\n"
 }
+
 sub numbersline {
   # [14951] 40cl 70.- 6.2% 1.63d 0.93/₀₀ (7.5)/2 3*
   # id, vol, price, alc, drinks, blood alc, avg rating /count, comment count
