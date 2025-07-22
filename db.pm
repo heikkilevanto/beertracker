@@ -7,8 +7,9 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-
-
+use Data::Dumper;
+local $Data::Dumper::Terse = 1;
+local $Data::Dumper::Indent = 0;
 # --- insert new functions here ---
 
 
@@ -43,38 +44,48 @@ sub query {
   my $c = shift;
   my $sql = shift;
   my @params = @_;
-  print STDERR "$sql ", @params, "\n" if ( $c->{devversion} );
+  print STDERR "$sql (", join(',',@params), ")\n" if ( $c->{devversion} );
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @params );
   return $sth;
 }
 
 # Simple buffered read of records. Keeps exactly one record in buffer, so
-# we can peek at it, and consume it late. For example, peek to see if the
+# we can peek at it, and consume it later. For example, peek to see if the
 # year has changed, and print a header if yes.
-# Bit dirty, keeps the buffered record inside $sth
+# (Tried to set it directly inside $sth, but that did not work)
+# Bit dirty, keeps the buffered record in a hash indexed by the $sth.
+# This works since this is a cgi script that does not run very long, so the
+# buffer will not grow very large within one HTTP request.
+
+my %buffer;
+
 sub nextrow {
     my ($sth) = @_;
-    if (exists $sth->{my_buffered_row}) {
-        my $row = $sth->{my_buffered_row};
-        delete $sth->{my_buffered_row};
+    if (exists $buffer{$sth}) {
+        my $row = $buffer{$sth};
+        delete $buffer{$sth};
         return $row;
     }
-    return $sth->fetchrow_hashref;
+    my $row = $sth->fetchrow_hashref;
+    return $row;
 } # nextrow
 
 sub peekrow {
     my ($sth) = @_;
-    return $sth->{my_buffered_row} if exists $sth->{my_buffered_row};
+    if (exists $buffer{$sth}) {
+      my $row = $buffer{$sth};
+      return $row;
+    }
     my $row = $sth->fetchrow_hashref;
-    $sth->{my_buffered_row} = $row if $row;
+    $buffer{$sth} = $row if $row;
     return $row;
 } # peekrow
 
 sub pushback_row {
     my ($sth, $row) = @_;
-    error( "Buffer already occupied" ) if exists $sth->{my_buffered_row};
-    $sth->{my_buffered_row} = $row;
+    util::error( "Buffer already occupied" ) if exists $buffer{$sth};
+    $buffer{$sth} = { %$row };
 } # pushback_row
 
 ################################################################################

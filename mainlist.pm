@@ -51,61 +51,12 @@ sub glassquery {
   };
   # TODO - Move the brew_stat into a separate query. Make one for locations as
   # well.
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($c->{username}, $date);
+  my $sth = db::query($c, $sql, $c->{username}, $date);
   return $sth;
 } # glassquery
 
-################################################################################
-# Db reader
-# Keeps a one-record buffer, so we can take a record, look at it, and put it
-# back to be processed.
-################################################################################
 
-# TODO Use the one in db.pm
 
-sub startlist {
-  my $c = shift;
-  my $date = shift;
-  my $reader = {};
-  $reader->{sth} = glassquery($c, $date);
-  $reader->{bufrec} = undef;
-  $c->{reader} = $reader;
-}
-
-# Get the next glass record. Either via the sth, or from the buffered value
-sub getnext {
-  my $c = shift;
-  my $rec;
-  if ( $c->{reader}->{bufrec} ) {
-    $rec = $c->{reader}->{bufrec};
-    $c->{reader}->{bufrec} = undef;
-    #print STDERR "getnext got $rec->{id} from buf \n";
-  } else {
-    $rec = $c->{reader}->{sth}->fetchrow_hashref();
-    #print STDERR "getnext got $rec->{id} from db\n";
-    #print STDERR JSON->new->encode($rec) , "\n";
-  }
-  return $rec;
-}
-
-# Put the record back in the reader, so we will get it again on getnext
-sub pushback {
-  my $c = shift;
-  my $rec = shift;
-  error ("Can not push back more than one record")
-    if ( $c->{reader}->{bufrec} );
-  #print STDERR "pushback '$rec->{id}' \n";
-  $c->{reader}->{bufrec} = $rec;
-}
-
-# Return a copy of the next record, without consuming it
-sub peekrec {
-  my $c = shift;
-  my $rec = getnext($c);
-  pushback($c,$rec);
-  return $rec;
-}
 
 ################################################################################
 # A helper to calculate blood alcohol for a given effdate
@@ -345,7 +296,7 @@ sub sumline {
 
 sub oneday {
   my $c = shift;
-  my $rec = peekrec($c);
+  my $rec = db::peekrow($c->{sth});
   return unless ($rec);
   my ($effdate, $loc, $locname,$weekday, $date ) = locationhead($c, $rec);
   my $balc = bloodalc($c,$date);
@@ -353,10 +304,10 @@ sub oneday {
   my $locprsum = 0;  # price for the location
   my $daydrsum = 0;  # drinks for the whole day
   my $dayprsum = 0;  # price for the whole day
-  while ( $rec = getnext($c) ) {
+  while ( $rec = db::nextrow($c->{sth}) ) {
     #print JSON->new->encode($rec) . "<br>";
     if ( $rec->{effdate} ne $effdate ) {
-      pushback($c,$rec);
+      db::pushback_row($c->{sth},$rec);
       last;
     }
     #print STDERR "oneday: id='$rec->{id} l='$rec->{loc}' \n";
@@ -393,12 +344,12 @@ sub mainlist {
   my $date = util::param($c,"date",util::datestr("%F", 365) );
   my $ndays = util::param($c, "ndays", 14 );
   print STDERR "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
-  startlist($c, $date);
+  $c->{sth} = glassquery($c, $date);
   while ( $ndays-- ) {
     oneday($c);
   }
 
-  $c->{reader}->{sth}->finish;
+  $c->{sth}->finish;
 }
 
 ################################################################################
