@@ -216,11 +216,11 @@ sub nameline {
   $time = "($time)" if ($time lt "0600");
   my $op = $c->{op};
   $op = "Graph" if ( $op eq "Person" ); # Edit the glass, even if coming from persons
+  print "<span style='white-space: nowrap;'>\n";
   print "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
         "<span>$time</span></a> \n";
   #print "$time ";
   my $dispstyle = brews::brewtextstyle($c,$style);
-  print "<span style='white-space: nowrap;'>\n";
   print "<span $dispstyle>[$style]</span> \n";
   print "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
   if ( $rec->{brewname} ) {
