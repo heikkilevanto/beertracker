@@ -202,8 +202,7 @@ sub makedatafile {
     print F $line;
     print F "\n" if ( $date->ymd ge $today); # split curves at today
     if ( $date->wday == 6 ) { # Sat
-      my $wkendcolor = $c->{bgcolor};
-      $wkendcolor =~ s/003/005/;
+      my $wkendcolor = $c->{altbgcolor};
       my $fri = $date->epoch - $halfday;
       my $sun = ($date + $oneday*2.5)->epoch;
       #$g->{weekends} .= "set object $g->{wkendtag} rect from \"$fri\",-0.5 to \"$sun\",50 " .
@@ -332,7 +331,7 @@ sub onelink {
   my $c = $g->{c};
   print "<a href='$c->{url}?o=$c->{op}".$start.$end. "' >" .
     #"<span>$txt</span></a>\n";
-    "<span style='border:1px solid white; padding: 1px 4px; color: white' >$txt</span></a>\n";
+    "<span style='border:1px solid white; padding: 1px 4px; color: white; background-color:$c->{altbgcolor}' >$txt</span></a>\n";
 }
 
 # Helper to produce the links under the graph

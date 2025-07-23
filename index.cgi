@@ -88,7 +88,8 @@ $devversion = 1 if ( $workdir =~ /-dev|-old/ );
 # I am not running the real thing.
 my $bgcolor = "#003000";
 $bgcolor = "#003050" if ( $devversion );
-
+my $altbgcolor = $bgcolor;
+$altbgcolor =~ s/003/005/;
 # Constants
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
 my $datadir = "./beerdata/";
@@ -153,6 +154,7 @@ my $c = {
   'cgi'      => $q,
   'onedrink' => $onedrink,
   'bgcolor'  => $bgcolor,
+  'altbgcolor'  => $altbgcolor,
   'devversion' => $devversion,
   'mobile'   => $mobile,
 };
@@ -292,7 +294,8 @@ sub htmlhead {
   # Style sheet - included right in the HTML headers
   print "<style rel='stylesheet'>\n";
   print '@media screen {';
-  print "  body, input, select, textarea, button { background-color: $bgcolor; color: #FFFFFF; }\n";
+  print "  body { background-color: $bgcolor; color: #FFFFFF; }\n";
+  print "  input, select, textarea, button { background-color: $altbgcolor; color: #FFFFFF; }\n";
   print "  * { font-size: small; }\n";
   print "  a { color: #666666; }\n";  # Almost invisible grey. Applies only to the
             # underline, if the content is in a span of its own.
