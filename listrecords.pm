@@ -143,7 +143,7 @@ sub listrecords {
       my $onclick = "onclick='fieldclick(this,$i);'";
       my $data = "data-col=$i";
       if ( $fn eq "Name" ) {
-        $v = "<a href='$url?o=$op&e=$rec[0]'><b>$v</b></a>";
+        $v = "<a href='$url?o=$op&e=$rec[0]'><span><b>$v</b></span></a>";
         $onclick = "";
       } elsif ( $fn =~ /Sub|Id/ ) {
         $v = "[$v]" if ($v);
