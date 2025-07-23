@@ -61,10 +61,15 @@ sub glassquery {
 ################################################################################
 # A helper to calculate blood alcohol for a given effdate
 # Returns a hash with bloodalcs for each timestamp for the effdate
-#  $bloodalc{"max"} = max ba for the date
 #  $bloodalc{$id} = ba after ingesting that glass
+#  $bloodalc{"max"} = max ba for the date
+#  $bloodalc{"now"} = ba at current time (if effdate = curr date)
+#  $bloodalc{"gone"} = time when alc all gone
 ################################################################################
-# TODO: Change this to return a list of values: ( date, max, hashref ). Add time when gone
+#
+# TODO: This might be refactored so that the loop is outisde this function,
+# and the func takes a hash with all the necessary data for the calculation,
+# and returns a new hash, including the ba at the time of the drink.
 
 sub bloodalc {
   my $c = shift;
@@ -90,15 +95,16 @@ sub bloodalc {
       timestamp as stamp
     from glasses
     where effdate = ?
+      and username = ?
       and stdrinks > 0
       and volume > 0
     order by timestamp
   );
   my $get_sth = $c->{dbh}->prepare($sql);
-  $get_sth->execute($effdate);
+  $get_sth->execute($effdate, $c->{username});
   my $alcinbody = 0;
   my $balctime = 0;
-  $bloodalc->{"max"} = 0 ;
+  my $max = 0 ;
   while ( my ($id, $eff, $stdrinks, $stamp) = $get_sth->fetchrow_array ) {
     next unless $stdrinks;
     my $drtime = $1 + $2/60 if ($stamp =~/ (\d?\d):(\d\d)/ ); # frac hrs
@@ -109,28 +115,31 @@ sub bloodalc {
     $alcinbody = 0 if ( $alcinbody < 0);
     $alcinbody += $stdrinks * 12 ; # grams of alc in std drink
     my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-    $bloodalc->{"max"} = $ba if ( $ba > $bloodalc->{"max"} );
+    $max = $ba if ( $ba > $max );
     $bloodalc->{$id} = sprintf("%0.2f",$ba);
     #print STDERR "BA:  '$id' '$stamp' : $ba \n";
   }
   #print STDERR "BA:  max:'$bloodalc->{max}' \n";
-  $bloodalc->{"max"} = sprintf("%0.2f", $bloodalc->{"max"} );
+  $bloodalc->{"max"} = sprintf("%0.2f", $max );
+  if ( $alcinbody ) {
+    my $now = util::datestr( "%H:%M", 0, 1);
+    my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs
+    $drtime += 24 if ( $drtime < $balctime ); # past midnight
+    my $timediff = $drtime - $balctime;
+    if ( $timediff >= 0 ) {
+      $alcinbody -= $burnrate * $bodyweight * $timediff;
+      $alcinbody = 0 if ( $alcinbody < 0);
+      my $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+      $bloodalc->{"now"} = sprintf("%0.2f", $curba );
+      my $lasts = $alcinbody / ( $burnrate * $bodyweight );
+      my $gone = $drtime + $lasts;
+      $gone -= 24 if ( $gone > 24 );
+      $bloodalc->{"gone"} = sprintf( "%02d:%02d", int($gone), ( $gone - int($gone) ) * 60 );
+    }
+  }
   return $bloodalc;
 
-}
-
-#     # Get allgone  TODO
-#     my $now = datestr( "%H:%M", 0, 1);
-#     my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs
-#     $drtime += 24 if ( $drtime < $balctime ); # past midnight
-#     my $timediff = $drtime - $balctime;
-#     $alcinbody -= $burnrate * $bodyweight * $timediff;
-#     $alcinbody = 0 if ( $alcinbody < 0);
-#     $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-#     my $lasts = $alcinbody / ( $burnrate * $bodyweight );
-#     my $gone = $drtime + $lasts;
-#     $gone -= 24 if ( $gone > 24 );
-#     $allgone = sprintf( "%02d:%02d", int($gone), ( $gone - int($gone) ) * 60 );
+} # bloodalc
 
 
 ################################################################################

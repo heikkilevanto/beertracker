@@ -44,10 +44,22 @@ sub query {
   my $c = shift;
   my $sql = shift;
   my @params = @_;
-  print STDERR "$sql (", join(',',@params), ")\n" if ( $c->{devversion} );
+  print STDERR "$sql \n(", join(',',@params), ")\n" if ( $c->{devversion} );
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @params );
   return $sth;
+}
+
+# Run a simple query, and return the first (only?) record
+sub queryrecord {
+  my $c = shift;
+  my $sql = shift;
+  my @params = @_;
+  my $sth = query($c,$sql, @params );
+  return undef unless ( $sth);
+  my $rec = $sth->fetchrow_hashref;
+  $sth->finish;
+  return $rec;
 }
 
 # Simple buffered read of records. Keeps exactly one record in buffer, so
