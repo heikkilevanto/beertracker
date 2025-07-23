@@ -194,17 +194,21 @@ sub topstats {
   util::error("Something wrong in topstats query: $sql") unless ($rec);
   my $ba = mainlist::bloodalc( $c, $rec->{today});
   my $s = "";
-  my $color = "white";
+  my $color = "";
+  $color = "white"  if ($rec->{drinks} >= 0.1 );
   $color = "yellow" if ($rec->{drinks} >= 4 );
   $color = "orange" if ($rec->{drinks} >= 7 );
   $color = "red" if ($rec->{drinks} >=10 );
   $color = "#f409c9" if ($rec->{drinks} >=13 ); # pinkish purple
   $s .= "&nbsp;&nbsp;";
-  $s .= "<span style='font-size: small; border:1px solid white; color:$color'>";
-  $s .= "&nbsp;" . util::unit($rec->{price}, ".-") if ($rec->{price});
-  $s .= "&nbsp;" . util::unit($rec->{drinks},"d") if ($rec->{drinks});
-  $s .= "&nbsp;" . util::unit($ba->{now}, "/₀₀") if ($ba->{now});
-  $s .= "</span>";
+  if ( $color ) {
+    $s .= "<span style='font-size: small; border:1px solid $color'>";
+    $s .= "&nbsp;" . util::unit($rec->{price}, ".-") if ($rec->{price});
+    $s .= "&nbsp;" . util::unit($rec->{drinks},"d") if ($rec->{drinks});
+    $s .= "&nbsp;" . util::unit($ba->{now}, "/₀₀") if ($ba->{now});
+    $s .= "&nbsp;";
+    $s .= "</span>";
+  }
   return $s;
 } # topstats
 
