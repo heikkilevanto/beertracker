@@ -292,10 +292,11 @@ sub htmlhead {
   # Style sheet - included right in the HTML headers
   print "<style rel='stylesheet'>\n";
   print '@media screen {';
-  print "  * { background-color: $bgcolor; color: #FFFFFF; }\n";
+  print "  body, input, select, textarea, button { background-color: $bgcolor; color: #FFFFFF; }\n";
   print "  * { font-size: small; }\n";
   print "  a { color: #666666; }\n";  # Almost invisible grey. Applies only to the
             # underline, if the content is in a span of its own.
+  print "  a span { color: #FFFFFF; }\n";  # Link text in white, if inside a span
   print "  input:valid { border: 1px solid white; } \n";
   print "  input:invalid { border: 1px solid red; } \n";
   print "  select { border: 1px solid white; } \n";
