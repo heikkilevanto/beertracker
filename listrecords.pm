@@ -145,6 +145,8 @@ sub listrecords {
       if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><span><b>$v</b></span></a>";
         $onclick = "";
+      } elsif ( $fn =~ /Clr/ ) {
+        $v="&nbsp;";
       } elsif ( $fn =~ /Sub|Id/ ) {
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Type" ) {
