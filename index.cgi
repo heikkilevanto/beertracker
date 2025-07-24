@@ -86,10 +86,13 @@ $devversion = 1 if ( $workdir =~ /-dev|-old/ );
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.
-my $bgcolor = "#003000";
-$bgcolor = "#003050" if ( $devversion );
-my $altbgcolor = $bgcolor;
-$altbgcolor =~ s/003/005/;
+#                  RrGgBb
+my $bgcolor =    "#003000";
+my $altbgcolor = "#004810";
+if (  $devversion ) {
+  $bgcolor = "#003050" ;
+  $altbgcolor = "#004850";
+}
 # Constants
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
 my $datadir = "./beerdata/";
@@ -295,7 +298,7 @@ sub htmlhead {
   print "<style rel='stylesheet'>\n";
   print '@media screen {';
   print "  body { background-color: $bgcolor; color: #FFFFFF; }\n";
-  print "  input, select, textarea, button { background-color: $altbgcolor; color: #FFFFFF; }\n";
+  print "  input, select, textarea, button, select option { background-color: $altbgcolor; color: #FFFFFF; }\n";
   print "  * { font-size: small; }\n";
   print "  a { color: #666666; }\n";  # Almost invisible grey. Applies only to the
             # underline, if the content is in a span of its own.
