@@ -62,6 +62,7 @@ sub dropdown {
             overflow-y: auto;
             border: 1px solid #ccc;
             z-index: 1000;
+            background-color: $c->{altbgcolor};
             display: none; /* Hidden by default */
         }
         .dropdown-item {
@@ -69,7 +70,7 @@ sub dropdown {
             padding: 3px;
         }
         .dropdown-item:hover {
-            background-color: #005000;
+            background-color: $c->{bgcolor};
         }
     </style>
         $newdiv
