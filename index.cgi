@@ -63,6 +63,8 @@ require "./comments.pm"; # Stuff for comments, ratings, and photos
 require "./util.pm"; # Various helper functions
 require "./graph.pm"; # The daily graph
 require "./stats.pm"; # Various statistics
+require "./monthstat.pm"; # Monthly statistics
+require "./yearstat.pm"; # annual stats
 require "./mainlist.pm"; # The main "full" list
 require "./beerboard.pm"; # The beer board for the current bar
 require "./inputs.pm"; # Helper routines for input forms
@@ -240,11 +242,11 @@ if ( $c->{op} =~ /Board/i ) {
   beerboard::beerboard($c);
   mainlist::mainlist($c);
 } elsif ( $c->{op} =~ /Years(d?)/i ) {
-  stats::yearsummary($c,$1); # $1 indicates sort order
+  yearstat::yearsummary($c,$1); # $1 indicates sort order
 } elsif ( $c->{op} =~ /short/i ) {
   stats::dailystats($c);
 } elsif ( $c->{op} =~ /Months([BS])?/ ) {
-  stats::monthstat($c,$1);
+  monthstat::monthstat($c,$1);
 } elsif ( $c->{op} =~ /DataStats/i ) {
   stats::datastats($c);
 } elsif ( $c->{op} eq "About" ) {

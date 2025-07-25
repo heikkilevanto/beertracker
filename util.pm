@@ -192,6 +192,7 @@ sub topstats {
     and effdate = today";
   my $rec = db::queryrecord($c, $sql, $c->{username});
   util::error("Something wrong in topstats query: $sql") unless ($rec);
+  return "" unless ( $rec->{drinks} );
   my $ba = mainlist::bloodalc( $c, $rec->{today});
   my $s = "";
   my $color = "";
