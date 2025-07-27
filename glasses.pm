@@ -131,8 +131,6 @@ sub selectbrewsubtype {
 # TODO - Del button to go back to here, with an option to ask if sure
 #        Could also ask to delete otherwise unused locations and brews
 # TODO - JS Magic to get geolocation to work
-# TODO - Display comments for the current glass. Also persons and photos
-# TODO - Form to add a new comment, or edit one
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
@@ -320,8 +318,8 @@ sub gettimestamp {
     print STDERR "gettimestamp: 'L' is '$newstamp' \n";
     ($d, $t) = split(" ",$newstamp);
   }
-  util::error("Bad date '$d' ") unless ( $d =~ /^\d\d-\d\d-\d\d|$/ );  # TODO - HOw to validate the fields in js?
-  util::error("Bad time '$t' ") unless ( $t =~ /^\d\d:\d\d(:\d\d|)?$/ );  # TODO - HOw to validate the fields in js?
+  util::error("Bad date '$d' ") unless ( $d =~ /^\d\d-\d\d-\d\d|$/ );
+  util::error("Bad time '$t' ") unless ( $t =~ /^\d\d:\d\d(:\d\d|)?$/ );
   $glass->{Timestamp} = "$d $t";
 
   print STDERR "gettimestamp: '$glass->{Timestamp}' \n";

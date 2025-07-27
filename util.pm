@@ -179,34 +179,48 @@ sub getversioninfo {
 ################################################################################
 
 # Return the current stats: Drinks, blood alc, and money for today
-# TODO
 sub topstats {
   my $c = shift;
   my $sql = "select
    strftime ( '%Y-%m-%d', 'now', '-06:00' ) as today,
    strftime ( '%Y-%m-%d', timestamp, '-06:00' ) as effdate,
+   strftime ( '%w', timestamp, '-06:00' ) as wday,
+   julianday(strftime('%Y-%m-%d', 'now', '-06:00')) -
+      julianday(strftime('%Y-%m-%d', timestamp, '-06:00')) AS daydiff,
    sum(price) as price,
    sum(stdrinks) as drinks
-    from GLASSES
-    where username = ?
-    and effdate = today";
+ from GLASSES
+ where username = ?
+ and effdate = ( select max (strftime('%Y-%m-%d', timestamp, '-06:00' ) ) from GLASSES )
+   ";
   my $rec = db::queryrecord($c, $sql, $c->{username});
   util::error("Something wrong in topstats query: $sql") unless ($rec);
-  return "" unless ( $rec->{drinks} );
-  my $ba = mainlist::bloodalc( $c, $rec->{today});
+  return "" if ( $rec->{daydiff} > 6 );
+  my ($date, $wday) = splitdate( "$rec->{effdate} $rec->{wday}" );
+  my $ba = mainlist::bloodalc( $c, $rec->{effdate});
+  my $balc = $ba->{now} ;
   my $s = "";
+  if ( $rec->{daydiff} ) {
+    $wday = "&nbsp; <b>$wday</b>: ";
+    $balc = $ba->{max};
+    print STDERR "top: n=$ba->{now} max=$balc\n";
+  } else {
+    $wday = "";
+  }
   my $color = "";
   $color = "white"  if ($rec->{drinks} >= 0.1 );
   $color = "yellow" if ($rec->{drinks} >= 4 );
   $color = "orange" if ($rec->{drinks} >= 7 );
   $color = "red" if ($rec->{drinks} >=10 );
   $color = "#f409c9" if ($rec->{drinks} >=13 ); # pinkish purple
+  $rec->{drinks} = sprintf("%1.1f", $rec->{drinks}) if ($rec->{drinks});
   $s .= "&nbsp;&nbsp;";
   if ( $color ) {
-    $s .= "<span style='font-size: small; border:1px solid $color'>";
+    $s .= "<span style='font-size: small; border:2px solid $color'>";
+    $s .= $wday;
     $s .= "&nbsp;" . util::unit($rec->{price}, ".-") if ($rec->{price});
     $s .= "&nbsp;" . util::unit($rec->{drinks},"d") if ($rec->{drinks});
-    $s .= "&nbsp;" . util::unit($ba->{now}, "/₀₀") if ($ba->{now});
+    $s .= "&nbsp;" . util::unit($balc, "/₀₀") if ($balc);
     $s .= "&nbsp;";
     $s .= "</span>";
   }

@@ -119,8 +119,8 @@ sub bloodalc {
     $bloodalc->{$id} = sprintf("%0.2f",$ba);
     #print STDERR "BA:  '$id' '$stamp' : $ba \n";
   }
+  $bloodalc->{max} = sprintf("%0.2f", $max );
   #print STDERR "BA:  max:'$bloodalc->{max}' \n";
-  $bloodalc->{"max"} = sprintf("%0.2f", $max );
   if ( $alcinbody ) {
     my $now = util::datestr( "%H:%M", 0, 1);
     my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs

@@ -46,6 +46,7 @@ $links{"Penyllan"} = "https://penyllan.com/";
 # Scraped from their website
 ################################################################################
 # TODO - This is one long routine. Refactor it to something manageable
+# Split into two modules, as well!
 
 sub beerboard {
   my $c = shift;
