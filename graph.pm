@@ -293,10 +293,16 @@ sub plotgraph {
       "set key left top horizontal textcolor \"white\" \n" .
       "set grid xtics ytics  linewidth 0.1 linecolor \"white\" \n".
       "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
-        "behind fc \"$c->{bgcolor}\" fillstyle solid border \n";  # green bkg
-    for (my $m=1; $m<$g->{maxd}; $m+= 3) {
-      $cmd .= "set arrow from \"$g->{start}\", $m to \"$g->{end}\", $m nohead linewidth 1 linecolor \"#00dd10\" \n"
-        if ( $g->{maxd} > $m + 1 );
+        "behind fc \"$c->{bgcolor}\" fillstyle solid border \n" .  # green bkg
+      "set arrow from \"$g->{start}\", 1 to \"$g->{end}\", 1 nohead linewidth 1 linecolor \"green\" \n" .
+      "set arrow from \"$g->{start}\", 4 to \"$g->{end}\", 4 nohead linewidth 1 linecolor \"yellow\" \n" .
+      "set arrow from \"$g->{start}\", 7 to \"$g->{end}\", 7 nohead linewidth 1 linecolor \"orange\" \n" .
+      "set arrow from \"$g->{start}\", 10 to \"$g->{end}\", 10 nohead linewidth 1 linecolor \"red\" \n" .
+      "";
+    my $y = 13;
+    while ( $y < $g->{maxd} -1 ) {
+      $cmd .= "set arrow from \"$g->{start}\", $y to \"$g->{end}\", $y nohead linewidth 1 linecolor \"#f409c9\" \n" ;
+      $y += 3;
     }
     $cmd .= $g->{weekends};
     $cmd .= "plot ";

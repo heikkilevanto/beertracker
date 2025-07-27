@@ -284,20 +284,18 @@ sub monthstat {
     . "set xdata time \n"
     . "set timefmt \"%Y-%m\" \n"
     . "set format x \"%b\"\n"
-    .
 
-    #"set format x \"%b\"\n" .
-    "set xrange [\"2000-$firstm\" : ] \n "
+    . "set xrange [\"2000-$firstm\" : ] \n "
     . "set key right top horizontal textcolor \"white\" \n "
     . "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 "
     . "behind fc \"$c->{bgcolor}\" fillstyle solid border \n"
     .    # green bkg
     "set border linecolor \"white\" \n"
-    . "set arrow from \"2000-$firstm\", 1 to \"2001-$lastm\", 1 nohead linewidth 0.1 linecolor \"white\" \n"
-    . "set arrow from \"2000-$firstm\", 4 to \"2001-$lastm\", 4 nohead linewidth 0.1 linecolor \"white\" \n"
-    . "set arrow from \"2000-$firstm\", 7 to \"2001-$lastm\", 7 nohead linewidth 0.1 linecolor \"white\" \n"
-    . "set arrow from \"2000-$firstm\", 10 to \"2001-$lastm\", 10 nohead linewidth 0.1 linecolor \"white\" \n"
-    . "set arrow from \"2000-$firstm\", 13 to \"2001-$lastm\", 13 nohead linewidth 0.1 linecolor \"white\" \n"
+    . "set arrow from \"2000-$firstm\", 1 to \"2001-$lastm\", 1 nohead linewidth 0.1 linecolor \"green\" \n"
+    . "set arrow from \"2000-$firstm\", 4 to \"2001-$lastm\", 4 nohead linewidth 0.1 linecolor \"yellow\" \n"
+    . "set arrow from \"2000-$firstm\", 7 to \"2001-$lastm\", 7 nohead linewidth 0.1 linecolor \"orange\" \n"
+    . "set arrow from \"2000-$firstm\", 10 to \"2001-$lastm\", 10 nohead linewidth 0.1 linecolor \"red\" \n"
+    . "set arrow from \"2000-$firstm\", 13 to \"2001-$lastm\", 13 nohead linewidth 0.1 linecolor \"#f409c9\" \n"
     . "set arrow from \"2001-01\", 0 to \"2001-01\", 10 nohead linewidth 0.1 linecolor \"white\" \n"
     . "plot ";
   my $lw = 2;
@@ -311,7 +309,7 @@ sub monthstat {
     my $j = $i + 1;
     $cmd .= "\"$c->{plotfile}\" "
       . "using 1:$j with line lc \"$col\" lw $lw notitle , ";
-    $lw += 0.25;
+    $lw += 0.35;
     $yy++;
   }
 
