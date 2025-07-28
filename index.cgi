@@ -73,6 +73,8 @@ require "./aboutpage.pm"; # The About page
 require "./VERSION.pm"; # auto-generated version info
 require "./copyproddata.pm"; # Copy production database into the dev version
 require "./db.pm"; # Various database helpers
+require "./geo.pm"; # Geo coordinate stuff
+
 
 
 
@@ -120,18 +122,6 @@ my %imagesizes;
 $imagesizes{"thumb"} = 90;
 $imagesizes{"mob"} = 240;  # 320 is full width on my phone
 $imagesizes{"pc"} = 640;
-
-
-# Geolocations. Set up when reading the file, passed to the javascript
-my %geolocations; # Latest known geoloc for each location name
-$geolocations{"Home "} =   "[55.6588/12.0825]";  # Special case for FF.
-$geolocations{"Home  "} =  "[55.6531712/12.5042688]";  # Chrome
-$geolocations{"Home   "} = "[55.6717389/12.5563058]";  # Chrome on my phone
-  # My desktop machine gets the coordinates wrong. FF says Somewhere in Roskilde
-  # Fjord, Chrome says in Valby...
-  # Note also the trailing space(s), to distinguish from the ordinary 'Home'
-  # That gets filtered away before saving.
-  # (This could be saved in each users config, if we had such)
 
 
 # the POST routine reads its own input parameters

@@ -44,9 +44,9 @@ close $idx;
 
 my $inserted = 0;
 for (my $i = 0; $i < @idx_lines; $i++) {
-    if ($idx_lines[$i] =~ /^require\s+"\.\/.*?\.pm";\s*$/) {
+    if ($idx_lines[$i] =~ /^require\s+"\.\/.*?\.pm";/) {
         my $j = $i + 1;
-        while ($j < @idx_lines && $idx_lines[$j] =~ /^require\s+"\.\/.*?\.pm";\s*$/) {
+        while ($j < @idx_lines && $idx_lines[$j] =~ /^require\s+"\.\/.*?\.pm";/) {
             $i = $j++;
         }
         splice @idx_lines, $i + 1, 0, qq{require "./$newfile";\n};

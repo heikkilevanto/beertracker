@@ -1,0 +1,23 @@
+#! /usr/bin/bash
+# A script to update the gelocation field into separate lat and lon fields
+
+cd beerdata || exit 1
+
+
+echo `date "+%F %X"` Creating lat/log fields
+sqlite3 beertracker.db << EOF
+ALTER TABLE locations ADD COLUMN lat REAL;
+ALTER TABLE locations ADD COLUMN lon REAL;
+EOF
+
+echo `date "+%F %X"` Splitting geo values
+sqlite3 beertracker.db << EOF
+BEGIN TRANSACTION;
+UPDATE locations
+SET
+  lat = CAST(substr(GeoCoordinates, 1, instr(GeoCoordinates, ' ') - 1) AS REAL),
+  lon = CAST(substr(GeoCoordinates, instr(GeoCoordinates, ' ') + 1) AS REAL);
+commit
+EOF
+
+echo `date "+%F %X"` All done

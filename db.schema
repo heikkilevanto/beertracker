@@ -1,6 +1,8 @@
 PRAGMA foreign_keys=OFF;
 BEGIN TRANSACTION;
 CREATE TABLE IF NOT EXISTS "GLASSES" (
+    -- A glass refers to the action of drinking one glass of a given brew
+    -- There can also be 'empty' glasses for restaurants, nights, etc.
     Id INTEGER PRIMARY KEY,
     Username TEXT NOT NULL,
     Timestamp DATETIME NOT NULL,
@@ -12,6 +14,7 @@ CREATE TABLE IF NOT EXISTS "GLASSES" (
     Volume DECIMAL,
     Alc DECIMAL,
     StDrinks DECIMAL
+
 );
 CREATE TABLE IF NOT EXISTS "BREWS" (
     Id INTEGER PRIMARY KEY,
@@ -54,8 +57,9 @@ CREATE TABLE IF NOT EXISTS "LOCATIONS" (
     GeoCoordinates TEXT,
     Website TEXT,
     Contact TEXT,
-    Address TEXT
-);
+    Address TEXT,
+    Lat REAL,
+    Lon REAL);
 CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE);
 CREATE INDEX idx_glasses_location ON GLASSES (Location);
 CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp);
@@ -120,24 +124,23 @@ CREATE VIEW PERSONS_LIST AS select
   left join COMMENTS on COMMENTS.Person = PERSONS.Id
   left join GLASSES on COMMENTS.Glass = GLASSES.Id
   left join LOCATIONS on LOCATIONS.id = GLASSES.Location
-  group by Persons.id
-  ;
+  group by Persons.id;
 CREATE VIEW COMMENTS_LIST AS
 select
     COMMENTS.Id,
-    strftime ( '%Y-%m-%d %w ', GLASSES.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', GLASSES.Timestamp) as Last,
-    LOCATIONS.Name as LocName,
-    "TR" as TR,
-    '' as Clr,
+	strftime ( '%Y-%m-%d %w ', GLASSES.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', GLASSES.Timestamp) as Last,
+	LOCATIONS.Name as LocName,
+	"TR" as TR,
+	'' as Clr,
 
-    BREWS.Name as BrewName,
-    PLOC.Name as Prod,
+	BREWS.Name as BrewName,
+	PLOC.Name as Prod,
 
-    "TR" as TR,
+	"TR" as TR,
 
-    COMMENTS.Rating as Rate,
+	COMMENTS.Rating as Rate,
     PERSONS.Name as PersonName,
-    COMMENTS.Comment as Comment
+	COMMENTS.Comment as Comment
 
   from COMMENTS
   left join GLASSES on Glasses.Id = COMMENTS.Glass
