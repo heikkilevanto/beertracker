@@ -3,6 +3,10 @@
 
 cd beerdata || exit 1
 
+echo "This has already been done - not trying to do it again"
+exit 1
+# Comment out the above if you really know what you are doing
+
 
 echo `date "+%F %X"` Creating lat/log fields
 sqlite3 beertracker.db << EOF
