@@ -223,6 +223,7 @@ if ( $q->request_method eq "POST" ) {
 
 
 htmlhead(); # Ok, now we can commit to making a HTML page
+geo::geojs($c);  # TODO - Move all JS in its own file
 
 print util::topline($c);
 

@@ -32,7 +32,12 @@ sub tablefields {
   my @fields;
   while ( my ($cid, $name, $type, $notnull, $def, $pk )  = $list_sth->fetchrow_array ) {
     next if ( $skips && $name =~ /^$skips$/ );
-    $name = "-$name" if ( $type eq "INTEGER" && !$nomark );  # Mark those that point to other tables
+    if ( ! $nomark ) { # Mark those that point to other tables, or other specials
+      $name = "-$name" if ( $type eq "INTEGER" || $type eq "REAL" );
+      # INTEGER usually refers to another table
+      # REAL is used for Lat/Long
+      # For numerical values, use DECIMAL
+    }
     push @fields, $name ;
   }
   return @fields;

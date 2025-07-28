@@ -214,26 +214,36 @@ sub inputform {
     my $inpname = $inputprefix . $f;
     my $val = "";
     $val = "value='$rec->{$f}'" if ( $rec && $rec->{$f} );
-    if ( $special ) {
-      $form .= "<td colspan=2>\n";
+    if ( $special) {
+      if ( $f =~ /Lat/ ) {
+        $form .= geo::geolabel($c, $inputprefix);
+      } else {
+        $form .= "<td colspan=2>\n";
+      }
     } else {
       $form .= "<td>$pl</td>\n";
     }
-    if ( $special && $f =~ /producerlocation/i ) {
-      $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "prodloc", "prod");
-    } elsif ( $special && $f =~ /location/i ) {
-      if ( $inputprefix !~ /newperson/ ) {
-        # Do no allow a relatedperson to have a location, comflicts with the persons own location
-        $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "loc");
+    if ( $special ) {
+      if ( $f =~ /producerlocation/i ) {
+        $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "prodloc", "prod");
+      } elsif ( $f =~ /location/i ) {
+        if ( $inputprefix !~ /newperson/ ) {
+          # Do no allow a relatedperson to have a location, conflicts with the persons own location
+          $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "loc");
+        }
+      } elsif ( $f =~ /person/i ) {
+        if ( $inputprefix !~ /newperson/ ) {
+          # Allow editing of RelatedPerson, but only on top level
+          $form .= persons::selectperson($c, $inputprefix.$f, $rec->{$f}, "pers");
+          # Avoids endless recursion
+        }
+      } elsif ( $f =~ /Lat/i ) {
+        $form .= geo::geoInput($c, $inputprefix, $rec->{Lat}, $rec->{Lon} );
+      } elsif ( $f =~ /Lon/i ) {
+        # Both handled under Lat
+      } else  {
+        util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
       }
-    } elsif ($special && $f =~ /person/i ) {
-      if ( $inputprefix !~ /newperson/ ) {
-        # Allow editing of RelatedPerson, but only on top level
-        $form .= persons::selectperson($c, $inputprefix.$f, $rec->{$f}, "pers");
-        # Avoids endless recursion
-      }
-    } elsif ( $special ) {
-      util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
     } else {  # Regular input field
       my $pass = "";
       if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself

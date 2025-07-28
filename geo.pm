@@ -25,9 +25,140 @@ sub approx_distance_km {
 
     my $dlat = $lat1 - $lat2;
     my $dlon = ($lon1 - $lon2) * cos(deg2rad($lat1));
-    return sqrt($dlat * $dlat + $dlon * $dlon) * 111;
+    return sqrt($dlat * $dlat + $dlon * $dlon) * 111;   # ~111 km / deg lat
 }
 
+################################################################################
+# Geo input field
+################################################################################
+# $form .= geo::geoInput($c, $inputprefix, $rec->{Lat}, $rec->{Lon} );
+
+# Label for the geo input
+sub geolabel {
+  my $c = shift;
+  my $inputprefix = shift || "";
+  my $s = "";
+  $s .= "<td>";
+  $s .= "Geo Lat";
+  $s .= "<br>";
+  $s .= "Geo Lon";
+  $s .= "</td>\n";
+  return $s;
+}
+
+# Geo input itself
+sub geoInput {
+  my $c = shift;
+  my $inputprefix = shift || "";
+  my $lat = shift;
+  my $lon = shift;
+
+  my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words' ".
+    "OnInput='geodist(\"$inputprefix\")'";
+
+  my $latname = $inputprefix."Lat";
+  my $lonname = $inputprefix."Lon";
+  my $distname = $inputprefix."Dist";
+  my $s = "";
+  $s .= "<td>\n";
+  $s .= "<input name='$latname' id='$latname' value='$lat' $clr />\n";
+  $s .= "&nbsp; <span id='$distname'>?</span>\n";
+  $s .= "<br>";
+  $s .= "<input name='$lonname' id='$lonname' value='$lon' $clr />\n";
+  $s .= "<span onclick='geoclear(\"$inputprefix\")'>&nbsp; (Clear)</span>\n";
+  $s .= "<span onclick='geohere(\"$inputprefix\")'>&nbsp; (Here)</span>\n";
+  $s .= "<script> geodist('$inputprefix');</script>\n";
+  return $s;
+}
+
+################################################################################
+# Javascript for the geo input
+################################################################################
+sub geojs {
+  my $c = shift;
+  my $js = <<'SCRIPT' ;
+
+  function geoclear(prefix) {
+    const latinp = document.getElementById(prefix+"Lat");
+    const loninp = document.getElementById(prefix+"Lon");
+    latinp.value = "";
+    loninp.value = "";
+    latinp.dispatchEvent(new Event("input"));
+  }
+
+  function geohere(prefix) {
+    const latinp = document.getElementById(prefix+"Lat");
+    const loninp = document.getElementById(prefix+"Lon");
+    if (!navigator.geolocation) {
+      console.log("Geolocation is not supported by your browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        latinp.value = pos.coords.latitude.toFixed(6);
+        loninp.value = pos.coords.longitude.toFixed(6);
+        latinp.dispatchEvent(new Event("input"));
+      },
+      function(err) {
+        console.log("Geo Error: " + err.message);
+      }
+    );
+  }
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth radius in km
+    const toRad = Math.PI / 180;
+
+    const dLat = (lat2 - lat1) * toRad;
+    const dLon = (lon2 - lon1) * toRad;
+
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * toRad) * Math.cos(lat2 * toRad) *
+              Math.sin(dLon / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function geodist(prefix) {
+    if (!navigator.geolocation) {
+      return;
+    }
+    const latinp = document.getElementById(prefix+"Lat");
+    const loninp = document.getElementById(prefix+"Lon");
+    const distspan = document.getElementById(prefix+"Dist");
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        const lat1 = pos.coords.latitude.toFixed(7);
+        const lon1 = pos.coords.longitude.toFixed(7);
+        const lat2 = latinp.value;
+        const lon2 = loninp.value;
+        if ( lat2 && lon2 ) {
+          var dist = haversineKm(lat1,lon1, lat2,lon2);
+          if ( dist > 10 )
+            dist = dist.toFixed(1) + " km";
+          else if ( dist > 1 )
+            dist = dist.toFixed(3) + " km";
+          else
+            dist = (dist * 1000)  .toFixed(0) + " m";
+
+          distspan.textContent= " " + dist ;
+        } else {
+          distspan.textContent = "";
+        }
+
+      },
+      function(err) {
+        console.log("Geo Error: " + err.message);
+      }
+    );
+  }
+
+
+SCRIPT
+  print "<script>$js</script>\n";
+
+}
 
 ################################################################################
 # Report module loaded ok
