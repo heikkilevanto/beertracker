@@ -37,11 +37,13 @@ sub approx_distance_km {
 sub geolabel {
   my $c = shift;
   my $inputprefix = shift || "";
+  my $distname = $inputprefix."Dist";
   my $s = "";
   $s .= "<td>";
   $s .= "Geo Lat";
   $s .= "<br>";
   $s .= "Geo Lon";
+  $s .= "<br><span id='$distname'>? km</span>\n";
   $s .= "</td>\n";
   return $s;
 }
@@ -58,13 +60,12 @@ sub geoInput {
 
   my $latname = $inputprefix."Lat";
   my $lonname = $inputprefix."Lon";
-  my $distname = $inputprefix."Dist";
   my $s = "";
   $s .= "<td>\n";
   $s .= "<input name='$latname' id='$latname' value='$lat' $clr />\n";
-  $s .= "&nbsp; <span id='$distname'>?</span>\n";
   $s .= "<br>";
   $s .= "<input name='$lonname' id='$lonname' value='$lon' $clr />\n";
+  $s .= "<br>";
   $s .= "<span onclick='geoclear(\"$inputprefix\")'>&nbsp; (Clear)</span>\n";
   $s .= "<span onclick='geohere(\"$inputprefix\")'>&nbsp; (Here)</span>\n";
   $s .= "<script> geodist('$inputprefix');</script>\n";
@@ -144,7 +145,7 @@ sub geojs {
 
           distspan.textContent= " " + dist ;
         } else {
-          distspan.textContent = "";
+          distspan.textContent = "...";
         }
 
       },
