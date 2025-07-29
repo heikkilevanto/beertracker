@@ -237,11 +237,10 @@ sub updaterecord {
         }
       }
     }
-    if ( $val ) {
-      push @sets , "$f = ?";
-      push @values, $val;
-      print STDERR "updaterecord: $f = '$val' \n";
-    }
+    $val = undef unless util::trim($val);
+    push @sets , "$f = ?";
+    push @values, $val;
+    print STDERR "updaterecord: $f = '$val' \n";
   }
   my $sql = "update $table set " .
     join( ", ", @sets) .
@@ -297,10 +296,9 @@ sub insertrecord {
         error ("insertrecord can not yet handle recursion to this type. p='$inputprefix' f='$f' ");
       }
     }
-    if ( $val ) {
-      push @sqlfields, $f;
-      push @values, $val;
-    }
+    $val = undef unless util::trim($val);
+    push @sqlfields, $f;
+    push @values, $val;
   }
   my $fieldlist = "(" . join( ", ", @sqlfields ) . " )";
   my $qlist = $fieldlist;
