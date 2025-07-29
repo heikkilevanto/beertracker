@@ -78,6 +78,14 @@ sub unit {
   return "$v<span style='font-size: xx-small'>$u</span> ";
 }
 
+
+# Helper for logging lists of values
+# Puts quotes around the values, separates them by commas, and handles
+# undef nicely
+sub loglist {
+  return join(", ", map { defined($_) ? "'$_'" : "(undef)" } @_);
+}
+
 ################################################################################
 # Helpers for date and timestamps
 ################################################################################

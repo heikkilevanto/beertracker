@@ -220,7 +220,6 @@ sub updaterecord {
   for my $f ( db::tablefields($c, $table)) {
     my $special = $1 if ( $f =~ s/^(-)// );
     my $val = util::param($c, $inputprefix.$f );
-    print STDERR "updaterecord: '$f' = '$val' \n";
     if ( $special ) {
       print STDERR "updaterecord: Met a special field '$f' \n";
       if ( $val eq "new" ) {
@@ -240,17 +239,17 @@ sub updaterecord {
     $val = undef unless util::trim($val);
     push @sets , "$f = ?";
     push @values, $val;
-    print STDERR "updaterecord: $f = '$val' \n";
+    print STDERR "updaterecord: $f = " . util::loglist($val) . "\n";
   }
   my $sql = "update $table set " .
     join( ", ", @sets) .
     " where id = ?";
   print STDERR "updaterecord: $sql \n";
-  print STDERR "updaterecord: " . join(", ", @values) . " \n";
+  print STDERR "updaterecord: " . util::loglist( @values ) . " \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @values, $id );
    print STDERR "Updated " . $sth->rows .
-      " $table records for id '$id' : " . join(", ", @values) ." \n";
+      " $table records for id '$id' : " . util::loglist( @values ) ." \n";
 } # updaterecord
 
 
@@ -305,12 +304,12 @@ sub insertrecord {
   $qlist =~ s/\w+/?/g; # Make a list like ( ?, ?, ?)
   my $sql = "insert into $table $fieldlist values $qlist";
   print STDERR "insertrecord: $sql \n";
-  print STDERR "insertrecord: " . join (", ", @values ) . "\n";
+  print STDERR "insertrecord: " . util::loglist( @values ) . "\n";
   error("insertrecord: Nothing to insert into $table") unless @values;
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @values );
   my $id = $c->{dbh}->last_insert_id(undef, undef, $table, undef) || undef;
-  print STDERR "Inserted $table id '$id' ". join (", ", @values ). " \n";
+  print STDERR "Inserted $table id '$id' ". util::loglist(@values) . " \n";
   return $id;
 } # insertrecord
 
