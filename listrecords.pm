@@ -289,7 +289,7 @@ sub listrecords {
   function sortTable(el, col) {
     const table = el.closest('table');
     const tbody = table.tBodies[0];
-    const ascending = ( el.value == " ▼" );
+    const ascending = ( el.value != " ▲" );
     const columnIndex = col;
 
     // Group rows into records

@@ -110,8 +110,8 @@ sub geojs {
   function geoclear(prefix) {
     const latinp = document.getElementById(prefix+"Lat");
     const loninp = document.getElementById(prefix+"Lon");
-    latinp.value = "";
-    loninp.value = "";
+    latinp.value = " ";
+    loninp.value = " ";
     latinp.dispatchEvent(new Event("input"));
   }
 
