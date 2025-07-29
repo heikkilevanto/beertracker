@@ -198,11 +198,14 @@ sub locationdeduplist {
   print "<input type=hidden name='dedup' value='1' />\n";
   print "<br/>\n";
   my $sort = $c->{sort} || "Last-";
-  print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}" );
+  my $params = {};
+  $params->{lat} = $loc->{Lat};
+  $params->{lon} = $loc->{Lon};
+  print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}", $params );
   print "</form>\n";
   print "<!-- locationdeduplist end -->\n";
   print "<hr/>\n";
-} # brewdeduplist
+} # locationdeduplist
 
 ################################################################################
 # Editlocation - Show a form for editing a location record
@@ -227,7 +230,7 @@ sub editlocation {
     print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
   }
 
-  if ( $p->{Id} ) {  # found the person
+  if ( $p->{Id} ) {  # found the location
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";

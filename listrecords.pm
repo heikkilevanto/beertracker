@@ -43,6 +43,7 @@ sub listrecords {
   my $table = shift;
   my $sort = shift;
   my $where = shift || "";
+  my $params = shift ;
 
   my @fields = db::tablefields($c, $table, "", 1);
   my $order = "";
@@ -87,7 +88,7 @@ sub listrecords {
       next;
     }
     my $sty = "style='max-width:200px; min-width:0'"; # default
-    if ( $f =~ /Id|Alc|Com|Count/ ) {
+    if ( $f =~ /Id|Alc/ ) {
       $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Stats)$/ ) {
       $sty = "style='max-width:100px; text-align:center'";
@@ -102,6 +103,9 @@ sub listrecords {
       $sty = "style='font-weight: bold; max-width:200px;' ";
     } elsif ( $f =~ /Comment/ ) {
       $sty = "style='max-width:200px; min-width:0; font-style: italic' ";
+    } elsif ( $f =~ /Geo/ ) {  # geo distance
+      $sty = "style='max-width:100px; min-width:0; text-align:right' ";
+      $f = "Dist (km)";
     } elsif ( $f =~ /^X/ ) {
       $sty = "style='display:none'";
     }
@@ -171,6 +175,11 @@ sub listrecords {
         $v = "<a href='$c->{url}?o=Full&date=$date'><span>$wd $date $time</span></a>";
         # TODO - "Sun 21:15" or "Sun 2023-05-25", depending on how recent
         # Will save a few chars on the phone
+      } elsif ( $fn eq "Geo" ) { # Geo dist
+        if ( $v && $params && $params->{lat} && $params->{lon} ) {
+          my ( $lat, $lon ) = split(' ', $v);
+          $v = geo::geodist( $params->{lat}, $params->{lon}, $lat, $lon );
+        }
       } elsif ( $fn eq "Comment" ) {
         $v = "$v";
       }
@@ -349,7 +358,7 @@ sub listrecords {
           } else {
             text = parseFloat(text);
           }
-          // console.log("sortkey for col " + columnIndex + " of '" + cell.textContent + "' is '" + text + "' m=" + match);
+          console.log("sortkey for col " + columnIndex + " of '" + cell.textContent + "' is '" + text + "' m=" + match);
           return text;
         }
     }

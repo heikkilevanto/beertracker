@@ -33,8 +33,7 @@ CREATE TABLE IF NOT EXISTS "BREWS" (
     Year DECIMAL,
     Details TEXT -- Other things worth noticing
 
-)
-;
+);
 CREATE TABLE IF NOT EXISTS "COMMENTS" (
     -- Comments are tied to glasses, so they are private for the user
     -- They refer to the brew in the glass by default, but if there is none,
@@ -59,9 +58,6 @@ CREATE TABLE IF NOT EXISTS "PERSONS" (
     RelatedPerson INTEGER -- Persons partner, or such
 
 );
-DROP TABLE IF  EXISTS "LOCATIONS"
--- Temp table while working on the Lat/Lon
-;
 CREATE TABLE LOCATIONS (
     -- Location is anything with a physical address
     -- They can be bars, restaurants, and producers of beer, wine, etc
@@ -181,15 +177,6 @@ LEFT JOIN
 where g.brew is not null
 GROUP BY
     g.brew;
-CREATE VIEW LOCATIONS_DEDUP_LIST AS select
-    "LOCATIONS".Id,
-	"Chk" as Chk,
-    "LOCATIONS".Name,
-    "LOCATIONS".LocType || ", " || "LOCATIONS".LocSubType as Type,
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last
-  from "LOCATIONS"
-  left join GLASSES on GLASSES.Location = "LOCATIONS".Id
-  group by "LOCATIONS".Id;
 CREATE VIEW LOC_RATINGS as
 SELECT
   l.id,
@@ -269,4 +256,15 @@ SELECT
   left join "LOCATIONS" on "LOCATIONS".id = GLASSES.Location
   left join BREW_RATINGS r on r.Brew = BREWS.Id
   group by BREWS.id;
+CREATE VIEW LOCATIONS_DEDUP_LIST AS 
+select
+    "LOCATIONS".Id,
+	"Chk" as Chk,
+    "LOCATIONS".Name,
+	"LOCATIONS".lat || " " || "LOCATIONS".lon as Geo,
+    "LOCATIONS".LocType || ", " || "LOCATIONS".LocSubType as Type,
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last
+  from "LOCATIONS"
+  left join GLASSES on GLASSES.Location = "LOCATIONS".Id
+  group by "LOCATIONS".Id;
 COMMIT;
