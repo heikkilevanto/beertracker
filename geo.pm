@@ -110,8 +110,8 @@ sub geojs {
   function geoclear(prefix) {
     const latinp = document.getElementById(prefix+"Lat");
     const loninp = document.getElementById(prefix+"Lon");
-    latinp.value = " ";
-    loninp.value = " ";
+    latinp.value = "";
+    loninp.value = "";
     latinp.dispatchEvent(new Event("input"));
   }
 
@@ -156,6 +156,10 @@ sub geojs {
     const latinp = document.getElementById(prefix+"Lat");
     const loninp = document.getElementById(prefix+"Lon");
     const distspan = document.getElementById(prefix+"Dist");
+    if ( ! latinp.value || ! loninp.value ) {
+      distspan.textContent = "...";
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       function(pos) {
         const lat1 = pos.coords.latitude.toFixed(7);
