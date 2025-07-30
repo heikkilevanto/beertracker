@@ -117,11 +117,6 @@ if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
   util::error ("Bad username\n");
 }
 
-# Default image sizes (width in pixels)
-my %imagesizes;
-$imagesizes{"thumb"} = 90;
-$imagesizes{"mob"} = 240;  # 320 is full width on my phone
-$imagesizes{"pc"} = 640;
 
 
 # the POST routine reads its own input parameters
