@@ -378,7 +378,7 @@ sub selectbrew {
   my $sql = "
     select
       BREWS.Id, BREWS.Brewtype, BREWS.SubType, Brews.Name,
-      BREWS.is_generic,
+      BREWS.IsGeneric,
       Locations.Name as Producer,
       BREWS.Alc
     from BREWS

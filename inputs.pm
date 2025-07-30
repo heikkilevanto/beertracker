@@ -241,8 +241,8 @@ sub inputform {
         $form .= geo::geoInput($c, $inputprefix, $rec->{Lat}, $rec->{Lon} );
       } elsif ( $f =~ /Lon/i ) {
         # Both handled under Lat
-      } elsif ( $f =~ /is_generic/i ) {
-
+      } elsif ( $f =~ /IsGeneric/i ) {
+        $f = "XXX";
       } else  {
         util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
       }

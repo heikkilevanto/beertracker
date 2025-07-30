@@ -26,14 +26,15 @@ CREATE TABLE IF NOT EXISTS "BREWS" (
     SubType TEXT, -- IPA, Red,
     BrewStyle TEXT, -- Style as defined by the producerm "Hazy IPA"
     ProducerLocation INTEGER,
-    Alc DECIMAL,
-    Country TEXT,
+    Alc DECIMAL,  -- Often with 1 decimal
+    Country TEXT, -- Usually a two-letter code
     Region TEXT,
     Flavor TEXT, -- Hops, Grapes, spices, barrels, etc
     Year DECIMAL,
-    Details TEXT -- Other things worth noticing
+    Details TEXT, -- Other things worth noticing
+    IsGeneric DECIMAL NOT NULL DEFAULT 0   -- House wine, mixed beer
 
-, is_generic DECIMAL NOT NULL DEFAULT 0);
+);
 CREATE TABLE IF NOT EXISTS "COMMENTS" (
     -- Comments are tied to glasses, so they are private for the user
     -- They refer to the brew in the glass by default, but if there is none,
@@ -205,7 +206,7 @@ SELECT
   left join "LOCATIONS" on "LOCATIONS".id = GLASSES.Location
   left join BREW_RATINGS r on r.Brew = BREWS.Id
   group by BREWS.id;
-CREATE VIEW LOCATIONS_DEDUP_LIST AS 
+CREATE VIEW LOCATIONS_DEDUP_LIST AS
 select
     "LOCATIONS".Id,
 	"Chk" as Chk,

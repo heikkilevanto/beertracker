@@ -101,7 +101,7 @@ sub listrecords {
       $chkfield = $i; # Remember where it is
     } elsif ( $f =~ /LocName|PersonName/ ) {
       $sty = "style='font-weight: bold; max-width:200px;' ";
-    } elsif ( $f =~ /is_generic/ ) {
+    } elsif ( $f =~ /isGeneric/i ) {
       $sty = "style='font-weight: bold; max-width:100px;' ";
       $f = "Generic";
     } elsif ( $f =~ /Comment/ ) {
@@ -185,7 +185,7 @@ sub listrecords {
         }
       } elsif ( $fn eq "Comment" ) {
         $v = "$v";
-      } elsif ( $fn eq "is_generic" ) {
+      } elsif ( $fn eq "IsGeneric" ) {
         $v = "Yes" if ($v);
       }
       $tds .= "<td $styles[$i] $data $onclick>$v</td>\n";

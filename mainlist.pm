@@ -35,7 +35,7 @@ sub glassquery {
       glasses.Subtype as subtype,
       brews.Id as brewid,
       brews.Name as brewname,
-      brews.is_generic as generic,
+      brews.IsGeneric as generic,
       locations.name as producer,
       locations.Id as prodid,
       (select count(*) from comments where comments.glass = glasses.id) as comcount,
