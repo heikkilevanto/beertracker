@@ -92,8 +92,8 @@ sub listrecords {
       $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Stats)$/ ) {
       $sty = "style='max-width:100px; text-align:center'";
-    } elsif ( $f =~ /^(Com|Alc|Count)$/ ) {
-      $sty = "style='text-align:right'";
+    } elsif ( $f =~ /^(Com|Count)$/ ) {
+      $sty = "style='text-align:right; max-width:50px'";
     } elsif ( $f =~ /Rate|Rating|Clr/) {
       $sty = "style='text-align:center; font-weight:bold; max-width:50px'";
     } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
@@ -101,6 +101,9 @@ sub listrecords {
       $chkfield = $i; # Remember where it is
     } elsif ( $f =~ /LocName|PersonName/ ) {
       $sty = "style='font-weight: bold; max-width:200px;' ";
+    } elsif ( $f =~ /is_generic/ ) {
+      $sty = "style='font-weight: bold; max-width:100px;' ";
+      $f = "Generic";
     } elsif ( $f =~ /Comment/ ) {
       $sty = "style='max-width:200px; min-width:0; font-style: italic' ";
     } elsif ( $f =~ /Geo/ ) {  # geo distance
@@ -182,6 +185,8 @@ sub listrecords {
         }
       } elsif ( $fn eq "Comment" ) {
         $v = "$v";
+      } elsif ( $fn eq "is_generic" ) {
+        $v = "Yes" if ($v);
       }
       $tds .= "<td $styles[$i] $data $onclick>$v</td>\n";
     }

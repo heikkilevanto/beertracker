@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS "BREWS" (
     Year DECIMAL,
     Details TEXT -- Other things worth noticing
 
-);
+, is_generic DECIMAL NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS "COMMENTS" (
     -- Comments are tied to glasses, so they are private for the user
     -- They refer to the brew in the glass by default, but if there is none,
@@ -187,26 +187,6 @@ select
   left join GLASSES on GLASSES.Location = "LOCATIONS".Id
   left join LOCATION_RATINGS r on r.id  = GLASSES.Id
   group by "LOCATIONS".Id;
-CREATE VIEW BREWS_LIST AS
-select
-    BREWS.Id,
-    BREWS.Name,
-    PLOC.Name as Producer,
-	"TR" as TR,
-    BREWS.Alc as Alc,
-    BREWS.BrewType || ", " || BREWS.Subtype as Type,
-    r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
-    count(GLASSES.Id) as Count,
-	"TR" as TR,
-	'Clr' as 'Clr',
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
-    "LOCATIONS".Name as Location
-  from BREWS
-  left join "LOCATIONS" PLOC on PLOC.id = BREWS.ProducerLocation
-  left join GLASSES on Glasses.Brew = BREWS.Id
-  left join "LOCATIONS" on "LOCATIONS".id = GLASSES.Location
-  left join BREW_RATINGS r on r.Brew = Brews.Id
-  group by BREWS.id;
 CREATE VIEW BREWS_DEDUP_LIST AS
 SELECT
     BREWS.Id,
@@ -266,4 +246,25 @@ CREATE VIEW GLASSREC AS
       left join BREWS  on glasses.Brew = Brews.id
       left join "LOCATIONS" PLOC on PLOC.id = Brews.ProducerLocation
       where glasses.Location = "LOCATIONS".id;
+CREATE VIEW BREWS_LIST AS
+select
+    BREWS.Id,
+    BREWS.Name,
+    PLOC.Name as Producer,
+	BREWS.is_generic,
+	"TR" as TR,
+    BREWS.Alc as Alc,
+    BREWS.BrewType || ", " || BREWS.Subtype as Type,
+    r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
+    count(GLASSES.Id) as Count,
+	"TR" as TR,
+	'Clr' as 'Clr',
+    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
+    "LOCATIONS".Name as Location
+  from BREWS
+  left join "LOCATIONS" PLOC on PLOC.id = BREWS.ProducerLocation
+  left join GLASSES on Glasses.Brew = BREWS.Id
+  left join "LOCATIONS" on "LOCATIONS".id = GLASSES.Location
+  left join BREW_RATINGS r on r.Brew = Brews.Id
+  group by BREWS.id;
 COMMIT;

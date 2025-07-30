@@ -378,6 +378,7 @@ sub selectbrew {
   my $sql = "
     select
       BREWS.Id, BREWS.Brewtype, BREWS.SubType, Brews.Name,
+      BREWS.is_generic,
       Locations.Name as Producer,
       BREWS.Alc
     from BREWS
@@ -392,7 +393,7 @@ sub selectbrew {
   my $opts = "";
   my $current = "";
 
-  while ( my ($id, $bt, $su, $na, $pr, $alc )  = $list_sth->fetchrow_array ) {
+  while ( my ($id, $bt, $su, $na, $generic, $pr, $alc )  = $list_sth->fetchrow_array ) {
     if ( $id eq $selected ) {
       $current = $na;
     }
@@ -402,6 +403,7 @@ sub selectbrew {
     my $disptype = $su;
     $disptype .= $bt unless ($su);
     $disp .= " [$disptype]";
+    $disp .= "&nbsp;(Gen)" if $generic;
     #$disp = substr($disp, 0, 30);
     $alc = $alc || "";
     $opts .= "<div class='dropdown-item' id='$id' alc='$alc' brewtype='$bt' >$disp</div>\n";

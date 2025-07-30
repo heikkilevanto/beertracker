@@ -35,6 +35,7 @@ sub glassquery {
       glasses.Subtype as subtype,
       brews.Id as brewid,
       brews.Name as brewname,
+      brews.is_generic as generic,
       locations.name as producer,
       locations.Id as prodid,
       (select count(*) from comments where comments.glass = glasses.id) as comcount,
@@ -208,15 +209,17 @@ sub numbersline {
   my $ba = $bloodalc->{ $rec->{id} } || "";
   #print STDERR "'$rec->{id}' ba=$ba \n";
   print util::unit($ba,"/₀₀");
-  my $rc = $rec->{rating_count};
-  if ( $rc ) {
-    if ( $rc == 1 ) {
-      print " <b>($rec->{average_rating})</b>";
-    } else {
-      print sprintf(" <b>(%3.1f)</b>/%d", $rec->{average_rating}, $rec->{rating_count} );
+  if ( ! $rec->{generic} ) {  # No ratings or comments on generics like Beer,Mixed or House Red WIne
+    my $rc = $rec->{rating_count};
+    if ( $rc ) {
+      if ( $rc == 1 ) {
+        print " <b>($rec->{average_rating})</b>";
+      } else {
+        print sprintf(" <b>(%3.1f)</b>/%d", $rec->{average_rating}, $rec->{rating_count} );
+      }
     }
+    print " $rec->{comment_count}•" if ( $rec->{comment_count} );
   }
-  print " $rec->{comment_count}•" if ( $rec->{comment_count} );
   print "<br/>\n"
 }
 
