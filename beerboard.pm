@@ -68,7 +68,7 @@ sub beerboard {
 
   my $locparam = util::param($c,"loc") || $foundrec->{loc} || "";
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
-  print "<hr/>\n"; # Pull-down for choosing the bar
+  # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
   print "Beer list \n";
   print "<select onchange='document.location=\"$c->{url}?o=board&loc=\" + this.value;' style='width:5.5em;'>\n";
@@ -319,6 +319,7 @@ sub beerboard {
   }
   # Keep $c->{qry}, so we filter the big list too
   $c->{qry} = "" if ($c->{qry} =~ /PA/i );   # But not 'PA', it is only for the board
+  print "<hr/>\n";
 } # beerboard
 
 
