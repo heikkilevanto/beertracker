@@ -252,14 +252,14 @@ select
     BREWS.Id,
     BREWS.Name,
     PLOC.Name as Producer,
-	BREWS.is_generic,
-	"TR" as TR,
+    BREWS.IsGeneric,
+    "TR" as TR,
     BREWS.Alc as Alc,
     BREWS.BrewType || ", " || BREWS.Subtype as Type,
     r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
     count(GLASSES.Id) as Count,
-	"TR" as TR,
-	'Clr' as 'Clr',
+    "TR" as TR,
+    'Clr' as 'Clr',
     strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
     "LOCATIONS".Name as Location
   from BREWS
