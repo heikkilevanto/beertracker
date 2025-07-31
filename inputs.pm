@@ -213,7 +213,7 @@ sub inputform {
     $pl .= $special if ($special) ;
     my $inpname = $inputprefix . $f;
     my $val = "";
-    $val = "value='$rec->{$f}'" if ( $rec && $rec->{$f} );
+    $val = "value='$rec->{$f}'" if ( $rec && defined($rec->{$f}) );
     if ( $special) {
       if ( $f =~ /Lat/ ) {
         $form .= geo::geolabel($c, $inputprefix);

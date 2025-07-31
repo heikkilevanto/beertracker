@@ -236,7 +236,7 @@ sub updaterecord {
         }
       }
     }
-    $val = undef unless util::trim($val);
+    $val = undef if (util::trim($val) eq '');
     push @sets , "$f = ?";
     push @values, $val;
     print STDERR "updaterecord: $f = " . util::loglist($val) . "\n";

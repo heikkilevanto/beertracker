@@ -80,8 +80,8 @@ sub geolabel {
 sub geoInput {
   my $c = shift;
   my $inputprefix = shift || "";
-  my $lat = shift;
-  my $lon = shift;
+  my $lat = shift || "";
+  my $lon = shift || "";
 
   my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words' ".
     "OnInput='geodist(\"$inputprefix\")'";
