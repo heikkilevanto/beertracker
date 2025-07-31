@@ -456,8 +456,10 @@ sub postbrew {
     util::error ("A brew must have a name" ) unless $name;
     #util::error ("A brew must have a type" ) unless util::param($c, "newbrewBrewType");
 
+
     my $defaults = {};
     $defaults->{BrewType} = util::param($c, "selbrewtype") || "WRONG"; # Signals a bad type. Should not happen
+    $defaults->{IsGeneric} = "0";
     $id = db::insertrecord($c,  "BREWS", $section, $defaults);
     return $id;
 

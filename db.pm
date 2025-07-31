@@ -268,7 +268,7 @@ sub insertrecord {
   for my $f ( db::tablefields($c, $table,undef,1)) {  # 1 indicates no -prefix
     my $val = util::param($c, $inputprefix.$f );
     print STDERR "insertrecord: '$inputprefix' '$f' got value '$val' \n";
-    if ( !$val ) {
+    if ( $val eq '' ) {
       $val =  $defaults->{$f} || "";
       print STDERR "insertrecord: '$f' defaults to '$val' \n" if ($val);
     }
@@ -295,7 +295,7 @@ sub insertrecord {
         error ("insertrecord can not yet handle recursion to this type. p='$inputprefix' f='$f' ");
       }
     }
-    $val = undef unless util::trim($val);
+    $val = undef if (util::trim($val) eq '');
     push @sqlfields, $f;
     push @values, $val;
   }

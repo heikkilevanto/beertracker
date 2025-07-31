@@ -31,7 +31,7 @@ use POSIX qw(strftime localtime locale_h);
 
 # Helper to trim leading and trailing spaces
 sub trim {
-  my $val = shift || "";
+  my $val = shift // "";  # // checks if value is defined, even if it is a false value
   $val =~ s/^ +//; # Trim leading spaces
   $val =~ s/ +$//; # and trailing
   $val =~ s/\s+/ /g; # and repeated spaces in the middle
@@ -121,7 +121,7 @@ sub param {
   my $def = shift || "";
   util::error("No context c ") unless $c;
   util::error("No cgi in c") unless $c->{cgi};
-  my $val = $c->{cgi}->param($tag) || $def;
+  my $val = $c->{cgi}->param($tag) // $def;
   $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%-]/_/g;
   return $val;
 }
