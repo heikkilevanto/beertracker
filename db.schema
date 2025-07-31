@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS "BREWS" (
     Flavor TEXT, -- Hops, Grapes, spices, barrels, etc
     Year DECIMAL,
     Details TEXT, -- Other things worth noticing
-    IsGeneric DECIMAL NOT NULL DEFAULT 0   -- House wine, mixed beer
+    IsGeneric DECIMAL  DEFAULT 0   -- House wine, mixed beer
 
 );
 CREATE TABLE IF NOT EXISTS "COMMENTS" (
