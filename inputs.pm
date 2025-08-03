@@ -210,11 +210,11 @@ sub inputform {
     $pl = util::trim($placeholderprefix .$pl);
     $pl =~ s/^([A-z])[a-z]+/$1/ if ( length($pl) > 20 );
     while ( length($pl) > 20 && $pl =~ s/([A-Z])([a-z]+)/$1/ ) { } ;  # Shorten pl
-    $pl .= $special if ($special) ;
+    #$pl .= $special if ($special) ;
     my $inpname = $inputprefix . $f;
     my $val = "";
     $val = "value='$rec->{$f}'" if ( $rec && defined($rec->{$f}) );
-    if ( $special) {
+    if ( $special && $f ne "IsGeneric") {
       if ( $f =~ /Lat/ ) {
         $form .= geo::geolabel($c, $inputprefix);
       } else {
@@ -242,7 +242,10 @@ sub inputform {
       } elsif ( $f =~ /Lon/i ) {
         # Both handled under Lat
       } elsif ( $f =~ /IsGeneric/i ) {
-        $f = "XXX";
+        $form .= "<td>\n";
+        my $checked = "";
+        $checked = "checked" if ($rec && $rec->{$f});
+        $form .= "<input type=checkbox name='$f' $checked value='1'/>";
       } else  {
         util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
       }
