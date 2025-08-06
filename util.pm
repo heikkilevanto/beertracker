@@ -208,10 +208,12 @@ sub topstats {
   my $ba = mainlist::bloodalc( $c, $rec->{effdate});
   my $balc = $ba->{now} ;
   my $s = "";
+  my $border = "2px";
   if ( $rec->{daydiff} ) {
     $wday = "&nbsp; <b>$wday</b>: ";
     $balc = $ba->{max};
     print STDERR "top: n=$ba->{now} max=$balc\n";
+    $border = "1px";
   } else {
     $wday = "";
   }
@@ -224,7 +226,7 @@ sub topstats {
   $rec->{drinks} = sprintf("%1.1f", $rec->{drinks}) if ($rec->{drinks});
   $s .= "&nbsp;&nbsp;";
   if ( $color ) {
-    $s .= "<span style='font-size: small; border:2px solid $color'>";
+    $s .= "<span style='font-size: small; border:$border solid $color'>";
     $s .= $wday;
     $s .= "&nbsp;" . util::unit($rec->{price}, ".-") if ($rec->{price});
     $s .= "&nbsp;" . util::unit($rec->{drinks},"d") if ($rec->{drinks});
