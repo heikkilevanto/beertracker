@@ -305,16 +305,6 @@ sub showmenu {
 #   return $lnk;
 # }
 
-# # Helper to make a Ratebeer search link
-#sub rblink {
-#   my $qry = shift;
-#   my $txt = shift || "Ratebeer";
-#   return "" unless $qry;
-#   $qry = uri_escape_utf8($qry);
-#   my $lnk = "<i>(<a href='https://www.ratebeer.com/search?q=$qry' " .
-#     " target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
-#   return $lnk;
-# }
 #
 # # Helper to make a Untappd search link
 #sub utlink {
