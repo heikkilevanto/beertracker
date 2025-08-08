@@ -298,16 +298,10 @@ sub plotgraph {
       "set arrow from \"$g->{start}\", 4 to \"$g->{end}\", 4 nohead linewidth 3 linecolor \"yellow\" \n" .
       "set arrow from \"$g->{start}\", 7 to \"$g->{end}\", 7 nohead linewidth 3 linecolor \"orange\" \n" .
       "set arrow from \"$g->{start}\", 10 to \"$g->{end}\", 10 nohead linewidth 3 linecolor \"red\" \n" .
-      "set arrow from \"$g->{end}\", 0 to \"$g->{end}\", 1 nohead linewidth 4 linecolor \"green\" \n" .
-      "set arrow from \"$g->{end}\", 1 to \"$g->{end}\", 4 nohead linewidth 4 linecolor \"white\" \n" .
-      "set arrow from \"$g->{end}\", 4 to \"$g->{end}\", 7 nohead linewidth 4 linecolor \"yellow\" \n" .
-      "set arrow from \"$g->{end}\", 7 to \"$g->{end}\", 10 nohead linewidth 4 linecolor \"orange\" \n" .
-      "set arrow from \"$g->{end}\", 10 to \"$g->{end}\", 13 nohead linewidth 4 linecolor \"red\" \n" .
-      "set arrow from \"$g->{end}\", 13 to \"$g->{end}\", $g->{maxd} nohead linewidth 4 linecolor \"#f409c9\" \n" .
       "";
     my $y = 13;
     while ( $y < $g->{maxd} -1 ) {
-      $cmd .= "set arrow from \"$g->{start}\", $y to \"$g->{end}\", $y nohead linewidth 3 linecolor \"#f409c9\" \n" ;
+      $cmd .= "set arrow from \"$g->{start}\", $y to \"$g->{end}\", $y nohead linewidth 2 linecolor \"#f409c9\" \n" ;
       $y += 3;
     }
     $cmd .= $g->{weekends};
