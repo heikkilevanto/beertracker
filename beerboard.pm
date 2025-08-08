@@ -155,7 +155,7 @@ sub beerboard {
       $alc = sprintf("%4.1f",$alc) if ($alc);
       my $seenkey = seenkey($mak,$beer);
       if ( $c->{qry} ) {
-        next unless ( "$sty $mak $beer" =~ /$c->{qry}/i );
+        next unless ( "$sty $mak $beer" =~ /$c->{qry}/ );
       }
 
       if ( $id != $previd +1 ) {
