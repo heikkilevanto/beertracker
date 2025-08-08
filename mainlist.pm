@@ -147,10 +147,15 @@ sub bloodalc {
 # List glasses for one day
 ################################################################################
 
+# Cache the location records we fetch.
+my %cachedloc;
+
 sub locationhead {
   my $c = shift;
   my $rec = shift;
-  my $loc = db::getrecord($c,"LOCATIONS", $rec->{loc});
+  $cachedloc{$rec->{loc}} = db::getrecord($c,"LOCATIONS", $rec->{loc})
+    unless ( $cachedloc{$rec->{loc}} );
+  my $loc = $cachedloc{$rec->{loc}};
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
   #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<br/>";
