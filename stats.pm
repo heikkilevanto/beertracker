@@ -22,7 +22,7 @@ sub statsmenu {
   my %stats;
   $stats{"Short"}     = "Days";
   $stats{"DataStats"} = "Datafile";
-  for my $k ( "Short", "Months", "Years", "DataStats" ) {
+  for my $k ( "Short", "Months", "Years", "DataStats", "Ratings" ) {
     my $tag = "span";
     $tag = "b" if ( $k =~ /$c->{op}/i );
     my $name = $stats{$k} || $k;

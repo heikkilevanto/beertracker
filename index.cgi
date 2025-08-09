@@ -74,6 +74,7 @@ require "./VERSION.pm"; # auto-generated version info
 require "./copyproddata.pm"; # Copy production database into the dev version
 require "./db.pm"; # Various database helpers
 require "./geo.pm"; # Geo coordinate stuff
+require "./ratestats.pm"; # Histogram of the ratings
 
 
 
@@ -235,6 +236,8 @@ if ( $c->{op} =~ /Board/i ) {
   monthstat::monthstat($c,$1);
 } elsif ( $c->{op} =~ /DataStats/i ) {
   stats::datastats($c);
+} elsif ( $c->{op} =~ /Ratings/i ) {
+  ratestats::ratings_histogram($c);
 } elsif ( $c->{op} eq "About" ) {
   aboutpage::about($c);
 } elsif ( $c->{op} =~ /Brew/i ) {
