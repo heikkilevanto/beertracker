@@ -133,7 +133,8 @@ sub chart_chartjs {
     my $include_cdn = $opts->{include_cdn} // 1;
 
     my $html = '';
-    $html .= qq{<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>\n} if $include_cdn;
+    #$html .= qq{<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>\n} if $include_cdn;
+    $html .= qq{<script src="chart.js"></script>\n} if $include_cdn;
     $html .= qq{<canvas id="$canvas_id"></canvas>\n};
     my $data_str = join(',', @$rows[1..9]);
     $html .= qq{<script>
