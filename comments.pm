@@ -10,7 +10,7 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
 
-my @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero should not be used!
+our @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero should not be used!
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect");  # 9 is the top
 
 ################################################################################

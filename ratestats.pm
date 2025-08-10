@@ -26,6 +26,10 @@ sub ratings_histogram {
     $html .= <<"CSS";
 <style>
 .chart-container {
+  max-width: 600px;   /* maximum width */
+  max-height: 600px;  /* maximum height */
+  width: 100%;        /* scale down responsively */
+  height: auto;       /* keep aspect ratio */
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
@@ -33,6 +37,7 @@ sub ratings_histogram {
 }
 .chart-item {
   flex: 1 1 45%;
+  min-height: 300px
 }
 \@media (max-width: 600px) {
   .chart-item {
@@ -43,9 +48,12 @@ sub ratings_histogram {
 CSS
 
     $html .= qq{<div class="chart-container">};
-    $html .= qq{<div class="chart-item">} . chart_gnuplot($c, $rows, {}) . qq{</div>};
     $html .= qq{<div class="chart-item">} . chart_chartjs($rows, { include_cdn => 1 }) . qq{</div>};
     $html .= qq{</div>};
+
+    my $allrows = histogram_data($c, {});
+    $html .= data_table($c, $filter, $rows, $allrows);
+
     $html .= histogram_form($c, $filter);
 
     print $html;
@@ -61,15 +69,26 @@ sub histogram_form {
     my $loc_type  = $opts->{loc_type}  // '';
 
     return qq{
+<hr>
 <form method="GET">
-  <input type="hidden" name="o" value="$c->{op}">
-  <label for="year">Year:</label>
-  <input type="text" name="year" value="$year">
-  <label for="brew_type">Brew type:</label>
-  <input type="text" name="brew_type" value="$brew_type">
-  <label for="loc_type">Location type:</label>
-  <input type="text" name="loc_type" value="$loc_type">
-  <input type="submit" value="Filter">
+  <table>
+    <tr>
+      <td>Year:</td>
+      <td><input type="text" name="year" value="$year" placeholder='(all)' ></td>
+    </tr><tr>
+      <td>Brew type:</td>
+      <td><input type="text" name="brew_type" value="$brew_type" placeholder='(all)' ></td>
+    </tr><tr>
+      <td>Location type:</td>
+      <td><input type="text" name="loc_type" value="$loc_type" placeholder='(all)' ></td>
+    </tr><tr>
+      <td><input type="hidden" name="o" value="$c->{op}"></td>
+      <td>
+        <input type="submit" value="Filter"> &nbsp;
+        <input type="button" value="Clear" onclick="window.location.href='$c->{url}?o=$c->{op}'">
+      </td>
+    </tr>
+  </table>
 </form>
 };
 } # histogram_form
@@ -132,70 +151,111 @@ sub chart_chartjs {
     my $canvas_id = $opts->{canvas_id} // 'histogramChart';
     my $include_cdn = $opts->{include_cdn} // 1;
 
+    my @labels;
+    for my $i (0..9) {
+      my $lbl = $comments::ratings[$i];
+      $labels[$i] = " $i: '$lbl ($i)'";
+    }
+    my $labelstr = join(',', @labels);
     my $html = '';
     #$html .= qq{<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>\n} if $include_cdn;
-    $html .= qq{<script src="chart.js"></script>\n} if $include_cdn;
+    $html .= qq{<script src="chart.umd.min.js"></script>\n} if $include_cdn;
     $html .= qq{<canvas id="$canvas_id"></canvas>\n};
     my $data_str = join(',', @$rows[1..9]);
-    $html .= qq{<script>
+    $html .= qq"<script>
         const ctx = document.getElementById('$canvas_id').getContext('2d');
         new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: [1,2,3,4,5,6,7,8,9,10],
+                labels: [1,2,3,4,5,6,7,8,9],
                 datasets: [{
-                    label: 'Ratings',
+                    label: '',
                     data: [$data_str],
                     backgroundColor: 'rgba(75, 192, 192, 0.5)'
                 }]
             },
-            options: { scales: { y: { beginAtZero: true } } }
+            options: {
+              indexAxis: 'y',
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: {
+                  beginAtZero: true,
+                  grid: { color: 'white' },
+                  ticks: { color: 'white' },
+                } ,
+                y: {
+                  type: 'linear',      // so we can set min/max numerically
+                  reverse: true,
+                  min: 1,
+                  max: 9,
+                  grid: { color: 'white' },
+                  ticks: {
+                    stepSize: 1,
+                    color: 'white',
+                    font: { size: 16 },
+                    autoSkip: false,
+                    callback: function(value) {
+                      const labels = { $labelstr };
+                      return labels[value] || value;
+                      }
+
+                  }
+                }
+              },
+               plugins: {
+                  legend: {
+                    labels: {
+                      filter: (legendItem) => legendItem.text !== ''
+                    }
+                  }
+                }
+            }
         });
-    </script>};
+    </script>";
     return $html;
 } # chart_chartjs
 
-############################################################
-# Write histogram data & gnuplot script, run gnuplot, return <img> HTML
-############################################################
-sub chart_gnuplot {
-  my ($c, $rows, $opts) = @_;
 
-  my ($width, $height) = $c->{mobile} ? (300, 200) : (600, 400);
-  open my $dfh, '>', $c->{plotfile} or die "Cannot write $c->{plotfile}: $!";
-  for my $rating (1..10) {
-      my $count = $rows->[$rating] // 0;
-      print $dfh "$rating $count\n";
+############################################################
+# Print the data in a numerical table
+############################################################
+sub data_table {
+  my $c = shift;
+  my $filter = shift;
+  my $filtered_rows = shift;
+  my $all_rows = shift;
+  my $filtering = 0;
+  if ( $filter->{year} ne "" || $filter->{brew_type} ne "" || $filter->{loc_type} ne "" ) {
+    $filtering = 1;
   }
-  close $dfh;
 
-  my $pngfile = "$c->{datadir}/$c->{username}-ratings.png";
+  my $html = "";
+  $html .= "<hr>\n";
+  $html .= '<table border="1" cellpadding="5" cellspacing="0">
+  <thead>
+    <tr>
+      <th>Rating</th>
+      <th>Total </th>';
+  $html .= "<th>Filtered</th>" if ( $filtering);
+  $html .= "</tr>
+     </thead> <tbody>";
+  for my $i ( 1..9) {
+    my $lbl = $comments::ratings[$i];
 
-  open my $gfh, '>', $c->{cmdfile} or die "Cannot write $c->{cmdfile}: $!";
-  print $gfh <<"GNUPLOT";
-    set terminal png size $width,$height
-    set output '$pngfile'
-    set border lc rgb "white"
-    set tics textcolor rgb "white"
-    set xlabel textcolor rgb "white"
-    set ylabel textcolor rgb "white"
-    set title textcolor rgb "white"
-    set key textcolor rgb "white"
+    $html .= "<tr><td align=right> $lbl ($i)</td>";
+    my $ar = $all_rows->[$i] || "";
+    $html .= "<td align=right>$ar</td>";
+    my $fr = $filtered_rows->[$i] || "";
+    $html .= "<td align=right>$fr</td>" if ($filtering);
+    $html .= "</tr>\n";
+  }
 
-    set object 1 rect from screen 0,0 to screen 1,1 fc rgb "$c->{bgcolor}" behind
-    set xlabel 'Rating'
-    set ylabel 'Count'
-    set boxwidth 0.5
-    set style fill solid
-    plot '$c->{plotfile}' using 1:2 with boxes title 'Ratings'
-GNUPLOT
-  close $gfh;
+  $html .= "</table>\n";
+  return $html;
 
-  system('gnuplot', $c->{cmdfile}) == 0 or warn "gnuplot failed: $?";
+} # data_table
 
-  my $png_url = "$c->{datadir}/$c->{username}-ratings.png";
-  return qq{<img src="$png_url" width="$width" height="$height" alt="Ratings Histogram">};
-} # chart_gnuplot
 
 ############################################################
 # Tell perl the module loaded OK
