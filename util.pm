@@ -289,7 +289,9 @@ sub showmenuitem {
   my $c = shift;
   my $op = shift;
   my $txt = shift;
-  my $sel = "selected" if ($c->{op} =~ /$op/i );
+  print STDERR "showmenuitem: o='$op' t='$txt' co='$c->{op}' \n";
+  my $sel = "";
+  $sel = "selected" if ($c->{op} =~ /$op/i );
   return "<option value='$op' $sel>$txt</option>\n";
 }
 # The main "Show" menu
