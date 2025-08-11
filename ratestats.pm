@@ -5,7 +5,9 @@
 package ratestats;
 use strict;
 use warnings;
-use DBI;
+
+use feature 'unicode_strings';
+use utf8;  # Source code and string literals are utf-8
 
 ############################################################
 # Main entry point: Display histogram graphs and filter form

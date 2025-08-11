@@ -23,11 +23,14 @@ sub copyproddata {
   if (!$c->{devversion}) {
     util::error ("Not allowed");
   }
-  my $databasefile = $c->{databasefile};
+  my $databasefile = $db::databasefile;
+  util::error ("No db file") unless $databasefile;
   my $datadir = $c->{datadir};
   my $photodir = $c->{photodir};
 
-  $c->{dbh}->disconnect;
+  util::error("Can not copy prod database, we have opened the db connection")
+    if ($c->{dbh});
+
   print STDERR "Before: \n" . `ls -l $databasefile* ` . `ls -l ../beertracker/$databasefile*`;
   system("rm $databasefile-*");  # Remove old -shm and -wal files
   print STDERR "rm $databasefile-* \n";

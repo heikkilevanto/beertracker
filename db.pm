@@ -7,11 +7,36 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use Data::Dumper;
-local $Data::Dumper::Terse = 1;
-local $Data::Dumper::Indent = 0;
-# --- insert new functions here ---
+use DBI;
 
+# use Data::Dumper;   # Useful when debugging
+# local $Data::Dumper::Terse = 1;
+# local $Data::Dumper::Indent = 0;
+
+################################################################################
+# Connect to the db
+################################################################################
+our $databasefile = "beerdata/beertracker.db";
+
+
+sub open_db {
+  my $c = shift;
+  my $mode = shift || 'ro';  # 'ro' or 'rw'
+  util::error("Database '$databasefile' not writable" ) unless ( -w $databasefile );
+  $c->{databasefile} => $databasefile;
+  if ( $c->{dbh} ) {  # close old connection if any
+    $c->{dbh}->disconnect;
+  }
+  my $dsn = $mode eq 'ro'
+      ? "dbi:SQLite:uri=file:$databasefile?mode=ro"
+      : "dbi:SQLite:dbname=$databasefile";
+  $c->{dbh} = DBI->connect($dsn, "", "", { RaiseError => 1, AutoCommit => 1 })
+    or util::error($DBI::errstr);
+  $c->{dbh}->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
+  $c->{dbh}->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
+  # But watch out for file permissions on the -wal and -sha files
+  # $c->{dbh}->trace(1);  # Way too much SQL logging in error.log, could be useful some day
+}
 
 
 ################################################################################
@@ -67,9 +92,12 @@ sub queryrecord {
   return $rec;
 }
 
-# Simple buffered read of records. Keeps exactly one record in buffer, so
-# we can peek at it, and consume it later. For example, peek to see if the
-# year has changed, and print a header if yes.
+################################################################################
+# Simple buffered read of records.
+################################################################################
+# Keeps exactly one record in buffer, so we can peek at it, and consume
+# it later. For example, peek to see if the year has changed, and print a
+# header if yes.
 # (Tried to set it directly inside $sth, but that did not work)
 # Bit dirty, keeps the buffered record in a hash indexed by the $sth.
 # This works since this is a cgi script that does not run very long, so the

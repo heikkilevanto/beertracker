@@ -39,18 +39,6 @@ my $q = CGI->new;
 $q->charset( "UTF-8" );
 
 
-# Database setup
-use DBI;
-my $databasefile = "beerdata/beertracker.db";
-die ("Database '$databasefile' not writable" ) unless ( -w $databasefile );
-
-my $dbh = DBI->connect("dbi:SQLite:dbname=$databasefile", "", "", { RaiseError => 1, AutoCommit => 1 })
-    or util::error($DBI::errstr);
-$dbh->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
-$dbh->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
-# But watch out for file permissions on the -wal and -sha files
-#$dbh->trace(1);  # Lots of SQL logging in error.log
-
 ################################################################################
 # Program modules
 ################################################################################
@@ -135,12 +123,10 @@ my %ratecount; # count of ratings for every beer, for averaging
 my $c = {
   'username' => $username,
   'datadir'  => $datadir,
-  'databasefile' => $databasefile,
   'scriptdir'    => $scriptdir,
   'plotfile' => $plotfile,
   'cmdfile'  => $cmdfile,
   'photodir' => $photodir,
-  'dbh'      => $dbh,
   'url'      => $q->url,
   'cgi'      => $q,
   'onedrink' => $onedrink,
@@ -165,7 +151,7 @@ $c->{href} = "$c->{url}?o=$c->{op}";
 
 if ($devversion) { # Print a line in error.log, to see what errors come from this invocation
   my $now = localtime;
-  print STDERR  "\n" . $now->ymd . " " . $now->hms . " " .
+  print STDERR  "\n\n" . $now->ymd . " " . $now->hms . " " .
      $q->request_method . " " . $ENV{'QUERY_STRING'}. " \n";
 }
 
@@ -188,14 +174,16 @@ if ( $devversion && $c->{op} eq "copyproddata" ) {
 
 if ( $q->request_method eq "POST" ) {
 
-  if ( 1 ) { # TODO LATER Remove this debug dumping of all CGI params
+  db::open_db($c, "rw");  # POST requests modify data by default
+
+  if ( $c->{devversion} ) {
     foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
       my $value = $c->{cgi}->param($param);
       print STDERR "   p: $param = '$value'\n" if ($value);
     }
   }
 
-  $dbh->do("BEGIN TRANSACTION");
+  $c->{dbh}->do("BEGIN TRANSACTION");
 
   if ( $c->{op} =~ /Person/i ) {
     persons::postperson($c);
@@ -209,13 +197,15 @@ if ( $q->request_method eq "POST" ) {
     glasses::postglass($c);
   }
 
-  $dbh->do("COMMIT");
+  $c->{dbh}->do("COMMIT");
+  $c->{dbh}->disconnect;
 
   # Redirect back to the op, but not editing
   print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}" );
-  $dbh->disconnect;
   exit;
 }
+
+db::open_db($c, "ro");  # GET requests are read-only by default
 
 
 htmlhead(); # Ok, now we can commit to making a HTML page
@@ -258,7 +248,7 @@ if ( $c->{op} =~ /Board/i ) {
   mainlist::mainlist($c);
 }
 
-$dbh->disconnect;
+$c->{dbh}->disconnect;
 htmlfooter();
 exit();  # The rest should be subs only
 
