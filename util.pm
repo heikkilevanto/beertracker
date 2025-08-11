@@ -206,16 +206,35 @@ sub topstats {
   return "" if ( $rec->{daydiff} > 6 );
   my ($date, $wday) = splitdate( "$rec->{effdate} $rec->{wday}" );
   my $ba = mainlist::bloodalc( $c, $rec->{effdate});
-  my $balc = $ba->{now} ;
+  my $banow = $ba->{now};
+  if ( $banow > 1 ) {
+    $banow = sprintf("%1.1f", $banow);
+  } elsif ( $banow > 0 ) {
+    $banow = sprintf("%1.2f", $banow);
+  } else {
+    $banow = "";
+  }
+  $banow =~ s/^0//;
+  my $bamax = $ba->{max};
+  if ( $bamax > 1 ) {
+    $bamax = sprintf("%1.1f", $bamax);
+  } elsif ( $bamax > 0 ) {
+    $bamax = sprintf("%1.2f", $bamax);
+  } else {
+    $bamax = "";
+  }
+  $bamax =~ s/^0//;
+  my $balc = $bamax;
+  if ( $banow && ($banow ne $bamax) ) {
+    $balc .= "-$banow";
+  }
   my $s = "";
   my $border = "2px";
   if ( $rec->{daydiff} ) {
-    $wday = "&nbsp; <b>$wday</b>: ";
-    $balc = $ba->{max};
-    print STDERR "top: n=$ba->{now} max=$balc\n";
+    $wday = " <b>$wday</b>: ";
     $border = "1px";
   } else {
-    $wday = "";
+    $wday = " ";
   }
   my $color = "";
   $color = "white"  if ($rec->{drinks} >= 0.1 );
@@ -223,14 +242,20 @@ sub topstats {
   $color = "orange" if ($rec->{drinks} >= 7 );
   $color = "red" if ($rec->{drinks} >=10 );
   $color = "#f409c9" if ($rec->{drinks} >=13 ); # pinkish purple
-  $rec->{drinks} = sprintf("%1.1f", $rec->{drinks}) if ($rec->{drinks});
-  $s .= "&nbsp;&nbsp;";
+  if ($rec->{drinks} >= 10) {
+    $rec->{drinks} = sprintf("%1.0f", $rec->{drinks}) ;
+  } elsif ($rec->{drinks} > 0) {
+    $rec->{drinks} = sprintf("%1.1f", $rec->{drinks}) ;
+  } else  {
+    $rec->{drinks} = "0";
+  }
+  $s .= "&nbsp;";
   if ( $color ) {
     $s .= "<span style='font-size: small; border:$border solid $color'>";
     $s .= $wday;
-    $s .= "&nbsp;" . util::unit($rec->{price}, ".-") if ($rec->{price});
-    $s .= "&nbsp;" . util::unit($rec->{drinks},"d") if ($rec->{drinks});
-    $s .= "&nbsp;" . util::unit($balc, "/₀₀") if ($balc);
+    $s .=  util::unit($rec->{price}, ".-") if ($rec->{price});
+    $s .=  util::unit($rec->{drinks},"d") if ($rec->{drinks});
+    $s .=  util::unit($balc, "/₀₀") ;
     $s .= "&nbsp;";
     $s .= "</span>";
   }
