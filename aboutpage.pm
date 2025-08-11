@@ -82,7 +82,7 @@ sub about {
   print "</ul><p>\n";
   print "Other useful links: <ul>";
   print aboutlink("Events", "https://www.beercph.dk/");
-  print aboutlink("Ratebeer", "https://www.ratebeer.com");
+  #print aboutlink("Ratebeer", "https://www.ratebeer.com");   # RIP RB Feb 2025
   print aboutlink("Untappd", "https://untappd.com");
   print "</ul><p>\n";
   print "<hr/>";
