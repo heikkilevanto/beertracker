@@ -38,8 +38,6 @@ sub yearsummary {
   my $c      = shift;
   my $sortdr = shift;
 
-  stats::statsmenu($c);
-
   my $sofar = "so far";
   my @years;
   if ( $c->{qry} ) {

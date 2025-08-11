@@ -17,7 +17,6 @@ sub monthstat {
   my $defbig = $c->{mobile} ? "S" : "B";
   my $bigimg = shift || $defbig;
   $bigimg =~ s/S//i;
-  stats::statsmenu($c);
 
   my $firsty = "";
 

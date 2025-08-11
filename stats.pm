@@ -13,23 +13,6 @@ use utf8;    # Source code and string literals are utf-8
 use File::Basename;
 use URI::Escape;
 
-################################################################################
-# Sub-menu for the various statistics pages
-################################################################################
-sub statsmenu {
-  my $c = shift;
-  print "Other stats: \n";
-  my %stats;
-  $stats{"Short"}     = "Days";
-  $stats{"DataStats"} = "Datafile";
-  for my $k ( "Short", "Months", "Years", "DataStats", "Ratings" ) {
-    my $tag = "span";
-    $tag = "b" if ( $k =~ /$c->{op}/i );
-    my $name = $stats{$k} || $k;
-    print "<a href='$c->{url}?o=$k'><$tag>$name</$tag></a>&nbsp;\n";
-  }
-  print "<hr/>\n";
-}
 
 ################################################################################
 # Statistics of the data file
@@ -38,7 +21,6 @@ sub statsmenu {
 # NOTE - Maybe later get global values and values for current user.
 sub datastats {
   my $c = shift;
-  statsmenu($c);
 
   print "<table>\n";
   print "<tr><td></td><td><b>Data file stats</b></td></tr>\n";
@@ -167,7 +149,6 @@ sub datastats {
 
 sub dailystats {
   my $c = shift;
-  statsmenu($c);
   my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
 
   print "<div style='overflow-x: auto;'>";
