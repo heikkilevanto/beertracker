@@ -6,8 +6,8 @@ CREATE TABLE IF NOT EXISTS "GLASSES" (
     -- Glasses are private for each user
     Id INTEGER PRIMARY KEY,
     Username TEXT NOT NULL,
-    Timestamp DATETIME NOT NULL,
-    BrewType TEXT NOT NULL,
+    Timestamp DATETIME NOT NULL, -- In local time from the browser
+    BrewType TEXT NOT NULL, -- Copied from BREWS.BrewType, except for 'empty' glasses
     SubType TEXT NOT NULL,
     Location INTEGER,
     Brew INTEGER,

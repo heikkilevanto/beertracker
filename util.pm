@@ -190,10 +190,10 @@ sub getversioninfo {
 sub topstats {
   my $c = shift;
   my $sql = "select
-   strftime ( '%Y-%m-%d', 'now', '-06:00' ) as today,
+   strftime ( '%Y-%m-%d', 'now', 'localtime', '-06:00' ) as today,
    strftime ( '%Y-%m-%d', timestamp, '-06:00' ) as effdate,
    strftime ( '%w', timestamp, '-06:00' ) as wday,
-   julianday(strftime('%Y-%m-%d', 'now', '-06:00')) -
+   julianday(strftime('%Y-%m-%d', 'now', 'localtime', '-06:00')) -
       julianday(strftime('%Y-%m-%d', timestamp, '-06:00')) AS daydiff,
    sum(price) as price,
    sum(stdrinks) as drinks
@@ -289,7 +289,6 @@ sub showmenuitem {
   my $c = shift;
   my $op = shift;
   my $txt = shift;
-  print STDERR "showmenuitem: o='$op' t='$txt' co='$c->{op}' \n";
   my $sel = "";
   $sel = "selected" if ($c->{op} =~ /$op/i );
   return "<option value='$op' $sel>$txt</option>\n";
