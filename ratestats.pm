@@ -50,7 +50,7 @@ sub ratings_histogram {
 CSS
 
     $html .= qq{<div class="chart-container">};
-    $html .= qq{<div class="chart-item">} . chart_chartjs($rows, { include_cdn => 1 }) . qq{</div>};
+    $html .= qq{<div class="chart-item">} . chart_chartjs($c, $rows) . qq{</div>};
     $html .= qq{</div>};
 
     my $allrows = histogram_data($c, {});
@@ -149,19 +149,22 @@ sub histogram_data {
 # Emit <canvas> and Chart.js instantiation script
 ############################################################
 sub chart_chartjs {
-    my ($rows, $opts) = @_;
+    my ($c, $rows, $opts) = @_;
     my $canvas_id = $opts->{canvas_id} // 'histogramChart';
-    my $include_cdn = $opts->{include_cdn} // 1;
 
     my @labels;
     for my $i (0..9) {
       my $lbl = $comments::ratings[$i];
-      $labels[$i] = " $i: '$lbl ($i)'";
+      if ( $c->{mobile} ) {
+        $labels[$i] = " $i: '($i)'";
+      } else {
+        $labels[$i] = " $i: '$lbl ($i)'";
+      }
     }
     my $labelstr = join(',', @labels);
     my $html = '';
     #$html .= qq{<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>\n} if $include_cdn;
-    $html .= qq{<script src="chart.umd.min.js"></script>\n} if $include_cdn;
+    $html .= qq{<script src="chart.umd.min.js"></script>\n} ;
     $html .= qq{<canvas id="$canvas_id"></canvas>\n};
     my $data_str = join(',', @$rows[1..9]);
     $html .= qq"<script>
