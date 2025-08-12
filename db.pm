@@ -291,7 +291,8 @@ sub updaterecord {
         }
       }
     }
-    $val = undef if (util::trim($val) eq '');
+    $val = util::trim($val);
+    $val = undef if ($val eq '');
     push @sets , "$f = ?";
     push @values, $val;
     print STDERR "updaterecord: $f = " . util::loglist($val) . "\n";
@@ -350,7 +351,8 @@ sub insertrecord {
         error ("insertrecord can not yet handle recursion to this type. p='$inputprefix' f='$f' ");
       }
     }
-    $val = undef if (util::trim($val) eq '');
+    $val = util::trim($val);
+    $val = undef if ($val eq '');
     push @sqlfields, $f;
     push @values, $val;
   }
