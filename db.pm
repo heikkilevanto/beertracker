@@ -33,9 +33,11 @@ sub open_db {
   $c->{dbh} = DBI->connect($dsn, "", "", { RaiseError => 1, AutoCommit => 1 })
     or util::error($DBI::errstr);
   $c->{dbh}->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
-  $c->{dbh}->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
-  # But watch out for file permissions on the -wal and -sha files
-  $c->{dbh}->do('PRAGMA foreign_keys = ON'); # Enforce foreign keys
+  if ( $mode ne "ro" ) {
+    $c->{dbh}->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
+    # But watch out for file permissions on the -wal and -sha files
+    $c->{dbh}->do('PRAGMA foreign_keys = ON'); # Enforce foreign keys
+  }
 
   # $c->{dbh}->trace(1);  # Way too much SQL logging in error.log, could be useful some day
 }
