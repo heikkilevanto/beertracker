@@ -234,6 +234,10 @@ sub data_table {
   if ( $filter->{year} ne "" || $filter->{brew_type} ne "" || $filter->{loc_type} ne "" ) {
     $filtering = 1;
   }
+  my $fcount = 0;  # count of filtered ratings
+  my $fsum = 0;    # And their sum for average
+  my $acount = 0;  # Same for all ratings
+  my $asum = 0;
 
   my $html = "";
   $html .= "<hr>\n";
@@ -247,7 +251,10 @@ sub data_table {
      </thead> <tbody>";
   for my $i ( 1..9) {
     my $lbl = $comments::ratings[$i];
-
+    $fcount += $filtered_rows->[$i] || 0;
+    $fsum += ( $filtered_rows->[$i] || 0 ) * $i;
+    $acount += $all_rows->[$i] || 0;
+    $asum += ( $all_rows->[$i] || 0 ) * $i;
     $html .= "<tr><td align=right> $lbl ($i)</td>";
     my $ar = $all_rows->[$i] || "";
     $html .= "<td align=right>$ar</td>";
@@ -256,6 +263,18 @@ sub data_table {
     $html .= "</tr>\n";
   }
 
+  $html .= "<tr><td align=right>Total ratings</td>\n";
+  $html .= "<td align=right>$acount</td>\n";
+  $html .= "<td align=right>$fcount</td>\n" if ($filtering);
+  $html .= "</tr><tr><td align=right>Average rating</td>\n";
+  $html .= "<td align=right> \n";
+  $html .= sprintf("%0.1f", $asum / $acount ) if ($asum);
+  $html .= "</td>\n";
+  if ($filtering) {
+    $html .= "<td align=right> \n";
+    $html .= sprintf("%0.1f", $fsum / $fcount ) if ($fsum);
+    $html .= "</td>\n";
+  }
   $html .= "</table>\n";
   return $html;
 
