@@ -90,7 +90,8 @@ CREATE INDEX idx_brews_producer_location ON BREWS(ProducerLocation);
 CREATE INDEX idx_comments_person ON COMMENTS (Person);
 CREATE INDEX idx_comments_glass ON COMMENTS (Glass);
 CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE);
-CREATE INDEX idx_locations_name ON "LOCATIONS" (Name COLLATE NOCASE);
+CREATE INDEX idx_locations_name ON "LOCATIONS" (Name COLLATE NOCASE)
+;
 CREATE VIEW COMPERS AS
       select
         comments.glass as id,
@@ -114,7 +115,9 @@ CREATE VIEW PERSONS_LIST AS select
   left join COMMENTS on COMMENTS.Person = PERSONS.Id
   left join GLASSES on COMMENTS.Glass = GLASSES.Id
   left join "LOCATIONS" on "LOCATIONS".id = GLASSES.Location
-  group by Persons.id;
+  group by Persons.id
+
+  ;
 CREATE VIEW COMMENTS_LIST AS
 select
     COMMENTS.Id,
