@@ -14,7 +14,9 @@ CREATE TABLE IF NOT EXISTS "GLASSES" (
     Price DECIMAL,
     Volume DECIMAL,
     Alc DECIMAL,
-    StDrinks DECIMAL
+    StDrinks DECIMAL,
+    FOREIGN KEY (Brew) REFERENCES Brews(ID),
+    FOREIGN KEY (Location) REFERENCES Locations(ID)
 
 );
 CREATE TABLE IF NOT EXISTS "BREWS" (
@@ -32,7 +34,8 @@ CREATE TABLE IF NOT EXISTS "BREWS" (
     Flavor TEXT, -- Hops, Grapes, spices, barrels, etc
     Year DECIMAL,
     Details TEXT, -- Other things worth noticing
-    IsGeneric INTEGER  -- House wine, mixed beer. "1" for generics, NULL or "0" for not
+    IsGeneric INTEGER,  -- House wine, mixed beer. "1" for generics, NULL or "0" for not
+    FOREIGN KEY (ProducerLocation) REFERENCES Locations(ID)
 
 );
 CREATE TABLE IF NOT EXISTS "COMMENTS" (
@@ -45,7 +48,9 @@ CREATE TABLE IF NOT EXISTS "COMMENTS" (
     Comment TEXT, -- Any kind of comment
     Rating INTEGER,  -- 1 (worst) to 9 (best)
     Person INTEGER,  -- Who was present
-    Photo TEXT
+    Photo TEXT,  -- filename of the photo
+    FOREIGN KEY (Glass) REFERENCES Glasses(ID)
+
 
 );
 CREATE TABLE IF NOT EXISTS "PERSONS" (
@@ -55,8 +60,9 @@ CREATE TABLE IF NOT EXISTS "PERSONS" (
     FullName TEXT,  -- As full name as I have
     Description TEXT, -- Any kind of comment
     Contact TEXT,  -- Phone, email, or such
-    Location INTEGER,  -- Where the person belongs (brewery, bar)
-    RelatedPerson INTEGER -- Persons partner, or such
+    Location INTEGER,  -- Where the person belongs (bar, home, brewery)
+    RelatedPerson INTEGER, -- Persons partner, or such
+    FOREIGN KEY (Location) REFERENCES Locations(ID)
 
 );
 CREATE TABLE LOCATIONS (
