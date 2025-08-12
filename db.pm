@@ -23,7 +23,7 @@ sub open_db {
   my $c = shift;
   my $mode = shift || 'ro';  # 'ro' or 'rw'
   util::error("Database '$databasefile' not writable" ) unless ( -w $databasefile );
-  $c->{databasefile} => $databasefile;
+  $c->{databasefile} = $databasefile;
   if ( $c->{dbh} ) {  # close old connection if any
     $c->{dbh}->disconnect;
   }
@@ -84,7 +84,7 @@ sub query {
   return $sth;
 }
 
-# Run a simple query, and return the first (only?) record
+# Run a simple query, and return the first (only?) record as a hash ref
 sub queryrecord {
   my $c = shift;
   my $sql = shift;
@@ -96,6 +96,29 @@ sub queryrecord {
   return $rec;
 }
 
+# Run a simple query and returns a <select> tag with <options> inside it
+# from the query, and an optional initial line
+# The query should return one value as 'v'
+# as in "select distinct BrewType as v from Glasses where username = ? "
+sub queryselect {
+  my $c = shift;
+  my $name = shift || "";
+  my $selopt = shift || "";  # the option currently selected
+  my $firstopt = shift || ""; # The first option display string, like (all). The value is always ""
+  my $sql = shift;
+  my @params = @_;
+  my $sth = query($c,$sql, @params );
+  return "" unless ( $sth);
+  my $opts = "";
+  $opts .= "<option value=''>$firstopt</option>\n" if ($firstopt);
+  while ( my $v = $sth->fetchrow_array )  {
+    my $sel = "";
+    $sel = "selected" if ( $v eq $selopt );
+    $opts .= "<option value='$v' $sel>$v</option>\n";
+  }
+  $sth->finish;
+  return "<select name='$name'>\n$opts</select>";
+}
 ################################################################################
 # Simple buffered read of records.
 ################################################################################

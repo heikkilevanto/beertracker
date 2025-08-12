@@ -49,6 +49,7 @@ sub ratings_histogram {
 </style>
 CSS
 
+    $html .= histogram_form($c, $filter);
     $html .= qq{<div class="chart-container">};
     $html .= qq{<div class="chart-item">} . chart_chartjs($c, $rows) . qq{</div>};
     $html .= qq{</div>};
@@ -56,7 +57,6 @@ CSS
     my $allrows = histogram_data($c, {});
     $html .= data_table($c, $filter, $rows, $allrows);
 
-    $html .= histogram_form($c, $filter);
 
     print $html;
 } # ratings_histogram
@@ -70,19 +70,43 @@ sub histogram_form {
     my $brew_type = $opts->{brew_type} // '';
     my $loc_type  = $opts->{loc_type}  // '';
 
+    # Get pulldown values for years
+    my $sql = "select
+      distinct strftime('%Y',Timestamp) as v
+      from glasses
+      where Username = ?
+      order by v desc";
+    my $yearsel = db::queryselect( $c, "year", $year, "(all)", $sql, $c->{username});
+
+    $sql = "select
+      distinct BrewType as v
+      from glasses where username = ?
+      order by timestamp desc";
+    my $brewsel = db::queryselect( $c, "brew_type", $brew_type, "(all)", $sql, $c->{username});
+
+    $sql = "select
+      distinct LocType as v
+      from glasses, Locations
+      where username = ?
+      and Locations.Id = glasses.location
+      order by timestamp desc";
+    my $locsel = db::queryselect( $c, "loc_type", $loc_type, "(all)", $sql, $c->{username});
+
     return qq{
-<hr>
 <form method="GET">
   <table>
+    <tr><td colspan=3><b>Ratings statistics</b></td></tr>
     <tr>
-      <td>Year:</td>
-      <td><input type="text" name="year" value="$year" placeholder='(all)' ></td>
+      <td>Filter Year:</td>
+      <td>
+        $yearsel
+      </td>
     </tr><tr>
       <td>Brew type:</td>
-      <td><input type="text" name="brew_type" value="$brew_type" placeholder='(all)' ></td>
+      <td>$brewsel</td>
     </tr><tr>
       <td>Location type:</td>
-      <td><input type="text" name="loc_type" value="$loc_type" placeholder='(all)' ></td>
+      <td>$locsel</td>
     </tr><tr>
       <td><input type="hidden" name="o" value="$c->{op}"></td>
       <td>
@@ -92,6 +116,7 @@ sub histogram_form {
     </tr>
   </table>
 </form>
+<hr>
 };
 } # histogram_form
 
@@ -105,9 +130,9 @@ sub histogram_data {
       SELECT comments.Rating as rating, COUNT(*) AS cnt
       FROM comments
       JOIN glasses ON comments.Glass = glasses.Id
-      JOIN brews ON glasses.Brew = brews.Id
       LEFT JOIN locations ON glasses.Location = locations.Id
     };
+#      JOIN brews ON glasses.Brew = brews.Id
 
     my @where = ('glasses.Username = ?');
     my @bind  = ($c->{username});
@@ -118,7 +143,7 @@ sub histogram_data {
     }
 
     if (defined $filter->{brew_type} && length $filter->{brew_type}) {
-      push @where, "brews.BrewType = ?";
+      push @where, "BrewType = ?";
       push @bind, $filter->{brew_type};
     }
 
@@ -246,7 +271,13 @@ sub data_table {
     <tr>
       <th>Rating</th>
       <th>Total </th>';
-  $html .= "<th>Filtered</th>" if ( $filtering);
+  if ( $filtering) {
+    $html .= "<th>Filtered";
+    $html .= "<br>$filter->{year}" if ($filter->{year});
+    $html .= "<br>$filter->{brew_type}" if ($filter->{brew_type});
+    $html .= "<br>$filter->{loc_type}" if ($filter->{loc_type});
+    $html .= "</th>" ;
+  }
   $html .= "</tr>
      </thead> <tbody>";
   for my $i ( 1..9) {
