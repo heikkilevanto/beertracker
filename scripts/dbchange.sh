@@ -7,7 +7,7 @@ echo "Updating the database structure from db.schema"
 cd beerdata || exit 1
 #set -euo pipefail
 
-sqlite3 beertracker.db ".dump" | grep "INSERT INTO" > data.dump
+sqlite3 beertracker.db ".dump" | grep "INSERT INTO" | grep -v "INSERT INTO sqlite_stat1" > data.dump
 
 rm -f beertracker.*.bak
 for F in beertracker.db*
@@ -24,6 +24,7 @@ then
   echo "Errors importing the schema"
   exit 1
 fi
+
 
 echo `date "+%F %X"` Importing data
 sqlite3 beertracker.db << EOF
