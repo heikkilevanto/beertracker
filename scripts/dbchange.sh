@@ -32,12 +32,20 @@ PRAGMA journal_mode = MEMORY;
 PRAGMA foreign_keys = OFF;
 BEGIN TRANSACTION;
 .read data.dump
+
 UPDATE COMMENTS SET Rating = NULL where Rating = 0 or Rating = '';
+UPDATE Glasses SET Brew = NULL WHERE Brew = '' or Brew = '0';
+UPDATE Brews SET ProducerLocation = NULL WHERE ProducerLocation= '' or ProducerLocation = '0';
+
+PRAGMA foreign_keys = ON;
+PRAGMA foreign_key_check;
 COMMIT;
 PRAGMA OPTIMIZE;
 EOF
 
-# The rating trick can be removed in near future, when we no longer need it
+
+# If the foreign_key_check outputs anything, we have a problem.
+# That's why I add the UPDATEs above
 
 chmod g+w beertracker.db
 echo `date "+%F %X"` Done!
