@@ -123,8 +123,7 @@ create index idx_comments_glass on comments (Glass);
 
 create index idx_persons_name on persons (Name collate nocase);
 
-create index idx_locations_name on locations (Name collate nocase)
-;
+create index idx_locations_name on locations (Name collate nocase);
 
 -- view compers
 drop view if exists compers;

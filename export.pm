@@ -10,9 +10,9 @@ use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
 
-use Data::Dumper;   # Useful when debugging
-local $Data::Dumper::Terse = 1;
-local $Data::Dumper::Indent = 0;
+# use Data::Dumper;   # Useful when debugging
+# local $Data::Dumper::Terse = 1;
+# local $Data::Dumper::Indent = 0;
 
 ################################################################################
 # Helper to get the html parameters for the export
@@ -20,13 +20,11 @@ local $Data::Dumper::Indent = 0;
 sub export_params {
   my $c = shift;
 
-  my $sql = "
-    select
+  my $sql = "select
       min( strftime('%Y-%m-%d', timestamp, '-06:00') ) as first,
       max( strftime('%Y-%m-%d', timestamp, '-06:00') ) as last
     from GLASSES
-    where username = ?
-  ";
+    where username = ?";
   my $dates = db::queryrecord( $c, $sql, $c->{username} );
   #$dates->{first} = "2025-08-13"; # While debugging the code ###
   my $datefrom = util::param($c,"datefrom", $dates->{first});
@@ -44,7 +42,7 @@ sub export_params {
 ################################################################################
 sub exportform {
   my $c = shift;
-  # TODO - Check if $c->{superuser}, and if so, allow choosing any/all users
+  # TODO - Check if $c->{superuser}, and if so, allow choosing any/all users #491
 
   my ( $datefrom, $dateto, $mode, $schema ) = export_params($c);
   print qq{
@@ -95,149 +93,139 @@ sub exportform {
 # Dump of the users data
 ################################################################################
 
-my $loglevel = 1;
+my $loglevel = 0;
 my @tables;
 my %table_columns;
 
 sub do_export {
-    my $c = shift;
-    my ($datefrom, $dateto, $mode, $schema) = export_params($c);
+  my $c = shift;
+  my ( $datefrom, $dateto, $mode, $schema ) = export_params($c);
 
-    # --- 1. Get all tables from sqlite_master ---
-    @tables = db::queryarray($c, "SELECT name FROM sqlite_master
-       WHERE type='table' and name NOT LIKE 'sqlite_%' ORDER BY name");
-    @tables = map { lc $_ } @tables;   # lowercase table names
+  # Get all tables from sqlite_master ---
+  @tables = db::queryarray(
+    $c, "SELECT name FROM sqlite_master
+      WHERE type='table' and name NOT LIKE 'sqlite_%' ORDER BY name" );
+  @tables = map { lc $_ } @tables;    # lowercase table names
 
-    # --- 2. Fetch columns once per table ---
+  # Fetch columns once per table
+  for my $table (@tables) {
+    my $sth = db::query($c, "PRAGMA table_info($table)");
+    my @cols;
+    while ( my $row = db::nextrow($sth) ) {
+      my $col = $row->{name};
+      push ( @cols ,$col );
+      }
+    $table_columns{$table} = \@cols;
+  }
+
+  # Collect glasses IDs
+  my @glasses_ids = db::queryarray($c, "
+      SELECT Id FROM Glasses
+      WHERE Username=? AND Timestamp BETWEEN ? AND ?
+  ", $c->{username}, $datefrom, $dateto);
+  dblog($c, "Glasses to export: ".scalar(@glasses_ids), $loglevel);
+  my $glasses_list = join(",", @glasses_ids);
+
+  # Collect other IDs manually ---
+  my %ids;
+  for my $table (@tables) {
+      $ids{$table} = [];
+  }
+  $ids{glasses} = \@glasses_ids;
+
+  # Always include comments for selected glasses
+  my @comments = db::queryarray($c, "
+      SELECT Id FROM Comments WHERE Glass IN ($glasses_list)");
+  $ids{comments} = \@comments;
+  dblog($c, "Comments to export: ".scalar(@comments), $loglevel);
+
+  # Supporting tables
+  my @brew_ids;
+  my @loc_ids;
+  my @person_ids;
+  if ( $mode eq 'full' ) {
+    @brew_ids      = db::queryarray($c, "SELECT Id FROM Brews");
+    @loc_ids       = db::queryarray($c, "SELECT Id FROM Locations");
+    @person_ids    = db::queryarray($c, "SELECT Id FROM Persons");
+  } else {
+    @brew_ids = db::queryarray($c,
+        "SELECT DISTINCT Brew FROM glasses
+         WHERE Id IN ($glasses_list) AND Brew IS NOT NULL");
+    @loc_ids = db::queryarray($c,
+        "SELECT DISTINCT Location FROM Glasses
+         WHERE Id IN ($glasses_list) AND Location IS NOT NULL");
+    push @loc_ids, db::queryarray($c, # also include producer locations from the brews
+        "SELECT DISTINCT ProducerLocation FROM Brews
+         WHERE Id IN (" . join(",", @brew_ids) . ") AND ProducerLocation IS NOT NULL");
+
+    my @person_ids = db::queryarray($c,
+        "SELECT DISTINCT Person FROM Comments WHERE Glass IN ($glasses_list) AND Person IS NOT NULL");
+  }
+  $ids{brews} = \@brew_ids;
+  $ids{locations} = \@loc_ids;
+  $ids{persons} = \@person_ids;
+
+  # Output headers for download ---
+  print "Content-Disposition: attachment; filename=beertracker_export.sql\n";
+  print "Content-Type: text/plain; charset=utf-8\n\n";
+
+  print "-- Export of BeerTracker data \n";
+  print "-- for user '$c->{username}'\n";
+  print "-- Date range: $datefrom to $dateto\n";
+  print "-- Export done at " . util::datestr() . "\n";
+
+  # Drop/create statements from sqlite_master ---
+  if ($schema && $schema eq 'dropcreate') {
+    my @tables = db::queryarray($c,
+        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
     for my $table (@tables) {
-        my $sth = db::query($c, "PRAGMA table_info($table)");
-        my @cols;
-        while ( my $row = db::nextrow($sth) ) {
-          my $col = $row->{name};
-          push ( @cols ,$col );
-          }
-        $table_columns{$table} = \@cols;
+      my ($create_sql) = db::queryarray($c,
+          "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", $table);
+      print "DROP TABLE IF EXISTS $table;\n$create_sql;\n\n";
     }
+  }
 
+  #  Output INSERTs ---
+  for my $table (@tables) {
+    my @ids = @{ $ids{$table} || [] };
+    my $nrecs = scalar(@ids);
+    print STDERR "Exporting table '$table' ($nrecs rows) \n";
+    print "\n-- Table: $table ($nrecs records) \n";
+    next unless @ids;
 
-    # --- 1. Collect glasses IDs ---
-    my @glasses_ids = db::queryarray($c, "
-        SELECT Id FROM Glasses
-        WHERE Username=? AND Timestamp BETWEEN ? AND ?
-    ", $c->{username}, $datefrom, $dateto);
-    dblog($c, "Glasses to export: ".scalar(@glasses_ids), $loglevel);
-    my $glasses_list = join(",", @glasses_ids);
+    my $idlist = join(",", @ids);   # safe because IDs come from DB
+    print STDERR "Ids for '$table': " . substr($idlist,0,50) ." \n";
+    my $sth = db::query($c, "SELECT * FROM $table WHERE Id IN ($idlist) ORDER BY Id");
 
-    # --- 2. Collect other IDs manually ---
-    # Initialize %ids for all tables
-    my %ids;
-    for my $table (@tables) {
-        $ids{$table} = [];
+    while (my $row = db::nextrow($sth)) {
+      print insert_statement($c, $table, $row, $table_columns{$table}), "\n";
     }
-    $ids{glasses} = \@glasses_ids;
+  }
 
-
-    # Always include comments for selected glasses
-    my @comments = db::queryarray($c, "
-        SELECT Id FROM Comments WHERE Glass IN ($glasses_list)");
-    $ids{comments} = \@comments;
-    dblog($c, "Comments to export: ".scalar(@comments), $loglevel);
-
-
-    # Supporting tables
-    my @brew_ids;
-    my @loc_ids;
-    my @person_ids;
-    if ( $mode eq 'full' ) {
-      @brew_ids      = db::queryarray($c, "SELECT Id FROM Brews");
-      @loc_ids       = db::queryarray($c, "SELECT Id FROM Locations");
-      @person_ids    = db::queryarray($c, "SELECT Id FROM Persons");
-    } else {
-      @brew_ids = db::queryarray($c,
-          "SELECT DISTINCT Brew FROM glasses
-          WHERE Id IN ($glasses_list) AND Brew IS NOT NULL");
-      @loc_ids = db::queryarray($c,
-          "SELECT DISTINCT Location FROM Glasses
-          WHERE Id IN ($glasses_list) AND Location IS NOT NULL");
-      push @loc_ids, db::queryarray($c, # also include producer locations from the brews
-          "SELECT DISTINCT ProducerLocation FROM Brews
-          WHERE Id IN (" . join(",", @brew_ids) . ") AND ProducerLocation IS NOT NULL");
-
-      my @person_ids = db::queryarray($c,
-          "SELECT DISTINCT Person FROM Comments WHERE Glass IN ($glasses_list) AND Person IS NOT NULL");
-    }
-    $ids{brews} = \@brew_ids;
-    $ids{locations} = \@loc_ids;
-    $ids{persons} = \@person_ids;
-
-    # --- 3. Output headers for download ---
-    print "Content-Disposition: attachment; filename=beertracker_export.sql\n";
-    print "Content-Type: text/plain; charset=utf-8\n\n";
-
-    print "-- Export of BeerTracker data for user $c->{username}\n";
-    print "-- Date range: $datefrom to $dateto\n\n";
-
-    # --- 4. Drop/create statements from sqlite_master ---
-    if ($schema && $schema eq 'dropcreate') {
-        my @tables = db::queryarray($c, "
-            SELECT name FROM sqlite_master WHERE type='table' ORDER BY name
-        ");
-        for my $table (@tables) {
-            my ($create_sql) = db::queryarray($c, "
-                SELECT sql FROM sqlite_master WHERE type='table' AND name=?
-            ", $table);
-            print "DROP TABLE IF EXISTS $table;\n$create_sql;\n\n";
-        }
-    }
-
-    # --- 5. Output INSERTs ---
-    for my $table (@tables) {
-        print STDERR "Exporting $table \n";
-        my $nrecs = scalar(@{ $ids{$table} });
-        print "\n-- Table: $table ($nrecs records) \n";
-        my @ids = @{ $ids{$table} || [] };
-        next unless @ids;
-
-        my $idlist = join(",", @ids);   # safe because IDs come from DB
-        print STDERR "Ids for '$table': $idlist \n";
-        my $sth = db::query($c, "SELECT * FROM $table WHERE Id IN ($idlist) ORDER BY Id");
-
-        while (my $row = db::nextrow($sth)) {
-            print insert_statement($c, $table, $row, $table_columns{$table}), "\n";
-        }
-    }
-
-
-
-
-    dblog($c, "Export finished", $loglevel);
+  dblog($c, "Export finished", $loglevel);
 } # do_export
-
-
-# Cache the column order for each table
-my %_table_columns_cache;
 
 
 # Produce the insert statement
 sub insert_statement {
-    my ($c, $table, $row, $cols_ref) = @_;
+  my ($c, $table, $row, $cols_ref) = @_;
 
-    my @vals;
-    for my $col (@$cols_ref) {
-        my $val = $row->{$col};
-        if (!defined $val) {
-            push @vals, "NULL";
-        } elsif ($val =~ /^-?\d+(\.\d+)?$/) {
-            push @vals, $val;
-        } else {
-            $val =~ s/'/''/g;
-            push @vals, "'$val'";
-        }
+  my @vals;
+  for my $col (@$cols_ref) {
+    my $val = $row->{$col};
+    if (!defined $val) {
+        push @vals, "NULL";
+    } elsif ($val =~ /^-?\d+(\.\d+)?$/) {
+        push @vals, $val;
+    } else {
+        $val =~ s/'/''/g;
+        push @vals, "'$val'";
     }
+  }
 
-    my $ins = "INSERT INTO $table (".join(",", @$cols_ref).") VALUES (".join(",", @vals).");";
-    print STDERR "$ins \n";
-    return $ins;
+  my $ins = "INSERT INTO $table (".join(",", @$cols_ref).") VALUES (".join(",", @vals).");";
+  #print STDERR "$ins \n";
+  return $ins;
 }
 
 
