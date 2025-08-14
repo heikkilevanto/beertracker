@@ -96,10 +96,29 @@ sub exportform {
 ################################################################################
 
 my $loglevel = 1;
+my @tables;
+my %table_columns;
 
 sub do_export {
     my $c = shift;
     my ($datefrom, $dateto, $mode, $schema) = export_params($c);
+
+    # --- 1. Get all tables from sqlite_master ---
+    @tables = db::queryarray($c, "SELECT name FROM sqlite_master
+       WHERE type='table' and name NOT LIKE 'sqlite_%' ORDER BY name");
+    @tables = map { lc $_ } @tables;   # lowercase table names
+
+    # --- 2. Fetch columns once per table ---
+    for my $table (@tables) {
+        my $sth = db::query($c, "PRAGMA table_info($table)");
+        my @cols;
+        while ( my $row = db::nextrow($sth) ) {
+          my $col = $row->{name};
+          push ( @cols ,$col );
+          }
+        $table_columns{$table} = \@cols;
+    }
+
 
     # --- 1. Collect glasses IDs ---
     my @glasses_ids = db::queryarray($c, "
@@ -109,13 +128,12 @@ sub do_export {
     dblog($c, "Glasses to export: ".scalar(@glasses_ids), $loglevel);
 
     # --- 2. Collect other IDs manually ---
-    my %ids = (
-        Glasses   => \@glasses_ids,
-        Comments  => [],
-        Brews     => [],
-        Locations => [],
-        Persons   => [],
-    );
+    # Initialize %ids for all tables
+    my %ids;
+    for my $table (@tables) {
+        $ids{$table} = [];
+    }
+    $ids{glasses} = \@glasses_ids;
 
     # Always include comments for selected glasses
     my @comments = db::queryarray($c, "
@@ -144,12 +162,22 @@ sub do_export {
     }
 
     # --- 5. Output INSERTs ---
-    for my $table (qw/Locations Brews Persons Glasses Comments/) {
-        for my $id (@{ $ids{$table} }) {
-            my $row = db::queryrecord($c, "SELECT * FROM $table WHERE Id=?", $id);
-            print insert_statement($c, $table, $row)."\n";
+    for my $table (@tables) {
+        print STDERR "Exporting $table \n";
+        my @ids = @{ $ids{$table} || [] };
+        next unless @ids;
+
+        my $idlist = join(",", @ids);   # safe because IDs come from DB
+        print STDERR "Ids for '$table': $idlist \n";
+        my $sth = db::query($c, "SELECT * FROM $table WHERE Id IN ($idlist) ORDER BY Id");
+
+        while (my $row = db::nextrow($sth)) {
+            print insert_statement($c, $table, $row, $table_columns{$table}), "\n";
         }
     }
+
+
+
 
     dblog($c, "Export finished", $loglevel);
 } # do_export
@@ -161,15 +189,7 @@ my %_table_columns_cache;
 
 # Produce the insert statement
 sub insert_statement {
-    my ($c, $table, $row) = @_;
-
-    # TODO - Seems to have problems with the column names, only inserts the Id
-    # Get column order once per table
-    my $cols_ref = $_table_columns_cache{$table};
-    unless ($cols_ref) {
-        $cols_ref = [ map { $_->{name} } db::queryrecord($c, "PRAGMA table_info($table)") ];
-        $_table_columns_cache{$table} = $cols_ref;
-    }
+    my ($c, $table, $row, $cols_ref) = @_;
 
     my @vals;
     for my $col (@$cols_ref) {
