@@ -95,16 +95,29 @@ sub queryrecord {
   $sth->finish;
   return $rec;
 }
-# Run a simple query, and return the first (only?) record as an array
+
+# Run a simple query that returns one value per row. Return them in an array
+# "select id from comments where glass = ?", 12345
 sub queryrecordarray {
   my $c = shift;
   my $sql = shift;
   my @params = @_;
   my $sth = query($c,$sql, @params );
-  return undef unless ( $sth);
-  my @rec = $sth->fetchrow_array;
+  return undef unless ($sth);
+  my $rec = $sth->fetchrow_hashref;
   $sth->finish;
-  return @rec;
+  return $rec;
+}
+
+
+# Run a simple query, and return the first (only?) record as an array
+sub queryarray {
+  my $c = shift;
+  my $sql = shift;
+  my @params = @_;
+  my $recs = $c->{dbh}->selectcol_arrayref($sql,undef, @params);
+  print STDERR "queryarray: $sql with [" .join(',',@params) . "] got " . scalar(@$recs) . " records \n";
+  return @$recs;
 }
 
 # Run a simple query and returns a <select> tag with <options> inside it

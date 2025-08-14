@@ -22,15 +22,15 @@ sub export_params {
 
   my $sql = "
     select
-      min( strftime('%Y-%m-%d', timestamp, '-06:00') ),
-      max( strftime('%Y-%m-%d', timestamp, '-06:00') )
+      min( strftime('%Y-%m-%d', timestamp, '-06:00') ) as first,
+      max( strftime('%Y-%m-%d', timestamp, '-06:00') ) as last
     from GLASSES
     where username = ?
   ";
-  my ( $first, $last ) = db::queryrecordarray( $c, $sql, $c->{username} );
-
-  my $datefrom = util::param($c,"datefrom", $first);
-  my $dateto = util::param($c,"dateto", $last);
+  my $dates = db::queryrecord( $c, $sql, $c->{username} );
+  $dates->{first} = "2025-08-13"; # While debugging the code ###
+  my $datefrom = util::param($c,"datefrom", $dates->{first});
+  my $dateto = util::param($c,"dateto", $dates->{last});
   my $mode = util::param($c,"mode");
   my $schema= util::param($c,"schema");
 
@@ -95,163 +95,106 @@ sub exportform {
 # Dump of the users data
 ################################################################################
 
+my $loglevel = 1;
 
-sub do_export{
+sub do_export {
     my $c = shift;
-    my ( $datefrom, $dateto, $mode, $schema ) = export_params($c);
-    # 1. Get tables
-    my @tables_orig = map { $_->[0] } @{ $c->{dbh}->selectall_arrayref(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-    ) };
-    my @tables = map { lc $_ } @tables_orig;   # use lowercase internally
-    my %table_case = map { lc($tables_orig[$_]) => $tables_orig[$_] } 0..$#tables_orig;
+    my ($datefrom, $dateto, $mode, $schema) = export_params($c);
 
-    print STDERR "Got tables " , join(', ', @tables)  , "\n";
+    # --- 1. Collect glasses IDs ---
+    my @glasses_ids = db::queryarray($c, "
+        SELECT Id FROM Glasses
+        WHERE Username=? AND Timestamp BETWEEN ? AND ?
+    ", $c->{username}, $datefrom, $dateto);
+    dblog($c, "Glasses to export: ".scalar(@glasses_ids), $loglevel);
 
-
-    # 2. Foreign key maps
-    my (%parents, %children);
-    for my $t_orig (@tables_orig) {
-        my $t = lc $t_orig;
-        my $fks = $c->{dbh}->selectall_arrayref("PRAGMA foreign_key_list($t_orig)", { Slice => {} });
-        for my $fk (@$fks) {
-            my $parent = lc $fk->{table};
-            push @{$parents{$t}},   { col => $fk->{from}, parent => $parent, pcol => $fk->{to} };
-            push @{$children{$parent}}, { child => $t, col => $fk->{from}, pcol => $fk->{to} };
-        }
-    }
-    for my $t (@tables) {
-        print STDERR "FK parents of $t: ",
-          join(", ", map { "$t.$_->{col} -> $_->{parent}.$_->{pcol}" } @{$parents{$t} // []}), "\n";
-        print STDERR "FK children of $t: ",
-          join(", ", map { "$_->{child}.$_->{col} -> $t.$_->{pcol}" } @{$children{$t} // []}), "\n";
-    }
-
-
-    # 3. Initial restrictions
-    my $glasses_filter = "username = ? AND strftime('%Y-%m-%d', timestamp, '-06:00') BETWEEN ? AND ?";
-    my %restrict = (
-        glasses  => { where => $glasses_filter, bind => [$c->{username},$datefrom,$dateto] }
+    # --- 2. Collect other IDs manually ---
+    my %ids = (
+        Glasses   => \@glasses_ids,
+        Comments  => [],
+        Brews     => [],
+        Locations => [],
+        Persons   => [],
     );
 
-    # track already included IDs per table to avoid infinite loops
-    my %seen = map { $_ => {} } @tables;
+    # Always include comments for selected glasses
+    my @comments = db::queryarray($c, "
+        SELECT Id FROM Comments WHERE Glass IN (".join(",", @glasses_ids).")
+    ");
+    $ids{Comments} = \@comments;
+    dblog($c, "Comments to export: ".scalar(@comments), $loglevel);
 
+    # TODO: add Brew, Locations, Persons collection manually as needed
 
-    # 4. Expand restrictions both ways
-    my $changed = 1;
-    while ($changed) {
-        $changed = 0;
+    # --- 3. Output headers for download ---
+    print "Content-Disposition: attachment; filename=beertracker_export.sql\n";
+    print "Content-Type: text/plain; charset=utf-8\n\n";
 
-        # UPWARD
+    # --- 4. Drop/create statements from sqlite_master ---
+    if ($schema && $schema eq 'dropcreate') {
+        my @tables = db::queryarray($c, "
+            SELECT name FROM sqlite_master WHERE type='table' ORDER BY name
+        ");
         for my $table (@tables) {
-            next unless $restrict{$table};
-            my ($pk) = $c->{dbh}->selectrow_array("SELECT name FROM pragma_table_info(?) WHERE pk=1", undef, $table_case{$table});
-            next unless $pk;
-
-            my $ids = $c->{dbh}->selectcol_arrayref(
-                "SELECT $pk FROM " . $table_case{$table} . " WHERE $restrict{$table}{where}",
-                undef, @{$restrict{$table}{bind}}
-            );
-            next unless @$ids;
-            my %idset = map { $_ => 1 } @$ids;
-
-            for my $fk (@{$parents{$table} // []}) {
-                my $parent = $fk->{parent};
-                my $pcol   = $fk->{pcol};
-                next unless $parent;
-
-                my @new_ids = grep { !$seen{$parent}{$_}++ } keys %idset;
-                next unless @new_ids;
-
-                my $ph = join(",", ("?") x @new_ids);
-                if ($restrict{$parent}) {
-                    $restrict{$parent}{where} .= " OR $pcol IN ($ph)";
-                    push @{$restrict{$parent}{bind}}, @new_ids;
-                } else {
-                    $restrict{$parent} = { where => "$pcol IN ($ph)", bind => \@new_ids };
-                }
-                $changed = 1;
-                print STDERR "Upward: $table -> $parent restricted to " . join(", ", @new_ids) . "\n";
-            }
-        }
-
-        # DOWNWARD
-        for my $table (@tables) {
-            next unless $restrict{$table};
-            my ($pk) = $c->{dbh}->selectrow_array("SELECT name FROM pragma_table_info(?) WHERE pk=1", undef, $table_case{$table});
-            next unless $pk;
-
-            my $ids = $c->{dbh}->selectcol_arrayref(
-                "SELECT $pk FROM " . $table_case{$table} . " WHERE $restrict{$table}{where}",
-                undef, @{$restrict{$table}{bind}}
-            );
-            next unless @$ids;
-            my %idset = map { $_ => 1 } @$ids;
-
-            for my $ch (@{$children{$table} // []}) {
-                my $child = $ch->{child};
-                my $col   = $ch->{col};
-                next unless $child;
-
-                my @new_ids = grep { !$seen{$child}{$_}++ } keys %idset;
-                next unless @new_ids;
-
-                my $ph = join(",", ("?") x @new_ids);
-                if ($restrict{$child}) {
-                    $restrict{$child}{where} .= " OR $col IN ($ph)";
-                    push @{$restrict{$child}{bind}}, @new_ids;
-                } else {
-                    $restrict{$child} = { where => "$col IN ($ph)", bind => \@new_ids };
-                }
-                $changed = 1;
-                print STDERR "Downward: $table -> $child restricted to " . join(", ", @new_ids) . "\n";
-            }
+            my ($create_sql) = db::queryarray($c, "
+                SELECT sql FROM sqlite_master WHERE type='table' AND name=?
+            ", $table);
+            print "DROP TABLE IF EXISTS $table;\n$create_sql;\n\n";
         }
     }
 
-
-    # 5. Dump schema + data
-    my $sql = "";
-
-    for my $table (@tables) {
-        my $table_lc = lc $table;
-        my $table_out = $table_case{$table_lc};  # original case from schema
-
-        my $sth_cols = $c->{dbh}->selectall_arrayref("PRAGMA table_info($table)");
-        my @cols = map { $_->[1] } @$sth_cols;
-        my $col_list = join(", ", map { qq("$_") } @cols);
-
-        # Schema
-        if ($schema eq 'dropcreate') {
-            $sql .= "DROP TABLE IF EXISTS \"$table_out\";\n";
-            my ($create) = $c->{dbh}->selectrow_array(
-                "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", undef, $table_out
-            );
-            $sql .= "$create;\n";
-        }
-
-        # Data
-        my $query = "SELECT * FROM $table";
-        my @bind;
-        if ($restrict{$table}) {
-            $query .= " WHERE $restrict{$table}{where}";
-            @bind = @{$restrict{$table}{bind}};
-        }
-        my $rows = $c->{dbh}->selectall_arrayref($query, { Slice => {} }, @bind);
-        for my $row (@$rows) {
-            my @vals = map { defined $_ ? $c->{dbh}->quote($_) : "NULL" } @{$row}{@cols};
-            $sql .= "INSERT INTO \"$table_out\" ($col_list) VALUES (" . join(", ", @vals) . ");\n";
+    # --- 5. Output INSERTs ---
+    for my $table (qw/Locations Brews Persons Glasses Comments/) {
+        for my $id (@{ $ids{$table} }) {
+            my $row = db::queryrecord($c, "SELECT * FROM $table WHERE Id=?", $id);
+            print insert_statement($c, $table, $row)."\n";
         }
     }
-    print STDERR "Export done \n";
-    print "Content-Disposition: attachment; filename=beertracker_export.sql\n";  # Make it a download
-    print "Content-Type: text/plain\n\n";
-    print $sql;
-    exit();
-    return $sql;
+
+    dblog($c, "Export finished", $loglevel);
 } # do_export
 
+
+# Cache the column order for each table
+my %_table_columns_cache;
+
+
+# Produce the insert statement
+sub insert_statement {
+    my ($c, $table, $row) = @_;
+
+    # TODO - Seems to have problems with the column names, only inserts the Id
+    # Get column order once per table
+    my $cols_ref = $_table_columns_cache{$table};
+    unless ($cols_ref) {
+        $cols_ref = [ map { $_->{name} } db::queryrecord($c, "PRAGMA table_info($table)") ];
+        $_table_columns_cache{$table} = $cols_ref;
+    }
+
+    my @vals;
+    for my $col (@$cols_ref) {
+        my $val = $row->{$col};
+        if (!defined $val) {
+            push @vals, "NULL";
+        } elsif ($val =~ /^-?\d+(\.\d+)?$/) {
+            push @vals, $val;
+        } else {
+            $val =~ s/'/''/g;
+            push @vals, "'$val'";
+        }
+    }
+
+    my $ins = "INSERT INTO $table (".join(",", @$cols_ref).") VALUES (".join(",", @vals).");";
+    print STDERR "$ins \n";
+    return $ins;
+}
+
+
+# Simple logging helper
+sub dblog {
+    my ($c, $msg, $level) = @_;
+    print STDERR "$msg\n" if $level;
+}
 
 ################################################################################
 # Report module loaded ok
