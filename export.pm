@@ -28,7 +28,7 @@ sub export_params {
     where username = ?
   ";
   my $dates = db::queryrecord( $c, $sql, $c->{username} );
-  $dates->{first} = "2025-08-13"; # While debugging the code ###
+  #$dates->{first} = "2025-08-13"; # While debugging the code ###
   my $datefrom = util::param($c,"datefrom", $dates->{first});
   my $dateto = util::param($c,"dateto", $dates->{last});
   my $mode = util::param($c,"mode");
@@ -126,6 +126,7 @@ sub do_export {
         WHERE Username=? AND Timestamp BETWEEN ? AND ?
     ", $c->{username}, $datefrom, $dateto);
     dblog($c, "Glasses to export: ".scalar(@glasses_ids), $loglevel);
+    my $glasses_list = join(",", @glasses_ids);
 
     # --- 2. Collect other IDs manually ---
     # Initialize %ids for all tables
@@ -135,18 +136,46 @@ sub do_export {
     }
     $ids{glasses} = \@glasses_ids;
 
+
     # Always include comments for selected glasses
     my @comments = db::queryarray($c, "
-        SELECT Id FROM Comments WHERE Glass IN (".join(",", @glasses_ids).")
-    ");
-    $ids{Comments} = \@comments;
+        SELECT Id FROM Comments WHERE Glass IN ($glasses_list)");
+    $ids{comments} = \@comments;
     dblog($c, "Comments to export: ".scalar(@comments), $loglevel);
 
-    # TODO: add Brew, Locations, Persons collection manually as needed
+
+    # Supporting tables
+    my @brew_ids;
+    my @loc_ids;
+    my @person_ids;
+    if ( $mode eq 'full' ) {
+      @brew_ids      = db::queryarray($c, "SELECT Id FROM Brews");
+      @loc_ids       = db::queryarray($c, "SELECT Id FROM Locations");
+      @person_ids    = db::queryarray($c, "SELECT Id FROM Persons");
+    } else {
+      @brew_ids = db::queryarray($c,
+          "SELECT DISTINCT Brew FROM glasses
+          WHERE Id IN ($glasses_list) AND Brew IS NOT NULL");
+      @loc_ids = db::queryarray($c,
+          "SELECT DISTINCT Location FROM Glasses
+          WHERE Id IN ($glasses_list) AND Location IS NOT NULL");
+      push @loc_ids, db::queryarray($c, # also include producer locations from the brews
+          "SELECT DISTINCT ProducerLocation FROM Brews
+          WHERE Id IN (" . join(",", @brew_ids) . ") AND ProducerLocation IS NOT NULL");
+
+      my @person_ids = db::queryarray($c,
+          "SELECT DISTINCT Person FROM Comments WHERE Glass IN ($glasses_list) AND Person IS NOT NULL");
+    }
+    $ids{brews} = \@brew_ids;
+    $ids{locations} = \@loc_ids;
+    $ids{persons} = \@person_ids;
 
     # --- 3. Output headers for download ---
     print "Content-Disposition: attachment; filename=beertracker_export.sql\n";
     print "Content-Type: text/plain; charset=utf-8\n\n";
+
+    print "-- Export of BeerTracker data for user $c->{username}\n";
+    print "-- Date range: $datefrom to $dateto\n\n";
 
     # --- 4. Drop/create statements from sqlite_master ---
     if ($schema && $schema eq 'dropcreate') {
@@ -164,6 +193,8 @@ sub do_export {
     # --- 5. Output INSERTs ---
     for my $table (@tables) {
         print STDERR "Exporting $table \n";
+        my $nrecs = scalar(@{ $ids{$table} });
+        print "\n-- Table: $table ($nrecs records) \n";
         my @ids = @{ $ids{$table} || [] };
         next unless @ids;
 
