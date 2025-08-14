@@ -311,6 +311,7 @@ sub showmenu {
   $s .= showmenuitem($c,'Years', 'Year stats');
   $s .= showmenuitem($c,'DataStats', 'Data Stats');
   $s .= showmenuitem($c,'Ratings', 'Rating Stats');
+  $s .= showmenuitem($c,'Export', 'Download data');
   $s .= showmenuitem($c,'About', 'About');
   if ( $c->{devversion} ) {
     $s .= showmenuitem($c,'copyproddata', 'Get Production Data');

@@ -63,6 +63,7 @@ require "./copyproddata.pm"; # Copy production database into the dev version
 require "./db.pm"; # Various database helpers
 require "./geo.pm"; # Geo coordinate stuff
 require "./ratestats.pm"; # Histogram of the ratings
+require "./export.pm"; # Export the users own data
 
 
 
@@ -162,17 +163,13 @@ if ( $devversion && $c->{op} eq "copyproddata" ) {
 }
 
 
-# # Default new users to the about page, we have nothing else to show
-# TODO - Make a better check, and force  the about page to show an input form
-# if ( !$c->{op}) {
-#   if ( !@lines) {
-#     $c->{op} = "About";
-#   } else {
-#     $c->{op} = "Graph";  # Default to showing the graph
-#   }
-# }
+if ( !$c->{op}) {
+  $c->{op} = "Graph";  # Default to showing the graph
+}
 
 if ( $q->request_method eq "POST" ) {
+
+  # TODO  Wrap all this in a single eval, and catch the DB errors in the end of POST
 
   db::open_db($c, "rw");  # POST requests modify data by default
 
@@ -207,6 +204,11 @@ if ( $q->request_method eq "POST" ) {
 
 db::open_db($c, "ro");  # GET requests are read-only by default
 
+# Datafile export needs to be done before HTML head, as we output text/plain
+if ( $c->{op} =~ /DoExport/i ) {
+  export::do_export($c);
+  exit;
+}
 
 htmlhead(); # Ok, now we can commit to making a HTML page
 geo::geojs($c);  # TODO - Move all JS in its own file
@@ -228,7 +230,7 @@ if ( $c->{op} =~ /Board/i ) {
   stats::datastats($c);
 } elsif ( $c->{op} =~ /Ratings/i ) {
   ratestats::ratings_histogram($c);
-} elsif ( $c->{op} eq "About" ) {
+} elsif ( $c->{op} =~ /About/i ) {
   aboutpage::about($c);
 } elsif ( $c->{op} =~ /Brew/i ) {
   brews::listbrews($c);
@@ -238,6 +240,8 @@ if ( $c->{op} =~ /Board/i ) {
   comments::listallcomments($c);
 } elsif ( $c->{op} =~ /Location/i ) {
   locations::listlocations($c);
+} elsif ( $c->{op} =~ /Export/i ) {
+  export::exportform($c);
 } elsif ( $c->{op} =~ /Full/i ) {
   glasses::inputform($c);
   mainlist::mainlist($c);

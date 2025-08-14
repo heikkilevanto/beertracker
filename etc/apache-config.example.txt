@@ -12,9 +12,11 @@
 
 <DirectoryMatch /var/www/html/beertracker(-dev)?(-old)?/>
    AllowOverride All
+   AcceptPathInfo On
    Options +FollowSymLinks +ExecCGI
 
    AddHandler cgi-script .cgi
+   DirectoryIndex index.cgi
 
    AuthUserFile /var/www/html/beertracker/.htpasswd
    AuthName "Please Enter Password"

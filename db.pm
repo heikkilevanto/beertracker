@@ -95,6 +95,17 @@ sub queryrecord {
   $sth->finish;
   return $rec;
 }
+# Run a simple query, and return the first (only?) record as an array
+sub queryrecordarray {
+  my $c = shift;
+  my $sql = shift;
+  my @params = @_;
+  my $sth = query($c,$sql, @params );
+  return undef unless ( $sth);
+  my @rec = $sth->fetchrow_array;
+  $sth->finish;
+  return @rec;
+}
 
 # Run a simple query and returns a <select> tag with <options> inside it
 # from the query, and an optional initial line
