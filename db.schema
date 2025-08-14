@@ -1,232 +1,293 @@
-PRAGMA foreign_keys=OFF;
-BEGIN TRANSACTION;
-CREATE TABLE IF NOT EXISTS "GLASSES" (
+# Beertracker database schema
+# Schema dumped at 2025-08-14 13:17 with beertracker-dev/scripts/dbdump.sh
+# Do not edit directly, unless you plan to run scripts/dbchange immediately
+# The schema lives inside the sqlite database!
+
+pragma foreign_keys=off;
+
+begin transaction;
+
+-- table glasses
+drop table if exists glasses;
+create table glasses (
     -- A glass refers to the action of drinking one glass of a given brew
     -- There can also be 'empty' glasses for restaurants, nights, etc.
     -- Glasses are private for each user
-    Id INTEGER PRIMARY KEY,
-    Username TEXT NOT NULL,
-    Timestamp DATETIME NOT NULL, -- In local time from the browser
-    BrewType TEXT NOT NULL, -- Copied from BREWS.BrewType, except for 'empty' glasses
-    SubType TEXT NOT NULL,
-    Location INTEGER,
-    Brew INTEGER,
-    Price DECIMAL,
-    Volume DECIMAL,
-    Alc DECIMAL,
-    StDrinks DECIMAL,
-    FOREIGN KEY (Brew) REFERENCES Brews(ID),
-    FOREIGN KEY (Location) REFERENCES Locations(ID)
+    Id integer primary key,
+    Username text not null,
+    Timestamp datetime not null, -- In local time from the browser
+    BrewType text not null, -- Copied from brews.BrewType, except for 'empty' glasses
+    SubType text not null,
+    Location integer,
+    Brew integer,
+    Price decimal,
+    Volume decimal,
+    Alc decimal,
+    StDrinks decimal,
+    foreign key (Brew) references Brews(id),
+    foreign key (Location) references Locations(id)
 
 );
-CREATE TABLE IF NOT EXISTS "BREWS" (
+
+-- table brews
+drop table if exists brews;
+create table brews (
     -- A brew is something I can drink
     -- Brews are shared between users
-    Id INTEGER PRIMARY KEY,
-    Name TEXT,
-    BrewType TEXT NOT NULL,  -- Beer, Wine, etc
-    SubType TEXT, -- IPA, Red,
-    BrewStyle TEXT, -- Style as defined by the producerm "Hazy IPA"
-    ProducerLocation INTEGER,
-    Alc DECIMAL,  -- Often with 1 decimal
-    Country TEXT, -- Usually a two-letter code
-    Region TEXT,
-    Flavor TEXT, -- Hops, Grapes, spices, barrels, etc
-    Year DECIMAL,
-    Details TEXT, -- Other things worth noticing
-    IsGeneric INTEGER,  -- House wine, mixed beer. "1" for generics, NULL or "0" for not
-    FOREIGN KEY (ProducerLocation) REFERENCES Locations(ID)
+    Id integer primary key,
+    Name text,
+    BrewType text not null,  -- Beer, Wine, etc
+    SubType text, -- ipa, Red,
+    BrewStyle text, -- Style as defined by the producerm "Hazy ipa"
+    ProducerLocation integer,
+    Alc decimal,  -- Often with 1 decimal
+    Country text, -- Usually a two-letter code
+    Region text,
+    Flavor text, -- Hops, Grapes, spices, barrels, etc
+    Year decimal,
+    Details text, -- Other things worth noticing
+    IsGeneric integer,  -- House wine, mixed beer. "1" for generics, null or "0" for not
+    foreign key (ProducerLocation) references Locations(id)
 
 );
-CREATE TABLE IF NOT EXISTS "COMMENTS" (
+
+-- table comments
+drop table if exists comments;
+create table comments (
     -- Comments are tied to glasses, so they are private for the user
     -- They refer to the brew in the glass by default, but if there is none,
     -- then to they can refer to the 'empty' glass itself (restaurant, night)
     -- or to the person metioned in the comment.
-    Id INTEGER PRIMARY KEY,
-    Glass INTEGER NOT NULL,
-    Comment TEXT, -- Any kind of comment
-    Rating INTEGER,  -- 1 (worst) to 9 (best)
-    Person INTEGER,  -- Who was present
-    Photo TEXT,  -- filename of the photo
-    FOREIGN KEY (Glass) REFERENCES Glasses(ID)
+    Id integer primary key,
+    Glass integer not null,
+    Comment text, -- Any kind of comment
+    Rating integer,  -- 1 (worst) to 9 (best)
+    Person integer,  -- Who was present
+    Photo text,  -- filename of the photo
+    foreign key (Glass) references Glasses(id)
 
 
 );
-CREATE TABLE IF NOT EXISTS "PERSONS" (
+
+-- table persons
+drop table if exists persons;
+create table persons (
     -- Various people I meet at the watering holes, or otherwise wish to remember
-    Id INTEGER PRIMARY KEY,
-    Name TEXT NOT NULL,  -- The name I know the person as
-    FullName TEXT,  -- As full name as I have
-    Description TEXT, -- Any kind of comment
-    Contact TEXT,  -- Phone, email, or such
-    Location INTEGER,  -- Where the person belongs (bar, home, brewery)
-    RelatedPerson INTEGER, -- Persons partner, or such
-    FOREIGN KEY (Location) REFERENCES Locations(ID)
+    Id integer primary key,
+    Name text not null,  -- The name I know the person as
+    FullName text,  -- As full name as I have
+    Description text, -- Any kind of comment
+    Contact text,  -- Phone, email, or such
+    Location integer,  -- Where the person belongs (bar, home, brewery)
+    RelatedPerson integer, -- Persons partner, or such
+    foreign key (Location) references Locations(id)
 
 );
-CREATE TABLE LOCATIONS (
+
+-- table locations
+drop table if exists locations;
+create table locations (
     -- Location is anything with a physical address
     -- They can be bars, restaurants, and producers of beer, wine, etc
     -- Even private homes.
-    Id INTEGER PRIMARY KEY,
-    Name TEXT NOT NULL,
-    OfficialName TEXT, -- Mostly for producers
-    Description TEXT,
-    LocType TEXT,  -- "Restaurant", "Producer"
-    LocSubType TEXT, -- Rest type "Bar", or producer of what "Beer"
-    Website TEXT,
-    Contact TEXT,
-    Address TEXT,
-    Lat REAL,
-    Lon REAL
+    Id integer primary key,
+    Name text not null,
+    OfficialName text, -- Mostly for producers
+    Description text,
+    LocType text,  -- "Restaurant", "Producer"
+    LocSubType text, -- Rest type "Bar", or producer of what "Beer"
+    Website text,
+    Contact text,
+    Address text,
+    Lat real,
+    Lon real
 );
-CREATE INDEX idx_glasses_username ON GLASSES (Username COLLATE NOCASE);
-CREATE INDEX idx_glasses_location ON GLASSES (Location);
-CREATE INDEX idx_glasses_timestamp ON GLASSES (Timestamp);
-CREATE INDEX idx_effdate ON GLASSES(strftime('%Y-%m-%d', Timestamp, '-06:00'));
-CREATE INDEX idx_brews_name ON BREWS (Name COLLATE NOCASE);
-CREATE INDEX idx_brews_producer_location ON BREWS(ProducerLocation);
-CREATE INDEX idx_comments_person ON COMMENTS (Person);
-CREATE INDEX idx_comments_glass ON COMMENTS (Glass);
-CREATE INDEX idx_persons_name ON PERSONS (Name COLLATE NOCASE);
-CREATE INDEX idx_locations_name ON "LOCATIONS" (Name COLLATE NOCASE)
+
+analyze sqlite_schema;
+
+create index idx_glasses_username on glasses (Username collate nocase);
+
+create index idx_glasses_location on glasses (Location);
+
+create index idx_glasses_timestamp on glasses (Timestamp);
+
+create index idx_effdate on glasses(strftime('%Y-%m-%d', Timestamp, '-06:00'));
+
+create index idx_brews_name on brews (Name collate nocase);
+
+create index idx_brews_producer_location on brews(ProducerLocation);
+
+create index idx_comments_person on comments (Person);
+
+create index idx_comments_glass on comments (Glass);
+
+create index idx_persons_name on persons (Name collate nocase);
+
+create index idx_locations_name on locations (Name collate nocase)
 ;
-CREATE VIEW COMPERS AS
+
+-- view compers
+drop view if exists compers;
+create view compers as
       select
         comments.glass as id,
-        AVG(NULLIF(comments.rating, 0)) AS rate,
-        GROUP_CONCAT(comments.Comment, ' | ') AS com,
-        COUNT(comments.Id) AS com_cnt,
-        GROUP_CONCAT(comments.Photo, '') AS photo,
-        COUNT(comments.Id) AS com_cnt,
-        GROUP_CONCAT(persons.name, ', ') AS people,
-        COUNT(persons.Id) AS pers_cnt
-      from COMMENTS
-      LEFT JOIN PERSONS on PERSONS.id = COMMENTS.Person
-      GROUP BY comments.glass;
-CREATE VIEW PERSONS_LIST AS select
-    PERSONS.Id,
-    PERSONS.Name,
-    count(COMMENTS.Id) - 1 as Com,
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
-    "LOCATIONS".Name as Location
-  from PERSONS
-  left join COMMENTS on COMMENTS.Person = PERSONS.Id
-  left join GLASSES on COMMENTS.Glass = GLASSES.Id
-  left join "LOCATIONS" on "LOCATIONS".id = GLASSES.Location
-  group by Persons.id
+        avg(nullif(comments.rating, 0)) as rate,
+        group_concat(comments.Comment, ' | ') as com,
+        count(comments.Id) as com_cnt,
+        group_concat(comments.Photo, '') as photo,
+        count(comments.Id) as com_cnt,
+        group_concat(persons.name, ', ') as people,
+        count(persons.Id) as pers_cnt
+      from comments
+      left join persons on persons.id = comments.Person
+      group by comments.glass;
 
-  ;
-CREATE VIEW COMMENTS_LIST AS
+-- view persons_list
+drop view if exists persons_list;
+create view persons_list as select
+    persons.Id,
+    persons.Name,
+    count(comments.Id) - 1 as Com,
+    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
+    locations.Name as Location
+  from persons
+  left join comments on comments.Person = persons.Id
+  left join glasses on comments.Glass = glasses.Id
+  left join locations on locations.id = glasses.Location
+  group by Persons.id;
+
+-- view comments_list
+drop view if exists comments_list;
+create view comments_list as
 select
-    COMMENTS.Id,
-	strftime ( '%Y-%m-%d %w ', GLASSES.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', GLASSES.Timestamp) as Last,
-	"LOCATIONS".Name as LocName,
-	"TR" as TR,
+    comments.Id,
+	strftime ( '%Y-%m-%d %w ', glasses.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', glasses.Timestamp) as Last,
+	locations.Name as LocName,
+	"tr" as tr,
 	'' as Clr,
 
-	BREWS.Name as BrewName,
-	PLOC.Name as Prod,
+	brews.Name as BrewName,
+	ploc.Name as Prod,
 
-	"TR" as TR,
+	"tr" as tr,
 
-	COMMENTS.Rating as Rate,
-    PERSONS.Name as PersonName,
-	COMMENTS.Comment as Comment
+	comments.Rating as Rate,
+    persons.Name as PersonName,
+	comments.Comment as Comment
 
-  from COMMENTS
-  left join GLASSES on Glasses.Id = COMMENTS.Glass
-  left join BREWS on BREWS.Id = GLASSES.Brew
-  left join PERSONS on PERSONS.Id = COMMENTS.Person
-  left join "LOCATIONS" on "LOCATIONS".id = GLASSES.Location
-  left join "LOCATIONS" PLOC on PLOC.id = BREWS.ProducerLocation
+  from comments
+  left join glasses on Glasses.Id = comments.Glass
+  left join brews on brews.Id = glasses.Brew
+  left join persons on persons.Id = comments.Person
+  left join locations on locations.id = glasses.Location
+  left join locations ploc on ploc.id = brews.ProducerLocation
   order by Last desc;
-CREATE VIEW BREW_RATINGS AS
-SELECT
+
+-- view brew_ratings
+drop view if exists brew_ratings;
+create view brew_ratings as
+select
     g.brew,
     count(g.brew) as glass_count,
-    COUNT(CASE WHEN c.rating IS NOT NULL AND c.rating != '' THEN 1 END) AS rating_count,
-    AVG(CASE WHEN c.rating IS NOT NULL AND c.rating != '' THEN c.rating END) AS average_rating,
-    COUNT(CASE WHEN c.comment IS NOT NULL AND c.comment != '' THEN 1 END) AS comment_count
-FROM
+    count(case when c.rating is not null and c.rating != '' then 1 end) as rating_count,
+    avg(case when c.rating is not null and c.rating != '' then c.rating end) as average_rating,
+    count(case when c.comment is not null and c.comment != '' then 1 end) as comment_count
+from
     glasses g
-LEFT JOIN
-    comments c ON c.glass = g.id
+left join
+    comments c on c.glass = g.id
 where g.brew is not null
-GROUP BY
+group by
     g.brew;
-CREATE VIEW LOC_RATINGS as
-SELECT
+
+-- view loc_ratings
+drop view if exists loc_ratings;
+create view loc_ratings as
+select
   l.id,
-  avg(CASE WHEN g.brew IS NOT NULL THEN c.rating END) as brew_avg,
-  count(CASE WHEN g.brew IS NOT NULL THEN c.rating END) as brew_count,
-  count(CASE WHEN g.brew IS NOT NULL THEN c.comment END) as brew_comments,
-  avg(CASE WHEN g.brew IS NULL THEN c.rating END) as loc_avg,
-  count(CASE WHEN g.brew IS NULL THEN c.rating END) as loc_count,
-  count(CASE WHEN g.brew IS NULL THEN c.comment END) as loc_comments
-from COMMENTS c,
-  "LOCATIONS" l,
-  GLASSES g
-WHERE c.glass = g.id
+  avg(case when g.brew is not null then c.rating end) as brew_avg,
+  count(case when g.brew is not null then c.rating end) as brew_count,
+  count(case when g.brew is not null then c.comment end) as brew_comments,
+  avg(case when g.brew is null then c.rating end) as loc_avg,
+  count(case when g.brew is null then c.rating end) as loc_count,
+  count(case when g.brew is null then c.comment end) as loc_comments
+from comments c,
+  locations l,
+  glasses g
+where c.glass = g.id
 and l.id = g.location
 and l.loctype <> "Producer"
 group by g.location;
-CREATE VIEW LOCATION_RATINGS as
-SELECT
+
+-- view location_ratings
+drop view if exists location_ratings;
+create view location_ratings as
+select
   l.id,
   count(c.rating) as rating_count,
   avg(c.rating) as rating_average,
   count(c.comment) as comment_count
-from COMMENTS c,
-  "LOCATIONS" l,
-  GLASSES g
-WHERE  g.brew IS NULL
+from comments c,
+  locations l,
+  glasses g
+where  g.brew is null
 and c.glass = g.id
 and l.id = g.location
-and l.loctype <> "Producer"
+and l.loctype <> Producer
 group by g.location;
-CREATE VIEW LOCATIONS_LIST AS
+
+-- view locations_list
+drop view if exists locations_list;
+create view locations_list as
 select
-    "LOCATIONS".Id,
-    "LOCATIONS".Name,
+    locations.Id,
+    locations.Name,
 	r.rating_count || ";" || r.rating_average || ";" || r.comment_count as Stats,
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
-    "LOCATIONS".LocType || ", " || "LOCATIONS".LocSubType as Type
-  from "LOCATIONS"
-  left join GLASSES on GLASSES.Location = "LOCATIONS".Id
-  left join LOCATION_RATINGS r on r.id  = GLASSES.Id
-  group by "LOCATIONS".Id;
-CREATE VIEW BREWS_DEDUP_LIST AS
-SELECT
-    BREWS.Id,
-	"Chk" as Chk,
-    BREWS.Name,
-    PLOC.Name as Producer,
-    BREWS.Alc as Alc,
-    BREWS.BrewType || ", " || BREWS.Subtype as Type,
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
-    "LOCATIONS".Name as Location,
-    r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
-    count(GLASSES.Id) as Count
-  from BREWS
-  left join "LOCATIONS" PLOC on PLOC.id = BREWS.ProducerLocation
-  left join GLASSES on Glasses.Brew = BREWS.Id
-  left join "LOCATIONS" on "LOCATIONS".id = GLASSES.Location
-  left join BREW_RATINGS r on r.Brew = BREWS.Id
-  group by BREWS.id;
-CREATE VIEW LOCATIONS_DEDUP_LIST AS
+    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
+    locations.LocType || ", " || locations.LocSubType as Type
+  from locations
+  left join glasses on glasses.Location = locations.Id
+  left join location_ratings r on r.id  = glasses.Id
+  group by locations.Id;
+
+-- view brews_dedup_list
+drop view if exists brews_dedup_list;
+create view brews_dedup_list as
 select
-    "LOCATIONS".Id,
+    brews.Id,
 	"Chk" as Chk,
-    "LOCATIONS".Name,
-	"LOCATIONS".lat || " " || "LOCATIONS".lon as Geo,
-    "LOCATIONS".LocType || ", " || "LOCATIONS".LocSubType as Type,
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last
-  from "LOCATIONS"
-  left join GLASSES on GLASSES.Location = "LOCATIONS".Id
-  group by "LOCATIONS".Id;
-CREATE VIEW GLASSREC AS
+    brews.Name,
+    ploc.Name as Producer,
+    brews.Alc as Alc,
+    brews.BrewType || ", " || brews.Subtype as Type,
+    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
+    locations.Name as Location,
+    r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
+    count(glasses.Id) as Count
+  from brews
+  left join locations ploc on ploc.id = brews.ProducerLocation
+  left join glasses on Glasses.Brew = brews.Id
+  left join locations on locations.id = glasses.Location
+  left join brew_ratings r on r.Brew = brews.Id
+  group by brews.id;
+
+-- view locations_dedup_list
+drop view if exists locations_dedup_list;
+create view locations_dedup_list as
+select
+    locations.Id,
+	"Chk" as Chk,
+    locations.Name,
+	locations.lat || " " || locations.lon as Geo,
+    locations.LocType || ", " || locations.LocSubType as Type,
+    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last
+  from locations
+  left join glasses on glasses.Location = locations.Id
+  group by locations.Id;
+
+-- view glassrec
+drop view if exists glassrec;
+create view glassrec as
       select
         glasses.id as glassid,
         glasses.username as username,
@@ -236,13 +297,13 @@ CREATE VIEW GLASSREC AS
         strftime ('%Y', glasses.timestamp) as year,
         strftime ('%H:%M:%S', glasses.timestamp) as time,
         glasses.brewtype as type,
-        COALESCE(brews.subtype, brews.country) as subtype,
+        coalesce(brews.subtype, brews.country) as subtype,
         strftime ('%Y-%m-%d', glasses.timestamp,'-06:00') as effdate,
-        "LOCATIONS".Id as locid,
-        "LOCATIONS".name as loc,
-        PLOC.name as maker,
-        BREWS.Id as brewid,
-        BREWS.name as name,
+        locations.Id as locid,
+        locations.name as loc,
+        ploc.name as maker,
+        brews.Id as brewid,
+        brews.name as name,
         volume as vol,
         coalesce(Brews.brewstyle,'') || ' ' ||
           coalesce(Brews.region,'')  || ' ' ||
@@ -252,29 +313,34 @@ CREATE VIEW GLASSREC AS
           as style,
         glasses.alc as alc,
         price as pr
-      from GLASSES , "LOCATIONS"
-      left join BREWS  on glasses.Brew = Brews.id
-      left join "LOCATIONS" PLOC on PLOC.id = Brews.ProducerLocation
-      where glasses.Location = "LOCATIONS".id;
-CREATE VIEW BREWS_LIST AS
+      from glasses , locations
+      left join brews  on glasses.Brew = Brews.id
+      left join locations ploc on ploc.id = Brews.ProducerLocation
+      where glasses.Location = locations.id;
+
+-- view brews_list
+drop view if exists brews_list;
+create view brews_list as
 select
-    BREWS.Id,
-    BREWS.Name,
-    PLOC.Name as Producer,
-    BREWS.IsGeneric,
-    "TR" as TR,
-    BREWS.Alc as Alc,
-    BREWS.BrewType || ", " || BREWS.Subtype as Type,
+    brews.Id,
+    brews.Name,
+    ploc.Name as Producer,
+    brews.IsGeneric,
+    "tr" as tr,
+    brews.Alc as Alc,
+    brews.BrewType || ", " || brews.Subtype as Type,
     r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
-    count(GLASSES.Id) as Count,
-    "TR" as TR,
+    count(glasses.Id) as Count,
+    "tr" as tr,
     'Clr' as 'Clr',
-    strftime ( '%Y-%m-%d %w ', max(GLASSES.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(GLASSES.Timestamp)) as Last,
-    "LOCATIONS".Name as Location
-  from BREWS
-  left join "LOCATIONS" PLOC on PLOC.id = BREWS.ProducerLocation
-  left join GLASSES on Glasses.Brew = BREWS.Id
-  left join "LOCATIONS" on "LOCATIONS".id = GLASSES.Location
-  left join BREW_RATINGS r on r.Brew = Brews.Id
-  group by BREWS.id;
-COMMIT;
+    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
+    locations.Name as Location
+  from brews
+  left join locations ploc on ploc.id = brews.ProducerLocation
+  left join glasses on Glasses.Brew = brews.Id
+  left join locations on locations.id = glasses.Location
+  left join brew_ratings r on r.Brew = Brews.Id
+  group by brews.id;
+
+commit;
+
