@@ -72,13 +72,32 @@ sub tablefields {
   return @fields;
 }
 
-# Run a simple DB query
-# Returns a st-handle for fetchrows
-sub query {
+# Log a query on STDERR (error.log)
+sub logquery {
   my $c = shift;
   my $sql = shift;
   my @params = @_;
-  print STDERR "$sql \n(", join(',',@params), ")\n" if ( $c->{devversion} );
+  my($pkg,$fname,$lineno,$sub) = caller(1);
+  my $msg = "$sub: ";
+
+  # Clean whitespace
+  $sql =~ s/\s+/ /g;
+
+  # trunc long lists
+  $sql =~ s/\bwhere\s+(\w+)\s+in\s*\(\s*([^,()]+(?:\s*,\s*[^,()]+){0,5})\s*,[^)]*\)/where $1 in ($2,..)/i;
+  $msg .= $sql;
+  $msg .= " [" .  join(', ',@params).  "]" if (@params);
+  $msg = substr($msg,0,239) unless (! $c->{devversion} );
+  print STDERR "$msg\n";
+}
+
+# Run a simple DB query
+# Returns a st-handle for fetchrows
+sub query {
+  logquery(@_);
+  my $c = shift;
+  my $sql = shift;
+  my @params = @_;
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @params );
   return $sth;
@@ -112,11 +131,11 @@ sub queryrecordarray {
 
 # Run a simple query, and return the first (only?) record as an array
 sub queryarray {
+  logquery(@_);
   my $c = shift;
   my $sql = shift;
   my @params = @_;
   my $recs = $c->{dbh}->selectcol_arrayref($sql,undef, @params);
-  print STDERR "queryarray: $sql with [" .join(',',@params) . "] got " . scalar(@$recs) . " records \n";
   return @$recs;
 }
 

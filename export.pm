@@ -21,7 +21,7 @@ sub export_params {
   my $c = shift;
 
   my $sql = "select
-      min( strftime('%Y-%m-%d', timestamp, '-06:00') ) as first,
+      min( strftime('%Y-01-01', timestamp, '-06:00') ) as first,
       max( strftime('%Y-%m-%d', timestamp, '-06:00') ) as last
     from GLASSES
     where username = ?";
@@ -31,8 +31,9 @@ sub export_params {
   my $dateto = util::param($c,"dateto", $dates->{last});
   my $mode = util::param($c,"mode");
   my $schema= util::param($c,"schema");
+  my $action= util::param($c,"action");
 
-  return ( $datefrom, $dateto, $mode, $schema );
+  return ( $datefrom, $dateto, $mode, $schema, $action );
 
 }
 
@@ -44,22 +45,22 @@ sub exportform {
   my $c = shift;
   # TODO - Check if $c->{superuser}, and if so, allow choosing any/all users #491
 
-  my ( $datefrom, $dateto, $mode, $schema ) = export_params($c);
+  my ( $datefrom, $dateto, $mode, $schema, $action ) = export_params($c);
   print qq{
   <form method="GET" action="index.cgi">
   <input type="hidden" name="o" value="DoExport">
   Export all data for user <b>'$c->{username}'</b><br>
   <table>
     <tr>
-      <td>From date:</td>
+      <td>From date</td>
       <td><input type="text" name="datefrom" value='$datefrom' placeholder="YYYY-MM-DD"></td>
     </tr>
     <tr>
-      <td>To date:</td>
+      <td>To date</td>
       <td><input type="text" name="dateto" value='$dateto' placeholder="YYYY-MM-DD"></td>
     </tr>
     <tr>
-      <td>Support records:</td>
+      <td>Support records &nbsp;</td>
       <td>
         <select name="mode">
           <option value="partial">Only referenced</option>
@@ -68,7 +69,7 @@ sub exportform {
       </td>
     </tr>
     <tr>
-      <td>Schema:</td>
+      <td>Schema</td>
       <td>
         <select name="schema">
           <option value="none">Data only</option>
@@ -77,7 +78,17 @@ sub exportform {
       </td>
     </tr>
     <tr>
+      <td>Action</td>
+      <td>
+        <select name="action">
+          <option value="download">Download file</option>
+          <option value="display">Show on screen</option>
+        </select>
+      </td>
+    </tr>
+    <tr>
       <td  style="text-align:center">
+        <br>
         <button type="submit">Export</button>
       </td>
     </tr>
@@ -93,21 +104,19 @@ sub exportform {
 # Dump of the users data
 ################################################################################
 
-my $loglevel = 0;
-my @tables;
-my %table_columns;
-
 sub do_export {
   my $c = shift;
-  my ( $datefrom, $dateto, $mode, $schema ) = export_params($c);
+  my ( $datefrom, $dateto, $mode, $schema, $action) = export_params($c);
+
 
   # Get all tables from sqlite_master ---
-  @tables = db::queryarray(
+  my @tables = db::queryarray(
     $c, "SELECT name FROM sqlite_master
       WHERE type='table' and name NOT LIKE 'sqlite_%' ORDER BY name" );
   @tables = map { lc $_ } @tables;    # lowercase table names
 
   # Fetch columns once per table
+  my %table_columns;
   for my $table (@tables) {
     my $sth = db::query($c, "PRAGMA table_info($table)");
     my @cols;
@@ -121,9 +130,8 @@ sub do_export {
   # Collect glasses IDs
   my @glasses_ids = db::queryarray($c, "
       SELECT Id FROM Glasses
-      WHERE Username=? AND Timestamp BETWEEN ? AND ?
+      WHERE Username=? AND strftime ('%Y-%m-%d', Timestamp,'-06:00') BETWEEN ? AND ?
   ", $c->{username}, $datefrom, $dateto);
-  dblog($c, "Glasses to export: ".scalar(@glasses_ids), $loglevel);
   my $glasses_list = join(",", @glasses_ids);
 
   # Collect other IDs manually ---
@@ -137,7 +145,6 @@ sub do_export {
   my @comments = db::queryarray($c, "
       SELECT Id FROM Comments WHERE Glass IN ($glasses_list)");
   $ids{comments} = \@comments;
-  dblog($c, "Comments to export: ".scalar(@comments), $loglevel);
 
   # Supporting tables
   my @brew_ids;
@@ -166,18 +173,16 @@ sub do_export {
   $ids{persons} = \@person_ids;
 
   # Output headers for download ---
-  print "Content-Disposition: attachment; filename=beertracker_export.sql\n";
+  print "Content-Disposition: attachment; filename=beertracker_export.sql\n" if ($action =~ /Download/i );
   print "Content-Type: text/plain; charset=utf-8\n\n";
 
   print "-- Export of BeerTracker data \n";
   print "-- for user '$c->{username}'\n";
   print "-- Date range: $datefrom to $dateto\n";
-  print "-- Export done at " . util::datestr() . "\n";
+  print "-- Export done at " . util::datestr() . "\n\n";
 
   # Drop/create statements from sqlite_master ---
   if ($schema && $schema eq 'dropcreate') {
-    my @tables = db::queryarray($c,
-        "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
     for my $table (@tables) {
       my ($create_sql) = db::queryarray($c,
           "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", $table);
@@ -194,7 +199,6 @@ sub do_export {
     next unless @ids;
 
     my $idlist = join(",", @ids);   # safe because IDs come from DB
-    print STDERR "Ids for '$table': " . substr($idlist,0,50) ." \n";
     my $sth = db::query($c, "SELECT * FROM $table WHERE Id IN ($idlist) ORDER BY Id");
 
     while (my $row = db::nextrow($sth)) {
@@ -202,7 +206,6 @@ sub do_export {
     }
   }
 
-  dblog($c, "Export finished", $loglevel);
 } # do_export
 
 
@@ -229,11 +232,6 @@ sub insert_statement {
 }
 
 
-# Simple logging helper
-sub dblog {
-    my ($c, $msg, $level) = @_;
-    print STDERR "$msg\n" if $level;
-}
 
 ################################################################################
 # Report module loaded ok
