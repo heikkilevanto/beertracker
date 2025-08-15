@@ -10,69 +10,76 @@ begin transaction;
 -- table glasses
 drop table if exists glasses;
 create table glasses (
+
     -- A glass refers to the action of drinking one glass of a given brew
     -- There can also be 'empty' glasses for restaurants, nights, etc.
     -- Glasses are private for each user
+
     Id integer primary key,
-    Username text not null,
+    Username text not null, -- identifies whom the glass record belongs to
     Timestamp datetime not null, -- In local time from the browser
     BrewType text not null, -- Copied from brews.BrewType, except for 'empty' glasses
-    SubType text not null,
+    SubType text not null, -- likewise
     Location integer,
     Brew integer,
     Price decimal,
     Volume decimal,
     Alc decimal,
-    StDrinks decimal,
+    StDrinks decimal, -- Calculated from volume and alc
+
     foreign key (Brew) references Brews(id),
     foreign key (Location) references Locations(id)
-
 );
 
 -- table brews
 drop table if exists brews;
 create table brews (
+
     -- A brew is something I can drink
     -- Brews are shared between users
+
     Id integer primary key,
-    Name text,
+    Name text,  -- The name I know the brew as
     BrewType text not null,  -- Beer, Wine, etc
     SubType text, -- ipa, Red,
     BrewStyle text, -- Style as defined by the producerm "Hazy ipa"
     ProducerLocation integer,
     Alc decimal,  -- Often with 1 decimal
     Country text, -- Usually a two-letter code
-    Region text,
+    Region text, -- Mostly for wines
     Flavor text, -- Hops, Grapes, spices, barrels, etc
     Year decimal,
     Details text, -- Other things worth noticing
     IsGeneric integer,  -- House wine, mixed beer. "1" for generics, null or "0" for not
-    foreign key (ProducerLocation) references Locations(id)
 
+    foreign key (ProducerLocation) references Locations(id)
 );
 
 -- table comments
 drop table if exists comments;
 create table comments (
+
     -- Comments are tied to glasses, so they are private for the user
     -- They refer to the brew in the glass by default, but if there is none,
     -- then to they can refer to the 'empty' glass itself (restaurant, night)
     -- or to the person metioned in the comment.
+
     Id integer primary key,
     Glass integer not null,
     Comment text, -- Any kind of comment
     Rating integer,  -- 1 (worst) to 9 (best)
     Person integer,  -- Who was present
     Photo text,  -- filename of the photo
+
     foreign key (Glass) references Glasses(id)
-
-
 );
 
 -- table persons
 drop table if exists persons;
 create table persons (
+
     -- Various people I meet at the watering holes, or otherwise wish to remember
+
     Id integer primary key,
     Name text not null,  -- The name I know the person as
     FullName text,  -- As full name as I have
@@ -80,27 +87,30 @@ create table persons (
     Contact text,  -- Phone, email, or such
     Location integer,  -- Where the person belongs (bar, home, brewery)
     RelatedPerson integer, -- Persons partner, or such
-    foreign key (Location) references Locations(id)
 
+    foreign key (Location) references Locations(id)
 );
 
 -- table locations
 drop table if exists locations;
 create table locations (
+
     -- Location is anything with a physical address
     -- They can be bars, restaurants, and producers of beer, wine, etc
     -- Even private homes.
+
     Id integer primary key,
-    Name text not null,
+    Name text not null, -- The name I know for the place
     OfficialName text, -- Mostly for producers
-    Description text,
-    LocType text,  -- "Restaurant", "Producer"
+    Description text,  -- Any kind of additiona info
+    LocType text,    -- "Restaurant", "Producer"
     LocSubType text, -- Rest type "Bar", or producer of what "Beer"
     Website text,
     Contact text,
     Address text,
-    Lat real,
-    Lon real
+    Lat real,  -- Geo coordinate latitude
+    Lon real   -- longitude
+
 );
 
 analyze sqlite_schema;
@@ -128,6 +138,7 @@ create index idx_locations_name on locations (Name collate nocase);
 -- view compers
 drop view if exists compers;
 create view compers as
+  -- TODO - PROBABLY NOT USED
       select
         comments.glass as id,
         avg(nullif(comments.rating, 0)) as rate,
@@ -143,7 +154,9 @@ create view compers as
 
 -- view persons_list
 drop view if exists persons_list;
-create view persons_list as select
+create view persons_list as
+  -- A
+  select
     persons.Id,
     persons.Name,
     count(comments.Id) - 1 as Com,
