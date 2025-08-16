@@ -327,7 +327,7 @@ sub postlocation {
 sub selectlocation {
   my $c = shift; # context
   my $fieldname = shift || "Location";
-  my $selected = shift || "0";  # The id of the selected location
+  my $selected = shift || "";  # The id of the selected location
   my $newprefix = shift || ""; # Prefix for new-location fields. Enables the "new"
   my $prods = shift || "";  # "prod" for prod locs only, "non" for non-prods only. Defaults to all
 
