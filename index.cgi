@@ -169,33 +169,38 @@ if ( !$c->{op}) {
 
 if ( $q->request_method eq "POST" ) {
 
-  # TODO  Wrap all this in a single eval, and catch the DB errors in the end of POST
+  my $debugparams = "";
+  eval {
+    db::open_db($c, "rw");  # POST requests modify data by default
 
-  db::open_db($c, "rw");  # POST requests modify data by default
-
-  if ( $c->{devversion} ) {
-    foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
-      my $value = $c->{cgi}->param($param);
-      print STDERR "   p: $param = '$value'\n" if ($value);
+    if ( $c->{devversion} ) {
+      foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
+        my $value = $c->{cgi}->param($param);
+        $debugparams .= "p: $param = '$value'\n";  # if ($c->{devversion}) ???
+        print STDERR "   p: $param = '$value'\n" ; #if ($value);  # log also zeroes
+      }
     }
+
+    $c->{dbh}->do("BEGIN TRANSACTION");
+
+    if ( $c->{op} =~ /Person/i ) {
+      persons::postperson($c);
+    } elsif ( $c->{op} =~ /Location/i ) {
+      locations::postlocation($c);
+    } elsif ( $c->{op} =~ /Beer|Brew/i ) {
+      brews::postbrew($c);
+    } elsif ( util::param($c, "commentedit") ) {
+      comments::postcomment($c);
+    } else { # Default to posting a glass
+      glasses::postglass($c);
+    }
+
+    $c->{dbh}->do("COMMIT");
+    $c->{dbh}->disconnect;
+  };
+  if ( $@ ) {
+    util::error("$@\n$debugparams");
   }
-
-  $c->{dbh}->do("BEGIN TRANSACTION");
-
-  if ( $c->{op} =~ /Person/i ) {
-    persons::postperson($c);
-  } elsif ( $c->{op} =~ /Location/i ) {
-    locations::postlocation($c);
-  } elsif ( $c->{op} =~ /Beer|Brew/i ) {
-    brews::postbrew($c);
-  } elsif ( util::param($c, "commentedit") ) {
-    comments::postcomment($c);
-  } else { # Default to posting a glass
-    glasses::postglass($c);
-  }
-
-  $c->{dbh}->do("COMMIT");
-  $c->{dbh}->disconnect;
 
   # Redirect back to the op, but not editing
   print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}" );

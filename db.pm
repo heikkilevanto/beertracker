@@ -377,6 +377,7 @@ sub insertrecord {
         my $def = {};
         $def->{LocType} = "Producer";
         $def->{LocSubType} = util::param($c, "selbrewtype") || "Beer";
+        $def->{ProducerLocation} = '';
         $val = db::insertrecord($c, "LOCATIONS", "newprod", $def );
         print STDERR "Returned from ProducerLocation, id='$val'  \n";
       } elsif ( $f eq "Location" ) {
