@@ -42,7 +42,7 @@ create table brews (
     Name text,  -- The name I know the brew as
     BrewType text not null,  -- Beer, Wine, etc
     SubType text, -- ipa, Red,
-    BrewStyle text, -- Style as defined by the producerm "Hazy ipa"
+    BrewStyle text, -- Style as defined by the producer "Hazy ipa"
     ProducerLocation integer,
     Alc decimal,  -- Often with 1 decimal
     Country text, -- Usually a two-letter code

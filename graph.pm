@@ -294,15 +294,14 @@ sub plotgraph {
       "set grid xtics ytics  linewidth 0.1 linecolor \"white\" \n".
       "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
         "behind fc \"$c->{bgcolor}\" fillstyle solid border \n" .  # green bkg
-      #"set arrow from \"$g->{start}\", 1 to \"$g->{end}\", 1 nohead linewidth 3 linecolor \"green\" \n" .
-      "set arrow from graph 0, first 1 to graph 1, first 1 nohead linewidth 3 linecolor \"green\" \n" .   # front
-      "set arrow from graph 0, first 4 to graph 1, first 4 nohead linewidth 3 linecolor \"yellow\" \n" .
-      "set arrow from graph 0, first 7 to graph 1, first 7 nohead linewidth 3 linecolor \"orange\" \n" .
-      "set arrow from graph 0, first 10 to graph 1, first 10 nohead linewidth 3 linecolor \"red\" \n" .
+      "set arrow from graph -0.01, first 1 to graph 1.01, first 1 nohead linewidth 3 linecolor \"green\" \n" .   # front
+      "set arrow from graph -0.01, first 4 to graph 1.01, first 4 nohead linewidth 3 linecolor \"yellow\" \n" .
+      "set arrow from graph -0.01, first 7 to graph 1.01, first 7 nohead linewidth 3 linecolor \"orange\" \n" .
+      "set arrow from graph -0.01, first 10 to graph 1.01, first 10 nohead linewidth 3 linecolor \"red\" \n" .
       "";
     my $y = 13;
     while ( $y < $g->{maxd} -1 ) {
-      $cmd .= "set arrow from graph 0, first $y to graph 1, first $y nohead linewidth 1 linecolor \"#f409c9\" \n" ;
+      $cmd .= "set arrow from graph -0.01, first $y to graph 1.01, first $y nohead linewidth 1 linecolor \"#f409c9\" \n" ;
       $y += 3;
     }
     $cmd .= $g->{weekends};
