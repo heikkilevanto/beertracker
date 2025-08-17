@@ -245,7 +245,7 @@ from comments c,
 where  g.brew is null
 and c.glass = g.id
 and l.id = g.location
-and l.loctype <> Producer
+and l.loctype <> 'Producer'
 group by g.location;
 
 -- view locations_list
