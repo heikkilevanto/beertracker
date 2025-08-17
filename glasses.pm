@@ -443,7 +443,8 @@ sub postglass {
   my $selbrewtype = util::param($c,"selbrewtype") || $brew->{BrewType};
   $glass->{BrewType} = $selbrewtype;  # Trust the input more than location
   if ( isemptyglass($selbrewtype) ) { # 'empty' glass
-    $glass->{Brew} = undef;
+    $glass->{Brew} = undef;  # "WRONG" to provoke a DB error when recordin a night
+    #$glass->{Brew} = "WRONG";  # "WRONG" to provoke a DB error when recordin a night
     $glass->{Volume} = undef;
     $glass->{Alc} = undef;
     $glass->{StDrinks} = "0";
@@ -463,9 +464,6 @@ sub postglass {
     getvalues($c, $glass, $brew, $sub);
     gettimestamp($c, $glass);
     fixvol($c, $glass, $brew);
-    if ( $pr =~ /^x/i ) {  # X indicates no price, no guessing
-      $glass->{Price} = undef;
-    }
 
 
   } # normal glass

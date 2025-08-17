@@ -199,8 +199,8 @@ if ( $q->request_method eq "POST" ) {
     $c->{dbh}->disconnect;
   };
   if ( $@ ) {
-    db::dberror($c,$debugparams);
-    #util::error("$@\n$debugparams");
+    #db::dberror($c,"$@\n$debugparams");
+    util::error("$@\n$debugparams");
   }
 
   # Redirect back to the op, but not editing

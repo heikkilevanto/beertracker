@@ -7,6 +7,8 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
+use Carp qw(longmess);
+
 use DBI;
 
 # use Data::Dumper;   # Useful when debugging
@@ -42,24 +44,11 @@ sub open_db {
   # $c->{dbh}->trace(1);  # Way too much SQL logging in error.log, could be useful some day
 
   $c->{dbh}->{HandleError} = sub {
-    my ($msg, $dbh, $ret) = @_;
-    my $fk = "";
-    if ($msg =~ /FOREIGN KEY constraint failed/) {
-        my $violations = $c->{dbh}->selectall_arrayref("PRAGMA foreign_key_check");
-        foreach my $r (@$violations) {
-            my ($table, $rowid, $parent, $fkid) = @$r;
-            $fk .= "FK violation: $table.rowid=$rowid → $parent (fkid=$fkid)\n";
-        }
-    }
-    util::error("Database error: $msg " .
-      "r='$ret'\n".
-      "FK:\n$fk");
-
+    my ($msg, $dbh) = @_;
+    dberror($c, $msg);
     return 0; # rethrow the error after logging
-    # Except that we never return here, util::error exits
-};
-
-
+    # Then we catch it in index.cgi, and dump parameters etc
+   };
 }
 
 ################################################################################
@@ -67,16 +56,17 @@ sub open_db {
 ################################################################################
 sub dberror {
   my $c = shift;
-  my $params = shift || "";
+  my $msg= shift || "";
 
-  my $fk = "";
-  my $err = $@;
-  my $rows = $c->{dbh}->selectall_arrayref("PRAGMA foreign_key_check");
-  foreach my $r (@$rows) {
-    my ($table, $rowid, $parent, $fkid) = @$r;
-    $fk .= "FK violation: $table.rowid=$rowid → $parent (fkid=$fkid)\n";
-  }
-  util::error("$err \n$fk \n$params");
+  my $sql = $c->{dbh}->{Statement} // '(unknown statement)';
+  my $errmsg = "DB ERROR \n".
+    "$msg \n\n" .
+    "SQL: $sql \n";
+  $errmsg .= longmess("Stack Trace");
+  #util::error($errmsg);
+  print STDERR $errmsg;
+  print "\n\n"; # WOrks even before sending headers
+  print $errmsg;
 
 }
 

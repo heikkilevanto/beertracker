@@ -8,7 +8,7 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
-
+use Carp qw(longmess);
 
 # --- insert new functions here ---
 # This is a marker for the refactoring scripts
@@ -144,15 +144,10 @@ sub error {
   my $msg = shift;
   print "\n\n";  # Works if have sent headers or not
   print "<hr/>\n";
-  print "ERROR   <br/>\n";
+  $msg = "ERROR  <br>\n" . $msg;
+  $msg .= longmess("Stack Trace:");
   print "$msg <br/>\n";
   print STDERR "ERROR: $msg\n";
-  my $i = 0;
-  while (my($pkg,$fname,$lineno,$subroutine) = caller($i++)) {
-    my $s = "  [$i]: $pkg:$lineno: $subroutine";
-    print "$s  <br/>\n";
-    print STDERR "$s \n";
-  }
   exit();
 }
 
