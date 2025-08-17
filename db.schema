@@ -65,13 +65,13 @@ create table comments (
     -- or to the person metioned in the comment.
 
     Id integer primary key,
-    Glass integer not null,
+    Glass integer,  -- Can be null if we delete the glass.
     Comment text, -- Any kind of comment
     Rating integer,  -- 1 (worst) to 9 (best)
     Person integer,  -- Who was present
     Photo text,  -- filename of the photo
 
-    foreign key (Glass) references Glasses(id)
+    foreign key (Glass) references Glasses(id) ON DELETE SET NULL
 );
 
 -- table persons
