@@ -493,9 +493,9 @@ sub postglass {
   my $selbrewtype = util::param($c,"selbrewtype") || $brew->{BrewType};
   $glass->{BrewType} = $selbrewtype;  # Trust the input more than location
   if ( isemptyglass($selbrewtype) ) { # 'empty' glass
-    $glass->{Brew} = "";
-    $glass->{Volume} = "";
-    $glass->{Alc} = "";
+    $glass->{Brew} = undef;
+    $glass->{Volume} = undef;
+    $glass->{Alc} = undef;
     $glass->{StDrinks} = "0";
     $glass->{SubType} = util::param($c,"selbrewsubtype") ;
     gettimestamp($c, $glass);
@@ -571,8 +571,6 @@ sub postglass {
       $glass->{Alc},
       $glass->{StDrinks}
       );
-      #or error($DBI::errstr);
-      # This fails if the database is locked by Sqlitebrowser.
       # TODO - Better error handling with db errors. Make a dedicated module for the db!
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";

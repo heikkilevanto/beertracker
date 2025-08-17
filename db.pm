@@ -40,8 +40,45 @@ sub open_db {
   }
 
   # $c->{dbh}->trace(1);  # Way too much SQL logging in error.log, could be useful some day
+
+  $c->{dbh}->{HandleError} = sub {
+    my ($msg, $dbh, $ret) = @_;
+    my $fk = "";
+    if ($msg =~ /FOREIGN KEY constraint failed/) {
+        my $violations = $c->{dbh}->selectall_arrayref("PRAGMA foreign_key_check");
+        foreach my $r (@$violations) {
+            my ($table, $rowid, $parent, $fkid) = @$r;
+            $fk .= "FK violation: $table.rowid=$rowid → $parent (fkid=$fkid)\n";
+        }
+    }
+    util::error("Database error: $msg " .
+      "r='$ret'\n".
+      "FK:\n$fk");
+
+    return 0; # rethrow the error after logging
+    # Except that we never return here, util::error exits
+};
+
+
 }
 
+################################################################################
+# Error handling
+################################################################################
+sub dberror {
+  my $c = shift;
+  my $params = shift || "";
+
+  my $fk = "";
+  my $err = $@;
+  my $rows = $c->{dbh}->selectall_arrayref("PRAGMA foreign_key_check");
+  foreach my $r (@$rows) {
+    my ($table, $rowid, $parent, $fkid) = @$r;
+    $fk .= "FK violation: $table.rowid=$rowid → $parent (fkid=$fkid)\n";
+  }
+  util::error("$err \n$fk \n$params");
+
+}
 
 ################################################################################
 # General db helpers
