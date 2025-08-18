@@ -36,7 +36,9 @@ sub open_db {
     or util::error($DBI::errstr);
   $c->{dbh}->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
   if ( $mode ne "ro" ) {
-    $c->{dbh}->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
+    $c->{dbh}->do('PRAGMA journal_mode = OFF'); # We don't need no fancyu journaling
+    $c->{dbh}->do('PRAGMA synchronous = OFF'); # No fsyncs needed, I trust my file system
+    #$c->{dbh}->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
     # But watch out for file permissions on the -wal and -sha files
     $c->{dbh}->do('PRAGMA foreign_keys = ON'); # Enforce foreign keys
   }

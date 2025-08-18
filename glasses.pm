@@ -444,7 +444,7 @@ sub postglass {
   $glass->{BrewType} = $selbrewtype;  # Trust the input more than location
   if ( isemptyglass($selbrewtype) ) { # 'empty' glass
     $glass->{Brew} = undef;  # "WRONG" to provoke a DB error when recordin a night
-    #$glass->{Brew} = "WRONG";  # "WRONG" to provoke a DB error when recordin a night
+    #$glass->{Brew} = "WRONG";  # "WRONG" to provoke a DB error when recordin a night COMMENT THIS OUT!
     $glass->{Volume} = undef;
     $glass->{Alc} = undef;
     $glass->{StDrinks} = "0";

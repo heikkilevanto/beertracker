@@ -201,6 +201,7 @@ if ( $q->request_method eq "POST" ) {
   if ( $@ ) {
     #db::dberror($c,"$@\n$debugparams");
     util::error("$@\n$debugparams");
+    $c->{dbh}->rollback;
   }
 
   # Redirect back to the op, but not editing
