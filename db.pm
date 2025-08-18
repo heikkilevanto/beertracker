@@ -49,7 +49,7 @@ sub open_db {
     my ($msg, $dbh) = @_;
     dberror($c, $msg);
     return 0; # rethrow the error after logging
-    # Then we catch it in index.cgi, and dump parameters etc
+    # Then we catch it in index.cgi, dump parameters, and roll back
    };
 }
 
@@ -67,8 +67,10 @@ sub dberror {
   $errmsg .= longmess("Stack Trace");
   #util::error($errmsg);
   print STDERR $errmsg;
-  print "\n\n"; # WOrks even before sending headers
+  print "\n\n"; # Works even before sending headers
+  print "<pre>\n\n";
   print $errmsg;
+  print "\n</pre>\n";
 
 }
 
