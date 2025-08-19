@@ -262,16 +262,17 @@ sub topline {
   my $c = shift; # context;
   my $s = "";
   $s .= "<span style='white-space: nowrap;'>\n";
-  $s .= "Beertracker";
+  $s .= showmenu($c);
+  my $name = "Beertracker";
   if ( $c->{devversion} ) {
-    $s =~ s/tracker/-DEV/;
+    $name =~ s/tracker/-DEV/;
   }
+  $s .= $name;
   my $v = Version::version_info();
   $s .= "&nbsp;\n";
   $s .= "$v->{tag}+$v->{commits}";
   $s .= "+" if ($v->{dirty});
   $s .= "&nbsp;\n";
-  $s .= showmenu($c);
 
   $s .= topstats($c);
 
@@ -289,7 +290,7 @@ sub showmenuitem {
   return "<option value='$op' $sel>$txt</option>\n";
 }
 # The main "Show" menu
-sub showmenu {
+sub showmenuOLD {
   my $c = shift; # context;
   my $s = "";
   $s .= " <select  style='width:4.5em;' " .
@@ -322,7 +323,50 @@ sub showmenu {
   return $s;
 }
 
+sub showmenu {
+  my $c = shift; # context;
+  my $s = "";
+  my $prod = "";
+  if ( $c->{devversion} ) {
+    $prod = '{ label: "Get Production Data", url: "o=copyproddata" },' ;
+  }
+  $s .= <<END;
+    <button id='menu-toggle'>☰ Menu</button>
+    <div id='menu'></div>
+    <script src='$c->{url}static/menu.js'></script>
+    <script>
+      var menuData = {
+        menu: [
+          { label: "Full", url: "o=Full" },
+          { label: "Graph", url: "o=Graph" },
+          { label: "Beer Board", url: "o=Board" },
+          { label: "Stats ...", children: [
+            { label: "Months", url: "o=Months" },
+            { label: "Years", url: "o=Years" },
+            { label: "Data", url: "o=DataStats" },
+            { label: "Ratings", url: "o=Ratings" },
+          ]},
+          { label: "Edit ...", children: [
+            { label: "Brews", url: "o=Brews" },
+            { label: "Locations", url: "o=Locations" },
+            { label: "Comments", url: "o=Comment" },
+            { label: "Persons", url: "o=Persons" },
+          ]},
+          { label: "More ...", children: [
+            { label: "Download your data", url: "o=Export" },
+            $prod
+            { label: "About", url: "o=About" },
+          ]},
+        ] };
+      initMenu(menuData, "menu", "menu-toggle");
+    </script>
+END
+  return $s;
+}
 
+################################################################################
+# Old stuff
+################################################################################
 # Some helpers from the old index.cgi. For now they are not used at all.
 # Kept here for future reference, in case I wish to reintroduce them.
 
@@ -358,19 +402,6 @@ sub showmenu {
 #   "target='_blank' class='no-print'><span>$txt</span></a>";
 #   return $lnk;
 # }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ################################################################################

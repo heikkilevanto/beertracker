@@ -287,6 +287,7 @@ sub htmlhead {
   print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
   print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
   # Style sheet - included right in the HTML headers
+  print "<style>:root { --menu-bg: $bgcolor; }</style>\n";
   print "<style rel='stylesheet'>\n";
   print '@media screen {';
   print "  body { background-color: $bgcolor; color: #FFFFFF; }\n";
@@ -311,6 +312,7 @@ sub htmlhead {
   print "  .no-wide, .no-wide * { display: none !important; }\n";
   print "}\n";
   print "</style>\n";
+  print "<link rel='stylesheet' href='static/beertracker.css'>\n";
   print "</head>\n";
   print "<body>\n";
   print "\n";

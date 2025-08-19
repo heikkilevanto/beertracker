@@ -15,10 +15,11 @@ use DBI;
 # local $Data::Dumper::Terse = 1;
 # local $Data::Dumper::Indent = 0;
 
+our $databasefile = "beerdata/beertracker.db";
+
 ################################################################################
 # Connect to the db
 ################################################################################
-our $databasefile = "beerdata/beertracker.db";
 
 
 sub open_db {
