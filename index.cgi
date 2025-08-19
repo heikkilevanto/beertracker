@@ -315,7 +315,7 @@ sub htmlhead {
   print "  .no-wide, .no-wide * { display: none !important; }\n";
   print "}\n";
   print "</style>\n";
-  print "<link rel='stylesheet' href='static/beertracker.css'>\n";
+  print "<link rel='stylesheet' href='static/menu.css'>\n";
   print "</head>\n";
   print "<body>\n";
   print "\n";
