@@ -1,0 +1,99 @@
+/* menu.css */
+
+/* Drawer container */
+html, body {
+  overflow-x: hidden;
+  padding: 0;
+
+}
+
+#menu {
+  position: fixed;
+  top: 0;
+  left: -250px;            /* hidden off-screen initially */
+  width: 250px;
+  height: 100%;
+  background-color: var(--menu-bg);
+  color: inherit;           /* matches body text color */
+  overflow-y: auto;
+  transition: left 0.3s ease;
+  z-index: 1000;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+  padding: 0;
+}
+
+/* Open state */
+#menu.open {
+  left: 0;
+}
+
+/* Menu sections */
+.menu-section {
+  font-weight: bold;
+  cursor: pointer;
+  margin: 0.5em 0;
+}
+#menu .menu-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5em 1em;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+#menu .menu-topbar .menu-toggle {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+#menu .menu-topbar .menu-toggle .close-x {
+  margin-left: auto;
+  font-weight: bold;
+}
+
+#menu .menu-close {
+  display: block;
+  margin-bottom: 1em;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-size: 1.5em;
+  cursor: pointer;
+}
+
+#menu .menu-close:hover {
+  color: #FFD700;
+}
+
+/* Links */
+#menu ul {
+  list-style: none;
+  padding-left: 1em;
+  margin: 0;
+}
+
+#menu li {
+  margin: 0.3em 0;
+}
+
+#menu a {
+  text-decoration: none;
+  color: inherit;   /* match body color */
+}
+
+#menu a.current {
+  font-weight: bold;
+  color: #FFD700;   /* highlight current item */
+}
+
+/* Optional: hover effect */
+#menu a:hover {
+  text-decoration: underline;
+}
