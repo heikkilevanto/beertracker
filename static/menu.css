@@ -20,6 +20,8 @@ html, body {
   z-index: 1000;
   box-shadow: 2px 0 5px rgba(0,0,0,0.3);
   padding: 0;
+  font-size: 1.1em;       /* slightly larger text */
+  line-height: 1.8;       /* more vertical spacing */
 }
 
 /* Open state */
@@ -33,6 +35,13 @@ html, body {
   cursor: pointer;
   margin: 0.5em 0;
 }
+
+#menu section {
+  margin-bottom: 1em;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding-bottom: 0.5em;
+}
+
 #menu .menu-topbar {
   display: flex;
   justify-content: space-between;
@@ -86,6 +95,7 @@ html, body {
 #menu a {
   text-decoration: none;
   color: inherit;   /* match body color */
+  padding: 0.5em 1em;     /* spacing around each link */
 }
 
 #menu a.current {
