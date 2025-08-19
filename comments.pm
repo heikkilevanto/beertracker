@@ -202,10 +202,10 @@ sub postcomment {
   my $person = util::param($c, "person") || undef;
 
   if ( $person && $person eq "new" ) {  # Adding a new person
-    my $newname = util::param($c,"newpersonName");
-    my $newfull = util::param($c,"newpersonFullName");
-    my $newdesc = util::param($c,"newpersonDescription");
-    my $newcont = util::param($c,"newpersonContact");
+    my $newname = util::param($c,"newpersonName") || undef;
+    my $newfull = util::param($c,"newpersonFullName") || undef;
+    my $newdesc = util::param($c,"newpersonDescription") || undef;
+    my $newcont = util::param($c,"newpersonContact") || undef;
     error ("A Person must have a name" )
        unless $newname;
     my $sql = "INSERT INTO persons (Name, FullName, Description, Contact) VALUES (?, ?, ?, ?)";
