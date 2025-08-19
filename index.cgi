@@ -287,7 +287,10 @@ sub htmlhead {
   print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
   print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
   # Style sheet - included right in the HTML headers
-  print "<style>:root { --menu-bg: $bgcolor; }</style>\n";
+  my ($r, $g, $b) = $bgcolor =~ /#(..)(..)(..)/;   # Make menu on semitransparent bg
+  $r = hex($r); $g = hex($g); $b = hex($b);
+  print "<style>:root { --menu-bg: rgba($r,$g,$b,0.9); }</style>\n";
+
   print "<style rel='stylesheet'>\n";
   print '@media screen {';
   print "  body { background-color: $bgcolor; color: #FFFFFF; }\n";

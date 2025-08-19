@@ -19,6 +19,12 @@ function initMenu(menuData, containerId, toggleButtonId) {
         childList.style.display = "none";
 
         span.addEventListener("click", () => {
+          // collapse all other sibling submenus
+          const siblingLists = Array.from(span.parentElement.parentElement.children)
+            .map(li => li.querySelector("ul"))
+            .filter(ul => ul && ul !== childList);
+          siblingLists.forEach(ul => ul.style.display = "none");
+
           childList.style.display =
             childList.style.display === "none" ? "block" : "none";
         });
