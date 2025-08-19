@@ -280,48 +280,6 @@ sub topline {
   $s .= "<hr>\n";
 } # topline
 
-# Helper for a menu item
-sub showmenuitem {
-  my $c = shift;
-  my $op = shift;
-  my $txt = shift;
-  my $sel = "";
-  $sel = "selected" if ($c->{op} =~ /$op/i );
-  return "<option value='$op' $sel>$txt</option>\n";
-}
-# The main "Show" menu
-sub showmenuOLD {
-  my $c = shift; # context;
-  my $s = "";
-  $s .= " <select  style='width:4.5em;' " .
-              "onchange='document.location=\"$c->{url}?o=\"+this.value;'>\n";
-  $s .= showmenuitem($c,'Full', 'Full List');
-  $s .= showmenuitem($c,'Graph', 'Graph');
-  $s .= showmenuitem($c,'board', 'Beer Board');
-  $s .= showmenuitem($c,'Months', 'Stats');
-  $s .= showmenuitem($c,'Brew', 'Brews');
-  $s .= showmenuitem($c,'Location', 'Locations');
-  $s .= showmenuitem($c,'Comment', 'Comments');
-  $s .= showmenuitem($c,'Person', 'Persons');
-  $s .= showmenuitem($c,'Months', 'Month stats');
-  $s .= showmenuitem($c,'Years', 'Year stats');
-  $s .= showmenuitem($c,'DataStats', 'Data Stats');
-  $s .= showmenuitem($c,'Ratings', 'Rating Stats');
-  $s .= showmenuitem($c,'Export', 'Download data');
-  $s .= showmenuitem($c,'About', 'About');
-  if ( $c->{devversion} ) {
-    $s .= showmenuitem($c,'copyproddata', 'Get Production Data');
-  }
-  $s .= "</select>\n";
-#  $s .=  " &nbsp; &nbsp; &nbsp;";
-#  if ( $c->{op} && $c->{op} !~ /graph/i ) {
-#    $s .= "<a href='$c->{url}'><b>G</b></a>\n";
-#  } else {
-#    $s .= "<a href='$c->{url}?o=board'><b>B</b></a>\n";
-#  }
-
-  return $s;
-}
 
 sub showmenu {
   my $c = shift; # context;
