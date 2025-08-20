@@ -42,6 +42,12 @@ html, body {
   padding-bottom: 0.5em;
 }
 
+/* Highlight parent of current page */
+.menu-section.open-parent {
+  text-decoration: underline;
+  color: #FFD700; /* same as current link, optional */
+}
+
 #menu .menu-topbar {
   display: flex;
   justify-content: space-between;

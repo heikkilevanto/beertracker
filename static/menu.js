@@ -5,6 +5,7 @@ function initMenu(menuData, containerId, toggleButtonId) {
   if (!container || !menuData || !menuData.menu) return;
 
   function buildMenu(items, currentLabel) {
+
     const ul = document.createElement("ul");
 
     items.forEach(item => {
@@ -32,8 +33,9 @@ function initMenu(menuData, containerId, toggleButtonId) {
         li.appendChild(span);
         li.appendChild(childList);
 
-        if (item.children.some(c => c.label === currentLabel)) {
+        if (item.children.some(c => c.url === currentLabel)) {
           childList.style.display = "block";
+          span.classList.add("open-parent");
         }
 
       } else {
@@ -41,8 +43,12 @@ function initMenu(menuData, containerId, toggleButtonId) {
         a.textContent = item.label;
         a.href = window.location.pathname + "?" + item.url;
 
-        if (item.label === currentLabel) {
+        if (item.url === currentLabel) {
           a.classList.add("current");
+        }
+        if (item.children && item.children.some(c => c.url === currentLabel)) {
+          childList.style.display = "block";
+          span.classList.add("open-parent");
         }
 
         li.appendChild(a);

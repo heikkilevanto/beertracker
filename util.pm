@@ -288,16 +288,20 @@ sub showmenu {
   if ( $c->{devversion} ) {
     $prod = '{ label: "Get Production Data", url: "o=copyproddata" },' ;
   }
+  my $current = "o=$c->{op}";
   $s .= <<END;
     <button id='menu-toggle'>☰ Menu</button>
     <div id='menu'></div>
     <script src='$c->{url}static/menu.js'></script>
     <script>
       var menuData = {
+        currentLabel: "$current",
         menu: [
-          { label: "Full", url: "o=Full" },
-          { label: "Graph", url: "o=Graph" },
-          { label: "Beer Board", url: "o=Board" },
+          { label: "Main ...", children: [
+            { label: "List only", url: "o=Full" },
+            { label: "With Graph", url: "o=Graph" },
+            { label: "Beer Board", url: "o=Board" },
+          ]},
           { label: "Stats ...", children: [
             { label: "Months", url: "o=Months" },
             { label: "Years", url: "o=Years" },
@@ -316,7 +320,7 @@ sub showmenu {
             { label: "About", url: "o=About" },
           ]},
         ] };
-      initMenu(menuData, "menu", "menu-toggle");
+      initMenu(menuData, "menu", "menu-toggle" );
     </script>
 END
   return $s;
