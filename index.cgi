@@ -315,7 +315,8 @@ sub htmlhead {
   print "  .no-wide, .no-wide * { display: none !important; }\n";
   print "}\n";
   print "</style>\n";
-  print "<link rel='stylesheet' href='static/menu.css'>\n";
+  my $mtime = (stat("static/menu.css"))[9] || time;
+  print "<link rel='stylesheet' href='static/menu.css?m=$mtime'>\n";
   print "</head>\n";
   print "<body>\n";
   print "\n";

@@ -34,6 +34,7 @@ function initMenu(menuData, containerId, toggleButtonId) {
         li.appendChild(childList);
 
         if (item.children.some(c => c.url === currentLabel)) {
+          // Note, this works on max 2-level menu. Fix later if needed
           childList.style.display = "block";
           span.classList.add("open-parent");
         }
