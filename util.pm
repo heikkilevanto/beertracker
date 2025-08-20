@@ -308,7 +308,7 @@ sub showmenu {
             { label: "Data", url: "o=DataStats" },
             { label: "Ratings", url: "o=Ratings" },
           ]},
-          { label: "Edit ...", children: [
+          { label: "List / Edit ...", children: [
             { label: "Brews", url: "o=Brews" },
             { label: "Locations", url: "o=Locations" },
             { label: "Comments", url: "o=Comment" },
