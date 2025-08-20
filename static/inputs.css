@@ -1,0 +1,86 @@
+
+
+/* inputs.css – styles for BeerTracker form widgets */
+
+/* Dropdown wrapper */
+.dropdown {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+}
+
+/* Text field */
+.dropdown-filter {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+}
+
+/* Hidden input stays invisible */
+.dropdown input[type="hidden"] {
+  display: none;
+}
+
+/* The dropdown list */
+.dropdown-list {
+  position: absolute;
+  width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  background-color: var(--bgcolor, white);
+  z-index: 1000;
+  display: none; /* hidden by default */
+}
+
+/* Each selectable item */
+.dropdown-item {
+  cursor: pointer;
+  padding: 3px;
+}
+
+.dropdown-item:hover {
+  background-color: var(--altbgcolor, #eee);
+}
+
+/* Container for “new record” input form */
+.dropdown-new {
+  padding-left: 10px;
+}
+
+
+/* Custom select wrapper */
+.custom-select {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  cursor: pointer;
+}
+
+/* Displayed value */
+.custom-select-display {
+  padding: 4px;
+  border: 1px solid #ccc;
+  background-color: var(--bgcolor, white);
+}
+
+/* Options list */
+.custom-select-list {
+  position: absolute;
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  background-color: var(--bgcolor, white);
+  z-index: 1000;
+  display: none;
+}
+
+/* Each selectable item */
+.custom-select-item {
+  padding: 3px;
+}
+
+.custom-select-item:hover {
+  background-color: var(--altbgcolor, #eee);
+}
