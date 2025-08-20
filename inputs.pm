@@ -21,9 +21,6 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 # Omit the "new" line if you don't want it
 # Returns a string ready to be printed in a form
 
-# TODO SOON - Move the CSS away from here
-# TODO - Refactor so that the javascript will not need variable named functions
-# TODO - Move the javascript into its own routine
 
 sub dropdown {
   my $c             = shift;
