@@ -192,7 +192,9 @@ sub queryselect {
     $opts .= "<option value='$v' $sel>$v</option>\n";
   }
   $sth->finish;
-  return "<select name='$name'>\n$opts</select>";
+  return "<select name='$name' id='$name'>\n$opts</select>\n".
+    "<script>replaceSelectWithCustom(document.getElementById('$name')); </script>\n";
+
 }
 ################################################################################
 # Simple buffered read of records.

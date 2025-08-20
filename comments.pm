@@ -164,7 +164,7 @@ sub commentform {
   #$s .= "<br/>";
 
   # Rating dropdown
-  $s .= "<select name='rating'>\n";
+  $s .= "<select name='rating' id='rating'>\n";
   $s .= "<option value=''>Rating</option>\n";
   my $r = $com->{Rating} || 0;
   for my $i (1 .. $#ratings) {  # Skip "Zero"
@@ -172,6 +172,8 @@ sub commentform {
     $s .= "<option value='$i'$selected>$i: $ratings[$i]</option>\n";
   }
   $s .= "</select>\n";
+  $s .= "<script>replaceSelectWithCustom(document.getElementById('rating'));</script>\n";
+
   $s .= "&nbsp; (photo) <br/>\n";
   # TODO - Photo button
 

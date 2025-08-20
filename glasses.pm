@@ -49,20 +49,22 @@ sub selectbrewtype {
   my $sql = "select distinct BrewType from Glasses";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( );
-  my $s = "";
+  my $opts = "";
   while ( my $bt = $sth->fetchrow_array ) {
     my $se = "";
     $se = "selected" if ( $bt eq $selected );
     my $em = "data-isempty=1";
     $em = "" if ( ! isemptyglass($bt) );
-    $s .= "<option value='$bt' $em $se>$bt</option>\n";
+    $opts .= "<option value='$bt' $em $se>$bt</option>\n";
   }
   util::error ("No brew types in the database. Insert some dummy glasses")
-    unless ($s);
-  $s = "<select name='selbrewtype' id='selbrewtype' onChange='selbrewchange(this);'>\n" .
-    $s . "</select>\n";
+    unless ($opts);
+  my $s = "<select name='selbrewtype' id='selbrewtype' onChange='selbrewchange(this);'>\n" .
+    $opts . "</select>\n";
   my $script = <<'SCRIPT';
     <script>
+      replaceSelectWithCustom(document.getElementById("selbrewtype"));
+
       function selbrewchange(el) {
         const selbrew = document.getElementById("selbrewtype");
         const val = selbrew.value;
@@ -145,7 +147,7 @@ sub inputform {
         "enctype='multipart/form-data'>\n";
   print "<table>\n";
 
-  print "<tr><td>Id $rec->{Id}</td>\n";
+  print "<tr><td width='120px'>Id $rec->{Id}</td>\n";
   my $stamp = util::datestr("%F %T");
   print "<td>" ; # <input name='stamp' value='$stamp' size=25 $clr/>";
   my ($date,$time) = ( "", "");

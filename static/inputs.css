@@ -59,9 +59,22 @@
 
 /* Displayed value */
 .custom-select-display {
-  padding: 4px;
+  padding: 4px 30px 4px 4px; /* extra right padding for arrow */
   border: 1px solid #ccc;
-  background-color: var(--bgcolor, white);
+  background-color: var(--altbgcolor, white);
+  position: relative;
+}
+
+/* Arrow on the right */
+.custom-select-display::after {
+  content: "▼"; /* downward arrow */
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 0.8em;
+  color: white;
 }
 
 /* Options list */

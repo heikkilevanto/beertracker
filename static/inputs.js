@@ -100,3 +100,44 @@ function initCustomSelect(container) {
     if (!container.contains(e.target)) list.style.display = "none";
   });
 }
+
+// Convert an existing <select> into a custom select
+function replaceSelectWithCustom(selectEl) {
+  if (!selectEl) return;
+
+  // Create wrapper
+  const wrapper = document.createElement("div");
+  wrapper.className = "custom-select";
+
+  // Display div
+  const display = document.createElement("div");
+  display.className = "custom-select-display";
+  display.textContent = selectEl.selectedOptions[0]?.textContent || "";
+  wrapper.appendChild(display);
+
+  // Hidden input
+  const hidden = document.createElement("input");
+  hidden.type = "hidden";
+  hidden.name = selectEl.name;
+  hidden.value = selectEl.value;
+  wrapper.appendChild(hidden);
+
+  // Options list
+  const list = document.createElement("div");
+  list.className = "custom-select-list";
+  Array.from(selectEl.options).forEach(opt => {
+    const item = document.createElement("div");
+    item.className = "custom-select-item";
+    item.dataset.value = opt.value;
+    item.textContent = opt.textContent;
+    list.appendChild(item);
+  });
+  wrapper.appendChild(list);
+
+  // Replace <select> in DOM
+  selectEl.parentNode.replaceChild(wrapper, selectEl);
+
+  // Initialize the custom select behavior
+  initCustomSelect(wrapper);
+}
+

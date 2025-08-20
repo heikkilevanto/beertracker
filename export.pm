@@ -47,7 +47,7 @@ sub exportform {
 
   my ( $datefrom, $dateto, $mode, $schema, $action ) = export_params($c);
   print qq{
-  <form method="GET" action="index.cgi">
+  <form method="GET" action="index.cgi" style='padding-bottom: 200px;'>
   <input type="hidden" name="o" value="DoExport">
   Export all data for user <b>'$c->{username}'</b><br>
   <table>
@@ -62,7 +62,7 @@ sub exportform {
     <tr>
       <td>Support records &nbsp;</td>
       <td>
-        <select name="mode">
+        <select name="mode" id="mode">
           <option value="partial">Only referenced</option>
           <option value="full">All in related tables</option>
         </select>
@@ -71,7 +71,7 @@ sub exportform {
     <tr>
       <td>Schema</td>
       <td>
-        <select name="schema">
+        <select name="schema" id="schema" >
           <option value="none">Data only</option>
           <option value="dropcreate">Drop + Create</option>
         </select>
@@ -80,7 +80,7 @@ sub exportform {
     <tr>
       <td>Action</td>
       <td>
-        <select name="action">
+        <select name="action" id="action">
           <option value="download">Download file</option>
           <option value="display">Show on screen</option>
         </select>
@@ -94,6 +94,11 @@ sub exportform {
     </tr>
   </table>
   </form>
+  <script>
+    replaceSelectWithCustom(document.getElementById("mode"));
+    replaceSelectWithCustom(document.getElementById("schema"));
+    replaceSelectWithCustom(document.getElementById("action"));
+  </script>
 
     };
 
