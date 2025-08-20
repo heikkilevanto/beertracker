@@ -265,6 +265,22 @@ exit();  # The rest should be subs only
 
 # End of main
 
+# Helper to make a link to a CSS file for the headers
+# Adds a parameter with the file mod time, so the browsers
+# can not use an older version from cache
+sub csslink {
+  my $module = shift;
+  my $fn = "static/$module.css";
+  my $mtime = (stat($fn))[9] || time;
+  return "<link rel='stylesheet' href='$fn?m=$mtime'>\n";
+}
+# Helper to make a link to a CSS file for the headers
+sub jslink {
+  my $module = shift;
+  my $fn = "static/$module.js";
+  my $mtime = (stat($fn))[9] || time;
+  return "<script src='$fn?m=$mtime'></script>\n";
+}
 
 sub htmlhead {
   print $q->header(
@@ -290,6 +306,8 @@ sub htmlhead {
   my ($r, $g, $b) = $bgcolor =~ /#(..)(..)(..)/;   # Make menu on semitransparent bg
   $r = hex($r); $g = hex($g); $b = hex($b);
   print "<style>:root { --menu-bg: rgba($r,$g,$b,0.9); }</style>\n";
+  print "<style>:root { --bgcolor: $bgcolor; }</style>\n";
+  print "<style>:root { --altbgcolor: $altbgcolor; }</style>\n";
 
   print "<style rel='stylesheet'>\n";
   print '@media screen {';
@@ -315,8 +333,13 @@ sub htmlhead {
   print "  .no-wide, .no-wide * { display: none !important; }\n";
   print "}\n";
   print "</style>\n";
-  my $mtime = (stat("static/menu.css"))[9] || time;
-  print "<link rel='stylesheet' href='static/menu.css?m=$mtime'>\n";
+  # CSS files
+  print csslink("menu");
+  print csslink("inputs");
+  # JS files
+  print jslink("menu");
+  print jslink("geo");
+  print jslink("inputs");
   print "</head>\n";
   print "<body>\n";
   print "\n";

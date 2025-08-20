@@ -289,12 +289,10 @@ sub showmenu {
     $prod = '{ label: "Get Production Data", url: "o=copyproddata" },' ;
   }
   my $current = "o=$c->{op}";
-  my $mtime = (stat("static/menu.js"))[9] || time;
 
   $s .= <<END;
     <button id='menu-toggle'>☰ Menu</button>
     <div id='menu'></div>
-    <script src='$c->{url}static/menu.js?m=$mtime'></script>
     <script>
       var menuData = {
         currentLabel: "$current",

@@ -1,5 +1,4 @@
 # Routines for input forms
-
 package inputs;
 use strict;
 use warnings;
@@ -8,7 +7,6 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
-
 
 my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 
@@ -28,158 +26,48 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 # TODO - Move the javascript into its own routine
 
 sub dropdown {
-  my $c = shift;
-  my $inputname = shift;   # Name of the input field, f.ex. 'loc'
-  my $selectedid = shift,  # Id of the initially  selected item, '6'
-  my $selectedname= shift; # Name of the initially selected item, 'Ølbaren'
-  my $options = shift; # List of DIVs to select from
-                #    "<div class='dropdown-item' id='4'>Home</div>\n".
-                #    "<div class='dropdown-item' id='6'>Ølbaren</div>\n" ...
-  my $tablename = shift;  # Table to grab input fields for new records. Empty if not
-  my $newfieldprefix = shift; # Prefix for new input fields, f.ex. newloc
-  my $skipnewfields = shift || "" ; # regexp. "Id|HiddenField|AlsoThis"
-
-  my $s = "input='$inputname' sel='$selectedid' " .
-     "seln='$selectedname' table='$tablename' newpref='$newfieldprefix' skip='$skipnewfields'";
-  print STDERR "dropdown: $s \n";
-  $s = "<!-- DROPDOWN START: $s -->\n";
+  my $c             = shift;
+  my $inputname     = shift;   # Name of the input field, e.g. 'loc'
+  my $selectedid    = shift;   # Id of initially selected item
+  my $selectedname  = shift;   # Name of initially selected item
+  my $options       = shift;   # List of DIVs to select from
+  my $tablename     = shift;   # Table for new record form
+  my $newfieldprefix= shift;   # Prefix for new input fields
+  my $skipnewfields = shift || "";
 
   my $newdiv = "";
-  if ($tablename) { # We want a way to add new records
-    # Add an option to do so
-    $options = "<div class='dropdown-item' id='new'>(new)</div>\n" . $options;
-    $newdiv = "<div id='newdiv-$inputname' style='padding-left:10px;' hidden>\n";
-    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname,"",$skipnewfields);
+  if ($tablename) {
+    $options = "<div class='dropdown-item' id='new'>(new)</div>\n$options";
+    $newdiv  = "<div class='dropdown-new' id='newdiv-$inputname' hidden>\n";
+    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname, "", $skipnewfields);
     $newdiv .= "</div>";
   }
 
-  $s .= <<JSEND;
-  <style>
-        .dropdown-list {
-            position: absolute;
-            width: 100%;
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ccc;
-            z-index: 1000;
-            background-color: $c->{bgcolor};
-            display: none; /* Hidden by default */
-        }
-        .dropdown-item {
-            cursor: pointer;
-            padding: 3px;
-        }
-        .dropdown-item:hover {
-            background-color: $c->{altbgcolor};
-        }
-    </style>
-        $newdiv
-        <div id="dropdown-$inputname" style="position:relative;width:100%;max-width:300px;">
-        <input type="text" id="dropdown-filter-$inputname" autocomplete="off"
-          style="width:100%" placeholder='$inputname' value='$selectedname' />
-        <input type="hidden" id='$inputname' name='$inputname' value='$selectedid' >
-        <div id="dropdown-list-$inputname" class="dropdown-list">
-            $options
-        </div>
+  my $s = <<"HTML";
+<!-- DROPDOWN START: input='$inputname' -->
+<div id="dropdown-$inputname" class="dropdown">
+  <div class="dropdown-main">
+    <input type="text"
+           class="dropdown-filter"
+           autocomplete="off"
+           placeholder="$inputname"
+           value="$selectedname" />
+    <input type="hidden"
+           id="$inputname"
+           name="$inputname"
+           value="$selectedid" />
+    <div class="dropdown-list">
+      $options
     </div>
-
-    <script>
-        const filterinput$inputname = document.getElementById('dropdown-filter-$inputname');
-        const hidinput$inputname = document.getElementById('$inputname');
-        const dropdownList$inputname = document.getElementById('dropdown-list-$inputname');
-        const wholedropdown$inputname = document.getElementById('dropdown-$inputname');
-        const newdiv$inputname = document.getElementById('newdiv-$inputname');
-
-        // Handle selection of a dropdown item
-        dropdownList$inputname.addEventListener('click', event => {
-            if (event.target.classList.contains('dropdown-item')) {
-              filterinput$inputname.value = event.target.textContent;
-              filterinput$inputname.oldvalue = "";
-              hidinput$inputname.value = event.target.getAttribute("id");
-              dropdownList$inputname .style.display = 'none';
-              if (event.target.getAttribute("id") == "new" ) {
-                wholedropdown$inputname.hidden = true;
-                newdiv$inputname.hidden = false;
-                const inputs = newdiv$inputname.querySelectorAll('[data-required="1"]');
-                for (let i = 0; i < inputs.length; i++) {
-                //if (inputs[i].offsetWidth || inputs[i].offsetHeight || inputs[i].getClientRects().length) {
-                if (inputs[i].offsetParent != null ) {
-                    // A trick to see if a field is visible
-                    inputs[i].setAttribute('required', 'required');
-                  } else {
-                    inputs[i].removeAttribute("required");
-                  }
-                }
-                document.querySelector('#newdiv-$inputname input')?.focus();
-              } else { // update alc and brewtype if selected a brew
-                const alcinp = document.getElementById("alc");
-                const selalc = event.target.getAttribute("alc");
-                if ( alcinp && selalc ) {
-                  alcinp.value = selalc;
-                  // console.log("Set alc " + selalc + " from brew ");
-                }
-              }
-            }
-        });
-
-        // Show/hide dropdown based on filter focus
-        filterinput$inputname.addEventListener('focus', () => {
-            dropdownList$inputname .style.display = 'block';
-            filterinput$inputname.oldvalue = filterinput$inputname.value;
-            filterinput$inputname.value = "";
-            filter$inputname();
-        });
-
-        filterinput$inputname.addEventListener('blur', () => {
-            if ( filterinput$inputname.oldvalue ) {
-              filterinput$inputname.value = filterinput$inputname.oldvalue;
-            }
-            // Delay hiding to allow click events on dropdown items
-            setTimeout(() => {
-                dropdownList$inputname .style.display = 'none';
-            }, 200);
-        });
-
-        // Filter dropdown items
-        function filter$inputname() {
-            const selbrewtype = document.getElementById("selbrewtype");
-            const filter = filterinput$inputname.value.toLowerCase();
-            Array.from(dropdownList$inputname .children).forEach(item => {
-                var brewtype = item.getAttribute("brewtype");
-                var disp = ''; // default to showing it
-                if ( selbrewtype && brewtype ) {
-                  if ( selbrewtype.value != brewtype ) {
-                    disp = 'none';
-                    //console.log( "HIDE '" + item.textContent + "' type '" + brewtype + "' != '" + selbrewtype.value + "'" );
-                  }
-                }
-                if (! item.textContent.toLowerCase().includes(filter) ) {
-                  disp = 'none';
-                  //console.log( "HIDE '" + item.textContent + "' filt '" + filter + "'" );
-                }
-                item.style.display = disp ;
-
-            });
-        };
-
-        // Filter dropdown items as the user types
-        filterinput$inputname.addEventListener('input', () => {
-          filter$inputname();
-        });
-
-        // Handle Esc to close the dropdown
-        filterinput$inputname.addEventListener("keydown", function(event) {
-          if (event.key === "Escape" || event.keyCode === 27) {
-          this.blur();
-          }
-        });
-
-    </script>
-JSEND
-  $s .= "<!-- DROPDOWN END : input='$inputname' -->\n";
+  </div>
+  $newdiv
+</div>
+<script>initDropdown(document.getElementById('dropdown-$inputname'));</script>
+<!-- DROPDOWN END: input='$inputname' -->
+HTML
 
   return $s;
-} # dropdown
+}
 
 
 ################################################################################
