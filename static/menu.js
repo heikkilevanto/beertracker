@@ -33,7 +33,7 @@ function initMenu(menuData, containerId, toggleButtonId) {
         li.appendChild(span);
         li.appendChild(childList);
 
-        if (item.children.some(c => c.url === currentLabel)) {
+        if (item.children.some(c => c.url.toLowerCase() === currentLabel.toLowerCase())) {
           // Note, this works on max 2-level menu. Fix later if needed
           childList.style.display = "block";
           span.classList.add("open-parent");
@@ -44,7 +44,7 @@ function initMenu(menuData, containerId, toggleButtonId) {
         a.textContent = item.label;
         a.href = window.location.pathname + "?" + item.url;
 
-        if (item.url === currentLabel) {
+        if (item.url.toLowerCase() === currentLabel.toLowerCase()) {
           a.classList.add("current");
         }
         if (item.children && item.children.some(c => c.url === currentLabel)) {
