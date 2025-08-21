@@ -20,8 +20,11 @@ jobs:
       - name: Syntax check CGI and modules
         run: |
           set -e
+          echo "Checking index.cgi"
           perl -c index.cgi
           for f in $(find . -name '*.pm'); do
+            echo "Checking $f"
             perl -c "$f"
           done
+          echo "All done"
 
