@@ -305,10 +305,12 @@ sub htmlhead {
   # Style sheet - included right in the HTML headers
   my ($r, $g, $b) = $bgcolor =~ /#(..)(..)(..)/;   # Make menu on semitransparent bg
   $r = hex($r); $g = hex($g); $b = hex($b);
-  print "<style>:root { --menu-bg: rgba($r,$g,$b,0.9); }</style>\n";
-  print "<style>:root { --bgcolor: $bgcolor; }</style>\n";
-  print "<style>:root { --altbgcolor: $altbgcolor; }</style>\n";
-
+  print "<style> :root {\n";
+  print "  --bgcolor: $bgcolor;\n";
+  print "  --altbgcolor: $altbgcolor;\n";
+  print "  --menu-bg: rgba($r,$g,$b,0.9);\n";
+  print "  --menu-current: #FFD700;\n";    # Some kind of yellow
+  print "}</style>\n";
   print "<style rel='stylesheet'>\n";
   print '@media screen {';
   print "  body { background-color: $bgcolor; color: #FFFFFF; }\n";

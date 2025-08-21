@@ -44,8 +44,7 @@ html, body {
 
 /* Highlight parent of current page */
 .menu-section.open-parent {
-  text-decoration: underline;
-  color: #FFD700; /* same as current link, optional */
+  color: var(--menu-current);
 }
 
 #menu .menu-topbar {
@@ -84,7 +83,7 @@ html, body {
 }
 
 #menu .menu-close:hover {
-  color: #FFD700;
+  color: var(--menu-current);
 }
 
 /* Links */
@@ -106,10 +105,29 @@ html, body {
 
 #menu a.current {
   font-weight: bold;
-  color: #FFD700;   /* highlight current item */
+  color:var(--menu-current); /* highlight current item */
 }
 
-/* Optional: hover effect */
-#menu a:hover {
-  text-decoration: underline;
+/* Add '*' before current link */
+#menu a.current::before,
+.menu-section.open-parent::before {
+  content: "* ";           /* the asterisk and a space */
+  color: var(--menu-current); /* optional, matches highlight color */
 }
+
+/* Make links full-width and add smooth transition */
+#menu a,
+.menu-section {
+  display: block;
+  width: 100%;
+  padding: 0.5em 1em;          /* ensures full line is highlighted */
+  transition: background-color 0.2s ease;
+}
+
+/* Hover effect for links and parents */
+#menu a:hover,
+.menu-section:hover {
+  text-decoration: none;                   /* remove underline */
+  background-color: var(--altbgcolor);    /* highlight full line */
+}
+

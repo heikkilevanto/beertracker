@@ -85,7 +85,6 @@ function initCustomSelect(container) {
   const hidden  = container.querySelector("input[type=hidden]");
 
   display.addEventListener("click", () => {
-    console.log("click");
     list.style.display = list.style.display === "block" ? "none" : "block";
   });
 
