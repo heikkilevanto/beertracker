@@ -25,14 +25,15 @@ jobs:
         run: |
           set -ex
           echo "Checking index.cgi"
-          perl -c index.cgi
+          perl -c index.cgi 2>&1
 
       - name: Syntax check modules
         run: |
           set -ex
-          for f in $(find . -name '*.pm'); do
+          for f in *.pm';
+          do
             echo "Checking $f"
-            perl -c "$f"
+            perl -c "$f" 2>&1
           done
           echo "All done"
 
