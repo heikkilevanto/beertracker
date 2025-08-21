@@ -1,5 +1,5 @@
-Part of my beertracker
-Routines for managing photos
+# Part of my beertracker
+# Routines for managing photos
 
 package photos;
 use strict;
@@ -7,6 +7,12 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
+use CGI qw( -utf8 );
+my $q = CGI->new;
+$q->charset( "UTF-8" );
+
+
+# TODO - Not really used yet
 
 # Default image sizes (width in pixels)
 my %imagesizes;
@@ -14,6 +20,11 @@ $imagesizes{"thumb"} = 90;
 $imagesizes{"mob"} = 240;  # 320 is full width on my phone
 $imagesizes{"pc"} = 640;
 
+
+# TODO - This should not be hard coded
+# TODO - Pass $c to all subs, etc
+#
+my $photodir = "beerdata/photo";
 
 # TODO
 #- Make a routine to scale to any given width. Check if already there.
