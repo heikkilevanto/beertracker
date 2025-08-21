@@ -17,6 +17,10 @@ jobs:
       - name: Check Perl version
         run: perl -v
 
+
+      - name: Install Perl modules
+        run: sudo apt-get update && sudo apt-get install -y libdbi-perl libdbd-sqlite3-perl
+
       - name: Syntax check CGI and modules
         run: |
           set -e
