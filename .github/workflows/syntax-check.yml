@@ -1,0 +1,27 @@
+
+name: Perl Syntax Check
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Check Perl version
+        run: perl -v
+
+      - name: Syntax check CGI and modules
+        run: |
+          set -e
+          perl -c index.cgi
+          for f in $(find . -name '*.pm'); do
+            perl -c "$f"
+          done
+
