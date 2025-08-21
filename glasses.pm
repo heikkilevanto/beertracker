@@ -11,7 +11,6 @@ use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
 
-
 our %volumes = ( # Comment is displayed on the About page
   'T' => " 2 Taster, sizes vary, always small",
   'G' => "16 Glass of wine - 12 in places, at home 16 is more realistic",
@@ -24,6 +23,7 @@ our %volumes = ( # Comment is displayed on the About page
 );
 
 # currency conversions
+# Not used at the moment, kept here for future reference
 my %currency;
 $currency{"eur"} = 7.5;
 $currency{"e"} = 7.5;
@@ -62,7 +62,7 @@ sub selectbrewtype {
   my $s = "<select name='selbrewtype' id='selbrewtype' onChange='selbrewchange(this);'>\n" .
     $opts . "</select>\n";
   my $script = <<'SCRIPT';
-    <script>
+    <script>Z
       replaceSelectWithCustom(document.getElementById("selbrewtype"));
 
       function selbrewchange(el) {
