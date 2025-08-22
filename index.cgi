@@ -59,7 +59,7 @@ require "./inputs.pm"; # Helper routines for input forms
 require "./listrecords.pm"; # A way to produce a nice list from db records
 require "./aboutpage.pm"; # The About page
 require "./VERSION.pm"; # auto-generated version info
-require "./copyproddata.pm"; # Copy production database into the dev version
+require "./superuser.pm"; # Superuser functions: Copåy prod data, git pull
 require "./db.pm"; # Various database helpers
 require "./geo.pm"; # Geo coordinate stuff
 require "./ratestats.pm"; # Histogram of the ratings
@@ -158,7 +158,7 @@ if ($devversion) { # Print a line in error.log, to see what errors come from thi
 
 if ( $devversion && $c->{op} eq "copyproddata" ) {
   print STDERR "Copying prod data to dev \n";
-  copyproddata::copyproddata($c);
+  superuser::copyproddata($c);
   exit;
 }
 

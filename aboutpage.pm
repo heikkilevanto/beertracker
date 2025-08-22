@@ -71,8 +71,10 @@ sub about {
 
   print "Beertracker on GitHub: <ul>";
   print aboutlink("GitHub","https://github.com/heikkilevanto/beertracker");
-  print aboutlink("Bugtracker", "https://github.com/heikkilevanto/beertracker/issues?".
+  print aboutlink("Issues", "https://github.com/heikkilevanto/beertracker/issues?".
        "q=is%3Aissue%20is%3Aopen%20sort%3Aupdated-desc%20-label%3ALater%20-label%3ANextVersion");
+  print aboutlink("Edit","https://github.dev/heikkilevanto/beertracker/tree/master");
+
   print aboutlink("User manual", "https://github.com/heikkilevanto/beertracker/blob/master/manual.md" );
   print "</ul><p>\n";
   #print "Some of my favourite bars and breweries<ul>";

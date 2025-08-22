@@ -1,6 +1,15 @@
-# Small helper routines
+# Superuser functions for my beertracker
 
-package copyproddata;
+# This module implements a few routines that should only be available for
+# the superuser, myself. These are
+#
+# - copyproddata:  Copies the production data into the dev setup, so I can test
+# with data that is up to date. Only available in the dev version.
+#
+# - gitstatus: Shows the git status on both dev and production version, and allows
+# a git pull to be run on any of them.
+
+package superuser;
 use strict;
 use warnings;
 
@@ -11,13 +20,15 @@ use POSIX qw(strftime localtime locale_h);
 
 
 ################################################################################
-# Copy production data to dev file
+# Copy production database to dev
 # Needs to be before the HTML head, as it forwards back to the page
 ################################################################################
 # Nice to see up to date data when developing
 # NOTE Had some problems with file permissions and the -wal and -shm files. Now I
 # delete those first, and copy over if they exist. Seems to work. But I leave
 # noted to STDERR so I can look in the log if I run into problems later.
+# NOTE - I have stopped using journaling at all, so the file permission problems
+# should be fixed
 sub copyproddata {
   my $c = shift;
   if (!$c->{devversion}) {
@@ -44,10 +55,24 @@ sub copyproddata {
 } # copyproddata
 
 
+################################################################################
+# Show git status
+################################################################################
+# Shows the git status on both dev and production version, and allows
+# a git pull to be run on any of them.
+# Useful if I edit a file directly in
+# github and commit it there. Then I can pull it first into dev and later
+# into prod. In case I made a typo that breaks dev, I can fix or revert it, and
+# then go to the production system and do a git pull on the dev setup.
 
+sub gitstatus {
+}
 
-# --- FUNCTIONS BELOW ---/
-# insert functions below
+################################################################################
+# Do a git pull
+################################################################################
+sub gitpull {
+}
 
 
 
