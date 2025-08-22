@@ -263,7 +263,7 @@ sub topline {
   my $s = "";
   $s .= "<span style='white-space: nowrap;'>\n";
   $s .= showmenu($c);
-  my $name = "Footracker";
+  my $name = "Beertracker";
   if ( $c->{devversion} ) {
     $name =~ s/tracker/-DEV/;
   }
