@@ -97,17 +97,13 @@ sub gitstatus {
   my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
   my $st = `$cmd` ;
   my $rc = $?;  # return code
+  print STDERR "gitstatus: $st \n";
   $st = encode_entities($st);
   print "<pre $style>\n$st\n</pre> \n";
-  if ($rc){
-    print STDERR "gitstatus: $st \n";
-    return;
-  }
   print "<hr>\n";
   my $reloc = "window.location.href=\"$c->{url}?o=GitPull&p=$p\"";
   print "$reloc <br>\n";
   print "Are you sure you want to do a <button onclick='$reloc'>Git Pull</button><br>\n";
-
 }
 
 ################################################################################
@@ -126,14 +122,12 @@ sub gitpull {
   print "Running $cmd <p/>\n";
   my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
   my $st = `$cmd` ;
+  print STDERR "gitpull: $st\n";
   my $rc = $?;  # return code
   $st = encode_entities($st);
-  print "<pre $style>\n$st\n</pre> \n";
-  if ($rc){
-    print STDERR "gitstatus: $st \n";
-    return;
-  }
-
+  print "<pre $style>\n$st\n</pre><p> \n";
+  print "Go back to <a href='$c->{url}?o=GitStatus'><span>Git Status</span></a>\n";
+  print "Or the <a href='$c->{url}?o=Graph'><span>Main list</span></a>\n";
 }
 
 
