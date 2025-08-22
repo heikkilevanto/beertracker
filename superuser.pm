@@ -17,7 +17,9 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
-
+use File::Basename;
+use Cwd qw(cwd);
+use HTML::Entities;
 
 ################################################################################
 # Copy production database to dev
@@ -54,6 +56,16 @@ sub copyproddata {
   exit();
 } # copyproddata
 
+################################################################################
+# Verify that the user is a superuser
+################################################################################
+# TODO - This could be stored in $c, or even retrieved from the db. For now,
+# a simple check is sufficient
+sub checksuperuser {
+  my $c = shift;
+  util::error("Not allowed") unless $c->{username} eq "heikki";
+}
+
 
 ################################################################################
 # Show git status
@@ -66,12 +78,62 @@ sub copyproddata {
 # then go to the production system and do a git pull on the dev setup.
 
 sub gitstatus {
+  my $c = shift;
+  checksuperuser($c);
+  my $cur = basename(cwd());
+  my $p = util::param($c, "p", $cur);
+  util::error("Bad path '$p'") unless $p =~ /^beertracker/ ;
+  print "<b>Git status for <i>'$p'</i> </b><p/>\n";
+  for my $d ( <../beertracker*> ) { #/  #The / needed to sync Kate's highlight
+    my $b = basename($d);
+    next if ($b eq $p );
+    print "&nbsp;(Switch to <a href='$c->{url}?o=$c->{op}&p=$b'><i>'$b'</i></a>)<br>\n";
+  }
+  print "<p/>\n";
+  chdir("../$p") or
+    util::error("Can not chdir to '$p' ");
+  my $cmd = "sudo -u heikki /usr/bin/git status -uno 2>&1";
+  print "Running $cmd <p/>\n";
+  my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
+  my $st = `$cmd` ;
+  my $rc = $?;  # return code
+  $st = encode_entities($st);
+  print "<pre $style>\n$st\n</pre> \n";
+  if ($rc){
+    print STDERR "gitstatus: $st \n";
+    return;
+  }
+  print "<hr>\n";
+  my $reloc = "window.location.href=\"$c->{url}?o=GitPull&p=$p\"";
+  print "$reloc <br>\n";
+  print "Are you sure you want to do a <button onclick='$reloc'>Git Pull</button><br>\n";
+
 }
 
 ################################################################################
 # Do a git pull
 ################################################################################
 sub gitpull {
+  my $c = shift;
+  checksuperuser($c);
+  my $cur = basename(cwd());
+  my $p = util::param($c, "p", $cur);
+  util::error("Bad path '$p'") unless $p =~ /^beertracker/ ;
+  print "<b>Doing a Git pull for <i>'$p'</i> </b><p/>\n";
+  chdir("../$p") or
+    util::error("Can not chdir to '$p' ");
+  my $cmd = "sudo -u heikki /usr/bin/git pull --ff-only 2>&1";
+  print "Running $cmd <p/>\n";
+  my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
+  my $st = `$cmd` ;
+  my $rc = $?;  # return code
+  $st = encode_entities($st);
+  print "<pre $style>\n$st\n</pre> \n";
+  if ($rc){
+    print STDERR "gitstatus: $st \n";
+    return;
+  }
+
 }
 
 

@@ -249,6 +249,10 @@ if ( $c->{op} =~ /Board/i ) {
   locations::listlocations($c);
 } elsif ( $c->{op} =~ /Export/i ) {
   export::exportform($c);
+} elsif ( $c->{op} =~ /GitStatus/i ) {
+  superuser::gitstatus($c);
+} elsif ( $c->{op} =~ /GitPull/i ) {
+  superuser::gitpull($c);
 } elsif ( $c->{op} =~ /Full/i ) {
   glasses::inputform($c);
   mainlist::mainlist($c);

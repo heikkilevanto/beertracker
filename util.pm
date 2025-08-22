@@ -143,10 +143,10 @@ sub paramnumber {
 sub error {
   my $msg = shift;
   print "\n\n";  # Works if have sent headers or not
-  print "<hr/>\n";
-  $msg = "ERROR  <br>\n" . $msg;
+  print "<pre>\n";
+  $msg = "ERROR  <br>\n$msg\n\n";
   $msg .= longmess("Stack Trace:");
-  print "$msg <br/>\n";
+  print "$msg\n";
   print STDERR "ERROR: $msg\n";
   exit();
 }
@@ -286,7 +286,12 @@ sub showmenu {
   my $s = "";
   my $prod = "";
   if ( $c->{devversion} ) {
-    $prod = '{ label: "Get Production Data", url: "o=copyproddata" },' ;
+    $prod = '{ label: "Get Production Data", url: "o=CopyProdData" },' ;
+  }
+  my $gitfuncs = "";
+  if ( $c->{username} eq "heikki" ) {
+    $gitfuncs = '{ label: "Git Status", url: "o=GitStatus" },';
+              #  '{ label: "Git Pull", url: "o=GitPull" },' ;
   }
   my $current = "o=$c->{op}";
 
@@ -317,6 +322,7 @@ sub showmenu {
           { label: "More ...", children: [
             { label: "Download your data", url: "o=Export" },
             $prod
+            $gitfuncs
             { label: "About", url: "o=About" },
           ]},
         ] };
