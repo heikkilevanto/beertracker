@@ -92,7 +92,8 @@ sub gitstatus {
   print "<p/>\n";
   chdir("../$p") or
     util::error("Can not chdir to '$p' ");
-  my $cmd = "sudo -u heikki /usr/bin/git status -uno 2>&1";
+  my $cmd = "sudo -u heikki /usr/bin/git fetch 2>&1 ; " .
+            "sudo -u heikki /usr/bin/git status -uno 2>&1 " ;
   print "Running $cmd <p/>\n";
   my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
   my $st = `$cmd` ;
@@ -101,9 +102,18 @@ sub gitstatus {
   $st = encode_entities($st);
   print "<pre $style>\n$st\n</pre> \n";
   print "<hr>\n";
-  my $reloc = "window.location.href=\"$c->{url}?o=GitPull&p=$p\"";
-  print "$reloc <br>\n";
-  print "Are you sure you want to do a <button onclick='$reloc'>Git Pull</button><br>\n";
+  if ( $rc && $st =~ /a password is required/ ) {
+    print "Make sure you have these lines in /etc/sudoers.d/beertracker: <br>\n";
+    print "<pre>
+    www-data ALL=(heikki) NOPASSWD: /usr/bin/git status -uno
+    www-data ALL=(heikki) NOPASSWD: /usr/bin/git fetch
+    www-data ALL=(heikki) NOPASSWD: /usr/bin/git pull --ff-only
+      </pre>\n";
+  }
+  if ( ! $rc ) {
+    my $reloc = "window.location.href=\"$c->{url}?o=GitPull&p=$p\"";
+    print "Are you sure you want to do a <button onclick='$reloc'>Git Pull</button><br>\n";
+  }
 }
 
 ################################################################################
