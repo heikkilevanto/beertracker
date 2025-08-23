@@ -92,7 +92,7 @@ sub gitstatus {
   print "<p/>\n";
   chdir("../$p") or
     util::error("Can not chdir to '$p' ");
-  my $cmd = "sudo -u heikki /usr/bin/git fetch 2>&1 ; " .
+  my $cmd = "sudo -u heikki /usr/bin/git fetch 2>&1 && " .
             "sudo -u heikki /usr/bin/git status -uno 2>&1 " ;
   print "Running $cmd <p/>\n";
   my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
@@ -110,9 +110,10 @@ sub gitstatus {
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git pull --ff-only
       </pre>\n";
   }
-  if ( ! $rc ) {
+  if ( ! $rc && $st =~ /can be fast-forwarded/ ) {
+    my $loading = 'document.body.innerHTML = "<p>Loading…</p>";';
     my $reloc = "window.location.href=\"$c->{url}?o=GitPull&p=$p\"";
-    print "Are you sure you want to do a <button onclick='$reloc'>Git Pull</button><br>\n";
+    print "Are you sure you want to do a <button onclick='$loading;$reloc'>Git Pull</button><br>\n";
   }
 }
 
