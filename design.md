@@ -13,6 +13,14 @@ The system is under constant development, so this document is likely to be
 somewhat out of date - the actual code is the source of truth.
 
 
+## TODO
+This document is nowhere near ready. Should write something about these:
+- Write a chapter about the history
+- Something about typical data flow, logging a glass
+- Configuration and deployment
+- Future considerations
+
+
 ## Architecture
 
 BeerTracker is a lightweight web application built with procedural Perl CGI
@@ -27,7 +35,6 @@ User sessions are minimal, with most data private per user, while shared
 entities like `brews` and `locations` are available globally. The design
 prioritizes readability, direct SQL usage, and modularity over abstraction or
 heavy frameworks.
-
 
 
 ## BeerTracker Database Schema
@@ -66,28 +73,36 @@ including addresses, coordinates, contact info, and type.
 
 ## Program modules
 Originally BeerTracker was one large script, but for version 3 I split it into
-many smaller modules. The definitive list of them is near the beginning of
-index.cgi.
+many smaller modules. The definitive list of them is in the `require` statements
+near the beginning of index.cgi. The modules can be divided roughly into
 
+Main operations:
+- `./mainlist.pm`  -   The main `full` list
+- `./graph.pm`  -   The daily graph
+- `./beerboard.pm`  -   The beer board for the current bar
+- `./glasses.pm`  -   Main input for and the full list
+- `./aboutpage.pm`  -   The About page
+
+Listing/Editing various helper records
 - `./persons.pm`  -   List of people, their details, editing, helpers
 - `./locations.pm`  -   Locations stuff
 - `./brews.pm`  -   Lists of various brews, etc
-- `./glasses.pm`  -   Main input for and the full list
 - `./comments.pm`  -   Stuff for comments, ratings, and photos
-- `./util.pm`  -   Various helper functions
-- `./graph.pm`  -   The daily graph
+
+Statistics etc
 - `./stats.pm`  -   Various statistics
 - `./monthstat.pm`  -   Monthly statistics
 - `./yearstat.pm`  -   annual stats
-- `./mainlist.pm`  -   The main `full` list
-- `./beerboard.pm`  -   The beer board for the current bar
-- `./inputs.pm`  -   Helper routines for input forms
-- `./listrecords.pm`  -   A way to produce a nice list from db records
-- `./aboutpage.pm`  -   The About page
-- `./VERSION.pm`  -   auto-generated version info
-- `./copyproddata.pm`  -   Copy production database into the dev version
-- `./db.pm`  -   Various database helpers
-- `./geo.pm`  -   Geo coordinate stuff
 - `./ratestats.pm`  -   Histogram of the ratings
 - `./export.pm`  -   Export the users own data
+
+And all the various helpers. I will not list them here, as things are not at
+all stable yet. There are also some things to make development work easier,
+like copying the production database into the development setup, or forcing
+a git pull...
+
+
+
+
+
 
