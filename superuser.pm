@@ -111,7 +111,7 @@ sub gitstatus {
       </pre>\n";
   }
   if ( ! $rc && $st =~ /can be fast-forwarded/ ) {
-    my $loading = 'document.body.innerHTML = "<p>Loading…</p>";';
+    my $loading = 'document.body.innerHTML = "<p>Pulling ...</p>";';
     my $reloc = "window.location.href=\"$c->{url}?o=GitPull&p=$p\"";
     print "Are you sure you want to do a <button onclick='$loading;$reloc'>Git Pull</button><br>\n";
   }

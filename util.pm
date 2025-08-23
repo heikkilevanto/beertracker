@@ -291,7 +291,9 @@ sub showmenu {
   my $gitfuncs = "";
   if ( $c->{username} eq "heikki" ) {
     $gitfuncs = '{ label: "Git Status", url: "o=GitStatus" },';
-              #  '{ label: "Git Pull", url: "o=GitPull" },' ;
+    if ( $c->{op} =~ /GitPull/i ) {  # Show the pull menu point only when we are there
+      $gitfuncs .= '{ label: "Git Pull", url: "o=GitPull" },' ;
+    }
   }
   my $current = "o=$c->{op}";
 
