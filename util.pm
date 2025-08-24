@@ -9,10 +9,8 @@ use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
 use Carp qw(longmess);
+use JSON;
 
-# --- insert new functions here ---
-# This is a marker for the refactoring scripts
-# This file acts as a template for new modules, up to the marker above
 
 ################################################################################
 # Table of contents
@@ -281,57 +279,71 @@ sub topline {
 } # topline
 
 
-sub showmenu {
-  my $c = shift; # context;
-  my $s = "";
-  my $prod = "";
-  if ( $c->{devversion} ) {
-    $prod = '{ label: "Get Production Data", url: "o=CopyProdData" },' ;
-  }
-  my $gitfuncs = "";
-  if ( $c->{username} eq "heikki" ) {
-    $gitfuncs = '{ label: "Git Status", url: "o=GitStatus" },';
-    if ( $c->{op} =~ /GitPull/i ) {  # Show the pull menu point only when we are there
-      $gitfuncs .= '{ label: "Git Pull", url: "o=GitPull" },' ;
-    }
-  }
-  my $current = "o=$c->{op}";
 
-  $s .= <<END;
-    <button id='menu-toggle'>☰ Menu</button>
-    <div id='menu'></div>
-    <script>
-      var menuData = {
-        currentLabel: "$current",
-        menu: [
-          { label: "Main ...", children: [
-            { label: "List only", url: "o=Full" },
-            { label: "With Graph", url: "o=Graph" },
-            { label: "Beer Board", url: "o=Board" },
-          ]},
-          { label: "Stats ...", children: [
-            { label: "Months", url: "o=Months" },
-            { label: "Years", url: "o=Years" },
-            { label: "Data", url: "o=DataStats" },
-            { label: "Ratings", url: "o=Ratings" },
-          ]},
-          { label: "List / Edit ...", children: [
-            { label: "Brews", url: "o=Brews" },
-            { label: "Locations", url: "o=Locations" },
-            { label: "Comments", url: "o=Comment" },
-            { label: "Persons", url: "o=Persons" },
-          ]},
-          { label: "More ...", children: [
-            { label: "Download your data", url: "o=Export" },
-            $prod
-            $gitfuncs
-            { label: "About", url: "o=About" },
-          ]},
-        ] };
-      initMenu(menuData, "menu", "menu-toggle" );
-    </script>
+sub showmenu {
+    my $c = shift;
+
+    my @menu;
+
+    # --- Main ---
+    my @main = (
+        { label => "List only", url => "o=Full" },
+        { label => "With Graph", url => "o=Graph" },
+        { label => "Beer Board", url => "o=Board" },
+    );
+    push @menu, { label => "Main ...", children => \@main };
+
+    # --- Stats ---
+    my @stats = (
+        { label => "Months",  url => "o=Months" },
+        { label => "Years",   url => "o=Years" },
+        { label => "Data",    url => "o=DataStats" },
+        { label => "Ratings", url => "o=Ratings" },
+    );
+    push @menu, { label => "Stats ...", children => \@stats };
+
+    # --- List/Edit ---
+    my @edit = (
+        { label => "Brews",     url => "o=Brews" },
+        { label => "Locations", url => "o=Locations" },
+        { label => "Comments",  url => "o=Comment" },
+        { label => "Persons",   url => "o=Persons" },
+    );
+    push @menu, { label => "List / Edit ...", children => \@edit };
+
+    # --- More ---
+    my @more = (
+        { label => "Download your data", url => "o=Export" },
+    );
+
+    if ($c->{devversion}) {
+        push @more, { label => "Get Production Data", url => "o=CopyProdData" };
+    }
+
+    if ($c->{username} eq "heikki") {
+        push @more, { label => "Git Status", url => "o=GitStatus" };
+        if ($c->{op} =~ /GitPull/i) {
+            push @more, { label => "Git Pull", url => "o=GitPull" };
+        }
+    }
+
+    push @more, { label => "About", url => "o=About" };
+    push @menu, { label => "More ...", children => \@more };
+
+    # --- JSON for JS ---
+    my $menu_json = encode_json({
+        currentLabel => "o=$c->{op}",
+        menu => \@menu,
+    });
+
+    return <<"END";
+<button id='menu-toggle'>☰ Menu</button>
+<div id='menu'></div>
+<script>
+    var menuData = $menu_json;
+    initMenu(menuData, "menu", "menu-toggle");
+</script>
 END
-  return $s;
 }
 
 ################################################################################
