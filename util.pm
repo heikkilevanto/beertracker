@@ -304,7 +304,7 @@ sub showmenu {
 
     # --- List/Edit ---
     my @edit = (
-        { label => "Brews",     url => "o=Brews" },
+        { label => "Brews",     url => "o=Brew" },
         { label => "Locations", url => "o=Locations" },
         { label => "Comments",  url => "o=Comment" },
         { label => "Persons",   url => "o=Persons" },

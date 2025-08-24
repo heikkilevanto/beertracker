@@ -59,7 +59,8 @@ and possible related persons.
 
 ### locations
 Represents physical places such as bars, restaurants, breweries, or homes,
-including addresses, coordinates, contact info, and type.
+including addresses, coordinates, contact info, and type. Also used for
+producers of beer and other brews.
 
 ### Relationships
 - `brews.ProducerLocation → locations.Id`

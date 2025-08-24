@@ -156,7 +156,7 @@ if ($devversion) { # Print a line in error.log, to see what errors come from thi
      $q->request_method . " " . $ENV{'QUERY_STRING'}. " \n";
 }
 
-if ( $devversion && $c->{op} eq "copyproddata" ) {
+if ( $devversion && $c->{op} =~ /copyproddata/i ) {
   print STDERR "Copying prod data to dev \n";
   superuser::copyproddata($c);
   exit;
