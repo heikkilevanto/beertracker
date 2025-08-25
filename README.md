@@ -64,7 +64,8 @@ yourself, file a pull request.
 
 
 ## See also
- - The [User Manual](./manual.md)
+ - The [User Manual](./doc/manual.md) (Badly out of date!)
+ - The [Design Document](./doc/design.md) (Not at all ready!)
  - The [Source Code](https://github.com/heikkilevanto/beertracker)
 
 

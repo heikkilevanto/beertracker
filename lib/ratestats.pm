@@ -189,7 +189,7 @@ sub chart_chartjs {
     my $labelstr = join(',', @labels);
     my $html = '';
     #$html .= qq{<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>\n} if $include_cdn;
-    $html .= qq{<script src="chart.umd.min.js"></script>\n} ;
+    $html .= qq{<script src="static/chart.umd.min.js"></script>\n} ;
     $html .= qq{<canvas id="$canvas_id"></canvas>\n};
     my $data_str = join(',', @$rows[1..9]);
     $html .= qq"<script>
