@@ -300,10 +300,10 @@ sub htmlhead {
   print "<html><head>\n";
   if ($devversion) {
     print "<title>Beer-DEV</title>\n";
-    print "<link rel='shortcut icon' href='beer-dev.png'/>\n";
+    print "<link rel='shortcut icon' href='static/beer-dev.png'/>\n";
   } else {
     print "<title>Beer</title>\n";
-    print "<link rel='shortcut icon' href='beer.png'/>\n";
+    print "<link rel='shortcut icon' href='static/beer.png'/>\n";
   }
   print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
   my ($r, $g, $b) = $bgcolor =~ /#(..)(..)(..)/;   # Make menu on semitransparent bg
