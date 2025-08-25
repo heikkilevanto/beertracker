@@ -111,6 +111,8 @@ sub listrecords {
       $f = "Dist (km)";
     } elsif ( $f =~ /^X/ ) {
       $sty = "style='display:none'";
+    } elsif ( $f =~ /^None/i ) {
+      $f = "";
     }
     #print STDERR "i=$i f='$f' s='$sty' \n";
     $styles[$i] = $sty;
@@ -185,6 +187,8 @@ sub listrecords {
         }
       } elsif ( $fn eq "Comment" ) {
         $v = "$v";
+      } elsif ( $fn eq "Photo" ) {
+        $v = photos::imagetag($c,$v,"thumb");
       } elsif ( $fn eq "IsGeneric" ) {
         $v = "Yes" if ($v);
       }
