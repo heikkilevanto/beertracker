@@ -43,28 +43,28 @@ $q->charset( "UTF-8" );
 # Program modules
 ################################################################################
 # All actual code should be in the modules
-require "./persons.pm";   # List of people, their details, editing, helpers
-require "./locations.pm"; # Locations stuff
-require "./brews.pm";  # Lists of various brews, etc
-require "./glasses.pm"; # Main input for and the full list
-require "./comments.pm"; # Stuff for comments, ratings, and photos
-require "./util.pm"; # Various helper functions
-require "./graph.pm"; # The daily graph
-require "./stats.pm"; # Various statistics
-require "./monthstat.pm"; # Monthly statistics
-require "./yearstat.pm"; # annual stats
-require "./mainlist.pm"; # The main "full" list
-require "./beerboard.pm"; # The beer board for the current bar
-require "./inputs.pm"; # Helper routines for input forms
-require "./listrecords.pm"; # A way to produce a nice list from db records
-require "./aboutpage.pm"; # The About page
-require "./VERSION.pm"; # auto-generated version info
-require "./superuser.pm"; # Superuser functions: Copåy prod data, git pull
-require "./db.pm"; # Various database helpers
-require "./geo.pm"; # Geo coordinate stuff
-require "./ratestats.pm"; # Histogram of the ratings
-require "./export.pm"; # Export the users own data
-require "./photos.pm"; # Helpers for managing photo files
+require "./lib/persons.pm";   # List of people, their details, editing, helpers
+require "./lib/locations.pm"; # Locations stuff
+require "./lib/brews.pm";  # Lists of various brews, etc
+require "./lib/glasses.pm"; # Main input for and the full list
+require "./lib/comments.pm"; # Stuff for comments, ratings, and photos
+require "./lib/util.pm"; # Various helper functions
+require "./lib/graph.pm"; # The daily graph
+require "./lib/stats.pm"; # Various statistics
+require "./lib/monthstat.pm"; # Monthly statistics
+require "./lib/yearstat.pm"; # annual stats
+require "./lib/mainlist.pm"; # The main "full" list
+require "./lib/beerboard.pm"; # The beer board for the current bar
+require "./lib/inputs.pm"; # Helper routines for input forms
+require "./lib/listrecords.pm"; # A way to produce a nice list from db records
+require "./lib/aboutpage.pm"; # The About page
+require "./lib/VERSION.pm"; # auto-generated version info
+require "./lib/superuser.pm"; # Superuser functions: Copåy prod data, git pull
+require "./lib/db.pm"; # Various database helpers
+require "./lib/geo.pm"; # Geo coordinate stuff
+require "./lib/ratestats.pm"; # Histogram of the ratings
+require "./lib/export.pm"; # Export the users own data
+require "./lib/photos.pm"; # Helpers for managing photo files
 
 
 
