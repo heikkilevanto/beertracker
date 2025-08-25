@@ -2,12 +2,13 @@
 
 /* Drawer container */
 html, body {
-  overflow-x: hidden;
   padding: 0;
+  margin-left: 10px;
 
 }
 
 #menu {
+  overflow-x: hidden;
   position: fixed;
   top: 0;
   left: -250px;            /* hidden off-screen initially */
