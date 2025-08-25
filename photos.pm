@@ -80,12 +80,13 @@ sub imagetag {
     print STDERR "Resize failed with $rc: '$conv' \n" if ( $conv );
   }
   my $w = $imagesizes{$width};
-  my $itag = "<img src='$fn' width='$w' />";
-  my $tag = "<a href='$orig'>$itag</a>";
+  my $itag = "<img src='$fn' width='$w'target='_blank' />";
+  my $tag = "<a href='$orig' target='_blank'>$itag</a>";
   return $tag;
 } # image
 
 
+# Save the uploaded image in a file
 sub savefile {
   my $c = shift;
   my $cid = shift; # comment id, for the file name
@@ -96,7 +97,7 @@ sub savefile {
   print STDERR "Saving image '$dbname' into '$filename' \n";
 
   util::error("FIle '$dbname' already exists, will not overwrite")
-    if ( -e $dbname );
+    if ( -e $filename );
   my $filehandle = $q->upload('photo');
   if ( ! $filehandle ) {
     print STDERR "No upload filehandle in photos::savefile\n";
