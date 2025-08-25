@@ -39,11 +39,12 @@ my $photodir = "beerdata/photo";
 # "orig" for the original image, "" for the plain name to be saved in the record,
 # or "thumb", "mob", "pc" for default sizes
 sub imagefilename {
+  my $c = shift;
   my $fn = shift; # The raw file name
   my $width = shift; # How wide we want it, or "orig" or ""
   $fn =~ s/(\.?\+?orig)?\.jpe?g$//i; # drop extension if any
   return $fn if (!$width); # empty width for saving the clean filename in $rec
-  $fn = "$photodir/$fn"; # a real filename
+  $fn = "$c->{photodir}/$fn"; # a real filename
   if ( $width =~ /\.?orig/ ) {
     $fn .= "+orig.jpg";
     return $fn;
@@ -57,22 +58,26 @@ sub imagefilename {
 
 
 # Produce the image tag
-sub image {
-  my $rec = shift;
-  my $width = shift; # One of the keys in %imagesizes
-  return "" unless ( $rec->{photo} && $rec->{photo} =~ /^2/);
-  my $orig = imagefilename($rec->{photo}, "orig");
+sub imagetag {
+  my $c = shift;
+  my $photo = shift;  # The name, as in the db
+  my $width = shift || "thumb" ; # One of the keys in %imagesizes
+  return "" unless ( $photo );
+  my $orig = imagefilename($c,$photo, "orig");
   if ( ! -r $orig ) {
-    print STDERR "Photo file '$orig' not found for record $rec->{stamp} \n";
+    print STDERR "Photo file '$orig' not found \n";
     return "";
   }
-  my $fn = imagefilename($rec->{photo}, $width);
+  my $fn = imagefilename($c,$photo, $width);
   return "" unless $fn;
   if ( ! -r $fn ) { # Need to resize it
     my $size = $imagesizes{$width};
     $size = $size . "x". $size .">";
-    system ("convert $orig -resize '$size' $fn");
     print STDERR "convert $orig -resize '$size' $fn \n";
+    my $conv = `convert $orig -resize '$size' $fn`;
+    my $rc = $?;
+    chomp($conv);
+    print STDERR "Resize failed with $rc: '$conv' \n" if ( $conv );
   }
   my $w = $imagesizes{$width};
   my $itag = "<img src='$fn' width='$w' />";
@@ -84,30 +89,30 @@ sub image {
 sub savefile {
   my $c = shift;
   my $cid = shift; # comment id, for the file name
-  my $fn = "c-$cid";
-  $fn =~ s/ /+/; # Remove spaces
-  my $serial = "0";
-  my $savefile;
-  do {
-    $serial++;
-    $savefile = "$c->{photodir}/$fn-$serial.jpg";
-    print STDERR "Looking to save in '$savefile' \n";
-  }  while ( -e $savefile ) ;
-  my $storename = imagefilename($fn,"");  # To be saved in the db
+
+  my $storename = "c-$cid";
+  my $dbname = imagefilename($c, $storename,"");  # To be saved in the db
+  my $filename = imagefilename($c, $storename, "orig"); # file to save in
+  print STDERR "Saving image '$dbname' into '$filename' \n";
+
+  util::error("FIle '$dbname' already exists, will not overwrite")
+    if ( -e $dbname );
   my $filehandle = $q->upload('photo');
   if ( ! $filehandle ) {
     print STDERR "No upload filehandle in photos::savefile\n";
     return "";
   }
   my $tmpfilename = $q->tmpFileName( $filehandle );
-  my $conv = `/usr/bin/convert $tmpfilename -auto-orient -strip $savefile 2>&1`;
+  my $convcmd = "/usr/bin/convert $tmpfilename -auto-orient -strip $filename 2>&1";
+  print STDERR "About to run: $convcmd \n";
+  my $conv = `$convcmd` ;
     # -auto-orient turns them upside up. -strip removes the orientation, so
     # they don't get turned again when displaying.
   my $rc = $?;
   print STDERR "Conv returned '$rc' and '$conv' \n" if ($rc || $conv); # Can this happen
-  my $fsz = -s $savefile;
-  print STDERR "Uploaded $fsz bytes into '$savefile' \n";
-  return $savefile; # The name without width-specs
+  my $fsz = -s $filename;
+  print STDERR "Uploaded $fsz bytes into '$filename' \n";
+  return $dbname; # The name without width-specs
 }# savefile
 
 

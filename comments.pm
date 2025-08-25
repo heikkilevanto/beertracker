@@ -38,8 +38,10 @@ sub commentline {
   $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );
   $s .= "<b>$cr->{PersName}:</b>\n" if ( $cr->{PersName} );
   $s .= "<i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
-  #$s .= "Photo $cr->{Photo} <br/>\n" if ( $cr->{Photo} );  # TODO - Show photo
-    # Once I have a photo module
+  if ( $cr->{Photo} ) {
+    $s .= "Photo $cr->{Photo} <br/>\n";
+    $s .= photos::imagetag($c, $cr->{Photo}, "thumb");
+  }
 
   return $s;
 } # commentline
