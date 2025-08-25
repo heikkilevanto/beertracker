@@ -249,6 +249,7 @@ sub postcomment {
     if ( util::param($c,"submit") =~ /Delete Comment/i ) {
       my $rows = $c->{dbh}->do("DELETE FROM COMMENTS WHERE ID = ?", undef, $comment_id);
       print STDERR "Deleted comment id '$comment_id' (rows=$rows) \n";
+      $photo = ""; # make sure we don't look at the upload, even if it happened to be there
     } else { # must be a real update
       my $sql = "UPDATE comments SET Rating = ?, Comment = ?, Person = ?
                 WHERE Id = ? AND Glass = ?";
@@ -262,6 +263,17 @@ sub postcomment {
     $sth->execute($glass, $rating, $comment, $person);
     $comment_id = $c->{dbh}->last_insert_id(undef, undef, "COMMENTS", undef) || undef;
     print STDERR "Inserted comment '$comment_id' for glass '$glass' \n";
+  }
+
+  if ( $photo &&  $c->{cgi}->upload('photo') ) {  # We have a photo
+    my $photoname = photos::savefile($c, $comment_id);
+    if ($photoname) {
+      my $sql = "UPDATE comments SET Photo = ?
+                WHERE Id = ? AND Glass = ?";  # Do we need both? Maybe username instead?
+      my $sth = $c->{dbh}->prepare($sql);
+      $sth->execute($photoname, $comment_id, $glass );
+      print STDERR "Updated photo name to '$photoname' for comment $comment_id \n";
+    }
   }
 
   # Redirect to avoid duplicate form submission on refresh

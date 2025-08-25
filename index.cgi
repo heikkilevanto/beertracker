@@ -64,6 +64,7 @@ require "./db.pm"; # Various database helpers
 require "./geo.pm"; # Geo coordinate stuff
 require "./ratestats.pm"; # Histogram of the ratings
 require "./export.pm"; # Export the users own data
+require "./photos.pm"; # Helpers for managing photo files
 
 
 

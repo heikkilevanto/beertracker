@@ -55,6 +55,7 @@ sub imagefilename {
   return $fn;
 } # imagefilename
 
+
 # Produce the image tag
 sub image {
   my $rec = shift;
@@ -79,33 +80,34 @@ sub image {
   return $tag;
 } # image
 
+
 sub savefile {
-  my $rec = shift;
-  my $fn = $rec->{stamp};
+  my $c = shift;
+  my $cid = shift; # comment id, for the file name
+  my $fn = "c-$cid";
   $fn =~ s/ /+/; # Remove spaces
-  $fn .= ".jpg";
-  if ( ! -d $photodir ) {
-    print STDERR "Creating photo dir $photodir - FIX PERMISSIONS \n";
-    print STDERR "chgrp heikki $photodir; chmod g+sw $photodir \n";
-    mkdir($photodir);
-  }
-  my $savefile = "$photodir/$fn";
-  my ( $base, $sec ) = $fn =~ /^(.*):(\d\d)/;
-  $sec--;
+  my $serial = "0";
+  my $savefile;
   do {
-    $sec++;
-    $fn = sprintf("%s:%02d", $base,$sec);
-    $savefile = imagefilename($fn,"orig");
+    $serial++;
+    $savefile = "$c->{photodir}/$fn-$serial.jpg";
+    print STDERR "Looking to save in '$savefile' \n";
   }  while ( -e $savefile ) ;
-  $rec->{photo} = imagefilename($fn,"");
-  my $filehandle = $q->upload('newphoto');
+  my $storename = imagefilename($fn,"");  # To be saved in the db
+  my $filehandle = $q->upload('photo');
+  if ( ! $filehandle ) {
+    print STDERR "No upload filehandle in photos::savefile\n";
+    return "";
+  }
   my $tmpfilename = $q->tmpFileName( $filehandle );
-  my $conv = `/usr/bin/convert $tmpfilename -auto-orient -strip $savefile`;
+  my $conv = `/usr/bin/convert $tmpfilename -auto-orient -strip $savefile 2>&1`;
     # -auto-orient turns them upside up. -strip removes the orientation, so
     # they don't get turned again when displaying.
-  print STDERR "Conv returned '$conv' \n" if ($conv); # Can this happen
+  my $rc = $?;
+  print STDERR "Conv returned '$rc' and '$conv' \n" if ($rc || $conv); # Can this happen
   my $fsz = -s $savefile;
   print STDERR "Uploaded $fsz bytes into '$savefile' \n";
+  return $savefile; # The name without width-specs
 }# savefile
 
 
