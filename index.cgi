@@ -306,49 +306,27 @@ sub htmlhead {
     print "<link rel='shortcut icon' href='beer.png'/>\n";
   }
   print "<meta http-equiv='Content-Type' content='text/html;charset=UTF-8'>\n";
-  print "<meta name='viewport' content='width=device-width, initial-scale=1.0'>\n";
-  # Style sheet - included right in the HTML headers
   my ($r, $g, $b) = $bgcolor =~ /#(..)(..)(..)/;   # Make menu on semitransparent bg
   $r = hex($r); $g = hex($g); $b = hex($b);
-  print "<style> :root {\n";
-  print "  --bgcolor: $bgcolor;\n";
-  print "  --altbgcolor: $altbgcolor;\n";
-  print "  --menu-bg: rgba($r,$g,$b,0.9);\n";
-  print "  --menu-current: #FFD700;\n";    # Some kind of yellow
-  print "}</style>\n";
-  print "<style rel='stylesheet'>\n";
-  print '@media screen {';
-  print "  body { background-color: $bgcolor; color: #FFFFFF; }\n";
-  print "  input, select, textarea, button, select option { background-color: $altbgcolor; color: #FFFFFF; }\n";
-  print "  * { font-size: small; }\n";
-  print "  a { color: #666666; }\n";  # Almost invisible grey. Applies only to the
-            # underline, if the content is in a span of its own.
-  print "  a span, a b, a i { color: #FFFFFF; }\n";  # Link text in white, if inside a span
-  print "  input:valid { border: 1px solid white; } \n";
-  print "  input:invalid { border: 1px solid red; } \n";
-  print "  select { border: 1px solid white; } \n";
-  print "}\n";
-  print '@media screen and (max-width: 700px){';
-  print "  .only-wide, .only-wide * { display: none !important; }\n";
-  print "}\n";
-  print '@media screen and (min-width: 700px){';
-  print "  .no-wide, .no-wide * { display: none !important; }\n";
-  print "}\n";
-  print '@media print{';
-  print "  * { font-size: xx-small; }\n";
-  print "  .no-print, .no-print * { display: none !important; }\n";
-  print "  .no-wide, .no-wide * { display: none !important; }\n";
-  print "}\n";
-  print "</style>\n";
+  print <<"END_STYLE";
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <style>:root {
+      --bgcolor: $bgcolor;
+      --altbgcolor: $altbgcolor;
+      --menu-bg: rgba($r,$g,$b,0.9);
+      --menu-current: #FFD700;
+    }</style>
+END_STYLE
   # CSS files
+  print csslink("base");
+  print csslink("layout");
   print csslink("menu");
   print csslink("inputs");
   # JS files
   print jslink("menu");
   print jslink("geo");
   print jslink("inputs");
-  print "</head>\n";
-  print "<body>\n";
+  print "</head><body>\n";
   print "\n";
 } # htmlhead
 

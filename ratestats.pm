@@ -266,9 +266,10 @@ sub data_table {
 
   my $html = "";
   $html .= "<hr>\n";
-  $html .= '<table border="1" cellpadding="5" cellspacing="0">
+  $html .= '<table border="1" cellpadding="5" cellspacing="0" class="data">
   <thead>
     <tr>
+      <th>&nbsp;</th>
       <th>Rating</th>
       <th>Total </th>';
   if ( $filtering) {
@@ -286,7 +287,7 @@ sub data_table {
     $fsum += ( $filtered_rows->[$i] || 0 ) * $i;
     $acount += $all_rows->[$i] || 0;
     $asum += ( $all_rows->[$i] || 0 ) * $i;
-    $html .= "<tr><td align=right> $lbl ($i)</td>";
+    $html .= "<tr><td align=right>($i)</td><td>$lbl</td>";
     my $ar = $all_rows->[$i] || "";
     $html .= "<td align=right>$ar</td>";
     my $fr = $filtered_rows->[$i] || "";
@@ -294,10 +295,10 @@ sub data_table {
     $html .= "</tr>\n";
   }
 
-  $html .= "<tr><td align=right>Total ratings</td>\n";
+  $html .= "<tr><td align=right colspan=2>Total ratings</td>\n";
   $html .= "<td align=right>$acount</td>\n";
   $html .= "<td align=right>$fcount</td>\n" if ($filtering);
-  $html .= "</tr><tr><td align=right>Average rating</td>\n";
+  $html .= "</tr><tr><td align=right colspan=2>Average rating</td>\n";
   $html .= "<td align=right> \n";
   $html .= sprintf("%0.1f", $asum / $acount ) if ($asum);
   $html .= "</td>\n";

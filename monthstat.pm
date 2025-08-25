@@ -88,7 +88,7 @@ sub monthstat {
   # Anything after this will be white by default
   # Should work for a few years
   my $t = "";
-  $t .= "<br/><table border=1 >\n";
+  $t .= "<br/><table class=data >\n";
   $t .= "<tr><td>&nbsp;</td>\n";
   my @months = (
     "",    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul",

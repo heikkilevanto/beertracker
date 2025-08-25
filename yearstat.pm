@@ -92,7 +92,7 @@ sub yearsummary {
   }
 
   print "<div style='overflow-x: auto;'>";
-  print "<table border='1' style='white-space: nowrap;' >\n";
+  print "<table class=data style='white-space: nowrap;' >\n";
 
   foreach my $y (@years) {
     my $ypr = 0;
