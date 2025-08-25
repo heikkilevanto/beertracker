@@ -87,7 +87,10 @@ sub gitstatus {
   for my $d ( <../beertracker*> ) { #/  #The / needed to sync Kate's highlight
     my $b = basename($d);
     next if ($b eq $p );
-    print "&nbsp;(Switch to <a href='$c->{url}?o=$c->{op}&p=$b'><i>'$b'</i></a>)<br>\n";
+    my $loading = "document.body.innerHTML=\"<p>Switching to $b</p>\"";
+    print "&nbsp;(Switch to " .
+       "<a href='$c->{url}?o=$c->{op}&p=$b' onclick='$loading'>" .
+       "<i>'$b'</i></a>)<br>\n";
   }
   print "<p/>\n";
   chdir("../$p") or

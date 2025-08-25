@@ -51,7 +51,11 @@ function initMenu(menuData, containerId, toggleButtonId) {
           childList.style.display = "block";
           span.classList.add("open-parent");
         }
-
+        a.onclick = function() {
+          document.body.innerHTML =
+            "<p>Loading " + item.label + "</p>";
+          // let browser continue to follow the link
+          };
         li.appendChild(a);
       }
 
