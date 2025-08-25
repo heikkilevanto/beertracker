@@ -62,7 +62,7 @@ sub selectbrewtype {
   my $s = "<select name='selbrewtype' id='selbrewtype' onChange='selbrewchange(this);'>\n" .
     $opts . "</select>\n";
   my $script = <<'SCRIPT';
-    <script>Z
+    <script>
       replaceSelectWithCustom(document.getElementById("selbrewtype"));
 
       function selbrewchange(el) {
