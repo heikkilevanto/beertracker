@@ -6,7 +6,7 @@ DATE=$(date +"%Y-%m-%d %H:%M:%S ")
 COMMIT=$(git rev-parse --short HEAD)
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-cat > VERSION.pm <<EOF
+cat > code/VERSION.pm <<EOF
 package Version;
 # Auto-generated file. Do not edit !!
 
@@ -26,5 +26,5 @@ sub version_info {
 1;
 EOF
 
-git add VERSION.pm
+git add code/VERSION.pm
 
