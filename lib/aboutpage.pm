@@ -90,7 +90,7 @@ sub about {
   print "<hr/>";
 
   print "Shorthand for drink volumes<br/><ul>\n";
-  for my $k ( keys(%glasses::volumes) ) {
+  for my $k ( sort keys(%glasses::volumes) ) {
     print "<li><b>$k</b> $glasses::volumes{$k}</li>\n";
   }
   print "</ul>\n";
