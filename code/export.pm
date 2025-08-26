@@ -47,7 +47,7 @@ sub exportform {
 
   my ( $datefrom, $dateto, $mode, $schema, $action ) = export_params($c);
   print qq{
-  <form method="GET" action="index.cgi" style='padding-bottom: 200px;'>
+  <form method="GET" style='padding-bottom: 200px;'>
   <input type="hidden" name="o" value="DoExport">
   Export all data for user <b>'$c->{username}'</b><br>
   <table>
