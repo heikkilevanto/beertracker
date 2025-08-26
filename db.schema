@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2025-08-14 13:17 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2025-08-26 15:45 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -71,7 +71,7 @@ create table comments (
     Person integer,  -- Who was present
     Photo text,  -- filename of the photo
 
-    foreign key (Glass) references Glasses(id) ON DELETE SET NULL
+    foreign key (Glass) references Glasses(id) on delete set null
 );
 
 -- table persons
@@ -138,7 +138,7 @@ create index idx_locations_name on locations (Name collate nocase);
 -- view compers
 drop view if exists compers;
 create view compers as
-  -- TODO - PROBABLY NOT USED
+  -- todo - probably not used
       select
         comments.glass as id,
         avg(nullif(comments.rating, 0)) as rate,
@@ -150,7 +150,8 @@ create view compers as
         count(persons.Id) as pers_cnt
       from comments
       left join persons on persons.id = comments.Person
-      group by comments.glass;
+      group by comments.glass
+;
 
 -- view persons_list
 drop view if exists persons_list;
@@ -166,34 +167,8 @@ create view persons_list as
   left join comments on comments.Person = persons.Id
   left join glasses on comments.Glass = glasses.Id
   left join locations on locations.id = glasses.Location
-  group by Persons.id;
-
--- view comments_list
-drop view if exists comments_list;
-create view comments_list as
-select
-    comments.Id,
-	strftime ( '%Y-%m-%d %w ', glasses.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', glasses.Timestamp) as Last,
-	locations.Name as LocName,
-	"tr" as tr,
-	'' as Clr,
-
-	brews.Name as BrewName,
-	ploc.Name as Prod,
-
-	"tr" as tr,
-
-	comments.Rating as Rate,
-    persons.Name as PersonName,
-	comments.Comment as Comment
-
-  from comments
-  left join glasses on Glasses.Id = comments.Glass
-  left join brews on brews.Id = glasses.Brew
-  left join persons on persons.Id = comments.Person
-  left join locations on locations.id = glasses.Location
-  left join locations ploc on ploc.id = brews.ProducerLocation
-  order by Last desc;
+  group by Persons.id
+;
 
 -- view brew_ratings
 drop view if exists brew_ratings;
@@ -353,6 +328,39 @@ select
   left join locations on locations.id = glasses.Location
   left join brew_ratings r on r.Brew = Brews.Id
   group by brews.id;
+
+-- view comments_list
+drop view if exists comments_list;
+create view comments_list as
+select
+    comments.Id,
+	strftime ( '%Y-%m-%d %w ', glasses.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', glasses.Timestamp) as Last,
+	locations.Name as LocName,
+	"tr" as tr,
+	'' as Clr,
+
+	brews.Name as BrewName,
+	ploc.Name as Prod,
+
+	"tr" as tr,
+
+	comments.Rating as Rate,
+    persons.Name as PersonName,
+	comments.Comment as Comment,
+
+	"tr" as tr,
+	'' as None, 
+	comments.photo as Photo,
+	
+	Glasses.username as Xusername
+	
+  from comments
+  left join glasses on Glasses.Id = comments.Glass
+  left join brews on brews.Id = glasses.Brew
+  left join persons on persons.Id = comments.Person
+  left join locations on locations.id = glasses.Location
+  left join locations ploc on ploc.id = brews.ProducerLocation
+  order by Last desc;
 
 commit;
 
