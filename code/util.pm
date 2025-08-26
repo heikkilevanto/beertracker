@@ -154,7 +154,7 @@ sub error {
 # A bit tricky code, but seems to work
 sub getversioninfo {
     my ($file, $namespace) = @_;
-    $file = "$file/VERSION.pm";
+    $file = "$file/code/VERSION.pm";
     $namespace ||= 'VersionTemp' . int(rand(1000000));
 
     my $code = do {
