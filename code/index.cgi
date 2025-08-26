@@ -2,9 +2,9 @@
 
 # Heikki's beer tracker
 #
-# Keeps beer drinking history in a flat text file.
+# Keeps track of the beers I drink, and what I think about them
 #
-# This is a simple CGI script
+# This is a (not so) simple CGI script
 # See https://github.com/heikkilevanto/beertracker/
 #
 

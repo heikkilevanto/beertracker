@@ -40,7 +40,7 @@ perl -ne '
     }
     print;
     print "\n" if /;\s*$/;
-' db.dump >> ../db.schema
+' db.dump >> ../code/db.schema
 
 cd ..
-ls -l beerdata/*dump beerdata/beertracker.db* db.schema
+ls -l beerdata/*dump beerdata/beertracker.db* code/db.schema

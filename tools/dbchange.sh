@@ -16,10 +16,10 @@ do
 done
 
 
-ls -l ../db.schema  data.dump
+ls -l ../code/db.schema  data.dump
 
 echo `date "+%F %X"` Importing schema
-if ! sqlite3 beertracker.db < ../db.schema
+if ! sqlite3 beertracker.db < ../code/db.schema
 then
   echo "Errors importing the schema"
   exit 1

@@ -4,7 +4,7 @@
 # Should be invoked from .git/hooks/post-merge
 
 # File to watch
-WATCHED_FILE="db.schema"
+WATCHED_FILE="code/db.schema"
 
 # Check if the file changed between ORIG_HEAD and HEAD
 if git diff --name-only ORIG_HEAD HEAD | grep -q "^$WATCHED_FILE$"; then
