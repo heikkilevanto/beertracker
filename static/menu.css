@@ -11,8 +11,8 @@ html, body {
   overflow-x: hidden;
   position: fixed;
   top: 0;
-  left: -250px;            /* hidden off-screen initially */
-  width: 250px;
+  left: -280px;            /* hidden off-screen initially */
+  width: 280px;
   height: 100%;
   background-color: var(--menu-bg);
   color: inherit;           /* matches body text color */

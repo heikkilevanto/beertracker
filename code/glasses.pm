@@ -147,7 +147,7 @@ sub inputform {
         "enctype='multipart/form-data'>\n";
   print "<table>\n";
 
-  print "<tr><td width='120px'>Id $rec->{Id}</td>\n";
+  print "<tr><td width='100px'>Id $rec->{Id}</td>\n";
   my $stamp = util::datestr("%F %T");
   print "<td>" ; # <input name='stamp' value='$stamp' size=25 $clr/>";
   my ($date,$time) = ( "", "");

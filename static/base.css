@@ -4,11 +4,11 @@
    ========================================= */
 
 /* Global defaults (from inline headers) */
-body {
+html,body {
   background-color: var(--bgcolor, #000000);
   color: #ffffff;
-  margin-left: 0.3em;
-  margin-top: 0.3em;
+  margin-left: 0.1em;
+  margin-top: 0.1em;
   padding: 0;
   font-size: 0.9rem; /* replaces '* { font-size: small; }' */
   font-family: sans-serif;
@@ -16,9 +16,9 @@ body {
 
 /* Wider screens (tablet/desktop) */
 @media screen and (min-width: 700px) {
-  body {
-  margin-left: 1em;
-  margin-top: 1em;
+  html, body {
+  margin-left: 0;
+  margin-top: 0;
   }
 }
 
