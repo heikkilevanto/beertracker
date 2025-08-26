@@ -33,6 +33,17 @@ sub aboutlink {
 
 
 
+# Helper to find where a system module comes from
+# NOT USED NOW, kept as a reference. Too slow for the hundred modules we find
+sub deb_pkg {
+    my ($file) = @_;
+    my $pkg = `dpkg -S '$file' 2>/dev/null`;
+    $pkg =~ s/:.*//s;   # strip filename part
+    chomp $pkg;
+    return $pkg || 'unknown';
+}
+
+
 ################################################################################
 # About page
 ################################################################################
@@ -77,11 +88,6 @@ sub about {
 
   print aboutlink("User manual", "https://github.com/heikkilevanto/beertracker/blob/master/manual.md" );
   print "</ul><p>\n";
-  #print "Some of my favourite bars and breweries<ul>";
-  #for my $k ( sort keys(%links) ) {  # TODO - Get these from the database somehow. Or skip
-  #  print aboutlink($k, $links{$k});
-  #}
-  print "</ul><p>\n";
   print "Other useful links: <ul>";
   print aboutlink("Events", "https://www.beercph.dk/");
   #print aboutlink("Ratebeer", "https://www.ratebeer.com");   # RIP RB Feb 2025
@@ -106,7 +112,29 @@ sub about {
   #print "<b>Debug info </b><br/>\n";  # TODO - Add new debug helpers here if needed
   #print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' ><span>Tail of the data file</span></a><br/>\n";
   #print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
-  exit();
+
+
+  print "<b>Loaded modules</b>\n";
+  my @sysmodules;
+  print "<table class=data>";
+  print "<tr><td>Module</td><td>Lines</td><td>Modified</td></tr>\n";
+  for my $mod (sort keys %INC) {
+      my $file = $INC{$mod};
+      (my $short = $mod) =~ s/\.pm$//;
+      if ($file =~ m{\./code/}) {
+          my $lines = 0;
+          if (open my $fh, '<', $file) {
+              $lines++ while <$fh>;
+              close $fh;
+          }
+          $short =~ s/\.\/code\///;
+          my @st = stat($file);
+          my $mtime = strftime "%Y-%m-%d %H:%M", localtime $st[9];
+          print "<tr><td>$short</td><td class='num'>$lines</td><td>$mtime</td></tr>\n";
+      }
+  }
+  print "</table>\n";
+
 } # About
 
 
