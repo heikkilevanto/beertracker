@@ -80,7 +80,7 @@ sub imagetag {
     print STDERR "Resize failed with $rc: '$conv' \n" if ( $conv );
   }
   my $w = $imagesizes{$width};
-  my $itag = "<img src='$fn' width='$w'target='_blank' />";
+  my $itag = "<img src='$fn' width='$w />";
   my $tag = "<a href='$orig' target='_blank'>$itag</a>";
   return $tag;
 } # image

@@ -74,28 +74,29 @@ producers of beer and other brews.
 
 ## Program modules
 Originally BeerTracker was one large script, but for version 3 I split it into
-many smaller modules. The definitive list of them is in the `require` statements
-near the beginning of index.cgi. The modules can be divided roughly into
+many smaller modules. Later I moved them all to live under .../code. The
+definitive list of them is in the `require` statements near the beginning of
+index.cgi. The modules can be divided roughly into
 
 Main operations:
-- `./mainlist.pm`  -   The main `full` list
-- `./graph.pm`  -   The daily graph
-- `./beerboard.pm`  -   The beer board for the current bar
-- `./glasses.pm`  -   Main input for and the full list
-- `./aboutpage.pm`  -   The About page
+- `code/mainlist.pm`  -   The main `full` list
+- `code/graph.pm`  -   The daily graph
+- `code/beerboard.pm`  -   The beer board for the current bar
+- `code/glasses.pm`  -   Main input for and the full list
+- `code/aboutpage.pm`  -   The About page
 
 Listing/Editing various helper records
-- `./persons.pm`  -   List of people, their details, editing, helpers
-- `./locations.pm`  -   Locations stuff
-- `./brews.pm`  -   Lists of various brews, etc
-- `./comments.pm`  -   Stuff for comments, ratings, and photos
+- `code/persons.pm`  -   List of people, their details, editing, helpers
+- `code/locations.pm`  -   Locations stuff
+- `code/brews.pm`  -   Lists of various brews, etc
+- `code/comments.pm`  -   Stuff for comments, ratings, and photos
 
 Statistics etc
-- `./stats.pm`  -   Various statistics
-- `./monthstat.pm`  -   Monthly statistics
-- `./yearstat.pm`  -   annual stats
-- `./ratestats.pm`  -   Histogram of the ratings
-- `./export.pm`  -   Export the users own data
+- `code/stats.pm`  -   Various statistics
+- `code/monthstat.pm`  -   Monthly statistics
+- `code/yearstat.pm`  -   annual stats
+- `code/ratestats.pm`  -   Histogram of the ratings
+- `code/export.pm`  -   Export the users own data
 
 And all the various helpers. I will not list them here, as things are not at
 all stable yet. There are also some things to make development work easier,
@@ -104,6 +105,31 @@ a git pull...
 
 
 
+## Configuration and Deployment
+Beertracker lives as a cgi script under Apache. There is a config example under
+etc.
 
+The site is protected by regular htpassword, so you need to create those the
+usual way.
 
+## Development Environment
+I normally develop under beertracker-dev, and when happy with it, commit and
+push the code. Then I pull under beertracker itself for production use.
+
+### Git trickery
+The git hook `pre-commit` invokes `tools/makeversion.sh` which updates the
+code/VERSION.pm with the current version number and a count of commits since,
+so the about page and the top line can show where we are going.
+
+The git hook `post-merge` invokes `tools/warn-schema.sh` which checks if the
+db.schema has changed and if so, prints a warning to run the dbupdate script.
+
+This is useful, if changing the schema under dev, for example adjusting some of
+the  list views. Then you should run tools/dbdump.sh to update the db.schema
+file. Commit and push that, and pull on production. The post-merge hook will
+remind to run `tools/dbchange.sh` which tries to port the schema change to the
+production database. It does it by exporting all the data, recreating the
+database from db.schema, and importing the data back to it. This works for
+changing views, or renaming columns in tables, but if adding columns or tables
+you may have to do some manual trickery.
 

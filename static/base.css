@@ -1,0 +1,41 @@
+/* =========================================
+   BeerTracker Base
+   Global defaults, forms, and links
+   ========================================= */
+
+/* Global defaults (from inline headers) */
+body {
+  background-color: var(--bgcolor, #000000);
+  color: #ffffff;
+  margin-left: 0.3em;
+  margin-top: 0.3em;
+  padding: 0;
+  font-size: 0.9rem; /* replaces '* { font-size: small; }' */
+  font-family: sans-serif;
+}
+
+/* Wider screens (tablet/desktop) */
+@media screen and (min-width: 700px) {
+  body {
+  margin-left: 1em;
+  margin-top: 1em;
+  }
+}
+
+/* Form basics */
+input,
+select,
+textarea,
+button,
+select option {
+  background-color: var(--altbgcolor, #333333);
+  color: #ffffff;
+}
+
+input:valid { border: 1px solid white; }
+input:invalid { border: 1px solid red; }
+select { border: 1px solid white; }
+
+/* Links */
+a { color: #666666; } /* Very dark, almost invisible - Only for the underline in a link */
+a span, a b, a i { color: #ffffff; } /* Put one of the tags inside a link, and it shows well */

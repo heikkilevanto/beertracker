@@ -1,0 +1,40 @@
+/* =========================================
+   BeerTracker Layout
+   Tables, utilities, and media queries
+   ========================================= */
+
+/* Layout tables: no borders by default */
+table {
+  border-collapse: collapse;
+  border: none;
+}
+th, td {
+  border: none;
+  padding: 0.2em 0.4em;
+}
+
+/* Data tables (reports, lists) */
+table.data {
+  border-collapse: collapse;
+}
+table.data th,
+table.data td {
+  border: 1px solid #666;
+  padding: 4px 6px;
+  text-align: left;
+}
+
+/* Utility classes */
+
+
+/* Media queries */
+@media screen and (max-width: 700px) {
+  .only-wide,
+  .only-wide * { display: none !important; }
+}
+
+@media screen and (min-width: 700px) {
+  .no-wide,
+  .no-wide * { display: none !important; }
+}
+
