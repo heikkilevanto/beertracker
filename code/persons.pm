@@ -20,7 +20,7 @@ sub listpersons {
   print "&nbsp;Persons <a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
 
   my $sort = $c->{sort} || "Last-";
-  print listrecords::listrecords($c, "PERSONS_LIST", $sort );
+  print listrecords::listrecords($c, "PERSONS_LIST", $sort);
   return;
 
 } # listpersons
@@ -49,10 +49,13 @@ sub showpersondetails {
   left join glasses g on g.id = comments.glass
   left join locations l on l.id = g.location
   where
-  comments.Glass in  ( select Glass from comments c2 where c2.person = ? )
+  comments.Glass in  (
+      select Glass from comments c2
+      where c2.person = ?
+      and username = ?)
     order by g.Timestamp desc, comments.id desc
   ";
-  my $sth = db::query($c, $pers_seen_sql, $pers->{Id} );
+  my $sth = db::query($c, $pers_seen_sql, $pers->{Id}, $c->{username} );
   my $curgl = "";
   while ( my $rec = $sth->fetchrow_hashref) {
     if ( $curgl ne $rec->{Glass} ) {

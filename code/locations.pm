@@ -157,10 +157,11 @@ sub locationvisits {
        count( distinct( strftime( '%d', timestamp, '-06:00' ) ) ) as daycount
     from glasses
     where Location = ?
+      and username = ?
     group by month
     order by timestamp
   };
-  my $sth = db::query($c, $listsql, $locrec->{Id} );
+  my $sth = db::query($c, $listsql, $locrec->{Id}, $c->{username} );
   my $currentyear = "";
   my ( $y, $m, $d );
   my $totalvisits = 0;

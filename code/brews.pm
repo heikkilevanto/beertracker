@@ -128,10 +128,11 @@ sub listbrewcomments {
       LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
       where COMMENTS.glass = GLASSES.id
        and Brew = ?
+       and Glasses.username = ?
       order by GLASSES.Timestamp Desc ";
   #print STDERR "listbrewcomments: id='$brew->{Id}': $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($brew->{Id});
+  $sth->execute($brew->{Id}, $c->{username});
   print "<div onclick='toggleCommentTable(this.nextElementSibling);'>";
   print "Comments and ratings for <b>$brew->{Name}</b> <br/>\n";
   print "</div>\n";
@@ -183,7 +184,7 @@ sub listbrewcomments {
   print "</table></div>\n";
   print "<div onclick='toggleCommentTable(this.previousElementSibling);'><br/>";
   if ( $comcount == 0 ) {
-    print "(No Comments)";
+    print "(No Comments by $c->{username})";
   } else {
     if ( $ratecount == 1) {
       print "One rating: <b>" . comments::ratingline($ratesum) . "</b> ";
@@ -234,10 +235,11 @@ sub listbrewglasses {
       LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
       LEFT JOIN COMMENTS on COMMENTS.Glass = GLASSES.Id
       WHERE Brew = ?
+        and Glasses.username = ?
       order by GLASSES.Timestamp Desc ";
   #print STDERR "listbrewcomments: id='$brew->{Id}': $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($brew->{Id});
+  $sth->execute($brew->{Id}, $c->{username});
   my $glcount = 0;
   print "<div onclick='toggleCommentTable(this.nextElementSibling);'><br/>";
   print "When and where: </div>\n";

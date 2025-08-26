@@ -82,10 +82,10 @@ sub listallcomments {
     editbrew($c);
     return;
   }
-  print "<b>Comments</b> ";
+  print "<b>Comments by $c->{username}</b> ";
   #print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
   print "<br/>\n";
-  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-" );
+  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", "Xusername=?", $c->{username} );
   return;
 } # listallcomments
 

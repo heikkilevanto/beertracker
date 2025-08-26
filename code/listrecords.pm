@@ -43,7 +43,7 @@ sub listrecords {
   my $table = shift;
   my $sort = shift;
   my $where = shift || "";
-  my $params = shift ;
+  my $params = shift || undef ;
 
   my @fields = db::tablefields($c, $table, "", 1);
   my $order = "";
@@ -60,7 +60,11 @@ sub listrecords {
   my $sql = "select * from $table $where $order";
   print STDERR "listrecords: $sql \n";
   my $list_sth = $c->{dbh}->prepare($sql);
-  $list_sth->execute();
+  if ( $params ) {
+    $list_sth->execute($params);
+  } else {
+    $list_sth->execute();
+  }
 
   my $url = $c->{url};
   my $op = $c->{op};
