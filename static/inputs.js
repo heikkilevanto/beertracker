@@ -82,7 +82,6 @@ function filterItems(filterInput, dropdownList) {
 function initCustomSelect(container) {
   const display = container.querySelector(".custom-select-display");
   const list    = container.querySelector(".custom-select-list");
-  const hidden  = container.querySelector("input[type=hidden]");
 
   display.addEventListener("click", () => {
     list.style.display = list.style.display === "block" ? "none" : "block";
@@ -91,7 +90,6 @@ function initCustomSelect(container) {
   list.addEventListener("click", (event) => {
     if (!event.target.classList.contains("custom-select-item")) return;
     display.textContent = event.target.textContent;
-    hidden.value = event.target.dataset.value;
     list.style.display = "none";
   });
 
@@ -101,41 +99,38 @@ function initCustomSelect(container) {
   });
 }
 
-// Convert an existing <select> into a custom select
+
 function replaceSelectWithCustom(selectEl) {
   if (!selectEl) return;
 
-  // Create wrapper
+  selectEl.style.display = "none";   // hide but keep <select>
+
   const wrapper = document.createElement("div");
   wrapper.className = "custom-select";
 
-  // Display div
   const display = document.createElement("div");
   display.className = "custom-select-display";
   display.textContent = selectEl.selectedOptions[0]?.textContent || "";
   wrapper.appendChild(display);
 
-  // Hidden input
-  const hidden = document.createElement("input");
-  hidden.type = "hidden";
-  hidden.name = selectEl.name;
-  hidden.value = selectEl.value;
-  wrapper.appendChild(hidden);
-
-  // Options list
   const list = document.createElement("div");
   list.className = "custom-select-list";
-  Array.from(selectEl.options).forEach(opt => {
+  Array.from(selectEl.options).forEach((opt, idx) => {
     const item = document.createElement("div");
     item.className = "custom-select-item";
     item.dataset.value = opt.value;
     item.textContent = opt.textContent;
+    item.addEventListener("click", () => {
+      selectEl.selectedIndex = idx;
+      selectEl.dispatchEvent(new Event("change")); // fires selbrewchange
+      display.textContent = opt.textContent;
+      list.style.display = "none";
+    });
     list.appendChild(item);
   });
   wrapper.appendChild(list);
 
-  // Replace <select> in DOM
-  selectEl.parentNode.replaceChild(wrapper, selectEl);
+  selectEl.parentNode.insertBefore(wrapper, selectEl.nextSibling);
 
   // Initialize the custom select behavior
   initCustomSelect(wrapper);
