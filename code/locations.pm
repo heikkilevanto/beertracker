@@ -199,12 +199,13 @@ sub locationdeduplist {
   print "<input type=hidden name='dedup' value='1' />\n";
   print "<br/>\n";
   my $sort = $c->{sort} || "Last-";
-  my $params = {};
-  $params->{lat} = $loc->{Lat};
-  $params->{lon} = $loc->{Lon};
-  print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}", $params );
+  my $extra = {};
+  $extra->{lat} = $loc->{Lat};
+  $extra->{lon} = $loc->{Lon};
+  print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}", undef, $extra );
   print "</form>\n";
   print "<!-- locationdeduplist end -->\n";
+
   print "<hr/>\n";
 } # locationdeduplist
 

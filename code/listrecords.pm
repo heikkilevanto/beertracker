@@ -43,7 +43,8 @@ sub listrecords {
   my $table = shift;
   my $sort = shift;
   my $where = shift || "";
-  my $params = shift || undef ;
+  my $params = shift || undef ;  # params for the sql
+  my $extraparams = shift || undef;  # params for special fields, like lat/long to measure from
 
   my @fields = db::tablefields($c, $table, "", 1);
   my $order = "";
@@ -185,9 +186,11 @@ sub listrecords {
         # TODO - "Sun 21:15" or "Sun 2023-05-25", depending on how recent
         # Will save a few chars on the phone
       } elsif ( $fn eq "Geo" ) { # Geo dist
-        if ( $v && $params && $params->{lat} && $params->{lon} ) {
+        if ( $v && $extraparams && $extraparams->{lat} && $extraparams->{lon} ) {
           my ( $lat, $lon ) = split(' ', $v);
-          $v = geo::geodist( $params->{lat}, $params->{lon}, $lat, $lon );
+          $v = geo::geodist( $extraparams->{lat}, $extraparams->{lon}, $lat, $lon );
+        } else {
+          $v = "";
         }
       } elsif ( $fn eq "Comment" ) {
         $v = "$v";
