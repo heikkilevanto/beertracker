@@ -430,8 +430,11 @@ sub postglass {
       $brewid = brews::postbrew($c, "new" );
     }
   }
-  my $brew = db::getrecord($c, "BREWS", $brewid );
-  print STDERR "postglass: Got brew '$brewid' = '$brew->{Name}' \n";
+  my $brew;
+  if ( $brewid ) {
+    $brew = db::getrecord($c, "BREWS", $brewid );
+    print STDERR "postglass: Got brew '$brewid' = '$brew->{Name}' \n";
+  }
   my $locid = util::param($c,"Location");
   if ( !$locid ) { # Should not happen
     util::error ("postglass: No 'Location' parameter! ");
@@ -452,6 +455,7 @@ sub postglass {
     $glass->{StDrinks} = "0";
     $glass->{SubType} = util::param($c,"selbrewsubtype") ;
     gettimestamp($c, $glass);
+    $glass->{Price} = util::paramnumber($c, "pr");
   } else { # real glass
     $glass->{Brew} = $brewid;
     $glass->{SubType} = $brew->{SubType} || $glass->{SubType};
