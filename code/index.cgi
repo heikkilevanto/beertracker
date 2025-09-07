@@ -165,6 +165,7 @@ if ($devversion) { # Print a line in error.log, to see what errors come from thi
      $q->request_method . " " . $ENV{'QUERY_STRING'}. " \n";
 }
 
+# Needs to be done early, before we send HTTP headers
 if ( $devversion && $c->{op} =~ /copyproddata/i ) {
   print STDERR "Copying prod data to dev \n";
   superuser::copyproddata($c);
@@ -179,13 +180,13 @@ if ( !$c->{op}) {
 if ( $q->request_method eq "POST" ) {
 
   my $debugparams = "";
-  eval {
+  eval { # Catch all database errors (and a few others)
     db::open_db($c, "rw");  # POST requests modify data by default
 
     if ( $c->{devversion} ) {
       foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
         my $value = $c->{cgi}->param($param);
-        $debugparams .= "p: $param = '$value'\n";  # if ($c->{devversion}) ???
+        $debugparams .= "p: $param = '$value'\n";
         print STDERR "   p: $param = '$value'\n" ; #if ($value);  # log also zeroes
       }
     }
