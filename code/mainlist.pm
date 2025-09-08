@@ -214,16 +214,8 @@ sub numbersline {
   my $ba = $bloodalc->{ $rec->{id} } || "";
   #print STDERR "'$rec->{id}' ba=$ba \n";
   print util::unit($ba,"/₀₀");
-  if ( ! $rec->{generic} ) {  # No ratings or comments on generics like Beer,Mixed or House Red WIne
-    my $rc = $rec->{rating_count};
-    if ( $rc ) {
-      if ( $rc == 1 ) {
-        print " <b>($rec->{average_rating})</b>";
-      } else {
-        print sprintf(" <b>(%3.1f)</b>/%d", $rec->{average_rating}, $rec->{rating_count} );
-      }
-    }
-    print " $rec->{comment_count}•" if ( $rec->{comment_count} );
+  if ( ! $rec->{generic} ) {  # No ratings or comments on generics like Beer,Mixed or House Red Wine
+    print comments::avgratings($c, $rec->{rating_count}, $rec->{average_rating}, $rec->{comment_count});
   }
   print "<br/>\n"
 }

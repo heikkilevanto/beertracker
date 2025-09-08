@@ -64,10 +64,14 @@ sub avgratings {
       $avg = int($avg);
       $s .= "<b>$avg</b>";
     }
-    $s .= ")";
+    $s .= ") ";
   }
-  if ( $com ) {
-    $s .= " $cnt•";
+  if ( $com ) { # TODO - Maybe a log scale would be better
+    my $n = $com;
+    $n = 5 if ( $n > 5 );
+    while ( $n-- ) {
+      $s .= "•";
+    }
   }
   return $s;
 }
