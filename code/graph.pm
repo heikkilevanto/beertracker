@@ -200,7 +200,7 @@ sub makedatafile {
   while ( $date <= $end ) {
     my $line = oneday( $g, $date->ymd, $today);
     print F $line;
-    print F "\n" if ( $date->ymd ge $today); # split curves at today
+    print F "\n" if ( $date->ymd eq $today); # split curves at today
     if ( $date->wday == 6 ) { # Sat
       my $wkendcolor = $c->{altbgcolor};
       my $fri = $date->epoch - $halfday;
