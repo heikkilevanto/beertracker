@@ -145,7 +145,7 @@ sub listlocationcomments {
 # List location visits
 ################################################################################
 # TODO - Make the month+count a link to the mainlist, with filtering for the
-# location and date range in that month
+# location and date range in that month. If I want to have filtering in the main
 sub locationvisits {
   my $c = shift;
   my $locrec = shift;
@@ -180,8 +180,20 @@ sub locationvisits {
   print "Total $totalvisits visits \n";
 
   print "<hr/>\n";
-
 } # locationvisits
+
+
+################################################################################
+# List all the brews from this producer
+################################################################################
+sub producerbrews {
+  my $c = shift;
+  my $p = shift;
+  print "<b>Brews by $p->{Name} </b><br/>\n";
+  print listrecords::listrecords($c, "BREWS_LIST", "Last-",
+    "Producer = ?", $p->{Name});
+  print "<hr>\n";
+} # producerbrews
 
 ################################################################################
 # locationdeduplist - List all locations, for selecting those that duplicate the current
@@ -248,6 +260,9 @@ sub editlocation {
     if ( $p->{Id} ne "new" ) {
       listlocationcomments($c,$p);
       locationvisits($c, $p );
+      if ( $p->{LocType} =~ /Producer/ ) {
+        producerbrews($c, $p);
+      }
       locationdeduplist($c,$p);
     }
   } else {

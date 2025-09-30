@@ -59,13 +59,18 @@ sub listrecords {
   $where = "where $where" if ($where);
 
   my $sql = "select * from $table $where $order";
-  print STDERR "listrecords: $sql \n";
+  print STDERR "listrecords: $sql ";
   my $list_sth = $c->{dbh}->prepare($sql);
+  my $paramlist = "";
   if ( $params ) {
-    $list_sth->execute($params);
+    my @paramarr = ( $params ); # the simple case;
+    @paramarr = @$params if ( ref $params eq 'ARRAY' );
+    $list_sth->execute(@paramarr);
+    print STDERR "[" . join(',', @paramarr) . "]"
   } else {
     $list_sth->execute();
   }
+  print STDERR "\n";
 
   my $url = $c->{url};
   my $op = $c->{op};
