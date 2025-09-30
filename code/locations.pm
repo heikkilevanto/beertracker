@@ -189,7 +189,9 @@ sub locationvisits {
 sub producerbrews {
   my $c = shift;
   my $p = shift;
-  print "<b>Brews by $p->{Name} </b><br/>\n";
+  my $countsql = "select count(*) as cnt from brews_list where Producer = ?";
+  my $nbrews = db::queryrecord($c, $countsql, $p->{Name});
+  print "<b>$nbrews->{cnt} Brews by $p->{Name} </b><br/>\n";
   print listrecords::listrecords($c, "BREWS_LIST", "Last-",
     "Producer = ?", $p->{Name});
   print "<hr>\n";
