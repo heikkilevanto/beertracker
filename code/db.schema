@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2025-10-02 16:44 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2025-10-02 16:58 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -349,10 +349,9 @@ select
     brews.Name,
     ploc.Name as xProducer,
     brews.Alc as Alc,
-    brews.BrewType || ", " || brews.Subtype as Type,
+    brews.Subtype as Sub,
     r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
-    count(glasses.Id) as Count,
-    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last
+    strftime ( '%Y-%m-%d', max(glasses.Timestamp), '-06:00' ) as Last
   from brews
   left join locations ploc on ploc.id = brews.ProducerLocation
   left join glasses on Glasses.Brew = brews.Id

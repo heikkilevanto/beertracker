@@ -99,10 +99,13 @@ sub listrecords {
       next;
     }
     my $sty = "style='max-width:200px; min-width:0'"; # default
+    $sty = "style='max-width:90px; min-width:0'" if ( $c->{mobile} );
     if ( $f =~ /Id|Alc/ ) {
       $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Stats|Type)$/ ) {
-      $sty = "style='max-width:80px; text-align:center'";
+      $sty = "style='max-width:100px; text-align:center'";
+    } elsif ( $f =~ /^(Sub)$/ ) {
+      $sty = "style='max-width:70px; text-align:center'";
     } elsif ( $f =~ /^(Com|Count)$/ ) {
       $sty = "style='text-align:right; max-width:50px'";
     } elsif ( $f =~ /Rate|Rating|Clr/) {
