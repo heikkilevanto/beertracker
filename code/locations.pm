@@ -192,8 +192,11 @@ sub producerbrews {
   my $countsql = "select count(*) as cnt from producer_brews_list where xProducer = ?";
   my $nbrews = db::queryrecord($c, $countsql, $p->{Name});
   print "<b>$nbrews->{cnt} Brews by $p->{Name} </b><br/>\n";
+  my $oldop = $c->{op};
+  $c->{op} = "Brew";  # Make name links to point to brews, not locations
   print listrecords::listrecords($c, "producer_brews_list", "Last-",
     "xProducer = ?", $p->{Name});
+  $c->{op} = $oldop;
   print "<hr>\n";
 } # producerbrews
 
