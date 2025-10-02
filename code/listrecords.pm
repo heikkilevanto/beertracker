@@ -223,18 +223,21 @@ sub listrecords {
   $s .= <<"SCRIPTEND";
   <script>
   let filterTimeout;
+  let filterGeneration = 0;
 
   function changefilter (inputElement) {
     clearTimeout(filterTimeout); // Cancel previous timeout
     filterTimeout = setTimeout(() => {
-      dochangefilter(inputElement);
+      filterGeneration++;
+      dochangefilter(inputElement, filterGeneration);
     }, 150); // Adjust delay as needed}
   }
 
-  function dochangefilter (inputElement) {
+  function dochangefilter (inputElement, gen) {
     // Find the table from the input's ancestor
     const table = inputElement.closest('table');
     if (!table) return; // should not happen
+    console.time("filter") ;
 
     const filterinputs = table.querySelectorAll('thead input');
 
@@ -250,6 +253,7 @@ sub listrecords {
     }
     const firstrows = table.querySelectorAll('tbody tr[data-first]');
     for (let r = 0; r < firstrows.length; r++) {
+      if (gen !== filterGeneration) return;  // A new filter has been started
       var disp = ""; // default to showing the row
       let row = firstrows[r];
       do {
@@ -261,6 +265,7 @@ sub listrecords {
               const re = filters[col];
               if ( !re.test( cols[c].textContent, 'i' ) ) {
                 disp = "none";
+                break;
               }
             }
           }
@@ -274,6 +279,8 @@ sub listrecords {
       } while ( ro && ! ro.hasAttribute("data-first") );
 
     }
+    console.timeEnd("filter") ;
+
   }
 
   // Clicking on a data field sets the filter
@@ -306,12 +313,15 @@ sub listrecords {
     dochangefilter(el);
   }
 
+  // Sorting the table
 
   function sortTable(el, col) {
     const table = el.closest('table');
     const tbody = table.tBodies[0];
     const ascending = ( el.value != " ▲" );
     const columnIndex = col;
+
+    console.time("sort") ;
 
     // Group rows into records
     const rows = Array.from(tbody.rows);
@@ -362,6 +372,7 @@ sub listrecords {
     table.dataset.sortCol = col;
     table.dataset.sortDir = ascending ? "desc" : "asc";
 
+    console.timeEnd("sort") ;
   }
 
   function extractSortKey(recordRows, columnIndex) {
@@ -379,7 +390,7 @@ sub listrecords {
           } else {
             text = parseFloat(text);
           }
-          console.log("sortkey for col " + columnIndex + " of '" + cell.textContent + "' is '" + text + "' m=" + match);
+          //console.log("sortkey for col " + columnIndex + " of '" + cell.textContent + "' is '" + text + "' m=" + match);
           return text;
         }
     }
