@@ -101,8 +101,8 @@ sub listrecords {
     my $sty = "style='max-width:200px; min-width:0'"; # default
     if ( $f =~ /Id|Alc/ ) {
       $sty = "style='max-width:55px; text-align:center'";
-    } elsif ( $f =~ /^(Stats)$/ ) {
-      $sty = "style='max-width:100px; text-align:center'";
+    } elsif ( $f =~ /^(Stats|Type)$/ ) {
+      $sty = "style='max-width:80px; text-align:center'";
     } elsif ( $f =~ /^(Com|Count)$/ ) {
       $sty = "style='text-align:right; max-width:50px'";
     } elsif ( $f =~ /Rate|Rating|Clr/) {
@@ -120,7 +120,7 @@ sub listrecords {
     } elsif ( $f =~ /Geo/ ) {  # geo distance
       $sty = "style='max-width:100px; min-width:0; text-align:right' ";
       $f = "Dist (km)";
-    } elsif ( $f =~ /^X/ ) {
+    } elsif ( $f =~ /^X/i ) {
       $sty = "style='display:none'";
     } elsif ( $f =~ /^None/i ) {
       $f = "";

@@ -26,11 +26,11 @@ cat db.dump | grep -i   "INSERT INTO" > data.dump
 # - Convert all UPPERCASE words to lowercase, but keep MixedCase and single 'A'
 # - Add drop table statements before create tables and views
 # - Add empty lines between statements
-echo "# Beertracker database schema" >../db.schema
-date "+# Schema dumped at %F %H:%M with $BASE/scripts/dbdump.sh" >> ../db.schema
-echo "# Do not edit directly, unless you plan to run scripts/dbchange immediately" >>../db.schema
-echo "# The schema lives inside the sqlite database!" >>../db.schema
-echo "" >>../db.schema
+echo "# Beertracker database schema" >../code/db.schema
+date "+# Schema dumped at %F %H:%M with $BASE/scripts/dbdump.sh" >> ../code/db.schema
+echo "# Do not edit directly, unless you plan to run scripts/dbchange immediately" >>../code/db.schema
+echo "# The schema lives inside the sqlite database!" >>../code/db.schema
+echo "" >>../code/db.schema
 
 perl -ne '
     next if /INSERT INTO/i;

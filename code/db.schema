@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2025-08-26 15:45 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2025-10-02 16:44 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -114,26 +114,6 @@ create table locations (
 );
 
 analyze sqlite_schema;
-
-create index idx_glasses_username on glasses (Username collate nocase);
-
-create index idx_glasses_location on glasses (Location);
-
-create index idx_glasses_timestamp on glasses (Timestamp);
-
-create index idx_effdate on glasses(strftime('%Y-%m-%d', Timestamp, '-06:00'));
-
-create index idx_brews_name on brews (Name collate nocase);
-
-create index idx_brews_producer_location on brews(ProducerLocation);
-
-create index idx_comments_person on comments (Person);
-
-create index idx_comments_glass on comments (Glass);
-
-create index idx_persons_name on persons (Name collate nocase);
-
-create index idx_locations_name on locations (Name collate nocase);
 
 -- view compers
 drop view if exists compers;
@@ -361,6 +341,44 @@ select
   left join locations on locations.id = glasses.Location
   left join locations ploc on ploc.id = brews.ProducerLocation
   order by Last desc;
+
+-- view producer_brews_list
+drop view if exists producer_brews_list;
+create view producer_brews_list as
+select
+    brews.Name,
+    ploc.Name as xProducer,
+    brews.Alc as Alc,
+    brews.BrewType || ", " || brews.Subtype as Type,
+    r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
+    count(glasses.Id) as Count,
+    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last
+  from brews
+  left join locations ploc on ploc.id = brews.ProducerLocation
+  left join glasses on Glasses.Brew = brews.Id
+  left join locations on locations.id = glasses.Location
+  left join brew_ratings r on r.Brew = Brews.Id
+  group by brews.id;
+
+create index idx_glasses_username on glasses (Username collate nocase);
+
+create index idx_glasses_location on glasses (Location);
+
+create index idx_glasses_timestamp on glasses (Timestamp);
+
+create index idx_effdate on glasses(strftime('%Y-%m-%d', Timestamp, '-06:00'));
+
+create index idx_brews_name on brews (Name collate nocase);
+
+create index idx_brews_producer_location on brews(ProducerLocation);
+
+create index idx_comments_person on comments (Person);
+
+create index idx_comments_glass on comments (Glass);
+
+create index idx_persons_name on persons (Name collate nocase);
+
+create index idx_locations_name on locations (Name collate nocase);
 
 commit;
 
