@@ -228,8 +228,7 @@ sub listrecords {
   function changefilter (inputElement) {
     clearTimeout(filterTimeout); // Cancel previous timeout
     filterTimeout = setTimeout(() => {
-      filterGeneration++;
-      dochangefilter(inputElement, filterGeneration);
+      dochangefilter(inputElement, ++filterGeneration);
     }, 150); // Adjust delay as needed}
   }
 
@@ -253,7 +252,11 @@ sub listrecords {
     }
     const firstrows = table.querySelectorAll('tbody tr[data-first]');
     for (let r = 0; r < firstrows.length; r++) {
-      if (gen !== filterGeneration) return;  // A new filter has been started
+      if (gen !== filterGeneration) {
+        console.log("Filtering aborted");
+        console.timeEnd("filter");
+        return;
+      }
       var disp = ""; // default to showing the row
       let row = firstrows[r];
       do {
@@ -296,7 +299,7 @@ sub listrecords {
     const filterinp = table.querySelector('input[data-col="'+col+'"]');
     if ( filterinp ) {
       filterinp.value = filtertext;
-      dochangefilter(el);
+      dochangefilter(el,++filterGeneration);
     }
   }
 
@@ -310,7 +313,7 @@ sub listrecords {
         filterinp.value = '';
       }
     }
-    dochangefilter(el);
+    dochangefilter(el,++filterGeneration);
   }
 
   // Sorting the table
