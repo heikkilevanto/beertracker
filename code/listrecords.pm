@@ -316,11 +316,13 @@ sub listrecords {
     dochangefilter(el,++filterGeneration);
   }
 
+  /////////////////////
   // Sorting the table
   let sortTimeout;
 
   function sortTable(el, col) {
     const ascending = ( el.value != " ▲" );
+
     el.value = ascending ? " ▲▲▲" : " ▼▼▼" ;  // Indicate we are sorting
 
     clearTimeout(sortTimeout); // Cancel previous timeout
@@ -336,6 +338,10 @@ sub listrecords {
     const columnIndex = col;
 
     console.time("sort") ;
+
+    // Detach tbody
+    const parent = tbody.parentNode;
+    parent.removeChild(tbody);
 
     // Group rows into records
     const rows = Array.from(tbody.rows);
@@ -375,6 +381,9 @@ sub listrecords {
             tbody.appendChild(row);
         }
     }
+
+    // Reattach tbody
+    parent.appendChild(tbody);
 
    // Clear arrows
    for (let th of table.querySelectorAll('thead input ') ) {

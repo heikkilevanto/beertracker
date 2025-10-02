@@ -32,6 +32,14 @@ select option {
   color: #ffffff;
 }
 
+/* Table head inputs for filtering and sorting */
+thead input {
+  user-select: none;    /* prevents text selection */
+  -webkit-user-select: none; /* Safari/Chrome */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* IE/Edge */
+}
+
 input:valid { border: 1px solid white; }
 input:invalid { border: 1px solid red; }
 select { border: 1px solid white; }
