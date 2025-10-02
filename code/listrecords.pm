@@ -317,11 +317,22 @@ sub listrecords {
   }
 
   // Sorting the table
+  let sortTimeout;
 
   function sortTable(el, col) {
+    const ascending = ( el.value != " ▲" );
+    el.value = ascending ? " ▲▲▲" : " ▼▼▼" ;  // Indicate we are sorting
+
+    clearTimeout(sortTimeout); // Cancel previous timeout
+    sortTimeout = setTimeout(() => { // Let the browser render first
+      doSortTable(el, col, ascending);
+    }, 0);
+
+  }
+
+  function doSortTable(el, col, ascending) {
     const table = el.closest('table');
     const tbody = table.tBodies[0];
-    const ascending = ( el.value != " ▲" );
     const columnIndex = col;
 
     console.time("sort") ;
