@@ -335,6 +335,7 @@ END_STYLE
   print jslink("menu");
   print jslink("geo");
   print jslink("inputs");
+  print jslink("listrecords");
   print "</head><body>\n";
   print "\n";
 } # htmlhead
