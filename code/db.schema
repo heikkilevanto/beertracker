@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2025-10-02 16:58 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2025-10-02 17:04 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -346,6 +346,7 @@ select
 drop view if exists producer_brews_list;
 create view producer_brews_list as
 select
+    brews.Id as xId,
     brews.Name,
     ploc.Name as xProducer,
     brews.Alc as Alc,

@@ -197,7 +197,8 @@ sub inputform {
   print "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' data-empty=1 />\n";
   my $pr = $rec->{Price} || "";
   $pr .= ".-" if ($pr);
-  print "<input name='pr' placeholder='pr' $sz4 value='$pr' />\n";
+  print "<input name='pr' placeholder='pr' $sz4 value='$pr' required />\n";
+    # Price is required, but a space or zero are allowed
   print "</td></tr>\n";
 
   # Buttons
@@ -207,7 +208,7 @@ sub inputform {
     print " <input type='hidden' name='e' value='$rec->{Id}' />\n";
     print " <input type='submit' name='submit' value='Save' id='save' />\n";
     print "</td><td>\n";
-    print " <input type='submit' name='submit' value='Del'/>\n";
+    print " <input type='submit' name='submit' value='Del' formnovalidate />\n";
     print "<a href='$c->{url}?o=$c->{op}' ><span>cancel</span></a>";
   } else { # New glass
     print "<input type='submit' name='submit' value='Record'/>\n";
