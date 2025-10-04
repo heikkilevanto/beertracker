@@ -106,8 +106,12 @@ sub listrecords {
       $sty = "style='display:none'";
     } elsif ( $f =~ /Id|Alc/ ) {
       $sty = "style='max-width:55px; text-align:center'";
-    } elsif ( $f =~ /^(Stats|Type)$/ ) {
+    } elsif ( $f =~ /^(Stats)$/ ) {
       $sty = "style='max-width:100px; text-align:center'";
+    } elsif ( $f =~ /^(Type)$/ ) {
+      my $w = "100px";
+      $w = "200px" unless $c->{mobile};
+      $sty = "style='max-width:$w; text-align:center'";
     } elsif ( $f =~ /^(Sub)$/ ) {
       $sty = "style='max-width:70px; text-align:center'";
     } elsif ( $f =~ /^(Com|Count)$/ ) {
