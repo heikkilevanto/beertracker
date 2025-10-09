@@ -9,13 +9,8 @@ use utf8;  # Source code and string literals are utf-8
 
 
 # TODO - Add current and latest as options to it
-# TODO - Add a way to add a new location
 
 # TODO - Add a button to use current geo (needs JS trickery)
-
-# TODO LATER - Add a way to merge two locations, in case of spelling errors
-
-# TODO - Move most of geolocation stuff here as well (or in its own module?)
 
 
 # Formatting magic
