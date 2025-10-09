@@ -195,7 +195,7 @@ sub inputform {
   my $alc = $rec->{Alc} || "";
   $alc .= "%" if ($alc);
   print "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' data-empty=1 />\n";
-  my $pr = $rec->{Price} || "";
+  my $pr = $rec->{Price} || "0";
   $pr .= ".-" if ($pr);
   print "<input name='pr' placeholder='pr' $sz4 value='$pr' required />\n";
     # Price is required, but a space or zero are allowed
