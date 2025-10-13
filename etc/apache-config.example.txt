@@ -4,13 +4,10 @@
 # Copy or symlink to /etc/apache2/conf-available|enabled or conf.d
 # Make also a symlink in /var/www/html/beertracker to the right place
 # Create a .htpasswd
-# Create a directory called beerdata, and your own data file in it,
-# same name as your username. Make both owned and writable by www-data.
+# Create a directory called beerdata, Make it owned and writable by www-data.
 
 
-#<Directory /home/heikki/proj/beertracker/>
-
-<DirectoryMatch /var/www/html/beertracker(-dev)?(-old)?/>
+<DirectoryMatch "^/var/www/html/beertracker(-dev)?/">
    AllowOverride All
    AcceptPathInfo On
    Options +FollowSymLinks +ExecCGI -Indexes
@@ -19,7 +16,7 @@
    DirectoryIndex code/index.cgi
 
    AuthUserFile /var/www/html/beertracker/.htpasswd
-   AuthName "Please Enter Password"
+   AuthName "Beertracker Password"
    AuthType Basic
    Require valid-user
 </DirectoryMatch>
@@ -31,28 +28,32 @@
 </FilesMatch>
 
 # Hide most of the data directory, but not the graphs we build there
-<DirectoryMatch /var/www/html/beertracker(-dev)?/beerdata>
-   Deny from All
-  <FilesMatch "\.png$">
-    Allow from All
-  </FilesMatch>
+<DirectoryMatch "^/var/www/html/beertracker(-dev)?/beerdata">
+    Require all denied
+    <FilesMatch "\.png$">
+        Require all granted
+        Satisfy any
+    </FilesMatch>
 </DirectoryMatch>
 
 # Allow photos from the photo dir
-<DirectoryMatch /var/www/html/beertracker(-dev)?/beerdata/.*\.photo>
-  Allow from All
-  <FilesMatch ".*\.png$">
-    Allow from All
-  </FilesMatch>
+<DirectoryMatch "^/var/www/html/beertracker(-dev)?/beerdata/.*\.photo">
+    Require all granted
 </DirectoryMatch>
 
+# Allow static files
+<DirectoryMatch "^/var/www/html/beertracker(-dev)?/static">
+  Require all granted
+  Satisfy any
+</DirectoryMatch>
 
-# Hide the .git directory too, although it is available at github
-<DirectoryMatch /var/www/html/beertracker(-dev)?/.git>
-   Deny from All
+# Hide the .git directory
+<DirectoryMatch "^/var/www/html/beertracker(-dev)?/.git">
+    Require all denied
 </DirectoryMatch>
 
 # Hide the scripts directory
-<DirectoryMatch /var/www/html/beertracker(-dev)?/scripts>
-   Deny from All
+<DirectoryMatch "^/var/www/html/beertracker(-dev)?/scripts">
+    Require all denied
 </DirectoryMatch>
+
