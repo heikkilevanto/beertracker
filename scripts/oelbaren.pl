@@ -8,7 +8,7 @@ use utf8;
 my $base_url = "https://oelbaren.dk/oel/";
 
 binmode STDOUT, ":encoding(UTF-8)";
-my $ua = LWP::UserAgent->new;
+my $ua = LWP::UserAgent->new ( timeout => 10 );   # sec
 $res = $ua->get($base_url);
 die "Failed to fetch $base_url", $res->status_line unless $res->is_success;
 
