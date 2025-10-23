@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2025-10-02 17:04 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2025-10-23 15:09 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -186,37 +186,6 @@ and l.id = g.location
 and l.loctype <> "Producer"
 group by g.location;
 
--- view location_ratings
-drop view if exists location_ratings;
-create view location_ratings as
-select
-  l.id,
-  count(c.rating) as rating_count,
-  avg(c.rating) as rating_average,
-  count(c.comment) as comment_count
-from comments c,
-  locations l,
-  glasses g
-where  g.brew is null
-and c.glass = g.id
-and l.id = g.location
-and l.loctype <> 'Producer'
-group by g.location;
-
--- view locations_list
-drop view if exists locations_list;
-create view locations_list as
-select
-    locations.Id,
-    locations.Name,
-	r.rating_count || ";" || r.rating_average || ";" || r.comment_count as Stats,
-    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
-    locations.LocType || ", " || locations.LocSubType as Type
-  from locations
-  left join glasses on glasses.Location = locations.Id
-  left join location_ratings r on r.id  = glasses.Id
-  group by locations.Id;
-
 -- view brews_dedup_list
 drop view if exists brews_dedup_list;
 create view brews_dedup_list as
@@ -359,6 +328,37 @@ select
   left join locations on locations.id = glasses.Location
   left join brew_ratings r on r.Brew = Brews.Id
   group by brews.id;
+
+-- view location_ratings
+drop view if exists location_ratings;
+create view location_ratings as
+select
+  l.id,
+  count(c.rating) as rating_count,
+  avg(c.rating) as rating_average,
+  count(c.comment) as comment_count
+from comments c,
+  locations l,
+  glasses g
+where c.glass = g.id
+and l.id = g.location
+and l.loctype <> 'Producer'
+group by g.location;
+
+-- view locations_list
+drop view if exists locations_list;
+create view locations_list as
+select
+    locations.Id,
+    locations.Name,
+	r.rating_count || ";" || r.rating_average || ";" || r.comment_count as Stats,
+	locations.lat || " " || locations.lon as Geo,
+    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
+    locations.LocType || ", " || locations.LocSubType as Type
+  from locations
+  left join glasses on glasses.Location = locations.Id
+  left join location_ratings r on r.id  = glasses.Id
+  group by locations.Id;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
