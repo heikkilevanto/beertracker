@@ -42,6 +42,18 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
+function formatteddist(lat1, lon1, lat2, lon2) {
+  var dist = haversineKm(lat1,lon1, lat2,lon2);
+  if ( dist > 10 )
+    dist = dist.toFixed(1) + " km";
+  else if ( dist > 1 )
+    dist = dist.toFixed(3) + " km";
+  else
+    dist = (dist * 1000)  .toFixed(0) + " m";
+  return dist;
+}
+
+
 function geodist(prefix) {
   if (!navigator.geolocation) {
     return;
@@ -60,14 +72,7 @@ function geodist(prefix) {
       const lat2 = latinp.value;
       const lon2 = loninp.value;
       if ( lat2 && lon2 ) {
-        var dist = haversineKm(lat1,lon1, lat2,lon2);
-        if ( dist > 10 )
-          dist = dist.toFixed(1) + " km";
-        else if ( dist > 1 )
-          dist = dist.toFixed(3) + " km";
-        else
-          dist = (dist * 1000)  .toFixed(0) + " m";
-
+        var dist = formatteddist(lat1,lon1, lat2,lon2);
         distspan.textContent= " " + dist ;
       } else {
         distspan.textContent = "...";

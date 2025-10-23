@@ -80,7 +80,12 @@ sub listrecords {
   $s .= "<style>
     .top-border td { border-top: 2px solid white; }
     </style>\n";
-  $s .= "<table>\n";
+  my $geotable = "";
+  if ( $extraparams && $extraparams->{lat} eq '?' && $extraparams->{lon} eq '?' ) {
+    $geotable = "id='geotable'";
+  }
+
+  $s .= "<table $geotable>\n";
   my @styles;  # One for each column
 
   # Table headers
@@ -88,7 +93,6 @@ sub listrecords {
 
   # Filter inputs also work as column headers, and sort buttons on dbl-click
   $s .= "<tr class='top-border'>\n";
-  #$s .= "<td onclick='clearfilters(this);'>Clr</td>\n";
   my $chkfield = "";
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
@@ -203,7 +207,12 @@ sub listrecords {
       } elsif ( $fn eq "Geo" ) { # Geo dist
         if ( $v && $extraparams && $extraparams->{lat} && $extraparams->{lon} ) {
           my ( $lat, $lon ) = split(' ', $v);
-          $v = geo::geodist( $extraparams->{lat}, $extraparams->{lon}, $lat, $lon );
+          if (  $extraparams->{lat} eq '?' ) {  # Need to recalc in js
+            $data .= " lat=$lat lon=$lon";
+            $v = '?';
+          } else {
+            $v = geo::geodist( $extraparams->{lat}, $extraparams->{lon}, $lat, $lon );
+          }
         } else {
           $v = "";
         }
@@ -221,6 +230,9 @@ sub listrecords {
     $s .= "$tds</tr>\n";
   }
   $s .= "</tbody></table>\n";
+  if ($geotable) {
+    $s .= "<script>geotabledist();</script>\n";
+  }
   $s .= "</div>\n";
   $list_sth->finish;
 

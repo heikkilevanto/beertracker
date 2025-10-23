@@ -31,7 +31,10 @@ sub listlocations {
   print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>\n";
   my $sort = $c->{sort} || "Last-";
   # print util::listrecords($c, "LOCATIONS_LIST", $sort, "Type NOT LIKE  'Producer%'" );
-  print listrecords::listrecords($c, "LOCATIONS_LIST", $sort );
+  my $extraparams = {};
+  $extraparams->{lat} = '?';
+  $extraparams->{lon} = '?';
+  print listrecords::listrecords($c, "LOCATIONS_LIST", $sort, "", "", $extraparams);
   return;
 } # listlocations
 
@@ -62,6 +65,7 @@ sub listlocationcomments {
       order by Glasses.Timestamp desc
   ";
 #        and ( glasses.brew = '' OR glasses.brew = NULL )
+# See loc_ratings view for ratings of the location vs the brews there
 
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($c->{username}, $loc->{Id});
