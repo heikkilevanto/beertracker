@@ -208,7 +208,7 @@ function geotablecells(table, pos) {
   for (const td of tds) {
     const lat = td.getAttribute("lat");
     const lon = td.getAttribute("lon");
-    let dist = formatteddistkm(pos.coords.latitude, pos.coords.longitude, lat,lon);
+    let dist = haversineKm(pos.coords.latitude, pos.coords.longitude, lat,lon);
     if ( dist > 100 )
       dist = dist.toFixed(0);
     else if ( dist > 10 )
@@ -217,10 +217,6 @@ function geotablecells(table, pos) {
       dist = dist.toFixed(2);
     td.textContent=dist;
   }
-}
-function formatteddistkm(lat1, lon1, lat2, lon2) {
-  var dist = haversineKm(lat1,lon1, lat2,lon2);
-  return dist;
 }
 
 // Calculate geo dists for the whole table
