@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2025-10-23 15:09 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2025-10-24 14:59 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -351,10 +351,11 @@ create view locations_list as
 select
     locations.Id,
     locations.Name,
-	r.rating_count || ";" || r.rating_average || ";" || r.comment_count as Stats,
+    locations.LocType || ", " || locations.LocSubType as Type,
+	"" as trmob, 
 	locations.lat || " " || locations.lon as Geo,
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
-    locations.LocType || ", " || locations.LocSubType as Type
+	r.rating_count || ";" || r.rating_average || ";" || r.comment_count as Stats
   from locations
   left join glasses on glasses.Location = locations.Id
   left join location_ratings r on r.id  = glasses.Id
