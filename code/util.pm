@@ -55,18 +55,6 @@ sub price {
   return $v;
 }
 
-# Split date and weekday, convert weekday to text
-# Get the date from Sqlite with a format like '%Y-%m-%d %w'
-# The %w returns the number of the weekday.
-sub splitdate {
-  my $stamp = shift || return ( "(never)", "", "" );
-  my ($date, $wd, $time ) = split (' ', $stamp);
-  if (defined($wd)) {
-    my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-    $wd = $weekdays[$wd];
-  }
-  return ( $date, $wd || "", $time || "" );
-}
 
 # helper to make a unit displayed in smaller font
 sub unit {
@@ -87,6 +75,19 @@ sub loglist {
 ################################################################################
 # Helpers for date and timestamps
 ################################################################################
+
+# Split date and weekday, convert weekday to text
+# Get the date from Sqlite with a format like '%Y-%m-%d %w'
+# The %w returns the number of the weekday.
+sub splitdate {
+  my $stamp = shift || return ( "(never)", "", "" );
+  my ($date, $wd, $time ) = split (' ', $stamp);
+  if (defined($wd)) {
+    my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
+    $wd = $weekdays[$wd];
+  }
+  return ( $date, $wd || "", $time || "" );
+}
 
 # Helper to get a date string, with optional delta (in days)
 sub datestr {

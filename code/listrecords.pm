@@ -106,12 +106,12 @@ sub listrecords {
     $sty = "style='max-width:90px; min-width:0'" if ( $c->{mobile} );
     if ( $f =~ /^X/i ) {
       $sty = "style='display:none'";
-    } elsif ( $f =~ /^X/i ) {
-      $sty = "style='display:none'";
     } elsif ( $f =~ /Id|Alc/ ) {
       $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Stats)$/ ) {
       $sty = "style='max-width:100px; text-align:center'";
+    } elsif ( $f =~ /^(Last)$/ ) {
+      $sty = "style='max-width:100px; text-align:center'" if ($c->{mobile});
     } elsif ( $f =~ /^(Type)$/ ) {
       my $w = "100px";
       $w = "200px" unless $c->{mobile};
@@ -133,8 +133,13 @@ sub listrecords {
     } elsif ( $f =~ /Comment/ ) {
       $sty = "style='max-width:200px; min-width:0; font-style: italic' ";
     } elsif ( $f =~ /Geo/ ) {  # geo distance
-      $sty = "style='max-width:100px; min-width:0; text-align:right' ";
-      $f = "Dist (km)";
+      if ( $c->{mobile} ) {
+        $sty = "style='max-width:55px; min-width:0; text-align:right' ";
+        $f = "km";
+      } else {
+        $sty = "style='max-width:100px; min-width:0; text-align:right' ";
+        $f = "Dist (km)";
+      }
     } elsif ( $f =~ /^None/i ) {
       $f = "";
     }
@@ -158,6 +163,8 @@ sub listrecords {
   }
   $s .= "</tr>\n";
   $s .= "</thead><tbody>\n";
+
+  my $cutoff = util::datestr("%F", -7);  # a week ago, display full date
 
   my $first = 1;
   while ( my @rec = $list_sth->fetchrow_array ) {
@@ -184,7 +191,11 @@ sub listrecords {
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Type" ) {
         $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
-        $v = "[$v]" if ($v);
+        if ($c->{mobile}) {
+          $v =~ s/^(.)[^,]+,*/$1/;  # Shorten restaurant to r, etc
+        } else {
+          $v = "[$v]" if ($v);
+        }
       } elsif ( $fn eq "Alc" ) {
         $v = util::unit($v,"%") if ($v);
       } elsif ( $fn eq "LocName" ) {
@@ -201,9 +212,12 @@ sub listrecords {
         $onclick = "";
       } elsif ( $fn eq "Last" ) {
         my ($date, $wd, $time) = util::splitdate($v);
-        $v = "<a href='$c->{url}?o=Full&date=$date'><span>$wd $date $time</span></a>";
-        # TODO - "Sun 21:15" or "Sun 2023-05-25", depending on how recent
-        # Will save a few chars on the phone
+        my $disp = "$date $time $wd"; # wday last, for alignment
+        if ( $c->{mobile} ) {
+          $disp = "$time $wd";
+          $disp = "$date" if ( $date lt $cutoff );
+        }
+        $v = "<a href='$c->{url}?o=Full&date=$date'><span>$disp</span></a>";
       } elsif ( $fn eq "Geo" ) { # Geo dist
         if ( $v && $extraparams && $extraparams->{lat} && $extraparams->{lon} ) {
           my ( $lat, $lon ) = split(' ', $v);
