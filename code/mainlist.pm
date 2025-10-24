@@ -273,6 +273,7 @@ sub buttonline {
   print "<input type='hidden' name='selbrewtype'  value='$rec->{brewtype}' />\n";
   print "<input type='hidden' name='date' id='date' value=' ' />\n";
   print "<input type='hidden' name='time' id='time' value=' ' />\n";
+  print "<input type='hidden' name='pr' id='time' value='$rec->{price}' />\n";
   print "<input type='hidden' name='o' value='$c->{op}' />\n";  # Stay on page
   print "<input type='hidden' name='q' value='$c->{qry}' />\n";
 

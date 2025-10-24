@@ -53,7 +53,6 @@ sub geodist {
   return sprintf( "%3.2f", $d) if ( $d < 10 );
   return sprintf( "%3.1f", $d) if ( $d < 100 );
   return sprintf( "%3.0f", $d);
-   # TODO different formats depending on the scale
 } # geodist
 
 ################################################################################
