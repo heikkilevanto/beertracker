@@ -99,7 +99,6 @@ function geotablecells(pos) {
     const lat = td.getAttribute("lat");
     const lon = td.getAttribute("lon");
     if ( lat && lon ) {
-      console.log("attr ", lat, lon, " pos ", pos.coords.latitude, pos.coords.longitude );
       let dist = haversineKm(pos.coords.latitude, pos.coords.longitude, lat,lon);
       if ( dist > 100 )
         dist = dist.toFixed(0);

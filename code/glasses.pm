@@ -164,7 +164,8 @@ sub inputform {
   print "<input name='time' id='time' value='$time' " .
         "pattern=' ?\\d\\d(:?\\d\\d)?(:?\\d\\d)?' ".
         "placeholder='HH:MM' $sz8/> &nbsp;\n";
-  print "<tr><td>Location</td>\n";
+  my $onclick = "onclick='selectNearest(\"#dropdown-Location\")'";
+  print "<tr><td $onclick>Location</td>\n";
   print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname", "non") .
     "</td></tr>\n";
 

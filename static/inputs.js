@@ -78,7 +78,29 @@ function filterItems(filterInput, dropdownList) {
 }
 
 
-// custom select
+// Helper to find the location with smallest distance, and to select that
+function selectNearest(dropdownId) {
+  const root = document.querySelector(dropdownId);
+  if ( ! root ) {
+    console.log ("Did not find ", dropdownId);
+    return;
+  }
+  const items = root.querySelectorAll('.dropdown-item span');
+  let best = null, min = Infinity;
+
+  items.forEach(span => {
+    const val = parseFloat(span.textContent.replace('>', ''));
+    if (val < min) { min = val; best = span.parentElement; }
+  });
+
+  if (best) {
+    root.querySelector('.dropdown-filter').value = best.textContent.trim();
+    root.querySelector('input[type=hidden]').value = best.id;
+  }
+}
+
+
+// Replacement for a regular select component, following our styles
 function initCustomSelect(container) {
   const display = container.querySelector(".custom-select-display");
   const list    = container.querySelector(".custom-select-list");
