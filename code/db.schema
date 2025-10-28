@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2025-10-24 14:59 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2025-10-28 16:13 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -360,6 +360,27 @@ select
   left join glasses on glasses.Location = locations.Id
   left join location_ratings r on r.id  = glasses.Id
   group by locations.Id;
+
+-- view LatestPrices
+drop view if exists LatestPrices;
+create view LatestPrices as
+select g.Location,
+       l.Name as LocationName,
+       g.Brew,
+       g.Volume,
+       g.Price,
+       g.Timestamp
+from glasses g
+join (
+    select Location, Brew, Volume, max(Timestamp) as MaxTime
+    from glasses
+    group by Location, Brew, Volume
+) latest
+  on g.Location = latest.Location
+ and g.Brew = latest.Brew
+ and g.Volume = latest.Volume
+ and g.Timestamp = latest.MaxTime
+left join Locations l on l.Id = g.Location;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 

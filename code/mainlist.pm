@@ -50,8 +50,8 @@ sub glassquery {
       and effdate <= ?
     order by timestamp desc
   };
-  # TODO - Move the brew_stat into a separate query. Make one for locations as
-  # well.
+  # TODO - Location stats?
+  # TODO - Price guesses for various sizes?
   my $sth = db::query($c, $sql, $c->{username}, $date);
   return $sth;
 } # glassquery

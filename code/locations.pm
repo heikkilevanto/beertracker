@@ -392,7 +392,7 @@ sub selectlocation {
     }
     my $dist = "";
     if ($lat && $lon) {
-      $dist = "<span lat=$lat lon=$lon style='pointer-events:none; font-size: xx-small;'> > ? </span>";
+      $dist = "<span lat=$lat lon=$lon style='pointer-events:none; font-size: xx-small;'> ??? </span>";
     }
     $opts .= "      <div class='dropdown-item' id='$id'>$name $type $dist</div>\n";
     if ( $id eq $selected ) {
