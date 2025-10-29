@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2025-10-29 11:39 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2025-10-29 11:59 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -375,6 +375,7 @@ from glasses g
 join (
     select Username, Location, Brew, Volume, max(Timestamp) as MaxTime
     from glasses
+	where price > 0
     group by Username, Location, Brew, Volume
 ) latest
   on g.Username = latest.Username
@@ -382,7 +383,8 @@ join (
  and g.Brew = latest.Brew
  and g.Volume = latest.Volume
  and g.Timestamp = latest.MaxTime
-left join Locations l on l.Id = g.Location;
+left join Locations l on l.Id = g.Location
+where g.Price > 0;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
