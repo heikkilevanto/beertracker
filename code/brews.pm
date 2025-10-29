@@ -212,6 +212,55 @@ sub listbrewcomments {
 
 
 ################################################################################
+# List latest prices at various locations
+################################################################################
+sub listbrewprices {
+  my $c = shift; # context
+  my $brew = shift;
+  print "<!-- listbrewprices -->\n";
+  my $sql = "
+    SELECT * from LatestPrices
+    WHERE Brew = ?
+      AND username = ?
+    ORDER by Timestamp DESC";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($brew->{Id}, $c->{username});
+  print "<div onclick='toggleCommentTable(this.nextElementSibling);'>";
+  print "Latest prices for <b>$brew->{Name}</b> <br/>\n";
+  print "</div>\n";
+  print "<div style='overflow-x: auto;'>";
+  print "<table >\n";
+  while ( my $com = $sth->fetchrow_hashref ) {
+    print "<tr><td>\n";
+    print "$com->{Timestamp}</span></a><br/> \n";
+    print "<td>\n";
+    print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
+    print "</td><td>\n";
+    print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
+    print "<td/><td>\n";
+    print $com->{LocationName};
+    print "</td>\n";
+    print "</tr>\n";
+  }
+  print "</table></div>\n";
+  print "<div onclick='togglePriceTable(this.previousElementSibling);'><br/>";
+  print "</div>";
+  print "<script>
+    function togglePriceTable(table) {
+      if (table) {
+        table.style.display = (table.style.display === 'none') ? 'table' : 'none';
+      }
+    }
+    </script>
+    ";
+  $sth->finish;
+  print "<!-- listbrewprices end -->\n";
+  print "<hr/>\n";
+
+} # listbrewprices
+
+
+################################################################################
 # List all glasses for the given brew
 ################################################################################
 sub listbrewglasses {
@@ -357,6 +406,7 @@ sub editbrew {
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
       listbrewcomments($c, $p);
+      listbrewprices($c, $p);
       listbrewglasses($c, $p);
       brewdeduplist($c, $p);
     }
