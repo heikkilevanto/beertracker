@@ -39,7 +39,7 @@ sub brewcolor {
       "adaa9d", "smoke|rauch|sc?h?lenkerla",
       "350f07", "stout|port",  # imp comes later
       "1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
-      "8cf2ed", "booze|sc?h?nap+s|whisky",
+      "8cf2ed", "booze|spirit|sc?h?nap+s|whisky",
       "e07e1d", "cider",
       "eaeac7", "weiss|wit|wheat|weizen",
       "66592c", "Black IPA|BIPA",
