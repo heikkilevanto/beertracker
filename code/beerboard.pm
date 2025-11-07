@@ -477,7 +477,7 @@ sub shortbeerstyle {
   $sty =~ s/\b(Beer|Style)\b//i; # Stop words
   $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
   $sty =~ s/\s+/ /g;  # multiple spaces etc
-  if ( $sty =~ /(\WPA|Pale Ale)/i ) {
+  if ( $sty =~ /( PA |Pale Ale)/i ) {
     return "APA"   if ( $sty =~ /America|US/i );
     return "BelPA" if ( $sty =~ /Belg/i );
     return "NEPA"  if ( $sty =~ /Hazy|Haze|New England|NE/i);
