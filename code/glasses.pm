@@ -336,7 +336,8 @@ sub getvalues {
   my $glass = shift;
   my $brew = shift;
   my $sub = shift;
-  $glass->{Price} = util::paramnumber($c, "pr");
+  #$glass->{Price} = util::paramnumber($c, "pr");
+  $glass->{Price} = util::param($c, "pr", "?");
   $glass->{Volume} = util::param($c, "vol", "L");  # Default to a large one
   $glass->{Alc} = util::paramnumber($c, "alc", $brew->{Alc} || "0");
   if ( $sub =~ /Copy (\d+)/ ) {
@@ -384,18 +385,6 @@ sub fixvol {
 
 
 ############## Helper to fix the price
-sub guessprice {
-  my $c = shift;
-  my $where = shift;
-  my $grec = db::getfieldswhere( $c, "GLASSES", "Price",
-      "WHERE Price > 0 AND $where",
-      "ORDER BY Timestamp DESC" );
-  if ( $grec && $grec->{Price} ) {
-    print STDERR "Found price '$grec->{Price}' with $where \n";
-    return $grec->{Price};
-  }
-  return 0;
-}
 
 # Convert prices to DKK if in other currencies
 # TODO - Not in use at the moment
@@ -413,6 +402,19 @@ sub curprice {
   return "";
 }
 
+sub guessoneprice {
+  my $c = shift;
+  my $where = shift;
+  my $grec = db::getfieldswhere( $c, "GLASSES", "Price",
+      "WHERE Price > 0 AND $where",
+      "ORDER BY Timestamp DESC" );
+  if ( $grec && $grec->{Price} ) {
+    print STDERR "Found price '$grec->{Price}' with $where \n";
+    return $grec->{Price};
+  }
+  return 0;
+}
+
 sub fixprice {
   my $c = shift;
   my $glass = shift;
@@ -424,30 +426,31 @@ sub fixprice {
     $glass->{Price} = "0";
     return;
   }
-
-  print STDERR "No price, guessing p='$glass->{Price}'\n";
-  # Sql where clause fragments
-  my $br = "Brew=$glass->{Brew}";
-  my $vo = "Volume=$glass->{Volume}";
-  my $lo = "Location=$glass->{Location}";
-  $pr = 0;
-  if ( $glass->{Brew} && $glass->{Brew} ne "new" &&
-       $glass->{Volume} ) {
-    # Have brew, try to find similar glasses
-    if ( $glass->{Location} ne "new" ) {
-      $pr = guessprice($c,"$br AND $lo AND $vo" );
+  if ( $pr eq "?" ) {
+    print STDERR "No price, guessing p='$glass->{Price}'\n";
+    # Sql where clause fragments
+    my $br = "Brew=$glass->{Brew}";
+    my $vo = "Volume=$glass->{Volume}";
+    my $lo = "Location=$glass->{Location}";
+    $pr = 0;
+    if ( $glass->{Brew} && $glass->{Brew} ne "new" &&
+        $glass->{Volume} ) {
+      # Have brew, try to find similar glasses
+      if ( $glass->{Location} ne "new" ) {
+        $pr = guessoneprice($c,"$br AND $lo AND $vo" );
+      }
+      if ( $pr == 0 ) {
+        $pr = guessoneprice($c,"$br AND $vo" );
+      }
     }
-    if ( $pr == 0 ) {
-      $pr = guessprice($c,"$br AND $vo" );
+    if ( $pr == 0 && $glass->{Location} ne "new") {
+      $pr = guessoneprice($c, "$lo AND $vo" );
     }
-  }
-  if ( $pr == 0 && $glass->{Location} ne "new") {
-    $pr = guessprice($c, "$lo AND $vo" );
-  }
-  if ( $pr > 0 ) {
-    $glass->{Price} = $pr;
-  } else {
-    print STDERR "Could not guess a price with $br $vo $lo \n";
+    if ( $pr > 0 ) {
+      $glass->{Price} = $pr;
+    } else {
+      print STDERR "Could not guess a price with $br $vo $lo \n";
+    }
   }
 } # fixprice
 
@@ -522,6 +525,8 @@ sub postglass {
     getvalues($c, $glass, $brew, $sub);
     gettimestamp($c, $glass);
     fixvol($c, $glass, $brew);
+    fixprice($c, $glass);
+
 
 
   } # normal glass

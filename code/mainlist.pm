@@ -254,11 +254,13 @@ sub buttonline {
   } elsif ( $rec->{brewtype}  eq "Wine" ) {
     $vols{12} = 1;
     $vols{16} = 1 unless ( $rec->{vol} == 15 );
-    $vols{37} = 1;
     $vols{75} = 1;
   } elsif ( $rec->{brewtype}  eq "Spirit" ) {
     $vols{2} = 1;
     $vols{4} = 1;
+  } elsif ( $rec->{vol} == 30 ||  $rec->{vol} == 50  ) {
+    $vols{30} = 1;  # SOme beers come in 30/50
+    $vols{50} = 1;
   } else { # Default to beer, usual sizes in craft beer world
     $vols{25} = 1;
     $vols{40} = 1;
@@ -273,7 +275,8 @@ sub buttonline {
   print "<input type='hidden' name='selbrewtype'  value='$rec->{brewtype}' />\n";
   print "<input type='hidden' name='date' id='date' value=' ' />\n";
   print "<input type='hidden' name='time' id='time' value=' ' />\n";
-  print "<input type='hidden' name='pr' id='time' value='$rec->{price}' />\n";
+  #print "<input type='hidden' name='pr' id='time' value='$rec->{price}' />\n";
+  print "<input type='hidden' name='pr' id='time' value='?' />\n";
   print "<input type='hidden' name='o' value='$c->{op}' />\n";  # Stay on page
   print "<input type='hidden' name='q' value='$c->{qry}' />\n";
 
