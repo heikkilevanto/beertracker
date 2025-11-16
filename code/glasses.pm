@@ -420,7 +420,10 @@ sub fixprice {
   my $glass = shift;
 
   my $pr = $glass->{Price} || "";
-  return if  ( $pr =~ /^\d+$/ );  # Already a good price, only digits
+  if  ( $pr =~ /^(\d+)[.-]*$/ ){  # Already a good price, only digits
+    $glass->{Price} = $1; # just the digits
+    return
+  }
   # TODO - Currencies, next time I travel
   if ( $pr =~ /^x/i ) {  # X indicates no price, no guessing
     $glass->{Price} = "0";
