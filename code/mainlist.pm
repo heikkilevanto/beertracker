@@ -30,6 +30,7 @@ sub glassquery {
       glasses.volume as vol,
       glasses.alc as alc,
       glasses.stdrinks as drinks,
+      glasses.note as note,
       location as loc,
       glasses.Brewtype as brewtype,
       glasses.Subtype as subtype,
@@ -200,7 +201,7 @@ sub nameline {
 }
 
 sub numbersline {
-  # [14951] 40cl 70.- 6.2% 1.63d 0.93/₀₀ (7.5)/2 3*
+  # [14951] 40cl 70.- 6.2% 1.63d 0.93/₀₀ (7.5)/2 3*  (glass note)
   # id, vol, price, alc, drinks, blood alc, avg rating /count, comment count
   # The ratings and comments are globally for that brew.
   my $c = shift;
@@ -216,6 +217,9 @@ sub numbersline {
   print util::unit($ba,"/₀₀");
   if ( ! $rec->{generic} ) {  # No ratings or comments on generics like Beer,Mixed or House Red Wine
     print comments::avgratings($c, $rec->{rating_count}, $rec->{average_rating}, $rec->{comment_count});
+  }
+  if ( $rec->{note} ) {
+    print " (<i>$rec->{note}</i>)";
   }
   print "<br/>\n"
 }

@@ -141,6 +141,7 @@ sub inputform {
   my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
   my $sz4 = "size='4' style='text-align:right' $clr";
   my $sz8 = "size='8'  $clr";
+  my $sz20 = "size='20' $clr";
 
   print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "onClick='setdate();' " .
@@ -187,8 +188,19 @@ sub inputform {
 
   print "</tr>\n";
 
-  # Vol, Alc, and Price
-  print "<tr><td>&nbsp;</td>";
+  # Note for the glass
+  my $hidenote = "hidden";
+  $rec->{Note} = "" unless ( $c->{edit} );  # Do not inherit from previous
+  $hidenote = "" if ( $rec->{Note} );
+  print "<tr id='noteline' $hidenote><td>Note</td><td>\n";
+  print "<input name='note' placeholder='note' value='$rec->{Note}' $sz20/>\n";
+  print "</td></tr>\n";
+
+  # (note toggle),  Vol, Alc, and Price
+  print "<tr>";
+  my $notetxt = "(note)";
+  $notetxt = "" if ( !$hidenote);
+  print "<td><div id='notetag' onclick='shownote();'>$notetxt</id></td>";
   print "<td id='avp' >\n";
   my $vol = $rec->{Volume} || "";
   $vol .= "c" if ($vol);
@@ -258,6 +270,13 @@ sub inputform {
       }
     }
     setdate();
+
+    function shownote() {
+      const noteline = document.getElementById("noteline");
+      noteline.hidden = false;
+      const toggle = document.getElementById("notetag");
+      toggle.hidden = true;
+    }
 
     // hide newBrewType, we use SelBrewType always
     var nbt = document.getElementsByName("newbrewBrewType");
@@ -344,6 +363,7 @@ sub getvalues {
     $glass->{Volume} = $1;
     print STDERR "getvalues: s='$sub' v='$1' \n";
   }
+  $glass->{Note} = util::param($c,"note");
 } # getvalues
 
 ############## Helper for alc, volume, etc
@@ -538,7 +558,8 @@ sub postglass {
     print STDERR "postglass: Op:'$sub' U:'$c->{username},' " .
       "Bt:'$glass->{BrewType}' Su:'$glass->{SubType}' Br:'$glass->{Brew}' " .
       "Lo:'$glass->{Location}' ".
-      "Pr:'$glass->{Price}' Vo:'$glass->{Volume}' Al:'$glass->{Alc}' dr:'$glass->{StDrinks}' \n";
+      "Pr:'$glass->{Price}' Vo:'$glass->{Volume}' Al:'$glass->{Alc}' " .
+      "dr:'$glass->{StDrinks}' N:'$glass->{Note}'\n";
   }
 
   if ( $sub eq "Save" ) {  # Update existing glass
@@ -551,7 +572,8 @@ sub postglass {
         Price = ?,
         Volume = ?,
         Alc = ?,
-        StDrinks = ?
+        StDrinks = ?,
+        Note = ?
       where id = ? and username = ?
     ";
   my $sth = $c->{dbh}->prepare($sql);
@@ -565,6 +587,7 @@ sub postglass {
     $glass->{Volume},
     $glass->{Alc},
     $glass->{StDrinks},
+    $glass->{Note},
     $glass->{Id}, $c->{username} );
   print STDERR "Updated " . $sth->rows .
     " Glass records for id '$c->{edit}'  \n";
@@ -572,8 +595,8 @@ sub postglass {
   } else { # Create a new glass
     my $sql = "insert into GLASSES
       ( Username, TimeStamp, BrewType, SubType,
-        Location, Brew, Price, Volume, Alc, StDrinks )
-      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ? )
+        Location, Brew, Price, Volume, Alc, StDrinks, Note )
+      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ? )
       ";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute(
@@ -586,7 +609,8 @@ sub postglass {
       $glass->{Price},
       $glass->{Volume},
       $glass->{Alc},
-      $glass->{StDrinks}
+      $glass->{StDrinks},
+      $glass->{Note}
       );
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
