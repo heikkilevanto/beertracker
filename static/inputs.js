@@ -32,7 +32,7 @@ function initDropdown(container) {
       // update alc if present
       const alcinp = document.getElementById("alc");
       const selalc = event.target.getAttribute("alc");
-      if (alcinp && selalc) alcinp.value = selalc;
+      if (alcinp && selalc) alcinp.value = selalc + "%";
 
       // show note if generic brew
       if ( event.target.textContent.includes("(Gen)") ){
