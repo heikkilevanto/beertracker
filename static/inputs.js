@@ -33,6 +33,15 @@ function initDropdown(container) {
       const alcinp = document.getElementById("alc");
       const selalc = event.target.getAttribute("alc");
       if (alcinp && selalc) alcinp.value = selalc;
+
+      // show note if generic brew
+      if ( event.target.textContent.includes("(Gen)") ){
+        const noteline = document.getElementById("noteline");
+        if ( noteline ) noteline.hidden = false;
+        const toggle = document.getElementById("notetag");
+        if (toggle) toggle.hidden = true;
+      }
+
     }
   });
 
