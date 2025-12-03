@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2025-10-29 11:59 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2025-12-03 16:45 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -25,7 +25,8 @@ create table glasses (
     Price decimal,
     Volume decimal,
     Alc decimal,
-    StDrinks decimal, -- Calculated from volume and alc
+    StDrinks decimal,
+    Note text, -- Calculated from volume and alc
 
     foreign key (Brew) references Brews(id),
     foreign key (Location) references Locations(id)
@@ -298,11 +299,11 @@ select
 	comments.Comment as Comment,
 
 	"tr" as tr,
-	'' as None, 
+	'' as None,
 	comments.photo as Photo,
-	
+
 	Glasses.username as Xusername
-	
+
   from comments
   left join glasses on Glasses.Id = comments.Glass
   left join brews on brews.Id = glasses.Brew
@@ -352,7 +353,7 @@ select
     locations.Id,
     locations.Name,
     locations.LocType || ", " || locations.LocSubType as Type,
-	"" as trmob, 
+	"" as trmob,
 	locations.lat || " " || locations.lon as Geo,
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
 	r.rating_count || ";" || r.rating_average || ";" || r.comment_count as Stats
