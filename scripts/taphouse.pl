@@ -43,7 +43,6 @@ foreach my $k ( sort {$a <=> $b} keys(%$beers) ) { # For each beer
   }
 
 }
-
 print $j
   ->pretty(1)   # Pretty-print the json
   ->ascii(1)    # Encode anything non-ascii

@@ -114,11 +114,17 @@ sub beerboard {
     print "<!-- Loaded cached board from '$cachefile' -->\n";
   }
   if ( !$json ){
-    $json = `perl $script`;
-    $loaded = 1;
-    print "<!-- run scraper script '$script' -->\n";
+    #$json = `perl $script`;
+    $json = `timeout 5s perl $script`;
+    if ( $! ) {
+      print STDERR "Timeout on running $script. $! \n";
+      $json = '"Timeout running $script: $!"';
+    } else {
+      $loaded = 1;
+      print "<!-- run scraper script '$script' -->\n";
+    }
   }
-  if (! $json) {
+  if (! $loaded || !$json) {
     print "Sorry, could not get the list from $locparam<br/>\n";
     print "<!-- Error running " . $scrapers{$locparam} . ". \n";
     print "Result: '$json'\n -->\n";
