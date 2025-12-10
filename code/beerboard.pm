@@ -71,7 +71,7 @@ sub beerboard {
   # Pull-down for choosing the bar
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
   print "Beer list \n";
-  print "<select onchange='document.location=\"$c->{url}?o=board&loc=\" + this.value;' style='width:5.5em;'>\n";
+  print "<select onchange='document.location=\"$c->{url}?o=Board&loc=\" + this.value;' style='width:5.5em;'>\n";
   if (!$scrapers{$locparam}) { #Include the current location, even if no scraper
     $scrapers{$locparam} = ""; #that way, the pulldown looks reasonable
   }
@@ -88,8 +88,8 @@ sub beerboard {
   print "&nbsp; (<a href='$c->{url}?o=$c->{op}&loc=$locparam&q=PA'><span>PA</span></a>) "
     if ($c->{qry} ne "PA" );
 
-  print "<a href='$c->{url}?o=board&loc=$locparam&f=f'><i>(Reload)</i></a>\n";
-  print "<a href='$c->{url}?o=board-2&loc=$locparam'><i>(all)</i></a>\n";
+  print "<a href='$c->{url}?o=Board&loc=$locparam&f=f'><i>(Reload)</i></a>\n";
+  print "<a href='$c->{url}?o=Board-2&loc=$locparam'><i>(all)</i></a>\n";
 
   print "<p>\n";
   if (!$scrapers{$locparam}) {
@@ -111,6 +111,7 @@ sub beerboard {
       $json .= $_ ;
     }
     close CF;
+    $loaded = 1;
     print "<!-- Loaded cached board from '$cachefile' -->\n";
   }
   if ( !$json ){
@@ -270,7 +271,7 @@ sub beerboard {
         if ($extraboard == $id) {
           $linkid = "-3";  # Force no expansion
         }
-        print "<a href='$c->{url}?o=board$linkid&loc=$locparam'><span width=100% $beerstyle id='here'>$dispid</span></a> ";
+        print "<a href='$c->{url}?o=Board$linkid&loc=$locparam'><span width=100% $beerstyle id='here'>$dispid</span></a> ";
         print "</td>\n";
 
         print "<td colspan=4 >";
@@ -305,7 +306,7 @@ sub beerboard {
         print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
       } else { # Plain view
         print "<tr><td align=right $beerstyle>";
-        print "<a href='$c->{url}?o=board$id&loc=$locparam#here'><span width=100% $beerstyle>$dispid</span></a> ";
+        print "<a href='$c->{url}?o=Board$id&loc=$locparam#here'><span width=100% $beerstyle>$dispid</span></a> ";
         print "</td>\n";
         print "$buttons\n";
         print "<td style='font-size: x-small;' align=right>$alc</td>\n";
@@ -341,7 +342,7 @@ sub loclink {
   my $scrape = shift || "List";
   my $lnk = "";
   if (defined($scrapers{$loc}) && $scrape ne " ") {
-    $lnk .= " &nbsp; <i><a href='$c->{url}?o=board&loc=$loc'><span>$scrape</span></a></i>" ;
+    $lnk .= " &nbsp; <i><a href='$c->{url}?o=Board&loc=$loc'><span>$scrape</span></a></i>" ;
   }
   if (defined($links{$loc}) && $www ne " ") {
     $lnk .= " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' ><span>$www</span></a></i>" ;

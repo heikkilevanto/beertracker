@@ -306,9 +306,9 @@ sub showmenu {
     # --- List/Edit ---
     my @edit = (
         { label => "Brews",     url => "o=Brew" },
-        { label => "Locations", url => "o=Locations" },
+        { label => "Locations", url => "o=Location" },
         { label => "Comments",  url => "o=Comment" },
-        { label => "Persons",   url => "o=Persons" },
+        { label => "Persons",   url => "o=Person" },
     );
     push @menu, { label => "List / Edit ...", children => \@edit };
 
@@ -331,6 +331,7 @@ sub showmenu {
     push @more, { label => "About", url => "o=About" };
     push @menu, { label => "More ...", children => \@more };
 
+    # TODO - Check we have a good $op, and if not, default to graph
     # --- JSON for JS ---
     my $menu_json = encode_json({
         currentLabel => "o=$c->{op}",

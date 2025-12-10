@@ -44,6 +44,9 @@ function initMenu(menuData, containerId, toggleButtonId) {
         a.textContent = item.label;
         a.href = window.location.pathname + "?" + item.url;
 
+        // TODO if (item.url.toLowerCase().startsWith(currentLabel.toLowerCase())) {
+        // Or something like that
+
         if (item.url.toLowerCase() === currentLabel.toLowerCase()) {
           a.classList.add("current");
         }

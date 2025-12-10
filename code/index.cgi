@@ -266,6 +266,10 @@ if ( $c->{op} =~ /Board/i ) {
   glasses::inputform($c);
   mainlist::mainlist($c);
 } else { # Default to the graph
+  # Log it, I have seen menus with no section selected! Must be a bad $op
+  # but I don't know where it comes from.
+  print STDERR "Index.cgi: Default op '$c->{op}' \n"
+    unless ( $c->{op} eq "Graph" );
   $c->{op} = "Graph" unless $c->{op};
   graph::graph($c);
   glasses::inputform($c);
