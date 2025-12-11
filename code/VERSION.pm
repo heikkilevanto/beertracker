@@ -8,8 +8,8 @@ sub version_info {
     return {
         tag     => 'v3.1',
         commits => 55,
-        date    => '2025-12-11 14:25:16 ',
-        commit  => 'dc54fdf',
+        date    => '2025-12-11 14:55:40 ',
+        commit  => '7b6cc5a',
         branch  => 'master',
     };
 }

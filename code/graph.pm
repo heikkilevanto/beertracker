@@ -226,8 +226,7 @@ sub plotgraph {
   my $white = "textcolor \"white\" ";
   my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
   my $weekline = "";
-  my $batitle = "notitle" ;
-  $batitle =  "title \"ba\" " if ( $g->{bigimg} eq "B" );
+  my $batitle =  "title \"ba\"";
   my $plotweekline =
     "'$g->{plotfile}' using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$g->{lastwk} wk\", " . #weekly
     "'' using 1:5 with points lc \"red\" pointtype 6 axes x1y2 $batitle, ";  # bloodalc
@@ -240,34 +239,17 @@ sub plotgraph {
   my $pointsize = "set pointsize 1.2\n";
   my $fillstyle = "fill solid noborder";  # no gaps between drinks or days
   my $fillstyleborder = "fill solid border linecolor \"$c->{bgcolor}\""; # Small gap around each drink
-  if ( $g->{bigimg} eq "B" ) {  # Big image
-    $g->{maxd} = $g->{maxd} + 1.5; # Make room at the top of the graph for the legend
-    if ( $g->{range} > 365*4 ) {  # "all"
-      ( $xtic, $xformat ) = @xyear;
-    } elsif ( $g->{range} > 400 ) { # "2y"
-      ( $xtic, $xformat ) = @xquart;
-    } elsif ( $g->{range} > 120 ) { # "y", "6m"
-      ( $xtic, $xformat ) = @xmonth;
-    } else { # 3m, m, 2w
-      ( $xtic, $xformat ) = @xweek;
-      $weekline = $plotweekline;
-      $fillstyle = $fillstyleborder;
-    }
-  } else { # Small image
-    $pointsize = "set pointsize 0.5\n" ;  # Smaller zeroday marks, etc
-    $g->{maxd} = $g->{maxd} + 2; # Make room at the top of the graph for the legend
-    if ( $g->{range} > 365*4 ) {  # "all"
-      ( $xtic, $xformat ) = @xyear;
-    } elsif ( $g->{range} > 360 ) { # "2y", "y"
-      ( $xtic, $xformat ) = @xquart;
-    } elsif ( $g->{range} > 80 ) { # "6m", "3m"
-      ( $xtic, $xformat ) = @xmonth;
-      $weekline = $plotweekline;
-    } else { # "m", "2w"
-      ( $xtic, $xformat ) = @xweek;
-      $fillstyle = $fillstyleborder;
-      $weekline = $plotweekline;
-    }
+  $g->{maxd} = $g->{maxd} + 1.5; # Make room at the top of the graph for the legend
+  if ( $g->{range} > 365*4 ) {  # "all"
+    ( $xtic, $xformat ) = @xyear;
+  } elsif ( $g->{range} > 400 ) { # "2y"
+    ( $xtic, $xformat ) = @xquart;
+  } elsif ( $g->{range} > 120 ) { # "y", "6m"
+    ( $xtic, $xformat ) = @xmonth;
+  } else { # 3m, m, 2w
+    ( $xtic, $xformat ) = @xweek;
+    $weekline = $plotweekline;
+    $fillstyle = $fillstyleborder;
   }
 
   my $cmd = "" .
@@ -343,7 +325,6 @@ sub onelink {
 # Helper to produce the links under the graph
 sub graphlinks {
   my $g = shift;
-  my $width = shift;
   my $c = $g->{c};
   my $t = localtime;
   my $start = Time::Piece->strptime($g->{start},"%F");
@@ -351,11 +332,11 @@ sub graphlinks {
   my $range = int( ($end - $start) * 0.9 );
   onelink($g, "&lt;&lt;", ($start-$range)->ymd, ($end-$range)->ymd ); # <<
   onelink($g, "&gt;&gt;", ($start+$range)->ymd, ($end+$range)->ymd ); # >>
-  onelink($g, "2w", ($t-14*$oneday)->ymd );
-  onelink($g, "Month"); # default values
+  onelink($g, "w", ($t-14*$oneday)->ymd, ($t+2*$oneday)->ymd ); # extra future
+  onelink($g, "M"); # default values
   onelink($g, "3m", $t->add_months(-3)->ymd );
   onelink($g, "6m", $t->add_months(-6)->ymd );
-  onelink($g, "Year", $t->add_years(-1)->ymd );
+  onelink($g, "Y", $t->add_years(-1)->ymd );
   onelink($g, "2y", $t->add_years(-2)->ymd );
   onelink($g, "all", "2016-01-01",$t->ymd );  # Earlest known data in the system
 }
@@ -365,17 +346,7 @@ sub graph {
   my $c = shift;
   my $g = {};  # Collects all graph-related parameters
   $g->{c} = $c;
-  # Parameters.
-  $g->{bigimg} = $c->{mobile} ? "S" : "B";
-  my $reload = 0;
-  if ($c->{op} =~ /Graph([BS]?)(X?)/i ) {
-    $g->{bigimg} = $1 if ($1);
-    $reload = $2;
-  }
-  $g->{imgsz}="320,250";
-  if ( $g->{bigimg} eq "B" ) {  # Big image
-    $g->{imgsz} = "640,480";
-  }
+  $g->{imgsz} = "640,480";
   # Date range, default to 30 days leading to tomorrow
   $g->{start} = util::param($c,"gstart", util::datestr("%F",-30) );
   $g->{end} = util::param($c,"gend", util::datestr("%F",1) );
@@ -383,26 +354,22 @@ sub graph {
 
   $g->{plotfile} = $c->{datadir} . $c->{username} . ".plot";
   $g->{cmdfile} = $c->{datadir} . $c->{username} . ".cmd";
-  $g->{pngfile} = $c->{datadir} . $c->{username} . "$g->{start}-$g->{end}-$g->{bigimg}.png";
+  $g->{pngfile} = $c->{datadir} . $c->{username} . "$g->{start}-$g->{end}.png";
 
-  if (  -r $g->{pngfile} && !$reload ) { # Have a cached file
+  if (  -r $g->{pngfile} ) { # Have a cached file
     print "\n<!-- Cached graph op='$c->{op}' file='$g->{pngfile}' -->\n";
     print STDERR "graph: Reusing a cached file $g->{pngfile} \n";
   } else { # Have to plot a new one
     print STDERR "graph: Generating $g->{pngfile} for op '$c->{op}' \n";
-    #print  "graph: b='$g->{bigimg}' r='$g->{reload}' gs='$g->{start}' ge='$g->{end}' <br/>\n";
     makedatafile($g);
     plotgraph($g);
   }
   # Finally, prine the HTML to display the graph
   my ( $imw,$imh ) = $g->{imgsz} =~ /(\d+),(\d+)/;
-  my $htsize = "width=$imw height=$imh" if ($imh) ;
-  if ($g->{bigimg} eq "B") {
-    print "<a href='$c->{url}?o=GraphS&gstart=$g->{start}&gend=$g->{end}'><img src=\"$g->{pngfile}\" $htsize/></a><br/>\n";
-  } else {
-    print "<a href='$c->{url}?o=GraphB'&gstart=$g->{start}&gend=$g->{end}'><img src=\"$g->{pngfile}\" $htsize/></a><br/>\n";
-  }
-  graphlinks($g, $imw);
+  my $htsize = "style='max-width:95vw;max-height:120vh'" if ($imh) ;
+  print "<img src=\"$g->{pngfile}\" $htsize/><br/>\n";
+  # TODO: Clickable image?
+  graphlinks($g);
   print "<hr/>\n";
 
 
