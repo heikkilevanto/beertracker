@@ -333,7 +333,7 @@ sub graphlinks {
   onelink($g, "&lt;&lt;", ($start-$range)->ymd, ($end-$range)->ymd ); # <<
   onelink($g, "&gt;&gt;", ($start+$range)->ymd, ($end+$range)->ymd ); # >>
   onelink($g, "w", ($t-14*$oneday)->ymd, ($t+2*$oneday)->ymd ); # extra future
-  onelink($g, "M"); # default values
+  onelink($g, "m"); # default values
   onelink($g, "3m", $t->add_months(-3)->ymd );
   onelink($g, "6m", $t->add_months(-6)->ymd );
   onelink($g, "Y", $t->add_years(-1)->ymd );
@@ -365,9 +365,8 @@ sub graph {
     plotgraph($g);
   }
   # Finally, prine the HTML to display the graph
-  my ( $imw,$imh ) = $g->{imgsz} =~ /(\d+),(\d+)/;
-  my $htsize = "style='max-width:95vw;max-height:120vh'" if ($imh) ;
-  print "<img src=\"$g->{pngfile}\" $htsize/><br/>\n";
+  my $sz = "style='max-width:95vw;max-height:120vh'";
+  print "<img src=\"$g->{pngfile}\" $sz/><br/>\n";
   # TODO: Clickable image?
   graphlinks($g);
   print "<hr/>\n";

@@ -14,12 +14,7 @@ use POSIX qw(strftime localtime locale_h);
 
 sub monthstat {
   my $c      = shift;
-  my $defbig = $c->{mobile} ? "S" : "B";
-  my $bigimg = shift || $defbig;
-  $bigimg =~ s/S//i;
-
   my $firsty = "";
-
   my %monthdrinks;
   my %monthprices;
   my $lastmonthday;    # last day of the last month
@@ -263,10 +258,7 @@ sub monthstat {
   $t .= "</tr>\n";
 
   $t .= "</table>\n";
-  my $imgsz = "340,240";
-  if ($bigimg) {
-    $imgsz = "640,480";
-  }
+  my $imgsz = "640,480";
   my $white  = "textcolor \"white\" ";
   my $firstm = $lastm + 1;
   my $cmd    = ""
@@ -321,12 +313,9 @@ sub monthstat {
   print C $cmd;
   close(C);
   system("gnuplot $c->{cmdfile} ");
-  if ($bigimg) {
-    print "<a href='$->{url}?o=MonthsS'><img src=\"$pngfile\"/></a><br/>\n";
-  }
-  else {
-    print "<a href='$->{url}?o=MonthsB'><img src=\"$pngfile\"/></a><br/>\n";
-  }
+
+  my $sz = "style='max-width:95vw;max-height:120vh'";
+  print "<img src=\"$pngfile\" $sz /><br/>\n";
   print $t;    # The table we built above
   exit();
 }    # Monthly stats

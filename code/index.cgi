@@ -236,12 +236,12 @@ if ( $c->{op} =~ /Board/i ) {
   graph::graph($c);
   beerboard::beerboard($c);
   mainlist::mainlist($c);
-} elsif ( $c->{op} =~ /Years(d?)/i ) {
-  yearstat::yearsummary($c,$1); # $1 indicates sort order
+} elsif ( $c->{op} =~ /Years/i ) {
+  yearstat::yearsummary($c);
 } elsif ( $c->{op} =~ /short/i ) {
   stats::dailystats($c);
-} elsif ( $c->{op} =~ /Months([BS])?/ ) {
-  monthstat::monthstat($c,$1);
+} elsif ( $c->{op} =~ /Months/ ) {
+  monthstat::monthstat($c);
 } elsif ( $c->{op} =~ /DataStats/i ) {
   stats::datastats($c);
 } elsif ( $c->{op} =~ /Ratings/i ) {

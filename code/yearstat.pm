@@ -36,7 +36,7 @@ sub yearline {
 
 sub yearsummary {
   my $c      = shift;
-  my $sortdr = shift;
+  my $sortdr = ( $c->{sort} );
 
   my $sofar = "so far";
   my @years;
@@ -86,7 +86,7 @@ sub yearsummary {
       . "' class='no-print'><span>Sort by money</span></a>)\n";
   }
   else {
-    print "Sorting by money (<a href='$c->{url}?o=YearsD&q="
+    print "Sorting by money (<a href='$c->{url}?o=Years&s=d&q="
       . uri_escape_utf8( $c->{qry} )
       . "' class='no-print'><span>Sort by drinks</span></a>)\n";
   }
