@@ -19,20 +19,41 @@ sub monthstat {
   my %monthprices;
   my $lastmonthday;    # last day of the last month
 
-  my $sumsql = q{
+  # Optional date range filters from gstart and gend parameters (month-based)
+  # Default gstart to 2000-01; support YYYY-MM or YYYY-MM-DD (we trim to YYYY-MM)
+  my $gstart = util::param($c, "gstart", "2000-01");
+  my $gend   = util::param($c, "gend", "");
+
+  # Normalize to YYYY-MM
+  $gstart =~ s/^(\d{4}-\d{2})-\d{2}$/$1/;
+  $gend   =~ s/^(\d{4}-\d{2})-\d{2}$/$1/ if $gend;
+
+  my $calmon_expr = "strftime ('%Y-%m', timestamp,'-06:00')";
+  my $where_clause = "where Username = ?";
+  my @sql_params = ( $c->{username} );
+  if ( $gstart ) {
+    $where_clause .= " and $calmon_expr >= ?";
+    push( @sql_params, $gstart );
+  }
+  if ( $gend ) {
+    $where_clause .= " and $calmon_expr <= ?";
+    push( @sql_params, $gend );
+  }
+
+  my $sumsql = qq{
   select
     distinct strftime ('%Y-%m', timestamp,'-06:00') as calmon,
   	sum(abs(price)) as pr,
   	sum(stdrinks) as drinks,
  	  max( strftime ('%d', timestamp,'-06:00')) as last
   from glasses
-  where Username = ?
+  $where_clause
   group by calmon
   order by calmon
   };
 
   my $sum_sth = $c->{dbh}->prepare($sumsql);
-  $sum_sth->execute( $c->{username} );
+  $sum_sth->execute( @sql_params );
   while ( my ( $calmon, $pr, $drinks, $last ) = $sum_sth->fetchrow_array ) {
     $monthdrinks{$calmon} = $drinks;
     $monthprices{$calmon} = $pr;       # negative prices for buying box wines
@@ -48,10 +69,20 @@ sub monthstat {
 
   my $pngfile = $c->{plotfile};
   $pngfile =~ s/\.plot/-stat.png/;
+  
+  # Use filtered end month for x-axis range, or current date if not filtered
   my $lasty      = util::datestr( "%Y", 0 );
   my $lastm      = util::datestr( "%m", 0 );
+  if ( $gend ) {
+    if ( $gend =~ /^(\d{4})-(\d{2})/ ) {
+      $lasty = $1;
+      $lastm = $2;
+    }
+  }
+  
   my $lastym     = "$lasty-$lastm";
-  my $dayofmonth = util::datestr("%d");
+  # Use actual last day from data when filtering to past months to avoid inflating averages
+  my $dayofmonth = ($gend && $lastmonthday) ? $lastmonthday : util::datestr("%d");
 
   open F, ">$c->{plotfile}"
     or util::error("Could not open $c->{plotfile} for writing");
@@ -184,17 +215,20 @@ sub monthstat {
   print F sort(@plotlines);
 
   # Projections
-  my $cur      = util::datestr( "%m",    0 );
-  my $curmonth = util::datestr( "%Y-%m", 0 );
+  # Projections for the visible last month (respect filters)
+  my $cur      = $lastm;              # month number of last visible month
+  my $curmonth = $lastym;             # YYYY-MM of last visible month
   my $d        = ( $monthdrinks{$curmonth} || 0 );
-  my $min      = $d / 30;                 # projection if rest of month stays at zero
-  my $avg      = $dayofmonth ? ($d / $dayofmonth) : 0;  # current average
-  my $max      = 2 * $avg - $min;         # simple linear projection
-  $max = 10 if ( $max > 10 );             # cap to avoid rescaling
-  $max = 0  if ( $max < 0 );
-  my $min_s = sprintf( "%3.1f", $min );
-  my $avg_s = sprintf( "%3.1f", $avg );
-  my $max_s = sprintf( "%3.1f", $max );
+  my $min      = ($d > 0) ? ($d / 30) : "NaN";  # if no data, keep as NaN
+  my $avg      = ($d > 0 && $dayofmonth) ? ($d / $dayofmonth) : "NaN";
+  my $max      = ($avg ne "NaN" && $min ne "NaN") ? (2 * $avg - $min) : "NaN";
+  if ( $max ne "NaN" ) {
+    $max = 10 if ( $max > 10 );
+    $max = 0  if ( $max < 0 );
+  }
+  my $min_s = ( $min eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $min );
+  my $avg_s = ( $avg eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $avg );
+  my $max_s = ( $max eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $max );
   print F "\n";
   print F "2001-$cur $min_s\n";  # low
   print F "2001-$cur $avg_s\n";  # mid (current average)
