@@ -187,14 +187,18 @@ sub monthstat {
   my $cur      = util::datestr( "%m",    0 );
   my $curmonth = util::datestr( "%Y-%m", 0 );
   my $d        = ( $monthdrinks{$curmonth} || 0 );
-  my $min      = sprintf( "%3.1f", $d / 30 );        # for whole month
-  my $avg      = $d / $dayofmonth;
-  my $max      = 2 * $avg - $min;
-  $max = "NaN" if ( $max > 10 );     # Don't mess with scaling of the graph
-  $max = sprintf( "%3.1f", $max );
+  my $min      = $d / 30;                 # projection if rest of month stays at zero
+  my $avg      = $dayofmonth ? ($d / $dayofmonth) : 0;  # current average
+  my $max      = 2 * $avg - $min;         # simple linear projection
+  $max = 10 if ( $max > 10 );             # cap to avoid rescaling
+  $max = 0  if ( $max < 0 );
+  my $min_s = sprintf( "%3.1f", $min );
+  my $avg_s = sprintf( "%3.1f", $avg );
+  my $max_s = sprintf( "%3.1f", $max );
   print F "\n";
-  print F "2001-$cur $min\n";
-  print F "2001-$cur $max\n";
+  print F "2001-$cur $min_s\n";  # low
+  print F "2001-$cur $avg_s\n";  # mid (current average)
+  print F "2001-$cur $max_s\n";  # high
   close(F);
   $t .= "<tr><td>Avg</td>\n";
   my $granddr    = 0;
@@ -261,6 +265,9 @@ sub monthstat {
   my $imgsz = "640,480";
   my $white  = "textcolor \"white\" ";
   my $firstm = $lastm + 1;
+  my $firstm_str = sprintf( "%02d", $firstm );
+  my $lastm_str  = sprintf( "%02d", $lastm );
+  my $xrange_end = ( $lastm == 1 ) ? "\"2001-01\"" : "";
   my $cmd    = ""
     . "set term png small size $imgsz \n"
     . "set out \"$pngfile\" \n"
@@ -276,17 +283,17 @@ sub monthstat {
     . "set timefmt \"%Y-%m\" \n"
     . "set format x \"%b\"\n"
 
-    . "set xrange [\"2000-$firstm\" : ] \n "
+    . "set xrange [\"2000-$firstm_str\" : $xrange_end] \n "
     . "set key right top horizontal textcolor \"white\" \n "
     . "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 "
     . "behind fc \"$c->{bgcolor}\" fillstyle solid border \n"
     .    # green bkg
     "set border linecolor \"white\" \n"
-    . "set arrow from \"2000-$firstm\", 1 to \"2001-$lastm\", 1 nohead linewidth 0.1 linecolor \"green\" \n"
-    . "set arrow from \"2000-$firstm\", 4 to \"2001-$lastm\", 4 nohead linewidth 0.1 linecolor \"yellow\" \n"
-    . "set arrow from \"2000-$firstm\", 7 to \"2001-$lastm\", 7 nohead linewidth 0.1 linecolor \"orange\" \n"
-    . "set arrow from \"2000-$firstm\", 10 to \"2001-$lastm\", 10 nohead linewidth 0.1 linecolor \"red\" \n"
-    . "set arrow from \"2000-$firstm\", 13 to \"2001-$lastm\", 13 nohead linewidth 0.1 linecolor \"#f409c9\" \n"
+    . "set arrow from \"2000-$firstm_str\", 1 to \"2001-$lastm_str\", 1 nohead linewidth 0.1 linecolor \"green\" \n"
+    . "set arrow from \"2000-$firstm_str\", 4 to \"2001-$lastm_str\", 4 nohead linewidth 0.1 linecolor \"yellow\" \n"
+    . "set arrow from \"2000-$firstm_str\", 7 to \"2001-$lastm_str\", 7 nohead linewidth 0.1 linecolor \"orange\" \n"
+    . "set arrow from \"2000-$firstm_str\", 10 to \"2001-$lastm_str\", 10 nohead linewidth 0.1 linecolor \"red\" \n"
+    . "set arrow from \"2000-$firstm_str\", 13 to \"2001-$lastm_str\", 13 nohead linewidth 0.1 linecolor \"#f409c9\" \n"
     . "set arrow from \"2001-01\", 0 to \"2001-01\", 10 nohead linewidth 0.1 linecolor \"white\" \n"
     . "plot ";
   my $lw = 2;
