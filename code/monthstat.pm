@@ -223,7 +223,7 @@ sub monthstat {
   my $avg      = ($d > 0 && $dayofmonth) ? ($d / $dayofmonth) : "NaN";
   my $max      = ($avg ne "NaN" && $min ne "NaN") ? (2 * $avg - $min) : "NaN";
   if ( $max ne "NaN" ) {
-    $max = 10 if ( $max > 10 );
+    $max = "NaN" if ( $max > 10 );
     $max = 0  if ( $max < 0 );
   }
   my $min_s = ( $min eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $min );
