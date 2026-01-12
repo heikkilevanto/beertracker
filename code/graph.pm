@@ -296,7 +296,7 @@ sub plotgraph {
       $cmd .= "'' using 1:" . $col++ . ":" . $col++ . " with boxes lc rgbcolor variable notitle, ";
     }
 
-    $cmd .=   "'' using 1:3 axes x1y2 with lines  lc \"#FfFfFf\" lw 3  title \"$g->{lastavg} 30d\" , ";   # monthly avg
+    $cmd .=   "'' using 1:3 axes x1y2 with linespoints  lc \"#FfFfFf\" lw 3 ps 0.5 pt 1 title \"$g->{lastavg} 30d\" , ";   # monthly avg
     $cmd .= $weekline . "\n";
 
 
