@@ -201,6 +201,8 @@ if ( $q->request_method eq "POST" ) {
       brews::postbrew($c);
     } elsif ( util::param($c, "commentedit") ) {
       comments::postcomment($c);
+    } elsif ( $c->{op} =~ /updateboard/i ) {
+      beerboard::updateboard($c);
     } else { # Default to posting a glass
       glasses::postglass($c);
     }

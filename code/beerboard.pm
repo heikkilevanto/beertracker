@@ -17,6 +17,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use URI::Escape;
+use JSON;
 
 # Beerlist scraping scrips
 my %scrapers;
@@ -134,6 +135,104 @@ sub beerboard {
   $c->{qry} = "" if ($c->{qry} =~ /PA/i );   # But not 'PA', it is only for the board
   print "<hr/>\n";
 } # beerboard
+
+
+################################################################################
+# Update board: scrape and ensure brews/producers exist in DB
+################################################################################
+
+sub updateboard {
+  my $c = shift;
+
+  my ($locparam, undef) = get_location_param($c);
+  
+  if (!$scrapers{$locparam}) {
+    print STDERR "updateboard: No scraper for '$locparam'\n";
+    util::error("No scraper for '$locparam'");
+  }
+
+  my $script = $c->{scriptdir} . $scrapers{$locparam};
+  my $json = `timeout 5s perl $script`;
+  if ($!) {
+    print STDERR "updateboard: Timeout running $script: $!\n";
+    util::error("Timeout running scraper for $locparam");
+  }
+  chomp($json);
+  if (!$json) {
+    print STDERR "updateboard: No output from scraper for $locparam\n";
+    util::error("No data from scraper for $locparam");
+  }
+
+  my $beerlist = JSON->new->utf8->decode($json)
+    or util::error("JSON decode failed for $locparam");
+
+  print STDERR "updateboard: Scraped " . scalar(@$beerlist) . " beers for $locparam\n";
+
+  foreach my $e (@$beerlist) {
+    my $maker = $e->{maker} || "";
+    my $beer = $e->{beer} || "";
+    my $style = $e->{type} || "";
+    my $alc = $e->{alc} || "";
+
+    next unless $maker && $beer;  # Skip incomplete entries
+
+    # Check if brew exists
+    my $brew_rec = db::findrecord($c, "BREWS", "Name", $beer, "collate nocase");
+    if ($brew_rec) {
+      print STDERR "updateboard: Brew '$beer' exists (id $brew_rec->{Id})\n";
+      next;
+    }
+
+    # Ensure producer exists
+    my $prod_rec = db::findrecord($c, "LOCATIONS", "Name", $maker, "collate nocase");
+    my $prod_id;
+    if ($prod_rec) {
+      $prod_id = $prod_rec->{Id};
+      print STDERR "updateboard: Producer '$maker' exists (id $prod_id)\n";
+    } else {
+      # Insert new producer
+      my $sql = "INSERT INTO LOCATIONS (Name, LocType, LocSubType) VALUES (?, 'Producer', 'Beer')";
+      my $sth = $c->{dbh}->prepare($sql);
+      $sth->execute($maker);
+      $prod_id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
+      print STDERR "updateboard: Inserted producer '$maker' (id $prod_id)\n";
+    }
+
+    # Ensure brew exists
+    my $sql_check = "SELECT Id FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
+    my $sth_check = $c->{dbh}->prepare($sql_check);
+    $sth_check->execute($beer, $prod_id);
+    my ($brew_id) = $sth_check->fetchrow_array;
+    if ($brew_id) {
+      print STDERR "updateboard: Brew '$beer' by '$maker' exists (id $brew_id)\n";
+    } else {
+      # Insert new brew
+      my $sql = "INSERT INTO BREWS (Name, BrewType, SubType, Alc, ProducerLocation) VALUES (?, 'Beer', ?, ?, ?)";
+      my $sth = $c->{dbh}->prepare($sql);
+      $sth->execute($beer, $style, $alc, $prod_id);
+      $brew_id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef);
+      print STDERR "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";
+    }
+  }
+
+  print STDERR "updateboard: Completed for $locparam\n";
+
+  # Redirect to board
+  print $c->{cgi}->redirect("$c->{url}?o=Board&loc=$locparam");
+  exit;
+}
+
+
+# Helper to create a POST form for triggering an operation
+sub post_form {
+  my ($c, $op, $loc, $label) = @_;
+  my $form = "<form method='POST' action='$c->{url}' style='display:inline;'>";
+  $form .= "<input type='hidden' name='o' value='$op'>";
+  $form .= "<input type='hidden' name='loc' value='$loc'>" if $loc;
+  $form .= "<input type='submit' value='$label' style='border:none; background:none; color:blue; text-decoration:underline; cursor:pointer; font-style:italic;'>";
+  $form .= "</form>\n";
+  return $form;
+}
 
 
 ################################################################################
@@ -440,8 +539,7 @@ sub render_location_selector {
   print "&nbsp; (<a href='$c->{url}?o=$c->{op}&loc=$locparam&q=PA'><span>PA</span></a>) "
     if ($c->{qry} ne "PA" );
 
-  print "<a href='$c->{url}?o=Board&loc=$locparam&f=f'><i>(Reload)</i></a>\n";
-  print "<a href='$c->{url}?o=Board-2&loc=$locparam'><i>(all)</i></a>\n";
+  print post_form($c, 'updateboard', $locparam, '(Reload)');
 
   print "<p>\n";
 }

@@ -1,0 +1,44 @@
+Based on our discussion and the goals we set out to achieve, here's a clear summary of what the final implementation should look like. This focuses on the core functionality: **proactively creating brews and producers during beer list scraping, ensuring DB updates happen via POST (not GET), and providing a seamless reload mechanism**. I'll outline the key components, code structure, and behavior, so you can stash the current changes and rebuild cleanly tomorrow.
+
+### Core Goals Achieved
+- **Brew/Producer Creation**: When scraping beer lists (via cache miss or manual reload), automatically create missing brews and producers in the DB.
+- **POST-Only Updates**: All DB writes (inserts) happen in POST requests to maintain security (RO GETs, RW POSTs).
+- **Cache & Reload Handling**: 
+  - Cache beer lists for 20 min.
+  - On cache miss or reload (`?o=Board&f=f`), trigger a POST update.
+  - Reload link forces fresh scrape + DB update.
+- **Clean Code**: Logic encapsulated in `beerboard.pm`; `index.cgi` handles routing without beerboard-specific clutter.
+
+### Key Code Components
+1. **In `beerboard.pm`**:
+   - `%scrapers` hash: Maps locations to scraper scripts.
+   - `load_or_scrape_beerlist($c, $script, $cachefile, $qrylim)`: Loads from cache or scrapes; returns `($json, $was_cached)`.
+   - `ensure_beers_exist($c, $beerlist)`: Processes scraped beers, creates missing producers/brews using `COLLATE NOCASE` for DB queries. Logs inserts/summary.
+   - `update_board($c)`: Forces scrape, calls `ensure_beers_exist`, caches result. Used in POST handler.
+   - `pre_display_check($c)`: Checks cache; if invalid/forced, outputs auto-POST form (with headers) and exits.
+   - `output_update_form($c, $locparam)`: Outputs the HTML form for auto-POST.
+   - `beerboard($c)`: Main display function. Calls `pre_display_check($c)` at the start. If no update needed, proceeds with normal HTML output (filtering, buttons, etc.).
+   - Reload link: `<a href='$c->{url}?o=Board&loc=$locparam&f=f'><i>(Reload)</i></a>` (forces update via `f=f`).
+
+2. **In `index.cgi`**:
+   - POST handler: `elsif ( $c->{op} =~ /UpdateBoard/i ) { beerboard::update_board($c); }` – Scrapes, updates DB, caches, redirects back to Board.
+   - GET routing: For `?o=Board`, calls `beerboard::beerboard($c)` after `htmlhead()`.
+   - No beerboard-specific pre-checks in `index.cgi` (handled internally in `beerboard`).
+
+3. **DB Schema**:
+   - Uses existing `BREWS` and `LOCATIONS` tables.
+   - Inserts with `COLLATE NOCASE` for case-insensitive matching on indexes.
+
+### Behavior Flow
+- **Normal Load (`?o=Board` with valid cache)**: Displays cached list immediately (RO DB).
+- **Cache Miss or Reload (`?o=Board&f=f`)**: `pre_display_check` detects, outputs auto-POST form → Browser submits POST `?o=UpdateBoard` → `update_board` scrapes, creates brews/producers, caches → Redirects to `?o=Board` for display.
+- **POST Logging**: Logs "POST UpdateBoard for loc=..." and insert details.
+- **Edge Cases**: Skips beers without names; creates producers if missing; trusts scraped spellings; deduplicates via DB checks.
+
+### Files to Check/Modify
+- **`beerboard.pm`**: Ensure all subs above are present and correct.
+- **`index.cgi`**: Ensure POST handler and routing are clean.
+- **`brews.pm`**: `ensure_beers_exist` with `COLLATE NOCASE`.
+- Test: Remove cache, load board (should auto-update), click reload (should force update).
+
+This should give a stable, working system. Stash your changes, and we can iterate from here tomorrow!
