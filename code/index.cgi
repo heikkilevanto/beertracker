@@ -217,7 +217,7 @@ if ( $q->request_method eq "POST" ) {
   }
 
   # Redirect back to the op, but not editing
-  print $c->{cgi}->redirect( "$c->{url}?o=$c->{op}" );
+  print $c->{cgi}->redirect( $c->{redirect_url} || "$c->{url}?o=$c->{op}" );
   exit;
 }
 

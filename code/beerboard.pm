@@ -72,9 +72,25 @@ sub beerboard {
   my $json = load_or_scrape_beerlist($c, $script, $cachefile, $qrylim);
 
   if (!$json) {
+    # No fresh cache, trigger update
+    print "<!-- No fresh cache, triggering update -->\n";
+    print post_form($c, 'updateboard', $locparam, '(Updating...)');
+    my $form_id = "form_updateboard_" . $locparam;
+    $form_id =~ s/\W/_/g;
+    print "<script>document.getElementById('$form_id').submit();</script>\n";
+    # Load old cache if available
+    if (-f $cachefile) {
+      open CF, $cachefile or util::error ("Could not open $cachefile for reading");
+      $json = join '', <CF>;
+      close CF;
+      print "<!-- Loaded old cache while updating -->\n";
+    }
+  }
+
+  if (!$json) {
     print "Sorry, could not get the list from $locparam<br/>\n";
-    print "<!-- Error running " . $scrapers{$locparam} . ". \n";
-    print "Result: '$json'\n -->\n";
+    print "<!-- Error: no cache and no data\n";
+    print "Cachefile: $cachefile\n -->\n";
   } else {
     chomp($json);
     my $beerlist = JSON->new->utf8->decode($json)
@@ -168,6 +184,9 @@ sub updateboard {
 
   print STDERR "updateboard: Scraped " . scalar(@$beerlist) . " beers for $locparam\n";
 
+  my $existing_brews = 0;
+  my $inserted_brews = 0;
+
   foreach my $e (@$beerlist) {
     my $maker = $e->{maker} || "";
     my $beer = $e->{beer} || "";
@@ -179,7 +198,7 @@ sub updateboard {
     # Check if brew exists
     my $brew_rec = db::findrecord($c, "BREWS", "Name", $beer, "collate nocase");
     if ($brew_rec) {
-      print STDERR "updateboard: Brew '$beer' exists (id $brew_rec->{Id})\n";
+      $existing_brews++;
       next;
     }
 
@@ -204,33 +223,50 @@ sub updateboard {
     $sth_check->execute($beer, $prod_id);
     my ($brew_id) = $sth_check->fetchrow_array;
     if ($brew_id) {
-      print STDERR "updateboard: Brew '$beer' by '$maker' exists (id $brew_id)\n";
+      $existing_brews++;
     } else {
       # Insert new brew
       my $sql = "INSERT INTO BREWS (Name, BrewType, SubType, Alc, ProducerLocation) VALUES (?, 'Beer', ?, ?, ?)";
       my $sth = $c->{dbh}->prepare($sql);
       $sth->execute($beer, $style, $alc, $prod_id);
       $brew_id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef);
+      $inserted_brews++;
       print STDERR "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";
     }
   }
 
+  print STDERR "updateboard: $existing_brews brews already existed, $inserted_brews inserted\n";
+
+  # Add brew_id to each beer and save updated JSON
+  my $cachefile = $c->{datadir} . $scrapers{$locparam};
+  $cachefile =~ s/\.pl/.cache/;
+  foreach my $e (@$beerlist) {
+    my $brew_rec = db::findrecord($c, "BREWS", "Name", $e->{beer}, "collate nocase");
+    $e->{brew_id} = $brew_rec ? $brew_rec->{Id} : undef;
+  }
+  my $updated_json = JSON->new->utf8->pretty->encode($beerlist);
+  open my $cf, ">$cachefile" or print STDERR "updateboard: Could not save updated cache: $!\n";
+  print $cf $updated_json;
+  close $cf;
+  print STDERR "updateboard: Saved updated JSON to $cachefile\n";
+
   print STDERR "updateboard: Completed for $locparam\n";
 
-  # Redirect to board
-  print $c->{cgi}->redirect("$c->{url}?o=Board&loc=$locparam");
-  exit;
+  # Set redirect
+  $c->{redirect_url} = "$c->{url}?o=Board&loc=$locparam";
 }
 
 
 # Helper to create a POST form for triggering an operation
 sub post_form {
   my ($c, $op, $loc, $label) = @_;
-  my $form = "<form method='POST' action='$c->{url}' style='display:inline;'>";
+  my $form_id = "form_" . $op . "_" . ($loc || 'none');
+  $form_id =~ s/\W/_/g;  # sanitize
+  my $form = "<form id='$form_id' method='POST' action='$c->{url}' style='display:inline;'>";
   $form .= "<input type='hidden' name='o' value='$op'>";
   $form .= "<input type='hidden' name='loc' value='$loc'>" if $loc;
-  $form .= "<input type='submit' value='$label' style='border:none; background:none; color:blue; text-decoration:underline; cursor:pointer; font-style:italic;'>";
-  $form .= "</form>\n";
+  $form .= "</form>";
+  $form .= "<a href='#' onclick='document.getElementById(\"$form_id\").submit(); return false;'><i>$label</i></a>\n";
   return $form;
 }
 
@@ -561,20 +597,7 @@ sub load_or_scrape_beerlist {
     print "<!-- Loaded cached board from '$cachefile' -->\n";
   }
   if ( !$json ){
-    #$json = `perl $script`;
-    $json = `timeout 5s perl $script`;
-    if ( $! ) {
-      print STDERR "Timeout on running $script. $! \n";
-      $json = '"Timeout running $script: $!"';
-    } else {
-      $loaded = 1;
-      print "<!-- run scraper script '$script' -->\n";
-    }
-  }
-  if ($loaded && $json) {
-    open CF, ">$cachefile" or util::error( "Could not open $cachefile for writing");
-    print CF $json;
-    close CF;
+    return undef;  # Don't scrape here, will trigger POST update
   }
   return $json;
 }
