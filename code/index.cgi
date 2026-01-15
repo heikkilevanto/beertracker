@@ -63,6 +63,7 @@ require "./code/monthstat.pm"; # Monthly statistics
 require "./code/yearstat.pm"; # annual stats
 require "./code/mainlist.pm"; # The main "full" list
 require "./code/beerboard.pm"; # The beer board for the current bar
+require "./code/scrapeboard.pm"; # Scraping and updating beer boards
 require "./code/inputs.pm"; # Helper routines for input forms
 require "./code/listrecords.pm"; # A way to produce a nice list from db records
 require "./code/aboutpage.pm"; # The About page
@@ -202,7 +203,7 @@ if ( $q->request_method eq "POST" ) {
     } elsif ( util::param($c, "commentedit") ) {
       comments::postcomment($c);
     } elsif ( $c->{op} =~ /updateboard/i ) {
-      beerboard::updateboard($c);
+      scrapeboard::updateboard($c);
     } else { # Default to posting a glass
       glasses::postglass($c);
     }
