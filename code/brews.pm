@@ -527,56 +527,6 @@ sub postbrew {
 # Helper to insert a brew record from old-style params
 # Happens when the user clicks on the beer board
 ################################################################################
-# TODO - Delete this once we have a new style beer board
-# TODO - Behaves funny with Restaurants and Nights
-sub insert_old_style_brew {
-  my $c = shift;
-  my $type = util::param($c, "type");
-  my $name = util::param($c, "name");
-  my $maker = util::param($c, "maker");
-  my $style = util::param($c, "style");
-  my $subtype = util::param($c, "subtype") || "Ale"; # TODO Calculate subtype properly
-  my $country = util::param($c, "country");
-  my $alc= util::param($c, "alc");
-  print STDERR "insert_old_style_brew: t='$type' st='$subtype' n='$name' m='$maker' sty='$style' \n";
-
-  if ( ! $name ){  # Sanity check
-    util::error( "insert_old_style_brew: NO NAME! t='$type' st='$subtype' n='$name' m='$maker'");
-  }
-
-  # Check if we have it already
-  my $brew = db::findrecord($c, "BREWS", "Name", $name, "collate nocase" );
-  if ( $brew) {
-    print STDERR "insert_old_style_brew: Found brew: Id=$brew->{Id}  \n";
-    return $brew->{Id}
-  }
-
-  util::error( "insert_old_style_brew: NO MAKER" ) unless ($maker);
-  # Get the producer (as location)
-  my $sql = "Select Id from LOCATIONS where Name = ? collate nocase";
-  my $get_sth = $c->{dbh}->prepare($sql);
-  $get_sth->execute($maker);
-  my $prodlocid = $get_sth->fetchrow_array;
-  if ( ! $prodlocid ) {
-    $sql = "Insert into LOCATIONS ( Name, LocType, LocSubType ) values (?, 'Producer', 'Beer')";
-    my $loc_sth = $c->{dbh}->prepare($sql);
-    $loc_sth->execute($maker);
-    $prodlocid = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
-    print STDERR "insert_old_style_brew: Inserted producer location '$maker' as id '$prodlocid' \n";
-  } else {
-    print STDERR "insert_old_style_brew: Found maker  m='$maker'  as id = '$prodlocid' \n";
-  }
-  $sql = "insert into BREWS
-    ( Name, BrewType, SubType, BrewStyle, ProducerLocation, Alc, Country )
-    values ( ?, ?, ?, ?, ?, ?, ? ) ";
-  my $ins_sth = $c->{dbh}->prepare($sql);
-  $ins_sth->execute( $name, $type, $subtype, $style, $prodlocid, $alc, $country);
-  my $id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
-  print STDERR "insert_old_style_brew: Inserted '$name' into BREWS as id '$id' \n";
-  return $id;
-
-}
-
 ################################################################################
 # Report module loaded ok
 1;

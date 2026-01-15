@@ -499,14 +499,9 @@ sub postglass {
 
   my $glass = findrec($c); # Get defaults from last glass or the record we are editing
     # TODO Is this needed?
-  my $brewid = "???";
-  if ( util::param($c,"tap") ) { # Comes from the beer board, old style inputs
-    $brewid  = brews::insert_old_style_brew($c);
-  } else { # Modern style input form or a copy button
-    $brewid = util::param($c,"Brew");
-    if ( $brewid eq "new" ) {
-      $brewid = brews::postbrew($c, "new" );
-    }
+  my $brewid = util::param($c,"Brew");
+  if ( $brewid eq "new" ) {
+    $brewid = brews::postbrew($c, "new" );
   }
   my $brew;
   if ( $brewid ) {

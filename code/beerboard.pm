@@ -195,19 +195,11 @@ sub updateboard {
 
     next unless $maker && $beer;  # Skip incomplete entries
 
-    # Check if brew exists
-    my $brew_rec = db::findrecord($c, "BREWS", "Name", $beer, "collate nocase");
-    if ($brew_rec) {
-      $existing_brews++;
-      next;
-    }
-
     # Ensure producer exists
     my $prod_rec = db::findrecord($c, "LOCATIONS", "Name", $maker, "collate nocase");
     my $prod_id;
     if ($prod_rec) {
       $prod_id = $prod_rec->{Id};
-      print STDERR "updateboard: Producer '$maker' exists (id $prod_id)\n";
     } else {
       # Insert new producer
       my $sql = "INSERT INTO LOCATIONS (Name, LocType, LocSubType) VALUES (?, 'Producer', 'Beer')";
@@ -241,8 +233,18 @@ sub updateboard {
   my $cachefile = $c->{datadir} . $scrapers{$locparam};
   $cachefile =~ s/\.pl/.cache/;
   foreach my $e (@$beerlist) {
-    my $brew_rec = db::findrecord($c, "BREWS", "Name", $e->{beer}, "collate nocase");
-    $e->{brew_id} = $brew_rec ? $brew_rec->{Id} : undef;
+    my $maker = $e->{maker} || "";
+    my $beer = $e->{beer} || "";
+    if ($maker && $beer) {
+      my $prod_rec = db::findrecord($c, "LOCATIONS", "Name", $maker, "collate nocase");
+      if ($prod_rec) {
+        my $sql = "SELECT Id FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
+        my $sth = $c->{dbh}->prepare($sql);
+        $sth->execute($beer, $prod_rec->{Id});
+        my ($brew_id) = $sth->fetchrow_array;
+        $e->{brew_id} = $brew_id;
+      }
+    }
   }
   my $updated_json = JSON->new->utf8->pretty->encode($beerlist);
   open my $cf, ">$cachefile" or print STDERR "updateboard: Could not save updated cache: $!\n";
@@ -685,21 +687,25 @@ sub prepare_beer_entry_data {
 sub generate_hidden_fields {
   my ($c, $e, $locparam, $locid, $id, $processed_data) = @_;
   my $hiddenbuttons = "";
-  if ( $processed_data->{sty} =~ /Cider/i ) {
-    $hiddenbuttons .= "<input type='hidden' name='type' value='Cider' />\n" ;
-  } else {
-    $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
+  $hiddenbuttons .= "<input type='hidden' name='Brew' value='$e->{brew_id}' />\n" if ($e->{brew_id});
+  if (!$e->{brew_id}) {
+    # Fallback to old style
+    if ( $processed_data->{sty} =~ /Cider/i ) {
+      $hiddenbuttons .= "<input type='hidden' name='type' value='Cider' />\n" ;
+    } else {
+      $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
+    }
+    $hiddenbuttons .= "<input type='hidden' name='country' value='$processed_data->{country}' />\n"
+      if ($processed_data->{country}) ;
+    $hiddenbuttons .= "<input type='hidden' name='maker' value='$processed_data->{mak}' />\n" ;
+    $hiddenbuttons .= "<input type='hidden' name='name' value='$processed_data->{beer}' />\n" ;
+    $hiddenbuttons .= "<input type='hidden' name='style' value='$processed_data->{origsty}' />\n" ;
+    $hiddenbuttons .= "<input type='hidden' name='subtype' value='$processed_data->{sty}' />\n" ;
+    $hiddenbuttons .= "<input type='hidden' name='alc' value='$e->{alc}' />\n" ;
   }
-  $hiddenbuttons .= "<input type='hidden' name='country' value='$processed_data->{country}' />\n"
-    if ($processed_data->{country}) ;
-  $hiddenbuttons .= "<input type='hidden' name='maker' value='$processed_data->{mak}' />\n" ;
-  $hiddenbuttons .= "<input type='hidden' name='name' value='$processed_data->{beer}' />\n" ;
-  $hiddenbuttons .= "<input type='hidden' name='style' value='$processed_data->{origsty}' />\n" ;
-  $hiddenbuttons .= "<input type='hidden' name='subtype' value='$processed_data->{sty}' />\n" ;
-  $hiddenbuttons .= "<input type='hidden' name='alc' value='$e->{alc}' />\n" ;
   $hiddenbuttons .= "<input type='hidden' name='loc' value='$locparam' />\n" ;
   $hiddenbuttons .= "<input type='hidden' name='Location' value='$locid' />\n" ;
-  $hiddenbuttons .= "<input type='hidden' name='tap' value='$id#' />\n" ; # Signalss this comes from a beer board
+  $hiddenbuttons .= "<input type='hidden' name='tap' value='$id#' />\n" ; # Signals this comes from a beer board
   $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
   return $hiddenbuttons;
 }
