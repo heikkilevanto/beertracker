@@ -45,8 +45,6 @@ $links{"Penyllan"} = "https://penyllan.com/";
 # Beer board (list) for the location.
 # Scraped from their website
 ################################################################################
-# TODO - This is one long routine. Refactor it to something manageable
-# Split into two modules, as well!
 
 sub beerboard {
   my $c = shift;
@@ -57,97 +55,36 @@ sub beerboard {
   if ( $c->{op} =~ /board(-?\d+)/i ) {
     $extraboard = $1;
   }
-  my $sql = "select * from glassrec " .
-            "where username = ? " .
-            "order by stamp desc ".
-            "limit 1";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( $c->{username} );
-  my $foundrec = $sth->fetchrow_hashref;
-  $sth->finish;
 
-  my $locparam = util::param($c,"loc") || $foundrec->{loc} || "";
-  $locparam =~ s/^ +//; # Drop the leading space for guessed locations
-  # Pull-down for choosing the bar
-  print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
-  print "Beer list \n";
-  print "<select onchange='document.location=\"$c->{url}?o=Board&loc=\" + this.value;' style='width:5.5em;'>\n";
-  if (!$scrapers{$locparam}) { #Include the current location, even if no scraper
-    $scrapers{$locparam} = ""; #that way, the pulldown looks reasonable
-  }
-  for my $l ( sort(keys(%scrapers)) ) {
-    my $sel = "";
-    $sel = "selected" if ( $l eq $locparam);
-    print "<option value='$l' $sel>$l</option>\n";
-  }
-  print "</select>\n";
-  print "</form>\n";
-  if ($links{$locparam} ) {
-    print loclink($c, $locparam,"www"," ");
-  }
-  print "&nbsp; (<a href='$c->{url}?o=$c->{op}&loc=$locparam&q=PA'><span>PA</span></a>) "
-    if ($c->{qry} ne "PA" );
-
-  print "<a href='$c->{url}?o=Board&loc=$locparam&f=f'><i>(Reload)</i></a>\n";
-  print "<a href='$c->{url}?o=Board-2&loc=$locparam'><i>(all)</i></a>\n";
-
-  print "<p>\n";
+  my ($locparam, $foundrec) = get_location_param($c);
+  
   if (!$scrapers{$locparam}) {
     print "Sorry, no  beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
     $locparam="Ølbaren"; # A good default
   }
+  
+  render_location_selector($c, $locparam);
 
   my $script = $c->{scriptdir} . $scrapers{$locparam};
   my $cachefile = $c->{datadir} . $scrapers{$locparam};
   $cachefile =~ s/\.pl/.cache/;
-  my $json = "";
-  my $loaded = 0;
-  if ( -f $cachefile
-       && (-M $cachefile) * 24 * 60 < 20    # age in minutes
-       && -s $cachefile > 256    # looks like a real file
-       && $qrylim ne "f" ) {
-    open CF, $cachefile or util::error ("Could not open $cachefile for reading");
-    while ( <CF> ) {
-      $json .= $_ ;
-    }
-    close CF;
-    $loaded = 1;
-    print "<!-- Loaded cached board from '$cachefile' -->\n";
-  }
-  if ( !$json ){
-    #$json = `perl $script`;
-    $json = `timeout 5s perl $script`;
-    if ( $! ) {
-      print STDERR "Timeout on running $script. $! \n";
-      $json = '"Timeout running $script: $!"';
-    } else {
-      $loaded = 1;
-      print "<!-- run scraper script '$script' -->\n";
-    }
-  }
-  if (! $loaded || !$json) {
+  my $json = load_or_scrape_beerlist($c, $script, $cachefile, $qrylim);
+
+  if (!$json) {
     print "Sorry, could not get the list from $locparam<br/>\n";
     print "<!-- Error running " . $scrapers{$locparam} . ". \n";
     print "Result: '$json'\n -->\n";
-  }else {
-    if ($loaded) {
-      open CF, ">$cachefile" or util::error( "Could not open $cachefile for writing");
-      print CF $json;
-      close CF;
-    }
+  } else {
     chomp($json);
-    #print "<!--\nPage:\n$json\n-->\n";  # for debugging
     my $beerlist = JSON->new->utf8->decode($json)
       or util::error("Json decode failed for $scrapers{$locparam} <pre>$json</pre>");
     my $nbeers = 0;
     if ($c->{qry}) {
-    print "Filter:<b>$c->{qry}</b> " .
-      "(<a href='$c->{url}?o=$c->{op}&loc=$locparam'><span>Clear</span></a>) " .
-      "<p>\n";
+      print "Filter:<b>$c->{qry}</b> " .
+        "(<a href='$c->{url}?o=$c->{op}&loc=$locparam'><span>Clear</span></a>) " .
+        "<p>\n";
     }
-    my $oldbeer = "$foundrec->{maker} : $foundrec->{name}";  # Remember current beer for opening
-    $oldbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
-    $oldbeer =~ s/[^a-z0-9]//ig; # and all non-ascii characters
+    $extraboard = determine_expansion_state($c, $extraboard, $foundrec, $beerlist);
 
     print "<table border=0 style='white-space: nowrap;'>\n";
     my $previd  = 0;
@@ -168,153 +105,22 @@ sub beerboard {
       if ( $id != $previd +1 ) {
         print "<tr><td align=right>&nbsp;</td><td align=right>. . .</td></tr>\n";
       }
-      my $thisbeer = "$mak : $beer";  # Remember current beer for opening
-      $thisbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
-      $thisbeer =~ s/[^a-z0-9]//gi; # and all non-ascii characters
-      if ( $extraboard == -1 && $thisbeer eq $oldbeer ) {
-        $extraboard = $id; # Default to expanding the beer currently in the input fields
-      }
-      my $dispmak = $mak;
-      $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu|Brauerei)\b//ig; #stop words
-      $dispmak =~ s/.*(Schneider).*/$1/i;
-      $dispmak =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
-      $dispmak =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
-      $dispmak =~ s/^ +//;
-      $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
-      $dispmak =~ s/[ -].*$// ; # first word
-      if ( $beer =~ /$dispmak/ || !$mak) {
-        $dispmak = ""; # Same word in the beer, don't repeat
-      } else {
-        $dispmak = filt($c, $mak, "i", $dispmak,"board&loc=$locparam","maker");
-      }
-      $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
-      $beer =~ s/.*(Hopfenweisse).*/$1/;
-      $beer =~ s/.*(Ungespundet).*/$1/;
-      if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
-        $mak = "Schlenkerla";
-        $dispmak = filt($c, $mak, "i", $mak,"board&loc=$locparam");
-      }
-      my $dispbeer .= filt($c, $beer, "b", $beer, "board&loc=$loc");
 
-      $mak =~ s/'//g; # Apostrophes break the input form below
-      $beer =~ s/'//g; # So just drop them
-      $sty =~ s/'//g;
-      my $origsty = $sty ;
-      $sty = shortbeerstyle($sty);
-      print "<!-- sty='$origsty' -> '$sty'\n'$e->{'beer'}' -> '$beer'\n'$e->{'maker'}' -> '$mak' -->\n";
-      # Add a comment to show the simplifying process.
-      # If there are strange beers, take a 'view source' and look
-      my $country = $e->{'country'} || "";
-      my $sizes = $e->{"sizePrice"};
+      my $processed_data = prepare_beer_entry_data($c, $e, $locparam);
       my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
       my $locid = $locrec->{Id};
-      my $hiddenbuttons = "";
-      if ( $sty =~ /Cider/i ) {
-        $hiddenbuttons .= "<input type='hidden' name='type' value='Cider' />\n" ;
-      } else {
-        $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
-      }
-      $hiddenbuttons .= "<input type='hidden' name='country' value='$country' />\n"
-        if ($country) ;
-      $hiddenbuttons .= "<input type='hidden' name='maker' value='$mak' />\n" ;
-      $hiddenbuttons .= "<input type='hidden' name='name' value='$beer' />\n" ;
-      $hiddenbuttons .= "<input type='hidden' name='style' value='$origsty' />\n" ;
-      $hiddenbuttons .= "<input type='hidden' name='subtype' value='$sty' />\n" ;
-      $hiddenbuttons .= "<input type='hidden' name='alc' value='$alc' />\n" ;
-      $hiddenbuttons .= "<input type='hidden' name='loc' value='$loc' />\n" ;
-      $hiddenbuttons .= "<input type='hidden' name='Location' value='$locid' />\n" ;
-      $hiddenbuttons .= "<input type='hidden' name='tap' value='$id#' />\n" ; # Signalss this comes from a beer board
-      $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
-      my $buttons="";
-      #foreach my $sp ( sort( {($a->{"vol"} <=> $b->{"vol"}) || ($a->{"vol"} cmp $b->{"vol"}) } @$sizes) ) {
-      while ( scalar(@$sizes) < 2 ) {
-        push @$sizes, { "vol" => "", "price" => "" };
-      }
-      foreach my $sp ( @$sizes ) {
-        my $vol = $sp->{"vol"} || "";
-        my $pr = $sp->{"price"} || "";
-        my $lbl;
-        if ($extraboard == $id || $extraboard == -2) {
-          my $dispvol = $vol;
-          $dispvol = $1 if ( $glasses::volumes{$vol} && $glasses::volumes{$vol} =~ /(^\d+)/);   # Translate S and L
-          $lbl = "$dispvol cl  ";
-          $lbl .= sprintf( "%3.1fd", $dispvol * $alc / $c->{onedrink});
-          $lbl .= "\n$pr.- " . sprintf( "%d/l ", $pr * 100 / $vol ) if ($pr);
-        } else {
-          if ( $pr ) {
-            $lbl = "$pr.-";
-          } elsif ( $vol =~ /\d/ ) {
-            $lbl = "$vol cl";
-          } elsif ( $vol ) {
-            $lbl = "&nbsp; $vol &nbsp;";
-          } else {
-            $lbl = " ";
-          }
-          $buttons .= "<td>";
-        }
-        $buttons .= "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
-        $buttons .= $hiddenbuttons;
-        $buttons .= "<input type='hidden' name='vol' value='$vol' />\n" ;
-        $buttons .= "<input type='hidden' name='pr' value='$pr' />\n" ;
-        $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
-        $buttons .= "</form>\n";
-        $buttons .= "</td>\n" if ($extraboard != $id && $extraboard != -2);
-      }
-      my $beerstyle = beercolorstyle($c, $origsty, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
+      my $hiddenbuttons = generate_hidden_fields($c, $e, $locparam, $locid, $id, $processed_data);
+      my $buttons = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, $extraboard, $id, $alc);
+
+      my $beerstyle = beercolorstyle($c, $processed_data->{origsty}, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
 
       my $dispid = $id;
       $dispid = "&nbsp;&nbsp;$id"  if ( length($dispid) < 2);
-      if ($extraboard == $id  || $extraboard == -2) { # More detailed view
-        print "<tr><td colspan=5><hr></td></tr>\n";
-        print "<tr><td align=right $beerstyle>";
-        my $linkid = $id;
-        if ($extraboard == $id) {
-          $linkid = "-3";  # Force no expansion
-        }
-        print "<a href='$c->{url}?o=Board$linkid&loc=$locparam'><span width=100% $beerstyle id='here'>$dispid</span></a> ";
-        print "</td>\n";
 
-        print "<td colspan=4 >";
-        print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
-        print "$mak: $dispbeer ";
-        print "<span style='font-size: x-small;'>($country)</span>" if ($country);
-        print "</span></td></tr>\n";
-        print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
-        print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
-        print "$hiddenbuttons";
-        print "<input type='hidden' name='vol' value='T' />\n" ;  # taster
-        print "<input type='hidden' name='pr' value='X' />\n" ;  # at no cost
-        print "<input type='submit' name='submit' value='Taster ' /> \n";
-        print "</form>\n";
-        print "</td></tr>\n";
-        print "<tr><td>&nbsp;</td><td colspan=4>$origsty <span style='font-size: x-small;'>$alc%</span></td></tr> \n";
-        my $seenline = seenline ($c, $mak, $beer);
-        if ($seenline) {
-          print "<tr><td>&nbsp;</td><td colspan=4> $seenline";
-          print "</td></tr>\n";
-        }
-          # TODO - Get rate counts from the database somehow
-#         if ($ratecount{$seenkey}) {
-#           my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
-#           print "<tr><td>&nbsp;</td><td colspan=4>";
-#           my $rating = "rating";
-#           $rating .= "s" if ($ratecount{$seenkey} > 1 );
-#           print "$ratecount{$seenkey} $rating <b>$avgrate</b>: ";
-#           print $ratings[$avgrate];
-#         print "</td></tr>\n";
-#         }
-        print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
-      } else { # Plain view
-        print "<tr><td align=right $beerstyle>";
-        print "<a href='$c->{url}?o=Board$id&loc=$locparam#here'><span width=100% $beerstyle>$dispid</span></a> ";
-        print "</td>\n";
-        print "$buttons\n";
-        print "<td style='font-size: x-small;' align=right>$alc</td>\n";
-        print "<td>$dispbeer $dispmak ";
-        print "<span style='font-size: x-small;'>($country)</span> " if ($country);
-        print "$sty</td>\n";
-        print "</tr>\n";
-      }
+      my $seenline = seenline($c, $mak, $beer);
+
+      render_beer_row($c, $e, $buttons, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons);
+
       $previd = $id;
     } # beer loop
     print "</table>\n";
@@ -591,6 +397,284 @@ sub beercolorstyle {
 } # beercolorstyle
 
 
+################################################################################
+# Helper functions for beerboard refactoring
+################################################################################
+
+sub get_location_param {
+  my $c = shift;
+  # Get the last used location for this user
+  my $sql = "select * from glassrec " .
+            "where username = ? " .
+            "order by stamp desc ".
+            "limit 1";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute( $c->{username} );
+  my $foundrec = $sth->fetchrow_hashref;
+  $sth->finish;
+
+  my $locparam = util::param($c,"loc") || $foundrec->{loc} || "";
+  $locparam =~ s/^ +//; # Drop the leading space for guessed locations
+  return ($locparam, $foundrec);
+}
+
+sub render_location_selector {
+  my ($c, $locparam) = @_;
+  # Pull-down for choosing the bar
+  print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
+  print "Beer list \n";
+  print "<select onchange='document.location=\"$c->{url}?o=Board&loc=\" + this.value;' style='width:5.5em;'>\n";
+  if (!$scrapers{$locparam}) { #Include the current location, even if no scraper
+    $scrapers{$locparam} = ""; #that way, the pulldown looks reasonable
+  }
+  for my $l ( sort(keys(%scrapers)) ) {
+    my $sel = "";
+    $sel = "selected" if ( $l eq $locparam);
+    print "<option value='$l' $sel>$l</option>\n";
+  }
+  print "</select>\n";
+  print "</form>\n";
+  if ($links{$locparam} ) {
+    print loclink($c, $locparam,"www"," ");
+  }
+  print "&nbsp; (<a href='$c->{url}?o=$c->{op}&loc=$locparam&q=PA'><span>PA</span></a>) "
+    if ($c->{qry} ne "PA" );
+
+  print "<a href='$c->{url}?o=Board&loc=$locparam&f=f'><i>(Reload)</i></a>\n";
+  print "<a href='$c->{url}?o=Board-2&loc=$locparam'><i>(all)</i></a>\n";
+
+  print "<p>\n";
+}
+
+sub load_or_scrape_beerlist {
+  my ($c, $script, $cachefile, $qrylim) = @_;
+  my $json = "";
+  my $loaded = 0;
+  if ( -f $cachefile
+       && (-M $cachefile) * 24 * 60 < 20    # age in minutes
+       && -s $cachefile > 256    # looks like a real file
+       && $qrylim ne "f" ) {
+    open CF, $cachefile or util::error ("Could not open $cachefile for reading");
+    while ( <CF> ) {
+      $json .= $_ ;
+    }
+    close CF;
+    $loaded = 1;
+    print "<!-- Loaded cached board from '$cachefile' -->\n";
+  }
+  if ( !$json ){
+    #$json = `perl $script`;
+    $json = `timeout 5s perl $script`;
+    if ( $! ) {
+      print STDERR "Timeout on running $script. $! \n";
+      $json = '"Timeout running $script: $!"';
+    } else {
+      $loaded = 1;
+      print "<!-- run scraper script '$script' -->\n";
+    }
+  }
+  if ($loaded && $json) {
+    open CF, ">$cachefile" or util::error( "Could not open $cachefile for writing");
+    print CF $json;
+    close CF;
+  }
+  return $json;
+}
+
+sub determine_expansion_state {
+  my ($c, $extraboard, $foundrec, $beerlist) = @_;
+  if ($extraboard == -1) {
+    my $oldbeer = "$foundrec->{maker} : $foundrec->{name}";
+    $oldbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
+    $oldbeer =~ s/[^a-z0-9]//ig; # and all non-ascii characters
+    foreach my $e (@$beerlist) {
+      my $mak = $e->{maker} || "";
+      my $beer = $e->{beer} || "";
+      
+      # Apply the same transformations as prepare_beer_entry_data
+      $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
+      $beer =~ s/.*(Hopfenweisse).*/$1/;
+      $beer =~ s/.*(Ungespundet).*/$1/;
+      if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
+        $mak = "Schlenkerla";
+      }
+      $mak =~ s/'//g; # Remove apostrophes
+      $beer =~ s/'//g; # Remove apostrophes
+      
+      my $thisbeer = "$mak : $beer";
+      $thisbeer =~ s/&[a-z]+;//g;
+      $thisbeer =~ s/[^a-z0-9]//gi;
+      if ($thisbeer eq $oldbeer) {
+        $extraboard = $e->{id};
+        last;
+      }
+    }
+  }
+  return $extraboard;
+}
+
+sub prepare_beer_entry_data {
+  my ($c, $e, $locparam) = @_;
+  my $mak = $e->{"maker"} || "";
+  my $beer = $e->{"beer"} || "";
+  my $sty = $e->{"type"} || "";
+  my $origsty = $sty;
+  $sty = shortbeerstyle($sty);
+  print "<!-- sty='$origsty' -> '$sty'\n'$e->{'beer'}' -> '$beer'\n'$e->{'maker'}' -> '$mak' -->\n";
+
+  my $dispmak = $mak;
+  $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu|Brauerei)\b//ig; #stop words
+  $dispmak =~ s/.*(Schneider).*/$1/i;
+  $dispmak =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
+  $dispmak =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
+  $dispmak =~ s/^ +//;
+  $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
+  $dispmak =~ s/[ -].*$// ; # first word
+  if ( $beer =~ /$dispmak/ || !$mak) {
+    $dispmak = ""; # Same word in the beer, don't repeat
+  } else {
+    $dispmak = filt($c, $mak, "i", $dispmak,"board&loc=$locparam","maker");
+  }
+  $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
+  $beer =~ s/.*(Hopfenweisse).*/$1/;
+  $beer =~ s/.*(Ungespundet).*/$1/;
+  if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
+    $mak = "Schlenkerla";
+    $dispmak = filt($c, $mak, "i", $mak,"board&loc=$locparam");
+  }
+  my $dispbeer = filt($c, $beer, "b", $beer, "board&loc=$locparam");
+
+  $mak =~ s/'//g; # Apostrophes break the input form below
+  $beer =~ s/'//g; # So just drop them
+  $sty =~ s/'//g;
+
+  my $country = $e->{'country'} || "";
+
+  return {
+    mak => $mak,
+    beer => $beer,
+    sty => $sty,
+    origsty => $origsty,
+    dispmak => $dispmak,
+    dispbeer => $dispbeer,
+    country => $country
+  };
+}
+
+sub generate_hidden_fields {
+  my ($c, $e, $locparam, $locid, $id, $processed_data) = @_;
+  my $hiddenbuttons = "";
+  if ( $processed_data->{sty} =~ /Cider/i ) {
+    $hiddenbuttons .= "<input type='hidden' name='type' value='Cider' />\n" ;
+  } else {
+    $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
+  }
+  $hiddenbuttons .= "<input type='hidden' name='country' value='$processed_data->{country}' />\n"
+    if ($processed_data->{country}) ;
+  $hiddenbuttons .= "<input type='hidden' name='maker' value='$processed_data->{mak}' />\n" ;
+  $hiddenbuttons .= "<input type='hidden' name='name' value='$processed_data->{beer}' />\n" ;
+  $hiddenbuttons .= "<input type='hidden' name='style' value='$processed_data->{origsty}' />\n" ;
+  $hiddenbuttons .= "<input type='hidden' name='subtype' value='$processed_data->{sty}' />\n" ;
+  $hiddenbuttons .= "<input type='hidden' name='alc' value='$e->{alc}' />\n" ;
+  $hiddenbuttons .= "<input type='hidden' name='loc' value='$locparam' />\n" ;
+  $hiddenbuttons .= "<input type='hidden' name='Location' value='$locid' />\n" ;
+  $hiddenbuttons .= "<input type='hidden' name='tap' value='$id#' />\n" ; # Signalss this comes from a beer board
+  $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
+  return $hiddenbuttons;
+}
+
+sub render_beer_buttons {
+  my ($c, $sizes, $hiddenbuttons, $extraboard, $id, $alc) = @_;
+  my $buttons = "";
+  while ( scalar(@$sizes) < 2 ) {
+    push @$sizes, { "vol" => "", "price" => "" };
+  }
+  foreach my $sp ( @$sizes ) {
+    my $vol = $sp->{"vol"} || "";
+    my $pr = $sp->{"price"} || "";
+    my $lbl;
+    if ($extraboard == $id || $extraboard == -2) {
+      my $dispvol = $vol;
+      $dispvol = $1 if ( $glasses::volumes{$vol} && $glasses::volumes{$vol} =~ /(^\d+)/);   # Translate S and L
+      $lbl = "$dispvol cl  ";
+      $lbl .= sprintf( "%3.1fd", $dispvol * $alc / $c->{onedrink});
+      $lbl .= "\n$pr.- " . sprintf( "%d/l ", $pr * 100 / $vol ) if ($pr);
+    } else {
+      if ( $pr ) {
+        $lbl = "$pr.-";
+      } elsif ( $vol =~ /\d/ ) {
+        $lbl = "$vol cl";
+      } elsif ( $vol ) {
+        $lbl = "&nbsp; $vol &nbsp;";
+      } else {
+        $lbl = " ";
+      }
+      $buttons .= "<td>";
+    }
+    $buttons .= "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+    $buttons .= $hiddenbuttons;
+    $buttons .= "<input type='hidden' name='vol' value='$vol' />\n" ;
+    $buttons .= "<input type='hidden' name='pr' value='$pr' />\n" ;
+    $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
+    $buttons .= "</form>\n";
+    $buttons .= "</td>\n" if ($extraboard != $id && $extraboard != -2);
+  }
+  return $buttons;
+}
+
+sub render_beer_row {
+  my ($c, $e, $buttons, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
+  if ($extraboard == $id  || $extraboard == -2) { # More detailed view
+    print "<tr><td colspan=5><hr></td></tr>\n";
+    print "<tr><td align=right $beerstyle>";
+    my $linkid = $id;
+    if ($extraboard == $id) {
+      $linkid = "-3";  # Force no expansion
+    }
+    print "<a href='$c->{url}?o=Board$linkid&loc=$locparam'><span width=100% $beerstyle id='here'>$dispid</span></a> ";
+    print "</td>\n";
+
+    print "<td colspan=4 >";
+    print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
+    print "$processed_data->{mak}: $processed_data->{dispbeer} ";
+    print "<span style='font-size: x-small;'>($processed_data->{country})</span>" if ($processed_data->{country});
+    print "</span></td></tr>\n";
+    print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
+    print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+    print "$hiddenbuttons";
+    print "<input type='hidden' name='vol' value='T' />\n" ;  # taster
+    print "<input type='hidden' name='pr' value='X' />\n" ;  # at no cost
+    print "<input type='submit' name='submit' value='Taster ' /> \n";
+    print "</form>\n";
+    print "</td></tr>\n";
+    print "<tr><td>&nbsp;</td><td colspan=4>$processed_data->{origsty} <span style='font-size: x-small;'>$e->{alc}%</span></td></tr> \n";
+    if ($seenline) {
+      print "<tr><td>&nbsp;</td><td colspan=4> $seenline";
+      print "</td></tr>\n";
+    }
+      # TODO - Get rate counts from the database somehow
+#         if ($ratecount{$seenkey}) {
+#           my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
+#           print "<tr><td>&nbsp;</td><td colspan=4>";
+#           my $rating = "rating";
+#           $rating .= "s" if ($ratecount{$seenkey} > 1 );
+#           print "$ratecount{$seenkey} $rating <b>$avgrate</b>: ";
+#           print $ratings[$avgrate];
+#         print "</td></tr>\n";
+#         }
+    print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
+  } else { # Plain view
+    print "<tr><td align=right $beerstyle>";
+    print "<a href='$c->{url}?o=Board$id&loc=$locparam#here'><span width=100% $beerstyle>$dispid</span></a> ";
+    print "</td>\n";
+    print "$buttons\n";
+    print "<td style='font-size: x-small;' align=right>$e->{alc}</td>\n";
+    print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
+    print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
+    print "$processed_data->{sty}</td>\n";
+    print "</tr>\n";
+  }
+}
 
 
 ################################################################################
