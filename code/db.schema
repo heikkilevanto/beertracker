@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-01-17 00:05 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-01-17 00:11 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -405,6 +405,25 @@ join (
  and g.Timestamp = latest.MaxTime
 left join Locations l on l.Id = g.Location
 where g.Price > 0;
+
+-- view current_taps
+drop view if exists current_taps;
+create view current_taps as
+  -- List currenbtly active taps for a location
+select
+    tb.Location,
+    tb.Tap,
+    tb.Brew,
+    b.Name as BrewName,
+    pl.Name as Producer,
+    tb.FirstSeen,
+    tb.LastSeen
+from tap_beers tb
+join brews b on tb.Brew = b.Id
+left join locations pl on b.ProducerLocation = pl.Id
+where tb.Gone is null
+order by tb.Location, tb.Tap
+;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
