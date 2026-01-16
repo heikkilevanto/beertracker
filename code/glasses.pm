@@ -211,7 +211,9 @@ sub inputform {
   my $pr = $rec->{Price} || "0";
   $pr .= ".-" if ($pr);
   print "<input name='pr' placeholder='pr' $sz4 value='$pr' required />\n";
-    # Price is required, but a space or zero are allowed
+  if ($rec->{tap}) {
+    print "<input type='hidden' name='tap' value='$rec->{tap}' />";
+  }
   print "</td></tr>\n";
 
   # Buttons
@@ -550,6 +552,7 @@ sub postglass {
   } # normal glass
 
   $glass->{tap} = util::param($c, "tap");
+  $glass->{tap} =~ s/\D//g if $glass->{tap};
 
   { no warnings;
     print STDERR "postglass: Op:'$sub' U:'$c->{username},' " .
