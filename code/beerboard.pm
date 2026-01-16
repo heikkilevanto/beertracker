@@ -544,7 +544,7 @@ sub generate_hidden_fields {
   }
   $hiddenbuttons .= "<input type='hidden' name='loc' value='$locparam' />\n" ;
   $hiddenbuttons .= "<input type='hidden' name='Location' value='$locid' />\n" ;
-  $hiddenbuttons .= "<input type='hidden' name='tap' value='$id#' />\n" ; # Signals this comes from a beer board
+  $hiddenbuttons .= "<input type='hidden' name='tap' value='$id' />\n" ; # Signals this comes from a beer board
   $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
   return $hiddenbuttons;
 }

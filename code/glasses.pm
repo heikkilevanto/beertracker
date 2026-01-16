@@ -549,12 +549,14 @@ sub postglass {
 
   } # normal glass
 
+  $glass->{tap} = util::param($c, "tap");
+
   { no warnings;
     print STDERR "postglass: Op:'$sub' U:'$c->{username},' " .
       "Bt:'$glass->{BrewType}' Su:'$glass->{SubType}' Br:'$glass->{Brew}' " .
       "Lo:'$glass->{Location}' ".
       "Pr:'$glass->{Price}' Vo:'$glass->{Volume}' Al:'$glass->{Alc}' " .
-      "dr:'$glass->{StDrinks}' N:'$glass->{Note}'\n";
+      "dr:'$glass->{StDrinks}' N:'$glass->{Note}' tap:'$glass->{tap}'\n";
   }
 
   if ( $sub eq "Save" ) {  # Update existing glass
@@ -568,7 +570,8 @@ sub postglass {
         Volume = ?,
         Alc = ?,
         StDrinks = ?,
-        Note = ?
+        Note = ?,
+        tap = ?
       where id = ? and username = ?
     ";
   my $sth = $c->{dbh}->prepare($sql);
@@ -583,6 +586,7 @@ sub postglass {
     $glass->{Alc},
     $glass->{StDrinks},
     $glass->{Note},
+    $glass->{tap},
     $glass->{Id}, $c->{username} );
   print STDERR "Updated " . $sth->rows .
     " Glass records for id '$c->{edit}'  \n";
@@ -590,8 +594,8 @@ sub postglass {
   } else { # Create a new glass
     my $sql = "insert into GLASSES
       ( Username, TimeStamp, BrewType, SubType,
-        Location, Brew, Price, Volume, Alc, StDrinks, Note )
-      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ? )
+        Location, Brew, Price, Volume, Alc, StDrinks, Note, tap )
+      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ? )
       ";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute(
@@ -605,7 +609,8 @@ sub postglass {
       $glass->{Volume},
       $glass->{Alc},
       $glass->{StDrinks},
-      $glass->{Note}
+      $glass->{Note},
+      $glass->{tap}
       );
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
