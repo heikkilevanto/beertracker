@@ -9,6 +9,9 @@ project, a Perl-based web application for tracking beer consumption.
 - Include comments for complex logic
 - Follow Perl best practices
 
+## Dialog
+- Always state first what you are about to do, before doing it
+
 ## File Structure
 - Each module is in a separate .pm file in the code/ directory
 - Main CGI script is index.cgi
@@ -41,7 +44,7 @@ project, a Perl-based web application for tracking beer consumption.
 - Use prepared statements: my $sth = $c->{dbh}->prepare($sql);
 - Execute with parameters: $sth->execute(@values);
 - Fetch results: my $rec = $sth->fetchrow_hashref;
-- Use transactions for multiple operations
+- index.cgi uses a transaction for any POST request, rolling back in case of errors
 - Foreign key constraints are enforced
 - Use helpers in brews.pm etc, and esp db.pm where possible
 
@@ -60,6 +63,7 @@ project, a Perl-based web application for tracking beer consumption.
 ## Error Handling
 - Use util::error("message") for fatal errors
 - Log to STDERR with print STDERR "message\n";
+- More logging if $c->{devversion}
 - Check return values and handle failures
 
 ## SQL Style
