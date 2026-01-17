@@ -108,6 +108,11 @@ sub datestr {
   return $dstr;
 } # datestr
 
+# Helper to get current timestamp
+sub now {
+  return datestr("%F %T", 0, 1);
+} # now
+
 
 ################################################################################
 # Helpers for cgi parameters

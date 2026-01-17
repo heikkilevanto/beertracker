@@ -106,6 +106,10 @@ sub updateboard {
 
   print STDERR "updateboard: $existing_brews brews already existed, $inserted_brews inserted\n";
 
+  # Get location ID
+  my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
+  my $loc_id = $loc_rec->{Id};
+
   # Add brew_id to each beer and save updated JSON
   my $cachefile = $c->{datadir} . $scrapers{$locparam};
   $cachefile =~ s/\.pl/.cache/;
@@ -123,6 +127,10 @@ sub updateboard {
       }
     }
   }
+
+  # Update taps
+  taps::update_taps($c, $loc_id, $beerlist);
+
   my $updated_json = JSON->new->utf8->pretty->encode($beerlist);
   open my $cf, ">$cachefile" or print STDERR "updateboard: Could not save updated cache: $!\n";
   print $cf $updated_json;

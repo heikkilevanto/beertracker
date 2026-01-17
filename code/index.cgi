@@ -64,6 +64,7 @@ require "./code/yearstat.pm"; # annual stats
 require "./code/mainlist.pm"; # The main "full" list
 require "./code/beerboard.pm"; # The beer board for the current bar
 require "./code/scrapeboard.pm"; # Scraping and updating beer boards
+require "./code/taps.pm"; # Updating tap_beers table
 require "./code/inputs.pm"; # Helper routines for input forms
 require "./code/listrecords.pm"; # A way to produce a nice list from db records
 require "./code/aboutpage.pm"; # The About page

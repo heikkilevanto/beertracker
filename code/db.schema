@@ -114,8 +114,6 @@ create table locations (
 
 );
 
-analyze sqlite_schema;
-
 -- table tap_beers
 drop table if exists tap_beers;
 create table tap_beers (
@@ -134,6 +132,8 @@ create table tap_beers (
     foreign key (Location) references Locations(id),
     foreign key (Brew) references Brews(id)
 );
+
+analyze sqlite_schema;
 
 -- view compers
 drop view if exists compers;
@@ -411,6 +411,7 @@ drop view if exists current_taps;
 create view current_taps as
   -- List currenbtly active taps for a location
 select
+    tb.Id,
     tb.Location,
     tb.Tap,
     tb.Brew,
