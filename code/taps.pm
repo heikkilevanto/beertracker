@@ -73,11 +73,11 @@ sub update_taps {
   $update_sth->execute($now, $location_id);
   print STDERR "taps: Updated LastSeen for active taps at location $location_id\n";
 
-  # TODO: Add scrape marker (future enhancement)
-  # my $marker_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, NULL, NULL, ?, ?)";
-  # my $marker_sth = $c->{dbh}->prepare($marker_sql);
-  # $marker_sth->execute($location_id, $now, $now);
-  # print STDERR "taps: Added scrape marker for location $location_id\n";
+  # Add scrape marker 
+  my $marker_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, NULL, NULL, ?, ?)";
+  my $marker_sth = $c->{dbh}->prepare($marker_sql);
+  $marker_sth->execute($location_id, $now, $now);
+  print STDERR "taps: Added scrape marker for location $location_id\n";
 } # update_taps
 
 ################################################################################

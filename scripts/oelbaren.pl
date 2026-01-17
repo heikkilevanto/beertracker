@@ -31,6 +31,7 @@ foreach my $design ($dom->findnodes($xpath)) {
     my ($number) = $beer[0] =~ m/\>(.*?)\</g;
 
     my ($maker, $model) = $beer[1] =~ m/\<td\>\<big\>(.*?) *\<b\>(.*?)\<\/b\>.*?\<br\/\>/g;
+    
     # Skip empty taps
     if ($model) {
       # <br/>DK - NEIPA - 7.5% </td>

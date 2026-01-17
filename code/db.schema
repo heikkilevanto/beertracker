@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-01-17 00:11 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-01-17 14:44 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -114,26 +114,22 @@ create table locations (
 
 );
 
--- table tap_beers
-drop table if exists tap_beers;
-create table tap_beers (
-
-    -- Tracks beers on taps at locations over time
-    -- Each row represents a period when a specific brew was on a specific tap
-
-    Id integer primary key,
-    Location integer not null,  -- The location (bar, etc.) where the tap is
-    Tap integer not null,       -- Tap number at the location
-    Brew integer not null,      -- The brew on the tap
-    FirstSeen datetime not null default current_timestamp, -- When the beer was first seen on this tap
-    LastSeen datetime not null default current_timestamp,  -- When the beer was last seen on this tap
-    Gone datetime,              -- When the beer was removed from the tap (null if still there)
-
-    foreign key (Location) references Locations(id),
-    foreign key (Brew) references Brews(id)
-);
-
 analyze sqlite_schema;
+
+-- table if
+drop table if exists if;
+create table if not exists "tap_beers" (
+	"Id"	integer,
+	"Location"	integer not null,
+	"Tap"	integer,
+	"Brew"	integer,
+	"FirstSeen"	datetime not null default current_timestamp,
+	"LastSeen"	datetime not null default current_timestamp,
+	"Gone"	datetime,
+	primary key("Id"),
+	foreign key("Brew") references "Brews"("id"),
+	foreign key("Location") references "Locations"("id")
+);
 
 -- view compers
 drop view if exists compers;
@@ -445,8 +441,6 @@ create index idx_comments_glass on comments (Glass);
 create index idx_persons_name on persons (Name collate nocase);
 
 create index idx_locations_name on locations (Name collate nocase);
-
-create index idx_tap_beers_location_gone_tap on tap_beers (Location, Gone, Tap);
 
 commit;
 
