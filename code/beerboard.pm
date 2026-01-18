@@ -422,7 +422,7 @@ sub load_beerlist_from_db {
   }
   
   # Load from DB
-  my $sql = "SELECT ct.Tap, ct.BrewName AS beer, pl.Name AS maker, b.SubType AS type, b.Alc AS alc,
+  my $sql = "SELECT ct.Tap, ct.Brew, ct.BrewName AS beer, pl.Name AS maker, b.SubType AS type, b.Alc AS alc,
                     tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL
              FROM current_taps ct
              JOIN tap_beers tb ON ct.Id = tb.Id
@@ -452,6 +452,7 @@ sub load_beerlist_from_db {
       beer => $row->{beer} || "",
       type => $row->{type} || "",
       alc => $row->{alc} || "",
+      brew_id => $row->{Brew},
       sizePrice => $sizePrice
     };
   }
