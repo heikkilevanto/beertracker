@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-01-17 14:44 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-01-18 12:01 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -125,7 +125,7 @@ create table if not exists "tap_beers" (
 	"Brew"	integer,
 	"FirstSeen"	datetime not null default current_timestamp,
 	"LastSeen"	datetime not null default current_timestamp,
-	"Gone"	datetime,
+	"Gone"	datetime, SizeS decimal, PriceS decimal, SizeM decimal, PriceM decimal, SizeL decimal, PriceL decimal,
 	primary key("Id"),
 	foreign key("Brew") references "Brews"("id"),
 	foreign key("Location") references "Locations"("id")

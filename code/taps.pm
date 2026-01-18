@@ -41,16 +41,30 @@ sub update_taps {
         print STDERR "taps: Closed tap $tap_num at location $location_id\n";
 
         # Insert new tap
-        my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, ?, ?, ?, ?)";
+        my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         my $insert_sth = $c->{dbh}->prepare($insert_sql);
-        $insert_sth->execute($location_id, $tap_num, $tap->{brew_id}, $now, $now);
+        my @sizes = @{$tap->{sizePrice} || []};
+        my $sizeS = $sizes[0] ? $sizes[0]->{vol} : undef;
+        my $priceS = $sizes[0] ? $sizes[0]->{price} : undef;
+        my $sizeM = $sizes[1] ? $sizes[1]->{vol} : undef;
+        my $priceM = $sizes[1] ? $sizes[1]->{price} : undef;
+        my $sizeL = $sizes[2] ? $sizes[2]->{vol} : undef;
+        my $priceL = $sizes[2] ? $sizes[2]->{price} : undef;
+        $insert_sth->execute($location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
         print STDERR "taps: Opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
       }
     } else {
       # Insert new tap
-      my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, ?, ?, ?, ?)";
+      my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       my $insert_sth = $c->{dbh}->prepare($insert_sql);
-      $insert_sth->execute($location_id, $tap_num, $tap->{brew_id}, $now, $now);
+      my @sizes = @{$tap->{sizePrice} || []};
+      my $sizeS = $sizes[0] ? $sizes[0]->{vol} : undef;
+      my $priceS = $sizes[0] ? $sizes[0]->{price} : undef;
+      my $sizeM = $sizes[1] ? $sizes[1]->{vol} : undef;
+      my $priceM = $sizes[1] ? $sizes[1]->{price} : undef;
+      my $sizeL = $sizes[2] ? $sizes[2]->{vol} : undef;
+      my $priceL = $sizes[2] ? $sizes[2]->{price} : undef;
+      $insert_sth->execute($location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
       print STDERR "taps: Opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
     }
   }
