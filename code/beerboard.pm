@@ -362,9 +362,11 @@ sub beercolorstyle {
 sub render_location_selector {
   my ($c, $locparam) = @_;
   # Pull-down for choosing the bar
+  my $url = $c->{url};
+  $url =~ s/"/&quot;/g;
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
   print "Beer list \n";
-  print "<select onchange='document.location=\"$c->{url}?o=Board&loc=\" + this.value;' style='width:5.5em;'>\n";
+  print "<select onchange=\"document.location='$url?o=Board&loc=' + this.value;\" style='display:inline-block; width:5.5em;'>\n";
   if (!$scrapeboard::scrapers{$locparam}) { #Include the current location, even if no scraper
     $scrapeboard::scrapers{$locparam} = ""; #that way, the pulldown looks reasonable
   }

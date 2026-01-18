@@ -14,6 +14,7 @@ our %scrapers;
 $scrapers{"Ølbaren"} = "oelbaren.pl";
 $scrapers{"Taphouse"} = "taphouse.pl";
 $scrapers{"Fermentoren"} = "fermentoren.pl";
+$scrapers{"Brus"} = "brus.pl";
 #$scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
 # Ølsnedkerens web site is broken, does not show a beer list at all
 # See #368
@@ -29,6 +30,7 @@ $links{"Taphouse"} = "http://www.taphouse.dk/";
 $links{"Slowburn"} = "https://slowburn.coop/";
 $links{"Brewpub"} = "https://brewpub.dk/vores-l";
 $links{"Penyllan"} = "https://penyllan.com/";
+$links{"Brus"} = "https://tapperietbrus.dk/bar/";
 
 ################################################################################
 # Update board: scrape and ensure brews/producers exist in DB
