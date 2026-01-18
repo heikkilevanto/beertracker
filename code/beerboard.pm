@@ -41,36 +41,21 @@ sub beerboard {
   
   render_location_selector($c, $locparam);
 
-  my $script = $c->{scriptdir} . $scrapeboard::scrapers{$locparam};
-  my $cachefile = $c->{datadir} . $scrapeboard::scrapers{$locparam};
-  $cachefile =~ s/\.pl/.cache/;
-  my $json = load_or_scrape_beerlist($c, $script, $cachefile, $qrylim);
+  my $beerlist = load_beerlist_from_db($c, $locparam, $qrylim);
 
-  if (!$json) {
-    # No fresh cache, trigger update
-    print "<!-- No fresh cache, triggering update -->\n";
+  if (!$beerlist) {
+    # No fresh data, trigger update
+    print "<!-- No fresh data, triggering update -->\n";
     print scrapeboard::post_form($c, 'updateboard', $locparam, '(Updating...)');
     my $form_id = "form_updateboard_" . $locparam;
     $form_id =~ s/\W/_/g;
     print "<script>document.getElementById('$form_id').submit();</script>\n";
-    # Load old cache if available
-    if (-f $cachefile) {
-      open CF, $cachefile or util::error ("Could not open $cachefile for reading");
-      $json = join '', <CF>;
-      close CF;
-      print "<!-- Loaded old cache while updating -->\n";
-    }
+    # Simple error message
+    print "Sorry, could not get the list from $locparam<br/>\n";
+    return;
   }
 
-  if (!$json) {
-    print "Sorry, could not get the list from $locparam<br/>\n";
-    print "<!-- Error: no cache and no data\n";
-    print "Cachefile: $cachefile\n -->\n";
-  } else {
-    chomp($json);
-    my $beerlist = JSON->new->utf8->decode($json)
-      or util::error("Json decode failed for $scrapeboard::scrapers{$locparam} <pre>$json</pre>");
-    my $nbeers = 0;
+  my $nbeers = 0;
     if ($c->{qry}) {
       print "Filter:<b>$c->{qry}</b> " .
         "(<a href='$c->{url}?o=$c->{op}&loc=$locparam'><span>Clear</span></a>) " .
@@ -118,10 +103,7 @@ sub beerboard {
     print "</table>\n";
     if (! $nbeers ) {
       print "Sorry, got no beers from $locparam\n";
-      print "<!-- Error running " . $scrapeboard::scrapers{$locparam} . ". \n";
-      print "Result: '$json'\n -->\n";
     }
-  }
   # Keep $c->{qry}, so we filter the big list too
   $c->{qry} = "" if ($c->{qry} =~ /PA/i );   # But not 'PA', it is only for the board
   print "<hr/>\n";
@@ -421,26 +403,61 @@ sub get_location_param {
   return ($locparam, $foundrec);
 }
 
-sub load_or_scrape_beerlist {
-  my ($c, $script, $cachefile, $qrylim) = @_;
-  my $json = "";
-  my $loaded = 0;
-  if ( -f $cachefile
-       && (-M $cachefile) * 24 * 60 < 20    # age in minutes
-       && -s $cachefile > 256    # looks like a real file
-       && $qrylim ne "f" ) {
-    open CF, $cachefile or util::error ("Could not open $cachefile for reading");
-    while ( <CF> ) {
-      $json .= $_ ;
+sub load_beerlist_from_db {
+  my ($c, $locparam, $qrylim) = @_;
+  
+  # Get location ID
+  my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
+  return undef unless $loc_rec;
+  my $loc_id = $loc_rec->{Id};
+  
+  # Check if we need to scrape: look at the latest scrape marker
+  my $marker_sql = "SELECT strftime('%s', LastSeen) as last_epoch FROM tap_beers WHERE Location = ? AND Tap IS NULL ORDER BY LastSeen DESC LIMIT 1";
+  my $marker_sth = $c->{dbh}->prepare($marker_sql);
+  $marker_sth->execute($loc_id);
+  my ($last_epoch) = $marker_sth->fetchrow_array;
+  
+  if (!$last_epoch || (time() - $last_epoch) > 20 * 60) {  # older than 20 min
+    return undef;  # Need to scrape
+  }
+  
+  # Load from DB
+  my $sql = "SELECT ct.Tap, ct.BrewName AS beer, pl.Name AS maker, b.SubType AS type, b.Alc AS alc,
+                    tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL
+             FROM current_taps ct
+             JOIN tap_beers tb ON ct.Id = tb.Id
+             JOIN brews b ON ct.Brew = b.Id
+             LEFT JOIN locations pl ON b.ProducerLocation = pl.Id
+             WHERE ct.Location = ?
+             ORDER BY ct.Tap";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($loc_id);
+  
+  my $beerlist = [];
+  while (my $row = $sth->fetchrow_hashref) {
+    my $sizePrice = [];
+    if ($row->{SizeS}) {
+      push @$sizePrice, { vol => $row->{SizeS}, price => $row->{PriceS} };
     }
-    close CF;
-    $loaded = 1;
-    print "<!-- Loaded cached board from '$cachefile' -->\n";
+    if ($row->{SizeM}) {
+      push @$sizePrice, { vol => $row->{SizeM}, price => $row->{PriceM} };
+    }
+    if ($row->{SizeL}) {
+      push @$sizePrice, { vol => $row->{SizeL}, price => $row->{PriceL} };
+    }
+    
+    push @$beerlist, {
+      id => $row->{Tap},
+      maker => $row->{maker} || "",
+      beer => $row->{beer} || "",
+      type => $row->{type} || "",
+      alc => $row->{alc} || "",
+      sizePrice => $sizePrice
+    };
   }
-  if ( !$json ){
-    return undef;  # Don't scrape here, will trigger POST update
-  }
-  return $json;
+  
+  print "<!-- Loaded beerlist from DB for '$locparam' -->\n";
+  return $beerlist;
 }
 
 sub determine_expansion_state {
@@ -552,12 +569,10 @@ sub generate_hidden_fields {
 sub render_beer_buttons {
   my ($c, $sizes, $hiddenbuttons, $extraboard, $id, $alc) = @_;
   my $buttons = "";
-  while ( scalar(@$sizes) < 2 ) {
-    push @$sizes, { "vol" => "", "price" => "" };
-  }
   foreach my $sp ( @$sizes ) {
     my $vol = $sp->{"vol"} || "";
     my $pr = $sp->{"price"} || "";
+    next unless $vol || $pr;  # Skip empty entries
     my $lbl;
     if ($extraboard == $id || $extraboard == -2) {
       my $dispvol = $vol;
@@ -573,17 +588,15 @@ sub render_beer_buttons {
       } elsif ( $vol ) {
         $lbl = "&nbsp; $vol &nbsp;";
       } else {
-        $lbl = " ";
+        next;  # Skip if no label
       }
-      $buttons .= "<td>";
     }
-    $buttons .= "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+    $buttons .= "<form method='POST' accept-charset='UTF-8' style='display: inline-block; margin-right: 5px; vertical-align: top;' class='no-print' >\n";
     $buttons .= $hiddenbuttons;
     $buttons .= "<input type='hidden' name='vol' value='$vol' />\n" ;
     $buttons .= "<input type='hidden' name='pr' value='$pr' />\n" ;
     $buttons .= "<input type='submit' name='submit' value='$lbl'/> \n";
     $buttons .= "</form>\n";
-    $buttons .= "</td>\n" if ($extraboard != $id && $extraboard != -2);
   }
   return $buttons;
 }
@@ -630,10 +643,8 @@ sub render_beer_row {
 #         }
     print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
   } else { # Plain view
-    print "<tr><td align=right $beerstyle>";
-    print "<a href='$c->{url}?o=Board$id&loc=$locparam#here'><span width=100% $beerstyle>$dispid</span></a> ";
-    print "</td>\n";
-    print "$buttons\n";
+    print "<tr><td align=right $beerstyle>$dispid</td>\n";
+    print "<td style='$beerstyle white-space: normal;'>$buttons</td>\n";
     print "<td style='font-size: x-small;' align=right>$e->{alc}</td>\n";
     print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
     print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});

@@ -131,12 +131,6 @@ sub updateboard {
   # Update taps
   taps::update_taps($c, $loc_id, $beerlist);
 
-  my $updated_json = JSON->new->utf8->pretty->encode($beerlist);
-  open my $cf, ">$cachefile" or print STDERR "updateboard: Could not save updated cache: $!\n";
-  print $cf $updated_json;
-  close $cf;
-  print STDERR "updateboard: Saved updated JSON to $cachefile\n";
-
   # Set redirect
   $c->{redirect_url} = "$c->{url}?o=Board&loc=$locparam";
 }
