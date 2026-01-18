@@ -644,7 +644,7 @@ sub render_beer_row {
 #         }
     print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
   } else { # Plain view
-    print "<tr><td align=right $beerstyle>$dispid</td>\n";
+    print "<tr><td align=right $beerstyle><a href='$c->{url}?o=Board$id&loc=$locparam#here'><span width=100% $beerstyle>$dispid</span></a></td>\n";
     print "<td style='$beerstyle white-space: normal;'>$buttons</td>\n";
     print "<td style='font-size: x-small;' align=right>$e->{alc}</td>\n";
     print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
