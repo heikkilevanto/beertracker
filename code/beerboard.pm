@@ -89,7 +89,7 @@ sub beerboard {
       my $hiddenbuttons = generate_hidden_fields($c, $e, $locparam, $locid, $id, $processed_data);
       my $buttons = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, $extraboard, $id, $alc);
 
-      my $beerstyle = beercolorstyle($c, $processed_data->{origsty}, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
+      my $beerstyle = beercolorstyle($c, $processed_data->{sty}, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
 
       my $dispid = $id;
       $dispid = "&nbsp;&nbsp;$id"  if ( length($dispid) < 2);
@@ -290,68 +290,18 @@ sub shortbeerstyle {
 } # shortbeerstyle
 
 # Helper to assign a color for a beer
-sub beercolor {
-  my $rec = shift; # Can also be type
-  my $prefix = shift || "0x";
-  my $line = shift;
-  my $type;
-  if ( ref($rec) ) {
-    $type = "$rec->{type},$rec->{subtype}: $rec->{style} $rec->{maker}";  # something we can match
-    $line = $rec->{rawline};
-  } else {
-    $type = $rec;
-  }
-  my @drinkcolors = (   # color, pattern. First match counts, so order matters
-      "003000", "restaurant", # regular bg color, no highlight
-      "eac4a6", "wine[, ]+white",
-      "801414", "wine[, ]+red",
-      "4f1717", "wine[, ]+port",
-      "aa7e7e", "wine",
-      "f2f21f", "Pils|Lager|Keller|Bock|Helles|IPL",
-      "e5bc27", "Classic|dunkel|shcwarz|vienna",
-      "adaa9d", "smoke|rauch|sc?h?lenkerla",
-      "350f07", "stout|port",  # imp comes later
-      "1a8d8d", "sour|kriek|lambie?c?k?|gueuze|gueze|geuze|berliner",
-      "8cf2ed", "booze|sc?h?nap+s|whisky",
-      "e07e1d", "cider",
-      "eaeac7", "weiss|wit|wheat|weizen",
-      "66592c", "Black IPA|BIPA",
-      "9ec91e", "NEIPA|New England",
-      "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
-      "d8d80f", "Pale Ale|PA",
-      "b7930e", "Old|Brown|Red|Dark|Ale|Belgian||Tripel|Dubbel|IDA",   # Any kind of ales (after Pale Ale)
-      "350f07", "Imp",
-      "dbb83b", "misc|mix|random",
-      );
-      for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
-        my $pat = $drinkcolors[$i+1];
-        if ( $type =~ /$pat/i ) {
-          return $prefix.$drinkcolors[$i] ;
-        }
-      }
-      print STDERR "No color for '$line' \n";
-      return $prefix."9400d3" ;   # dark-violet, aggressive pink
-}
-
-# Helper to return a style attribute with suitable colors for (beer) style
 sub beercolorstyle {
   my $c = shift;
   my $rec = shift;  # Can also be style as text, see below
   my $line = shift; # for error logging
   my $type = "";
-  my $bkg;
   if (ref($rec)) {
-    $bkg= beercolor($rec,"#");
+    $type = "$rec->{type},$rec->{subtype}: $rec->{style} $rec->{maker}";  # something we can match
+    $line = $rec->{rawline};
   } else {
     $type = $rec;
-    $bkg= beercolor($type,"#",$line);
   }
-  my $col = $c->{bgcolor};
-  my $lum = ( hex($1) + hex($2) + hex($3) ) /3  if ($bkg =~ /^#?(..)(..)(..)/i );
-  if ($lum < 64) {  # If a fairly dark color
-    $col = "#ffffff"; # put white text on it
-  }
-  return "style='background-color:$bkg;color:$col;'";
+  return brews::brewtextstyle($c, $type);
 } # beercolorstyle
 
 

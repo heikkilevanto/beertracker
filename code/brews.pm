@@ -57,7 +57,7 @@ sub brewcolor {
     $type = "$1";
     $type .= ",$3" if ( $3 );
   } else {
-    util::error("Can not get style color for '$brew'");
+    $type = $brew;  # Fallback to the full string for matching
   }
   for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
     my $pat = $drinkcolors[$i+1];
