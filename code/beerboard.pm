@@ -113,7 +113,11 @@ sub beerboard {
     }
     $extraboard = determine_expansion_state($c, $extraboard, $foundrec, $beerlist);
 
-    print "<table border=0 style='white-space: nowrap;'>\n";
+    my $all_expanded = ($extraboard == -2);
+    my $expand_display = $all_expanded ? 'block' : 'none';
+    print "<div id='expand-all' style='display:$expand_display;'><a href='#' onclick='expandAll(); return false;'><span>Expand All</span></a> | <a href='#' onclick='collapseAll(); return false;'><span>Collapse All</span></a></div>\n";
+
+    print "<table id='beerboard' border=0 style='white-space: nowrap;'>\n";
     my $previd  = 0;
     foreach my $e ( sort {$a->{"id"} <=> $b->{"id"} } @$beerlist )  {
       $nbeers++;
@@ -137,7 +141,8 @@ sub beerboard {
       my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
       my $locid = $locrec->{Id};
       my $hiddenbuttons = generate_hidden_fields($c, $e, $locparam, $locid, $id, $processed_data);
-      my $buttons = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, $extraboard, $id, $alc);
+      my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $alc);
+      my $buttons_expanded = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 1, $alc);
 
       my $beerstyle = beercolorstyle($c, $processed_data->{sty}, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
 
@@ -146,11 +151,39 @@ sub beerboard {
 
       my $seenline = seenline($c, $mak, $beer);
 
-      render_beer_row($c, $e, $buttons, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons);
+      render_beer_row($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons);
 
       $previd = $id;
     } # beer loop
     print "</table>\n";
+    print "<script>\nvar allExpanded = " . ($all_expanded ? 'true' : 'false') . ";
+function toggleBeer(id) {
+  var compact = document.getElementById('compact_' + id);
+  var expanded = document.querySelectorAll('.expanded_' + id);
+  if (compact.style.display === 'none') {
+    compact.style.display = 'table-row';
+    expanded.forEach(function(row) { row.style.display = 'none'; });
+  } else {
+    compact.style.display = 'none';
+    expanded.forEach(function(row) { row.style.display = 'table-row'; });
+  }
+  document.getElementById('expand-all').style.display = 'block';
+}
+function expandAll() {
+  var compacts = document.querySelectorAll('[id^=\"compact_\"]');
+  var expandeds = document.querySelectorAll('[class^=\"expanded_\"]');
+  compacts.forEach(function(row) { row.style.display = 'none'; });
+  expandeds.forEach(function(row) { row.style.display = 'table-row'; });
+  setTimeout(() => window.scrollTo(0, document.getElementById('beerboard').offsetTop), 10);
+}
+function collapseAll() {
+  var compacts = document.querySelectorAll('[id^=\"compact_\"]');
+  var expandeds = document.querySelectorAll('[class^=\"expanded_\"]');
+  compacts.forEach(function(row) { row.style.display = 'table-row'; });
+  expandeds.forEach(function(row) { row.style.display = 'none'; });
+  setTimeout(() => window.scrollTo(0, document.getElementById('beerboard').offsetTop), 10);
+}
+</script>\n";
     if (! $nbeers ) {
       print "Sorry, got no beers from $locparam\n";
     }
@@ -422,11 +455,13 @@ sub load_beerlist_from_db {
   
   # Load from DB
   my $sql = "SELECT ct.Tap, ct.Brew, ct.BrewName AS beer, pl.Name AS maker, pl.Id AS maker_id, b.SubType AS type, b.Alc AS alc,
-                    tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL
+                    tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
+                    br.rating_count, br.average_rating, br.comment_count, strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date
              FROM current_taps ct
              JOIN tap_beers tb ON ct.Id = tb.Id
              JOIN brews b ON ct.Brew = b.Id
              LEFT JOIN locations pl ON b.ProducerLocation = pl.Id
+             LEFT JOIN brew_ratings br ON b.Id = br.brew
              WHERE ct.Location = ?
              ORDER BY ct.Tap";
   my $sth = $c->{dbh}->prepare($sql);
@@ -453,7 +488,11 @@ sub load_beerlist_from_db {
       type => $row->{type} || "",
       alc => $row->{alc} || "",
       brew_id => $row->{Brew},
-      sizePrice => $sizePrice
+      sizePrice => $sizePrice,
+      rating_count => $row->{rating_count},
+      average_rating => $row->{average_rating},
+      comment_count => $row->{comment_count},
+      first_seen_date => $row->{first_seen_date}
     };
   }
   
@@ -537,7 +576,11 @@ sub prepare_beer_entry_data {
     origsty => $origsty,
     dispmak => $dispmak,
     dispbeer => $dispbeer,
-    country => $country
+    country => $country,
+    rating_count => $e->{rating_count},
+    average_rating => $e->{average_rating},
+    comment_count => $e->{comment_count},
+    first_seen_date => $e->{first_seen_date}
   };
 }
 
@@ -568,14 +611,14 @@ sub generate_hidden_fields {
 }
 
 sub render_beer_buttons {
-  my ($c, $sizes, $hiddenbuttons, $extraboard, $id, $alc) = @_;
+  my ($c, $sizes, $hiddenbuttons, $detailed, $alc) = @_;
   my $buttons = "";
   foreach my $sp ( @$sizes ) {
     my $vol = $sp->{"vol"} || "";
     my $pr = $sp->{"price"} || "";
     next unless $vol || $pr;  # Skip empty entries
     my $lbl;
-    if ($extraboard == $id || $extraboard == -2) {
+    if ($detailed) {
       my $dispvol = $vol;
       $dispvol = $1 if ( $glasses::volumes{$vol} && $glasses::volumes{$vol} =~ /(^\d+)/);   # Translate S and L
       $lbl = "$dispvol cl  ";
@@ -603,54 +646,47 @@ sub render_beer_buttons {
 }
 
 sub render_beer_row {
-  my ($c, $e, $buttons, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
-  if ($extraboard == $id  || $extraboard == -2) { # More detailed view
-    print "<tr><td colspan=5><hr></td></tr>\n";
-    print "<tr><td align=right $beerstyle>";
-    my $linkid = $id;
-    if ($extraboard == $id) {
-      $linkid = "-3";  # Force no expansion
-    }
-    print "<a href='$c->{url}?o=Board$linkid&loc=$locparam'><span width=100% $beerstyle id='here'>$dispid</span></a> ";
-    print "</td>\n";
-
-    print "<td colspan=4 >";
-    print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
-    print "$processed_data->{mak}: $processed_data->{dispbeer} ";
-    print "<span style='font-size: x-small;'>($processed_data->{country})</span>" if ($processed_data->{country});
-    print "</span></td></tr>\n";
-    print "<tr><td>&nbsp;</td><td colspan=4> $buttons &nbsp;\n";
-    print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
-    print "$hiddenbuttons";
-    print "<input type='hidden' name='vol' value='T' />\n" ;  # taster
-    print "<input type='hidden' name='pr' value='X' />\n" ;  # at no cost
-    print "<input type='submit' name='submit' value='Taster ' /> \n";
-    print "</form>\n";
+  my ($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
+  my $compact_display = ($extraboard == $id || $extraboard == -2) ? 'none' : 'table-row';
+  my $expanded_display = ($extraboard == $id || $extraboard == -2) ? 'table-row' : 'none';
+  # Compact row
+  print "<tr id='compact_$id' style='display: $compact_display;'>\n";
+  print "<td align=right $beerstyle><a href='#' onclick=\"toggleBeer('$id'); return false;\"><span width=100% $beerstyle>$dispid</span></a></td>\n";
+  print "<td style='$beerstyle white-space: normal;'>$buttons_compact</td>\n";
+  print "<td style='font-size: x-small;' align=right>$e->{alc}</td>\n";
+  print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
+  print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
+  print "$processed_data->{sty}</td>\n";
+  print "</tr>\n";
+  # Expanded rows
+  print "<tr class='expanded_$id' style='display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
+  print "<tr class='expanded_$id' style='display: $expanded_display;'><td align=right $beerstyle>";
+  print "<a href='#' onclick=\"toggleBeer('$id'); return false;\"><span width=100% $beerstyle id='here'>$dispid</span></a> ";
+  print "</td>\n";
+  print "<td colspan=4 >";
+  print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
+  print "$processed_data->{mak}: $processed_data->{dispbeer} ";
+  print "<span style='font-size: x-small;'>($processed_data->{country})</span>" if ($processed_data->{country});
+  print "</span></td></tr>\n";
+  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $buttons_expanded &nbsp;\n";
+  print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
+  print "$hiddenbuttons";
+  print "<input type='hidden' name='vol' value='T' />\n" ;  # taster
+  print "<input type='hidden' name='pr' value='X' />\n" ;  # at no cost
+  print "<input type='submit' name='submit' value='Taster ' /> \n";
+  print "</form>\n";
+  print "</td></tr>\n";
+  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span $beerstyle>$processed_data->{origsty}</span> <span style='font-size: x-small;'><b>$e->{alc}%</b></span>";
+  if ($processed_data->{first_seen_date}) {
+    print " <span style='font-size: x-small;'>On since $processed_data->{first_seen_date}.</span>";
+  }
+  if ( $processed_data->{average_rating} ) {
+    print " " . comments::avgratings($c, $processed_data->{rating_count}, $processed_data->{average_rating}, $processed_data->{comment_count});
+  }
+  print "</td></tr> \n";
+  if ($seenline) {
+    print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $seenline";
     print "</td></tr>\n";
-    print "<tr><td>&nbsp;</td><td colspan=4>$processed_data->{origsty} <span style='font-size: x-small;'>$e->{alc}%</span></td></tr> \n";
-    if ($seenline) {
-      print "<tr><td>&nbsp;</td><td colspan=4> $seenline";
-      print "</td></tr>\n";
-    }
-      # TODO - Get rate counts from the database somehow
-#         if ($ratecount{$seenkey}) {
-#           my $avgrate = sprintf("%3.1f", $ratesum{$seenkey}/$ratecount{$seenkey});
-#           print "<tr><td>&nbsp;</td><td colspan=4>";
-#           my $rating = "rating";
-#           $rating .= "s" if ($ratecount{$seenkey} > 1 );
-#           print "$ratecount{$seenkey} $rating <b>$avgrate</b>: ";
-#           print $ratings[$avgrate];
-#         print "</td></tr>\n";
-#         }
-    print "<tr><td colspan=5><hr></td></tr>\n" if ($extraboard != -2) ;
-  } else { # Plain view
-    print "<tr><td align=right $beerstyle><a href='$c->{url}?o=Board$id&loc=$locparam#here'><span width=100% $beerstyle>$dispid</span></a></td>\n";
-    print "<td style='$beerstyle white-space: normal;'>$buttons</td>\n";
-    print "<td style='font-size: x-small;' align=right>$e->{alc}</td>\n";
-    print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
-    print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
-    print "$processed_data->{sty}</td>\n";
-    print "</tr>\n";
   }
 }
 
