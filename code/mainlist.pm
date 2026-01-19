@@ -177,8 +177,6 @@ sub nameline {
   my $rec = shift;
   my $locationid = shift; # The location we are at, not producer of current drink
   my $locationname = shift;
-  my $style = $rec->{brewtype};
-  $style .= ",$rec->{subtype}" if ($rec->{subtype});
   my $time = $rec->{time};
   $time = "($time)" if ($time lt "0600");
   my $op = $c->{op};
@@ -187,8 +185,7 @@ sub nameline {
   print "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
         "<span>$time</span></a> \n";
   #print "$time ";
-  my $dispstyle = brews::brewtextstyle($c,$style);
-  print "<span $dispstyle>[$style]</span> \n";
+  print brews::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}) . " \n";
   print "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
   if ( $rec->{brewname} ) {
     print "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;

@@ -601,10 +601,10 @@ sub render_beer_row {
   print "<tr id='compact_$id' style='display: $compact_display;'>\n";
   print "<td align=right $beerstyle><a href='#' onclick=\"toggleBeer('$id'); return false;\"><span width=100% $beerstyle>$dispid</span></a></td>\n";
   print "<td style='$beerstyle white-space: normal;'>$buttons_compact</td>\n";
-  print "<td style='font-size: x-small;' align=right>$e->{alc}</td>\n";
+  print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
   print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
-  print "$processed_data->{sty}</td>\n";
+  print brews::brewstyledisplay($c, "Beer", $processed_data->{sty}) . "</td>\n";
   print "</tr>\n";
   # Expanded rows
   print "<tr class='expanded_$id' style='display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
@@ -624,7 +624,7 @@ sub render_beer_row {
   print "<input type='submit' name='submit' value='Taster ' /> \n";
   print "</form>\n";
   print "</td></tr>\n";
-  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span $beerstyle>$processed_data->{origsty}</span> <span style='font-size: x-small;'><b>$e->{alc}%</b></span>";
+  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4>" . brews::brewstyledisplay($c, "Beer", $processed_data->{origsty}) . " <span style='font-size: x-small;'><b>$e->{alc}%</b></span>";
   if ($processed_data->{first_seen_date}) {
     print " <span style='font-size: x-small;'>On since $processed_data->{first_seen_date}.</span>";
   }

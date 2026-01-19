@@ -83,6 +83,22 @@ sub brewtextstyle {
   return "style='background-color:#$bkg;color:$fg;'";
 }
 
+# Returns HTML for a styled display of the brew type and subtype
+sub brewstyledisplay {
+  my $c = shift;
+  my $brewtype = shift;
+  my $subtype = shift;
+  my $style_str;
+  if ($brewtype eq 'Beer') {
+    $style_str = $subtype || 'Beer';
+  } else {
+    $style_str = $brewtype;
+    $style_str .= ",$subtype" if $subtype;
+  }
+  my $dispstyle = brewtextstyle($c, $style_str);
+  return "<span $dispstyle>[$style_str]</span>";
+}
+
 # Helper to shorten a beer style
 sub shortbeerstyle {
   my $sty = shift || "";
