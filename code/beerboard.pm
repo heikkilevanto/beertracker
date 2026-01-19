@@ -134,7 +134,7 @@ sub beerboard {
       }
 
       if ( $id != $previd +1 ) {
-        print "<tr><td align=right>&nbsp;</td><td align=right>. . .</td></tr>\n";
+        print "<tr><td align=center>. . .</td></tr>\n";
       }
 
       my $processed_data = prepare_beer_entry_data($c, $e, $locparam);
@@ -672,7 +672,7 @@ sub render_beer_row {
   print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
   print "$hiddenbuttons";
   print "<input type='hidden' name='vol' value='T' />\n" ;  # taster
-  print "<input type='hidden' name='pr' value='X' />\n" ;  # at no cost
+  print "<input type='hidden' name='pr' value='0' />\n" ;  # at no cost
   print "<input type='submit' name='submit' value='Taster ' /> \n";
   print "</form>\n";
   print "</td></tr>\n";
