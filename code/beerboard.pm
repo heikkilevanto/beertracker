@@ -125,8 +125,8 @@ sub beerboard {
       my $alc = $e->{"alc"} || "";
       $alc = sprintf("%4.1f",$alc) if ($alc);
       my $seenkey = seenkey($mak,$beer);
-      if ( $c->{qry} ) {
-        next unless ( "$sty $mak $beer" =~ /$c->{qry}/ );
+      if ( $c->{qry} && $c->{qry} =~ /PA/i ) {
+        next unless ( "$sty $mak $beer" =~ /PA/i );
       }
 
       if ( $id != $previd +1 ) {
@@ -421,7 +421,7 @@ sub load_beerlist_from_db {
   my ($last_epoch) = $marker_sth->fetchrow_array;
   
   # Load from DB
-  my $sql = "SELECT ct.Tap, ct.Brew, ct.BrewName AS beer, pl.Name AS maker, b.SubType AS type, b.Alc AS alc,
+  my $sql = "SELECT ct.Tap, ct.Brew, ct.BrewName AS beer, pl.Name AS maker, pl.Id AS maker_id, b.SubType AS type, b.Alc AS alc,
                     tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL
              FROM current_taps ct
              JOIN tap_beers tb ON ct.Id = tb.Id
@@ -448,6 +448,7 @@ sub load_beerlist_from_db {
     push @$beerlist, {
       id => $row->{Tap},
       maker => $row->{maker} || "",
+      maker_id => $row->{maker_id},
       beer => $row->{beer} || "",
       type => $row->{type} || "",
       alc => $row->{alc} || "",
@@ -512,16 +513,16 @@ sub prepare_beer_entry_data {
   if ( $beer =~ /$dispmak/ || !$mak) {
     $dispmak = ""; # Same word in the beer, don't repeat
   } else {
-    $dispmak = filt($c, $mak, "i", $dispmak,"board&loc=$locparam","maker");
+    $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$dispmak</i></a>" if ($dispmak && $e->{maker_id});
   }
   $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
   $beer =~ s/.*(Hopfenweisse).*/$1/;
   $beer =~ s/.*(Ungespundet).*/$1/;
   if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
     $mak = "Schlenkerla";
-    $dispmak = filt($c, $mak, "i", $mak,"board&loc=$locparam");
+    $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$mak</i></a>" if ($e->{maker_id});
   }
-  my $dispbeer = filt($c, $beer, "b", $beer, "board&loc=$locparam");
+  my $dispbeer = "<a href='$c->{url}?o=Brew&e=$e->{brew_id}'><b>$beer</b></a>" if ($e->{brew_id});
 
   $mak =~ s/'//g; # Apostrophes break the input form below
   $beer =~ s/'//g; # So just drop them
