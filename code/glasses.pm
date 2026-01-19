@@ -200,7 +200,7 @@ sub inputform {
   print "<tr>";
   my $notetxt = "(note)";
   $notetxt = "" if ( !$hidenote);
-  print "<td><div id='notetag' onclick='shownote();'>$notetxt</id></td>";
+  print "<td><div id='notetag' onclick='shownote();'>$notetxt</div></td>";
   print "<td id='avp' >\n";
   my $vol = $rec->{Volume} || "";
   $vol .= "c" if ($vol);

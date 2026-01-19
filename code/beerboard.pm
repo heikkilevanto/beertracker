@@ -72,7 +72,7 @@ sub beerboard {
   my $is_old = $last_epoch && (time() - $last_epoch) > 20 * 60;
   if ($is_old) {
     my $timestamp = strftime('%Y-%m-%d %H:%M', localtime($last_epoch));
-    print "<div style='color: red; font-weight: bold;'>The beer board is too old / from $timestamp</div>\n";
+    print "<div style='font-weight: bold;'>The beer board is from $timestamp</div>\n";
     # Trigger background update
     print "<!-- Triggering background update -->\n";
     my $form_id = "form_updateboard_" . $locparam;
@@ -572,8 +572,8 @@ sub render_beer_row {
   my $expanded_display = ($extraboard == $id) ? 'table-row' : 'none';
   # Compact row
   print "<tr id='compact_$id' style='display: $compact_display;'>\n";
-  print "<td align=right $beerstyle><a href='#' onclick=\"toggleBeer('$id'); return false;\"><span width=100% $beerstyle>$dispid</span></a></td>\n";
-  print "<td style='$beerstyle white-space: normal;'>$buttons_compact</td>\n";
+  print "<td align=right $beerstyle><a href='#' onclick=\"toggleBeer('$id'); return false;\"><span $beerstyle>$dispid</span></a></td>\n";
+  print "<td>$buttons_compact</td>\n";
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
   print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
@@ -582,10 +582,10 @@ sub render_beer_row {
   # Expanded rows
   print "<tr class='expanded_$id' style='display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
   print "<tr class='expanded_$id' style='display: $expanded_display;'><td align=right $beerstyle>";
-  print "<a href='#' onclick=\"toggleBeer('$id'); return false;\"><span width=100% $beerstyle id='here'>$dispid</span></a> ";
+  print "<a href='#' onclick=\"toggleBeer('$id'); return false;\"><span $beerstyle id='here'>$dispid</span></a> ";
   print "</td>\n";
   print "<td colspan=4 >";
-  print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width=100px'>\n";
+  print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width:100px'>\n";
   print "$processed_data->{mak}: $processed_data->{dispbeer} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span>" if ($processed_data->{country});
   print "</span></td></tr>\n";
