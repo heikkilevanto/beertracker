@@ -28,11 +28,6 @@ sub beerboard {
 
   my $qrylim = util::param($c,"f");
 
-  my $extraboard = -1; # Which of the entries to open, or -1 current, -2 for all, -3 for none
-  if ( $c->{op} =~ /board(-?\d+)/i ) {
-    $extraboard = $1;
-  }
-
   my ($locparam, $foundrec) = get_location_param($c);
   
   if (!$scrapeboard::scrapers{$locparam}) {
@@ -111,10 +106,20 @@ sub beerboard {
         "(<a href='$c->{url}?o=$c->{op}&loc=$locparam'><span>Clear</span></a>) " .
         "<p>\n";
     }
-    $extraboard = determine_expansion_state($c, $extraboard, $foundrec, $beerlist);
 
-    my $all_expanded = ($extraboard == -2);
-    my $expand_display = $all_expanded ? 'block' : 'none';
+    # Always expand the beer I drank most recently, if any
+    my $extraboard = -3; # none by default
+    if ($foundrec && $foundrec->{brewid} && @$beerlist) {
+      foreach my $e (@$beerlist) {
+        if ($foundrec->{brewid} == $e->{brew_id}) {
+          $extraboard = $e->{id};
+          last;
+        }
+      }
+    }
+
+    my $all_expanded = 0;
+    my $expand_display = 'none';
     print "<div id='expand-all' style='display:$expand_display;'><a href='#' onclick='expandAll(); return false;'><span>Expand All</span></a> | <a href='#' onclick='collapseAll(); return false;'><span>Collapse All</span></a></div>\n";
 
     print "<table id='beerboard' border=0 style='white-space: nowrap;'>\n";
@@ -156,7 +161,7 @@ sub beerboard {
       $previd = $id;
     } # beer loop
     print "</table>\n";
-    print "<script>\nvar allExpanded = " . ($all_expanded ? 'true' : 'false') . ";
+    print "<script>\nvar allExpanded = false;
 function toggleBeer(id) {
   var compact = document.getElementById('compact_' + id);
   var expanded = document.querySelectorAll('.expanded_' + id);
@@ -448,38 +453,6 @@ sub load_beerlist_from_db {
   return ($beerlist, $last_epoch);
 }
 
-sub determine_expansion_state {
-  my ($c, $extraboard, $foundrec, $beerlist) = @_;
-  if ($extraboard == -1) {
-    my $oldbeer = "$foundrec->{maker} : $foundrec->{name}";
-    $oldbeer =~ s/&[a-z]+;//g;  # Drop things like &amp;
-    $oldbeer =~ s/[^a-z0-9]//ig; # and all non-ascii characters
-    foreach my $e (@$beerlist) {
-      my $mak = $e->{maker} || "";
-      my $beer = $e->{beer} || "";
-      
-      # Apply the same transformations as prepare_beer_entry_data
-      $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
-      $beer =~ s/.*(Hopfenweisse).*/$1/;
-      $beer =~ s/.*(Ungespundet).*/$1/;
-      if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
-        $mak = "Schlenkerla";
-      }
-      $mak =~ s/'//g; # Remove apostrophes
-      $beer =~ s/'//g; # Remove apostrophes
-      
-      my $thisbeer = "$mak : $beer";
-      $thisbeer =~ s/&[a-z]+;//g;
-      $thisbeer =~ s/[^a-z0-9]//gi;
-      if ($thisbeer eq $oldbeer) {
-        $extraboard = $e->{id};
-        last;
-      }
-    }
-  }
-  return $extraboard;
-}
-
 sub prepare_beer_entry_data {
   my ($c, $e, $locparam) = @_;
   my $mak = $e->{"maker"} || "";
@@ -595,8 +568,8 @@ sub render_beer_buttons {
 
 sub render_beer_row {
   my ($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
-  my $compact_display = ($extraboard == $id || $extraboard == -2) ? 'none' : 'table-row';
-  my $expanded_display = ($extraboard == $id || $extraboard == -2) ? 'table-row' : 'none';
+  my $compact_display = ($extraboard == $id) ? 'none' : 'table-row';
+  my $expanded_display = ($extraboard == $id) ? 'table-row' : 'none';
   # Compact row
   print "<tr id='compact_$id' style='display: $compact_display;'>\n";
   print "<td align=right $beerstyle><a href='#' onclick=\"toggleBeer('$id'); return false;\"><span width=100% $beerstyle>$dispid</span></a></td>\n";
@@ -624,7 +597,7 @@ sub render_beer_row {
   print "<input type='submit' name='submit' value='Taster ' /> \n";
   print "</form>\n";
   print "</td></tr>\n";
-  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4>" . brews::brewstyledisplay($c, "Beer", $processed_data->{origsty}) . " <span style='font-size: x-small;'><b>$e->{alc}%</b></span>";
+  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . brews::brewstyledisplay($c, "Beer", $processed_data->{origsty});
   if ($processed_data->{first_seen_date}) {
     print " <span style='font-size: x-small;'>On since $processed_data->{first_seen_date}.</span>";
   }
