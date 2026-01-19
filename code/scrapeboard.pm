@@ -43,23 +43,26 @@ sub updateboard {
   
   if (!$scrapers{$locparam}) {
     print STDERR "updateboard: No scraper for '$locparam'\n";
-    util::error("No scraper for '$locparam'");
+    return;  # No error page
   }
 
   my $script = $c->{scriptdir} . $scrapers{$locparam};
   my $json = `timeout 5s perl $script`;
   if ($!) {
     print STDERR "updateboard: Timeout running $script: $!\n";
-    util::error("Timeout running scraper for $locparam");
+    return;
   }
   chomp($json);
   if (!$json) {
     print STDERR "updateboard: No output from scraper for $locparam\n";
-    util::error("No data from scraper for $locparam");
+    return;
   }
 
-  my $beerlist = JSON->new->utf8->decode($json)
-    or util::error("JSON decode failed for $locparam");
+  my $beerlist = eval { JSON->new->utf8->decode($json) };
+  if ($@) {
+    print STDERR "updateboard: JSON decode failed for $locparam: $@\n";
+    return;
+  }
 
   print STDERR "updateboard: Scraped " . scalar(@$beerlist) . " beers for $locparam\n";
 
@@ -133,8 +136,7 @@ sub updateboard {
   # Update taps
   taps::update_taps($c, $loc_id, $beerlist);
 
-  # Set redirect
-  $c->{redirect_url} = "$c->{url}?o=Board&loc=$locparam";
+  # No redirect for background update
 }
 
 # Helper to create a POST form for triggering an operation

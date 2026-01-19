@@ -14,6 +14,7 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use URI::Escape;
 use JSON;
+use POSIX qw(strftime localtime);
 
 
 
@@ -41,18 +42,67 @@ sub beerboard {
   
   render_location_selector($c, $locparam);
 
-  my $beerlist = load_beerlist_from_db($c, $locparam, $qrylim);
+  my ($beerlist, $last_epoch) = load_beerlist_from_db($c, $locparam, $qrylim);
 
-  if (!$beerlist) {
-    # No fresh data, trigger update
-    print "<!-- No fresh data, triggering update -->\n";
-    print scrapeboard::post_form($c, 'updateboard', $locparam, '(Updating...)');
+  if (!$beerlist || !@$beerlist) {
+    print "No beer data available for $locparam<br/>\n";
+    # Trigger background update
+    print "<!-- Triggering background update -->\n";
     my $form_id = "form_updateboard_" . $locparam;
     $form_id =~ s/\W/_/g;
-    print "<script>document.getElementById('$form_id').submit();</script>\n";
-    # Simple error message
-    print "Sorry, could not get the list from $locparam<br/>\n";
+    my $form = "<form id='$form_id' method='POST' action='$c->{url}' style='display:none;'>";
+    $form .= "<input type='hidden' name='o' value='updateboard'>";
+    $form .= "<input type='hidden' name='loc' value='$locparam'>";
+    $form .= "</form>";
+    print $form;
+    print "<script>
+      setTimeout(() => {
+        fetch('$c->{url}', {
+          method: 'POST',
+          body: new FormData(document.getElementById('$form_id'))
+        }).then(response => {
+          if (response.ok) {
+            console.log('Background update completed successfully');
+          } else {
+            console.error('Background update failed with status', response.status);
+          }
+        }).catch(error => {
+          console.error('Background update error:', error);
+        });
+      }, 3000);
+    </script>\n";
     return;
+  }
+
+  my $is_old = $last_epoch && (time() - $last_epoch) > 20 * 60;
+  if ($is_old) {
+    my $timestamp = strftime('%Y-%m-%d %H:%M', localtime($last_epoch));
+    print "<div style='color: red; font-weight: bold;'>The beer board is too old / from $timestamp</div>\n";
+    # Trigger background update
+    print "<!-- Triggering background update -->\n";
+    my $form_id = "form_updateboard_" . $locparam;
+    $form_id =~ s/\W/_/g;
+    my $form = "<form id='$form_id' method='POST' action='$c->{url}' style='display:none;'>";
+    $form .= "<input type='hidden' name='o' value='updateboard'>";
+    $form .= "<input type='hidden' name='loc' value='$locparam'>";
+    $form .= "</form>";
+    print $form;
+    print "<script>
+      setTimeout(() => {
+        fetch('$c->{url}', {
+          method: 'POST',
+          body: new FormData(document.getElementById('$form_id'))
+        }).then(response => {
+          if (response.ok) {
+            console.log('Background update completed successfully');
+          } else {
+            console.error('Background update failed with status', response.status);
+          }
+        }).catch(error => {
+          console.error('Background update error:', error);
+        });
+      }, 3000);
+    </script>\n";
   }
 
   my $nbeers = 0;
@@ -360,18 +410,14 @@ sub load_beerlist_from_db {
   
   # Get location ID
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
-  return undef unless $loc_rec;
+  return ([], undef) unless $loc_rec;
   my $loc_id = $loc_rec->{Id};
   
-  # Check if we need to scrape: look at the latest scrape marker
+  # Get the latest scrape marker
   my $marker_sql = "SELECT strftime('%s', LastSeen) as last_epoch FROM tap_beers WHERE Location = ? AND Tap IS NULL ORDER BY LastSeen DESC LIMIT 1";
   my $marker_sth = $c->{dbh}->prepare($marker_sql);
   $marker_sth->execute($loc_id);
   my ($last_epoch) = $marker_sth->fetchrow_array;
-  
-  if (!$last_epoch || (time() - $last_epoch) > 20 * 60) {  # older than 20 min
-    return undef;  # Need to scrape
-  }
   
   # Load from DB
   my $sql = "SELECT ct.Tap, ct.Brew, ct.BrewName AS beer, pl.Name AS maker, b.SubType AS type, b.Alc AS alc,
@@ -410,7 +456,7 @@ sub load_beerlist_from_db {
   }
   
   print "<!-- Loaded beerlist from DB for '$locparam' -->\n";
-  return $beerlist;
+  return ($beerlist, $last_epoch);
 }
 
 sub determine_expansion_state {
