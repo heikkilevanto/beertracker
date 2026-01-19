@@ -19,19 +19,6 @@ $scrapers{"Brus"} = "brus.pl";
 # Ølsnedkerens web site is broken, does not show a beer list at all
 # See #368
 
-# Links to beer lists at the most common locations and breweries
-our %links; # TODO - Kill this, get them from the database
-$links{"Ølbaren"} = "http://oelbaren.dk/oel/";
-$links{"Ølsnedkeren"} = "https://www.olsnedkeren.dk/";
-$links{"Fermentoren"} = "http://fermentoren.com/index";
-$links{"Dry and Bitter"} = "https://www.dryandbitter.com/collections/beer/";
-#$links{"Dudes"} = "http://www.dudes.bar"; # R.I.P Dec 2018
-$links{"Taphouse"} = "http://www.taphouse.dk/";
-$links{"Slowburn"} = "https://slowburn.coop/";
-$links{"Brewpub"} = "https://brewpub.dk/vores-l";
-$links{"Penyllan"} = "https://penyllan.com/";
-$links{"Brus"} = "https://tapperietbrus.dk/bar/";
-
 ################################################################################
 # Update board: scrape and ensure brews/producers exist in DB
 ################################################################################
@@ -152,29 +139,7 @@ sub post_form {
   return $form;
 }
 
-# Helper to make a link to a bar of brewery web page and/or scraped beer menu
-sub loclink {
-  my $c = shift;
-  my $loc = shift;
-  my $www = shift || "www";
-  my $scrape = shift || "List";
-  my $lnk = "";
-  if (defined($scrapers{$loc}) && $scrape ne " ") {
-    $lnk .= " &nbsp; <i><a href='$c->{url}?o=Board&loc=$loc'><span>$scrape</span></a></i>" ;
-  }
-  if (defined($links{$loc}) && $www ne " ") {
-    $lnk .= " &nbsp; <i><a href='" . $links{$loc} . "' target='_blank' ><span>$www</span></a></i>" ;
-  }
-  return $lnk
-}
-
-# Helper functions for beerboard refactoring - but wait, these are for beerboard, but since loclink is here
-
-# Actually, loclink is used in beerboard, so perhaps keep it in scrapeboard since links are here.
-
-# But to minimize changes, perhaps move loclink too.
-
-# For now, include loclink in scrapeboard.
+# Helper functions for beerboard refactoring - loclink moved to beerboard since links are now in database
 
 # Also, get_location_param is used in updateboard, so move it.
 

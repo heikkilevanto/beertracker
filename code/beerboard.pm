@@ -377,8 +377,9 @@ sub render_location_selector {
   }
   print "</select>\n";
   print "</form>\n";
-  if ($scrapeboard::links{$locparam} ) {
-    print scrapeboard::loclink($c, $locparam,"www"," ");
+  my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
+  if ($locrec && $locrec->{Website}) {
+    print " &nbsp; <i><a href='$locrec->{Website}' target='_blank' ><span>www</span></a></i>" ;
   }
   print "&nbsp; (<a href='$c->{url}?o=$c->{op}&loc=$locparam&q=PA'><span>PA</span></a>) "
     if ($c->{qry} ne "PA" );
