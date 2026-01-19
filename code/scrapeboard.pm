@@ -87,9 +87,10 @@ sub updateboard {
       $existing_brews++;
     } else {
       # Insert new brew
-      my $sql = "INSERT INTO BREWS (Name, BrewType, SubType, Alc, ProducerLocation) VALUES (?, 'Beer', ?, ?, ?)";
+      my $short_style = brews::shortbeerstyle($style);
+      my $sql = "INSERT INTO BREWS (Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation) VALUES (?, 'Beer', ?, ?, ?, ?)";
       my $sth = $c->{dbh}->prepare($sql);
-      $sth->execute($beer, $style, $alc, $prod_id);
+      $sth->execute($beer, $short_style, $style, $alc, $prod_id);
       $brew_id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef);
       $inserted_brews++;
       print STDERR "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";

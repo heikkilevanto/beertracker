@@ -320,58 +320,6 @@ sub seenline {
   return $seenline;
 } # seenline
 
-
-# Helper to shorten a beer style
-# TODO - Drop these from here. We have similar things in brews.pm,
-# but they operate on a brew record, which we don't get from the
-# scrapers.
-sub shortbeerstyle {
-  my $sty = shift || "";
-  return "" unless $sty;
-  $sty =~ s/\b(Beer|Style)\b//i; # Stop words
-  $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
-  $sty =~ s/\s+/ /g;  # multiple spaces etc
-  if ( $sty =~ /( PA |Pale Ale)/i ) {
-    return "APA"   if ( $sty =~ /America|US/i );
-    return "BelPA" if ( $sty =~ /Belg/i );
-    return "NEPA"  if ( $sty =~ /Hazy|Haze|New England|NE/i);
-    return "PA";
-  }
-  if ( $sty =~ /(IPA|India)/i ) {
-    return "SIPA"  if ( $sty =~ /Session/i);
-    return "BIPA"  if ( $sty =~ /Black/i);
-    return "DNE"   if ( $sty =~ /(Double|Triple).*(New England|NE)/i);
-    return "DIPA"  if ( $sty =~ /Double|Dipa|Triple/i);
-    return "WIPA"  if ( $sty =~ /Wheat/i);
-    return "NEIPA" if ( $sty =~ /New England|NE|Hazy/i);
-    return "NZIPA" if ( $sty =~ /New Zealand|NZ/i);
-    return "WC"    if ( $sty =~ /West Coast|WC/i);
-    return "AIPA"  if ( $sty =~ /America|US/i);
-    return "IPA";
-  }
-  return "Dunk"  if ( $sty =~ /.*Dunkel.*/i);
-  return "Bock"  if ( $sty =~ /Bock/i);
-  return "Smoke" if ( $sty =~ /(Smoke|Rauch)/i);
-  return "Lager" if ( $sty =~ /Lager|Keller|Pils|Zwickl/i);
-  return "Berl"  if ( $sty =~ /Berliner/i);
-  return "Weiss" if ( $sty =~ /Hefe|Weizen|Hvede|Wit/i);
-  return "Stout" if ( $sty =~ /Stout|Porter|Imperial/i);
-  return "Farm"  if ( $sty =~ /Farm/i);
-  return "Sais"  if ( $sty =~ /Saison/i);
-  return "Dubl"  if ( $sty =~ /(Double|Dubbel)/i);
-  return "Trip"  if ( $sty =~ /(Triple|Tripel|Tripple)/i);
-  return "Quad"  if ( $sty =~ /(Quadruple|Quadrupel)/i);
-  return "Trap"  if ( $sty =~ /Trappist/i);
-  return "Blond" if ( $sty =~ /Blond/i);
-  return "Brown" if ( $sty =~ /Brown/i);
-  return "Strng" if ( $sty =~ /Strong/i);
-  return "Belg"  if ( $sty =~ /Belg/i);
-  return "BW"    if ( $sty =~ /Barley.*Wine/i);
-  return "Sour"  if ( $sty =~ /Lambic|Gueuze|Sour|Kriek|Frmaboise/i);
-  $sty =~ s/^ *([^ ]{1,5}).*/$1/; # First word, only five chars, in case we didn't get it above
-  return $sty;
-} # shortbeerstyle
-
 # Helper to assign a color for a beer
 sub beercolorstyle {
   my $c = shift;
@@ -538,7 +486,7 @@ sub prepare_beer_entry_data {
   my $beer = $e->{"beer"} || "";
   my $sty = $e->{"type"} || "";
   my $origsty = $sty;
-  $sty = shortbeerstyle($sty);
+  $sty = brews::shortbeerstyle($sty);
   print "<!-- sty='$origsty' -> '$sty'\n'$e->{'beer'}' -> '$beer'\n'$e->{'maker'}' -> '$mak' -->\n";
 
   my $dispmak = $mak;
