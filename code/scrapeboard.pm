@@ -147,7 +147,7 @@ sub updateboard {
   taps::update_taps($c, $loc_id, $beerlist);
 
   # Redirect back to showing the board, for this location
-  $c->{redirect_url} = "$c->{url}?o=$c->{op}&loc=$locparam";
+  $c->{redirect_url} = "$c->{url}?o=Board&loc=$locparam";
 }
 
 # Helper to create a POST form for triggering an operation
