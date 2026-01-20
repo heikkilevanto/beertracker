@@ -124,7 +124,8 @@ sub updateboard {
   # Update taps
   taps::update_taps($c, $loc_id, $beerlist);
 
-  # No redirect for background update
+  # Redirect back to showing the board, for this location
+  $c->{redirect_url} = "$c->{url}?o=$c->{op}&loc=$locparam";
 }
 
 # Helper to create a POST form for triggering an operation
@@ -140,9 +141,6 @@ sub post_form {
   return $form;
 }
 
-# Helper functions for beerboard refactoring - loclink moved to beerboard since links are now in database
-
-# Also, get_location_param is used in updateboard, so move it.
 
 ################################################################################
 # Tell Perl the module loaded fine
