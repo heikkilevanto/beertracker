@@ -236,8 +236,8 @@ htmlhead(); # Ok, now we can commit to making a HTML page
 print util::topline($c);
 
 if ( $c->{op} =~ /Board/i ) {
-  glasses::inputform($c);
   graph::graph($c);
+  glasses::inputform($c);
   beerboard::beerboard($c);
   mainlist::mainlist($c);
 } elsif ( $c->{op} =~ /Years/i ) {
