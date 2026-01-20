@@ -67,7 +67,7 @@ sub beerboard {
 
     my $all_expanded = 0;
     my $expand_display = 'none';
-    print "<div id='expand-all' style='display:$expand_display;'><a href='#' onclick='expandAll(); return false;'><span>Expand All</span></a> | <a href='#' onclick='collapseAll(); return false;'><span>Collapse All</span></a></div>\n";
+    print "<div id='expand-all' style='display:$expand_display;'><a href='#' onclick='collapseAll(); return false;'><span>Collapse All</span></a></div>\n";
 
     print "<table id='beerboard' border=0 style='white-space: nowrap;'>\n";
     my $previd  = 0;
@@ -222,6 +222,8 @@ sub render_location_selector {
     if ($c->{qry} ne "PA" );
 
   print scrapeboard::post_form($c, 'updateboard', $locparam, '(Reload)');
+
+  print "&nbsp; <a href='#' onclick='expandAll(); return false;'><span>(Exp)</span></a>";
 
   print "<p>\n";
 }
