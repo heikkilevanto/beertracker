@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-01-20 01:03 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-01-20 14:07 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -52,7 +52,7 @@ create table brews (
     Flavor text, -- Hops, Grapes, spices, barrels, etc
     Year decimal,
     Details text, -- Other things worth noticing
-    IsGeneric integer,  -- House wine, mixed beer. "1" for generics, null or "0" for not
+    IsGeneric integer, DefPrice, DefVol, AltPrices, AltVols,  -- House wine, mixed beer. "1" for generics, null or "0" for not
 
     foreign key (ProducerLocation) references Locations(id)
 );

@@ -34,6 +34,16 @@ function initDropdown(container) {
       const selalc = event.target.getAttribute("alc");
       if (alcinp && selalc) alcinp.value = selalc + "%";
 
+      // update pr if present
+      const prinp = document.getElementById("pr");
+      const selpr = event.target.getAttribute("defprice");
+      if (prinp && selpr && selpr.trim()) prinp.value = selpr + ".-";
+
+      // update vol if present
+      const volinp = document.getElementById("vol");
+      const selvol = event.target.getAttribute("defvol");
+      if (volinp && selvol && selvol.trim()) volinp.value = selvol + "c"
+
       // show note if generic brew
       if ( event.target.textContent.includes("(Gen)") ){
         const noteline = document.getElementById("noteline");

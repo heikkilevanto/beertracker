@@ -204,13 +204,13 @@ sub inputform {
   print "<td id='avp' >\n";
   my $vol = $rec->{Volume} || "";
   $vol .= "c" if ($vol);
-  print "<input name='vol' placeholder='vol' $sz4 value='$vol' data-empty=1 />\n";
+  print "<input name='vol' id='vol' placeholder='vol' $sz4 value='$vol' data-empty=1 />\n";
   my $alc = $rec->{Alc} || "";
   $alc .= "%" if ($alc);
   print "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' data-empty=1 />\n";
   my $pr = $rec->{Price} || "0";
   $pr .= ".-" if ($pr);
-  print "<input name='pr' placeholder='pr' $sz4 value='$pr' required />\n";
+  print "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' required />\n";
   if ($rec->{tap}) {
     print "<input type='hidden' name='tap' value='$rec->{tap}' />";
   }
@@ -617,6 +617,15 @@ sub postglass {
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
   }
+
+  # If the brew has no DefPrice, set it from this glass
+  if ( $brew && !$brew->{DefPrice} && $glass->{Price} && $glass->{Volume} ) {
+    my $sql = "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute($glass->{Price}, $glass->{Volume}, $brewid);
+    print STDERR "Updated brew '$brewid' with DefPrice '$glass->{Price}' and DefVol '$glass->{Volume}'\n";
+  }
+
   graph::clearcachefiles($c);
 } # postglass
 

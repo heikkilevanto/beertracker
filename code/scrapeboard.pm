@@ -88,9 +88,21 @@ sub updateboard {
     } else {
       # Insert new brew
       my $short_style = brews::shortbeerstyle($style);
-      my $sql = "INSERT INTO BREWS (Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation) VALUES (?, 'Beer', ?, ?, ?, ?)";
+      # Compute defprice and defvol
+      my $defprice;
+      my $defvol;
+      if ($e->{sizePrice} && ref($e->{sizePrice}) eq 'ARRAY') {
+        my @sizes = sort { $a->{vol} <=> $b->{vol} } @{$e->{sizePrice}};
+        my $count = scalar @sizes;
+        if ($count >= 1) {
+          my $def_index = ($count == 1) ? 0 : 1;
+          $defvol = $sizes[$def_index]->{vol};
+          $defprice = $sizes[$def_index]->{price};
+        }
+      }
+      my $sql = "INSERT INTO BREWS (Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation, DefPrice, DefVol) VALUES (?, 'Beer', ?, ?, ?, ?, ?, ?)";
       my $sth = $c->{dbh}->prepare($sql);
-      $sth->execute($beer, $short_style, $style, $alc, $prod_id);
+      $sth->execute($beer, $short_style, $style, $alc, $prod_id, $defprice, $defvol);
       $brew_id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef);
       $inserted_brews++;
       print STDERR "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";

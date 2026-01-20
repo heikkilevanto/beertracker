@@ -496,7 +496,9 @@ sub selectbrew {
       BREWS.Id, BREWS.Brewtype, BREWS.SubType, Brews.Name,
       BREWS.IsGeneric,
       Locations.Name as Producer,
-      BREWS.Alc
+      BREWS.Alc,
+      BREWS.DefPrice,
+      BREWS.DefVol
     from BREWS
     left join GLASSES on GLASSES.Brew= BREWS.ID
     left join LOCATIONS on LOCATIONS.Id = BREWS.ProducerLocation
@@ -509,7 +511,7 @@ sub selectbrew {
   my $opts = "";
   my $current = "";
 
-  while ( my ($id, $bt, $su, $na, $generic, $pr, $alc )  = $list_sth->fetchrow_array ) {
+  while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol )  = $list_sth->fetchrow_array ) {
     if ( $id eq $selected ) {
       $current = $na;
     }
@@ -522,7 +524,9 @@ sub selectbrew {
     $disp .= "&nbsp;(Gen)" if $generic;
     #$disp = substr($disp, 0, 30);
     $alc = $alc || "";
-    $opts .= "<div class='dropdown-item' id='$id' alc='$alc' brewtype='$bt' >$disp</div>\n";
+    $defprice = $defprice || "";
+    $defvol = $defvol || "";
+    $opts .= "<div class='dropdown-item' id='$id' alc='$alc' defprice='$defprice' defvol='$defvol' brewtype='$bt' >$disp</div>\n";
   }
   my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew" );
 
