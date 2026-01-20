@@ -126,7 +126,7 @@ sub param {
   util::error("No context c ") unless $c;
   util::error("No cgi in c") unless $c->{cgi};
   my $val = $c->{cgi}->param($tag) // $def;
-  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%-]/_/g;
+  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%!#-]/_/g;
   return $val;
 }
 
