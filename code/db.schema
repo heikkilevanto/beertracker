@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-01-18 12:01 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-01-20 01:03 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -24,9 +24,10 @@ create table glasses (
     Brew integer,
     Price decimal,
     Volume decimal,
-    Alc decimal,
-    StDrinks decimal,
-    Note text, tap integer, -- Calculated from volume and alc
+    Alc decimal, 
+    StDrinks decimal, -- Calculated from volume and alc
+    Note text, -- note for this one glass, like what mixed beer
+    Tap integer, 
 
     foreign key (Brew) references Brews(id),
     foreign key (Location) references Locations(id)

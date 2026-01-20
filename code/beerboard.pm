@@ -2,11 +2,6 @@
 # Routines for displaying the beer list (board) for the current bar
 # and buttons for quickly marking a beer has been drunk
 
-# TODO - Rethink the whole beer board system, keep them all in the database,
-# etc. See #390
-# Later
-#  - Add tap records showing when we have seen said beer at which tap
-
 package beerboard;
 use strict;
 use warnings;
@@ -41,31 +36,7 @@ sub beerboard {
 
   if (!$beerlist || !@$beerlist) {
     print "No beer data available for $locparam<br/>\n";
-    # Trigger background update
-    print "<!-- Triggering background update -->\n";
-    my $form_id = "form_updateboard_" . $locparam;
-    $form_id =~ s/\W/_/g;
-    my $form = "<form id='$form_id' method='POST' action='$c->{url}' style='display:none;'>";
-    $form .= "<input type='hidden' name='o' value='updateboard'>";
-    $form .= "<input type='hidden' name='loc' value='$locparam'>";
-    $form .= "</form>";
-    print $form;
-    print "<script>
-      setTimeout(() => {
-        fetch('$c->{url}', {
-          method: 'POST',
-          body: new FormData(document.getElementById('$form_id'))
-        }).then(response => {
-          if (response.ok) {
-            console.log('Background update completed successfully');
-          } else {
-            console.error('Background update failed with status', response.status);
-          }
-        }).catch(error => {
-          console.error('Background update error:', error);
-        });
-      }, 3000);
-    </script>\n";
+    trigger_background_update($c, $locparam);
     return;
   }
 
@@ -73,31 +44,7 @@ sub beerboard {
   if ($is_old) {
     my $timestamp = strftime('%Y-%m-%d %H:%M', localtime($last_epoch));
     print "<div style='font-weight: bold;'>The beer board is from $timestamp</div>\n";
-    # Trigger background update
-    print "<!-- Triggering background update -->\n";
-    my $form_id = "form_updateboard_" . $locparam;
-    $form_id =~ s/\W/_/g;
-    my $form = "<form id='$form_id' method='POST' action='$c->{url}' style='display:none;'>";
-    $form .= "<input type='hidden' name='o' value='updateboard'>";
-    $form .= "<input type='hidden' name='loc' value='$locparam'>";
-    $form .= "</form>";
-    print $form;
-    print "<script>
-      setTimeout(() => {
-        fetch('$c->{url}', {
-          method: 'POST',
-          body: new FormData(document.getElementById('$form_id'))
-        }).then(response => {
-          if (response.ok) {
-            console.log('Background update completed successfully');
-          } else {
-            console.error('Background update failed with status', response.status);
-          }
-        }).catch(error => {
-          console.error('Background update error:', error);
-        });
-      }, 3000);
-    </script>\n";
+    trigger_background_update($c, $locparam);
   }
 
   my $nbeers = 0;
@@ -201,32 +148,6 @@ function collapseAll() {
 ################################################################################
 # Small helpers
 ################################################################################
-
-# Helper to make a filter link
-sub filt {
-  my $c = shift;
-  my $f = shift; # filter term
-  my $tag = shift || "span";
-  my $dsp = shift || $f;
-  my $op = shift || $c->{op} || "";
-  my $fld = shift || ""; # Field to filter by
-  $op = "o=$op" if ($op);
-  my $param = $f;
-  $param =~ s"[\[\]]""g; # remove the [] around styles etc
-  my $endtag = $tag;
-  $endtag =~ s/ .*//; # skip attributes
-  my $style = "";
-  if ( $tag =~ /background-color:([^;]+);/ ) { #make the link underline disappear
-    $style = "style='color:$1'";
-  }
-  $param = "&q=" . uri_escape_utf8($param) if ($param);
-  $fld = "&qf=$fld" if ($fld);
-  my $link = "<a href='$c->{url}?$op$param$fld' $style>" .
-    "<$tag>$dsp</$endtag></a>";
-  return $link;
-}
-
-
 
 # Helper to make a seenkey, an index to %lastseen and %seen
 # Normalizes the names a bit, to catch some misspellings etc
@@ -609,6 +530,34 @@ sub render_beer_row {
     print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $seenline";
     print "</td></tr>\n";
   }
+}
+
+sub trigger_background_update {
+  my ($c, $locparam) = @_;
+  print "<!-- Triggering background update -->\n";
+  my $form_id = "form_updateboard_" . $locparam;
+  $form_id =~ s/\W/_/g;
+  my $form = "<form id='$form_id' method='POST' action='$c->{url}' style='display:none;'>";
+  $form .= "<input type='hidden' name='o' value='updateboard'>";
+  $form .= "<input type='hidden' name='loc' value='$locparam'>";
+  $form .= "</form>";
+  print $form;
+  print "<script>
+    setTimeout(() => {
+      fetch('$c->{url}', {
+        method: 'POST',
+        body: new FormData(document.getElementById('$form_id'))
+      }).then(response => {
+        if (response.ok) {
+          console.log('Background update completed successfully');
+        } else {
+          console.error('Background update failed with status', response.status);
+        }
+      }).catch(error => {
+        console.error('Background update error:', error);
+      });
+    }, 3000);
+  </script>\n";
 }
 
 
