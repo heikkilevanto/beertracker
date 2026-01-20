@@ -343,6 +343,7 @@ END_STYLE
   print jslink("geo");
   print jslink("inputs");
   print jslink("listrecords");
+  print jslink("beerboard");
   print "</head><body>\n";
   print "\n";
 } # htmlhead
