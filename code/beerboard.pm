@@ -80,7 +80,6 @@ sub beerboard {
       my $loc = $locparam;
       my $alc = $e->{"alc"} || "";
       $alc = sprintf("%4.1f",$alc) if ($alc);
-      my $seenkey = seenkey($mak,$beer);
       if ( $c->{qry} && $c->{qry} =~ /PA/i ) {
         next unless ( "$sty $mak $beer" =~ /PA/i );
       }
@@ -101,7 +100,7 @@ sub beerboard {
       my $dispid = $id;
       $dispid = "&nbsp;&nbsp;$id"  if ( length($dispid) < 2);
 
-      my $seenline = seenline($c, $mak, $beer);
+      my $seenline = seenline($c, $e->{brew_id});
 
       render_beer_row($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons);
 
@@ -149,60 +148,19 @@ function collapseAll() {
 # Small helpers
 ################################################################################
 
-# Helper to make a seenkey, an index to %lastseen and %seen
-# Normalizes the names a bit, to catch some misspellings etc
-sub seenkey {
-  my $rec= shift;
-  my $maker;
-  my $name = shift;
-  my $key;
-  if (ref($rec)) {
-    $maker = $rec->{maker} || "";
-    $name = $rec->{name} || "";
-    if ($rec->{type} eq "Beer") {
-      $key = "$rec->{maker}:$rec->{name}"; # Needs to match m:b in beer board etc
-    } elsif ( $rec->{type} =~ /Restaurant|Night/ ) {
-      $key = "$rec->{type}:$rec->{loc}";  # We only have loc to match (and subkey?)
-    } elsif ( $rec->{name} && $rec->{subkey} ) {  # Wine and booze: Wine:Red:Foo
-      $key = "$rec->{type}:$rec->{subkey}:$rec->{name}";
-    } elsif ( $rec->{name} ) {  # Wine and booze: Wine::Mywine
-      $key = "$rec->{type}::$rec->{name}";
-    } else { # TODO - Not getting keys for many records !!!
-      #print STDERR "No seenkey for $rec->{rawline} \n";
-      return "";  # Nothing to make a good key from
-    }
-  } else { # Called  the old way, like for beer board
-    $maker = $rec;
-    $key = "$maker:$name";
-    #return "" if ( !$maker && !$name );
-  }
-  $key = lc($key);
-  return "" if ( $key =~ /misc|mixed/ );
-  $key =~ s/&amp;/&/g;
-  $key =~ s/[^a-zåæø0-9:]//gi;  # Skip all special characters and spaces
-  return $key;
-} # seenkey
-
 # Helper to produce a "Seen" line
 sub seenline {
   my $c = shift;
-  my $maker = shift;
-  my $beer = shift;
-  my $seenkey;
-  $seenkey = seenkey($maker,$beer);
-  return "" unless ($seenkey);
-  return "" unless ($seenkey =~ /[a-z]/ );  # At least some real text in it
+  my $brew_id = shift;
+  return "" unless $brew_id;
   my $countsql = q{
-    select brews.id, count(glasses.id)
-    from brews, glasses, locations
-    where brews.id = glasses.brew
-    and locations.id = brews.producerlocation
-    and locations.name = ?
-    and brews.name = ?
+    select count(id)
+    from glasses
+    where brew = ?
   };
   my $get_sth = $c->{dbh}->prepare($countsql);
-  $get_sth->execute($maker,$beer);
-  my ( $brewid, $count ) = $get_sth->fetchrow_array;
+  $get_sth->execute($brew_id);
+  my ($count) = $get_sth->fetchrow_array;
   return "" unless($count);
   my $seenline = "Seen <b>$count</b> times: ";
   my $listsql = q{
@@ -219,7 +177,7 @@ sub seenline {
   my $nmonths = 0;
   my $nyears = 0;
   my $list_sth = $c->{dbh}->prepare($listsql);
-  $list_sth->execute($brewid);
+  $list_sth->execute($brew_id);
   while ( my $eff = $list_sth->fetchrow_array ) {
     my $comma = ",";
     if ( ! $prefix || $eff !~ /^$prefix/ ) {
