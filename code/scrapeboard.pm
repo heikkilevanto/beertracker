@@ -79,27 +79,37 @@ sub updateboard {
     }
 
     # Ensure brew exists
-    my $sql_check = "SELECT Id FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
+    my $sql_check = "SELECT Id, DefPrice, DefVol FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
     my $sth_check = $c->{dbh}->prepare($sql_check);
     $sth_check->execute($beer, $prod_id);
-    my ($brew_id) = $sth_check->fetchrow_array;
+    my ($brew_id, $current_defprice, $current_defvol) = $sth_check->fetchrow_array;
+
+    # Compute defprice and defvol from scraped data
+    my $defprice;
+    my $defvol;
+    if ($e->{sizePrice} && ref($e->{sizePrice}) eq 'ARRAY') {
+      my @sizes = sort { $a->{vol} <=> $b->{vol} } @{$e->{sizePrice}};
+      my $count = scalar @sizes;
+      if ($count >= 1) {
+        my $def_index = ($count == 1) ? 0 : 1;
+        $defvol = $sizes[$def_index]->{vol};
+        $defprice = $sizes[$def_index]->{price};
+      }
+    }
+
     if ($brew_id) {
       $existing_brews++;
+      # Update DefPrice/DefVol if different
+      if ( ($current_defprice // '') ne ($defprice // '') ||
+           ($current_defvol // '') ne ($defvol // '') ) {
+        my $sql_update = "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?";
+        my $sth_update = $c->{dbh}->prepare($sql_update);
+        $sth_update->execute($defprice, $defvol, $brew_id);
+        print STDERR "updateboard: Updated brew '$brew_id' DefPrice to '$defprice', DefVol to '$defvol'\n";
+      }
     } else {
       # Insert new brew
       my $short_style = brews::shortbeerstyle($style);
-      # Compute defprice and defvol
-      my $defprice;
-      my $defvol;
-      if ($e->{sizePrice} && ref($e->{sizePrice}) eq 'ARRAY') {
-        my @sizes = sort { $a->{vol} <=> $b->{vol} } @{$e->{sizePrice}};
-        my $count = scalar @sizes;
-        if ($count >= 1) {
-          my $def_index = ($count == 1) ? 0 : 1;
-          $defvol = $sizes[$def_index]->{vol};
-          $defprice = $sizes[$def_index]->{price};
-        }
-      }
       my $sql = "INSERT INTO BREWS (Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation, DefPrice, DefVol) VALUES (?, 'Beer', ?, ?, ?, ?, ?, ?)";
       my $sth = $c->{dbh}->prepare($sql);
       $sth->execute($beer, $short_style, $style, $alc, $prod_id, $defprice, $defvol);

@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-01-20 14:07 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-01-20 14:33 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -52,7 +52,7 @@ create table brews (
     Flavor text, -- Hops, Grapes, spices, barrels, etc
     Year decimal,
     Details text, -- Other things worth noticing
-    IsGeneric integer, DefPrice, DefVol, AltPrices, AltVols,  -- House wine, mixed beer. "1" for generics, null or "0" for not
+    IsGeneric integer, DefPrice, DefVol,  -- House wine, mixed beer. "1" for generics, null or "0" for not
 
     foreign key (ProducerLocation) references Locations(id)
 );
@@ -200,7 +200,7 @@ from comments c,
   glasses g
 where c.glass = g.id
 and l.id = g.location
-and l.loctype <> "Producer"
+and l.loctype <> 'Producer'
 group by g.location;
 
 -- view brews_dedup_list
@@ -208,14 +208,14 @@ drop view if exists brews_dedup_list;
 create view brews_dedup_list as
 select
     brews.Id,
-	"Chk" as Chk,
+	'Chk' as Chk,
     brews.Name,
     ploc.Name as Producer,
     brews.Alc as Alc,
-    brews.BrewType || ", " || brews.Subtype as Type,
+    brews.BrewType || ', ' || brews.Subtype as Type,
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
     locations.Name as Location,
-    r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
+    r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
     count(glasses.Id) as Count
   from brews
   left join locations ploc on ploc.id = brews.ProducerLocation
@@ -229,10 +229,10 @@ drop view if exists locations_dedup_list;
 create view locations_dedup_list as
 select
     locations.Id,
-	"Chk" as Chk,
+	'Chk' as Chk,
     locations.Name,
-	locations.lat || " " || locations.lon as Geo,
-    locations.LocType || ", " || locations.LocSubType as Type,
+	locations.lat || ' ' || locations.lon as Geo,
+    locations.LocType || ', ' || locations.LocSubType as Type,
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last
   from locations
   left join glasses on glasses.Location = locations.Id
@@ -279,12 +279,12 @@ select
     brews.Name,
     ploc.Name as Producer,
     brews.IsGeneric,
-    "tr" as tr,
+    'tr' as tr,
     brews.Alc as Alc,
-    brews.BrewType || ", " || brews.Subtype as Type,
-    r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
+    brews.BrewType || ', ' || brews.Subtype as Type,
+    r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
     count(glasses.Id) as Count,
-    "tr" as tr,
+    'tr' as tr,
     'Clr' as 'Clr',
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
     locations.Name as Location
@@ -302,19 +302,19 @@ select
     comments.Id,
 	strftime ( '%Y-%m-%d %w ', glasses.Timestamp, '-06:00' ) ||  strftime ( '%H:%M', glasses.Timestamp) as Last,
 	locations.Name as LocName,
-	"tr" as tr,
+	'tr' as tr,
 	'' as Clr,
 
 	brews.Name as BrewName,
 	ploc.Name as Prod,
 
-	"tr" as tr,
+	'tr' as tr,
 
 	comments.Rating as Rate,
     persons.Name as PersonName,
 	comments.Comment as Comment,
 
-	"tr" as tr,
+	'tr' as tr,
 	'' as None,
 	comments.photo as Photo,
 
@@ -337,7 +337,7 @@ select
     ploc.Name as xProducer,
     brews.Alc as Alc,
     brews.Subtype as Sub,
-    r.rating_count || ";" || r.average_rating || ";" || r.comment_count as Stats,
+    r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
     strftime ( '%Y-%m-%d', max(glasses.Timestamp), '-06:00' ) as Last
   from brews
   left join locations ploc on ploc.id = brews.ProducerLocation
@@ -368,11 +368,11 @@ create view locations_list as
 select
     locations.Id,
     locations.Name,
-    locations.LocType || ", " || locations.LocSubType as Type,
-	"" as trmob,
-	locations.lat || " " || locations.lon as Geo,
+    locations.LocType || ', ' || locations.LocSubType as Type,
+	'' as trmob,
+	locations.lat || ' ' || locations.lon as Geo,
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
-	r.rating_count || ";" || r.rating_average || ";" || r.comment_count as Stats
+	r.rating_count || ';' || r.rating_average || ';' || r.comment_count as Stats
   from locations
   left join glasses on glasses.Location = locations.Id
   left join location_ratings r on r.id  = glasses.Id
