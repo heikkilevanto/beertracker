@@ -369,8 +369,6 @@ sub getvalues {
 } # getvalues
 
 ############## Helper for alc, volume, etc
-# TODO - Guess volume from previous glass (same location, brew)
-# TODO - Guess price from previous glass (same location, size, brew - in that order)
 sub fixvol {
   my $c = shift;
   my $glass = shift;
@@ -424,25 +422,12 @@ sub curprice {
   return "";
 }
 
-sub guessoneprice {
-  my $c = shift;
-  my $where = shift;
-  my $grec = db::getfieldswhere( $c, "GLASSES", "Price",
-      "WHERE Price > 0 AND $where",
-      "ORDER BY Timestamp DESC" );
-  if ( $grec && $grec->{Price} ) {
-    print STDERR "Found price '$grec->{Price}' with $where \n";
-    return $grec->{Price};
-  }
-  return 0;
-}
-
 sub fixprice {
   my $c = shift;
   my $glass = shift;
 
   my $pr = $glass->{Price} || "";
-  if  ( $pr =~ /^(\d+)[.-]*$/ ){  # Already a good price, only digits
+  if  ( $pr =~ /^(\d+)[,.-]*$/ ){  # Already a good price, only digits
     $glass->{Price} = $1; # just the digits
     return
   }
@@ -451,33 +436,7 @@ sub fixprice {
     $glass->{Price} = "0";
     return;
   }
-  if ( $pr eq "?" ) {
-    print STDERR "No price, guessing p='$glass->{Price}'\n";
-    # Sql where clause fragments
-    my $br = "Brew=$glass->{Brew}";
-    my $vo = "Volume=$glass->{Volume}";
-    my $lo = "Location=$glass->{Location}";
-    $pr = 0;
-    if ( $glass->{Brew} && $glass->{Brew} ne "new" &&
-        $glass->{Volume} ) {
-      # Have brew, try to find similar glasses
-      if ( $glass->{Location} ne "new" ) {
-        $pr = guessoneprice($c,"$br AND $lo AND $vo" );
-      }
-      if ( $pr == 0 ) {
-        $pr = guessoneprice($c,"$br AND $vo" );
-      }
-    }
-    if ( $pr == 0 && $glass->{Location} ne "new") {
-      $pr = guessoneprice($c, "$lo AND $vo" );
-    }
-    if ( $pr > 0 ) {
-      $glass->{Price} = $pr;
-    } else {
-      print STDERR "Could not guess a price with $br $vo $lo \n";
-    }
-  }
-} # fixprice
+ } # fixprice
 
 ############## postglass itself
 
