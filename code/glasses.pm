@@ -357,8 +357,7 @@ sub getvalues {
   my $glass = shift;
   my $brew = shift;
   my $sub = shift;
-  #$glass->{Price} = util::paramnumber($c, "pr");
-  $glass->{Price} = util::param($c, "pr", "?");
+  $glass->{Price} = util::paramnumber($c, "pr");
   $glass->{Volume} = util::param($c, "vol", "L");  # Default to a large one
   $glass->{Alc} = util::paramnumber($c, "alc", $brew->{Alc} || "0");
   if ( $sub =~ /Copy (\d+)/ ) {
@@ -606,10 +605,6 @@ sub findrec {
   }
   my $sql = "select * from glasses " .
             "where id = ? and username = ? ";
-  if ( $id =~ /^\d\d\d\d-\d\d/ ) { # Called with old-style timestamp
-    $sql =~ s/id =/timestamp =/;   # TODO - Drop this when no longer needed
-    print STDERR "glasses::findrec called with timestamp '$id' instead of proper id\n";
-  }
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( $id, $c->{username} );
   my $rec = $sth->fetchrow_hashref;
