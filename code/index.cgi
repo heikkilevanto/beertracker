@@ -55,6 +55,7 @@ require "./code/persons.pm";   # List of people, their details, editing, helpers
 require "./code/locations.pm"; # Locations stuff
 require "./code/brews.pm";  # Lists of various brews, etc
 require "./code/glasses.pm"; # Main input for and the full list
+require "./code/postglass.pm"; # POST handling for glass records
 require "./code/comments.pm"; # Stuff for comments, ratings, and photos
 require "./code/util.pm"; # Various helper functions
 require "./code/graph.pm"; # The daily graph
@@ -206,7 +207,7 @@ if ( $q->request_method eq "POST" ) {
     } elsif ( $c->{op} =~ /updateboard/i ) {
       scrapeboard::updateboard($c);
     } else { # Default to posting a glass
-      glasses::postglass($c);
+      postglass::postglass($c);
     }
 
     $c->{dbh}->do("COMMIT");
@@ -295,7 +296,7 @@ sub csslink {
   my $mtime = (stat($fn))[9] || time;
   return "<link rel='stylesheet' href='$fn?m=$mtime'>\n";
 }
-# Helper to make a link to a CSS file for the headers
+# Helper to make a link to a JS file for the headers
 sub jslink {
   my $module = shift;
   my $fn = "static/$module.js";
