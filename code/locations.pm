@@ -69,7 +69,7 @@ sub listlocationcomments {
 
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($c->{username}, $loc->{Id});
-  print "<div onclick='toggleCommentTable(this.nextElementSibling);'>" .
+  print "<div onclick='toggleElement(this.nextElementSibling);'>" .
         "<b>Comments for $loc->{Name}</b> [$loc->{Id}]</div>\n";
   print "<div style='overflow-x: auto;'>";
 
@@ -83,7 +83,7 @@ sub listlocationcomments {
     if ( $lastglass ne $com->{Gid} ) {
       $count++;
       if ( $count == 8 ) {
-        print "<div onclick='this.style=\"display:none\"; toggleCommentTable(this.nextElementSibling)'>More...</div>";
+        print "<div onclick='this.style=\"display:none\"; toggleElement(this.nextElementSibling)'>More...</div>";
         print "<div style='display:none'>";
         # TODO - Hide the following entries in a div
       }
@@ -113,7 +113,7 @@ sub listlocationcomments {
     print "</div>\n";
   }
   print "</table></div>\n";
-  print "<div onclick='toggleCommentTable(this.previousElementSibling);'><br/>";
+  print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
   if ( $comcount == 0 ) {
     print "(No Comments)";
   } else {
@@ -127,14 +127,6 @@ sub listlocationcomments {
     }
   }
   print "</div>";
-  print "<script>
-    function toggleCommentTable(div) {
-      if (div) {
-        div.style.display = (div.style.display === 'none') ? 'table' : 'none';
-      }
-    }
-    </script>
-    ";
   $sth->finish;
   print "<!-- listbrewcomments end -->\n";
   print "<hr/>\n";
@@ -149,7 +141,6 @@ sub locationvisits {
   my $c = shift;
   my $locrec = shift;
   my @monthnames = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
-  print "<b>Visits to $locrec->{Name}</b> [$locrec->{Id}]";
   my $listsql = q{
     select
        strftime ('%Y-%m', timestamp,'-06:00') as month,
@@ -164,19 +155,29 @@ sub locationvisits {
   my $currentyear = "";
   my ( $y, $m, $d );
   my $totalvisits = 0;
+  my $table_html = "";
   while ( my $visit = db::nextrow($sth)) {
     my $eff = $visit->{month};
     ( $y, $m ) = split('-', $eff );
     if ( $y ne $currentyear ) {
-      print "<br>\n";
-      print "<b>$y:</b> ";
+      $table_html .= "<br>\n";
+      $table_html .= "<b>$y:</b> ";
       $currentyear=$y;
     }
-    print "$monthnames[$m-1]: <b>$visit->{daycount}</b> ";
+    $table_html .= "$monthnames[$m-1]: <b>$visit->{daycount}</b> ";
     $totalvisits += $visit->{daycount};
   }
-  print "<br/>\n";
-  print "Total $totalvisits visits \n";
+  $table_html .= "<br/>\n";
+
+  print "<div onclick='toggleElement(this.nextElementSibling);'>";
+  print "<b>$totalvisits visits to $locrec->{Name}</b> [$locrec->{Id}]";
+  print "</div>\n";
+  print "<div style='display:none'>";
+  print $table_html;
+  print "<div onclick='toggleElement(this.parentElement);'>";
+  print "Total $totalvisits visits";
+  print "</div>\n";
+  print "</div>\n";
 
   print "<hr/>\n";
 } # locationvisits

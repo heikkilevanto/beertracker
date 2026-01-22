@@ -199,7 +199,7 @@ function extractSortKey(recordRows, columnIndex) {
   return ""; // fallback key
 }
 
-// Toggle visibility of an element, used in brews.pm and other help table edits
+// Toggle visibility of an element, used in brews.pm and locations.pm
 //  print "<div onclick='toggleElement(this.nextElementSibling);'>";
 //  print "Comments and ratings ... \n";
 //  print "</div>\n";
