@@ -9,14 +9,6 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-# Formatting magic
-my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
-
-
-################################################################################
-
-################################################################################
-# List of brews
 ################################################################################
 # List of brews
 ################################################################################
@@ -166,7 +158,7 @@ sub listbrewprices {
   print "<table >\n";
   while ( my $com = $sth->fetchrow_hashref ) {
     print "<tr><td>\n";
-    print "$com->{Timestamp}</span></a><br/> \n";
+    print "$com->{Timestamp}<br/> \n";
     print "<td>\n";
     print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
     print "</td><td>\n";
@@ -275,7 +267,7 @@ sub listbrewglasses {
   print "<!-- listbrewglasses end -->\n";
   print "<hr/>\n";
 
-} # listbrewcomments
+} # listbrewglasses
 
 ################################################################################
 # brewdeduplist - List all brews, for selecting those that duplicate the current
@@ -392,7 +384,6 @@ sub selectbrew {
     $disptype .= $bt unless ($su);
     $disp .= " [$disptype]";
     $disp .= "&nbsp;(Gen)" if $generic;
-    #$disp = substr($disp, 0, 30);
     $alc = $alc || "";
     $defprice = $defprice || "";
     $defvol = $defvol || "";
@@ -401,7 +392,7 @@ sub selectbrew {
   my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew" );
 
   return $s;
-}
+} # selectbrew
 
 ################################################################################
 # Deduplicate brews
@@ -448,7 +439,7 @@ sub postbrew {
 
 
     my $defaults = {};
-    $defaults->{BrewType} = util::param($c, "selbrewtype") || "WRONG"; # Signals a bad type. Should not happen
+    $defaults->{BrewType} = util::param($c, "selbrewtype");
     $defaults->{IsGeneric} = "0";
     $id = db::insertrecord($c,  "BREWS", $section, $defaults);
     return $id;
@@ -461,10 +452,6 @@ sub postbrew {
   return $id;
 } # postbrew
 
-################################################################################
-# Helper to insert a brew record from old-style params
-# Happens when the user clicks on the beer board
-################################################################################
 ################################################################################
 # Report module loaded ok
 1;
