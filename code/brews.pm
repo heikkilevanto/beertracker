@@ -59,7 +59,7 @@ sub listbrewcomments {
   #print STDERR "listbrewcomments: id='$brew->{Id}': $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id}, $c->{username});
-  print "<div onclick='toggleCommentTable(this.nextElementSibling);'>";
+  print "<div onclick='toggleElement(this.nextElementSibling);'>";
   print "Comments and ratings for <b>$brew->{Name}</b> <br/>\n";
   print "</div>\n";
   print "<div style='overflow-x: auto;'>";
@@ -108,7 +108,7 @@ sub listbrewcomments {
     print "</tr>\n";
   }
   print "</table></div>\n";
-  print "<div onclick='toggleCommentTable(this.previousElementSibling);'><br/>";
+  print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
   if ( $comcount == 0 ) {
     print "(No Comments by $c->{username})";
   } else {
@@ -122,14 +122,6 @@ sub listbrewcomments {
     }
   }
   print "</div>";
-  print "<script>
-    function toggleCommentTable(table) {
-      if (table) {
-        table.style.display = (table.style.display === 'none') ? 'table' : 'none';
-      }
-    }
-    </script>
-    ";
   $sth->finish;
   print "<!-- listbrewcomments end -->\n";
   print "<hr/>\n";
@@ -151,7 +143,7 @@ sub listbrewprices {
     ORDER by Timestamp DESC";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id}, $c->{username});
-  print "<div onclick='toggleCommentTable(this.nextElementSibling);'>";
+  print "<div onclick='toggleElement(this.nextElementSibling);'>";
   print "Latest prices for <b>$brew->{Name}</b> <br/>\n";
   print "</div>\n";
   print "<div style='overflow-x: auto;'>";
@@ -169,16 +161,8 @@ sub listbrewprices {
     print "</tr>\n";
   }
   print "</table></div>\n";
-  print "<div onclick='togglePriceTable(this.previousElementSibling);'><br/>";
+  print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
   print "</div>";
-  print "<script>
-    function togglePriceTable(table) {
-      if (table) {
-        table.style.display = (table.style.display === 'none') ? 'table' : 'none';
-      }
-    }
-    </script>
-    ";
   $sth->finish;
   print "<!-- listbrewprices end -->\n";
   print "<hr/>\n";
@@ -216,7 +200,7 @@ sub listbrewglasses {
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id}, $c->{username});
   my $glcount = 0;
-  print "<div onclick='toggleCommentTable(this.nextElementSibling);'><br/>";
+  print "<div onclick='toggleElement(this.nextElementSibling);'><br/>";
   print "When and where: </div>\n";
   print "<div style='overflow-x: auto; display:none'>";
   print "<table  style='white-space: nowrap;'>\n";
@@ -255,7 +239,7 @@ sub listbrewglasses {
     print "</tr>\n";
   }
   print "</table></div>\n";
-  print "<div onclick='toggleCommentTable(this.previousElementSibling);'><br/>";
+  print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
   if ( $glcount) {
     print "$glcount Glasses between ";
     print "$firstrec->{Date} and $lastrec->{Date}\n"

@@ -1,5 +1,5 @@
 // listrecords helpers
-// These manage filtering and soprting of lists created by listrecords
+// These manage filtering and sorting of lists created by listrecords
 
 let filterTimeout;
 let filterGeneration = 0;
@@ -197,4 +197,15 @@ function extractSortKey(recordRows, columnIndex) {
       }
   }
   return ""; // fallback key
+}
+
+// Toggle visibility of an element, used in brews.pm and other help table edits
+//  print "<div onclick='toggleElement(this.nextElementSibling);'>";
+//  print "Comments and ratings ... \n";
+//  print "</div>\n";
+//  print "<div style='overflow-x: auto;'>";  # Actual data to be displayed or not
+function toggleElement(element) {
+  if (element) {
+    element.style.display = (element.style.display === 'none') ? 'table' : 'none';
+  }
 }
