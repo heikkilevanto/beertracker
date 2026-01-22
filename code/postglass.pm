@@ -170,7 +170,6 @@ sub postglass {
 } # postglass
 
 ################################################################################
-################################################################################
 # Helper for timestamp parsing
 ################################################################################
 sub gettimestamp {
@@ -205,7 +204,7 @@ sub gettimestamp {
 
   # "Y" means date of yesterday
   if ( $d =~ /^Y/i ) {
-    $d = util::datestr("%F", -1,1) ;
+    $d = util::datestr("%F", -1, 1);
   }
 
   # "L" in date or time means 5 minutes after the previous one
@@ -245,7 +244,7 @@ sub getvalues {
   $glass->{Note} = util::param($c,"note");
 } # getvalues
 
-############## Helper for alc, volume, etc
+############## Helpers for alc, volume, etc
 sub fixvol {
   my $c = shift;
   my $glass = shift;
