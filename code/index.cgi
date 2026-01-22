@@ -54,6 +54,7 @@ if ( cwd() =~ /\/code$/ ) {
 require "./code/persons.pm";   # List of people, their details, editing, helpers
 require "./code/locations.pm"; # Locations stuff
 require "./code/brews.pm";  # Lists of various brews, etc
+require "./code/styles.pm"; # Beer style utilities: colors, display, shortening
 require "./code/glasses.pm"; # Main input for and the full list
 require "./code/postglass.pm"; # POST handling for glass records
 require "./code/comments.pm"; # Stuff for comments, ratings, and photos

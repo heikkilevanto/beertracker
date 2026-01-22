@@ -109,7 +109,7 @@ sub updateboard {
       }
     } else {
       # Insert new brew
-      my $short_style = brews::shortbeerstyle($style);
+      my $short_style = styles::shortbeerstyle($style);
       my $sql = "INSERT INTO BREWS (Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation, DefPrice, DefVol) VALUES (?, 'Beer', ?, ?, ?, ?, ?, ?)";
       my $sth = $c->{dbh}->prepare($sql);
       $sth->execute($beer, $short_style, $style, $alc, $prod_id, $defprice, $defvol);

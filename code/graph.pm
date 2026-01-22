@@ -111,7 +111,7 @@ sub oneday {
       $drinksline .= "$y 0xffffff "; # White separator for locaton changes
       $cnt--;
     }
-    my $color = brews::brewcolor($style);
+    my $color = styles::brewcolor($style);
     my $y = $top;
     if ( $r->{StDrinks} < 0.2 ) {
       $y = $top + 0.2; # Show at least something visible

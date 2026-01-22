@@ -95,7 +95,7 @@ sub beerboard {
       my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $alc);
       my $buttons_expanded = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 1, $alc);
 
-      my $beerstyle = beercolorstyle($c, $processed_data->{sty}, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
+      my $beerstyle = styles::beercolorstyle($c, $processed_data->{sty}, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
 
       my $dispid = $id;
       $dispid = "&nbsp;&nbsp;$id"  if ( length($dispid) < 2);
@@ -175,21 +175,6 @@ sub seenline {
 
   return $seenline;
 } # seenline
-
-# Helper to assign a color for a beer
-sub beercolorstyle {
-  my $c = shift;
-  my $rec = shift;  # Can also be style as text, see below
-  my $line = shift; # for error logging
-  my $type = "";
-  if (ref($rec)) {
-    $type = "$rec->{type},$rec->{subtype}: $rec->{style} $rec->{maker}";  # something we can match
-    $line = $rec->{rawline};
-  } else {
-    $type = $rec;
-  }
-  return brews::brewtextstyle($c, $type);
-} # beercolorstyle
 
 
 ################################################################################
@@ -312,7 +297,7 @@ sub prepare_beer_entry_data {
   my $beer = $e->{"beer"} || "";
   my $sty = $e->{"type"} || "";
   my $origsty = $sty;
-  $sty = brews::shortbeerstyle($sty);
+  $sty = styles::shortbeerstyle($sty);
   print "<!-- sty='$origsty' -> '$sty'\n'$e->{'beer'}' -> '$beer'\n'$e->{'maker'}' -> '$mak' -->\n";
 
   my $dispmak = $mak;
@@ -430,7 +415,7 @@ sub render_beer_row {
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
   print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
-  print brews::brewstyledisplay($c, "Beer", $processed_data->{sty}) . "</td>\n";
+  print styles::brewstyledisplay($c, "Beer", $processed_data->{sty}) . "</td>\n";
   print "</tr>\n";
   # Expanded rows
   print "<tr class='expanded_$id' style='display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
@@ -450,7 +435,7 @@ sub render_beer_row {
   print "<input type='submit' name='submit' value='Taster ' /> \n";
   print "</form>\n";
   print "</td></tr>\n";
-  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . brews::brewstyledisplay($c, "Beer", $processed_data->{origsty});
+  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
   if ($processed_data->{first_seen_date}) {
     print " <span style='font-size: x-small;'>On since $processed_data->{first_seen_date}.</span>";
   }
