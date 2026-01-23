@@ -90,8 +90,8 @@ sub postglass {
 
   } # normal glass
 
-  $glass->{tap} = util::param($c, "tap");
-  $glass->{tap} =~ s/\D//g if $glass->{tap};
+  $glass->{Tap} = util::param($c, "tap");
+  $glass->{Tap} =~ s/\D//g if $glass->{Tap};
 
   { no warnings;
     print STDERR "postglass: Op:'$sub' U:'$c->{username},' " .
@@ -128,7 +128,7 @@ sub postglass {
     $glass->{Alc},
     $glass->{StDrinks},
     $glass->{Note},
-    $glass->{tap},
+    $glass->{Tap},
     $glass->{Id}, $c->{username} );
   print STDERR "Updated " . $sth->rows .
     " Glass records for id '$c->{edit}'  \n";
@@ -136,7 +136,7 @@ sub postglass {
   } else { # Create a new glass
     my $sql = "insert into GLASSES
       ( Username, TimeStamp, BrewType, SubType,
-        Location, Brew, Price, Volume, Alc, StDrinks, Note, tap )
+        Location, Brew, Price, Volume, Alc, StDrinks, Note, Tap )
       values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ? )
       ";
     my $sth = $c->{dbh}->prepare($sql);
@@ -152,7 +152,7 @@ sub postglass {
       $glass->{Alc},
       $glass->{StDrinks},
       $glass->{Note},
-      $glass->{tap}
+      $glass->{Tap}
       );
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
@@ -164,6 +164,11 @@ sub postglass {
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($glass->{Price}, $glass->{Volume}, $brewid);
     print STDERR "Updated brew '$brewid' with DefPrice '$glass->{Price}' and DefVol '$glass->{Volume}'\n";
+  }
+
+  # If setdef checkbox is checked, update brew defaults
+  if ( util::param($c, "setdef") && $brewid && $glass->{Price} && $glass->{Volume} ) {
+    brews::update_brew_defaults($c, $brewid, $glass->{Price}, $glass->{Volume});
   }
 
   graph::clearcachefiles($c);

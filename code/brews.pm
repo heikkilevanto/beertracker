@@ -189,6 +189,7 @@ sub update_brew_defaults {
   if ($rows != 1) {
     util::error("Failed to update defaults for brew $brew_id");
   }
+  print STDERR "Updated brew $brew_id DefPrice to $price, DefVol to $vol\n";
 } # update_brew_defaults
 
 ################################################################################

@@ -122,9 +122,6 @@ sub selectbrewsubtype {
 # This is a fairly small, but rather complex form. For now it is hard coded,
 # without using the util::inputform helper, as almost every field has some
 # special considerations.
-# TODO - Del button to go back to here, with an option to ask if sure
-#        Could also ask to delete otherwise unused locations and brews
-# TODO - JS Magic to get geolocation to work
 sub inputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
@@ -184,15 +181,15 @@ sub inputform {
   my $hidenote = "hidden";
   $rec->{Note} = "" unless ( $c->{edit} );  # Do not inherit from previous
   $hidenote = "" if ( $rec->{Note} );
-  print "<tr id='noteline' $hidenote><td>Note</td><td>\n";
+  print "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$rec->{Tap}' size='2' /></td><td>\n";
   print "<input name='note' placeholder='note' value='$rec->{Note}' $sz20/>\n";
   print "</td></tr>\n";
 
   # (note toggle),  Vol, Alc, and Price
   print "<tr>";
-  my $notetxt = "(note)";
+  my $notetxt = "(more)";
   $notetxt = "" if ( !$hidenote);
-  print "<td><div id='notetag' onclick='shownote();'>$notetxt</div></td>";
+  print "<td id='leftcol'><div id='notetag' onclick='shownote();'>$notetxt</div></td>";
   print "<td id='avp' >\n";
   my $vol = $rec->{Volume} || "";
   $vol .= "c" if ($vol);
@@ -203,9 +200,6 @@ sub inputform {
   my $pr = $rec->{Price} || "0";
   $pr .= ".-" if ($pr);
   print "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' required />\n";
-  if ($rec->{tap}) {
-    print "<input type='hidden' name='tap' value='$rec->{tap}' />";
-  }
   print "</td></tr>\n";
 
   # Buttons
@@ -265,11 +259,18 @@ sub inputform {
     }
     setdate();
 
+    // If noteline is already shown (editing with note), set the labels
+    if (!document.getElementById("noteline").hidden) {
+      document.getElementById("leftcol").innerHTML = '<input type="checkbox" name="setdef" />Def';
+    }
+
     function shownote() {
       const noteline = document.getElementById("noteline");
       noteline.hidden = false;
       const toggle = document.getElementById("notetag");
       toggle.hidden = true;
+      const leftcol = document.getElementById("leftcol");
+      leftcol.innerHTML = '<input type="checkbox" name="setdef" />Def';
     }
 
     // hide newBrewType, we use SelBrewType always
@@ -282,32 +283,6 @@ sub inputform {
 SCRIPTEND
   print "<script defer>$script</script>\n";
 } # inputform
-
-################################################################################
-# Update, insert, or delete a glass from the form above
-################################################################################
-
-
-############## Helper to get the timestamp right
-
-# Moved to postglass.pm
-
-############## Helper to get input values into $glass with some defaults
-
-# Moved to postglass.pm
-
-############## Helper for alc, volume, etc
-
-# Moved to postglass.pm
-
-
-############## Helper to fix the price
-
-# Moved to postglass.pm
-
-############## postglass itself
-
-# Moved to postglass.pm
 
 
 ################################################################################
