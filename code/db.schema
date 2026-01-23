@@ -387,10 +387,11 @@ select g.Username,
        g.Brew,
        g.Volume,
        g.Price,
-       g.Timestamp
+       g.Timestamp,
+       latest.Count
 from glasses g
 join (
-    select Username, Location, Brew, Volume, max(Timestamp) as MaxTime
+    select Username, Location, Brew, Volume, max(Timestamp) as MaxTime, count(*) as Count
     from glasses
 	where price > 0
     group by Username, Location, Brew, Volume

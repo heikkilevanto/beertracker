@@ -169,6 +169,7 @@ sub listbrewprices {
     }
     print "</td><td>\n";
     print $com->{LocationName};
+    print " ($com->{Count})" if ($com->{Count} && $com->{Count} > 1);
     print "</td>\n";
     print "</tr>\n";
   }
