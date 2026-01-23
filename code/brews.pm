@@ -155,7 +155,19 @@ sub listbrewprices {
     print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
     print "</td><td>\n";
     print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
-    print "<td/><td>\n";
+    print "</td><td>\n";
+    if ( $com->{Price} && $com->{Volume} ) {
+      print "<form method='POST' accept-charset='UTF-8' style='display:inline;'>\n";
+      print "<input type='hidden' name='o' value='Brews' />\n";
+      print "<input type='hidden' name='e' value='$brew->{Id}' />\n";
+      print "<input type='hidden' name='setdefaultprice' value='$com->{Price}' />\n";
+      print "<input type='hidden' name='setdefaultvol' value='$com->{Volume}' />\n";
+      print "<input type='submit' value='Def' style='font-size: x-small;' />\n";
+      print "</form>\n";
+    } else {
+      print "&nbsp;";
+    }
+    print "</td><td>\n";
     print $com->{LocationName};
     print "</td>\n";
     print "</tr>\n";
@@ -169,6 +181,14 @@ sub listbrewprices {
 
 } # listbrewprices
 
+################################################################################
+sub update_brew_defaults {
+  my ($c, $brew_id, $price, $vol) = @_;
+  my $rows = $c->{dbh}->do("UPDATE brews SET DefPrice = ?, DefVol = ? WHERE Id = ?", undef, $price, $vol, $brew_id);
+  if ($rows != 1) {
+    util::error("Failed to update defaults for brew $brew_id");
+  }
+} # update_brew_defaults
 
 ################################################################################
 # List all glasses for the given brew
@@ -407,6 +427,13 @@ sub dedupbrews {
 sub postbrew {
   my $c = shift; # context
   my $id = shift || $c->{edit};
+  my $setdefaultprice = util::param($c, "setdefaultprice");
+  my $setdefaultvol = util::param($c, "setdefaultvol");
+  if ($setdefaultprice && $setdefaultvol) {
+    update_brew_defaults($c, $id, $setdefaultprice, $setdefaultvol);
+    $c->{redirect_url} = "?o=Brews&e=$id";
+    return;
+  }
   if ( util::param($c,"dedup") ) {
     dedupbrews($c);
     return;
