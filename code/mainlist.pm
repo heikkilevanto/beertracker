@@ -31,6 +31,7 @@ sub glassquery {
       glasses.alc as alc,
       glasses.stdrinks as drinks,
       glasses.note as note,
+      glasses.tap as tap,
       location as loc,
       glasses.Brewtype as brewtype,
       glasses.Subtype as subtype,
@@ -217,6 +218,9 @@ sub numbersline {
   }
   if ( $rec->{note} ) {
     print " (<i>$rec->{note}</i>)";
+  }
+  if ( $rec->{tap} ) {
+    print " #$rec->{tap}";
   }
   print "<br/>\n"
 }
