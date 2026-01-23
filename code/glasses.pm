@@ -221,7 +221,6 @@ sub inputform {
   } else { # New glass
     print "<input type='submit' name='submit' value='Record'/>\n";
     print "</td><td>\n";
-    print " <input type='submit' name='submit' value='Save' id='save' />\n";
     print " <input type='button' value='Clr' onclick='clearinputs()'/>\n";
   }
   print "&nbsp;" ;
