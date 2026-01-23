@@ -53,7 +53,7 @@ sub glassquery {
     order by timestamp desc
   };
   # TODO - Location stats?
-  # TODO - Price guesses for various sizes?
+  # TODO - Price guesses for various sizes? (Needed for copy buttons to different volumes)
   my $sth = db::query($c, $sql, $c->{username}, $date);
   return $sth;
 } # glassquery
@@ -185,7 +185,6 @@ sub nameline {
   print "<span style='white-space: nowrap;'>\n";
   print "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
         "<span>$time</span></a> \n";
-  #print "$time ";
   print styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}) . " \n";
   print "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
   if ( $rec->{brewname} ) {
@@ -270,29 +269,33 @@ sub buttonline {
     $vols{25} = 1;
     $vols{40} = 1;
   }
-  print "<form method='POST' style='display:inline;' class='no-print' onClick='setdate();'>\n";
-
-  # Hidden fields to post
+  # Hidden fields to post (same for all copy buttons)
   my $brewid = $rec->{brewid} || "";
   my $locid = $rec->{loc} || "";
-  print "<input type='hidden' name='Location'  value='$locid' />\n";
-  print "<input type='hidden' name='Brew'  value='$brewid' />\n";
-  print "<input type='hidden' name='selbrewtype'  value='$rec->{brewtype}' />\n";
-  print "<input type='hidden' name='date' id='date' value=' ' />\n";
-  print "<input type='hidden' name='time' id='time' value=' ' />\n";
-  #print "<input type='hidden' name='pr' id='time' value='$rec->{price}' />\n";
-  print "<input type='hidden' name='pr' id='time' value='?' />\n";
-  print "<input type='hidden' name='o' value='$c->{op}' />\n";  # Stay on page
-  print "<input type='hidden' name='q' value='$c->{qry}' />\n";
 
   # Actual copy buttons
   foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
     # The sort order defaults to numerical, but if that fails, takes
     # alphabetical ('R' for restaurant). Note the "no warnings".
+    print "<form method='POST' style='display:inline;' class='no-print' onClick='setdate();'>\n";
+    print "<input type='hidden' name='Location'  value='$locid' />\n";
+    print "<input type='hidden' name='Brew'  value='$brewid' />\n";
+    print "<input type='hidden' name='selbrewtype'  value='$rec->{brewtype}' />\n";
+    print "<input type='hidden' name='date' id='date' value=' ' />\n";
+    print "<input type='hidden' name='time' id='time' value=' ' />\n";
+    # For copy buttons, pass the original price only if volume matches, else leave empty to trigger guessing
+    my $copy_price = ($rec->{vol} && $volx == $rec->{vol} && defined $rec->{price}) ? $rec->{price} : '';
+    my $tap_val = $rec->{tap} // '';
+    my $orig_vol_val = $rec->{vol} // '';
+    print "<input type='hidden' name='pr' value='$copy_price' />\n";
+    print "<input type='hidden' name='tap' value='$tap_val' />\n";
+    print "<input type='hidden' name='orig_vol' value='$orig_vol_val' />\n";
+    print "<input type='hidden' name='o' value='$c->{op}' />\n";  # Stay on page
+    print "<input type='hidden' name='q' value='$c->{qry}' />\n";
     print "<input type='submit' name='submit' value='Copy $volx' " .
                 "style='display: inline; font-size: small' />\n";
+    print "</form>\n";
   }
-  print "</form>\n";
   print "<br/>\n";
 } # buttonline
 

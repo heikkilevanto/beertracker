@@ -248,6 +248,8 @@ sub getvalues {
   $glass->{Alc} = util::paramnumber($c, "alc", $brew->{Alc} || "0");
   if ( $sub =~ /Copy (\d+)/ ) {
     $glass->{Volume} = $1;
+    # TODO: When copying to a different volume, the passed price may need adjustment.
+    # If volume changed, scale price proportionally or use brew's default price per volume.
     print STDERR "getvalues: s='$sub' v='$1' \n";
   }
   $glass->{Note} = util::param($c,"note");
@@ -297,6 +299,36 @@ sub fixprice {
   if  ( $pr =~ /^(\d+)[,.-]*$/ ){  # Already a good price, only digits
     $glass->{Price} = $1; # just the digits
     return
+  }
+  # If price is empty, try to guess from tap or previous glass
+  if ( !$pr ) {
+    my $brewid = util::param($c, "Brew");
+    my $locid = util::param($c, "Location");
+    my $vol = $glass->{Volume};
+    # First, check tap_beers for matching volume and price
+    my $sql = "SELECT SizeS, PriceS, SizeM, PriceM, SizeL, PriceL FROM tap_beers WHERE Location = ? AND Brew = ?";
+    my $sth = db::query($c, $sql, $locid, $brewid);
+    my $row = $sth->fetchrow_hashref();
+    if ($row) {
+      if ($row->{SizeS} && $row->{SizeS} == $vol && $row->{PriceS}) {
+        $glass->{Price} = $row->{PriceS};
+      } elsif ($row->{SizeM} && $row->{SizeM} == $vol && $row->{PriceM}) {
+        $glass->{Price} = $row->{PriceM};
+      } elsif ($row->{SizeL} && $row->{SizeL} == $vol && $row->{PriceL}) {
+        $glass->{Price} = $row->{PriceL};
+      }
+    }
+    # If not found in tap, check latest glass for same brew, location, volume
+    if (!$glass->{Price}) {
+      my $sql2 = "SELECT Price FROM glasses WHERE Username = ? AND Brew = ? AND Location = ? AND Volume = ? ORDER BY Timestamp DESC LIMIT 1";
+      my $sth2 = db::query($c, $sql2, $c->{username}, $brewid, $locid, $vol);
+      my $row2 = $sth2->fetchrow_hashref();
+      if ($row2 && $row2->{Price}) {
+        $glass->{Price} = $row2->{Price};
+      }
+    }
+    # If still no price, leave empty
+    return;
   }
   # TODO - Currencies, next time I travel
   if ( $pr =~ /^x/i ) {  # X indicates no price, no guessing

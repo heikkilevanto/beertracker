@@ -183,7 +183,7 @@ sub inputform {
   if ( $c->{edit} ) {
     $hidenote = "";
   }
-  my $tap = $rec->{tap} || "";
+  my $tap = $rec->{Tap} || "";
   if ( !$c->{edit} ) {
     $tap = " $tap";
   }
