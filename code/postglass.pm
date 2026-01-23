@@ -90,8 +90,12 @@ sub postglass {
 
   } # normal glass
 
-  $glass->{Tap} = util::param($c, "tap");
-  $glass->{Tap} =~ s/\D//g if $glass->{Tap};
+  # Save the tap only if it was edited, or if we are editing
+  $glass->{tap} = util::param($c, "tap");
+  if ( !$c->{edit} && $glass->{tap} =~ /^ /  ) { 
+    $glass->{tap} = undef;
+  }
+  $glass->{tap} =~ s/\D//g if $glass->{tap};
 
   { no warnings;
     print STDERR "postglass: Op:'$sub' U:'$c->{username},' " .
@@ -128,7 +132,7 @@ sub postglass {
     $glass->{Alc},
     $glass->{StDrinks},
     $glass->{Note},
-    $glass->{Tap},
+    $glass->{tap},
     $glass->{Id}, $c->{username} );
   print STDERR "Updated " . $sth->rows .
     " Glass records for id '$c->{edit}'  \n";
@@ -152,7 +156,7 @@ sub postglass {
       $glass->{Alc},
       $glass->{StDrinks},
       $glass->{Note},
-      $glass->{Tap}
+      $glass->{tap}
       );
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";

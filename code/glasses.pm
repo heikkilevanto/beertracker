@@ -180,8 +180,15 @@ sub inputform {
   # Note for the glass
   my $hidenote = "hidden";
   $rec->{Note} = "" unless ( $c->{edit} );  # Do not inherit from previous
-  $hidenote = "" if ( $rec->{Note} );
-  print "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$rec->{Tap}' size='2' /></td><td>\n";
+  if ( $c->{edit} ) {
+    $hidenote = "";
+  }
+  my $tap = $rec->{tap} || "";
+  if ( !$c->{edit} ) {
+    $tap = " $tap";
+  }
+  print STDERR "Glass input form: hidenote='$hidenote' Note='$rec->{Note}' Tap='$tap'\n";
+  print "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' size='2' $clr/></td><td>\n";
   print "<input name='note' placeholder='note' value='$rec->{Note}' $sz20/>\n";
   print "</td></tr>\n";
 
