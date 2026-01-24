@@ -206,6 +206,6 @@ function extractSortKey(recordRows, columnIndex) {
 //  print "<div style='overflow-x: auto;'>";  # Actual data to be displayed or not
 function toggleElement(element) {
   if (element) {
-    element.style.display = (element.style.display === 'none') ? 'table' : 'none';
+    element.style.display = (element.style.display === 'none') ? 'block' : 'none';
   }
 }

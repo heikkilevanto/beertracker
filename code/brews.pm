@@ -218,49 +218,64 @@ sub listbrewglasses {
       WHERE Brew = ?
         and Glasses.username = ?
       order by GLASSES.Timestamp Desc ";
-  #print STDERR "listbrewcomments: id='$brew->{Id}': $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id}, $c->{username});
   my $glcount = 0;
-  print "<div onclick='toggleElement(this.nextElementSibling);'><br/>";
-  print "When and where: </div>\n";
-  print "<div style='overflow-x: auto; display:none'>";
-  print "<table  style='white-space: nowrap;'>\n";
+  my %years;
   my $firstrec;
   my $lastrec;
   while ( my $com = $sth->fetchrow_hashref ) {
     $glcount++;
     $firstrec = $com unless($firstrec);
     $lastrec = $com;
-    print "<tr><td>\n";
-    print "<span style='font-size: xx-small'>" .
-          "[$com->{Gid}]</span></td>\n";
-    print "<td><a href='$c->{url}?o=Full&e=$com->{Gid}'><span>";
-    print "$com->{Date} </span></a>";
-    my $tim = $com->{Time};
-    $tim = "($tim)" if ($tim lt "06:00");
-    print "$tim\n";
-    print "</td>\n";
-
-    print "<td>\n";
-    print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
-    print "</td><td>\n";
-
-    print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
-    print "</td><td>\n";
-
-    if ( $com->{Rating} ) {
-      print "<b>($com->{Rating})</b>" ;
-    } elsif ( $com->{Comment} ) {
-      print "<b>(*)</b>\n"  ;
-    }
-    print "</td><td>\n";
-
-    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span>@<b>$com->{Loc}</b></span></a> &nbsp;";
-    print "</td>\n";
-    print "</tr>\n";
+    my $year = substr($com->{Date}, 0, 4);
+    push @{$years{$year}}, $com;
   }
-  print "</table></div>\n";
+  print "<div onclick='toggleElement(this.nextElementSibling);'><br/>";
+  print "When and where: </div>\n";
+  print "<div style='overflow-x: auto; display:none'>\n";
+  my $latest_year = (sort {$b cmp $a} keys %years)[0] if %years;
+  for my $year (sort {$b cmp $a} keys %years) {
+    my $count = scalar @{$years{$year}};
+    my $display = ($year eq $latest_year) ? '' : 'display: none; ';
+    print "<div style='overflow-x: auto; $display'>\n";
+    print "<br><div style='font-weight: bold;'>$year</div>\n";
+    print "<table style='white-space: nowrap;'>\n";
+    for my $com (@{$years{$year}}) {
+      print "<tr><td>\n";
+      print "<span style='font-size: xx-small'>" .
+            "[$com->{Gid}]</span></td>\n";
+      print "<td><a href='$c->{url}?o=Full&e=$com->{Gid}'><span>";
+      print "$com->{Date} </span></a>";
+      my $tim = $com->{Time};
+      $tim = "($tim)" if ($tim lt "06:00");
+      print "$tim\n";
+      print "</td>\n";
+
+      print "<td>\n";
+      print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
+      print "</td><td>\n";
+
+      print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
+      print "</td><td>\n";
+
+      if ( $com->{Rating} ) {
+        print "<b>($com->{Rating})</b>" ;
+      } elsif ( $com->{Comment} ) {
+        print "<b>(*)</b>\n"  ;
+      }
+      print "</td><td>\n";
+
+      print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span>@<b>$com->{Loc}</b></span></a> &nbsp;";
+      print "</td>\n";
+      print "</tr>\n";
+    }
+    print "</table>\n";
+    print "</div>\n";
+    print "<div onclick='toggleElement(this.previousElementSibling);' style='cursor: pointer;'>";
+    print "<b>$count</b> times in <b>$year</b></div>\n";
+  }
+  print "</div>\n";
   print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
   if ( $glcount) {
     print "$glcount Glasses between ";
