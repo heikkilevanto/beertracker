@@ -125,54 +125,36 @@ sub seenline {
   my $c = shift;
   my $brew_id = shift;
   return "" unless $brew_id;
-  my $countsql = q{
-    select count(id)
+  my $sql = q{
+    select count(id),
+           strftime('%Y-%m-%d', min(timestamp), '-06:00') as min_date,
+           strftime('%Y-%m-%d', max(timestamp), '-06:00') as max_date
     from glasses
     where brew = ?
   };
-  my $get_sth = $c->{dbh}->prepare($countsql);
-  $get_sth->execute($brew_id);
-  my ($count) = $get_sth->fetchrow_array;
-  return "" unless($count);
-  my $seenline = "Seen <b>$count</b> times: ";
-  my $listsql = q{
-    select
-      distinct strftime ('%Y-%m-%d', timestamp,'-06:00') as effdate
-    from glasses
-    where brew = ?
-    order by timestamp desc
-    limit 7
-  };
-  my $prefix = "";
-  my $detail="";
-  my $detailpattern = "";
-  my $nmonths = 0;
-  my $nyears = 0;
-  my $list_sth = $c->{dbh}->prepare($listsql);
-  $list_sth->execute($brew_id);
-  while ( my $eff = $list_sth->fetchrow_array ) {
-    my $comma = ",";
-    if ( ! $prefix || $eff !~ /^$prefix/ ) {
-      $comma = ":" ;
-      if ( $nmonths++ < 2 ) {
-        ($prefix) = $eff =~ /^(\d+-\d+)/ ;  # yyyy-mm
-        $detailpattern = "(\\d\\d)\$";
-      } elsif ( $nyears++ < 1 ) {
-        ($prefix) = $eff =~ /^(\d+)/ ;  # yyyy
-        $detailpattern = "(\\d\\d)-\\d\\d\$";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($brew_id);
+  my ($count, $min_date, $max_date) = $sth->fetchrow_array;
+  return "" unless $count;
+  my $times_word = $count == 1 ? "time" : "times";
+  my $seenline = "Seen <b>$count</b> $times_word";
+  if ($min_date) {
+    my $display_date = $min_date;
+    if ($count > 1 && $max_date) {
+      my $now_utc6 = time() - 6 * 3600;
+      my $today = strftime('%Y-%m-%d', localtime($now_utc6));
+      my $yest_utc6 = $now_utc6 - 86400;
+      my $yesterday = strftime('%Y-%m-%d', localtime($yest_utc6));
+      if ($max_date eq $today) {
+        $display_date .= " to today";
+      } elsif ($max_date eq $yesterday) {
+        $display_date .= " to yesterday";
       } else {
-        $prefix = "20";
-        $detailpattern = "^20(\\d\\d)";
-        $comma = "";
+        $display_date .= " to $max_date";
       }
-      $seenline .= " <b>$prefix</b>";
     }
-    my ($det) = $eff =~ /$detailpattern/ ;
-    next if ($det eq $detail);
-    $detail = $det;
-    $seenline .= $comma . "$det";
+    $seenline .= " $display_date";
   }
-
   return $seenline;
 } # seenline
 
