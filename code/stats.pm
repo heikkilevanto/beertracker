@@ -117,7 +117,7 @@ sub datastats {
 
     #print STDERR "U: ", JSON->new->encode($rec), "\n";
     if ( $rec->{LocType} =~ /Restaurant/i && $rec->{count} == 1 ) {
-      $singles .= "$rec->{LocSubType}, ";
+      $singles .= "$rec->{LocSubType}; ";
     }
     else {
       $rec->{LocSubType} = "???" unless ( $rec->{LocSubType} );
