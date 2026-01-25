@@ -44,14 +44,15 @@ sub open_db {
     $c->{dbh}->do('PRAGMA foreign_keys = ON'); # Enforce foreign keys
   }
 
-  # $c->{dbh}->trace(1);  # Way too much SQL logging in error.log, could be useful some day
-
+  #$c->{dbh}->trace(1);  # Way too much SQL logging in error.log, could be useful some day
+  
   $c->{dbh}->{HandleError} = sub {
     my ($msg, $dbh) = @_;
     dberror($c, $msg);
     return 0; # rethrow the error after logging
     # Then we catch it in index.cgi, dump parameters, and roll back
-   };
+  };
+
 }
 
 ################################################################################

@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-01-20 14:33 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-01-25 15:00 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -115,8 +115,8 @@ create table locations (
 
 );
 
--- table tap_beers
-drop table if exists "tap_beers" ;
+-- table "tap_beers"
+drop table if exists "tap_beers";
 create table if not exists "tap_beers" (
 	"Id"	integer,
 	"Location"	integer not null,
@@ -125,15 +125,17 @@ create table if not exists "tap_beers" (
 	"FirstSeen"	datetime not null default current_timestamp,
 	"LastSeen"	datetime not null default current_timestamp,
 	"Gone"	datetime, 
-  SizeS decimal, PriceS decimal, 
-  SizeM decimal, PriceM decimal, 
-  SizeL decimal, PriceL decimal,
+  "SizeS" decimal, "PriceS" decimal, 
+  "SizeM" decimal, "PriceM" decimal, 
+  "SizeL" decimal, "PriceL" decimal,
+
 	primary key("Id"),
 	foreign key("Brew") references "Brews"("id"),
 	foreign key("Location") references "Locations"("id")
 );
 
 analyze sqlite_schema;
+
 
 -- view compers
 drop view if exists compers;
@@ -446,6 +448,8 @@ create index idx_comments_glass on comments (Glass);
 create index idx_persons_name on persons (Name collate nocase);
 
 create index idx_locations_name on locations (Name collate nocase);
+
+create index idx_tap_beers_brew_gone on tap_beers (Brew, Gone, FirstSeen);
 
 commit;
 
