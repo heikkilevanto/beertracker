@@ -165,10 +165,14 @@ sub format_date_relative {
   my $today = strftime('%Y-%m-%d', localtime($now_utc6));
   my $yest_utc6 = $now_utc6 - 86400;
   my $yesterday = strftime('%Y-%m-%d', localtime($yest_utc6));
+  my $time_part = "";
+  if ($time_str) {
+    $time_part = " at " . ($time_str lt "06:00" ? "($time_str)" : $time_str);
+  }
   if ($date_str eq $today) {
-    return "today" . ($time_str ? " at $time_str" : "");
+    return "today$time_part";
   } elsif ($date_str eq $yesterday) {
-    return "yesterday" . ($time_str ? " at $time_str" : "");
+    return "yesterday$time_part";
   } else {
     return $date_str;
   }
