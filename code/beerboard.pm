@@ -397,7 +397,11 @@ sub render_beer_row {
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
   print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
-  print styles::brewstyledisplay($c, "Beer", $processed_data->{sty}) . "</td>\n";
+  print styles::brewstyledisplay($c, "Beer", $processed_data->{sty});
+  if ( $processed_data->{average_rating} ) {
+    print " " . comments::avgratings($c, $processed_data->{rating_count}, $processed_data->{average_rating}, $processed_data->{comment_count});
+  }
+  print "</td>\n";
   print "</tr>\n";
   # Expanded rows
   print "<tr class='expanded_$id' style='display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
