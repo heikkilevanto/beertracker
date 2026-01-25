@@ -159,16 +159,16 @@ sub seenline {
 } # seenline
 
 sub format_date_relative {
-  my $date_str = shift;
+  my ($date_str, $time_str) = @_;
   return "" unless $date_str;
   my $now_utc6 = time() - 6 * 3600;
   my $today = strftime('%Y-%m-%d', localtime($now_utc6));
   my $yest_utc6 = $now_utc6 - 86400;
   my $yesterday = strftime('%Y-%m-%d', localtime($yest_utc6));
   if ($date_str eq $today) {
-    return "today";
+    return "today" . ($time_str ? " at $time_str" : "");
   } elsif ($date_str eq $yesterday) {
-    return "yesterday";
+    return "yesterday" . ($time_str ? " at $time_str" : "");
   } else {
     return $date_str;
   }
@@ -245,7 +245,8 @@ sub load_beerlist_from_db {
   # Load from DB
   my $sql = "SELECT ct.Tap, ct.Brew, ct.BrewName AS beer, pl.Name AS maker, pl.Id AS maker_id, b.SubType AS type, b.Alc AS alc,
                     tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
-                    br.rating_count, br.average_rating, br.comment_count, strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date
+                    br.rating_count, br.average_rating, br.comment_count, strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
+                    strftime('%H:%M', tb.FirstSeen) as first_seen_time
              FROM current_taps ct
              JOIN tap_beers tb ON ct.Id = tb.Id
              JOIN brews b ON ct.Brew = b.Id
@@ -281,7 +282,8 @@ sub load_beerlist_from_db {
       rating_count => $row->{rating_count},
       average_rating => $row->{average_rating},
       comment_count => $row->{comment_count},
-      first_seen_date => $row->{first_seen_date}
+      first_seen_date => $row->{first_seen_date},
+      first_seen_time => $row->{first_seen_time}
     };
   }
   
@@ -338,7 +340,8 @@ sub prepare_beer_entry_data {
     average_rating => $e->{average_rating},
     comment_count => $e->{comment_count},
     first_seen_date => $e->{first_seen_date},
-    first_seen_date_formatted => format_date_relative($e->{first_seen_date})
+    first_seen_time => $e->{first_seen_time},
+    first_seen_date_formatted => format_date_relative($e->{first_seen_date}, $e->{first_seen_time})
   };
 }
 
