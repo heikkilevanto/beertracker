@@ -115,9 +115,7 @@ create table locations (
 
 );
 
-analyze sqlite_schema;
-
--- table if
+-- table ap_beers
 drop table if exists if;
 create table if not exists "tap_beers" (
 	"Id"	integer,
@@ -131,6 +129,8 @@ create table if not exists "tap_beers" (
 	foreign key("Brew") references "Brews"("id"),
 	foreign key("Location") references "Locations"("id")
 );
+
+analyze sqlite_schema;
 
 -- view compers
 drop view if exists compers;

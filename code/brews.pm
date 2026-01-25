@@ -90,11 +90,15 @@ sub listbrewcomments {
     print "</td>\n";
 
     print "<td style='border-bottom: 1px solid white; vertical-align: top; white-space:normal'>\n";
-    print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b></span></a> &nbsp;";
+    if ( $com->{Lid} ) {
+      print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b></span></a> &nbsp;";
+    } else {
+      print "<b>$com->{Loc}</b> &nbsp;" if $com->{Loc};
+    }
     print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
     print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
     print "<br/>";
-    print "<i>$com->{Comment}</i>";
+    print "<i>$com->{Comment}</i>" if $com->{Comment};
     $comcount++ if ($com->{Comment});
     print "</td>\n";
 
@@ -353,6 +357,7 @@ sub editbrew {
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
       listbrewcomments($c, $p);
+      listbrewtaps($c, $p);
       listbrewprices($c, $p);
       listbrewglasses($c, $p);
       brewdeduplist($c, $p);
@@ -479,6 +484,68 @@ sub postbrew {
   }
   return $id;
 } # postbrew
+
+################################################################################
+# List tap information for the given brew
+################################################################################
+sub listbrewtaps {
+  my $c = shift; # context
+  my $brew = shift;
+  print "<!-- listbrewtaps -->\n";
+
+  # Current taps
+  my $sql_current = qq{
+    SELECT tap_beers.Location, locations.Name, strftime('%Y-%m-%d', tap_beers.FirstSeen) AS Since, tap_beers.Tap,
+           ROUND(julianday('now') - julianday(tap_beers.FirstSeen)) AS DaysOnTap
+    FROM tap_beers
+    JOIN locations ON tap_beers.Location = locations.Id
+    WHERE tap_beers.Brew = ? AND tap_beers.Gone IS NULL
+    ORDER BY tap_beers.FirstSeen ASC
+  };
+  my $sth_current = $c->{dbh}->prepare($sql_current);
+  $sth_current->execute($brew->{Id});
+  my $current_taps = $sth_current->fetchall_arrayref({});
+
+  if (@$current_taps) {
+    print "<div style='white-space: nowrap;'>\n";
+    foreach my $tap (@$current_taps) {
+      print "Currently <b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{Name}</span></a></b> since $tap->{Since} ($tap->{DaysOnTap} days)<br/>\n";
+    }
+    print "</div>\n";
+  } else {
+    print "This beer is not currently on tap anywhere.<br/>\n";
+  }
+
+  # Historical taps
+  my $sql_history = qq{
+    SELECT tap_beers.Location, locations.Name, strftime('%Y-%m-%d', tap_beers.FirstSeen) AS FirstSeenFormatted,
+           strftime('%Y-%m-%d', tap_beers.Gone) AS GoneFormatted,
+           ROUND(julianday(tap_beers.Gone) - julianday(tap_beers.FirstSeen)) AS DaysLasted, tap_beers.Tap
+    FROM tap_beers
+    JOIN locations ON tap_beers.Location = locations.Id
+    WHERE tap_beers.Brew = ? AND tap_beers.Gone IS NOT NULL
+    ORDER BY tap_beers.Gone DESC
+  };
+  my $sth_history = $c->{dbh}->prepare($sql_history);
+  $sth_history->execute($brew->{Id});
+  my $history_taps = $sth_history->fetchall_arrayref({});
+  my $history_count = scalar(@$history_taps);
+
+  if ($history_count > 0) {
+    print "<br/>\n";
+    print "<div onclick='toggleElement(this.nextElementSibling);'>\n";
+    print "<b>Tap history, $history_count entries</b><br/>\n";
+    print "</div>\n";
+    print "<div style='display: none; white-space: nowrap;'>\n";
+    foreach my $tap (@$history_taps) {
+      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{Name}</span></a></b> $tap->{FirstSeenFormatted} to $tap->{GoneFormatted} ($tap->{DaysLasted} days)<br/>\n";
+    }
+    print "</div>\n";
+  } else {
+    print "<br/>\n(no tap history)\n";
+  }
+  print "<hr/>\n";
+} # listbrewtaps
 
 ################################################################################
 # Report module loaded ok
