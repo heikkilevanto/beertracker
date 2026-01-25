@@ -405,7 +405,8 @@ sub render_beer_buttons {
 
 sub render_beer_row {
   my ($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
-  my $today = strftime('%Y-%m-%d', localtime(time()));
+  my $now_utc6 = time() - 6 * 3600;
+  my $today = strftime('%Y-%m-%d', localtime($now_utc6));
   my $bg = ($processed_data->{first_seen_date} && $processed_data->{first_seen_date} eq $today) ? "background-color: $c->{altbgcolor}; " : "";
   my $compact_display = ($extraboard == $id) ? 'none' : 'table-row';
   my $expanded_display = ($extraboard == $id) ? 'table-row' : 'none';
