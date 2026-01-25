@@ -152,14 +152,15 @@ sub listbrewprices {
   print "</div>\n";
   print "<div style='overflow-x: auto;'>";
   print "<table >\n";
+  my $sty = "style='white-space: nowrap;' ";
   while ( my $com = $sth->fetchrow_hashref ) {
-    print "<tr><td>\n";
+    print "<tr><td $sty>\n";
     print "$com->{Timestamp}<br/> \n";
-    print "<td>\n";
+    print "<td $sty>\n";
     print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
-    print "</td><td>\n";
+    print "</td><td $sty>\n";
     print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
-    print "</td><td>\n";
+    print "</td><td $sty>\n";
     if ( $com->{Price} && $com->{Volume} ) {
       print "<form method='POST' accept-charset='UTF-8' style='display:inline;'>\n";
       print "<input type='hidden' name='o' value='Brews' />\n";
@@ -171,7 +172,7 @@ sub listbrewprices {
     } else {
       print "&nbsp;";
     }
-    print "</td><td>\n";
+    print "</td><td $sty>\n";
     print $com->{LocationName};
     print " ($com->{Count})" if ($com->{Count} && $com->{Count} > 1);
     print "</td>\n";
@@ -509,7 +510,7 @@ sub listbrewtaps {
   if (@$current_taps) {
     print "<div style='white-space: nowrap;'>\n";
     foreach my $tap (@$current_taps) {
-      print "Currently <b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{Name}</span></a></b> since $tap->{Since} ($tap->{DaysOnTap} days)<br/>\n";
+      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{Name}</span></a></b> since $tap->{Since} ($tap->{DaysOnTap} days)<br/>\n";
     }
     print "</div>\n";
   } else {
