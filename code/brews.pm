@@ -302,6 +302,10 @@ sub brewdeduplist {
   my $c = shift; # context
   my $brew = shift;
   print "<!-- brewdeduplist -->\n";
+  print "<div onclick='toggleElement(this.nextElementSibling);'>";
+  print "<b>Deduplicate</b><br/>\n";
+  print "</div>\n";
+  print "<div style='display: none;'>\n";
   print "<form method='POST' accept-charset='UTF-8' class='no-print' >\n";
   print "Mark brews that are duplicates of [$brew->{Id}] $brew->{Name} ";
   print "and click here: \n";
@@ -313,6 +317,7 @@ sub brewdeduplist {
   my $sort = $c->{sort} || "Last-";
   print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id}" );
   print "</form>\n";
+  print "</div>\n";
   print "<!-- brewdeduplist end -->\n";
   print "<hr/>\n";
 } # brewdeduplist
