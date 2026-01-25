@@ -388,10 +388,12 @@ sub render_beer_buttons {
 
 sub render_beer_row {
   my ($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
+  my $today = strftime('%Y-%m-%d', localtime(time()));
+  my $bg = ($e->{first_seen_date} && $e->{first_seen_date} eq $today) ? "background-color: $c->{altbgcolor}; " : "";
   my $compact_display = ($extraboard == $id) ? 'none' : 'table-row';
   my $expanded_display = ($extraboard == $id) ? 'table-row' : 'none';
   # Compact row
-  print "<tr id='compact_$id' style='display: $compact_display;'>\n";
+  print "<tr id='compact_$id' style='$bg display: $compact_display;'>\n";
   print "<td align=right $beerstyle><a href='#' onclick=\"toggleBeer('$id'); return false;\"><span $beerstyle>$dispid</span></a></td>\n";
   print "<td>$buttons_compact</td>\n";
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
@@ -404,8 +406,8 @@ sub render_beer_row {
   print "</td>\n";
   print "</tr>\n";
   # Expanded rows
-  print "<tr class='expanded_$id' style='display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
-  print "<tr class='expanded_$id' style='display: $expanded_display;'><td align=right $beerstyle>";
+  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
+  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td align=right $beerstyle>";
   print "<a href='#' onclick=\"toggleBeer('$id'); return false;\"><span $beerstyle id='here'>$dispid</span></a> ";
   print "</td>\n";
   print "<td colspan=4 >";
@@ -413,7 +415,7 @@ sub render_beer_row {
   print "$processed_data->{mak}: $processed_data->{dispbeer} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span>" if ($processed_data->{country});
   print "</span></td></tr>\n";
-  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $buttons_expanded &nbsp;\n";
+  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $buttons_expanded &nbsp;\n";
   print "<form method='POST' accept-charset='UTF-8' style='display: inline;' class='no-print' >\n";
   print "$hiddenbuttons";
   print "<input type='hidden' name='vol' value='T' />\n" ;  # taster
@@ -421,7 +423,7 @@ sub render_beer_row {
   print "<input type='submit' name='submit' value='Taster ' /> \n";
   print "</form>\n";
   print "</td></tr>\n";
-  print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
+  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
   if ($processed_data->{first_seen_date}) {
     print " <span style='font-size: x-small;'>On since $processed_data->{first_seen_date}.</span>";
   }
@@ -430,7 +432,7 @@ sub render_beer_row {
   }
   print "</td></tr> \n";
   if ($seenline) {
-    print "<tr class='expanded_$id' style='display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $seenline";
+    print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $seenline";
     print "</td></tr>\n";
   }
 }
