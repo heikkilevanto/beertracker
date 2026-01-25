@@ -158,6 +158,22 @@ sub seenline {
   return $seenline;
 } # seenline
 
+sub format_date_relative {
+  my $date_str = shift;
+  return "" unless $date_str;
+  my $now_utc6 = time() - 6 * 3600;
+  my $today = strftime('%Y-%m-%d', localtime($now_utc6));
+  my $yest_utc6 = $now_utc6 - 86400;
+  my $yesterday = strftime('%Y-%m-%d', localtime($yest_utc6));
+  if ($date_str eq $today) {
+    return "today";
+  } elsif ($date_str eq $yesterday) {
+    return "yesterday";
+  } else {
+    return $date_str;
+  }
+} # format_date_relative
+
 
 ################################################################################
 # Helper functions for beerboard 
@@ -321,7 +337,8 @@ sub prepare_beer_entry_data {
     rating_count => $e->{rating_count},
     average_rating => $e->{average_rating},
     comment_count => $e->{comment_count},
-    first_seen_date => $e->{first_seen_date}
+    first_seen_date => $e->{first_seen_date},
+    first_seen_date_formatted => format_date_relative($e->{first_seen_date})
   };
 }
 
@@ -389,7 +406,7 @@ sub render_beer_buttons {
 sub render_beer_row {
   my ($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
   my $today = strftime('%Y-%m-%d', localtime(time()));
-  my $bg = ($e->{first_seen_date} && $e->{first_seen_date} eq $today) ? "background-color: $c->{altbgcolor}; " : "";
+  my $bg = ($processed_data->{first_seen_date} && $processed_data->{first_seen_date} eq $today) ? "background-color: $c->{altbgcolor}; " : "";
   my $compact_display = ($extraboard == $id) ? 'none' : 'table-row';
   my $expanded_display = ($extraboard == $id) ? 'table-row' : 'none';
   # Compact row
@@ -424,8 +441,8 @@ sub render_beer_row {
   print "</form>\n";
   print "</td></tr>\n";
   print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
-  if ($processed_data->{first_seen_date}) {
-    print " <span style='font-size: x-small;'>On since $processed_data->{first_seen_date}.</span>";
+  if ($processed_data->{first_seen_date_formatted}) {
+    print " <span style='font-size: x-small;'>On since $processed_data->{first_seen_date_formatted}.</span>";
   }
   if ( $processed_data->{average_rating} ) {
     print " " . comments::avgratings($c, $processed_data->{rating_count}, $processed_data->{average_rating}, $processed_data->{comment_count});
