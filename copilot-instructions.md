@@ -6,8 +6,10 @@
 BeerTracker is a procedural Perl CGI web application for personal beer tracking. It uses SQLite for data storage and runs under Apache. The main entry point is `code/index.cgi`, which dispatches requests to focused modules in `code/` based on the `o` parameter (e.g., `o=Board` for beerboard.pm).
 
 Key components:
-- **Database**: SQLite file `beerdata/beertracker.db` with schema in `code/db.schema`. Tables: glasses (drinking events), brews (beverages), locations (places), persons, comments.
-- **Modules**: ~20 Perl modules in `code/` for specific functionalities (e.g., beerboard.pm for bar beer lists, db.pm for database helpers).
+- **Database**: SQLite file `beerdata/beertracker.db` with schema in `code/db.schema`. Tables: glasses (drinking events), brews (beverages), locations (places), persons, comments, taps.
+- **Modules**: ~30 Perl modules in `code/` for specific functionalities (e.g., beerboard.pm for bar beer lists, db.pm for database helpers). We try to keep modules focused and small, ideally <300 lines, but some are larger.
+- **CGI Handling**: `code/index.cgi` handles all requests, routing based on `o` parameter. POST requests are wrapped in eval for error handling.
+- **Templates**: HTML is generated directly in Perl using print statements with qq{} for multi-line strings.  
 - **Scraping**: Perl scripts in `scripts/` scrape beer menus from bar websites (e.g., oelbaren.pl).
 - **Static Assets**: CSS/JS in `static/`, served with cache-busting timestamps.
 
@@ -23,8 +25,8 @@ Data flows from browser forms to index.cgi, which calls module post*() functions
 ## Key Patterns and Conventions
 - **Context Hash**: Pass `$c` hash containing globals (username, dbh, url, etc.) to all functions.
 - **Parameter Handling**: Use `util::param($c, "key")` for CGI params; handles GET/POST uniformly.
-- **Database Access**: Direct SQL with DBI; `db::open_db($c, "rw")` for POST requests, "ro" for GET requests. Foreign keys enforced.
-- **Error Handling**: `util::error()` for fatal errors; database errors logged to STDERR and shown in HTML.
+- **Database Access**: Direct SQL with DBI; `db::open_db($c, "rw")` for POST requests, "ro" for GET requests. Foreign keys enforced. db.pm has helpers for common queries. Use those when possible, to get consistent logging and error handling.
+- **Error Handling**: `util::error()` for fatal errors; database errors logged to STDERR and shown in HTML. In dev mode we should aim to log all SQL statements, but not in production.
 - **Filtering**: Use `q` param for grep-style filtering (e.g., `?q=IPA`); 
 - **Links**: Build URLs as `$c->{url}?o=Operation&e=ID`; use `uri_escape_utf8()` for params.
 - **Display Helpers**: `util::unit()` for values with units (e.g., "33<small>cl</small>"); `util::datestr()` for dates.
