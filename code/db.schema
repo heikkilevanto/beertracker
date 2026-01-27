@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-01-25 15:00 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-01-27 13:33 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -115,8 +115,8 @@ create table locations (
 
 );
 
--- table "tap_beers"
-drop table if exists "tap_beers";
+-- table if
+drop table if exists if;
 create table if not exists "tap_beers" (
 	"Id"	integer,
 	"Location"	integer not null,
@@ -135,7 +135,6 @@ create table if not exists "tap_beers" (
 );
 
 analyze sqlite_schema;
-
 
 -- view compers
 drop view if exists compers;
@@ -412,7 +411,6 @@ where g.Price > 0;
 -- view current_taps
 drop view if exists current_taps;
 create view current_taps as
-  -- List currenbtly active taps for a location
 select
     tb.Id,
     tb.Location,
@@ -428,6 +426,18 @@ left join locations pl on b.ProducerLocation = pl.Id
 where tb.Gone is null
 order by tb.Location, tb.Tap
 ;
+
+-- view brew_taps
+drop view if exists brew_taps;
+create view brew_taps as 
+select 
+  tap_beers.*, 
+  locations.Name as LocationName, 
+  round(julianday(coalesce(Gone, 'now')) - julianday(FirstSeen)) as Days, 
+  strftime('%Y-%m-%d', FirstSeen) as Since, 
+  strftime('%Y-%m-%d', Gone) as GoneFormatted 
+from tap_beers 
+join locations on tap_beers.Location = locations.Id;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 

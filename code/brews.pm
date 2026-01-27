@@ -499,43 +499,27 @@ sub listbrewtaps {
   my $brew = shift;
   print "<!-- listbrewtaps -->\n";
 
-  # Current taps
-  my $sql_current = qq{
-    SELECT tap_beers.Location, locations.Name, strftime('%Y-%m-%d', tap_beers.FirstSeen) AS Since, tap_beers.Tap,
-           ROUND(julianday('now') - julianday(tap_beers.FirstSeen)) AS DaysOnTap
-    FROM tap_beers
-    JOIN locations ON tap_beers.Location = locations.Id
-    WHERE tap_beers.Brew = ? AND tap_beers.Gone IS NULL
-    ORDER BY tap_beers.FirstSeen ASC
+  my $sql = qq{
+    SELECT * FROM brew_taps WHERE Brew = ? ORDER BY Gone DESC, FirstSeen DESC
   };
-  my $sth_current = $c->{dbh}->prepare($sql_current);
-  $sth_current->execute($brew->{Id});
-  my $current_taps = $sth_current->fetchall_arrayref({});
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute($brew->{Id});
+  my $taps = $sth->fetchall_arrayref({});
 
-  if (@$current_taps) {
+  my @current = grep { !defined $_->{Gone} } @$taps;
+  my @history = grep { defined $_->{Gone} } @$taps;
+
+  if (@current) {
     print "<div style='white-space: nowrap;'>\n";
-    foreach my $tap (@$current_taps) {
-      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{Name}</span></a></b> since $tap->{Since} ($tap->{DaysOnTap} days)<br/>\n";
+    foreach my $tap (@current) {
+      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{LocationName}</span></a></b> since $tap->{Since} ($tap->{Days} days)<br/>\n";
     }
     print "</div>\n";
   } else {
     print "This beer is not currently on tap anywhere.<br/>\n";
   }
 
-  # Historical taps
-  my $sql_history = qq{
-    SELECT tap_beers.Location, locations.Name, strftime('%Y-%m-%d', tap_beers.FirstSeen) AS FirstSeenFormatted,
-           strftime('%Y-%m-%d', tap_beers.Gone) AS GoneFormatted,
-           ROUND(julianday(tap_beers.Gone) - julianday(tap_beers.FirstSeen)) AS DaysLasted, tap_beers.Tap
-    FROM tap_beers
-    JOIN locations ON tap_beers.Location = locations.Id
-    WHERE tap_beers.Brew = ? AND tap_beers.Gone IS NOT NULL
-    ORDER BY tap_beers.Gone DESC
-  };
-  my $sth_history = $c->{dbh}->prepare($sql_history);
-  $sth_history->execute($brew->{Id});
-  my $history_taps = $sth_history->fetchall_arrayref({});
-  my $history_count = scalar(@$history_taps);
+  my $history_count = scalar(@history);
 
   if ($history_count > 0) {
     print "<br/>\n";
@@ -543,8 +527,8 @@ sub listbrewtaps {
     print "<b>Tap history, $history_count entries</b><br/>\n";
     print "</div>\n";
     print "<div style='display: none; white-space: nowrap;'>\n";
-    foreach my $tap (@$history_taps) {
-      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{Name}</span></a></b> $tap->{FirstSeenFormatted} to $tap->{GoneFormatted} ($tap->{DaysLasted} days)<br/>\n";
+    foreach my $tap (@history) {
+      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{LocationName}</span></a></b> $tap->{Since} to $tap->{GoneFormatted} ($tap->{Days} days)<br/>\n";
     }
     print "</div>\n";
   } else {
