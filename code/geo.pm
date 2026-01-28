@@ -81,6 +81,7 @@ sub geoInput {
   my $inputprefix = shift || "";
   my $lat = shift || "";
   my $lon = shift || "";
+  my $disabled = shift || "";  # "disabled" or ""
 
   my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words' ".
     "OnInput='geodist(\"$inputprefix\")'";
@@ -89,12 +90,13 @@ sub geoInput {
   my $lonname = $inputprefix."Lon";
   my $s = "";
   $s .= "<td>\n";
-  $s .= "<input name='$latname' id='$latname' value='$lat' $clr />\n";
+  $s .= "<input name='$latname' id='$latname' value='$lat' $clr $disabled />\n";
   $s .= "<br>";
-  $s .= "<input name='$lonname' id='$lonname' value='$lon' $clr />\n";
+  $s .= "<input name='$lonname' id='$lonname' value='$lon' $clr $disabled />\n";
   $s .= "<br>";
-  $s .= "<span onclick='geoclear(\"$inputprefix\")'>&nbsp; (Clear)</span>\n";
-  $s .= "<span onclick='geohere(\"$inputprefix\")'>&nbsp; (Here)</span>\n";
+  my $hiddenclass = $disabled ? "class='geo-edit-links' hidden" : "class='geo-edit-links'";
+  $s .= "<span onclick='geoclear(\"$inputprefix\")' $hiddenclass>&nbsp; (Clear)</span>\n";
+  $s .= "<span onclick='geohere(\"$inputprefix\")' $hiddenclass>&nbsp; (Here)</span>\n";
   $s .= "<script> geodist('$inputprefix');</script>\n";
   return $s;
 }

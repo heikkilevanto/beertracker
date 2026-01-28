@@ -31,6 +31,7 @@ sub dropdown {
   my $tablename     = shift;   # Table for new record form
   my $newfieldprefix= shift;   # Prefix for new input fields
   my $skipnewfields = shift || "";
+  my $disabled      = shift || "";   # "disabled" or ""
 
   my $newdiv = "";
   if ($tablename) {
@@ -48,7 +49,8 @@ sub dropdown {
            class="dropdown-filter"
            autocomplete="off"
            placeholder="$inputname"
-           value="$selectedname" />
+           value="$selectedname"
+           $disabled />
     <input type="hidden"
            id="$inputname"
            name="$inputname"
@@ -80,6 +82,12 @@ sub inputform {
   my $separatortag = shift || "<br/>";
   my $skipfields = shift || "Id"; # regexp. "Id|HiddenField|AlsoThis"  "all" for showing all
 
+  # Determine if we should disable fields (editing existing, not new)
+  my $disabled = "";
+  if ( $rec && $rec->{Id} && $rec->{Id} ne "new" && !$inputprefix ) {
+    $disabled = "disabled";
+  }
+
   my $form = "";
   if ( $inputprefix ) { # Subheader for included records
     my $hdr = $inputprefix;
@@ -110,27 +118,27 @@ sub inputform {
     }
     if ( $special ) {
       if ( $f =~ /producerlocation/i ) {
-        $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "prodloc", "prod");
+        $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "prodloc", "prod", $disabled);
       } elsif ( $f =~ /location/i ) {
         if ( $inputprefix !~ /newperson/ ) {
           # Do no allow a relatedperson to have a location, conflicts with the persons own location
-          $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "loc");
+          $form .= locations::selectlocation($c, $inputprefix.$f, $rec->{$f}, "loc", "", $disabled);
         }
       } elsif ( $f =~ /person/i ) {
         if ( $inputprefix !~ /newperson/ ) {
           # Allow editing of RelatedPerson, but only on top level
-          $form .= persons::selectperson($c, $inputprefix.$f, $rec->{$f}, "pers");
+          $form .= persons::selectperson($c, $inputprefix.$f, $rec->{$f}, "pers", "", $disabled);
           # Avoids endless recursion
         }
       } elsif ( $f =~ /Lat/i ) {
-        $form .= geo::geoInput($c, $inputprefix, $rec->{Lat}, $rec->{Lon} );
+        $form .= geo::geoInput($c, $inputprefix, $rec->{Lat}, $rec->{Lon}, $disabled );
       } elsif ( $f =~ /Lon/i ) {
         # Both handled under Lat
       } elsif ( $f =~ /IsGeneric/i ) {
         $form .= "<td>\n";
         my $checked = "";
         $checked = "checked" if ($rec && $rec->{$f});
-        $form .= "<input type=checkbox name='$f' $checked value='1'/>";
+        $form .= "<input type=checkbox name='$f' $checked value='1' $disabled/>";
       } else  {
         util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
       }
@@ -149,7 +157,7 @@ sub inputform {
         }
       }
       $form .= "<td>\n";
-      $form .= "<input name='$inpname' $val $clr $pass $required/>\n";
+      $form .= "<input name='$inpname' $val $clr $pass $required $disabled/>\n";
       $form .= $separatortag;
     }
     $form .= "</td></tr>\n";

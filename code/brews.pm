@@ -353,7 +353,15 @@ sub editbrew {
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
 
     print inputs::inputform($c, "BREWS", $p );
-    print "<input type='submit' name='submit' value='$submit Brew' />\n";
+    
+    if ( $p->{Id} ne "new" ) {
+      # Editing existing record: show Edit button, hide submit
+      print "<button type='button' class='edit-enable-btn' onclick='enableEditing(this.form)'>Edit</button>\n";
+      print "<input type='submit' name='submit' value='$submit Brew' class='edit-submit-btn' hidden />\n";
+    } else {
+      # New record: normal submit button
+      print "<input type='submit' name='submit' value='$submit Brew' />\n";
+    }
     print "<a href='$c->{url}?o=$c->{op}'><span>Cancel</span></a>\n";
     print "<br/>\n";
 

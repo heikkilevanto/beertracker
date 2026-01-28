@@ -96,9 +96,10 @@ sub editperson {
   if ( $c->{edit} =~ /^new/i ) {
     print "<br/><input type='submit' name='submit' value='Insert Person' />\n";
   } else {
-    print "<br/><input type='submit' name='submit' value='Update Person' />\n";
-    print "<br/><br/><input type='submit' name='submit' value='Create a Copy' />\n";
-    print "<input type='submit' name='submit' value='Delete Person' />\n";
+    print "<br/><button type='button' class='edit-enable-btn' onclick='enableEditing(this.form)'>Edit</button>\n";
+    print "<input type='submit' name='submit' value='Update Person' class='edit-submit-btn' hidden />\n";
+    print "<br/><br/><input type='submit' name='submit' value='Create a Copy' class='edit-submit-btn' hidden />\n";
+    print "<input type='submit' name='submit' value='Delete Person' class='edit-submit-btn' hidden />\n";
   }
   # Come back to here after updating
   print "<input type='hidden' name='o' value='$c->{op}' />\n";
@@ -132,6 +133,7 @@ sub selectperson {
   my $selected = shift || "";  # The id of the selected person
   my $width = shift || "";
   my $newpersonfield = shift || ""; # If set, allows the 'new' option
+  my $disabled = shift || "";  # "disabled" or ""
   my $sql = "
   select
     PERSONS.Id,
@@ -155,7 +157,7 @@ sub selectperson {
       $current = $name;
     }
   }
-  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "PERSONS", "newperson" );
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "PERSONS", "newperson", "Id|Username", $disabled );
   return $s;
 } # selectperson
 

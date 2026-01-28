@@ -254,7 +254,15 @@ sub editlocation {
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
     print inputs::inputform($c, "LOCATIONS", $p );
-    print "<input type='submit' name='submit' value='$submit Location' />\n";
+    
+    if ( $p->{Id} ne "new" ) {
+      # Editing existing record: show Edit button, hide submit
+      print "<button type='button' class='edit-enable-btn' onclick='enableEditing(this.form)'>Edit</button>\n";
+      print "<input type='submit' name='submit' value='$submit Location' class='edit-submit-btn' hidden />\n";
+    } else {
+      # New record: normal submit button
+      print "<input type='submit' name='submit' value='$submit Location' />\n";
+    }
     print "<a href='$c->{url}?o=$c->{op}&e='><span>Cancel</span></a><br/>\n";
 
     # Come back to here after updating
@@ -352,6 +360,7 @@ sub selectlocation {
   my $selected = shift || "";  # The id of the selected location
   my $newprefix = shift || ""; # Prefix for new-location fields. Enables the "new"
   my $prods = shift || "";  # "prod" for prod locs only, "non" for non-prods only. Defaults to all
+  my $disabled = shift || "";  # "disabled" or ""
 
   if ( $selected && $selected !~ /^\d+$/ ){
     print STDERR "selectlocation called with non-numerical 'selected' argument: '$selected' \n";
@@ -400,7 +409,7 @@ sub selectlocation {
       $current = $name;
     }
   }
-  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield, $skip );
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield, $skip, $disabled );
   $s .= "<script>geotabledist();</script>\n";
   return $s;
 

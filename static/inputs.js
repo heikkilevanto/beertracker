@@ -97,6 +97,32 @@ function filterItems(filterInput, dropdownList) {
 }
 
 
+// Enable editing mode for forms that start in display-only mode
+function enableEditing(form) {
+  // Enable all disabled inputs
+  const inputs = form.querySelectorAll('input[disabled], textarea[disabled], select[disabled]');
+  inputs.forEach(input => input.removeAttribute('disabled'));
+  
+  // Enable dropdown filters
+  const dropdownFilters = form.querySelectorAll('.dropdown-filter');
+  dropdownFilters.forEach(filter => filter.removeAttribute('disabled'));
+  
+  // Show geo edit links
+  const geoLinks = form.querySelectorAll('.geo-edit-links');
+  geoLinks.forEach(link => link.hidden = false);
+  
+  // Hide Edit button, show Submit button(s)
+  const editBtn = form.querySelector('.edit-enable-btn');
+  if (editBtn) editBtn.hidden = true;
+  
+  const submitBtns = form.querySelectorAll('.edit-submit-btn');
+  submitBtns.forEach(btn => btn.hidden = false);
+  
+  // Focus first enabled input
+  const firstInput = form.querySelector('input:not([type=hidden]):not([disabled])');
+  if (firstInput) firstInput.focus();
+}
+
 // Helper to find the location with smallest distance, and to select that
 function selectNearest(dropdownId) {
   const root = document.querySelector(dropdownId);
