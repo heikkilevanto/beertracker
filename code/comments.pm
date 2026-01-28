@@ -25,6 +25,18 @@ sub ratingline {
 }
 
 ################################################################################
+# Get CSS class for rating color coding
+################################################################################
+sub get_rating_class {
+  my $rating = shift;
+  $rating = int($rating + 0.5); # round to nearest integer
+  if ($rating <= 3) { return 'rating-rubbish'; }
+  elsif ($rating <= 5) { return 'rating-bronze'; }
+  elsif ($rating <= 7) { return 'rating-silver'; }
+  else { return 'rating-gold'; }
+}
+
+################################################################################
 # Display a comment on a single line
 ################################################################################
 sub commentline {
@@ -57,12 +69,12 @@ sub avgratings {
   if ( $avg ) {
     $s .= "(" ;
     if ( $cnt > 1) {
-      $s .= sprintf("<b>%2.1f</b>", $avg);
+      $s .= sprintf("<b class='%s'>%2.1f</b>", get_rating_class($avg), $avg);
       $s .= "<span style='font-size: xx-small;'>";
       $s .= "/$cnt" . "</span>" ;
     } else {
       $avg = int($avg);
-      $s .= "<b>$avg</b>";
+      $s .= sprintf("<b class='%s'>%d</b>", get_rating_class($avg), $avg);
     }
     $s .= ") ";
   }
@@ -178,7 +190,8 @@ sub commentform {
   my $r = $com->{Rating} || 0;
   for my $i (1 .. $#ratings) {  # Skip "Zero"
     my $selected = ($r == $i) ? " selected" : "";
-    $s .= "<option value='$i'$selected>$i: $ratings[$i]</option>\n";
+    my $class = get_rating_class($i);
+    $s .= "<option class='$class' value='$i'$selected>$i: $ratings[$i]</option>\n";
   }
   $s .= "</select>\n";
   $s .= "<script>replaceSelectWithCustom(document.getElementById('rating'));</script>\n";

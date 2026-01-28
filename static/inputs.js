@@ -176,7 +176,7 @@ function replaceSelectWithCustom(selectEl) {
   wrapper.className = "custom-select";
 
   const display = document.createElement("div");
-  display.className = "custom-select-display";
+  display.className = "custom-select-display " + (selectEl.selectedOptions[0]?.className || "");
   display.textContent = selectEl.selectedOptions[0]?.textContent || "";
   wrapper.appendChild(display);
 
@@ -184,13 +184,14 @@ function replaceSelectWithCustom(selectEl) {
   list.className = "custom-select-list";
   Array.from(selectEl.options).forEach((opt, idx) => {
     const item = document.createElement("div");
-    item.className = "custom-select-item";
+    item.className = "custom-select-item " + opt.className;
     item.dataset.value = opt.value;
     item.textContent = opt.textContent;
     item.addEventListener("click", () => {
       selectEl.selectedIndex = idx;
       selectEl.dispatchEvent(new Event("change")); // fires selbrewchange
       display.textContent = opt.textContent;
+      display.className = "custom-select-display " + opt.className;
       list.style.display = "none";
     });
     list.appendChild(item);

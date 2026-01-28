@@ -47,3 +47,21 @@ select { border: 1px solid white; }
 /* Links */
 a { color: #666666; } /* Very dark, almost invisible - Only for the underline in a link */
 a span, a b, a i { color: #ffffff; } /* Put one of the tags inside a link, and it shows well */
+
+/* Rating color coding */
+.rating-rubbish { color: #B22222; } /* Firebrick - not too bright red */
+.rating-bronze { color: #DAA520; } /* Goldenrod */
+.rating-silver { color: #F0F0F0; } /* Light gray, closer to white */
+.rating-gold { color: #FFFF00; } /* Bright yellow */
+
+/* For custom select items */
+.custom-select-item.rating-rubbish { color: #B22222; }
+.custom-select-item.rating-bronze { color: #DAA520; }
+.custom-select-item.rating-silver { color: #F0F0F0; }
+.custom-select-item.rating-gold { color: #FFFF00; }
+
+/* For custom select display */
+.custom-select-display.rating-rubbish { color: #B22222; }
+.custom-select-display.rating-bronze { color: #DAA520; }
+.custom-select-display.rating-silver { color: #F0F0F0; }
+.custom-select-display.rating-gold { color: #FFFF00; }
