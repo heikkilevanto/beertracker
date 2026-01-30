@@ -70,4 +70,10 @@ Data flows from browser forms to index.cgi, which calls module post*() functions
 - **Context Usage**: `my $username = $c->{username}; my $url = $c->{url};`
 - **Scraping Output**: `print encode_json({ maker => $maker, beer => $beer, alc => $alc });`
 
-Focus on direct SQL, context passing, and CGI dispatch. Avoid over-abstraction; prioritize readability and direct data manipulation.
+## Priorities
+- Focus on direct SQL, context passing, and CGI dispatch. Avoid over-abstraction; prioritize readability and direct data manipulation.
+- Be precise and explicit in all code generation. No fluff
+- Do ask clarifying questions if requirements are ambiguous. 
+- don't try to be too clever or use advanced Perl features unnecessarily. Keep it simple and maintainable.
+
+
