@@ -117,7 +117,7 @@ sub postperson {
   my $c = shift; # context
   # Validate
   my $name = $c->{cgi}->param("Name");
-  error ("A Person must have a name" )
+  util::error ("A Person must have a name" )
     unless $name;
   db::postrecord($c, "PERSONS");
   return;
