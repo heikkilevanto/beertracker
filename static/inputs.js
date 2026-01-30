@@ -83,15 +83,45 @@ function initDropdown(container) {
 function filterItems(filterInput, dropdownList) {
   const selbrewtype = document.getElementById("selbrewtype");
   const filter = filterInput.value.toLowerCase();
+  const isLocationFilter = filter.startsWith('@');
+  const isDotFilter = filter === '.';
+  let searchTerm = filter;
+  
+  // If user types just a dot, use the current selected location
+  if (isDotFilter) {
+    const locationInput = document.querySelector('input[name="Location"][type="hidden"]');
+    if (locationInput && locationInput.value) {
+      // Get the location name from the visible input
+      const locationFilter = locationInput.closest('.dropdown').querySelector('.dropdown-filter');
+      if (locationFilter && locationFilter.value) {
+        // Remove everything after the first '[' and trim
+        let locName = locationFilter.value.split('[')[0].trim();
+        searchTerm = locName.toLowerCase();
+      }
+    }
+  } else if (isLocationFilter) {
+    searchTerm = filter.substring(1);
+  }
+  
   Array.from(dropdownList.children).forEach(item => {
     let disp = '';
     const brewtype = item.getAttribute("brewtype");
     if (selbrewtype && brewtype && selbrewtype.value !== brewtype) {
       disp = 'none';
     }
-    if (!item.textContent.toLowerCase().includes(filter)) {
-      disp = 'none';
+    
+    // Filter by location (seenat) if starts with @ or is just a dot, otherwise by display text
+    if (isLocationFilter || isDotFilter) {
+      const seenat = (item.getAttribute("seenat") || "").toLowerCase();
+      if (!seenat.includes(searchTerm)) {
+        disp = 'none';
+      }
+    } else {
+      if (!item.textContent.toLowerCase().includes(searchTerm)) {
+        disp = 'none';
+      }
     }
+    
     item.style.display = disp;
   });
 }

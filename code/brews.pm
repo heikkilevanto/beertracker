@@ -400,10 +400,12 @@ sub selectbrew {
       Locations.Name as Producer,
       BREWS.Alc,
       BREWS.DefPrice,
-      BREWS.DefVol
+      BREWS.DefVol,
+      GROUP_CONCAT(DISTINCT SeenLocations.Name) as SeenAt
     from BREWS
     left join GLASSES on GLASSES.Brew= BREWS.ID
     left join LOCATIONS on LOCATIONS.Id = BREWS.ProducerLocation
+    left join LOCATIONS as SeenLocations on SeenLocations.Id = GLASSES.Location
     group by BREWS.id
     order by max(GLASSES.Timestamp) DESC
     ";
@@ -413,7 +415,7 @@ sub selectbrew {
   my $opts = "";
   my $current = "";
 
-  while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol )  = $list_sth->fetchrow_array ) {
+  while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $seenat )  = $list_sth->fetchrow_array ) {
     if ( $id eq $selected ) {
       $current = $na;
     }
@@ -427,7 +429,9 @@ sub selectbrew {
     $alc = $alc || "";
     $defprice = $defprice || "";
     $defvol = $defvol || "";
-    $opts .= "<div class='dropdown-item' id='$id' alc='$alc' defprice='$defprice' defvol='$defvol' brewtype='$bt' >$disp</div>\n";
+    $seenat = $seenat || "";
+    $opts .= "<div class='dropdown-item' id='$id' alc='$alc' " .
+       "defprice='$defprice' defvol='$defvol' brewtype='$bt' seenat='$seenat' >$disp</div>\n";
   }
   my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew" );
 
