@@ -51,7 +51,7 @@ sub selectbrewtype {
   }
   util::error ("No brew types in the database. Insert some dummy glasses")
     unless ($opts);
-  my $s = "<select name='selbrewtype' id='selbrewtype' onChange='selbrewchange(this);'>\n" .
+  my $s = "<select name='selbrewtype' id='selbrewtype' onChange='selbrewchange(this);' style='max-width:100px; width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;'>\n" .
     $opts . "</select>\n";
   my $script = <<'SCRIPT';
     <script>
@@ -160,7 +160,7 @@ sub inputform {
     "</td></tr>\n";
 
   # Brew style
-  print "<tr><td style='vertical-align:top'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
+  print "<tr><td width='100px' style='vertical-align:top; max-width:100px;'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
   print "<td>\n";
 
   # Brew, or  subtype
