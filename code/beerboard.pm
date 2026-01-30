@@ -98,7 +98,6 @@ sub beerboard {
       my $beerstyle = styles::beercolorstyle($c, $processed_data->{sty}, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
 
       my $dispid = $id;
-      $dispid = "&nbsp;&nbsp;$id"  if ( length($dispid) < 2);
 
       my $seenline = seenline($c, $e->{brew_id});
 
@@ -419,7 +418,7 @@ sub render_beer_row {
   my $expanded_display = ($extraboard == $id) ? 'table-row' : 'none';
   # Compact row
   print "<tr id='compact_$id' style='$bg display: $compact_display;'>\n";
-  print "<td align=right $beerstyle><a href='#' onclick=\"toggleBeer('$id'); return false;\"><span $beerstyle>$dispid</span></a></td>\n";
+  print "<td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" style=\"cursor: pointer;\"><span $beerstyle>#$dispid</span></td>\n";
   print "<td>$buttons_compact</td>\n";
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
   print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
@@ -432,8 +431,8 @@ sub render_beer_row {
   print "</tr>\n";
   # Expanded rows
   print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
-  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td align=right $beerstyle>";
-  print "<a href='#' onclick=\"toggleBeer('$id'); return false;\"><span $beerstyle id='here'>$dispid</span></a> ";
+  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" style=\"cursor: pointer;\">";
+  print "<span $beerstyle id='here'>#$dispid</span> ";
   print "</td>\n";
   print "<td colspan=4 >";
   print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width:100px'>\n";
