@@ -46,6 +46,7 @@ sub listrecords {
   my $where = shift || "";
   my $params = shift || undef ;  # params for the sql
   my $extraparams = shift || undef;  # params for special fields, like lat/long to measure from
+  my $maxrecords = shift || 20;  # show this many records initially, rest hidden
 
   my @fields = db::tablefields($c, $table, "", 1);
   my $order = "";
@@ -167,7 +168,15 @@ sub listrecords {
   my $cutoff = util::datestr("%F", -7);  # a week ago, display full date
 
   my $first = 1;
+  my $rowcount = 0;
+  my $hashidden = 0;  # Flag to track if we have hidden rows
   while ( my @rec = $list_sth->fetchrow_array ) {
+    $rowcount++;
+    my $hidden = "";
+    if ( $rowcount > $maxrecords ) {
+      $hidden = " hidden";
+      $hashidden = 1;
+    }
     my $tds = "";
     my $id = $rec[0]; # Id has to be first if using the Check pseudofield
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
@@ -175,6 +184,7 @@ sub listrecords {
       my $fn = $fields[$i];
       my $linebreak = linebreak($c,$fn);
       if ( $linebreak ) {
+        $linebreak =~ s/<tr>/<tr$hidden>/ if $hidden;  # Apply hidden to linebreak TRs
         $tds .= $linebreak;
         $first = 0;
         next;
@@ -235,15 +245,20 @@ sub listrecords {
       } elsif ( $fn eq "Photo" ) {
         $v = photos::imagetag($c,$v,"thumb");
       } elsif ( $fn eq "IsGeneric" ) {
-        $v = "Yes" if ($v);
+        $v = "Gen" if ($v);
       }
       $tds .= "<td $styles[$i] $data $onclick>$v</td>\n";
     }
 
-    $s .= "<tr data-first=1 class='top-border'>\n"; # in-between TRs don't have data_first
+    $s .= "<tr data-first=1 class='top-border'$hidden>\n"; # in-between TRs don't have data_first
     $s .= "$tds</tr>\n";
   }
   $s .= "</tbody></table>\n";
+  if ($hashidden) {
+    $s .= "<div style='text-align: left; margin-top: 10px;'>";
+    $s .= "<a href='javascript:void(0);' onclick='showMoreRecords(this);'><span>More...</span></a>";
+    $s .= "</div>\n";
+  }
   if ($geotable) {
     $s .= "<script>geotabledist();</script>\n";
   }

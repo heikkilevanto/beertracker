@@ -29,6 +29,19 @@ function dochangefilter (inputElement, gen) {
       filters[col] = new RegExp(filterinp.value, 'i')
     }
   }
+  
+  // When filtering, clear all hidden attributes to show all matching rows
+  const hiddenRows = table.querySelectorAll('tr[hidden]');
+  hiddenRows.forEach(row => {
+    row.removeAttribute('hidden');
+  });
+  
+  // Also hide the "More..." link if it exists
+  const moreLink = table.nextElementSibling;
+  if (moreLink && moreLink.tagName === 'DIV' && moreLink.querySelector('a[onclick*="showMoreRecords"]')) {
+    moreLink.style.display = 'none';
+  }
+  
   const firstrows = table.querySelectorAll('tbody tr[data-first]');
   for (let r = 0; r < firstrows.length; r++) {
     if (gen !== filterGeneration) {
@@ -207,5 +220,22 @@ function extractSortKey(recordRows, columnIndex) {
 function toggleElement(element) {
   if (element) {
     element.style.display = (element.style.display === 'none') ? 'block' : 'none';
+  }
+}
+
+// Show more records by removing the hidden attribute from all hidden TR elements
+function showMoreRecords(link) {
+  // Find the table before this link
+  const moreDiv = link.parentElement;
+  const table = moreDiv.previousElementSibling;
+  
+  if (table && table.tagName === 'TABLE') {
+    const hiddenRows = table.querySelectorAll('tr[hidden]');
+    hiddenRows.forEach(row => {
+      row.removeAttribute('hidden');
+    });
+    
+    // Remove the "More..." link after revealing all rows
+    moreDiv.style.display = 'none';
   }
 }
