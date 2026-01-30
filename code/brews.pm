@@ -401,11 +401,15 @@ sub selectbrew {
       BREWS.Alc,
       BREWS.DefPrice,
       BREWS.DefVol,
-      GROUP_CONCAT(DISTINCT SeenLocations.Name) as SeenAt
+      GROUP_CONCAT(DISTINCT SeenLocations.Name) as SeenAt,
+      br.rating_count,
+      br.average_rating,
+      br.comment_count
     from BREWS
     left join GLASSES on GLASSES.Brew= BREWS.ID
     left join LOCATIONS on LOCATIONS.Id = BREWS.ProducerLocation
     left join LOCATIONS as SeenLocations on SeenLocations.Id = GLASSES.Location
+    left join brew_ratings br on BREWS.Id = br.brew
     group by BREWS.id
     order by max(GLASSES.Timestamp) DESC
     ";
@@ -415,17 +419,26 @@ sub selectbrew {
   my $opts = "";
   my $current = "";
 
-  while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $seenat )  = $list_sth->fetchrow_array ) {
+  while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {
     if ( $id eq $selected ) {
       $current = $na;
     }
     my $disp = "";
-    $disp .= $na if ($na);
-    $disp = "$pr: $disp  " if ($pr && $na !~ /$pr/ );
-    my $disptype = $su;
-    $disptype .= $bt unless ($su);
-    $disp .= " [$disptype]";
+    if ($pr && $na !~ /$pr/ ) {
+      $disp .= "<i><span style='font-size: x-small;'>$pr:</span></i> ";
+    }
+    $disp .= "<b>$na</b>" if ($na);
+    $disp .= " <span style='font-size: xx-small;'>";
+    $disp .= " " . util::unit($alc, "%") if $alc;
+    my $style_html = styles::brewstyledisplay($c, $bt, $su);
+    # Remove main type if there's a subtype (e.g., [Wine,Red] -> [Red])
+    if ($su) {
+      $style_html =~ s/\[$bt,([^\]]+)\]/[$1]/;
+    }
+    $disp .= $style_html;
     $disp .= "&nbsp;(Gen)" if $generic;
+    $disp .= " " . comments::avgratings($c, $rating_count, $average_rating, $comment_count) if (!$generic);
+    $disp .= "</span>";
     $alc = $alc || "";
     $defprice = $defprice || "";
     $defvol = $defvol || "";
