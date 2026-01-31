@@ -201,10 +201,9 @@ sub listrecords {
         $v = "[$v]" if ($v);
       } elsif ( $fn eq "Type" ) {
         $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
-        if ($c->{mobile}) {
-          $v =~ s/^(.)[^,]+,*/$1/;  # Shorten restaurant to r, etc
-        } else {
-          $v = "[$v]" if ($v);
+        if ($v) {
+          my ($brewtype, $subtype) = split(/,\s*/, $v, 2);  # Split on comma
+          $v = styles::brewstyledisplay($c, $brewtype, $subtype);
         }
       } elsif ( $fn eq "Alc" ) {
         $v = util::unit($v,"%") if ($v);
