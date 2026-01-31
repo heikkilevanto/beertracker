@@ -49,7 +49,7 @@ sub update_taps {
 
     if ($current) {
       if ($current->{Brew} == $tap->{brew_id}) {
-        print STDERR "taps: Tap $tap_num beer unchanged\n";
+        #print STDERR "taps: Tap $tap_num beer unchanged\n";
       } else {
         # Close old tap
         my $close_sql = "UPDATE tap_beers SET Gone = ? WHERE Id = ?";

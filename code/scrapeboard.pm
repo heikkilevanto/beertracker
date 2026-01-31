@@ -110,9 +110,16 @@ sub updateboard {
     } else {
       # Insert new brew
       my $short_style = styles::shortbeerstyle($style);
-      my $sql = "INSERT INTO BREWS (Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation, DefPrice, DefVol) VALUES (?, 'Beer', ?, ?, ?, ?, ?, ?)";
+      # Extract year from beer name if present (pattern: 20[23][0-9])
+      my $year = undef;
+      if ($beer =~ /(20[23][0-9])/) {
+        $year = $1;
+      }
+      my $sql = "INSERT INTO BREWS ".
+        "(Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation, DefPrice, DefVol, Year) " .
+        "VALUES (?, 'Beer', ?, ?, ?, ?, ?, ?, ?)";
       my $sth = $c->{dbh}->prepare($sql);
-      $sth->execute($beer, $short_style, $style, $alc, $prod_id, $defprice, $defvol);
+      $sth->execute($beer, $short_style, $style, $alc, $prod_id, $defprice, $defvol, $year);
       $brew_id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef);
       $inserted_brews++;
       print STDERR "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";

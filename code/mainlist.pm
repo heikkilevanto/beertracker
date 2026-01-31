@@ -348,7 +348,6 @@ sub oneday {
     numbersline($c,$rec,$balc);
     commentlines($c,$rec);
     buttonline($c,$rec);
-    #print "</p>\n";
     print "<br/>\n";
   }
   sumline($c, $locname, $locdrsum, $locprsum) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
