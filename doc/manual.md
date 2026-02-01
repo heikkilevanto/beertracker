@@ -163,6 +163,27 @@ When you pick a beer you've had before, the system tries to guess the price base
 
 ---
 
+## Comments and Ratings
+
+You can add comments and ratings to any entry. These show up in the full list and help you remember what you thought about different beers.
+
+**Adding comments**: In the full list below the input form, find the entry you want to comment on and click the little speech bubble icon or "comment" link. A text box appears where you can write your thoughts. Comments can be as short or long as you want.
+
+**Ratings**: When commenting, you can also give a rating from 1-10. Just select a rating from the dropdown. This is useful for remembering which beers you liked.
+
+**Photos**: You can attach a photo to any entry - handy for remembering what the beer looked like, or capturing the scene at a restaurant. Click the Photo button. On a phone that should open up the camera, on machines without cameras you can still upload a photo.
+
+**People**: You can tag who you were drinking with. This is especially useful for restaurant and night entries to remember who was at dinner. Just add their names when commenting or editing. Only one name
+per comment.
+
+**Multiple comments**: You can add multiple comments to the same entry over time. Each comment gets timestamped, so you can track how your opinion changes.
+
+**Empty entries for comments**: Sometimes you want to comment on a general experience rather than a specific drink. That's what the "Feedback" record type is for - it creates an entry with no drink details that you can hang comments on.
+
+**Finding comments**: Use the "Comments" filter link at the top of the full list to see only entries that have comments. Similarly, "Ratings" shows only entries you've rated. This makes it easy to review your tasting notes when deciding what to order.
+
+---
+
 ## Editing
 The input form is also used for editing old records. In that case there are
 a few small differences:
