@@ -10,14 +10,15 @@ function initDropdown(container) {
 
   // Select item
   dropdownList.addEventListener("click", (event) => {
-    if (!event.target.classList.contains("dropdown-item")) return;
+    const item = event.target.closest('.dropdown-item');
+    if (!item) return;
 
-    filterInput.value = event.target.textContent;
+    filterInput.value = item.textContent;
     filterInput.oldvalue = "";
-    hiddenInput.value = event.target.id;
+    hiddenInput.value = item.id;
     dropdownList.style.display = "none";
 
-    if (event.target.id === "new") {
+    if (item.id === "new") {
       container.querySelector(".dropdown-main").hidden = true;
       if (newDiv) {
         newDiv.hidden = false;
@@ -31,21 +32,21 @@ function initDropdown(container) {
     } else {
       // update alc if present
       const alcinp = document.getElementById("alc");
-      const selalc = event.target.getAttribute("alc");
+      const selalc = item.getAttribute("alc");
       if (alcinp && selalc) alcinp.value = selalc + "%";
 
       // update pr if present
       const prinp = document.getElementById("pr");
-      const selpr = event.target.getAttribute("defprice");
+      const selpr = item.getAttribute("defprice");
       if (prinp && selpr && selpr.trim()) prinp.value = selpr + ".-";
 
       // update vol if present
       const volinp = document.getElementById("vol");
-      const selvol = event.target.getAttribute("defvol");
+      const selvol = item.getAttribute("defvol");
       if (volinp && selvol && selvol.trim()) volinp.value = selvol + "c"
 
       // show note if generic brew
-      if ( event.target.textContent.includes("(Gen)") ){
+      if ( item.textContent.includes("(Gen)") ){
         const noteline = document.getElementById("noteline");
         if ( noteline ) noteline.hidden = false;
         const toggle = document.getElementById("notetag");
