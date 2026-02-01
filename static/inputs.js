@@ -85,10 +85,10 @@ function filterItems(filterInput, dropdownList) {
   const selbrewtype = document.getElementById("selbrewtype");
   const filter = filterInput.value.toLowerCase();
   const isLocationFilter = filter.startsWith('@');
-  const isDotFilter = filter === '.';
+  const isDotFilter = filter === '.' || filter === '@';
   let searchTerm = filter;
   
-  // If user types just a dot, use the current selected location
+  // If user types just a dot or @, use the current selected location
   if (isDotFilter) {
     const locationInput = document.querySelector('input[name="Location"][type="hidden"]');
     if (locationInput && locationInput.value) {
