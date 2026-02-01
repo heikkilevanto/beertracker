@@ -336,9 +336,10 @@ When price is left empty, the system attempts to auto-fill from:
 2. **Previous entries** - Looks for most recent glass of same brew, location, and volume
 3. If neither found, leaves empty (but form validation requires a value)
 
-**Currency conversion (future feature):**
-- Code includes support for EUR and USD conversion (not currently active)
-- Would convert foreign currencies to DKK using fixed rates
+**Currency conversion (planned feature):**
+- Code framework exists for EUR and USD conversion, but is not currently implemented
+- When activated, would convert foreign currencies to DKK using fixed rates
+- See `postglass.pm` lines 342-346 for the conversion code (currently unused)
 
 **Brew defaults:**
 - When recording a brew for the first time (no DefPrice set), this price and volume become the brew's defaults
@@ -664,7 +665,7 @@ Fixing or updating a previous entry:
 
 Entering drinks from a previous date:
 
-1. Click the up-arrow (if hidden fields not visible) - currently not explicitly in the form code, but mentioned in old docs
+1. Date and time fields are always visible in the current implementation
 2. Clear the date field and enter date: `2024-01-15`
 3. Clear the time field and enter time: `20:30`
 4. Fill in all other fields (location, brew, volume, etc.)
