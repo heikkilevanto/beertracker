@@ -94,10 +94,10 @@ The time field records when you had the drink. Like the date field, it auto-fill
 - `23:55` - Standard HH:MM format
 - `2355` - Compact HHMM format (converted to 23:55)
 - `235859` - HHMMSS format (converted to 23:58:59)
-- `1` - Single digit hour (converted to 01:)
-- `15` - Two digit hour (converted to 15:00)
-- `15:` - Hour with colon (converted to 15:00)
-- `21:00:` - Incomplete seconds (auto-filled with current seconds)
+- `1` - Single digit hour (converted to 01:00, then seconds added)
+- `15` - Two digit hour (converted to 15:00, then seconds added)
+- `15:` - Hour with colon (converted to 15:00, then seconds added)
+- `21:00:` - Incomplete seconds (auto-filled with current seconds to 21:00:SS)
 
 **Time normalization:**
 The system automatically normalizes all time formats to `HH:MM:SS` internally:
