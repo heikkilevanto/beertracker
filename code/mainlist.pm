@@ -365,14 +365,30 @@ sub oneday {
 
 sub mainlist {
   my $c = shift;
-  my $date = util::param($c,"date",util::datestr("%F", 365) );
-  my $ndays = util::param($c, "ndays", 14 );
+  my $date = util::param($c,"date",util::datestr("%F") );
+  my $ndays = util::paramnumber($c, "ndays", 7 ) || 7;
   print STDERR "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
+  my $original_ndays = $ndays;
+  if (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays")) {
+    print qq{<a href="$c->{url}?o=$c->{op}&date=$date&ndays=$original_ndays"><b>Main list</b></a><br/>\n};
+    print qq{<form method="GET" style="display:inline;">\n};
+    print qq{<input type="hidden" name="o" value="$c->{op}" />\n};
+    print qq{Date: <input type="text" name="date" value="$date" style="width: 8em;" /> \n};
+    print qq{Days: <input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> \n};
+    print qq{<input type="submit" value="Show" />\n};
+    print qq{</form><br/>\n};
+  } else {
+    print qq{<a href="$c->{url}?o=$c->{op}&date=$date&ndays=$original_ndays"><b>Main list $original_ndays days back from $date</b></a><br/>\n};
+  }
   $c->{sth} = glassquery($c, $date);
   while ( $ndays-- ) {
     oneday($c);
   }
-
+  my $next_rec = db::peekrow($c->{sth});
+  if ($next_rec) {
+    my ($new_date) = split(' ', $next_rec->{effdate});
+    print qq{<a href="$c->{url}?o=$c->{op}&date=$new_date&ndays=$original_ndays"><span>Older records</span></a><br/>\n};
+  }
   $c->{sth}->finish;
 }
 
