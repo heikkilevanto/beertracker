@@ -39,6 +39,7 @@ sub monthstat {
     $where_clause .= " and $calmon_expr <= ?";
     push( @sql_params, $gend );
   }
+  $where_clause .= " and Brew is not null";
 
   my $sumsql = qq{
   select

@@ -126,6 +126,9 @@ Just type the number like `45` or `89`. The system adds the `.-` decoration auto
 
 If you've ordered this same beer at this place before, the price might auto-fill. Otherwise you need to enter it. Type **X** for free drinks.
 
+For "empty" glasses, that is notes on restaurants, nights, etc, you should enter the total price,
+including all the drinks you had there. Or set it to zero or **X** if you can not be bothered.
+
 ### Extra Fields
 
 Click "(more)" in the left column to reveal:
