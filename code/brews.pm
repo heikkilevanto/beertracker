@@ -331,7 +331,18 @@ sub editbrew {
   my $c = shift;
   my $p = {};
   my $submit = "Update";
-  if ( $c->{edit} =~ /new/i ) {
+  my $duplicate_id = $c->{duplicate};
+  if ($duplicate_id) {
+    # Load the brew to duplicate
+    my $sql = "select * from BREWS where id = ?";
+    my $get_sth = $c->{dbh}->prepare($sql);
+    $get_sth->execute($duplicate_id);
+    $p = $get_sth->fetchrow_hashref;
+    $get_sth->finish;
+    $p->{Id} = "new";
+    $submit = "Insert";
+    print "<b>Duplicating Brew $duplicate_id: $p->{Name}</b><br/>\n";
+  } elsif ( $c->{edit} =~ /new/i ) {
     $p->{Id} = "new";
     $p->{BrewType} = "Beer"; # Some decent defaults
     $p->{SubType} = "NEIPA"; # More for guiding the input than true values
@@ -357,6 +368,7 @@ sub editbrew {
     if ( $p->{Id} ne "new" ) {
       # Editing existing record: show Edit button, hide submit
       print "<button type='button' class='edit-enable-btn' onclick='enableEditing(this.form)'>Edit</button>\n";
+      print "<button type='button' onclick=\"window.location.href='$c->{url}?o=$c->{op}&e=new&duplicate=$p->{Id}'\">Duplicate</button>\n";
       print "<input type='submit' name='submit' value='$submit Brew' class='edit-submit-btn' hidden />\n";
     } else {
       # New record: normal submit button

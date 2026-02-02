@@ -154,6 +154,7 @@ $c->{edit}= util::param($c,"e");  # Record to edit
 $c->{qry} = util::param($c,"q");  # filter query, greps the list
 $c->{op}  = util::param($c,"o");  # operation, to list breweries, locations, etc
 $c->{sort} = util::param($c,"s");  # Sort key
+$c->{duplicate} = util::param($c,"duplicate");  # ID of brew to duplicate
 $c->{href} = "$c->{url}?o=$c->{op}";
 
 
