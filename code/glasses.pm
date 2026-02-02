@@ -83,6 +83,25 @@ sub selectbrewtype {
                 td.style.display = 'none';
           }
         }
+        // Prefill subtype from location when changing to Restaurant
+        if (val === "Restaurant") {
+          const locDropdown = document.getElementById("dropdown-Location");
+          if (locDropdown) {
+            const locHidden = locDropdown.querySelector("input[type=hidden]");
+            if (locHidden && locHidden.value) {
+              const locItems = locDropdown.querySelectorAll(".dropdown-item");
+              locItems.forEach(item => {
+                if (item.id === locHidden.value) {
+                  const locsubtype = item.getAttribute("locsubtype");
+                  const selbrewsubtype = document.getElementById("selbrewsubtype");
+                  if (selbrewsubtype && locsubtype) {
+                    selbrewsubtype.value = locsubtype;
+                  }
+                }
+              });
+            }
+          }
+        }
       }
     </script>
 SCRIPT

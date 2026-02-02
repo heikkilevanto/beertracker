@@ -404,7 +404,8 @@ sub selectlocation {
     if ($lat && $lon) {
       $dist = "<span lat=$lat lon=$lon style='pointer-events:none; font-size: xx-small;'> ??? </span>";
     }
-    $opts .= "      <div class='dropdown-item' id='$id'>$name $type $dist</div>\n";
+    my $substtr = $subtype ? "locsubtype='$subtype'" : "";
+    $opts .= "      <div class='dropdown-item' id='$id' $substtr>$name $type $dist</div>\n";
     if ( $id eq $selected ) {
       $current = $name;
     }

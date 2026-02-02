@@ -45,6 +45,14 @@ function initDropdown(container) {
       const selvol = item.getAttribute("defvol");
       if (volinp && selvol && selvol.trim()) volinp.value = selvol + "c"
 
+      // update subtype if Restaurant brewtype
+      const selbrewtype = document.getElementById("selbrewtype");
+      const selbrewsubtype = document.getElementById("selbrewsubtype");
+      const locsubtype = item.getAttribute("locsubtype");
+      if (selbrewtype && selbrewsubtype && locsubtype && selbrewtype.value === "Restaurant") {
+        selbrewsubtype.value = locsubtype;
+      }
+
       // show note if generic brew
       if ( item.textContent.includes("(Gen)") ){
         const noteline = document.getElementById("noteline");
