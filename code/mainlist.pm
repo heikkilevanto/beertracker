@@ -339,10 +339,13 @@ sub oneday {
       $locdrsum = 0;
       $locprsum = 0;
     }
-    $dayprsum += abs($rec->{price}) if ($rec->{price} && $rec->{price}=~/^-?[0-9.]/);
+    # Sum prices only for non-empty glasses, skipping nights and restaurants
+    if ($rec->{price} && $rec->{brewid}) {
+      $dayprsum += abs($rec->{price});
+      $locprsum += abs($rec->{price})  if ($rec->{price} && $rec->{price}=~/^-?[0-9.]/);
+    }
       # TODO - Do we still have old negative prices from boxes?
     $daydrsum += $rec->{drinks} if ($rec->{drinks});
-    $locprsum += abs($rec->{price})  if ($rec->{price} && $rec->{price}=~/^-?[0-9.]/);
     $locdrsum += $rec->{drinks} if ($rec->{drinks});
     nameline($c, $rec, $loc, $locname);
     numbersline($c,$rec,$balc);
