@@ -199,6 +199,7 @@ sub topstats {
  from GLASSES
  where username = ?
  and effdate = ( select max (strftime('%Y-%m-%d', timestamp, '-06:00' ) ) from GLASSES )
+ and Brew is not null
    ";
   my $rec = db::queryrecord($c, $sql, $c->{username});
   util::error("Something wrong in topstats query: $sql") unless ($rec);
