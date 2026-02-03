@@ -370,15 +370,14 @@ sub mainlist {
   print STDERR "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
   my $original_ndays = $ndays;
   if (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays")) {
-    print qq{<a href="$c->{url}?o=$c->{op}&date=$date&ndays=$original_ndays"><b>Main list</b></a><br/>\n};
-    print qq{<form method="GET" style="display:inline;">\n};
+    print qq{<b>Main List</b><br/>\n};
+    print qq{<form method="GET">\n};
     print qq{<input type="hidden" name="o" value="$c->{op}" />\n};
-    print qq{Date: <input type="text" name="date" value="$date" style="width: 8em;" /> \n};
-    print qq{Days: <input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> \n};
-    print qq{<input type="submit" value="Show" />\n};
+    print qq{<table>\n};
+    print qq{<tr><td>Date from:</td><td><input type="text" name="date" value="$date" style="width: 8em;" /></td></tr>\n};
+    print qq{<tr><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days back</td></tr>\n};
+    print qq{</table>\n};
     print qq{</form><br/>\n};
-  } else {
-    print qq{<a href="$c->{url}?o=$c->{op}&date=$date&ndays=$original_ndays"><b>Main list $original_ndays days back from $date</b></a><br/>\n};
   }
   $c->{sth} = glassquery($c, $date);
   while ( $ndays-- ) {
