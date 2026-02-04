@@ -35,6 +35,10 @@ sub clearcachefiles {
         or error ("Could not unlink $pf $!");
       }
   }
+  # Create a zero-sized file called username.last
+  my $lastfile = $datadir . $c->{username} . '.last';
+  open my $fh, '>', $lastfile or util::error("Could not create $lastfile: $!");
+  close $fh;
 } # clearcachefiles
 
 ################################################################################
