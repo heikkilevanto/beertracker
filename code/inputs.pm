@@ -32,13 +32,24 @@ sub dropdown {
   my $newfieldprefix= shift;   # Prefix for new input fields
   my $skipnewfields = shift || "";
   my $disabled      = shift || "";   # "disabled" or ""
+  my $enablescan    = shift || "";   # "scan" to enable barcode scanning
 
   my $newdiv = "";
+  my $actions = "";
+  
+  # Build combined actions line if scan or new enabled
+  if ($enablescan eq "scan") {
+    $actions .= "<span class='action-link' data-action='scan' style='cursor: pointer;'>(scan)</span>";
+  }
   if ($tablename) {
-    $options = "<div class='dropdown-item' id='new'>(new)</div>\n$options";
+    $actions .= "<span class='action-link' data-action='new' style='cursor: pointer; float: right;'>(new)</span>";
     $newdiv  = "<div class='dropdown-new' id='newdiv-$inputname' hidden>\n";
     $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname, "", $skipnewfields);
     $newdiv .= "</div>";
+  }
+  
+  if ($actions) {
+    $options = "<div class='dropdown-item' id='actions'>$actions</div>\n$options";
   }
 
   my $s = <<"HTML";
