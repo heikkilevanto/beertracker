@@ -249,7 +249,7 @@ sub load_beerlist_from_db {
   my $sql = "SELECT ct.Tap, ct.Brew, ct.BrewName AS beer, pl.Name AS maker, pl.Id AS maker_id, b.SubType AS type, b.Alc AS alc,
                     tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
                     br.rating_count, br.average_rating, br.comment_count, strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
-                    strftime('%H:%M', tb.FirstSeen) as first_seen_time
+                    strftime('%H:%M', tb.FirstSeen) as first_seen_time, strftime('%s', tb.FirstSeen) as first_seen_ts
              FROM current_taps ct
              JOIN tap_beers tb ON ct.Id = tb.Id
              JOIN brews b ON ct.Brew = b.Id
@@ -286,7 +286,8 @@ sub load_beerlist_from_db {
       average_rating => $row->{average_rating},
       comment_count => $row->{comment_count},
       first_seen_date => $row->{first_seen_date},
-      first_seen_time => $row->{first_seen_time}
+      first_seen_time => $row->{first_seen_time},
+      first_seen_ts => $row->{first_seen_ts}
     };
   }
   
@@ -344,6 +345,7 @@ sub prepare_beer_entry_data {
     comment_count => $e->{comment_count},
     first_seen_date => $e->{first_seen_date},
     first_seen_time => $e->{first_seen_time},
+    first_seen_ts => $e->{first_seen_ts},
     first_seen_date_formatted => format_date_relative($e->{first_seen_date}, $e->{first_seen_time})
   };
 }
@@ -411,9 +413,8 @@ sub render_beer_buttons {
 
 sub render_beer_row {
   my ($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
-  my $now_utc6 = time() - 6 * 3600;
-  my $today = strftime('%Y-%m-%d', localtime($now_utc6));
-  my $bg = ($processed_data->{first_seen_date} && $processed_data->{first_seen_date} eq $today) ? "background-color: $c->{altbgcolor}; " : "";
+  my $is_new = $processed_data->{first_seen_ts} && (time() - $processed_data->{first_seen_ts}) < 86400;
+  my $bg = $is_new ? "background-color: $c->{altbgcolor}; " : "";
   my $compact_display = ($extraboard == $id) ? 'none' : 'table-row';
   my $expanded_display = ($extraboard == $id) ? 'table-row' : 'none';
   # Compact row
