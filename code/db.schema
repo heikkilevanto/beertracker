@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-01-27 13:33 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-02-06 14:57 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -52,7 +52,10 @@ create table brews (
     Flavor text, -- Hops, Grapes, spices, barrels, etc
     Year decimal,
     Details text, -- Other things worth noticing
-    IsGeneric integer, DefPrice, DefVol,  -- House wine, mixed beer. "1" for generics, null or "0" for not
+    IsGeneric text,  -- House wine, mixed beer. "1" for generics, null or "0" for not
+    DefPrice text, -- default price
+    DefVol text,   -- default volume, matching the def price
+    Barcode text,  -- bar code on the bottle or box
 
     foreign key (ProducerLocation) references Locations(id)
 );
@@ -424,8 +427,7 @@ from tap_beers tb
 join brews b on tb.Brew = b.Id
 left join locations pl on b.ProducerLocation = pl.Id
 where tb.Gone is null
-order by tb.Location, tb.Tap
-;
+order by tb.Location, tb.Tap;
 
 -- view brew_taps
 drop view if exists brew_taps;
