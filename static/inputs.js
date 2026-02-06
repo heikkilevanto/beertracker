@@ -13,54 +13,69 @@ function initDropdown(container) {
     const item = event.target.closest('.dropdown-item');
     if (!item) return;
 
+    // Check if clicking on an action link (scan/new)
+    const actionLink = event.target.closest('.action-link');
+    if (actionLink) {
+      const action = actionLink.getAttribute('data-action');
+      if (action === 'scan') {
+        // Start barcode scanning
+        scanBarcodeForDropdown(container, filterInput, hiddenInput, dropdownList);
+        return;
+      } else if (action === 'new') {
+        // Show new form
+        filterInput.value = '(new)';
+        filterInput.oldvalue = "";
+        hiddenInput.value = 'new';
+        dropdownList.style.display = "none";
+        container.querySelector(".dropdown-main").hidden = true;
+        if (newDiv) {
+          newDiv.hidden = false;
+          const inputs = newDiv.querySelectorAll('[data-required="1"]');
+          inputs.forEach(inp => {
+            if (inp.offsetParent != null) inp.setAttribute("required", "required");
+            else inp.removeAttribute("required");
+          });
+          newDiv.querySelector("input")?.focus();
+        }
+        return;
+      }
+    }
+
+    // Regular item selection
     filterInput.value = item.textContent;
     filterInput.oldvalue = "";
     hiddenInput.value = item.id;
     dropdownList.style.display = "none";
 
-    if (item.id === "new") {
-      container.querySelector(".dropdown-main").hidden = true;
-      if (newDiv) {
-        newDiv.hidden = false;
-        const inputs = newDiv.querySelectorAll('[data-required="1"]');
-        inputs.forEach(inp => {
-          if (inp.offsetParent != null) inp.setAttribute("required", "required");
-          else inp.removeAttribute("required");
-        });
-        newDiv.querySelector("input")?.focus();
-      }
-    } else {
-      // update alc if present
-      const alcinp = document.getElementById("alc");
-      const selalc = item.getAttribute("alc");
-      if (alcinp && selalc) alcinp.value = selalc + "%";
+    // update alc if present
+    const alcinp = document.getElementById("alc");
+    const selalc = item.getAttribute("alc");
+    if (alcinp && selalc) alcinp.value = selalc + "%";
 
-      // update pr if present
-      const prinp = document.getElementById("pr");
-      const selpr = item.getAttribute("defprice");
-      if (prinp && selpr && selpr.trim()) prinp.value = selpr + ".-";
+    // update pr if present
+    const prinp = document.getElementById("pr");
+    const selpr = item.getAttribute("defprice");
+    if (prinp && selpr && selpr.trim()) prinp.value = selpr + ".-";
 
-      // update vol if present
-      const volinp = document.getElementById("vol");
-      const selvol = item.getAttribute("defvol");
-      if (volinp && selvol && selvol.trim()) volinp.value = selvol + "c"
+    // update vol if present
+    const volinp = document.getElementById("vol");
+    const selvol = item.getAttribute("defvol");
+    if (volinp && selvol && selvol.trim()) volinp.value = selvol + "c"
 
-      // update subtype if Restaurant brewtype
-      const selbrewtype = document.getElementById("selbrewtype");
-      const selbrewsubtype = document.getElementById("selbrewsubtype");
-      const locsubtype = item.getAttribute("locsubtype");
-      if (selbrewtype && selbrewsubtype && locsubtype && selbrewtype.value === "Restaurant") {
-        selbrewsubtype.value = locsubtype;
-      }
+    // update subtype if Restaurant brewtype
+    const selbrewtype = document.getElementById("selbrewtype");
+    const selbrewsubtype = document.getElementById("selbrewsubtype");
+    const locsubtype = item.getAttribute("locsubtype");
+    if (selbrewtype && selbrewsubtype && locsubtype && selbrewtype.value === "Restaurant") {
+      selbrewsubtype.value = locsubtype;
+    }
 
-      // show note if generic brew
-      if ( item.textContent.includes("(Gen)") ){
-        const noteline = document.getElementById("noteline");
-        if ( noteline ) noteline.hidden = false;
-        const toggle = document.getElementById("notetag");
-        if (toggle) toggle.hidden = true;
-      }
-
+    // show note if generic brew
+    if ( item.textContent.includes("(Gen)") ){
+      const noteline = document.getElementById("noteline");
+      if ( noteline ) noteline.hidden = false;
+      const toggle = document.getElementById("notetag");
+      if (toggle) toggle.hidden = true;
     }
   });
 
@@ -87,6 +102,75 @@ function initDropdown(container) {
   filterInput.addEventListener("keydown", (event) => {
     if (event.key === "Escape" || event.keyCode === 27) filterInput.blur();
   });
+}
+
+// Scan barcode and filter dropdown
+function scanBarcodeForDropdown(container, filterInput, hiddenInput, dropdownList) {
+  // Create a temporary hidden input for the scanner
+  const tempInput = document.createElement('input');
+  tempInput.type = 'hidden';
+  tempInput.id = 'temp-barcode-scan-' + Date.now();
+  document.body.appendChild(tempInput);
+  
+  // Start scanning
+  startBarcodeScanning(tempInput.id);
+  
+  // Poll for when the barcode is filled
+  const checkInterval = setInterval(() => {
+    if (tempInput.value) {
+      clearInterval(checkInterval);
+      const scannedCode = tempInput.value;
+      tempInput.remove();
+      
+      // Filter dropdown items by barcode
+      const items = Array.from(dropdownList.children);
+      const matches = items.filter(item => {
+        const itemBarcode = item.getAttribute('barcode');
+        return itemBarcode && itemBarcode === scannedCode;
+      });
+      
+      if (matches.length === 1) {
+        // Exactly one match - select it
+        const match = matches[0];
+        filterInput.value = match.textContent;
+        hiddenInput.value = match.id;
+        dropdownList.style.display = 'none';
+        
+        // Trigger the same updates as clicking the item
+        const alcinp = document.getElementById("alc");
+        const selalc = match.getAttribute("alc");
+        if (alcinp && selalc) alcinp.value = selalc + "%";
+        
+        const prinp = document.getElementById("pr");
+        const selpr = match.getAttribute("defprice");
+        if (prinp && selpr && selpr.trim()) prinp.value = selpr + ".-";
+        
+        const volinp = document.getElementById("vol");
+        const selvol = match.getAttribute("defvol");
+        if (volinp && selvol && selvol.trim()) volinp.value = selvol + "c";
+      } else if (matches.length > 1) {
+        // Multiple matches - show only those
+        items.forEach(item => {
+          item.style.display = matches.includes(item) ? '' : 'none';
+        });
+        filterInput.value = `[${matches.length} matches for ${scannedCode}]`;
+        dropdownList.style.display = 'block';
+      } else {
+        // No match - show message
+        filterInput.value = `No brew found with barcode ${scannedCode}`;
+        setTimeout(() => {
+          filterInput.value = '';
+          filterInput.focus();
+        }, 2000);
+      }
+    }
+  }, 100);
+  
+  // Timeout after 30 seconds
+  setTimeout(() => {
+    clearInterval(checkInterval);
+    tempInput.remove();
+  }, 30000);
 }
 
 function filterItems(filterInput, dropdownList) {

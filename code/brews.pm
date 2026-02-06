@@ -413,6 +413,7 @@ sub selectbrew {
       BREWS.Alc,
       BREWS.DefPrice,
       BREWS.DefVol,
+      BREWS.Barcode,
       GROUP_CONCAT(DISTINCT SeenLocations.Name) as SeenAt,
       br.rating_count,
       br.average_rating,
@@ -428,10 +429,10 @@ sub selectbrew {
   my $list_sth = $c->{dbh}->prepare($sql);
   $list_sth->execute();
 
-  my $opts = "";
+  my $opts = ""; 
   my $current = "";
 
-  while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {
+  while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $barcode, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {
     if ( $id eq $selected ) {
       $current = $na;
     }
@@ -454,11 +455,12 @@ sub selectbrew {
     $alc = $alc || "";
     $defprice = $defprice || "";
     $defvol = $defvol || "";
+    $barcode = $barcode || "";
     $seenat = $seenat || "";
     $opts .= "<div class='dropdown-item' id='$id' alc='$alc' " .
-       "defprice='$defprice' defvol='$defvol' brewtype='$bt' seenat='$seenat' >$disp</div>\n";
+       "defprice='$defprice' defvol='$defvol' brewtype='$bt' barcode='$barcode' seenat='$seenat' >$disp</div>\n";
   }
-  my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew" );
+  my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, "BREWS", "newbrew", "", "", "scan" );
 
   return $s;
 } # selectbrew
