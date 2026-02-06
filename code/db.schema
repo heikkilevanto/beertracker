@@ -463,5 +463,7 @@ create index idx_locations_name on locations (Name collate nocase);
 
 create index idx_tap_beers_brew_gone on tap_beers (Brew, Gone, FirstSeen);
 
+create index idx_brew_barcode on brews (Barcode);
+
 commit;
 
