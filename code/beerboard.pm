@@ -169,7 +169,7 @@ sub format_date_relative {
     $time_part = " at " . ($time_str lt "06:00" ? "($time_str)" : $time_str);
   }
   if ($date_str eq $today) {
-    return "today$time_part";
+    return "$time_part";
   } elsif ($date_str eq $yesterday) {
     return "yesterday$time_part";
   } else {
