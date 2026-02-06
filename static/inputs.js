@@ -150,6 +150,10 @@ function enableEditing(form) {
   const geoLinks = form.querySelectorAll('.geo-edit-links');
   geoLinks.forEach(link => link.hidden = false);
   
+  // Show barcode scan links
+  const barcodeLinks = form.querySelectorAll('.barcode-scan-link');
+  barcodeLinks.forEach(link => link.hidden = false);
+  
   // Hide Edit button, show Submit button(s)
   const editBtn = form.querySelector('.edit-enable-btn');
   if (editBtn) editBtn.hidden = true;

@@ -143,22 +143,27 @@ sub inputform {
         util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
       }
     } else {  # Regular input field
-      my $pass = "";
-      if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
-        # (that is lowercase 'alc'). Pass it to glass.alc
-        $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
-      }
-      my $required = "";
-      if ( $f =~ /Name|BrewType|SubType|LocType/i && $f !~ /OfficialName|FullName/i) {
-        if ( $inputprefix ) {
-          $required = "data-required='1'";
-        } else {
-          $required = "required";
+      if ( $f =~ /Barcode/i ) {
+        # Special handling for barcode field - add scan link
+        $form .= barcodeInput($c, $inpname, $rec->{$f}, $disabled );
+      } else {
+        my $pass = "";
+        if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
+          # (that is lowercase 'alc'). Pass it to glass.alc
+          $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
         }
+        my $required = "";
+        if ( $f =~ /Name|BrewType|SubType|LocType/i && $f !~ /OfficialName|FullName/i) {
+          if ( $inputprefix ) {
+            $required = "data-required='1'";
+          } else {
+            $required = "required";
+          }
+        }
+        $form .= "<td>\n";
+        $form .= "<input name='$inpname' $val $clr $pass $required $disabled/>\n";
+        $form .= $separatortag;
       }
-      $form .= "<td>\n";
-      $form .= "<input name='$inpname' $val $clr $pass $required $disabled/>\n";
-      $form .= $separatortag;
     }
     $form .= "</td></tr>\n";
   }
@@ -166,4 +171,23 @@ sub inputform {
 
   return $form;
 } # inputform
+
+################################################################################
+# Barcode input field with scan button
+################################################################################
+
+sub barcodeInput {
+  my $c = shift;
+  my $fieldname = shift || "Barcode";
+  my $value = shift || "";
+  my $disabled = shift || "";  # "disabled" or ""
+
+  my $s = "";
+  $s .= "<td>\n";
+  $s .= "<input name='$fieldname' id='$fieldname' value='$value' $clr $disabled />\n";
+  $s .= "<br>";
+  my $hiddenclass = $disabled ? "class='barcode-scan-link' hidden" : "class='barcode-scan-link'";
+  $s .= "<span onclick='startBarcodeScanning(\"$fieldname\")' $hiddenclass>&nbsp; (Scan)</span>\n";
+  return $s;
+} # barcodeInput
 
