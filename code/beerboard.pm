@@ -246,17 +246,22 @@ sub load_beerlist_from_db {
   my ($last_epoch) = $marker_sth->fetchrow_array;
   
   # Load from DB
-  my $sql = "SELECT ct.Tap, ct.Brew, ct.BrewName AS beer, pl.Name AS maker, pl.Id AS maker_id, b.SubType AS type, b.Alc AS alc,
-                    tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
-                    br.rating_count, br.average_rating, br.comment_count, strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
-                    strftime('%H:%M', tb.FirstSeen) as first_seen_time, strftime('%s', tb.FirstSeen) as first_seen_ts
-             FROM current_taps ct
-             JOIN tap_beers tb ON ct.Id = tb.Id
-             JOIN brews b ON ct.Brew = b.Id
-             LEFT JOIN locations pl ON b.ProducerLocation = pl.Id
-             LEFT JOIN brew_ratings br ON b.Id = br.brew
-             WHERE ct.Location = ?
-             ORDER BY ct.Tap";
+  my $sql = "SELECT 
+      ct.Tap, ct.Brew, ct.BrewName AS beer, 
+      pl.Name AS maker, pl.Id AS maker_id, 
+      b.SubType AS type, b.Alc AS alc,
+      tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
+      br.rating_count, br.average_rating, br.comment_count, 
+      strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
+      strftime('%H:%M', tb.FirstSeen) as first_seen_time, 
+      strftime('%s', tb.FirstSeen) as first_seen_ts
+    FROM current_taps ct
+      JOIN tap_beers tb ON ct.Id = tb.Id
+      JOIN brews b ON ct.Brew = b.Id
+      LEFT JOIN locations pl ON b.ProducerLocation = pl.Id
+      LEFT JOIN brew_ratings br ON b.Id = br.brew
+    WHERE ct.Location = ?
+    ORDER BY ct.Tap";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($loc_id);
   
