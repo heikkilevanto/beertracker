@@ -311,7 +311,7 @@ sub sumline {
   print "<table border=0 > <tr>";
   my $attr = "align='right'  ";
   print "<td>=</td>\n";
-  print "<td $attr width='50px' ><b>" . util::unit($prsum,"kr") . "</b></td>\n";
+  print "<td $attr width='50px' ><b>" . util::unit($prsum,".-") . "</b></td>\n";
   print "<td $attr width='50px' ><b>" . util::unit($drinksum, "d") . "</b></td>\n";
   print "<td $attr width='53px' ><b>" . util::unit($balc, "/₀₀") . "</b></td>\n";
   print "<td>&nbsp; <b>$txt</b></td>";
@@ -344,7 +344,7 @@ sub adjustment_form {
     my $sign = $current_adjustment_price >= 0 ? '+' : '';
     print qq{<div id='adjform_$form_id' style='display:none;'>
     <form method='POST' style='display:inline; margin-left:1em;'>
-      <span style='font-size:small;'>Adjustment: ${sign}${current_adjustment_price}kr</span>
+      <span style='font-size:small;'>Adjustment: ${sign}${current_adjustment_price}.-</span>
       <input type='hidden' name='o' value='Glass'/>
       <input type='hidden' name='submit' value='Del'/>
       <input type='hidden' name='e' value='$current_adjustment'/>
@@ -367,7 +367,7 @@ sub adjustment_form {
     my ($date) = split(' ', $effdate);
     print qq{<div id='adjform_$form_id' style='display:none;'>
     <form method='POST' style='display:inline; margin-left:1em;' onsubmit='return updateAdjustment_$form_id();'>
-      <span style='font-size:small;'>Expected: ${locprsum}kr, Paid:</span>
+      <span style='font-size:small;'>Expected: ${locprsum}.-, Paid:</span>
       <input name='actualpaid' id='actualpaid_$form_id' size='4' required style='font-size:small;'/>
       <input type='hidden' name='o' value='Glass'/>
       <input type='hidden' name='submit' value='Insert'/>
@@ -391,7 +391,7 @@ sub adjustment_form {
       const expected = $locprsum;
       const diff = actual - expected;
       document.getElementById('pr_$form_id').value = diff;
-      document.getElementById('note_$form_id').value = 'Expected: ' + expected + 'kr, Paid: ' + actual + 'kr, Diff: ' + diff + 'kr';
+      document.getElementById('note_$form_id').value = 'Expected: ' + expected + '.-, Paid: ' + actual + '.-, Diff: ' + diff + '.-';
       document.getElementById('subtype_$form_id').value = diff >= 0 ? 'Up' : 'Dn';
       return true;
     }
@@ -463,7 +463,7 @@ sub oneday {
     print "<br/>\n";
   }
   my $loc_total_with_adj = $locprsum + $current_adjustment_price;
-  sumline($c, $locname, $locdrsum, $loc_total_with_adj) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
+  sumline($c, $locname, $locdrsum, $loc_total_with_adj);
   adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
   sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
   print "<hr/>";
