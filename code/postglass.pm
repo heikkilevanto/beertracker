@@ -70,6 +70,15 @@ sub postglass {
     $glass->{SubType} = util::param($c,"selbrewsubtype") ;
     gettimestamp($c, $glass);
     $glass->{Price} = util::paramnumber($c, "pr");
+  } elsif ( $selbrewtype eq 'Adjustment' ) { # payment adjustment glass
+    $glass->{Brew} = $brewid;
+    $glass->{SubType} = util::param($c,"selbrewsubtype") ; # 'Up' or 'Dn'
+    $glass->{Volume} = 0;
+    $glass->{Alc} = 0;
+    $glass->{StDrinks} = 0;
+    $glass->{Note} = util::param($c,"note");  # Get note from form, don't inherit
+    gettimestamp($c, $glass);
+    $glass->{Price} = util::paramnumber($c, "pr");
   } else { # real glass
     $glass->{Brew} = $brewid;
     $glass->{SubType} = $brew->{SubType} || $glass->{SubType};

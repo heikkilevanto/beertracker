@@ -44,7 +44,7 @@ sub monthstat {
   my $sumsql = qq{
   select
     distinct strftime ('%Y-%m', timestamp,'-06:00') as calmon,
-  	sum(abs(price)) as pr,
+  	sum(price) as pr,
   	sum(stdrinks) as drinks,
  	  max( strftime ('%d', timestamp,'-06:00')) as last
   from glasses

@@ -58,7 +58,7 @@ sub yearsummary {
   my $sql = "
     select
       locations.Name as name,
-      sum(abs(glasses.Price)) as price,
+      sum(glasses.Price) as price,
       sum(glasses.StDrinks) as drinks,
       count(distinct(strftime('%Y-%m-%d',glasses.timestamp, '-06:00'))) as visits
     from glasses

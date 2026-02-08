@@ -38,7 +38,7 @@ sub isemptyglass {
 sub selectbrewtype {
   my $c = shift;
   my $selected = shift || "";
-  my $sql = "select distinct BrewType from Glasses";
+  my $sql = "select distinct BrewType from Glasses WHERE BrewType != 'Adjustment'";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( );
   my $opts = "";
@@ -48,6 +48,10 @@ sub selectbrewtype {
     my $em = "data-isempty=1";
     $em = "" if ( ! isemptyglass($bt) );
     $opts .= "<option value='$bt' $em $se>$bt</option>\n";
+  }
+  # If editing an Adjustment glass, add it to dropdown
+  if ( $selected eq 'Adjustment' ) {
+    $opts .= "<option value='Adjustment' selected>Adjustment</option>\n";
   }
   util::error ("No brew types in the database. Insert some dummy glasses")
     unless ($opts);

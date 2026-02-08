@@ -24,6 +24,7 @@ sub brewcolor {
   # TODO - Check against actual brew styles in the db
   my @drinkcolors = (   # color, pattern. First match counts, so order matters
       "003000", "restaurant|night|feedback", # regular bg color, no highlight
+      "808080", "adjustment", # gray for payment adjustments
       "eac4a6", "wine[, ]+white",
       "801414", "wine[, ]+red",
       "4f1717", "wine[, ]+port",

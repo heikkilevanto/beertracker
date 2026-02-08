@@ -8,6 +8,8 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
+my $form_counter = 0;  # Counter for unique form IDs across page load
+
 
 
 ################################################################################
@@ -253,7 +255,7 @@ sub buttonline {
   my %vols;     # guess sizes for small/large beers
   $vols{$rec->{vol}} = 1 if ($rec->{vol});
   # TODO - more logic, if 20, say 20/30, if 25, say 25/40,
-  if ( $rec->{brewtype} =~ /Night|Restaurant|Feedback/i) {
+  if ( $rec->{brewtype} =~ /Night|Restaurant|Feedback|Adjustment/i) {
     %vols=(); # nothing to copy
   } elsif ( $rec->{brewtype}  eq "Wine" ) {
     $vols{12} = 1;
@@ -316,6 +318,97 @@ sub sumline {
   print "</tr></table>";
 }
 
+sub adjustment_form {
+  my $c = shift;
+  my $locationid = shift;
+  my $effdate = shift;
+  my $locprsum = shift;
+  my $current_adjustment = shift;
+  my $current_adjustment_price = shift || 0;
+  my $last_glass_time = shift || "23:59";  # Default to end of day if no glasses
+  
+  # Generate unique ID for this form instance (to handle multiple sessions at same location)
+  $form_counter++;
+  my $form_id = "adj_${locationid}_${form_counter}";
+  
+  # Get adjustment brew ID
+  my $sql = "SELECT Id FROM brews WHERE BrewType='Adjustment' LIMIT 1";
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute();
+  my ($adjustment_brew_id) = $sth->fetchrow_array();
+  $sth->finish();
+  return unless $adjustment_brew_id;  # No adjustment brew configured
+  
+  if ($current_adjustment) {
+    # Adjustment exists - show delete button with amount
+    my $sign = $current_adjustment_price >= 0 ? '+' : '';
+    print qq{<div id='adjform_$form_id' style='display:none;'>
+    <form method='POST' style='display:inline; margin-left:1em;'>
+      <span style='font-size:small;'>Adjustment: ${sign}${current_adjustment_price}kr</span>
+      <input type='hidden' name='o' value='Glass'/>
+      <input type='hidden' name='submit' value='Del'/>
+      <input type='hidden' name='e' value='$current_adjustment'/>
+      <button type='submit' style='font-size:small;'>Delete ±</button>
+    </form>
+    </div>
+    <script>
+    (function() {
+      const tables = document.querySelectorAll('table');
+      const lastTable = tables[tables.length - 1];
+      lastTable.style.cursor = 'pointer';
+      lastTable.onclick = function() {
+        const form = document.getElementById('adjform_$form_id');
+        form.style.display = form.style.display === 'none' ? 'inline' : 'none';
+      };
+    })();
+    </script>};
+  } else {
+    # No adjustment - show entry form
+    my ($date) = split(' ', $effdate);
+    print qq{<div id='adjform_$form_id' style='display:none;'>
+    <form method='POST' style='display:inline; margin-left:1em;' onsubmit='return updateAdjustment_$form_id();'>
+      <span style='font-size:small;'>Expected: ${locprsum}kr, Paid:</span>
+      <input name='actualpaid' id='actualpaid_$form_id' size='4' required style='font-size:small;'/>
+      <input type='hidden' name='o' value='Glass'/>
+      <input type='hidden' name='submit' value='Insert'/>
+      <input type='hidden' name='Location' value='$locationid'/>
+      <input type='hidden' name='Brew' value='$adjustment_brew_id'/>
+      <input type='hidden' name='selbrewtype' value='Adjustment'/>
+      <input type='hidden' name='selbrewsubtype' id='subtype_$form_id' value=''/>
+      <input type='hidden' name='date' value='$date'/>
+      <input type='hidden' name='time' value='$last_glass_time:00'/>
+      <input type='hidden' name='vol' value='0'/>
+      <input type='hidden' name='alc' value='0'/>
+      <input type='hidden' name='pr' id='pr_$form_id' value='0'/>
+      <input type='hidden' name='note' id='note_$form_id' value=''/>
+      <button type='submit' style='font-size:small;'>Save ±</button>
+    </form>
+    </div>
+    <script>
+    function updateAdjustment_$form_id() {
+      const actualInput = document.getElementById('actualpaid_$form_id');
+      const actual = parseFloat(actualInput.value) || 0;
+      const expected = $locprsum;
+      const diff = actual - expected;
+      document.getElementById('pr_$form_id').value = diff;
+      document.getElementById('note_$form_id').value = 'Expected: ' + expected + 'kr, Paid: ' + actual + 'kr, Diff: ' + diff + 'kr';
+      document.getElementById('subtype_$form_id').value = diff >= 0 ? 'Up' : 'Dn';
+      return true;
+    }
+    (function() {
+      const tables = document.querySelectorAll('table');
+      const lastTable = tables[tables.length - 1];
+      lastTable.style.cursor = 'pointer';
+      lastTable.onclick = function() {
+        const form = document.getElementById('adjform_$form_id');
+        form.style.display = form.style.display === 'none' ? 'inline' : 'none';
+      };
+    })();
+    </script>};
+  }
+  print "<br/>\n";
+} # adjustment_form
+
 sub oneday {
   my $c = shift;
   my $rec = db::peekrow($c->{sth});
@@ -326,6 +419,9 @@ sub oneday {
   my $locprsum = 0;  # price for the location
   my $daydrsum = 0;  # drinks for the whole day
   my $dayprsum = 0;  # price for the whole day
+  my $current_adjustment = undef;  # Track adjustment glass for current location session
+  my $current_adjustment_price = 0;  # Track adjustment amount
+  my $last_glass_time = undef;  # Track time of last glass in location session
   while ( $rec = db::nextrow($c->{sth}) ) {
     #print JSON->new->encode($rec) . "<br>";
     if ( $rec->{effdate} ne $effdate ) {
@@ -334,17 +430,30 @@ sub oneday {
     }
     #print STDERR "oneday: id='$rec->{id} l='$rec->{loc}' \n";
     if ( $rec->{loc} != $loc ) {
-      sumline($c, $locname, $locdrsum, $locprsum);
+      my $loc_total_with_adj = $locprsum + $current_adjustment_price;
+      sumline($c, $locname, $locdrsum, $loc_total_with_adj);
+      adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
       ($effdate, $loc, $locname, $weekday, $date) = locationhead($c, $rec);
       $locdrsum = 0;
       $locprsum = 0;
+      $current_adjustment = undef;  # Reset for new location
+      $current_adjustment_price = 0;
+      $last_glass_time = undef;
     }
-    # Sum prices only for non-empty glasses, skipping nights and restaurants
-    if ($rec->{price} && $rec->{brewid}) {
-      $dayprsum += abs($rec->{price});
-      $locprsum += abs($rec->{price})  if ($rec->{price} && $rec->{price}=~/^-?[0-9.]/);
+    # Sum prices only for non-empty glasses, skipping nights, restaurants, and adjustments
+    if ($rec->{price} && $rec->{brewid} && $rec->{brewtype} ne 'Adjustment') {
+      $dayprsum += $rec->{price};
+      $locprsum += $rec->{price} if ($rec->{price} && $rec->{price}=~/^-?[0-9.]/);
     }
-      # TODO - Do we still have old negative prices from boxes?
+    # Track adjustment glass for current location
+    if ($rec->{brewtype} eq 'Adjustment') {
+      $current_adjustment = $rec->{id};
+      $current_adjustment_price = $rec->{price};
+      # Add adjustment to day total but not location sum (we want expected, not actual)
+      $dayprsum += $rec->{price};
+    }
+    # Track last glass time for this location (for setting adjustment timestamp)
+    $last_glass_time = $rec->{time} if $rec->{time};
     $daydrsum += $rec->{drinks} if ($rec->{drinks});
     $locdrsum += $rec->{drinks} if ($rec->{drinks});
     nameline($c, $rec, $loc, $locname);
@@ -353,11 +462,13 @@ sub oneday {
     buttonline($c,$rec);
     print "<br/>\n";
   }
-  sumline($c, $locname, $locdrsum, $locprsum) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
+  my $loc_total_with_adj = $locprsum + $current_adjustment_price;
+  sumline($c, $locname, $locdrsum, $loc_total_with_adj) if ( abs($locdrsum -$daydrsum) > 0.1 ) ;
+  adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
   sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
   print "<hr/>";
 
-}
+} # oneday
 
 ################################################################################
 # mainlist itself
@@ -365,6 +476,7 @@ sub oneday {
 
 sub mainlist {
   my $c = shift;
+  $form_counter = 0;  # Reset counter for each page load
   my $date = util::param($c,"date",util::datestr("%F") );
   my $ndays = util::paramnumber($c, "ndays", 7 ) || 7;
   print STDERR "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
