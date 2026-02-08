@@ -417,8 +417,10 @@ sub oneday {
   my $balc = bloodalc($c,$date);
   my $locdrsum = 0;  # drinks for the location
   my $locprsum = 0;  # price for the location
+  my $locmaxba = 0;  # max blood alc for the location
   my $daydrsum = 0;  # drinks for the whole day
   my $dayprsum = 0;  # price for the whole day
+  my $location_count = 1;  # number of locations for the day
   my $current_adjustment = undef;  # Track adjustment glass for current location session
   my $current_adjustment_price = 0;  # Track adjustment amount
   my $last_glass_time = undef;  # Track time of last glass in location session
@@ -431,11 +433,13 @@ sub oneday {
     #print STDERR "oneday: id='$rec->{id} l='$rec->{loc}' \n";
     if ( $rec->{loc} != $loc ) {
       my $loc_total_with_adj = $locprsum + $current_adjustment_price;
-      sumline($c, $locname, $locdrsum, $loc_total_with_adj);
+      sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba);
       adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
       ($effdate, $loc, $locname, $weekday, $date) = locationhead($c, $rec);
       $locdrsum = 0;
       $locprsum = 0;
+      $locmaxba = 0;
+      $location_count++;
       $current_adjustment = undef;  # Reset for new location
       $current_adjustment_price = 0;
       $last_glass_time = undef;
@@ -456,6 +460,7 @@ sub oneday {
     $last_glass_time = $rec->{time} if $rec->{time};
     $daydrsum += $rec->{drinks} if ($rec->{drinks});
     $locdrsum += $rec->{drinks} if ($rec->{drinks});
+    $locmaxba = $balc->{$rec->{id}} if $balc->{$rec->{id}} && $balc->{$rec->{id}} > $locmaxba;
     nameline($c, $rec, $loc, $locname);
     numbersline($c,$rec,$balc);
     commentlines($c,$rec);
@@ -463,9 +468,11 @@ sub oneday {
     print "<br/>\n";
   }
   my $loc_total_with_adj = $locprsum + $current_adjustment_price;
-  sumline($c, $locname, $locdrsum, $loc_total_with_adj);
+  sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba);
   adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
-  sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
+  if ($location_count > 1) {
+    sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
+  }
   print "<hr/>";
 
 } # oneday
