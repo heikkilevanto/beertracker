@@ -13,7 +13,7 @@ The system is under constant development, so this document is likely to be
 somewhat out of date - the actual code is the source of truth.
 
 ## History
-I wrote the first version (v0.1) on a Frziday afternoon, sick and tired of 
+I wrote the first version (v0.1) on a Friday afternoon, sick and tired of 
 abstract design discussions at work. The first versions used a flat text file 
 for the database (quick to append, easy to read, but inflexible). I started to
 use it for real in January 2016, and have been using the system ever since.
@@ -33,6 +33,10 @@ use it for real in January 2016, and have been using the system ever since.
 This document is nowhere near ready. Should write something about these:
 - Something about typical data flow, logging a glass
 - Future considerations
+
+---
+
+**Quickstart (TL;DR):** Clone the repo, copy a recent `beerdata/production` DB to `beerdata/beertracker.db`, ensure required Perl modules are installed, put `code/index.cgi` under Apache cgi-bin (or configure a vhost to serve the `beertracker` directory), and start making entries. See `copilot-instructions.md`, `README.md` and `etc/apache-config.example.txt` for more details.
 
 
 ## Architecture

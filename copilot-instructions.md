@@ -2,6 +2,9 @@
 
 (This file lives in the root of the BeerTracker codebase as `copilot-instructions.md` and is used to guide AI code generation tools. There is a symlink from .github to this file to make sure copilot will read it)
 
+**TL;DR:** Keep changes small and explicit — procedural Perl, direct SQL with DBI, pass a `$c` context hash, prefer clarity over cleverness. For architecture details see `doc/design.md`.
+
+
 ## Architecture Overview
 BeerTracker is a procedural Perl CGI web application for personal beer tracking. It uses SQLite for data storage and runs under Apache. The main entry point is `code/index.cgi`, which dispatches requests to focused modules in `code/` based on the `o` parameter (e.g., `o=Board` for beerboard.pm).
 
@@ -17,7 +20,8 @@ Data flows from browser forms to index.cgi, which calls module post*() functions
 
 ## Development Workflow
 - **Dev Environment**: Work in `beertracker-dev` directory (blue background indicates dev mode).
-- **Database Changes**: Edit schema in SQLite, run `tools/dbdump.sh` to update `code/db.schema`, commit. Git post-merge hook warns if schema changed. Use `tools/dbchange.sh` to apply schema updates in production.
+- **Database Changes**: Edit schema in SQLite, run `tools/dbdump.sh` to update `code/db.schema`, commit. Git post-merge hook warns if schema changed. Use `tools/dbchange.sh` to apply schema updates in production. Some 
+changes (alter table) require manual steps; document those in commit message. Changes to views and indexes work well with dbchange.sh.
 - **Versioning**: Git pre-commit hook runs `tools/makeversion.sh` to update `code/VERSION.pm` with commit count.
 - **Testing**: No automated tests; manually test CGI under Apache. Use `superuser::copyproddata()` to sync production data to dev.
 - **Deployment**: Git pull code to production, run `tools/dbchange.sh` if schema changed.
@@ -39,9 +43,10 @@ Data flows from browser forms to index.cgi, which calls module post*() functions
 - **Dialog**: Always state first what you are about to do, before doing it.
 - **Language Features**: use strict; use warnings; use feature 'unicode_strings'; use utf8; use open ':encoding(UTF-8)'; binmode STDOUT, ":utf8".
 - **Code Structure**: Functions start with "sub function_name {". Use "my $c = shift;" for context object. Return values explicitly. Use early returns for error conditions. Functions end with "} # function_name".
-- **Variables and Naming**: Use lowercase with underscores: $variable_name. Descriptive names: $beer_list, $location_id. Context object is $c. Database handle is $c->{dbh}. CGI object is $c->{cgi}.
+- **Variables and Naming**: Use lowercase: $variablename. Descriptive names: $beerlist, $locationid. Context object is $c. Database handle is $c->{dbh}. CGI object is $c->{cgi}.
 - **HTML Generation**: Use print qq{<html>...}; for HTML output. Escape special characters. Use CSS classes and inline styles. Generate forms with method="POST" for data modification.
-- **JavaScript Integration**: Use <script> tags for client-side logic. Inline JavaScript for simple interactions. Use event handlers like onclick. Most JavaScript in separate files under static/.
+- **JavaScript Integration**: Use <script> tags for client-side logic. Inline JavaScript for simple interactions. Use event handlers like onclick. JavaScript should be in separate files under static/, but there
+are still some inline scripts in the HTML for simplicity.
 - **SQL Style**: Use uppercase for keywords: SELECT, INSERT, UPDATE. Use placeholders (?) for parameters. Join tables explicitly. Use meaningful table aliases.
 - **Comments**: Use # for single-line comments. Use # TODO for future improvements. Document function purposes. Explain complex algorithms.
 - **Control Structures**: Use foreach for loops: foreach my $item (@list). Use if/elsif/else for conditionals. Use early returns to reduce nesting. Use next/last for loop control.
@@ -58,7 +63,7 @@ Data flows from browser forms to index.cgi, which calls module post*() functions
 
 ## Common Tasks
 - **Add New Operation**: Add dispatch in index.cgi (POST in eval block, GET in main if-elsif chain), create module in `code/`.
-- **Database Query**: Prepare with `$sth = $c->{dbh}->prepare($sql); $sth->execute(@params);` while loop for results.
+- **Database Query**: Prepare with `$sth = $c->{dbh}->prepare($sql); $sth->execute(@params);` while loop for results. Or use the helpers in db.pm when possible.
 - **Form Handling**: Hidden inputs for state; `accept-charset='UTF-8'`; redirect after POST.
 - **Beer Board**: Scrape to JSON, store in tap_beers table, display in beerboard.pm with expand/collapse JS.
 - **Debugging**: Print to STDERR for logs; `$c->{devversion}` for dev-specific behavior.
@@ -75,5 +80,6 @@ Data flows from browser forms to index.cgi, which calls module post*() functions
 - Be precise and explicit in all code generation. No fluff
 - Do ask clarifying questions if requirements are ambiguous. 
 - don't try to be too clever or use advanced Perl features unnecessarily. Keep it simple and maintainable.
+- Avoid duplicating code; if you find yourself writing similar code, consider refactoring into a helper function in db.pm or util.pm.
 
 
