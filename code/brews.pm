@@ -67,8 +67,6 @@ sub listbrewcomments {
   my $ratesum = 0;
   my $ratecount = 0;
   my $comcount = 0;
-  my $perscount = 0;
-  my $count = 0;
   my $sty = "style='border-bottom: 1px solid white; vertical-align: top;' ";
   while ( my $com = $sth->fetchrow_hashref ) {
     print "<tr><td $sty>\n";
@@ -105,7 +103,6 @@ sub listbrewcomments {
     print "<td $sty>\n";
     if ( $com->{Person} ) {
       print "<a href='$c->{url}?o=Person&e=$com->{Pid}'><span style='font-weight: bold;'>$com->{Person}</span></a>\n";
-      $perscount++;
     }
     print "</td>\n";
     # TODO - Photo thumbnail in its own TD

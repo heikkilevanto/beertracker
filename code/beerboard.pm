@@ -7,8 +7,6 @@ use strict;
 use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
-use URI::Escape;
-use JSON;
 use POSIX qw(strftime localtime);
 
 
@@ -65,12 +63,13 @@ sub beerboard {
       }
     }
 
-    my $all_expanded = 0;
     my $expand_display = 'none';
     print "<div id='expand-all' style='display:$expand_display;'><a href='#' onclick='collapseAll(); return false;'><span>Collapse All</span></a></div>\n";
 
     print "<table id='beerboard' border=0 style='white-space: nowrap;'>\n";
     my $previd  = 0;
+    my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
+    my $locid = $locrec ? $locrec->{Id} : undef;
     foreach my $e ( sort {$a->{"id"} <=> $b->{"id"} } @$beerlist )  {
       $nbeers++;
       my $id = $e->{"id"} || 0;
@@ -89,8 +88,6 @@ sub beerboard {
       }
 
       my $processed_data = prepare_beer_entry_data($c, $e, $locparam);
-      my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
-      my $locid = $locrec->{Id};
       my $hiddenbuttons = generate_hidden_fields($c, $e, $locparam, $locid, $id, $processed_data);
       my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $alc);
       my $buttons_expanded = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 1, $alc);
