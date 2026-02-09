@@ -94,10 +94,6 @@ sub avgratings {
 sub listallcomments {
   my $c = shift; # context
 
-  if ( $c->{edit} ) {
-    editbrew($c);
-    return;
-  }
   print "<b>Comments by $c->{username}</b> ";
   #print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
   print "<br/>\n";
