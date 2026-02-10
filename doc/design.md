@@ -29,14 +29,6 @@ use it for real in January 2016, and have been using the system ever since.
 - v3.1 Aug'25: Rating stats, photos, geo coordinates, generic brews, refactoring
 - v3.2 Jan'26: Tracking beer taps, prices, AI-assisted refactoring
 
-## TODO
-This document is nowhere near ready. Should write something about these:
-- Something about typical data flow, logging a glass
-- Future considerations
-
----
-
-**Quickstart (TL;DR):** Clone the repo, copy a recent `beerdata/production` DB to `beerdata/beertracker.db`, ensure required Perl modules are installed, put `code/index.cgi` under Apache cgi-bin (or configure a vhost to serve the `beertracker` directory), and start making entries. See `copilot-instructions.md`, `README.md` and `etc/apache-config.example.txt` for more details.
 
 
 ## Architecture
@@ -139,6 +131,18 @@ Other utilities:
 
 There are also a small number of javascript and css files under static
 
+## External Modules and Dependencies
+
+BeerTracker requires the following Perl modules: CGI, Carp, Cwd, DBI, File::Copy, File::Path, JSON, LWP::UserAgent, Math::Trig, POSIX, Time::Piece, URI::Escape, URI::URL, XML::LibXML.
+
+To install all required modules on Debian/Ubuntu, run:
+```
+sudo apt-get install libcgi-pm-perl libdbi-perl libjson-perl libwww-perl libtime-piece-perl liburi-perl libxml-libxml-perl
+```
+
+The js code makes use of quagga.min.js, and chart.umd.min.js
+
+
 ## Configuration and Deployment
 Beertracker lives as a cgi script under Apache. There is a config example under
 etc.
@@ -167,3 +171,9 @@ database from db.schema, and importing the data back to it. This works for
 changing views, or renaming columns in tables, but if adding columns or tables
 you may have to do some manual trickery in both development and production db.
 
+## See also
+- The project lives on github at https://github.com/heikkilevanto/beertracker. 
+- Bugs and feature requests are logged at /issues at github. There are a few 
+tags to indicate wishes, future plans, etc.
+- The about page lists a few useful links
+- etc/apache-config.example.txt for setting things up
