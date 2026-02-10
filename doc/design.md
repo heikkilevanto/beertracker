@@ -143,6 +143,45 @@ sudo apt-get install libcgi-pm-perl libdbi-perl libjson-perl libwww-perl libtime
 The js code makes use of quagga.min.js, and chart.umd.min.js
 
 
+## Scraper Interface
+
+Scraper scripts in `scripts/` (e.g., `oelbaren.pl`, `fermentoren.pl`) fetch beer 
+lists from bar websites and output JSON to STDOUT. The `scrapeboard.pm` module 
+invokes these scripts and processes the output to update the database with 
+beers and producers.
+
+Each scraper outputs a JSON array of beer objects with the following fields:
+```json
+[
+  {
+    "id": 5,
+    "maker": "Dry & Bitter",
+    "beer": "Little Helper",
+    "type": "Session IPA",
+    "alc": 4.5,
+    "country": "DK",
+    "sizePrice": [
+      { "vol": 20, "price": 45 },
+      { "vol": 30, "price": 65 }
+    ]
+  }
+]
+```
+
+**Fields:**
+- `id`: Tap number (integer)
+- `maker`: Producer/brewery name (string)
+- `beer`: Beer name (string)
+- `type`: Beer style (string)
+- `alc`: Alcohol percentage (number)
+- `country`: Country code (string, optional)
+- `sizePrice`: Array of volume/price objects (optional)
+  - `vol`: Volume in cl (number or "S"/"L" for small/large when unknown)
+  - `price`: Price in local currency (number, optional)
+
+New scrapers should follow this format and be registered in `scrapeboard.pm`.
+
+
 ## Configuration and Deployment
 Beertracker lives as a cgi script under Apache. There is a config example under
 etc.
