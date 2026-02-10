@@ -129,6 +129,13 @@ Other utilities:
 - `code/util.pm` - Various helper functions
 - `code/VERSION.pm` - auto-generated version info
 
+Scraping scripts live in scripts/ and are invoked by code/scrapeboard.pm. Each scraper is a standalone Perl script that fetches a bar page, parses it (typically with LWP::UserAgent and XML::LibXML) and writes a UTF-8 JSON array of beer objects to STDOUT. Example JSON structure:
+
+[
+  { "name": "West Coast IPA", "maker": "Some Brewery", "type": "IPA", "abv": 6.5, "tap": 3 },
+  { "name": "Pilsner", "maker": "Other Brewery", "type": "Pilsner", "abv": 4.7 }
+]
+
 There are also a small number of javascript and css files under static
 
 ## External Modules and Dependencies
