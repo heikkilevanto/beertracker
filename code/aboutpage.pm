@@ -85,8 +85,8 @@ sub about {
   print aboutlink("Issues", "https://github.com/heikkilevanto/beertracker/issues?".
        "q=is%3Aissue%20is%3Aopen%20sort%3Aupdated-desc%20-label%3ALater%20-label%3ANextVersion");
   print aboutlink("Edit","https://github.dev/heikkilevanto/beertracker/tree/master");
-
-  print aboutlink("User manual", "https://github.com/heikkilevanto/beertracker/blob/master/manual.md" );
+  print aboutlink("User manual", "https://github.com/heikkilevanto/beertracker/blob/master/doc/manual.md" );
+  print aboutlink("Design doc", "https://github.com/heikkilevanto/beertracker/blob/master/doc/design.md" );
   print "</ul><p>\n";
   print "Other useful links: <ul>";
   print aboutlink("Events", "https://www.beercph.dk/");
