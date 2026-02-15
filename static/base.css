@@ -4,21 +4,53 @@
    ========================================= */
 
 /* Global defaults (from inline headers) */
-html,body {
+html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
   background-color: var(--bgcolor, #000000);
   color: #ffffff;
-  margin-left: 0.1em;
-  margin-top: 0.1em;
+  margin: 0;
   padding: 0;
   font-size: 0.9rem; /* replaces '* { font-size: small; }' */
   font-family: sans-serif;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Top line wrapper - stays at top */
+.top-line-wrapper {
+  background-color: var(--bgcolor, #000000);
+  padding: 0.1em;
+  border-bottom: 1px solid #666;
+  overflow-x: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+  /* Hide scrollbar while keeping scroll functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.top-line-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
+}
+
+/* Content wrapper - scrollable */
+.content-wrapper {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
 }
 
 /* Wider screens (tablet/desktop) */
 @media screen and (min-width: 700px) {
-  html, body {
-  margin-left: 0;
-  margin-top: 0;
+  .top-line-wrapper,
+  .content-wrapper {
+    padding: 0;
   }
 }
 

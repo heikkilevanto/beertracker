@@ -1,11 +1,7 @@
 /* menu.css */
 
 /* Drawer container */
-html, body {
-  padding: 0;
-  margin-left: 10px;
-
-}
+/* Note: margin/padding handled by base.css flexbox layout */
 
 #menu {
   overflow-x: hidden;
@@ -52,7 +48,7 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5em 1em;
+  padding: 0.1em;
   border-bottom: 1px solid rgba(255,255,255,0.2);
 }
 

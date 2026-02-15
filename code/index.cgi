@@ -237,6 +237,7 @@ if ( $c->{op} =~ /DoExport/i ) {
 htmlhead(); # Ok, now we can commit to making a HTML page
 
 print util::topline($c);
+print "<div class='content-wrapper'>\n";
 
 if ( $c->{op} =~ /Board/i ) {
   graph::graph($c);
@@ -356,6 +357,7 @@ END_STYLE
 
 # HTML footer
 sub htmlfooter {
+  print "</div>\n"; # Close content-wrapper
   print "</body></html>\n";
 }
 

@@ -266,7 +266,7 @@ sub topstats {
 sub topline {
   my $c = shift; # context;
   my $s = "";
-  $s .= "<span style='white-space: nowrap;'>\n";
+  $s .= "<div class='top-line-wrapper'>\n";
   $s .= showmenu($c);
   my $name = "Beertracker";
   if ( $c->{devversion} ) {
@@ -281,8 +281,7 @@ sub topline {
 
   $s .= topstats($c);
 
-  $s .= "</span>";
-  $s .= "<hr>\n";
+  $s .= "</div>\n";
 } # topline
 
 
