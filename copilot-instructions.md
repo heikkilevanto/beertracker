@@ -14,7 +14,8 @@ Key components:
 - **CGI Handling**: `code/index.cgi` handles all requests, routing based on `o` parameter. POST requests are wrapped in eval for error handling.
 - **Templates**: HTML is generated directly in Perl using print statements with qq{} for multi-line strings.  
 - **Scraping**: Perl scripts in `scripts/` scrape beer menus from bar websites (e.g., oelbaren.pl).
-- **Static Assets**: CSS/JS in `static/`, served with cache-busting timestamps.
+- **Static Assets**: CSS/JS in `static/`, served with cache-busting timestamps from index.cgi. We can safely
+assume that they are loaded and available when generating HTML.
 
 Data flows from browser forms to index.cgi, which calls module post*() functions for writes, then redirects to display pages.
 
@@ -35,8 +36,9 @@ changes (alter table) require manual steps; document those in commit message. Ch
 - **Links**: Build URLs as `$c->{url}?o=Operation&e=ID`; use `uri_escape_utf8()` for params.
 - **Display Helpers**: `util::unit()` for values with units (e.g., "33<small>cl</small>"); `util::datestr()` for dates.
 - **Scraping**: Use LWP::UserAgent and XML::LibXML; output JSON to STDOUT for beer lists.
-- **UTF-8**: All source and data is UTF-8; set `binmode STDOUT, ":utf8"`.
+- **UTF-8**: All source and data is UTF-8; set `binmode STDOUT, ":utf8"` in index.cgi
 - **No Frameworks**: Pure Perl, no ORM or web framework; procedural style with modules.
+- The system lives in the local time zone. Since beer drinking often spans midnight, we offset the date by 6 hours to group late-night drinking into the previous day. This is handled in SQL queries with `datetime(Timestamp, '-6 hours')`.
 
 ## Code Style Details
 - **General Principles**: Write clean, readable, maintainable code. Use meaningful variable and function names. Include comments for complex logic. Follow Perl best practices.
@@ -82,4 +84,15 @@ are still some inline scripts in the HTML for simplicity.
 - don't try to be too clever or use advanced Perl features unnecessarily. Keep it simple and maintainable.
 - Avoid duplicating code; if you find yourself writing similar code, consider refactoring into a helper function in db.pm or util.pm.
 
-
+## Interactions
+- When I ask you to check a module, check for
+  - adherence to the architecture and code style guidelines
+  - consistency with existing patterns in the codebase
+  - potential bugs or issues in the logic
+  - opportunities for refactoring or improvement 
+  - dead and unused code that can be removed
+  - code duplication that can be refactored into helper functions
+  - Important: Make no changes before checking with the user. Just list your findings first.
+  - Do not list all things that are all right, only those that might be issues or improvements. 
+- always be explicit about what you are doing and why, before doing it.
+- If you need to make changes, list them clearly and ask for confirmation before proceeding.
