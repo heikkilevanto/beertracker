@@ -112,7 +112,7 @@ sub listlocationcomments {
   if ( $count >= 8 ) {
     print "</div>\n";
   }
-  print "</table></div>\n";
+  print "</div>\n";
   print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
   if ( $comcount == 0 ) {
     print "(No Comments)";
@@ -295,23 +295,25 @@ sub deduplocations {
       my $sql = "UPDATE GLASSES set Location = ? where Location = ?  ";
       print STDERR "$sql with '$id' and '$dup' \n";
       my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
-      util::error("Deduplicate Locations: Failed to update glasses") unless $rows;
+      util::error("Deduplicate Locations: Failed to update GLASSES") unless defined $rows;
       print STDERR "Updated $rows glasses from $dup to $id\n";
 
       $sql = "UPDATE PERSONS set Location = ? where Location = ?  ";
       print STDERR "$sql with '$id' and '$dup' \n";
       $rows = $c->{dbh}->do($sql, undef, $id, $dup);
-      print STDERR "Updated $rows glasses from $dup to $id\n";
+      util::error("Deduplicate Locations: Failed to update PERSONS") unless defined $rows;
+      print STDERR "Updated $rows persons from $dup to $id\n";
 
       $sql = "UPDATE BREWS set ProducerLocation = ? where ProducerLocation = ?  ";
       print STDERR "$sql with '$id' and '$dup' \n";
       $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      util::error("Deduplicate Locations: Failed to update BREWS") unless defined $rows;
       print STDERR "Updated $rows brews from $dup to $id\n";
 
       $sql = "DELETE FROM LOCATIONS WHERE Id = ? ";
       $rows = $c->{dbh}->do($sql, undef, $dup);
-      util::error("Deduplicate Locations: Failed to delete brew '$dup'") unless $rows;
-      print STDERR "Deleted $rows brews with id  $dup\n";
+      util::error("Deduplicate Locations: Failed to delete location '$dup'") unless defined $rows;
+      print STDERR "Deleted $rows locations with id $dup\n";
     }
   }
 

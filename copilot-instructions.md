@@ -32,6 +32,7 @@ changes (alter table) require manual steps; document those in commit message. Ch
 - **Parameter Handling**: Use `util::param($c, "key")` for CGI params; handles GET/POST uniformly.
 - **Database Access**: Direct SQL with DBI; `db::open_db($c, "rw")` for POST requests, "ro" for GET requests. Foreign keys enforced. db.pm has helpers for common queries. Use those when possible, to get consistent logging and error handling.
 - **Error Handling**: `util::error()` for fatal errors; database errors logged to STDERR and shown in HTML. In dev mode we should aim to log all SQL statements, but not in production.
+- **Rollback** Index.cgi catches errors, and rolls back transactions. 
 - **Filtering**: Use `q` param for grep-style filtering (e.g., `?q=IPA`); 
 - **Links**: Build URLs as `$c->{url}?o=Operation&e=ID`; use `uri_escape_utf8()` for params.
 - **Display Helpers**: `util::unit()` for values with units (e.g., "33<small>cl</small>"); `util::datestr()` for dates.
