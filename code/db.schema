@@ -160,13 +160,17 @@ create view compers as
 -- view persons_list
 drop view if exists persons_list;
 create view persons_list as
-  -- A
+  -- List to select which person to edit
   select
     persons.Id,
     persons.Name,
+    "trmob" as trmob,
     count(comments.Id) - 1 as Com,
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
-    locations.Name as Location
+    locations.Name as Location, 
+    "tr" as tr,
+    'Clr' as 'Clr',
+    persons.description
   from persons
   left join comments on comments.Person = persons.Id
   left join glasses on comments.Glass = glasses.Id

@@ -131,7 +131,7 @@ sub listrecords {
     } elsif ( $f =~ /isGeneric/i ) {
       $sty = "style='font-weight: bold; max-width:100px;' ";
       $f = "Generic";
-    } elsif ( $f =~ /Comment/ ) {
+    } elsif ( $f =~ /Comment|Description/i ) {
       $sty = "style='max-width:200px; min-width:0; font-style: italic' ";
     } elsif ( $f =~ /Geo/ ) {  # geo distance
       if ( $c->{mobile} ) {
