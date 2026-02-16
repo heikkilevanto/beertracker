@@ -26,6 +26,7 @@ sub open_db {
   my $c = shift;
   my $mode = shift || 'ro';  # 'ro' or 'rw'
   util::error("Database '$databasefile' not writable" ) unless ( -w $databasefile );
+  # Yes, check for ro as well. Fail early!
   $c->{databasefile} = $databasefile;
   if ( $c->{dbh} ) {  # close old connection if any
     $c->{dbh}->disconnect;
@@ -156,9 +157,10 @@ sub queryrecordarray {
   my @params = @_;
   my $sth = query($c,$sql, @params );
   return undef unless ($sth);
-  my $rec = $sth->fetchrow_hashref;
+  my @vals;
+  while ( my @r = $sth->fetchrow_array ) { push @vals, $r[0]; }
   $sth->finish;
-  return $rec;
+  return @vals;
 }
 
 
@@ -359,7 +361,7 @@ sub updaterecord {
         print STDERR "updaterecord: Should insert a new $f \n";
         if ( $f =~ /location/i ) {
           $val = db::insertrecord($c, "LOCATIONS", "newloc");
-        } elsif ( $f =~ /location/i ) {
+        } elsif ( $f =~ /brew/i ) {
           $val = db::insertrecord($c, "BREWS", "newbrew");
         } elsif ( $f =~ /person/i ) {
           $val = db::insertrecord($c, "PERSONS", "newperson");
@@ -441,7 +443,7 @@ sub insertrecord {
   my $sql = "insert into $table $fieldlist values $qlist";
   print STDERR "insertrecord: $sql \n";
   print STDERR "insertrecord: " . util::loglist( @values ) . "\n";
-  error("insertrecord: Nothing to insert into $table") unless @values;
+  util::error("insertrecord: Nothing to insert into $table") unless @values;
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @values );
   my $id = $c->{dbh}->last_insert_id(undef, undef, $table, undef) || undef;
