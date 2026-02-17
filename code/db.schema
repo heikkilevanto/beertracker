@@ -221,6 +221,7 @@ select
     brews.Id,
 	'Chk' as Chk,
     brews.Name,
+    '?' as Sim,
     ploc.Name as Producer,
     brews.Alc as Alc,
     brews.BrewType || ', ' || brews.Subtype as Type,
@@ -242,6 +243,7 @@ select
     locations.Id,
 	'Chk' as Chk,
     locations.Name,
+    '?' as Sim,
 	locations.lat || ' ' || locations.lon as Geo,
     locations.LocType || ', ' || locations.LocSubType as Type,
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last

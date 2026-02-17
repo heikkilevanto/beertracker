@@ -133,6 +133,9 @@ sub listrecords {
       $f = "Generic";
     } elsif ( $f =~ /Comment|Description/i ) {
       $sty = "style='max-width:200px; min-width:0; font-style: italic' ";
+    } elsif ( $f =~ /Sim/ ) {  # name similarity
+      $sty = "style='max-width:55px; min-width:0; text-align:right' ";
+      $f = "Sim";
     } elsif ( $f =~ /Geo/ ) {  # geo distance
       if ( $c->{mobile} ) {
         $sty = "style='max-width:55px; min-width:0; text-align:right' ";
@@ -227,6 +230,25 @@ sub listrecords {
           $disp = "$date" if ( $date lt $cutoff );
         }
         $v = "<a href='$c->{url}?o=Full&date=$date'><span>$disp</span></a>";
+      } elsif ( $fn eq "Sim" ) { # Name similarity
+        if ( $v && $extraparams && $extraparams->{refname} ) {
+          # Find the Name field in this row
+          my $name_idx;
+          for (my $j = 0; $j < scalar(@fields); $j++) {
+            if ($fields[$j] eq 'Name') {
+              $name_idx = $j;
+              last;
+            }
+          }
+          if (defined $name_idx) {
+            my $thisname = $rec[$name_idx];
+            $v = util::namesimilarity($extraparams->{refname}, $thisname);
+          } else {
+            $v = "";
+          }
+        } else {
+          $v = "";
+        }
       } elsif ( $fn eq "Geo" ) { # Geo dist
         if ( $v && $extraparams && $extraparams->{lat} && $extraparams->{lon} ) {
           my ( $lat, $lon ) = split(' ', $v);

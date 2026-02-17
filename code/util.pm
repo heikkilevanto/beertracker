@@ -72,6 +72,22 @@ sub loglist {
   return join(", ", map { defined($_) ? "'$_'" : "(undef)" } @_);
 }
 
+# Calculate name similarity using Levenshtein edit distance
+# Returns the edit distance: 0 = identical, higher = more different
+# Lower numbers mean more similar strings
+sub namesimilarity {
+  my $name1 = shift || "";
+  my $name2 = shift || "";
+  
+  return 0 if lc($name1) eq lc($name2);  # Exact match (case-insensitive)
+  return 999 unless $name1 && $name2;  # Large number for missing names
+  
+  # Calculate Levenshtein distance (loaded in index.cgi)
+  my $dist = Text::LevenshteinXS::distance($name1, $name2);
+  
+  return $dist;
+} # namesimilarity
+
 ################################################################################
 # Helpers for date and timestamps
 ################################################################################

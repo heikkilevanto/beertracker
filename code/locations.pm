@@ -219,6 +219,7 @@ sub locationdeduplist {
   my $extra = {};
   $extra->{lat} = $loc->{Lat};
   $extra->{lon} = $loc->{Lon};
+  $extra->{refname} = $loc->{Name};
   print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}", undef, $extra );
   print "</form>\n";
   print "<!-- locationdeduplist end -->\n";

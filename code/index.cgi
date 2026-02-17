@@ -33,6 +33,10 @@ binmode STDERR, ":utf8"; #
 
 use Time::Piece;
 
+# Text::LevenshteinXS - for calculating string similarity (edit distance)
+# Alternative: use Text::Levenshtein qw(distance); # pure Perl version
+use Text::LevenshteinXS qw(distance);
+
 use URI::Escape;
 use CGI qw( -utf8 );
 my $q = CGI->new;

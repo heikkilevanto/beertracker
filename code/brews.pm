@@ -312,7 +312,9 @@ sub brewdeduplist {
   print "<input type=hidden name='dedup' value='1' />\n";
   print "<br/>\n";
   my $sort = $c->{sort} || "Last-";
-  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id}" );
+  my $extra = {};
+  $extra->{refname} = $brew->{Name};
+  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id}" , undef, $extra);
   print "</form>\n";
   print "</div>\n";
   print "<!-- brewdeduplist end -->\n";
