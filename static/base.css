@@ -70,6 +70,7 @@ thead input {
   -webkit-user-select: none; /* Safari/Chrome */
   -moz-user-select: none;    /* Firefox */
   -ms-user-select: none;     /* IE/Edge */
+  touch-action: manipulation; /* prevents double-tap zoom and selection on mobile */
 }
 
 input:valid { border: 1px solid white; }

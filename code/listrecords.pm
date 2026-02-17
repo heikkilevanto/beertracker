@@ -156,7 +156,7 @@ sub listrecords {
     if ( $f =~ /Clr/i ) { # Clear filters button
       $s .= "<span $sty onclick='clearfilters(this);' >Clr</span>";
     } elsif ( $f  ) {
-      my $on = "oninput='changefilter(this);' ondblclick=sortTable(this,$i)";
+      my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
       $on = "" if ($f=~/Chk/);
       $s .= "<input type=text data-col=$i $sty $on placeholder='$f'/>";
       # Tried also with box-sizing: border-box; display: block;. Still extends the cell
