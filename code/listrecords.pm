@@ -85,8 +85,9 @@ sub listrecords {
   if ( $extraparams && $extraparams->{lat} eq '?' && $extraparams->{lon} eq '?' ) {
     $geotable = "id='geotable'";
   }
+  my $tableattrs = "$geotable data-maxrecords='$maxrecords'";
 
-  $s .= "<table $geotable>\n";
+  $s .= "<table $tableattrs>\n";
   my @styles;  # One for each column
 
   # Table headers

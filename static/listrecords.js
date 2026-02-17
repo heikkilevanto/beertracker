@@ -30,25 +30,25 @@ function dochangefilter (inputElement, gen) {
     }
   }
   
-  // When filtering, clear all hidden attributes to show all matching rows
+  // Check if user has already expanded the list ("More..." link is hidden)
+  const maxRecords = parseInt(table.dataset.maxrecords) || 0;
+  const moreLink = table.nextElementSibling;
+  const wasExpanded = moreLink && moreLink.tagName === 'DIV' && 
+                      moreLink.querySelector('a[onclick*="showMoreRecords"]') &&
+                      moreLink.style.display === 'none';
+  
+  // Temporarily clear all hidden attributes to process all rows
   const hiddenRows = table.querySelectorAll('tr[hidden]');
   hiddenRows.forEach(row => {
     row.removeAttribute('hidden');
   });
   
-  // Also hide the "More..." link if it exists
-  const moreLink = table.nextElementSibling;
-  if (moreLink && moreLink.tagName === 'DIV' && moreLink.querySelector('a[onclick*="showMoreRecords"]')) {
-    moreLink.style.display = 'none';
-  }
-  
   const firstrows = table.querySelectorAll('tbody tr[data-first]');
+  let visibleCount = 0;
+  
+  // Process all rows - don't abort mid-loop to avoid inconsistent table state
+  // If user types quickly, the newer filter will run after this one completes
   for (let r = 0; r < firstrows.length; r++) {
-    if (gen !== filterGeneration) {
-      console.log("Filtering aborted");
-      console.timeEnd("filter");
-      return;
-    }
     var disp = ""; // default to showing the row
     let row = firstrows[r];
     do {
@@ -67,13 +67,47 @@ function dochangefilter (inputElement, gen) {
       }
       row = row.nextElementSibling;
     } while ( row && ! row.hasAttribute("data-first") );
+    
+    // Apply display setting
     let ro = firstrows[r];
     do {
       ro.style.display = disp;
       ro = ro.nextElementSibling;
     } while ( ro && ! ro.hasAttribute("data-first") );
-
+    
+    // Count visible records
+    if (disp === "") {
+      visibleCount++;
+    }
   }
+  
+  // If list wasn't expanded and we have maxRecords limit, hide beyond top N
+  if (!wasExpanded && maxRecords > 0) {
+    let recordCount = 0;
+    for (let r = 0; r < firstrows.length; r++) {
+      if (firstrows[r].style.display !== "none") {
+        recordCount++;
+        if (recordCount > maxRecords) {
+          // Hide this record and continuation rows
+          let currentRow = firstrows[r];
+          do {
+            currentRow.setAttribute('hidden', '');
+            currentRow = currentRow.nextElementSibling;
+          } while (currentRow && currentRow.dataset.first !== "1");
+        }
+      }
+    }
+    // Show "More..." link if we have hidden records
+    if (moreLink && visibleCount > maxRecords) {
+      moreLink.style.display = '';
+    } else if (moreLink) {
+      moreLink.style.display = 'none';
+    }
+  } else if (moreLink) {
+    // List was expanded, keep "More..." hidden
+    moreLink.style.display = 'none';
+  }
+
   console.timeEnd("filter") ;
 
 }
@@ -131,17 +165,18 @@ function doSortTable(el, col, ascending) {
 
   console.time("sort") ;
 
-  // When sorting, unhide all rows (like filtering does)
+  // Check if user has already expanded the list ("More..." link is hidden)
+  const maxRecords = parseInt(table.dataset.maxrecords) || 0;
+  const moreLink = table.nextElementSibling;
+  const wasExpanded = moreLink && moreLink.tagName === 'DIV' && 
+                      moreLink.querySelector('a[onclick*="showMoreRecords"]') &&
+                      moreLink.style.display === 'none';
+  
+  // Temporarily unhide all rows for sorting
   const hiddenRows = table.querySelectorAll('tr[hidden]');
   hiddenRows.forEach(row => {
     row.removeAttribute('hidden');
   });
-  
-  // Also hide the "More..." link if it exists
-  const moreLink = table.nextElementSibling;
-  if (moreLink && moreLink.tagName === 'DIV' && moreLink.querySelector('a[onclick*="showMoreRecords"]')) {
-    moreLink.style.display = 'none';
-  }
 
   // Detach tbody
   const parent = tbody.parentNode;
@@ -188,6 +223,28 @@ function doSortTable(el, col, ascending) {
 
   // Reattach tbody
   parent.appendChild(tbody);
+
+  // Re-hide rows beyond maxRecords only if list wasn't already expanded
+  if (!wasExpanded && maxRecords > 0) {
+    const allRecords = tbody.querySelectorAll('tr[data-first="1"]');
+    let recordCount = 0;
+    allRecords.forEach(row => {
+      recordCount++;
+      if (recordCount > maxRecords) {
+        // Hide this record and any continuation rows
+        let currentRow = row;
+        do {
+          currentRow.setAttribute('hidden', '');
+          currentRow = currentRow.nextElementSibling;
+        } while (currentRow && currentRow.dataset.first !== "1");
+      }
+    });
+    // Show the "More..." link again
+    if (moreLink) {
+      moreLink.style.display = '';
+    }
+  }
+  // If was expanded, keep it expanded (moreLink stays hidden)
 
   // Clear arrows
   for (let th of table.querySelectorAll('thead input ') ) {
