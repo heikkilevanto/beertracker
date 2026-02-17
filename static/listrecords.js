@@ -131,6 +131,18 @@ function doSortTable(el, col, ascending) {
 
   console.time("sort") ;
 
+  // When sorting, unhide all rows (like filtering does)
+  const hiddenRows = table.querySelectorAll('tr[hidden]');
+  hiddenRows.forEach(row => {
+    row.removeAttribute('hidden');
+  });
+  
+  // Also hide the "More..." link if it exists
+  const moreLink = table.nextElementSibling;
+  if (moreLink && moreLink.tagName === 'DIV' && moreLink.querySelector('a[onclick*="showMoreRecords"]')) {
+    moreLink.style.display = 'none';
+  }
+
   // Detach tbody
   const parent = tbody.parentNode;
   parent.removeChild(tbody);
