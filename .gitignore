@@ -3,3 +3,4 @@ beerdata/*
 *swp
 fit.log
 *.bak
+tmp/
