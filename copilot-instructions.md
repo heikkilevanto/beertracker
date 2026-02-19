@@ -26,7 +26,8 @@ changes (alter table) require manual steps; document those in commit message. Ch
 - **Versioning**: Git pre-commit hook runs `tools/makeversion.sh` to update `code/VERSION.pm` with commit count.
 - **Testing**: No automated tests; manually test CGI under Apache. Use `superuser::copyproddata()` to sync production data to dev.
 - **Deployment**: Git pull code to production, run `tools/dbchange.sh` if schema changed.
-
+- **Plan files**: are kept under plans. They are used to track AI instructions for implementing a change.
+They should be named like '557-photo.md' where 557 is the issue number. Delete when done. 
 ## Key Patterns and Conventions
 - **Context Hash**: Pass `$c` hash containing globals (username, dbh, url, etc.) to all functions.
 - **Parameter Handling**: Use `util::param($c, "key")` for CGI params; handles GET/POST uniformly.
@@ -86,6 +87,7 @@ are still some inline scripts in the HTML for simplicity.
 - Avoid duplicating code; if you find yourself writing similar code, consider refactoring into a helper function in db.pm or util.pm.
 
 ## Interactions
+- When designing a new feature or making changes, feel free to ask clarifying questions 
 - When I ask you to check a module, check for
   - adherence to the architecture and code style guidelines
   - consistency with existing patterns in the codebase
@@ -97,3 +99,4 @@ are still some inline scripts in the HTML for simplicity.
   - Do not list all things that are all right, only those that might be issues or improvements. 
 - always be explicit about what you are doing and why, before doing it.
 - If you need to make changes, list them clearly and ask for confirmation before proceeding.
+- Avoid emojis and fluff in your responses; be concise and to the point.
