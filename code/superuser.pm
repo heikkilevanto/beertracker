@@ -36,7 +36,7 @@ sub copyproddata {
   if (!$c->{devversion}) {
     util::error ("Not allowed");
   }
-  my $databasefile = $db::databasefile;
+  my $databasefile = db::dbfile();
   util::error ("No db file") unless $databasefile;
   my $datadir = $c->{datadir};
   my $photodir = $c->{photodir};

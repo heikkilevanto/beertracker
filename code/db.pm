@@ -17,6 +17,9 @@ use DBI;
 
 our $databasefile = "beerdata/beertracker.db";
 
+# Return the path to the SQLite database file.
+sub dbfile { return $databasefile; }
+
 ################################################################################
 # Connect to the db
 ################################################################################
@@ -136,6 +139,16 @@ sub query {
   $sth->execute( @params );
   return $sth;
 }
+
+# Run a DML/DDL statement (INSERT, UPDATE, DELETE, CREATE, ALTER, etc.)
+# Logs the statement and executes it; returns the result of do().
+sub execute {
+  logquery(@_);
+  my $c = shift;
+  my $sql = shift;
+  my @params = @_;
+  return $c->{dbh}->do($sql, undef, @params);
+} # execute
 
 # Run a simple query, and return the first (only?) record as a hash ref
 sub queryrecord {

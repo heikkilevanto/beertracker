@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-02-08 14:12 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-02-20 13:16 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -138,6 +138,10 @@ create table if not exists "tap_beers" (
 );
 
 analyze sqlite_schema;
+
+-- table globals
+drop table if exists globals;
+create table globals (k text primary key, v text);
 
 -- view compers
 drop view if exists compers;

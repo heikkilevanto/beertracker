@@ -81,6 +81,7 @@ require "./code/geo.pm"; # Geo coordinate stuff
 require "./code/ratestats.pm"; # Histogram of the ratings
 require "./code/export.pm"; # Export the users own data
 require "./code/photos.pm"; # Helpers for managing photo files
+require "./code/migrate.pm"; # DB migration system
 
 
 
@@ -202,7 +203,9 @@ if ( $q->request_method eq "POST" ) {
 
     $c->{dbh}->do("BEGIN TRANSACTION");
 
-    if ( $c->{op} =~ /Person/i ) {
+    if ( $c->{op} =~ /migrate/i ) {
+      migrate::run_migrations($c);
+    } elsif ( $c->{op} =~ /Person/i ) {
       persons::postperson($c);
     } elsif ( $c->{op} =~ /Location/i ) {
       locations::postlocation($c);
@@ -231,6 +234,8 @@ if ( $q->request_method eq "POST" ) {
 }
 
 db::open_db($c, "ro");  # GET requests are read-only by default
+
+migrate::startup_check($c);  # Redirect to migration form if DB is behind code version
 
 # Datafile export needs to be done before HTML head, as we output text/plain
 if ( $c->{op} =~ /DoExport/i ) {
@@ -268,6 +273,8 @@ if ( $c->{op} =~ /Board/i ) {
   comments::listallcomments($c);
 } elsif ( $c->{op} =~ /Location/i ) {
   locations::listlocations($c);
+} elsif ( $c->{op} =~ /migrate/i ) {
+  migrate::migrate_form($c);
 } elsif ( $c->{op} =~ /Export/i ) {
   export::exportform($c);
 } elsif ( $c->{op} =~ /GitStatus/i ) {
