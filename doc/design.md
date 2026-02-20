@@ -219,9 +219,6 @@ The git hook `pre-commit` invokes `tools/makeversion.sh` which updates the
 code/VERSION.pm with the current version number and a count of commits since,
 so the about page and the top line can show where we are going.
 
-The git hook `post-merge` invokes `tools/warn-schema.sh` which checks if
-`code/db.schema` has changed and prints a reminder.
-
 Schema changes (adding tables, columns, indexes, views) must be implemented as
 migration subs in `code/migrate.pm` following the process described above.
 After verifying a migration locally, run `tools/dbdump.sh` to update
