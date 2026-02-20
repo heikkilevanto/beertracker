@@ -75,7 +75,12 @@ producers of beer and other brews.
 
 ### tap_beers
 Track what beers various places have on tap now or in the past. Also what
-volumes the beer was sold at, and for what price. 
+volumes the beer was sold at, and for what price.
+
+### globals
+Single-row key/value store for system-wide metadata. Currently holds one row:
+`db_version` (integer), which tracks the applied migration level and is
+managed exclusively by `code/migrate.pm`.
 
 ### Relationships
 - `brews.ProducerLocation → locations.Id`
@@ -84,8 +89,8 @@ volumes the beer was sold at, and for what price.
 - `comments.Glass → glasses.Id`
 - `persons.Location → locations.Id`
 - `persons.RelatedPerson → persons.Id`
-- `taps_beers.Location → locations.Id`
-- `taps_beers.Brew → brews.Id`
+- `tap_beers.Location → locations.Id`
+- `tap_beers.Brew → brews.Id`
 
 ## Program modules
 Originally BeerTracker was one large script, but for version 3 I split it into
@@ -124,6 +129,7 @@ Other utilities:
 - `code/geo.pm` - Geo coordinate stuff
 - `code/inputs.pm` - Helper routines for input forms
 - `code/listrecords.pm` - A way to produce a nice list from db records
+- `code/migrate.pm` - DB migration system: detects version mismatch, shows form, runs migrations
 - `code/scrapeboard.pm` - Scraping and updating beer boards
 - `code/superuser.pm` - Superuser functions: Copy prod data, git pull
 - `code/util.pm` - Various helper functions
@@ -193,22 +199,35 @@ usual way.
 I normally develop under beertracker-dev, and when happy with it, commit and
 push the code. Then I pull under beertracker itself for production use.
 
+### Database migrations
+Schema changes are managed by `code/migrate.pm`. Each schema change is
+implemented as a numbered Perl sub registered in `@MIGRATIONS` and the
+constant `$CODE_DB_VERSION` is bumped to match. On every page load,
+`migrate::startup_check()` compares `globals.db_version` with
+`$CODE_DB_VERSION`. If the DB is behind, a timestamped file-copy backup is
+taken and the user is redirected to a confirmation form (`o=migrate`). Posting
+the form runs the missing migrations inside the normal transaction, updating
+`globals.db_version` after each one. On error the transaction rolls back and
+the DB is left unchanged.
+
+To add a migration: write a `mig_NNN_description` sub, register it in
+`@MIGRATIONS`, and bump `$CODE_DB_VERSION`. After verifying, run
+`tools/dbdump.sh` and commit `code/db.schema` together with the migration code.
+
 ### Git trickery
 The git hook `pre-commit` invokes `tools/makeversion.sh` which updates the
 code/VERSION.pm with the current version number and a count of commits since,
 so the about page and the top line can show where we are going.
 
-The git hook `post-merge` invokes `tools/warn-schema.sh` which checks if the
-db.schema has changed and if so, prints a warning to run the dbupdate script.
+The git hook `post-merge` invokes `tools/warn-schema.sh` which checks if
+`code/db.schema` has changed and prints a reminder.
 
-This is useful, if changing the schema under dev, for example adjusting some of
-the  list views. Then you should run tools/dbdump.sh to update the db.schema
-file. Commit and push that, and pull on production. The post-merge hook will
-remind to run `tools/dbchange.sh` which tries to port the schema change to the
-production database. It does it by exporting all the data, recreating the
-database from db.schema, and importing the data back to it. This works for
-changing views, or renaming columns in tables, but if adding columns or tables
-you may have to do some manual trickery in both development and production db.
+Schema changes (adding tables, columns, indexes, views) must be implemented as
+migration subs in `code/migrate.pm` following the process described above.
+After verifying a migration locally, run `tools/dbdump.sh` to update
+`code/db.schema`, then commit both together. On production, `git pull` followed
+by the first page load will detect the version mismatch and apply the
+migrations automatically.
 
 ## See also
 - The project lives on github at https://github.com/heikkilevanto/beertracker. 
