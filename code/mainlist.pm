@@ -226,6 +226,13 @@ sub numbersline {
   print "<br/>\n"
 }
 
+sub photoline {
+  my $c = shift;
+  my $rec = shift;
+  my $html = photos::thumbnails_html($c, 'glass', $rec->{id});
+  print $html if $html;
+} # photoline
+
 sub commentlines {
   my $c = shift;
   my $rec = shift;
@@ -465,6 +472,7 @@ sub oneday {
     $locmaxba = $balc->{$rec->{id}} if $balc->{$rec->{id}} && $balc->{$rec->{id}} > $locmaxba;
     nameline($c, $rec, $loc, $locname);
     numbersline($c,$rec,$balc);
+    photoline($c,$rec);
     commentlines($c,$rec);
     buttonline($c,$rec);
     print "<br/>\n";

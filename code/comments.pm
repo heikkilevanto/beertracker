@@ -150,6 +150,7 @@ sub commentform {
     $hidden = "";
   }
   $s .= "<span onclick='document.getElementById(\"commentform\").hidden ^= true'>(Add comment)</span>\n";
+  $s .= photos::photo_form($c, glass => $glassid) . "\n";
   $s .= "<div  id='commentform' $hidden>\n";
   $s .= "<form method='post' action='$c->{url}' enctype='multipart/form-data'>\n";
   $s .= "<input type='hidden' name='commentedit' value='1'>\n"; # To distinguish from glass submit
@@ -163,9 +164,6 @@ sub commentform {
     $s .= "<input type='hidden' name='comment_id' value='$com->{Id}'>\n";
     $s .= "<br/>Editing comment $com->{Id} <br/>";
   }
-
-  # Photo preview
-  $s .= "<div id='preview'></div>\n";
 
   # Comment text area
   my $comment = $com->{Comment} || "";
@@ -189,14 +187,6 @@ sub commentform {
   $s .= "</select>\n";
   $s .= "<script>replaceSelectWithCustom(document.getElementById('rating'));</script>\n";
 
-  # Photo
-  my $oldphoto = $com->{photo} || "";
-  $s .= "<input type='file' id='cameraInput' name='photo'
-         accept='image/*' capture='environment' style='display:none' value='$oldphoto'>\n";
-  $s .= "<button type='button' onclick='document.getElementById(\"cameraInput\").click()'> ".
-    "Photo</button>\n";
-  $s .= "<br>\n";
-
   # Submit button
   my $button_text = $com->{Id} ? "Update Comment" : "Add Comment";
   $s .= "<input type='submit' name='submit' value='$button_text'>\n";
@@ -206,23 +196,6 @@ sub commentform {
 
   $s .= "</form>\n";
   $s .= "</div>\n";
-  $s .= <<END;
-  <script>
-      document.getElementById('cameraInput').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (file) {
-        const img = document.createElement('img');
-        img.src = URL.createObjectURL(file);
-        img.style.maxWidth = "200px";
-        img.style.maxHeight = "200px";
-
-        const preview = document.getElementById('preview');
-        preview.innerHTML = "";   // clear any old preview
-        preview.appendChild(img);
-      }
-    });
-  </script>
-END
 
   return $s;
 }
@@ -278,7 +251,7 @@ sub postcomment {
   }
 
   if ( $photo &&  $c->{cgi}->upload('photo') ) {  # We have a photo
-    my $photoname = photos::savefile($c, $comment_id);
+    my $photoname = photos::savefile($c, "c-$comment_id");
     if ($photoname) {
       my $sql = "UPDATE comments SET Photo = ?
                 WHERE Id = ? AND Glass = ?";  # Do we need both? Maybe username instead?

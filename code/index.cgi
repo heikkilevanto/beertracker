@@ -211,6 +211,8 @@ if ( $q->request_method eq "POST" ) {
       locations::postlocation($c);
     } elsif ( $c->{op} =~ /Beer|Brew/i ) {
       brews::postbrew($c);
+    } elsif ( $c->{op} =~ /Photo/i ) {
+      photos::post_photo($c);
     } elsif ( util::param($c, "commentedit") ) {
       comments::postcomment($c);
     } elsif ( $c->{op} =~ /updateboard/i ) {
