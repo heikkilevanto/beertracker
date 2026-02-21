@@ -116,6 +116,7 @@ sub about {
 
   print "<b>Loaded modules</b>\n";
   my @sysmodules;
+  my $tot = 0;
   print "<table class=data>";
   print "<tr><td>Module</td><td>Lines</td><td>Modified</td></tr>\n";
   for my $mod (sort keys %INC) {
@@ -131,8 +132,10 @@ sub about {
           my @st = stat($file);
           my $mtime = strftime "%Y-%m-%d %H:%M", localtime $st[9];
           print "<tr><td>$short</td><td class='num'>$lines</td><td>$mtime</td></tr>\n";
+          $tot += $lines;
       }
   }
+  print "<tr><td>= Total</td><td class='num'>$tot</td><td>&nbsp;</td></tr>\n";
   print "</table>\n";
 
 } # About
