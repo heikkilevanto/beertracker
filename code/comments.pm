@@ -50,10 +50,7 @@ sub commentline {
   $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );
   $s .= "<b>$cr->{PersName}:</b>\n" if ( $cr->{PersName} );
   $s .= "<i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
-  if ( $cr->{Photo} ) {
-    $s .= "Photo $cr->{Photo} <br/>\n";
-    $s .= photos::imagetag($c, $cr->{Photo}, "thumb");
-  }
+  $s .= photos::thumbnails_html($c, 'comment', $cr->{Id}) if $cr->{Id};
 
   return $s;
 } # commentline

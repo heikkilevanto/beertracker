@@ -241,8 +241,10 @@ sub commentlines {
     $sth->execute($rec->{id});
     print "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
+      my $comid = $com->{Id}; # Save before clearing
       $com->{Id} = ""; # Disable the edit link with id
-      print "<li>". comments::commentline($c, $com). "</li>\n  ";  # </div>\n";
+      print "<li>". comments::commentline($c, $com).
+            photos::thumbnails_html($c, 'comment', $comid). "</li>\n  ";  # </div>\n";
     }
     print "</ul>\n";
   }

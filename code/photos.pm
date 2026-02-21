@@ -86,6 +86,53 @@ sub imagetag {
 } # image
 
 
+# Map entity type to the corresponding photos table column
+my %entity_col = (
+  comment  => 'Comment',
+  glass    => 'Glass',
+  location => 'Location',
+  person   => 'Person',
+  brew     => 'Brew',
+);
+
+# Return a list of photo records for a given entity.
+# Usage: get_photos($c, 'comment', $comment_id)
+sub get_photos {
+  my $c    = shift;
+  my $type = shift; # entity type: comment, glass, location, person, brew
+  my $id   = shift;
+  return () unless defined($id) && $id ne '';
+  my $col = $entity_col{lc($type)};
+  unless ($col) {
+    print STDERR "get_photos: unknown entity type '$type'\n";
+    return ();
+  }
+  my $sql = "SELECT * FROM photos WHERE $col = ? ORDER BY Id";
+  my $sth = db::query($c, $sql, $id);
+  my @photos;
+  while (my $row = $sth->fetchrow_hashref) {
+    push @photos, $row;
+  }
+  return @photos;
+} # get_photos
+
+# Return thumbnail HTML for all photos attached to an entity.
+# Each thumbnail links to the full-size original.
+sub thumbnails_html {
+  my $c    = shift;
+  my $type = shift;
+  my $id   = shift;
+  return '' unless defined($id) && $id ne '';
+  my @photos = get_photos($c, $type, $id);
+  return '' unless @photos;
+  my $s = '';
+  for my $p (@photos) {
+    $s .= imagetag($c, $p->{Filename}, 'thumb');
+  }
+  return $s;
+} # thumbnails_html
+
+
 # Save the uploaded image in a file
 sub savefile {
   my $c = shift;
