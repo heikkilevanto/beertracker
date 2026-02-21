@@ -21,10 +21,11 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 1;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 2;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
+  [2, 'create photos table and backfill from comments.Photo', \&mig_002_photos_table],
 );
 
 ################################################################################
@@ -165,5 +166,47 @@ sub mig_001_create_globals_table {
   db::execute($c, "CREATE TABLE IF NOT EXISTS globals (k TEXT PRIMARY KEY, v TEXT)");
   db::execute($c, "INSERT OR REPLACE INTO globals(k,v) VALUES('db_version','0')");
 } # mig_001_create_globals_table
+
+sub mig_002_photos_table {
+  my $c = shift;
+  db::execute($c, q{
+    CREATE TABLE IF NOT EXISTS photos (
+      Id INTEGER PRIMARY KEY,
+      Filename TEXT NOT NULL,
+      Caption TEXT,
+      Glass INTEGER,
+      Location INTEGER,
+      Person INTEGER,
+      Comment INTEGER,
+      Brew INTEGER,
+      Uploader INTEGER,
+      Public INTEGER NOT NULL DEFAULT 0,
+      Ts DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  });
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_photos_comment  ON photos(Comment)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_photos_location ON photos(Location)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_photos_person   ON photos(Person)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_photos_brew     ON photos(Brew)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_photos_uploader ON photos(Uploader)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_photos_public   ON photos(Public)");
+
+  # Ensure Heikki has a persons record (auto-assigned id).
+  db::execute($c, q{
+    INSERT OR IGNORE INTO persons (Name) VALUES ('Heikki')
+  });
+
+  # Backfill: migrate legacy comments.Photo filenames into the photos table.
+  # Resolve Uploader by joining comments -> glasses (Username) -> persons (Name).
+  db::execute($c, q{
+    INSERT INTO photos (Filename, Comment, Uploader, Public, Ts)
+      SELECT c.Photo, c.Id, p.Id, 0, CURRENT_TIMESTAMP
+        FROM comments c
+        LEFT JOIN glasses g ON g.Id = c.Glass
+        LEFT JOIN persons p ON lower(p.Name) = lower(g.Username)
+       WHERE c.Photo IS NOT NULL AND c.Photo != ''
+  });
+  db::execute($c, "UPDATE comments SET Photo = NULL WHERE Photo IS NOT NULL");
+} # mig_002_photos_table
 
 1;
