@@ -143,7 +143,13 @@ A single Perl function in `photos.pm` renders a collapsible form used everywhere
 ### Photo display
 - Thumbnail inline with the parent entity (comment, location, brew, etc.). Clicking opens the full-size image.
 - Inline delete button for the uploader or admin.
-- Inline edit link (caption, `Public` flag) opens a small edit form (same widget in edit mode).
+- Inline edit link (caption, `Public` flag) opens a small edit form (same widget in edit mode.
+
+### Thumbnails & editing
+- Clicking any thumbnail should navigate to a dedicated photo‑edit page where metadata can be changed or the photo deleted. This page is the canonical place for editing a single photo record.
+- Entity edit/display pages (persons, locations, brews, glasses) show all relevant thumbnails for that record. Those pages also include a `photos::photo_form` widget for capturing/uploading a new photo.
+- In record lists (e.g. person or location index) show only the most recent thumbnail in a small, unobtrusive size.
+- The main glass list (`o=MainList`) also displays thumbnails: include any photo attached directly to the glass or to its comments. The comment form on the main list continues to embed the `(photo)` widget for quick uploads.
 
 ### Public default rules
 | Attached to | Default `Public` |
