@@ -200,7 +200,7 @@ sub mig_002_photos_table {
   # Resolve Uploader by joining comments -> glasses (Username) -> persons (Name).
   db::execute($c, q{
     INSERT INTO photos (Filename, Comment, Uploader, Public, Ts)
-      SELECT c.Photo, c.Id, p.Id, 0, CURRENT_TIMESTAMP
+      SELECT c.Photo, c.Id, p.Id, 0, g.Timestamp
         FROM comments c
         LEFT JOIN glasses g ON g.Id = c.Glass
         LEFT JOIN persons p ON lower(p.Name) = lower(g.Username)

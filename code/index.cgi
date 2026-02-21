@@ -271,6 +271,8 @@ if ( $c->{op} =~ /Board/i ) {
   brews::listbrews($c);
 } elsif ( $c->{op} =~ /Person/i ) {
   persons::listpersons($c);
+} elsif ( $c->{op} =~ /Photo/i ) {
+  photos::listphotos($c);
 } elsif ( $c->{op} =~ /Comment/i ) {
   comments::listallcomments($c);
 } elsif ( $c->{op} =~ /Location/i ) {

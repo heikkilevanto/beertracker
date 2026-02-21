@@ -59,9 +59,10 @@ sub imagefilename {
 
 # Produce the image tag
 sub imagetag {
-  my $c = shift;
-  my $photo = shift;  # The name, as in the db
-  my $width = shift || "thumb" ; # One of the keys in %imagesizes
+  my $c        = shift;
+  my $photo    = shift;  # The name, as in the db
+  my $width    = shift || "thumb"; # One of the keys in %imagesizes
+  my $link_url = shift;  # Optional: override the link target (defaults to orig)
   return "" unless ( $photo );
   my $orig = imagefilename($c,$photo, "orig");
   if ( ! -r $orig ) {
@@ -79,11 +80,13 @@ sub imagetag {
     chomp($conv);
     print STDERR "Resize failed with $rc: '$conv' \n" if ( $conv );
   }
-  my $w = $imagesizes{$width};
+  my $w    = $imagesizes{$width};
+  my $href = $link_url || $orig;
+  my $tgt  = $link_url ? "" : " target='_blank'";
   my $itag = "<img src='$fn' width='$w' style='vertical-align:top' />";
-  my $tag = "<a href='$orig' target='_blank' style='margin-right:6px; display:inline-block'>$itag</a>\n";
+  my $tag  = "<a href='$href'$tgt style='margin-right:6px; display:inline-block'>$itag</a>\n";
   return $tag;
-} # image
+} # imagetag
 
 
 # Map entity type to the corresponding photos table column
@@ -127,7 +130,8 @@ sub thumbnails_html {
   return '' unless @photos;
   my $s = '';
   for my $p (@photos) {
-    $s .= imagetag($c, $p->{Filename}, 'thumb');
+    my $editurl = "$c->{url}?o=Photos&e=$p->{Id}";
+    $s .= imagetag($c, $p->{Filename}, 'thumb', $editurl);
   }
   return "<div style='margin-left:1.2em; margin-top:3px'>$s</div>\n";
 } # thumbnails_html
@@ -207,13 +211,36 @@ document.getElementById('${fid}_file').addEventListener('change', function() {
 } # photo_form
 
 ################################################################################
-# POST handler: save uploaded photo, insert photos row, redirect back.
+# POST handler: save uploaded photo OR update/delete metadata.
 sub post_photo {
   my $c = shift;
-  my $glassid    = util::param($c, 'glass')      || undef;
-  my $caption    = util::param($c, 'caption')    || undef;
-  my $ispublic   = util::param($c, 'public') ? 1 : 0;
-  my $return_url = util::param($c, 'return_url') || "$c->{url}?o=$c->{op}";
+
+  my $photo_id   = util::param($c, 'photo_id')   || undef;
+  # return_url contains '=' so must bypass util::param's character filter
+  my $return_url = $c->{cgi}->param('return_url') || "$c->{url}?o=Photos";
+
+  # --- Metadata edit / delete path ---
+  if ($photo_id) {
+    if ( util::param($c, 'submit') =~ /Delete/i ) {
+      db::execute($c, "DELETE FROM photos WHERE Id = ?", $photo_id);
+      print STDERR "Deleted photo id=$photo_id\n";
+    } else {
+      my $caption  = util::param($c, 'caption')  || undef;
+      my $ispublic = util::param($c, 'public') ? 1 : 0;
+      db::execute($c,
+        "UPDATE photos SET Caption = ?, Public = ? WHERE Id = ?",
+        $caption, $ispublic, $photo_id);
+      print STDERR "Updated photo id=$photo_id\n";
+    }
+    $c->{redirect_url} = $return_url;
+    return;
+  }
+
+  # --- New upload path ---
+  my $glassid  = util::param($c, 'glass') || undef;
+  my $caption  = util::param($c, 'caption') || undef;
+  my $ispublic = util::param($c, 'public') ? 1 : 0;
+  $return_url  = $c->{cgi}->param('return_url') || "$c->{url}?o=$c->{op}";
 
   util::error("No glass id provided for photo upload") unless $glassid;
 
@@ -222,8 +249,8 @@ sub post_photo {
     "SELECT Id FROM persons WHERE lower(Name) = lower(?)", undef, $c->{username});
 
   # Use a human-readable timestamp for the filename
-  my $ts     = strftime("%Y-%m-%d+%H:%M:%S", localtime);
-  my $prefix = "g-${glassid}-${ts}";
+  my $ts        = strftime("%Y-%m-%d+%H:%M:%S", localtime);
+  my $prefix    = "g-${glassid}-${ts}";
   my $photoname = savefile($c, $prefix);
   util::error("Photo upload failed or no file was selected") unless $photoname;
 
@@ -234,6 +261,110 @@ sub post_photo {
   print STDERR "Inserted photo '$photoname' for glass '$glassid' uploader='" . ($uploader//"NULL") . "'\n";
   $c->{redirect_url} = $return_url;
 } # post_photo
+
+################################################################################
+# GET: list all photos for the current user, newest first.
+sub listphotos {
+  my $c = shift;
+
+  if ( $c->{edit} ) {
+    editphoto($c);
+    return;
+  }
+
+  print "<b>Photos for $c->{username}</b><br/>\n";
+
+  my $sql = q{
+    SELECT p.*
+      FROM photos p
+     WHERE p.Glass   IN (SELECT Id FROM glasses WHERE Username = ?)
+        OR p.Comment IN (SELECT c.Id FROM comments c
+                           JOIN glasses g ON g.Id = c.Glass
+                          WHERE g.Username = ?)
+        OR p.Uploader = (SELECT Id FROM persons WHERE lower(Name) = lower(?))
+     ORDER BY p.Ts DESC
+  };
+  my $sth = db::query($c, $sql, $c->{username}, $c->{username}, $c->{username});
+
+  my $count    = 0;
+  my $cur_date = '';
+  my $in_div   = 0;
+  while (my $p = $sth->fetchrow_hashref) {
+    my $editurl = "$c->{url}?o=Photos&e=$p->{Id}";
+    my $thumb = imagetag($c, $p->{Filename}, 'thumb', $editurl);
+    next unless $thumb;  # skip if file missing
+
+    # Extract date part from Ts (e.g. "2026-02-21 15:54:12" -> "2026-02-21")
+    my ($date) = split(' ', $p->{Ts});
+    $date //= 'Unknown date';
+
+    if ($date ne $cur_date) {
+      print "</div>\n" if $in_div;
+      print "<b>$date</b><br/>\n";
+      print "<div style='display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px'>\n";
+      $cur_date = $date;
+      $in_div   = 1;
+    }
+
+    my $cap = $p->{Caption} ? "<br/><small>" . util::htmlesc($p->{Caption}) . "</small>" : '';
+    print "<div style='text-align:center'>$thumb$cap</div>\n";
+    $count++;
+  }
+  print "</div>\n" if $in_div;
+  print "<p>$count photo" . ($count == 1 ? '' : 's') . ".</p>\n";
+} # listphotos
+
+################################################################################
+# GET: edit form for a single photo record.
+sub editphoto {
+  my $c = shift;
+  my $photo_id = $c->{edit};
+
+  my ($p) = do {
+    my $sth = db::query($c, "SELECT * FROM photos WHERE Id = ?", $photo_id);
+    $sth->fetchrow_hashref;
+  };
+  util::error("Photo $photo_id not found") unless $p;
+
+  my $return_url  = "$c->{url}?o=Photos";
+  my $caption     = $p->{Caption} // '';
+  my $pub_checked = $p->{Public}  ? ' checked' : '';
+
+  # Entity summary line
+  my @attached;
+  push @attached, "Glass $p->{Glass}"     if $p->{Glass};
+  push @attached, "Comment $p->{Comment}" if $p->{Comment};
+  push @attached, "Location $p->{Location}" if $p->{Location};
+  push @attached, "Person $p->{Person}"   if $p->{Person};
+  push @attached, "Brew $p->{Brew}"       if $p->{Brew};
+  my $attached_str = @attached ? join(', ', @attached) : 'none';
+
+  print qq{<b>Edit Photo $photo_id</b> &nbsp;
+<a href='$return_url'><span>(Back to list)</span></a><br/>
+<small>Attached to: $attached_str &nbsp; Uploaded: $p->{Ts}</small><br/>
+<form method='post' action='$c->{url}'>
+  <input type='hidden' name='o'          value='Photos' />
+  <input type='hidden' name='photo_id'   value='$photo_id' />
+  <input type='hidden' name='return_url' value='$return_url' />
+  <label>Caption: <input type='text' name='caption' value='$caption' size='40' /></label><br/>
+  <label><input type='checkbox' name='public' value='1'$pub_checked /> Public</label><br/>
+  <input type='submit' name='submit' value='Update Photo' />
+  &nbsp;
+  <input type='submit' name='submit' value='Delete Photo'
+    onclick='return confirm("Delete this photo?")' />
+</form>
+<hr/>
+};
+
+  # Full-size image below the form — opens in a new tab when clicked
+  my $orig = imagefilename($c, $p->{Filename}, 'orig');
+  if (-r $orig) {
+    print "<a href='$orig' target='_blank'><img src='$orig' "
+        . "style='max-width:100%; max-height:80vh; cursor:pointer' /></a>\n";
+  } else {
+    print "<p><i>Image file not found: $orig</i></p>\n";
+  }
+} # editphoto
 
 ################################################################################
 # Report module loaded ok

@@ -146,6 +146,16 @@ sub param {
   return $val;
 }
 
+# Escape HTML special characters
+sub htmlesc {
+  my $s = shift // '';
+  $s =~ s/&/&amp;/g;
+  $s =~ s/</&lt;/g;
+  $s =~ s/>/&gt;/g;
+  $s =~ s/"/&quot;/g;
+  return $s;
+} # htmlesc
+
 sub paramnumber {
   my $c = shift;
   my $tag = shift;
@@ -330,6 +340,7 @@ sub showmenu {
         { label => "Locations", url => "o=Location" },
         { label => "Comments",  url => "o=Comment" },
         { label => "Persons",   url => "o=Person" },
+        { label => "Photos",    url => "o=Photos" },
     );
     push @menu, { label => "List / Edit ...", children => \@edit };
 
