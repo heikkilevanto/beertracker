@@ -119,8 +119,8 @@ sub about {
   my $tot = 0;
   print "<table class=data>";
   print "<tr><td>Module</td><td>Lines</td><td>Modified</td></tr>\n";
-  for my $mod (sort keys %INC) {
-      my $file = $INC{$mod};
+  for my $mod ("./code/index.cgi", sort keys %INC) {
+      my $file = $INC{$mod} || $mod; 
       (my $short = $mod) =~ s/\.pm$//;
       if ($file =~ m{\./code/}) {
           my $lines = 0;
