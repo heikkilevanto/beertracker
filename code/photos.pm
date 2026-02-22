@@ -221,9 +221,54 @@ sub post_photo {
 
   # --- Metadata edit / delete path ---
   if ($photo_id) {
-    if ( util::param($c, 'submit') =~ /Delete/i ) {
+    my $submit = util::param($c, 'submit') || '';
+
+    if ( $submit =~ /Add Attachment/i ) {
+      # Create a new photos row pointing to the same image file, different entity
+      my $attach_type = util::param($c, 'attach_type') || '';
+      my $attach_id;
+      if ($attach_type eq 'brew') {
+        $attach_id = util::param($c, 'Brew') || undef;
+      } elsif ($attach_type eq 'location') {
+        $attach_id = util::param($c, 'attach_location_id') || undef;
+      } else {
+        $attach_id = util::param($c, 'attach_person_id') || undef;
+      }
+      util::error("No entity selected for attachment") unless $attach_id;
+      my $src = $c->{dbh}->selectrow_hashref(
+        "SELECT * FROM photos WHERE Id = ?", undef, $photo_id);
+      util::error("Source photo $photo_id not found") unless $src;
+      my $col = ucfirst($attach_type);
+      db::execute($c,
+        "INSERT INTO photos (Filename, $col, Uploader, Caption, Public, Ts) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+        $src->{Filename}, $attach_id, $src->{Uploader}, $src->{Caption}, $src->{Public});
+      my $new_id = $c->{dbh}->last_insert_id("","","","");
+      print STDERR "Added attachment: photo $new_id (copy of $photo_id) for $attach_type $attach_id\n";
+      $c->{redirect_url} = "$c->{url}?o=Photos&e=$new_id";
+      return;
+    }
+
+    if ( $submit =~ /Delete/i ) {
+      # Fetch filename before deleting so we can clean up files if last record
+      my $fname_row = $c->{dbh}->selectrow_hashref(
+        "SELECT Filename FROM photos WHERE Id = ?", undef, $photo_id);
       db::execute($c, "DELETE FROM photos WHERE Id = ?", $photo_id);
       print STDERR "Deleted photo id=$photo_id\n";
+      # Remove physical image files only when no other record references this filename
+      if ($fname_row && $fname_row->{Filename}) {
+        my ($remaining) = $c->{dbh}->selectrow_array(
+          "SELECT COUNT(*) FROM photos WHERE Filename = ?", undef, $fname_row->{Filename});
+        if ($remaining == 0) {
+          my $orig = imagefilename($c, $fname_row->{Filename}, 'orig');
+          (my $base = $orig) =~ s/\+orig\.jpg$//;
+          unlink $orig;
+          my @scaled = glob("${base}+*w.jpg");
+          unlink @scaled if @scaled;
+          print STDERR "Deleted image files for '$fname_row->{Filename}'\n";
+        } else {
+          print STDERR "Photo '$fname_row->{Filename}' still has $remaining record(s), keeping files\n";
+        }
+      }
     } else {
       my $caption  = util::param($c, 'caption')  || undef;
       my $ispublic = util::param($c, 'public') ? 1 : 0;
@@ -342,6 +387,8 @@ sub photo_attached_str {
   my @attached;
 
   if ( $p->{Glass} ) {
+    my $gid = $p->{Glass};
+    my $glink = "<a href='$c->{url}?o=Glass&e=$gid'><span>$gid</span></a>";
     my $row = $c->{dbh}->selectrow_hashref(q{
       SELECT l.Name  AS Loc,
              b.Name  AS Brew,
@@ -351,19 +398,20 @@ sub photo_attached_str {
         LEFT JOIN brews b      ON b.Id  = g.Brew
         LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
        WHERE g.Id = ?
-    }, undef, $p->{Glass});
+    }, undef, $gid);
     if ($row) {
-      my $s = "Glass [$p->{Glass}]:";
+      my $s = "G[$glink]:";
       $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
       $s .= " <b>$row->{Brew}</b>"      if $row->{Brew};
       $s .= " \@<b>$row->{Loc}</b>"     if $row->{Loc};
       push @attached, $s;
     } else {
-      push @attached, "Glass [$p->{Glass}]";
+      push @attached, "G[$glink]";
     }
   }
 
   if ( $p->{Comment} ) {
+    my $cid = $p->{Comment};
     my $row = $c->{dbh}->selectrow_hashref(q{
       SELECT c.Comment AS Txt,
              l.Name  AS Loc,
@@ -375,9 +423,9 @@ sub photo_attached_str {
         LEFT JOIN brews b      ON b.Id  = g.Brew
         LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
        WHERE c.Id = ?
-    }, undef, $p->{Comment});
+    }, undef, $cid);
     if ($row) {
-      my $s = "Comment [$p->{Comment}]:";
+      my $s = "C[$cid]:";
       $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
       $s .= " <b>$row->{Brew}</b>"      if $row->{Brew};
       $s .= " \@<b>$row->{Loc}</b>"     if $row->{Loc};
@@ -385,54 +433,60 @@ sub photo_attached_str {
         if $row->{Txt};
       push @attached, $s;
     } else {
-      push @attached, "Comment [$p->{Comment}]";
+      push @attached, "C[$cid]";
     }
   }
 
   if ( $p->{Location} ) {
+    my $lid = $p->{Location};
+    my $llink = "<a href='$c->{url}?o=Location&e=$lid'><span>$lid</span></a>";
     my $row = $c->{dbh}->selectrow_hashref(
       "SELECT Name, Description FROM locations WHERE Id = ?",
-      undef, $p->{Location});
+      undef, $lid);
     if ($row) {
-      my $s = "Location [$p->{Location}]: <b>$row->{Name}</b>";
+      my $s = "L[$llink]: <b>$row->{Name}</b>";
       $s .= " &mdash; " . util::htmlesc(substr($row->{Description}, 0, 80))
         if $row->{Description};
       push @attached, $s;
     } else {
-      push @attached, "Location [$p->{Location}]";
+      push @attached, "L[$llink]";
     }
   }
 
   if ( $p->{Person} ) {
+    my $peid = $p->{Person};
+    my $pelink = "<a href='$c->{url}?o=Person&e=$peid'><span>$peid</span></a>";
     my $row = $c->{dbh}->selectrow_hashref(
       "SELECT Name, Description FROM persons WHERE Id = ?",
-      undef, $p->{Person});
+      undef, $peid);
     if ($row) {
-      my $s = "Person [$p->{Person}]: <b>$row->{Name}</b>";
+      my $s = "P[$pelink]: <b>$row->{Name}</b>";
       $s .= " &mdash; " . util::htmlesc(substr($row->{Description}, 0, 80))
         if $row->{Description};
       push @attached, $s;
     } else {
-      push @attached, "Person [$p->{Person}]";
+      push @attached, "P[$pelink]";
     }
   }
 
   if ( $p->{Brew} ) {
+    my $bid = $p->{Brew};
+    my $blink = "<a href='$c->{url}?o=Brew&e=$bid'><span>$bid</span></a>";
     my $row = $c->{dbh}->selectrow_hashref(q{
       SELECT b.Name, b.Details, pl.Name AS Producer
         FROM brews b
         LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
        WHERE b.Id = ?
-    }, undef, $p->{Brew});
+    }, undef, $bid);
     if ($row) {
-      my $s = "Brew [$p->{Brew}]:";
+      my $s = "B[$blink]:";
       $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
       $s .= " <b>$row->{Name}</b>";
       $s .= " &mdash; " . util::htmlesc(substr($row->{Details}, 0, 80))
         if $row->{Details};
       push @attached, $s;
     } else {
-      push @attached, "Brew [$p->{Brew}]";
+      push @attached, "B[$blink]";
     }
   }
 
@@ -460,22 +514,83 @@ sub editphoto {
   # Entity summary — fetch human-readable details for each attached entity
   my $attached_str = photo_attached_str($c, $p) || 'none';
 
+  # Fetch sibling records (same filename, different Id)
+  my $sib_sth = db::query($c,
+    "SELECT * FROM photos WHERE Filename = ? AND Id != ? ORDER BY Id",
+    $p->{Filename}, $photo_id);
+  my @siblings;
+  while (my $s = $sib_sth->fetchrow_hashref) {
+    push @siblings, $s;
+  }
+
   print qq{<b>Edit Photo $photo_id</b><br/>
-<small>Attached to:<br/>$attached_str</small><br/>
-<small>Uploaded: $p->{Ts} by $p->{Uploader}</small><br/>
 <form method='post' action='$c->{url}'>
   <input type='hidden' name='o'          value='Photos' />
   <input type='hidden' name='photo_id'   value='$photo_id' />
   <input type='hidden' name='return_url' value='$return_url' />
-  <label>Caption: <input type='text' name='caption' value='$caption' size='40' /></label><br/>
-  <label><input type='checkbox' name='public' value='1'$pub_checked /> Public</label><br/>
-  <input type='submit' name='submit' value='Update Photo' />
-  &nbsp;
-  <input type='submit' name='submit' value='Delete Photo'
-    onclick='return confirm("Delete this photo?")' />
-  &nbsp;
-  <a href='$return_url'><span>(Back to list)</span></a>
+  <table>
+    <tr><td><small>Attached</small></td>
+        <td><small>$attached_str</small></td></tr>
+    <tr><td><small>Uploaded</small></td>
+        <td><small>$p->{Ts} by $p->{Uploader}</small></td></tr>
+    <tr><td><small>Caption</small></td>
+        <td><input type='text' name='caption' value='$caption' size='20' /></td></tr>
+    <tr><td><small>Public</small></td>
+        <td><input type='checkbox' name='public' value='1'$pub_checked /></td></tr>
+    <tr><td></td>
+        <td>
+          <input type='submit' name='submit' value='Update Photo' />
+          &nbsp;
+          <input type='submit' name='submit' value='Delete Photo'
+            onclick='return confirm("Delete this photo?")' />
+          &nbsp;
+          <a href='$return_url'><span>(Back to list)</span></a>
+        </td></tr>
+  </table>
 </form>
+};
+
+  # Siblings section
+  if (@siblings) {
+    print "<hr/>\n";
+    for my $s (@siblings) {
+      my $sib_str = photo_attached_str($c, $s) || 'unknown';
+      my $sib_url = "$c->{url}?o=Photos&e=$s->{Id}";
+      print "<small><span><a href='$sib_url'><span>Also</span></a> $sib_str</span></small><br/>\n";
+    }
+  }
+
+  # Collapsed "Also attach to" form
+  my $pid = $photo_id; # for readability in the heredoc
+  my $person_sel   = persons::selectperson($c, 'attach_person_id', '', '', '', 0);
+  my $location_sel = locations::selectlocation($c, 'attach_location_id', '', '', 0, 0);
+  my $brew_sel     = brews::selectbrew($c, '', '');
+
+  print qq{<details style='margin-top:6px'>
+<summary style='cursor:pointer'>Also attach to&hellip;</summary>
+<form method='post' action='$c->{url}' style='margin-top:4px'>
+  <input type='hidden' name='o'          value='Photos' />
+  <input type='hidden' name='photo_id'   value='$pid' />
+  <input type='hidden' name='return_url' value='$return_url' />
+  Type: <select name='attach_type' id='atype_$pid'
+    onchange='atype_change_$pid(this.value)'>
+    <option value='person'>Person</option>
+    <option value='location'>Location</option>
+    <option value='brew'>Brew</option>
+  </select><br/>
+  <div id='atype_person_$pid'>$person_sel</div>
+  <div id='atype_location_$pid' style='display:none'>$location_sel</div>
+  <div id='atype_brew_$pid' style='display:none'>$brew_sel</div>
+  <input type='submit' name='submit' value='Add Attachment' />
+</form>
+</details>
+<script>
+function atype_change_$pid(v) {
+  ['person','location','brew'].forEach(function(t) {
+    document.getElementById('atype_' + t + '_$pid').style.display = (t === v) ? '' : 'none';
+  });
+}
+</script>
 <hr/>
 };
 
