@@ -272,6 +272,10 @@ sub editlocation {
     print "</form>\n";
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
+      my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";
+      print photos::thumbnails_html($c, 'location', $p->{Id});
+      print photos::photo_form($c, location => $p->{Id}, public_default => 1, return_url => $return_url);
+      print "<hr/>\n";
       listlocationcomments($c,$p);
       locationvisits($c, $p );
       if ( $p->{LocType} =~ /Producer/ ) {

@@ -171,19 +171,31 @@ sub savefile {
 
 ################################################################################
 # Collapsible (photo) upload widget. Returns an HTML string.
-# Clicking "(photo)" immediately triggers the file picker / camera.
+# Clicking "(Photo)" immediately triggers the file picker / camera.
 # Once a file is chosen the form auto-submits — no extra button needed.
 # Options (as key=>value pairs):
-#   glass          => $id   (required)
+#   glass|location|person|brew|comment => $id   (one required)
 #   public_default => 0|1   (default 0)
 #   return_url     => $url  (where to redirect after upload)
 sub photo_form {
   my $c    = shift;
   my %opts = @_;
-  my $glassid     = $opts{glass}          // '';
+
+  # Find which entity type was supplied
+  my ($entity_type, $entity_id);
+  for my $t (qw(glass location person brew comment)) {
+    if (defined $opts{$t} && $opts{$t} ne '') {
+      $entity_type = $t;
+      $entity_id   = $opts{$t};
+      last;
+    }
+  }
+  $entity_type //= 'glass';
+  $entity_id   //= '';
+
   my $pub_default = $opts{public_default} // 0;
   my $return_url  = $opts{return_url}     // "$c->{url}?o=$c->{op}";
-  my $fid         = "photoform_g${glassid}";
+  my $fid         = "photoform_${entity_type}_${entity_id}";
   my $pub_val     = $pub_default ? '1' : '0';
 
   my $s = '';
@@ -194,7 +206,7 @@ sub photo_form {
   $s .= "<form id='${fid}_form' method='post' action='$c->{url}' "
       . "enctype='multipart/form-data' style='display:none'>\n";
   $s .= "  <input type='hidden' name='o' value='Photos' />\n";
-  $s .= "  <input type='hidden' name='glass' value='$glassid' />\n";
+  $s .= "  <input type='hidden' name='$entity_type' value='$entity_id' />\n";
   $s .= "  <input type='hidden' name='public' value='$pub_val' />\n";
   $s .= "  <input type='hidden' name='return_url' value='$return_url' />\n";
   $s .= "  <input type='file' id='${fid}_file' name='photo' "
@@ -237,26 +249,34 @@ sub post_photo {
   }
 
   # --- New upload path ---
-  my $glassid  = util::param($c, 'glass') || undef;
   my $caption  = util::param($c, 'caption') || undef;
   my $ispublic = util::param($c, 'public') ? 1 : 0;
   $return_url  = $c->{cgi}->param('return_url') || "$c->{url}?o=$c->{op}";
 
-  util::error("No glass id provided for photo upload") unless $glassid;
+  # Determine which entity type/id was submitted
+  my %entity_prefix = (glass=>'g', location=>'l', person=>'p', brew=>'b', comment=>'c');
+  my ($entity_type, $entity_id);
+  for my $t (qw(glass location person brew comment)) {
+    my $val = util::param($c, $t) || undef;
+    if ($val) { $entity_type = $t; $entity_id = $val; last; }
+  }
+  util::error("No entity id provided for photo upload") unless $entity_id;
 
+  my $col    = $entity_col{$entity_type};
+  my $pfx    = $entity_prefix{$entity_type};
   my $uploader = $c->{username};
 
   # Use a human-readable timestamp for the filename
   my $ts        = strftime("%Y-%m-%d+%H:%M:%S", localtime);
-  my $prefix    = "g-${glassid}-${ts}";
+  my $prefix    = "${pfx}-${entity_id}-${ts}";
   my $photoname = savefile($c, $prefix);
   util::error("Photo upload failed or no file was selected") unless $photoname;
 
   db::execute($c,
-    "INSERT INTO photos (Filename, Glass, Uploader, Caption, Public, Ts) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
-    $photoname, $glassid, $uploader, $caption, $ispublic);
+    "INSERT INTO photos (Filename, $col, Uploader, Caption, Public, Ts) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+    $photoname, $entity_id, $uploader, $caption, $ispublic);
 
-  print STDERR "Inserted photo '$photoname' for glass '$glassid' uploader='" . ($uploader//"NULL") . "'\n";
+  print STDERR "Inserted photo '$photoname' for $entity_type '$entity_id' uploader='" . ($uploader//"NULL") . "'\n";
   $c->{redirect_url} = $return_url;
 } # post_photo
 

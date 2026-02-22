@@ -4,7 +4,7 @@
 
 ## Summary
 Implement first‑class photo support allowing multiple images on glasses, comments, locations, persons and brews.  
-Each photo records an uploader (`persons.Id`, NULL = unknown) and obeys existing visibility/export rules.
+Each photo records an uploader (username as `text`, NULL = unknown) and obeys existing visibility/export rules.
 
 Database alterations are handled by `migrate.pm` with an automatic migration on first page load; no external scripts are required.
 
@@ -13,14 +13,14 @@ Database alterations are handled by `migrate.pm` with an automatic migration on 
 ## Status
 
 ### Done
-- **Schema & migration** (`migrate.pm` mig_002): `photos` table created with all indexes; Heikki inserted as a persons record; legacy `comments.Photo` filenames backfilled with correct timestamps taken from the linked glass, and uploaders resolved via glass username → persons join.
+- **Schema & migration** (`migrate.pm` mig_002): `photos` table created with all indexes; legacy `comments.Photo` filenames backfilled with correct timestamps taken from the linked glass.
 - **`photos.pm` core helpers**:
   - `get_photos($c, $type, $id)` — fetches photo rows for any entity type.
   - `thumbnails_html($c, $type, $id)` — returns an indented block div of thumbnails, each linking to the photo edit page.
   - `imagetag($c, $filename, $width, $link_url)` — renders a thumbnail; optional `$link_url` overrides the href (defaults to full-size in a new tab).
   - `savefile($c, $prefix)` — saves uploaded file; prefix is caller-supplied (e.g. `g-42-2026-02-21+15:54:12`); auto-orients with ImageMagick.
 - **`photo_form($c, glass=>$id)`** — a zero-click upload widget: clicking `(Photo)` immediately triggers the OS file picker / camera. On file selection the form auto-submits (no extra button). The form is `display:none` in the DOM; no expand/collapse clutter.
-- **`post_photo($c)`** — handles both new uploads (saves file, inserts photos row with human-readable timestamp filename) and metadata edits/deletes (caption, Public flag, delete).
+- **`post_photo($c)`** — handles both new uploads (saves file, inserts photos row with human-readable timestamp filename; `Uploader` set to `$c->{username}` directly) and metadata edits/deletes (caption, Public flag, delete).
 - **`listphotos($c)`** — `o=Photos` GET: all photos for the current user, grouped by date, thumbnails linking to edit page.
 - **`editphoto($c)`** — `o=Photos&e=$id` GET: metadata form (caption, Public checkbox, Update/Delete buttons), full-size image below (click opens in new tab).
 - **`comments.pm`**: legacy `comments.Photo` display code removed; thumbnails shown via `thumbnails_html`; `(Photo)` widget sits on the same line as `(Add comment)`, attached to the glass (not the comment).
@@ -67,7 +67,7 @@ CREATE TABLE photos (
   Person INTEGER,
   Comment INTEGER,
   Brew INTEGER,
-  Uploader INTEGER, -- persons.Id; NULL = unknown
+  Uploader TEXT, -- username; NULL = unknown
   Public INTEGER NOT NULL DEFAULT 0,
   Ts DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -81,6 +81,7 @@ CREATE INDEX idx_photos_public   ON photos(Public);
 
 Notes:
 - `Filename` stores just the base name. Files live under `beerdata/<username>.photo/`. New uploads get names like `g-42-2026-02-21+15:54:12+orig.jpg`; resized variants append a size suffix, e.g. `+90w.jpg`. `imagefilename()` in `photos.pm` encodes this convention.
+- `Uploader` stores the username string directly (not a foreign key to persons); case-insensitive comparisons use `lower()`.
 - Multiple nullable FK columns allow a photo to attach to more than one entity (e.g. both `Glass` and `Location`). No single-FK constraint is enforced — intentional.
 - Brew photos default to `Public = 1`; glass/comment/person photos default to `Public = 0`.
 
