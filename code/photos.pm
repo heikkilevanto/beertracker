@@ -244,9 +244,7 @@ sub post_photo {
 
   util::error("No glass id provided for photo upload") unless $glassid;
 
-  # Resolve uploader: look up person id by username
-  my ($uploader) = $c->{dbh}->selectrow_array(
-    "SELECT Id FROM persons WHERE lower(Name) = lower(?)", undef, $c->{username});
+  my $uploader = $c->{username};
 
   # Use a human-readable timestamp for the filename
   my $ts        = strftime("%Y-%m-%d+%H:%M:%S", localtime);
@@ -281,7 +279,7 @@ sub listphotos {
         OR p.Comment IN (SELECT c.Id FROM comments c
                            JOIN glasses g ON g.Id = c.Glass
                           WHERE g.Username = ?)
-        OR p.Uploader = (SELECT Id FROM persons WHERE lower(Name) = lower(?))
+        OR lower(p.Uploader) = lower(?)
      ORDER BY p.Ts DESC
   };
   my $sth = db::query($c, $sql, $c->{username}, $c->{username}, $c->{username});

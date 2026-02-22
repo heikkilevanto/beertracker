@@ -32,6 +32,7 @@ Database alterations are handled by `migrate.pm` with an automatic migration on 
 ### Still needed
 
 #### Wire into entity pages
+- listrecords to be able to show very small thumbnails
 - **`locations.pm`** — show location thumbnails (via `thumbnails_html`); add `photo_form` with `public_default=>1`.
 - **`persons.pm`** — show person thumbnails; add `photo_form`.
 - **`brews.pm`** — show brew thumbnails; add `photo_form` with `public_default=>1`.
@@ -41,16 +42,17 @@ Database alterations are handled by `migrate.pm` with an automatic migration on 
 - The `Public` flag is stored but not yet enforced on display. Decide whether non-public photos should be hidden from Dennis's view of Heikki's data (and vice versa), and implement if needed.
 
 #### Caption at upload time
-- The `photo_form` widget auto-submits immediately on file pick, so there is no opportunity to enter a caption before upload. Captions can be added after the fact via the edit page. This is an acceptable trade-off for now, but could be revisited if captions at upload time matter.
+- The `photo_form` widget auto-submits immediately on file pick, so there is no opportunity to enter a caption before upload. Captions can be added after the fact via the edit page. This is an acceptable trade-off for now, but could be revisited if captions at upload time matter. Probably not.
 
 #### Export
 - Deferred to issue #560. Public photos should be included in user data exports.
 
 #### Future / optional
-- Retire the `Glass` FK column in photos once the comments refactor (#405) is complete, if all glass-level photos move to a comment instead.
-- Bulk photo management / reorder on the `o=Photos` list page.
+- Retire the `Glass` FK column in photos once the comments refactor (#405) is complete, if all glass-level photos move to a comment instead. Probably not, I think I like my photos to point to glasses, except when directly related to a comment
+- Bulk photo management / reorder on the `o=Photos` list page. Use listrecords()
 - Show a single most-recent thumbnail in person/location/brew index lists.
-
+- Allow multiple metadata records for a single photo file. F.ex. if a photo has two people on it, I can use it for both persons. Watch out when deleting etc. Bit tricky to reattach a photo to a new kind of record.
+- Show more details about what the photo is attached to. Make helpers in glasses etc to get a summary. We will need the same for comments later.
 ---
 
 ## Schema (single source of truth — deployed)

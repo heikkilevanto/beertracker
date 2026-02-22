@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-02-20 13:16 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-02-22 13:10 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -142,6 +142,22 @@ analyze sqlite_schema;
 -- table globals
 drop table if exists globals;
 create table globals (k text primary key, v text);
+
+-- table photos
+drop table if exists photos;
+create table photos (
+      Id integer primary key,
+      Filename text not null, 
+      Caption text,
+      Glass integer,
+      Location integer,
+      Person integer,
+      Comment integer,
+      Brew integer,
+      Uploader text,
+      Public integer not null default 0,
+      Ts datetime default current_timestamp
+    );
 
 -- view compers
 drop view if exists compers;
@@ -474,6 +490,18 @@ create index idx_locations_name on locations (Name collate nocase);
 create index idx_tap_beers_brew_gone on tap_beers (Brew, Gone, FirstSeen);
 
 create index idx_brew_barcode on brews (Barcode);
+
+create index idx_photos_comment  on photos(Comment);
+
+create index idx_photos_location on photos(Location);
+
+create index idx_photos_person   on photos(Person);
+
+create index idx_photos_brew     on photos(Brew);
+
+create index idx_photos_uploader on photos(Uploader);
+
+create index idx_photos_public   on photos(Public);
 
 commit;
 
