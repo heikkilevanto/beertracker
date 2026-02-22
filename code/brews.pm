@@ -381,6 +381,10 @@ sub editbrew {
     print "</form>\n";
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
+      my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";
+      print photos::thumbnails_html($c, 'Brew', $p->{Id});
+      print photos::photo_form($c, brew => $p->{Id}, public_default => 1, return_url => $return_url);
+      print "<hr/>\n";
       listbrewcomments($c, $p);
       listbrewtaps($c, $p);
       listbrewprices($c, $p);

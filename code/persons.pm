@@ -106,6 +106,13 @@ sub editperson {
   print "</form>\n";
   print "<hr/>\n";
 
+  if ( $c->{edit} !~ /^new/i ) {
+    my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";
+    print photos::thumbnails_html($c, 'Person', $p->{Id});
+    print photos::photo_form($c, person => $p->{Id}, public_default => 0, return_url => $return_url);
+    print "<hr/>\n";
+  }
+
   showpersondetails($c,$p);
 } # editperson
 
