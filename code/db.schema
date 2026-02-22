@@ -190,7 +190,8 @@ create view persons_list as
     locations.Name as Location, 
     "tr" as tr,
     'Clr' as 'Clr',
-    persons.description
+    persons.description,
+    (select Filename from photos where Person = persons.Id order by Ts desc limit 1) as Photo
   from persons
   left join comments on comments.Person = persons.Id
   left join glasses on comments.Glass = glasses.Id
@@ -320,7 +321,8 @@ select
     'tr' as tr,
     'Clr' as 'Clr',
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
-    locations.Name as Location
+    locations.Name as Location,
+    (select Filename from photos where Brew = brews.Id order by Ts desc limit 1) as Photo
   from brews
   left join locations ploc on ploc.id = brews.ProducerLocation
   left join glasses on Glasses.Brew = brews.Id
@@ -405,7 +407,8 @@ select
 	'' as trmob,
 	locations.lat || ' ' || locations.lon as Geo,
     strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
-	r.rating_count || ';' || r.rating_average || ';' || r.comment_count as Stats
+	r.rating_count || ';' || r.rating_average || ';' || r.comment_count as Stats,
+    (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as Photo
   from locations
   left join glasses on glasses.Location = locations.Id
   left join location_ratings r on r.id  = glasses.Id

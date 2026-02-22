@@ -122,6 +122,8 @@ sub listrecords {
       $sty = "style='max-width:70px; text-align:center'";
     } elsif ( $f =~ /^(Com|Count)$/ ) {
       $sty = "style='text-align:right; max-width:50px'";
+    } elsif ( $f =~ /^Photo$/ ) {
+      $sty = "style='text-align:center; max-width:50px; padding:1px'";
     } elsif ( $f =~ /Rate|Rating|Clr/) {
       $sty = "style='text-align:center; font-weight:bold; max-width:50px'";
     } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
@@ -265,7 +267,7 @@ sub listrecords {
       } elsif ( $fn eq "Comment" ) {
         $v = "$v";
       } elsif ( $fn eq "Photo" ) {
-        $v = photos::imagetag($c,$v,"thumb");
+        $v = photos::imagetag($c, $v, $c->{mobile} ? "small" : "thumb");
       } elsif ( $fn eq "IsGeneric" ) {
         $v = "Gen" if ($v);
       }

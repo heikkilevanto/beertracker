@@ -21,11 +21,13 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 2;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 4;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
   [2, 'create photos table and backfill from comments.Photo', \&mig_002_photos_table],
+  [3, 'add Photo column to locations_list view', \&mig_003_locations_list_photo],
+  [4, 'add Photo column to persons_list and brews_list views', \&mig_004_persons_brews_list_photo],
 );
 
 ################################################################################
@@ -208,5 +210,82 @@ sub mig_002_photos_table {
   });
   db::execute($c, "UPDATE comments SET Photo = NULL WHERE Photo IS NOT NULL");
 } # mig_002_photos_table
+
+################################################################################
+sub mig_003_locations_list_photo {
+  my $c = shift;
+  db::execute($c, "DROP VIEW IF EXISTS locations_list");
+  db::execute($c, q{
+    CREATE VIEW locations_list AS
+    SELECT
+      locations.Id,
+      locations.Name,
+      locations.LocType || ', ' || locations.LocSubType AS Type,
+      '' AS trmob,
+      locations.lat || ' ' || locations.lon AS Geo,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS Stats,
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS Photo
+    FROM locations
+    LEFT JOIN glasses ON glasses.Location = locations.Id
+    LEFT JOIN location_ratings r ON r.id = glasses.Id
+    GROUP BY locations.Id
+  });
+} # mig_003_locations_list_photo
+
+################################################################################
+sub mig_004_persons_brews_list_photo {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS persons_list");
+  db::execute($c, q{
+    CREATE VIEW persons_list AS
+    SELECT
+      persons.Id,
+      persons.Name,
+      'trmob' AS trmob,
+      count(comments.Id) - 1 AS Com,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      locations.Name AS Location,
+      'tr' AS tr,
+      'Clr' AS Clr,
+      persons.description,
+      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS Photo
+    FROM persons
+    LEFT JOIN comments ON comments.Person = persons.Id
+    LEFT JOIN glasses ON comments.Glass = glasses.Id
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    GROUP BY persons.Id
+  });
+
+  db::execute($c, "DROP VIEW IF EXISTS brews_list");
+  db::execute($c, q{
+    CREATE VIEW brews_list AS
+    SELECT
+      brews.Id,
+      brews.Name,
+      ploc.Name AS Producer,
+      brews.IsGeneric,
+      'tr' AS tr,
+      brews.Alc AS Alc,
+      brews.BrewType || ', ' || brews.Subtype AS Type,
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS Stats,
+      count(glasses.Id) AS Count,
+      'tr' AS tr,
+      'Clr' AS Clr,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      locations.Name AS Location,
+      (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1) AS Photo
+    FROM brews
+    LEFT JOIN locations ploc ON ploc.Id = brews.ProducerLocation
+    LEFT JOIN glasses ON glasses.Brew = brews.Id
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    LEFT JOIN brew_ratings r ON r.Brew = brews.Id
+    GROUP BY brews.Id
+  });
+} # mig_004_persons_brews_list_photo
 
 1;

@@ -17,6 +17,7 @@ $q->charset( "UTF-8" );
 # Default image sizes (width in pixels)
 my %imagesizes;
 $imagesizes{"thumb"} = 90;
+$imagesizes{"small"} = 40;  # For compact list display
 $imagesizes{"mob"} = 240;  # 320 is full width on my phone
 $imagesizes{"pc"} = 640;
 
