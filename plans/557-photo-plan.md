@@ -15,27 +15,28 @@ Database alterations are handled by `migrate.pm` with an automatic migration on 
 ### Done
 - **Schema & migration** (`migrate.pm` mig_002): `photos` table created with all indexes; legacy `comments.Photo` filenames backfilled with correct timestamps taken from the linked glass.
 - **`photos.pm` core helpers**:
-  - `get_photos($c, $type, $id)` — fetches photo rows for any entity type.
-  - `thumbnails_html($c, $type, $id)` — returns an indented block div of thumbnails, each linking to the photo edit page.
-  - `imagetag($c, $filename, $width, $link_url)` — renders a thumbnail; optional `$link_url` overrides the href (defaults to full-size in a new tab).
+  - `get_photos($c, $col, $id)` — fetches photo rows; `$col` is the capitalised DB column name (`Glass`, `Comment`, `Location`, `Person`, `Brew`).
+  - `thumbnails_html($c, $col, $id)` — returns an indented block div of thumbnails, each linking to the photo edit page. Same `$col` convention.
+  - `imagetag($c, $filename, $width, $link_url)` — renders a thumbnail; named sizes: `thumb` (90px), `small` (40px, for list rows), `mob` (240px), `pc` (640px). Optional `$link_url` overrides the href.
   - `savefile($c, $prefix)` — saves uploaded file; prefix is caller-supplied (e.g. `g-42-2026-02-21+15:54:12`); auto-orients with ImageMagick.
-- **`photo_form($c, glass=>$id)`** — a zero-click upload widget: clicking `(Photo)` immediately triggers the OS file picker / camera. On file selection the form auto-submits (no extra button). The form is `display:none` in the DOM; no expand/collapse clutter.
-- **`post_photo($c)`** — handles both new uploads (saves file, inserts photos row with human-readable timestamp filename; `Uploader` set to `$c->{username}` directly) and metadata edits/deletes (caption, Public flag, delete).
+- **`photo_form($c, <type>=>$id)`** — a zero-click upload widget accepting any entity type (`glass`, `location`, `person`, `brew`, `comment`). Clicking `(Photo)` immediately triggers the OS file picker / camera. On file selection the form auto-submits. The form is `display:none` in the DOM.
+- **`post_photo($c)`** — entity-agnostic: detects which entity type was submitted, builds the filename prefix and column name dynamically. `Uploader` set to `$c->{username}` directly.
 - **`listphotos($c)`** — `o=Photos` GET: all photos for the current user, grouped by date, thumbnails linking to edit page.
 - **`editphoto($c)`** — `o=Photos&e=$id` GET: metadata form (caption, Public checkbox, Update/Delete buttons), full-size image below (click opens in new tab).
-- **`comments.pm`**: legacy `comments.Photo` display code removed; thumbnails shown via `thumbnails_html`; `(Photo)` widget sits on the same line as `(Add comment)`, attached to the glass (not the comment).
-- **`mainlist.pm`**: `photoline` helper prints glass-level photos (before comments); comment-level photos appear after each comment line.
+- **`comments.pm`**: legacy `comments.Photo` display code removed; thumbnails shown via `thumbnails_html('Comment', ...)`; `(Photo)` widget sits on the same line as `(Add comment)`, attached to the glass (not the comment).
+- **`mainlist.pm`**: glass-level and comment-level photos shown via `thumbnails_html`.
+- **`locations.pm`** — `editlocation`: shows `thumbnails_html('Location', ...)` and `photo_form(location=>..., public_default=>1)` for existing records.
+- **`persons.pm`** — `editperson`: shows `thumbnails_html('Person', ...)` and `photo_form(person=>...)` for existing records.
+- **`brews.pm`** — `editbrew`: shows `thumbnails_html('Brew', ...)` and `photo_form(brew=>..., public_default=>1)` for existing records.
+- **`listrecords.pm`**: `Photo` column rendered via `imagetag` — `small` (40px) on mobile, `thumb` (90px) on desktop. Column header styled narrow and centred.
+- **`locations_list` view** (mig_003): correlated subquery adds most-recent `Photo` filename per location.
+- **`persons_list` view** (mig_004): correlated subquery adds most-recent `Photo` filename per person.
+- **`brews_list` view** (mig_004): correlated subquery adds most-recent `Photo` filename per brew.
 - **Routing**: `index.cgi` dispatches GET and POST `o=Photos` to `photos::listphotos` and `photos::post_photo` respectively.
 - **Menu**: Photos listed under "List / Edit".
 - **`util.pm`**: `htmlesc()` helper added.
 
 ### Still needed
-
-#### Wire into entity pages
-- listrecords to be able to show very small thumbnails
-- **`locations.pm`** — show location thumbnails (via `thumbnails_html`); add `photo_form` with `public_default=>1`.
-- **`persons.pm`** — show person thumbnails; add `photo_form`.
-- **`brews.pm`** — show brew thumbnails; add `photo_form` with `public_default=>1`.
 
 #### Security / visibility
 - `post_photo` delete path does not yet check that the requester is the uploader or admin. Add an ownership check before the DELETE.
@@ -50,7 +51,6 @@ Database alterations are handled by `migrate.pm` with an automatic migration on 
 #### Future / optional
 - Retire the `Glass` FK column in photos once the comments refactor (#405) is complete, if all glass-level photos move to a comment instead. Probably not, I think I like my photos to point to glasses, except when directly related to a comment
 - Bulk photo management / reorder on the `o=Photos` list page. Use listrecords()
-- Show a single most-recent thumbnail in person/location/brew index lists.
 - Allow multiple metadata records for a single photo file. F.ex. if a photo has two people on it, I can use it for both persons. Watch out when deleting etc. Bit tricky to reattach a photo to a new kind of record.
 - Show more details about what the photo is attached to. Make helpers in glasses etc to get a summary. We will need the same for comments later.
 ---
