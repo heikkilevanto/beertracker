@@ -229,7 +229,7 @@ sub numbersline {
 sub photoline {
   my $c = shift;
   my $rec = shift;
-  my $html = photos::thumbnails_html($c, 'glass', $rec->{id});
+  my $html = photos::thumbnails_html($c, 'Glass', $rec->{id});
   print $html if $html;
 } # photoline
 
@@ -251,7 +251,7 @@ sub commentlines {
       my $comid = $com->{Id}; # Save before clearing
       $com->{Id} = ""; # Disable the edit link with id
       print "<li>". comments::commentline($c, $com).
-            photos::thumbnails_html($c, 'comment', $comid). "</li>\n  ";  # </div>\n";
+            photos::thumbnails_html($c, 'Comment', $comid). "</li>\n  ";  # </div>\n";
     }
     print "</ul>\n";
   }

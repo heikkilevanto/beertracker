@@ -89,27 +89,13 @@ sub imagetag {
 } # imagetag
 
 
-# Map entity type to the corresponding photos table column
-my %entity_col = (
-  comment  => 'Comment',
-  glass    => 'Glass',
-  location => 'Location',
-  person   => 'Person',
-  brew     => 'Brew',
-);
-
 # Return a list of photo records for a given entity.
-# Usage: get_photos($c, 'comment', $comment_id)
+# Usage: get_photos($c, 'Comment', $comment_id)  -- $col is the photos table column name
 sub get_photos {
-  my $c    = shift;
-  my $type = shift; # entity type: comment, glass, location, person, brew
-  my $id   = shift;
+  my $c   = shift;
+  my $col = shift; # photos table column: Comment, Glass, Location, Person, Brew
+  my $id  = shift;
   return () unless defined($id) && $id ne '';
-  my $col = $entity_col{lc($type)};
-  unless ($col) {
-    print STDERR "get_photos: unknown entity type '$type'\n";
-    return ();
-  }
   my $sql = "SELECT * FROM photos WHERE $col = ? ORDER BY Id";
   my $sth = db::query($c, $sql, $id);
   my @photos;
@@ -121,12 +107,13 @@ sub get_photos {
 
 # Return thumbnail HTML for all photos attached to an entity.
 # Each thumbnail links to the full-size original.
+# Usage: thumbnails_html($c, 'Comment', $id)  -- $col is the photos table column name
 sub thumbnails_html {
-  my $c    = shift;
-  my $type = shift;
-  my $id   = shift;
+  my $c   = shift;
+  my $col = shift; # photos table column: Comment, Glass, Location, Person, Brew
+  my $id  = shift;
   return '' unless defined($id) && $id ne '';
-  my @photos = get_photos($c, $type, $id);
+  my @photos = get_photos($c, $col, $id);
   return '' unless @photos;
   my $s = '';
   for my $p (@photos) {
@@ -262,7 +249,7 @@ sub post_photo {
   }
   util::error("No entity id provided for photo upload") unless $entity_id;
 
-  my $col    = $entity_col{$entity_type};
+  my $col    = ucfirst($entity_type);
   my $pfx    = $entity_prefix{$entity_type};
   my $uploader = $c->{username};
 
