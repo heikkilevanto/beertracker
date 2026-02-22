@@ -52,7 +52,7 @@ Database alterations are handled by `migrate.pm` with an automatic migration on 
 - Retire the `Glass` FK column in photos once the comments refactor (#405) is complete, if all glass-level photos move to a comment instead. Probably not, I think I like my photos to point to glasses, except when directly related to a comment
 - Bulk photo management / reorder on the `o=Photos` list page. Use listrecords()
 - Allow multiple metadata records for a single photo file. F.ex. if a photo has two people on it, I can use it for both persons. Watch out when deleting etc. Bit tricky to reattach a photo to a new kind of record.
-- Show more details about what the photo is attached to. Make helpers in glasses etc to get a summary. We will need the same for comments later.
+
 ---
 
 ## Schema (single source of truth — deployed)

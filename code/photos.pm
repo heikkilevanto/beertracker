@@ -283,42 +283,161 @@ sub listphotos {
   my $sql = q{
     SELECT p.*
       FROM photos p
-     WHERE p.Glass   IN (SELECT Id FROM glasses WHERE Username = ?)
-        OR p.Comment IN (SELECT c.Id FROM comments c
-                           JOIN glasses g ON g.Id = c.Glass
-                          WHERE g.Username = ?)
-        OR lower(p.Uploader) = lower(?)
+     WHERE ( p.Glass   IN (SELECT Id FROM glasses WHERE Username = ?)
+          OR p.Comment IN (SELECT c.Id FROM comments c
+                             JOIN glasses g ON g.Id = c.Glass
+                            WHERE g.Username = ?)
+          OR lower(p.Uploader) = lower(?) )
+       AND ( lower(p.Uploader) = lower(?) OR p.Public = 1 )
      ORDER BY p.Ts DESC
   };
-  my $sth = db::query($c, $sql, $c->{username}, $c->{username}, $c->{username});
+  my $sth = db::query($c, $sql, $c->{username}, $c->{username}, $c->{username}, $c->{username});
 
   my $count    = 0;
   my $cur_date = '';
-  my $in_div   = 0;
+  my $in_table = 0;
   while (my $p = $sth->fetchrow_hashref) {
     my $editurl = "$c->{url}?o=Photos&e=$p->{Id}";
     my $thumb = imagetag($c, $p->{Filename}, 'thumb', $editurl);
     next unless $thumb;  # skip if file missing
 
-    # Extract date part from Ts (e.g. "2026-02-21 15:54:12" -> "2026-02-21")
     my ($date) = split(' ', $p->{Ts});
     $date //= 'Unknown date';
 
     if ($date ne $cur_date) {
-      print "</div>\n" if $in_div;
+      print "</table>\n" if $in_table;
       print "<b>$date</b><br/>\n";
-      print "<div style='display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px'>\n";
+      print "<table style='border-collapse:collapse; margin-bottom:12px'>\n";
       $cur_date = $date;
-      $in_div   = 1;
+      $in_table = 1;
     }
 
-    my $cap = $p->{Caption} ? "<br/><small>" . util::htmlesc($p->{Caption}) . "</small>" : '';
-    print "<div style='text-align:center'>$thumb$cap</div>\n";
+    my $attached = photo_attached_str($c, $p);
+    my $cap = $p->{Caption}
+      ? "<b>" . util::htmlesc($p->{Caption}) . "</b><br/>\n"
+      : '';
+    my $meta = "";
+    $meta .= $cap;
+    $meta .= "$attached<br/>\n" if $attached;
+    $meta .= "<small>$p->{Ts} &mdash; $p->{Uploader}</small>\n";
+
+    print qq{<tr valign='top'>
+  <td style='padding:2px 8px 6px 0'>$thumb</td>
+  <td style='padding:2px 0 6px 0'><small>$meta</small></td>
+</tr>
+};
     $count++;
   }
-  print "</div>\n" if $in_div;
+  print "</table>\n" if $in_table;
   print "<p>$count photo" . ($count == 1 ? '' : 's') . ".</p>\n";
 } # listphotos
+
+################################################################################
+# Return an HTML string describing what a photo is attached to.
+# Each entity on its own line (joined with <br/>).
+sub photo_attached_str {
+  my $c = shift;
+  my $p = shift;  # photo record hashref
+
+  my @attached;
+
+  if ( $p->{Glass} ) {
+    my $row = $c->{dbh}->selectrow_hashref(q{
+      SELECT l.Name  AS Loc,
+             b.Name  AS Brew,
+             pl.Name AS Producer
+        FROM glasses g
+        LEFT JOIN locations l  ON l.Id  = g.Location
+        LEFT JOIN brews b      ON b.Id  = g.Brew
+        LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
+       WHERE g.Id = ?
+    }, undef, $p->{Glass});
+    if ($row) {
+      my $s = "Glass [$p->{Glass}]:";
+      $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
+      $s .= " <b>$row->{Brew}</b>"      if $row->{Brew};
+      $s .= " \@<b>$row->{Loc}</b>"     if $row->{Loc};
+      push @attached, $s;
+    } else {
+      push @attached, "Glass [$p->{Glass}]";
+    }
+  }
+
+  if ( $p->{Comment} ) {
+    my $row = $c->{dbh}->selectrow_hashref(q{
+      SELECT c.Comment AS Txt,
+             l.Name  AS Loc,
+             b.Name  AS Brew,
+             pl.Name AS Producer
+        FROM comments c
+        LEFT JOIN glasses g    ON g.Id  = c.Glass
+        LEFT JOIN locations l  ON l.Id  = g.Location
+        LEFT JOIN brews b      ON b.Id  = g.Brew
+        LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
+       WHERE c.Id = ?
+    }, undef, $p->{Comment});
+    if ($row) {
+      my $s = "Comment [$p->{Comment}]:";
+      $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
+      $s .= " <b>$row->{Brew}</b>"      if $row->{Brew};
+      $s .= " \@<b>$row->{Loc}</b>"     if $row->{Loc};
+      $s .= "<br/>&ldquo;" . util::htmlesc(substr($row->{Txt}, 0, 80)) . "&rdquo;"
+        if $row->{Txt};
+      push @attached, $s;
+    } else {
+      push @attached, "Comment [$p->{Comment}]";
+    }
+  }
+
+  if ( $p->{Location} ) {
+    my $row = $c->{dbh}->selectrow_hashref(
+      "SELECT Name, Description FROM locations WHERE Id = ?",
+      undef, $p->{Location});
+    if ($row) {
+      my $s = "Location [$p->{Location}]: <b>$row->{Name}</b>";
+      $s .= " &mdash; " . util::htmlesc(substr($row->{Description}, 0, 80))
+        if $row->{Description};
+      push @attached, $s;
+    } else {
+      push @attached, "Location [$p->{Location}]";
+    }
+  }
+
+  if ( $p->{Person} ) {
+    my $row = $c->{dbh}->selectrow_hashref(
+      "SELECT Name, Description FROM persons WHERE Id = ?",
+      undef, $p->{Person});
+    if ($row) {
+      my $s = "Person [$p->{Person}]: <b>$row->{Name}</b>";
+      $s .= " &mdash; " . util::htmlesc(substr($row->{Description}, 0, 80))
+        if $row->{Description};
+      push @attached, $s;
+    } else {
+      push @attached, "Person [$p->{Person}]";
+    }
+  }
+
+  if ( $p->{Brew} ) {
+    my $row = $c->{dbh}->selectrow_hashref(q{
+      SELECT b.Name, b.Details, pl.Name AS Producer
+        FROM brews b
+        LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
+       WHERE b.Id = ?
+    }, undef, $p->{Brew});
+    if ($row) {
+      my $s = "Brew [$p->{Brew}]:";
+      $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
+      $s .= " <b>$row->{Name}</b>";
+      $s .= " &mdash; " . util::htmlesc(substr($row->{Details}, 0, 80))
+        if $row->{Details};
+      push @attached, $s;
+    } else {
+      push @attached, "Brew [$p->{Brew}]";
+    }
+  }
+
+  return join('<br/>', @attached);
+} # photo_attached_str
 
 ################################################################################
 # GET: edit form for a single photo record.
@@ -331,23 +450,19 @@ sub editphoto {
     $sth->fetchrow_hashref;
   };
   util::error("Photo $photo_id not found") unless $p;
+  util::error("Photo $photo_id is not visible to you")
+    unless $p->{Public} || lc($p->{Uploader}) eq lc($c->{username});
 
   my $return_url  = "$c->{url}?o=Photos";
   my $caption     = $p->{Caption} // '';
   my $pub_checked = $p->{Public}  ? ' checked' : '';
 
-  # Entity summary line
-  my @attached;
-  push @attached, "Glass $p->{Glass}"     if $p->{Glass};
-  push @attached, "Comment $p->{Comment}" if $p->{Comment};
-  push @attached, "Location $p->{Location}" if $p->{Location};
-  push @attached, "Person $p->{Person}"   if $p->{Person};
-  push @attached, "Brew $p->{Brew}"       if $p->{Brew};
-  my $attached_str = @attached ? join(', ', @attached) : 'none';
+  # Entity summary — fetch human-readable details for each attached entity
+  my $attached_str = photo_attached_str($c, $p) || 'none';
 
-  print qq{<b>Edit Photo $photo_id</b> &nbsp;
-<a href='$return_url'><span>(Back to list)</span></a><br/>
-<small>Attached to: $attached_str &nbsp; Uploaded: $p->{Ts}</small><br/>
+  print qq{<b>Edit Photo $photo_id</b><br/>
+<small>Attached to:<br/>$attached_str</small><br/>
+<small>Uploaded: $p->{Ts} by $p->{Uploader}</small><br/>
 <form method='post' action='$c->{url}'>
   <input type='hidden' name='o'          value='Photos' />
   <input type='hidden' name='photo_id'   value='$photo_id' />
@@ -358,6 +473,8 @@ sub editphoto {
   &nbsp;
   <input type='submit' name='submit' value='Delete Photo'
     onclick='return confirm("Delete this photo?")' />
+  &nbsp;
+  <a href='$return_url'><span>(Back to list)</span></a>
 </form>
 <hr/>
 };
