@@ -21,8 +21,11 @@ Database alterations are handled by `migrate.pm` with an automatic migration on 
   - `savefile($c, $prefix)` — saves uploaded file; prefix is caller-supplied (e.g. `g-42-2026-02-21+15:54:12`); auto-orients with ImageMagick.
 - **`photo_form($c, <type>=>$id)`** — a zero-click upload widget accepting any entity type (`glass`, `location`, `person`, `brew`, `comment`). Clicking `(Photo)` immediately triggers the OS file picker / camera. On file selection the form auto-submits. The form is `display:none` in the DOM.
 - **`post_photo($c)`** — entity-agnostic: detects which entity type was submitted, builds the filename prefix and column name dynamically. `Uploader` set to `$c->{username}` directly.
-- **`listphotos($c)`** — `o=Photos` GET: all photos for the current user, grouped by date, thumbnails linking to edit page.
-- **`editphoto($c)`** — `o=Photos&e=$id` GET: metadata form (caption, Public checkbox, Update/Delete buttons), full-size image below (click opens in new tab).
+- **`listphotos($c)`** — `o=Photos` GET: table layout, one photo per row, grouped by date; thumbnails link to edit page. Visibility filtered: only photos uploaded by the current user or marked Public.
+- **`editphoto($c)`** — `o=Photos&e=$id` GET: table-layout metadata form (caption, Public checkbox, Update/Delete/Back buttons); entity attachment displayed as `G[id]`, `C[id]`, `L[id]`, `P[id]`, `B[id]` with linked IDs for Location/Person/Brew; full-size image below. Visibility enforced — error if photo is private and not uploaded by current user.
+- **Multiple attachments**: "Also attach to…" collapsed `<details>` form on the edit page; inserts a new `photos` row for the same `Filename` pointing to a Person, Location, or Brew; redirects to the new record's edit page. Siblings (other records sharing the same `Filename`) are listed above with `Also` links.
+- **Delete cleanup**: when the last `photos` record for a `Filename` is deleted, the physical `+orig.jpg` and all `+*w.jpg` scaled variants are unlinked.
+- **`photo_attached_str($c, $p)`** — shared helper returning an HTML string of attached-entity summaries; used by both `listphotos` and `editphoto`.
 - **`comments.pm`**: legacy `comments.Photo` display code removed; thumbnails shown via `thumbnails_html('Comment', ...)`; `(Photo)` widget sits on the same line as `(Add comment)`, attached to the glass (not the comment).
 - **`mainlist.pm`**: glass-level and comment-level photos shown via `thumbnails_html`.
 - **`locations.pm`** — `editlocation`: shows `thumbnails_html('Location', ...)` and `photo_form(location=>..., public_default=>1)` for existing records.
@@ -38,9 +41,8 @@ Database alterations are handled by `migrate.pm` with an automatic migration on 
 
 ### Still needed
 
-#### Security / visibility
-- `post_photo` delete path does not yet check that the requester is the uploader or admin. Add an ownership check before the DELETE.
-- The `Public` flag is stored but not yet enforced on display. Decide whether non-public photos should be hidden from Dennis's view of Heikki's data (and vice versa), and implement if needed.
+#### Security
+- `post_photo` update/delete path has no ownership check — anyone who knows a photo ID can modify or delete it. Add a check that `$c->{username}` matches `lower(Uploader)` before allowing writes.
 
 #### Caption at upload time
 - The `photo_form` widget auto-submits immediately on file pick, so there is no opportunity to enter a caption before upload. Captions can be added after the fact via the edit page. This is an acceptable trade-off for now, but could be revisited if captions at upload time matter. Probably not.
@@ -51,7 +53,6 @@ Database alterations are handled by `migrate.pm` with an automatic migration on 
 #### Future / optional
 - Retire the `Glass` FK column in photos once the comments refactor (#405) is complete, if all glass-level photos move to a comment instead. Probably not, I think I like my photos to point to glasses, except when directly related to a comment
 - Bulk photo management / reorder on the `o=Photos` list page. Use listrecords()
-- Allow multiple metadata records for a single photo file. F.ex. if a photo has two people on it, I can use it for both persons. Watch out when deleting etc. Bit tricky to reattach a photo to a new kind of record.
 
 ---
 

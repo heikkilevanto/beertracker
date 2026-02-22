@@ -508,7 +508,7 @@ sub editphoto {
     unless $p->{Public} || lc($p->{Uploader}) eq lc($c->{username});
 
   my $return_url  = "$c->{url}?o=Photos";
-  my $caption     = $p->{Caption} // '';
+  my $caption     = util::htmlesc($p->{Caption} // '');
   my $pub_checked = $p->{Public}  ? ' checked' : '';
 
   # Entity summary — fetch human-readable details for each attached entity
