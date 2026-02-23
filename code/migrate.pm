@@ -1,11 +1,6 @@
 # DB migration system for beertracker
 # Detects when the DB is older than the running code, shows a confirmation form
 # (GET, o=migrate), and applies forward-only migrations (POST, o=migrate).
-#
-# Adding a migration:
-#   1. Write a sub mig_NNN_description below.
-#   2. Register it in @MIGRATIONS (keep numeric order).
-#   3. Bump $CODE_DB_VERSION to the highest migration id.
 
 package migrate;
 use strict;
@@ -14,6 +9,16 @@ use feature 'unicode_strings';
 use utf8;
 use File::Copy;
 use POSIX qw(strftime);
+
+#
+# Adding a migration:
+#   1. Write a sub mig_NNN_description below.
+#   2. Register it in @MIGRATIONS (keep numeric order).
+#   3. Bump $CODE_DB_VERSION to the highest migration id.
+#
+# Remember to add comments in create table/view statements about what is the
+# purpose of the table/view, and to each column that is not immediately obvious.
+ 
 
 ################################################################################
 # Migration registry
