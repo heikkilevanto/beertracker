@@ -388,7 +388,7 @@ sub photo_attached_str {
 
   if ( $p->{Glass} ) {
     my $gid = $p->{Glass};
-    my $glink = "<a href='$c->{url}?o=Glass&e=$gid'><span>$gid</span></a>";
+    my $glink = "<a href='$c->{url}?o=Full&e=$gid'><span>$gid</span></a>";
     my $row = $c->{dbh}->selectrow_hashref(q{
       SELECT l.Name  AS Loc,
              b.Name  AS Brew,
@@ -414,10 +414,14 @@ sub photo_attached_str {
     my $cid = $p->{Comment};
     my $row = $c->{dbh}->selectrow_hashref(q{
       SELECT c.Comment AS Txt,
-             l.Name  AS Loc,
-             b.Name  AS Brew,
-             pl.Name AS Producer
+             c.Glass   AS Gid,
+             c.Rating  AS Rating,
+             p.Name    AS PersName,
+             l.Name    AS Loc,
+             b.Name    AS Brew,
+             pl.Name   AS Producer
         FROM comments c
+        LEFT JOIN persons p     ON p.Id = c.Person
         LEFT JOIN glasses g    ON g.Id  = c.Glass
         LEFT JOIN locations l  ON l.Id  = g.Location
         LEFT JOIN brews b      ON b.Id  = g.Brew
@@ -425,13 +429,34 @@ sub photo_attached_str {
        WHERE c.Id = ?
     }, undef, $cid);
     if ($row) {
-      my $s = "C[$cid]:";
-      $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
-      $s .= " <b>$row->{Brew}</b>"      if $row->{Brew};
-      $s .= " \@<b>$row->{Loc}</b>"     if $row->{Loc};
-      $s .= "<br/>&ldquo;" . util::htmlesc(substr($row->{Txt}, 0, 80)) . "&rdquo;"
-        if $row->{Txt};
-      push @attached, $s;
+      # only emit a comment line when there's something useful to show
+      if ( defined $row->{Rating} || $row->{PersName} || $row->{Txt} ) {
+        # make the comment id itself a link to the glass full view
+        my $clink;
+        if (defined $row->{Gid} && $row->{Gid} ne '') {
+          $clink = "<a href='$c->{url}?o=Full&e=$row->{Gid}&ec=$cid'>" .
+                   "<span>$cid</span></a>";
+        } else {
+          $clink = $cid;
+        }
+        my $s = "C[$clink]:";
+        $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
+        $s .= " <b>$row->{Brew}</b>"      if $row->{Brew};
+        $s .= " \@<b>$row->{Loc}</b>"     if $row->{Loc};
+        # build rating/person/text string (no newline)
+        my $txt = "";
+        if ( defined $row->{Rating} && $row->{Rating} ne '' ) {
+          $txt .= "(" . "<b>" . $row->{Rating} . "</b>" . ") ";
+        }
+        if ( $row->{PersName} ) {
+          $txt .= "<b>" . util::htmlesc($row->{PersName}) . "</b>: ";
+        }
+        if ( $row->{Txt} ) {
+          $txt .= util::htmlesc($row->{Txt});
+        }
+        $s .= "<br/>" . $txt if $txt;
+        push @attached, $s;
+      }
     } else {
       push @attached, "C[$cid]";
     }
@@ -537,8 +562,7 @@ sub editphoto {
         <td><input type='text' name='caption' value='$caption' size='20' /></td></tr>
     <tr><td><small>Public</small></td>
         <td><input type='checkbox' name='public' value='1'$pub_checked /></td></tr>
-    <tr><td></td>
-        <td>
+    <tr><td colspan='2'>
           <input type='submit' name='submit' value='Update Photo' />
           &nbsp;
           <input type='submit' name='submit' value='Delete Photo'

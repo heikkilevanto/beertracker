@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-02-22 13:10 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-02-23 13:25 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 
@@ -177,28 +177,6 @@ create view compers as
       group by comments.glass
 ;
 
--- view persons_list
-drop view if exists persons_list;
-create view persons_list as
-  -- List to select which person to edit
-  select
-    persons.Id,
-    persons.Name,
-    "trmob" as trmob,
-    count(comments.Id) - 1 as Com,
-    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
-    locations.Name as Location, 
-    "tr" as tr,
-    'Clr' as 'Clr',
-    persons.description,
-    (select Filename from photos where Person = persons.Id order by Ts desc limit 1) as Photo
-  from persons
-  left join comments on comments.Person = persons.Id
-  left join glasses on comments.Glass = glasses.Id
-  left join locations on locations.id = glasses.Location
-  group by Persons.id
-;
-
 -- view brew_ratings
 drop view if exists brew_ratings;
 create view brew_ratings as
@@ -305,31 +283,6 @@ create view glassrec as
       left join locations ploc on ploc.id = Brews.ProducerLocation
       where glasses.Location = locations.id;
 
--- view brews_list
-drop view if exists brews_list;
-create view brews_list as
-select
-    brews.Id,
-    brews.Name,
-    ploc.Name as Producer,
-    brews.IsGeneric,
-    'tr' as tr,
-    brews.Alc as Alc,
-    brews.BrewType || ', ' || brews.Subtype as Type,
-    r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
-    count(glasses.Id) as Count,
-    'tr' as tr,
-    'Clr' as 'Clr',
-    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
-    locations.Name as Location,
-    (select Filename from photos where Brew = brews.Id order by Ts desc limit 1) as Photo
-  from brews
-  left join locations ploc on ploc.id = brews.ProducerLocation
-  left join glasses on Glasses.Brew = brews.Id
-  left join locations on locations.id = glasses.Location
-  left join brew_ratings r on r.Brew = Brews.Id
-  group by brews.id;
-
 -- view comments_list
 drop view if exists comments_list;
 create view comments_list as
@@ -397,23 +350,6 @@ and l.id = g.location
 and l.loctype <> 'Producer'
 group by g.location;
 
--- view locations_list
-drop view if exists locations_list;
-create view locations_list as
-select
-    locations.Id,
-    locations.Name,
-    locations.LocType || ', ' || locations.LocSubType as Type,
-	'' as trmob,
-	locations.lat || ' ' || locations.lon as Geo,
-    strftime ( '%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00' ) ||  strftime ( '%H:%M', max(glasses.Timestamp)) as Last,
-	r.rating_count || ';' || r.rating_average || ';' || r.comment_count as Stats,
-    (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as Photo
-  from locations
-  left join glasses on glasses.Location = locations.Id
-  left join location_ratings r on r.id  = glasses.Id
-  group by locations.Id;
-
 -- view LatestPrices
 drop view if exists LatestPrices;
 create view LatestPrices as
@@ -469,6 +405,71 @@ select
   strftime('%Y-%m-%d', Gone) as GoneFormatted 
 from tap_beers 
 join locations on tap_beers.Location = locations.Id;
+
+-- view locations_list
+drop view if exists locations_list;
+create view locations_list as
+    select
+      locations.Id,
+      locations.Name,
+      locations.LocType || ', ' || locations.LocSubType as Type,
+      '' as trmob,
+      locations.lat || ' ' || locations.lon as Geo,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) as Last,
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count as Stats,
+      (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as Photo
+    from locations
+    left join glasses on glasses.Location = locations.Id
+    left join location_ratings r on r.id = glasses.Id
+    group by locations.Id;
+
+-- view persons_list
+drop view if exists persons_list;
+create view persons_list as
+    select
+      persons.Id,
+      persons.Name,
+      'trmob' as trmob,
+      count(comments.Id) - 1 as Com,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) as Last,
+      locations.Name as Location,
+      'tr' as tr,
+      'Clr' as Clr,
+      persons.description,
+      (select Filename from photos where Person = persons.Id order by Ts desc limit 1) as Photo
+    from persons
+    left join comments on comments.Person = persons.Id
+    left join glasses on comments.Glass = glasses.Id
+    left join locations on locations.Id = glasses.Location
+    group by persons.Id;
+
+-- view brews_list
+drop view if exists brews_list;
+create view brews_list as
+    select
+      brews.Id,
+      brews.Name,
+      ploc.Name as Producer,
+      brews.IsGeneric,
+      'tr' as tr,
+      brews.Alc as Alc,
+      brews.BrewType || ', ' || brews.Subtype as Type,
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
+      count(glasses.Id) as Count,
+      'tr' as tr,
+      'Clr' as Clr,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) as Last,
+      locations.Name as Location,
+      (select Filename from photos where Brew = brews.Id order by Ts desc limit 1) as Photo
+    from brews
+    left join locations ploc on ploc.Id = brews.ProducerLocation
+    left join glasses on glasses.Brew = brews.Id
+    left join locations on locations.Id = glasses.Location
+    left join brew_ratings r on r.Brew = brews.Id
+    group by brews.Id;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
