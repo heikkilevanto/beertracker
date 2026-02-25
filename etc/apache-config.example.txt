@@ -10,6 +10,7 @@
 <DirectoryMatch "^/var/www/html/beertracker(-dev)?/">
    AllowOverride All
    AcceptPathInfo On
+   CGIPassAuth On
    Options +FollowSymLinks +ExecCGI -Indexes
 
    AddHandler cgi-script .cgi
