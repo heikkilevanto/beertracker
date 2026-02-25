@@ -105,7 +105,7 @@ sub about {
   print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
 
   print "<p><hr>\n";
-  print "This site uses no cookies, and collects no personally identifiable information<p>\n";
+  print "This site uses a session cookie (HttpOnly, Secure) to keep you logged in. It collects no personally identifiable information beyond what you enter.<p>\n";
 
 
   print "<p><hr/>\n";

@@ -82,6 +82,9 @@ require "./code/ratestats.pm"; # Histogram of the ratings
 require "./code/export.pm"; # Export the users own data
 require "./code/photos.pm"; # Helpers for managing photo files
 require "./code/migrate.pm"; # DB migration system
+require "./code/login.pm";  # Cookie-based authentication
+# Login module dependencies (also loaded inside login.pm; listed here for documentation):
+#   Digest::SHA qw(hmac_sha256_hex), Authen::Htpasswd, CGI::Cookie, MIME::Base64
 
 
 
@@ -112,15 +115,19 @@ my $scriptdir = "./scripts/";  # screen scraping scripts
 my $plotfile = "";
 my $cmdfile = "";
 my $photodir = "";
-my $username = ($q->remote_user()||"");
+# Build a minimal context so login.pm can use the CGI object.
+# authenticate() sets $c_auth->{username}; sends 401 and exits on failure.
+my $c_auth = { cgi => $q };
+login::authenticate($c_auth);
+my $username = $c_auth->{username};
 
 # Sudo mode, normally commented out
 #$username = "dennis" if ( $username eq "heikki" );  # Fake user to see one with less data
 
-if ( ($q->remote_user()||"") =~ /^[a-zA-Z0-9]+$/ ) {
+if ( $username =~ /^[a-zA-Z0-9]+$/ ) {
   $plotfile = $datadir . $username . ".plot";
-  $cmdfile = $datadir . $username . ".cmd";
-  $photodir = $datadir . $username. ".photo";
+  $cmdfile  = $datadir . $username . ".cmd";
+  $photodir = $datadir . $username . ".photo";
 } else {
   util::error ("Bad username\n");
 }
@@ -162,6 +169,7 @@ $c->{sort} = util::param($c,"s");  # Sort key
 $c->{duplicate} = util::param($c,"duplicate");  # ID of brew to duplicate
 $c->{href} = "$c->{url}?o=$c->{op}";
 
+login::prepare_cookie($c);  # Build fresh auth cookie; htmlhead() will send it.
 
 
 ################################################################################
@@ -242,6 +250,12 @@ migrate::startup_check($c);  # Redirect to migration form if DB is behind code v
 # Datafile export needs to be done before HTML head, as we output text/plain
 if ( $c->{op} =~ /DoExport/i ) {
   export::do_export($c);
+  exit;
+}
+
+# Logout must be done before HTML head, as we send a redirect with an expired cookie
+if ( $c->{op} =~ /Logout/i ) {
+  login::logout($c);
   exit;
 }
 
@@ -328,6 +342,8 @@ sub htmlhead {
     -Cache_Control => "no-cache, no-store, must-revalidate",
     -Pragma => "no-cache",
     -Expires => "0",
+    -Secure => 1,
+    -cookie => $c->{auth_cookie},
     -X_beertracker => "This beertracker is my hobby project. It is open source",
     -X_author => "Heikki Levanto",
     -X_source_repo => "https://github.com/heikkilevanto/beertracker" );
