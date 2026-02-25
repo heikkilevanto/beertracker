@@ -41,6 +41,8 @@ sub showpersondetails {
     strftime('%Y-%m-%d %w', g.timestamp, '-06:00') as effdate,
     strftime('%H:%M', g.timestamp, '-06:00') as time,
     g.Location as loc,
+    l.Name as locname,
+    l.Website as locwebsite,
     g.brewtype as brewtype,
     g.subtype as subtype,
     g.id as id

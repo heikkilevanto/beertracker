@@ -42,13 +42,17 @@ sub glassquery {
       brews.IsGeneric as generic,
       locations.name as producer,
       locations.Id as prodid,
+      gloc.Name as locname,
+      gloc.Website as locwebsite,
       (select count(*) from comments where comments.glass = glasses.id) as comcount,
+      (select count(*) from photos where photos.Glass = glasses.id) as photocount,
       br.rating_count,
       br.average_rating,
       br.comment_count
     from glasses
     left join brews on brews.id = glasses.brew
     left join locations on locations.id = brews.producerlocation
+    left join locations gloc on gloc.id = glasses.location
     left join brew_ratings br on glasses.brew = br.brew
     where Username = ?
       and effdate <= ?
@@ -151,27 +155,22 @@ sub bloodalc {
 # List glasses for one day
 ################################################################################
 
-# Cache the location records we fetch.
-my %cachedloc;
-
 sub locationhead {
   my $c = shift;
   my $rec = shift;
-  $cachedloc{$rec->{loc}} = db::getrecord($c,"LOCATIONS", $rec->{loc})
-    unless ( $cachedloc{$rec->{loc}} );
-  my $loc = $cachedloc{$rec->{loc}};
+  my $locname = $rec->{locname};
+  my $locwebsite = $rec->{locwebsite} || '';
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
-  #print STDERR "Loc head: d='$rec->{effdate}' l='$rec->{loc}'='$loc->{Name}' \n";
   print "<br/>";
-  my $locname = "@" . $loc->{Name};
+  my $display = "@" . $locname;
   print "<b><a href='$c->{url}?o=$c->{op}&date=$date'><span>$wd $date</span></a> " .
-    "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$locname</span></a> </b>";
+    "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$display</span></a> </b>";
   print " <span style='font-size: x-small;'>[$rec->{loc}]</span>\n";
-  print "<a href='$loc->{Website}' target='_blank'><span style='font-size: x-small;'>www</span></a>"
-    if ( $loc->{Website} );
+  print "<a href='$locwebsite' target='_blank'><span style='font-size: x-small;'>www</span></a>"
+    if ( $locwebsite );
   print "<br/>";
   print "<br/>" unless ( $rec->{PersName} ); # not for person detail list
-  return ( $rec->{effdate}, $rec->{loc}, "@".$loc->{Name}, "$wd $date", $date );
+  return ( $rec->{effdate}, $rec->{loc}, "@".$locname, "$wd $date", $date );
 }
 
 sub nameline {
@@ -229,6 +228,7 @@ sub numbersline {
 sub photoline {
   my $c = shift;
   my $rec = shift;
+  return unless $rec->{photocount};  # skip query for the common case
   my $html = photos::thumbnails_html($c, 'Glass', $rec->{id});
   print $html if $html;
 } # photoline
@@ -239,7 +239,8 @@ sub commentlines {
   if ( $rec->{comcount} ) {
     my $sql = "select COMMENTS.*,
       PERSONS.Name as PersName,
-      PERSONS.Id as PersId
+      PERSONS.Id as PersId,
+      (select count(*) from photos where photos.Comment = comments.Id) as photocount
       from comments
       left join PERSONS on persons.id = comments.person
       where glass = ?
@@ -250,8 +251,8 @@ sub commentlines {
     while ( my $com = $sth->fetchrow_hashref() ) {
       my $comid = $com->{Id}; # Save before clearing
       $com->{Id} = ""; # Disable the edit link with id
-      print "<li>". comments::commentline($c, $com).
-            photos::thumbnails_html($c, 'Comment', $comid). "</li>\n  ";  # </div>\n";
+      my $phothtml = $com->{photocount} ? photos::thumbnails_html($c, 'Comment', $comid) : '';
+      print "<li>". comments::commentline($c, $com). $phothtml . "</li>\n  ";  # </div>\n";
     }
     print "</ul>\n";
   }
