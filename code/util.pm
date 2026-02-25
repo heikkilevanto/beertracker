@@ -360,7 +360,6 @@ sub showmenu {
         }
     }
 
-    push @more, { label => "Log out", url => "o=Logout" };
     push @more, { label => "About", url => "o=About" };
     push @menu, { label => "More ...", children => \@more };
 

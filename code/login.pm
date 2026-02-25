@@ -88,7 +88,9 @@ sub prepare_cookie {
 
 
 # logout($c) — expire the login cookie and redirect to the app root.
-# The browser will then prompt for credentials on the next request.
+# NOTE: In practice this has limited effect. The browser caches HTTP Basic
+# credentials and re-sends them automatically, so login.pm immediately
+# re-issues a fresh cookie. Kept here for completeness and future use.
 sub logout {
   my $c = shift;
   my $q = $c->{cgi};

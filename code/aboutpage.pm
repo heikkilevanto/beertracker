@@ -105,8 +105,10 @@ sub about {
   print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
 
   print "<p><hr>\n";
-  print "This site uses a session cookie (HttpOnly, Secure) to keep you logged in. It collects no personally identifiable information beyond what you enter.<p>\n";
-
+  print "This site uses one session cookie to keep you logged in. <br/>\n";
+  print "No third-party cookies or trackers of any kind. <br/>\n";
+  print "It collects no personally identifiable information beyond what you enter.<br/>\n";
+  print "No information is shared with any third parties. <p>\n";
 
   print "<p><hr/>\n";
   #print "<b>Debug info </b><br/>\n";  # TODO - Add new debug helpers here if needed
