@@ -3,7 +3,8 @@
 
 # Copy or symlink to /etc/apache2/conf-available|enabled or conf.d
 # Make also a symlink in /var/www/html/beertracker to the right place
-# Create a .htpasswd
+# Create /etc/lsd/login.secret: sudo mkdir -p /etc/lsd && openssl rand -hex 32 | sudo tee /etc/lsd/login.secret && sudo chmod 640 /etc/lsd/login.secret && sudo chown root:www-data /etc/lsd/login.secret
+# Create a .htpasswd (still used by login.pm for password validation)
 # Create a directory called beerdata, Make it owned and writable by www-data.
 
 
@@ -16,10 +17,9 @@
    AddHandler cgi-script .cgi
    DirectoryIndex code/index.cgi
 
-   AuthUserFile /var/www/html/beertracker/.htpasswd
-   AuthName "Beertracker Password"
-   AuthType Basic
-   Require valid-user
+   # Authentication is handled by login.pm (cookie + HTTP Basic via CGIPassAuth).
+   # No Apache-level auth required; access to the app is open at the Apache level.
+   Require all granted
 </DirectoryMatch>
 
 # Tell the browser check image age every time - our graphs tend to be alive
