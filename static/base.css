@@ -13,8 +13,10 @@ html {
 body {
   background-color: var(--bgcolor, #000000);
   color: #ffffff;
+  /* give the entire application a slight left margin so content
+     doesn't sit flush against the browser edge */
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 5px;
   font-size: 0.9rem; /* replaces '* { font-size: small; }' */
   font-family: sans-serif;
   height: 100%;
