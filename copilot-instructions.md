@@ -25,7 +25,7 @@ Data flows from browser forms to index.cgi, which calls module post*() functions
 changes (alter table) require manual steps; document those in commit message. Changes to views and indexes work well with dbchange.sh.
 - **Versioning**: Git pre-commit hook runs `tools/makeversion.sh` to update `code/VERSION.pm` with commit count.
 - **Testing**: No automated tests; manually test CGI under Apache. Use `superuser::copyproddata()` to sync production data to dev.
-- **Deployment**: Git pull code to production, run `tools/dbchange.sh` if schema changed.
+- **Deployment**: Git pull code to production, should migrate the database on first run if schema changed. / Apache config in `etc/apache-config.example.txt` is mostly stable; avoid changes there if possible. It is actually used as the real Apache config in production. The dev version runs from the same config, so changes there should be tested carefully.
 - **Plan files**: are kept under plans. They are used to track AI instructions for implementing a change.
 They should be named like '557-photo.md' where 557 is the issue number. Delete when done. 
 ## Key Patterns and Conventions

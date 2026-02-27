@@ -24,7 +24,7 @@ use MIME::Base64 qw(decode_base64);
 # Config — adjust per project
 ################################################################################
 
-my $HTPASSWD_FILE = "/var/www/html/beertracker/.htpasswd";
+my $HTPASSWD_FILE = "./.htpasswd";
 my $SECRET_FILE   = "/etc/lsd/login.secret";
 my $COOKIE_NAME   = "lsd_login";
 my $COOKIE_MAX_AGE = 14 * 86400;  # 14 days in seconds
@@ -33,11 +33,13 @@ my $COOKIE_MAX_AGE = 14 * 86400;  # 14 days in seconds
 # Public functions
 ################################################################################
 
-# authenticate($c) — authenticate the request, set $c->{username}.
+# authenticate($c, $htpasswd) — authenticate the request, set $c->{username}.
 # Checks the login cookie first; falls back to HTTP Basic credentials.
 # Sends a 401 response and exits if neither is present or valid.
+# Optional $htpasswd overrides the default $HTPASSWD_FILE path.
 sub authenticate {
   my $c = shift;
+  my $htpasswd = shift || $HTPASSWD_FILE;
   my $q = $c->{cgi};
 
   my $secret = read_secret();
@@ -57,7 +59,7 @@ sub authenticate {
   if ($auth_header =~ /^Basic (.+)$/i) {
     my $decoded = decode_base64($1);
     my ($username, $password) = split /:/, $decoded, 2;
-    if ($username && $password && validate_htpasswd($username, $password)) {
+    if ($username && $password && validate_htpasswd($username, $password, $htpasswd)) {
       $c->{username} = $username;
       return;
     }
@@ -166,16 +168,18 @@ sub read_secret {
 } # read_secret
 
 
-# validate_htpasswd($username, $password) — check credentials against .htpasswd.
+# validate_htpasswd($username, $password, $htpasswd) — check credentials against .htpasswd.
 # Returns 1 on success, undef on failure.
 sub validate_htpasswd {
-  my ($username, $password) = @_;
-  return undef unless -f $HTPASSWD_FILE;
-  my $file = Authen::Htpasswd->new($HTPASSWD_FILE);
+  my ($username, $password, $htpasswd) = @_;
+  $htpasswd ||= $HTPASSWD_FILE;
+  return undef unless -f $htpasswd;
+  my $file = Authen::Htpasswd->new($htpasswd);
   my $user = $file->lookup_user($username);
   return undef unless $user;
   return $user->check_password($password) ? 1 : undef;
 } # validate_htpasswd
+
 
 
 # send_401($q) — print a 401 response that causes the browser to prompt for
