@@ -24,8 +24,9 @@ use MIME::Base64 qw(decode_base64);
 # Config — adjust per project
 ################################################################################
 
-my $HTPASSWD_FILE = "./.htpasswd";
-my $SECRET_FILE   = "/etc/lsd/login.secret";
+my $HTPASSWD_FILE     = "./.htpasswd";
+my $HTPASSWD_FALLBACK = "/var/www/html/beertracker/.htpasswd";
+my $SECRET_FILE       = "/etc/lsd/login.secret";
 my $COOKIE_NAME   = "lsd_login";
 my $COOKIE_MAX_AGE = 14 * 86400;  # 14 days in seconds
 
@@ -37,9 +38,10 @@ my $COOKIE_MAX_AGE = 14 * 86400;  # 14 days in seconds
 # Checks the login cookie first; falls back to HTTP Basic credentials.
 # Sends a 401 response and exits if neither is present or valid.
 # Optional $htpasswd overrides the default $HTPASSWD_FILE path.
+# If the resolved htpasswd file is missing, falls back to $HTPASSWD_FALLBACK.
 sub authenticate {
   my $c = shift;
-  my $htpasswd = shift || $HTPASSWD_FILE;
+  my $htpasswd = resolve_htpasswd(shift);
   my $q = $c->{cgi};
 
   my $secret = read_secret();
@@ -49,8 +51,14 @@ sub authenticate {
   if ($token) {
     my $username = verify_token($token, $secret);
     if ($username) {
-      $c->{username} = $username;
-      return;
+      if (user_in_htpasswd($username, $htpasswd)) {
+        $c->{username} = $username;
+        return;
+      } else {
+        warn "login: cookie user '$username' not authorised by $htpasswd\n";
+      }
+    } else {
+      warn "login: invalid or expired cookie\n";
     }
   }
 
@@ -62,6 +70,8 @@ sub authenticate {
     if ($username && $password && validate_htpasswd($username, $password, $htpasswd)) {
       $c->{username} = $username;
       return;
+    } else {
+      warn "login: basic auth failed for '" . ($username // "") . "' against $htpasswd\n";
     }
   }
 
@@ -122,6 +132,26 @@ sub logout {
 ################################################################################
 # Internal helpers
 ################################################################################
+
+# resolve_htpasswd($path) — return $path if it exists, otherwise fall back to
+# $HTPASSWD_FALLBACK with a note to STDERR. Uses $HTPASSWD_FILE if $path is undef.
+sub resolve_htpasswd {
+  my $path = shift || $HTPASSWD_FILE;
+  return $path if -f $path;
+  warn "login: $path not found, falling back to $HTPASSWD_FALLBACK\n";
+  return $HTPASSWD_FALLBACK;
+} # resolve_htpasswd
+
+
+# user_in_htpasswd($username, $htpasswd) — check that $username exists in the
+# htpasswd file (no password check). Returns 1 on success, undef on failure.
+sub user_in_htpasswd {
+  my ($username, $htpasswd) = @_;
+  return undef unless -f $htpasswd;
+  my $file = Authen::Htpasswd->new($htpasswd);
+  return $file->lookup_user($username) ? 1 : undef;
+} # user_in_htpasswd
+
 
 # make_token($username, $secret) — build a signed token string.
 # Format: username:expiry:hmac  where hmac covers "username:expiry".
