@@ -34,14 +34,17 @@ my $COOKIE_MAX_AGE = 14 * 86400;  # 14 days in seconds
 # Public functions
 ################################################################################
 
-# authenticate($c, $htpasswd) — authenticate the request, set $c->{username}.
+# authenticate($c, $htpasswd, $allow_anon) — authenticate the request, set $c->{username}.
 # Checks the login cookie first; falls back to HTTP Basic credentials.
 # Sends a 401 response and exits if neither is present or valid.
 # Optional $htpasswd overrides the default $HTPASSWD_FILE path.
 # If the resolved htpasswd file is missing, falls back to $HTPASSWD_FALLBACK.
+# Optional $allow_anon: if true and no credentials found, sets $c->{username} to ""
+# and returns instead of sending 401. Useful for publicly accessible pages.
 sub authenticate {
   my $c = shift;
   my $htpasswd = resolve_htpasswd(shift);
+  my $allow_anon = shift;
   my $q = $c->{cgi};
 
   my $secret = read_secret();
@@ -75,7 +78,11 @@ sub authenticate {
     }
   }
 
-  # Nothing worked — send 401 and exit
+  # Nothing worked — either allow anonymous access or send 401 and exit
+  if ($allow_anon) {
+    $c->{username} = "";
+    return;
+  }
   send_401($q);
   exit 0;
 } # authenticate
