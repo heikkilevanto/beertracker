@@ -19,6 +19,7 @@ use Digest::SHA qw(hmac_sha256_hex);
 use Authen::Htpasswd;
 use CGI::Cookie;
 use MIME::Base64 qw(decode_base64);
+use Cwd;
 
 ################################################################################
 # Config — adjust per project
@@ -145,7 +146,7 @@ sub logout {
 sub resolve_htpasswd {
   my $path = shift || $HTPASSWD_FILE;
   return $path if -f $path;
-  warn "login: $path not found, falling back to $HTPASSWD_FALLBACK\n";
+  warn "login: $path not found (cwd=" . (Cwd::getcwd() // "unknown") . "), falling back to $HTPASSWD_FALLBACK\n";
   return $HTPASSWD_FALLBACK;
 } # resolve_htpasswd
 
