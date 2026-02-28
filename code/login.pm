@@ -15,6 +15,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;
 
+use open ':encoding(UTF-8)';
 use Digest::SHA qw(hmac_sha256_hex);
 use Authen::Htpasswd;
 use CGI::Cookie;
@@ -28,8 +29,10 @@ use Cwd;
 my $HTPASSWD_FILE     = "./.htpasswd";
 my $HTPASSWD_FALLBACK = "/var/www/html/beertracker/.htpasswd";
 my $SECRET_FILE       = "/etc/lsd/login.secret";
-my $COOKIE_NAME   = "lsd_login";
-my $COOKIE_MAX_AGE = 14 * 86400;  # 14 days in seconds
+my $COOKIE_NAME       = "lsd_login";
+my $COOKIE_MAX_AGE    = 14 * 86400;  # 14 days in seconds
+my $REALM             = "Lsd";          # shown in Basic Auth browser prompt
+my $APP_PATH          = "/";           # app root path used by logout redirect
 
 ################################################################################
 # Public functions
@@ -91,8 +94,10 @@ sub authenticate {
 
 # prepare_cookie($c) — build a fresh signed cookie and store in $c->{auth_cookie}.
 # Called after the full $c is constructed; htmlhead() attaches it to the response.
+# Does nothing if $c->{username} is empty (anonymous / unauthenticated request).
 sub prepare_cookie {
   my $c = shift;
+  return unless $c->{username};
   my $secret = read_secret();
   my $token = make_token($c->{username}, $secret);
   $c->{auth_cookie} = CGI::Cookie->new(
@@ -126,9 +131,8 @@ sub logout {
     -samesite => "Strict",
   );
 
-  # Redirect to app root: strip /code/index.cgi (or similar) from the URL
-  my $root = $c->{url};
-  $root =~ s|/code/[^/]+$|/|;
+  # Redirect to app root: take scheme+host from the current URL and append $APP_PATH.
+  (my $root = $c->{url}) =~ s|(https?://[^/]+).*|$1$APP_PATH|;
 
   print $q->redirect(
     -uri    => $root,
@@ -210,7 +214,6 @@ sub read_secret {
 # Returns 1 on success, undef on failure.
 sub validate_htpasswd {
   my ($username, $password, $htpasswd) = @_;
-  $htpasswd ||= $HTPASSWD_FILE;
   return undef unless -f $htpasswd;
   my $file = Authen::Htpasswd->new($htpasswd);
   my $user = $file->lookup_user($username);
@@ -226,7 +229,7 @@ sub send_401 {
   my $q = shift;
   print $q->header(
     -status           => "401 Unauthorized",
-    -WWW_Authenticate => qq{Basic realm="Beertracker", charset="UTF-8"},
+    -WWW_Authenticate => qq{Basic realm="$REALM", charset="UTF-8"},
     -type             => "text/plain",
   );
   print "Authentication required.\n";
