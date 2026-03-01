@@ -99,23 +99,22 @@ sub postglass {
 
   } # normal glass
 
-  # Save the tap only if it was edited, or if we are editing.
-  # Leading space means "not user-edited" (main form convention); fall back to
-  # latest glass's tap (from findrec) if form provided nothing useful.
-  $glass->{tap} = util::param($c, "tap");
-  if ( !$c->{edit} && $glass->{tap} =~ /^ /  ) {
-    $glass->{tap} = undef;  # Main form: tap not touched by user, don't save
-  } elsif ( !$c->{edit} && !$glass->{tap} ) {
-    $glass->{tap} = $glass->{Tap};  # Copy form: no tap on copied record, inherit from latest glass
+  # Update Tap from form if the user provided an explicit value.
+  # Leading space means "not user-edited" (main form convention); empty string
+  # (copy button) means the copied record had no tap.  In both cases leave
+  # $glass->{Tap} as-is — findrec already populated it from the latest glass.
+  my $formtap = util::param($c, "tap");
+  if ( $c->{edit} || ( $formtap !~ /^ / && $formtap ne '' ) ) {
+    $glass->{Tap} = $formtap;  # Editing, or an explicit tap value was passed
   }
-  $glass->{tap} =~ s/\D//g if $glass->{tap};
+  $glass->{Tap} =~ s/\D//g if $glass->{Tap};
 
   { no warnings;
     print STDERR "postglass: Op:'$sub' U:'$c->{username},' " .
       "Bt:'$glass->{BrewType}' Su:'$glass->{SubType}' Br:'$glass->{Brew}' " .
       "Lo:'$glass->{Location}' ".
       "Pr:'$glass->{Price}' Vo:'$glass->{Volume}' Al:'$glass->{Alc}' " .
-      "dr:'$glass->{StDrinks}' N:'$glass->{Note}' tap:'$glass->{tap}'\n";
+      "dr:'$glass->{StDrinks}' N:'$glass->{Note}' Tap:'$glass->{Tap}'\n";
   }
 
   if ( $sub eq "Save" ) {  # Update existing glass
@@ -145,7 +144,7 @@ sub postglass {
     $glass->{Alc},
     $glass->{StDrinks},
     $glass->{Note},
-    $glass->{tap},
+    $glass->{Tap},
     $glass->{Id}, $c->{username} );
   print STDERR "Updated " . $sth->rows .
     " Glass records for id '$c->{edit}'  \n";
@@ -169,7 +168,7 @@ sub postglass {
       $glass->{Alc},
       $glass->{StDrinks},
       $glass->{Note},
-      $glass->{tap}
+      $glass->{Tap}
       );
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print STDERR "Inserted Glass id '$id' \n";
