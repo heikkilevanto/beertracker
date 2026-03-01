@@ -165,16 +165,17 @@ sub maininputform {
   print "<td>" ; # <input name='stamp' value='$stamp' size=25 $clr/>";
   my ($date,$time) = ( "", "");
   ($date,$time) = split ( ' ',$rec->{Timestamp} ) if ($rec->{Timestamp} );
+  my ($rawdate, $rawtime) = ($date, $time);  # Save real values before leading-space marker
   if ( !$c->{edit} ) {
     $date =" $date";  # Mark the time as speculative
     $time =" $time";
   }
-  print "<input name='date' id='date' value='$date' " .
+  print "<input name='date' id='date' value='$date' data-rawval='$rawdate' " .
         "pattern=' ?([LlYy])?(\\d\\d\\d\\d-\\d\\d-\\d\\d)?' " .
         "placeholder='YYYY-MM-DD' $sz8 /> &nbsp;\n";
         # Could not make alternative pattern work, so I use a sequence of L/Y
         # and a valid date. Note also the leading space
-  print "<input name='time' id='time' value='$time' " .
+  print "<input name='time' id='time' value='$time' data-rawval='$rawtime' " .
         "pattern=' ?\\d\\d(:?\\d\\d)?(:?\\d\\d)?' ".
         "placeholder='HH:MM' $sz8/> &nbsp;\n";
   my $onclick = "onclick='selectNearest(\"#dropdown-Location\")'";
@@ -202,17 +203,19 @@ sub maininputform {
 
   # Note for the glass
   my $hidenote = "hidden";
+  my $rawnote = $rec->{Note} || "";  # Save before zeroing for non-edit mode
   $rec->{Note} = "" unless ( $c->{edit} );  # Do not inherit from previous
   if ( $c->{edit} ) {
     $hidenote = "";
   }
   my $tap = $rec->{Tap} || "";
+  my $rawtap = $tap;  # Save before leading-space marker
   if ( !$c->{edit} ) {
     $tap = " $tap";
   }
   print STDERR "Glass input form: hidenote='$hidenote' Note='$rec->{Note}' Tap='$tap'\n";
-  print "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' size='2' $clr/></td><td>\n";
-  print "<input name='note' placeholder='note' value='$rec->{Note}' $sz20/>\n";
+  print "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' data-rawval='$rawtap' size='2' $clr/></td><td>\n";
+  print "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' $sz20/>\n";
   print "</td></tr>\n";
 
   # (note toggle),  Vol, Alc, and Price
@@ -242,9 +245,18 @@ sub maininputform {
     print " <input type='submit' name='submit' value='Del' formnovalidate />\n";
     print "<a href='$c->{url}?o=$c->{op}' ><span>cancel</span></a>";
   } else { # New glass
-    print "<input type='submit' name='submit' value='Record'/>\n";
+    print " <input type='hidden' name='e' id='edit-e' value='$rec->{Id}' disabled/>\n";
+    print "<span id='new-buttons'><input type='submit' name='submit' value='Record'/></span>\n";
+    print "<span id='edit-buttons' style='display:none'><input type='submit' name='submit' value='Save' id='save'/></span>\n";
     print "</td><td>\n";
+    print "<span id='new-buttons-right'>\n";
     print " <input type='button' value='Clr' onclick='clearinputs()'/>\n";
+    print " <input type='button' value='Edit' onclick='editrecord()'/>\n";
+    print "</span>\n";
+    print "<span id='edit-buttons-right' style='display:none'>\n";
+    print " <input type='submit' name='submit' value='Del' formnovalidate/>\n";
+    print " <a href='$c->{url}?o=$c->{op}'><span>cancel</span></a>\n";
+    print "</span>\n";
   }
   print "&nbsp;" ;
   print "</td></tr>\n";
@@ -308,6 +320,23 @@ sub maininputform {
       nbt[0].hidden = true;
       var br = nbt[0].nextElementSibling;
       br.hidden = true;
+    }
+
+    function editrecord() {  // Switch form to edit mode for the current record in-place
+      const dateInput = document.getElementById('date');
+      const timeInput = document.getElementById('time');
+      const tapInput = document.querySelector('[name=tap]');
+      const noteInput = document.querySelector('[name=note]');
+      dateInput.value = dateInput.dataset.rawval;
+      timeInput.value = timeInput.dataset.rawval;
+      tapInput.value = tapInput.dataset.rawval;
+      noteInput.value = noteInput.dataset.note;
+      shownote();
+      document.getElementById('edit-e').disabled = false;
+      document.getElementById('new-buttons').style.display = 'none';
+      document.getElementById('edit-buttons').style.display = '';
+      document.getElementById('new-buttons-right').style.display = 'none';
+      document.getElementById('edit-buttons-right').style.display = '';
     }
 SCRIPTEND
   print "<script defer>$script</script>\n";
