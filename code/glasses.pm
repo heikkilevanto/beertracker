@@ -145,7 +145,7 @@ sub selectbrewsubtype {
 # This is a fairly small, but rather complex form. For now it is hard coded,
 # without using the util::inputform helper, as almost every field has some
 # special considerations.
-sub inputform {
+sub maininputform {
   my $c = shift;
   my $rec = findrec($c); # Get defaults, or the record we are editing
 
@@ -311,7 +311,7 @@ sub inputform {
     }
 SCRIPTEND
   print "<script defer>$script</script>\n";
-} # inputform
+} # maininputform
 
 
 ################################################################################

@@ -266,7 +266,7 @@ print "<div class='content-wrapper'>\n";
 
 if ( $c->{op} =~ /Board/i ) {
   graph::graph($c);
-  glasses::inputform($c);
+  glasses::maininputform($c);
   beerboard::beerboard($c);
   mainlist::mainlist($c);
 } elsif ( $c->{op} =~ /Years/i ) {
@@ -300,7 +300,7 @@ if ( $c->{op} =~ /Board/i ) {
 } elsif ( $c->{op} =~ /GitPull/i ) {
   superuser::gitpull($c);
 } elsif ( $c->{op} =~ /Full/i ) {
-  glasses::inputform($c);
+  glasses::maininputform($c);
   mainlist::mainlist($c);
 } else { # Default to the graph
   # Log it, I have seen menus with no section selected! Must be a bad $op
@@ -309,7 +309,7 @@ if ( $c->{op} =~ /Board/i ) {
     unless ( $c->{op} eq "Graph" );
   $c->{op} = "Graph" unless $c->{op};
   graph::graph($c);
-  glasses::inputform($c);
+  glasses::maininputform($c);
   mainlist::mainlist($c);
 }
 
