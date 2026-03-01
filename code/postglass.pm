@@ -99,10 +99,14 @@ sub postglass {
 
   } # normal glass
 
-  # Save the tap only if it was edited, or if we are editing
+  # Save the tap only if it was edited, or if we are editing.
+  # Leading space means "not user-edited" (main form convention); fall back to
+  # latest glass's tap (from findrec) if form provided nothing useful.
   $glass->{tap} = util::param($c, "tap");
-  if ( !$c->{edit} && $glass->{tap} =~ /^ /  ) { 
-    $glass->{tap} = undef;
+  if ( !$c->{edit} && $glass->{tap} =~ /^ /  ) {
+    $glass->{tap} = undef;  # Main form: tap not touched by user, don't save
+  } elsif ( !$c->{edit} && !$glass->{tap} ) {
+    $glass->{tap} = $glass->{Tap};  # Copy form: no tap on copied record, inherit from latest glass
   }
   $glass->{tap} =~ s/\D//g if $glass->{tap};
 
