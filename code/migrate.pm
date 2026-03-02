@@ -26,13 +26,14 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 4;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 5;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
   [2, 'create photos table and backfill from comments.Photo', \&mig_002_photos_table],
   [3, 'add Photo column to locations_list view', \&mig_003_locations_list_photo],
   [4, 'add Photo column to persons_list and brews_list views', \&mig_004_persons_brews_list_photo],
+  [5, 'add index on photos(Glass) for mainlist performance', \&mig_005_idx_photos_glass],
 );
 
 ################################################################################
@@ -292,5 +293,11 @@ sub mig_004_persons_brews_list_photo {
     GROUP BY brews.Id
   });
 } # mig_004_persons_brews_list_photo
+
+################################################################################
+sub mig_005_idx_photos_glass {
+  my $c = shift;
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_photos_glass ON photos(Glass)");
+} # mig_005_idx_photos_glass
 
 1;
