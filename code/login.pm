@@ -32,7 +32,6 @@ my $SECRET_FILE       = "/etc/lsd/login.secret";
 my $COOKIE_NAME       = "lsd_login";
 my $COOKIE_MAX_AGE    = 14 * 86400;  # 14 days in seconds
 my $REALM             = "Lsd";          # shown in Basic Auth browser prompt
-my $APP_PATH          = "/";           # app root path used by logout redirect
 
 ################################################################################
 # Public functions
@@ -112,33 +111,12 @@ sub prepare_cookie {
 } # prepare_cookie
 
 
-# logout($c) — expire the login cookie and redirect to the app root.
-# NOTE: In practice this has limited effect. The browser caches HTTP Basic
-# credentials and re-sends them automatically, so login.pm immediately
-# re-issues a fresh cookie. Kept here for completeness and future use.
-sub logout {
-  my $c = shift;
-  my $q = $c->{cgi};
-
-  # Expired cookie to clear the browser's copy
-  my $expired_cookie = CGI::Cookie->new(
-    -name     => $COOKIE_NAME,
-    -value    => "",
-    -expires  => "-1d",
-    -path     => "/",
-    -secure   => 1,
-    -httponly => 1,
-    -samesite => "Strict",
-  );
-
-  # Redirect to app root: take scheme+host from the current URL and append $APP_PATH.
-  (my $root = $c->{url}) =~ s|(https?://[^/]+).*|$1$APP_PATH|;
-
-  print $q->redirect(
-    -uri    => $root,
-    -cookie => $expired_cookie,
-  );
-} # logout
+# logout() is intentionally not implemented.
+# Expiring the cookie is trivial, but the browser caches HTTP Basic credentials
+# and re-sends them automatically on the next request, causing login.pm to
+# immediately re-issue a fresh cookie. A working logout would require replacing
+# the Basic Auth challenge with an HTML login form so the browser never caches
+# credentials. Not worth the complexity for a personal app.
 
 
 ################################################################################
