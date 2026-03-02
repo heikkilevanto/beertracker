@@ -253,11 +253,6 @@ if ( $c->{op} =~ /DoExport/i ) {
   exit;
 }
 
-# Logout must be done before HTML head, as we send a redirect with an expired cookie
-if ( $c->{op} =~ /Logout/i ) {
-  login::logout($c);
-  exit;
-}
 
 htmlhead(); # Ok, now we can commit to making a HTML page
 
