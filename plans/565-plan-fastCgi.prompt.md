@@ -9,6 +9,12 @@ running under FastCGI (it checks for the FCGI socket). This means Phase A and B
 can be done, tested, and merged while still running plain CGI. The actual
 switch to FastCGI is just an Apache config change in Phase C.
 
+
+DID NO WORK! FastrCgi did spawn a new process every time, just slowing things
+down. Claude talsk about needing spawn-fcgi + mod_proxy_fcgi instead of mod_fcgid, but that seems like a much bigger change. Maybe later...
+Stage A changes done and seem to work. The rest is stashed away.
+
+
 ## Apache Config Strategy
 
 Both prod and dev run on the same machine; Apache points directly at the
