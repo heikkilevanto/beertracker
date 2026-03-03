@@ -178,7 +178,7 @@ sub error {
   $msg .= longmess("Stack Trace:");
   print "$msg\n";
   print STDERR "ERROR: $msg\n";
-  exit();
+  die $msg;
 }
 
 # Helper to get version info

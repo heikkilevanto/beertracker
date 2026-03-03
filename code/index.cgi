@@ -244,6 +244,8 @@ if ( $q->request_method eq "POST" ) {
   exit;
 }
 
+eval {
+
 db::open_db($c, "ro");  # GET requests are read-only by default
 
 migrate::startup_check($c);  # Redirect to migration form if DB is behind code version
@@ -254,8 +256,7 @@ if ( $c->{op} =~ /DoExport/i ) {
   exit;
 }
 
-
-htmlhead(); # Ok, now we can commit to making a HTML page
+htmlhead($c); # Ok, now we can commit to making a HTML page
 
 print util::topline($c);
 print "<div class='content-wrapper'>\n";
@@ -311,6 +312,12 @@ if ( $c->{op} =~ /Board/i ) {
 
 $c->{dbh}->disconnect;
 htmlfooter();
+
+}; # end eval GET
+if ($@) {
+  eval { $c->{dbh}->disconnect } if $c->{dbh};
+  print STDERR "GET error: $@\n";
+}
 exit();  # The rest should be subs only
 
 # End of main
@@ -333,7 +340,8 @@ sub jslink {
 }
 
 sub htmlhead {
-  print $q->header(
+  my $c = shift;
+  print $c->{cgi}->header(
     -type => "text/html;charset=UTF-8",
     -Cache_Control => "no-cache, no-store, must-revalidate",
     -Pragma => "no-cache",

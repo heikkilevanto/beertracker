@@ -359,7 +359,6 @@ sub monthstat {
   my $sz = "style='max-width:95vw;max-height:120vh'";
   print "<img src=\"$pngfile\" $sz /><br/>\n";
   print $t;    # The table we built above
-  exit();
 }    # Monthly stats
 
 

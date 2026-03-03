@@ -53,7 +53,7 @@ sub copyproddata {
   system("cp ../beertracker/$photodir/* $photodir");
   print STDERR "After: \n" . `ls -l $databasefile* ` . ` ls -l ../beertracker/$databasefile*`;
   print $c->{cgi}->redirect( "$c->{url}" ); # without the o=, so we don't copy again and again
-  exit();
+  return;
 } # copyproddata
 
 ################################################################################
