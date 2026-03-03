@@ -33,7 +33,7 @@ These are all safe to change now — plain CGI is unaffected.
 | monthstat.pm line 362 | `exit()` leftover at end of function | Remove; falls through to caller |
 | superuser.pm line 56 — `copyproddata()` | `exit()` after redirect | Change to `return` |
 | util.pm line 181 — `util::error()` | `exit()` after printing error | Change to `die $msg` (POST eval already catches it; add a bare `eval` wrapper in GET path too) |
-| login.pm line 90 — auth failure | `exit 0` after sending 401 | Change to `die "401\n"`; in the request loop catch with `next` if `$@ =~ /^401/` |
+| login.pm line 90 — auth failure | `exit 0` after sending 401 | **Needs design thought** — `login.pm` is also used by other scripts, so changing its exit behaviour affects them too. Options: pass a callback, return an error code and let the caller exit/die, or add a flag to `$c` that controls behaviour. Decide before implementing. |
 
 **Test after A1:** Normal page load, bad-password 401, error condition, monthstat page — all should work under plain CGI.
 
@@ -45,6 +45,11 @@ Update the one call site (`htmlhead($c)`).
 **Test after A2:** Any page render — headers, cookies, CSS links should be unchanged.
 
 ## Phase B: Add CGI::Fast loop (safe under plain CGI)
+
+### B0. Install dependencies
+    apt install libfcgi-perl libcgi-fast-perl
+
+(mod_fcgid is not needed yet — that's Phase C.)
 
 ### B1. Replace `use CGI` with `use CGI::Fast`
 `CGI::Fast` is a drop-in subclass of `CGI`. Under plain CGI it behaves
@@ -82,13 +87,12 @@ loop runs exactly once — identical to current behaviour.
 ## Phase C: Switch Apache to FastCGI
 
 ### C1. Prerequisites on server
-    apt install libapache2-mod-fcgid libfcgi-perl libcgi-fast-perl
+    apt install libapache2-mod-fcgid
     a2enmod fcgid
 
 ### C2. Edit Apache config
 In `etc/apache-config.example.txt` change `SetHandler cgi-script` →
-`SetHandler fcgid-script`. Add fcgid tuning if needed (e.g.
-`FcgidMaxRequestsPerProcess 500`). Restart Apache.
+`SetHandler fcgid-script`. Restart Apache.
 
 Rollback: `git checkout etc/apache-config.example.txt && sudo systemctl restart apache2`
 
@@ -102,7 +106,10 @@ In the GET path, replace `db::open_db($c, "ro")` with a reconnect-if-needed
 pattern using `$dbh_ro->ping`.
 POST continues to open a fresh rw handle per request.
 
-## Phase E: In-process caching (follow-up)
+## Follow-ups
 
-With a persistent process, module-level caches become viable.
-`selectbrew` and other heavy queries are candidates. To be planned separately.
+- **In-process caching**: with a persistent process, module-level caches become
+  viable. `selectbrew` and other heavy queries are candidates. To be planned
+  separately.
+- **fcgid tuning**: if process count or memory use becomes an issue, look at
+  `FcgidMaxRequestsPerProcess`, `FcgidMaxProcesses`, etc. Not needed upfront.
