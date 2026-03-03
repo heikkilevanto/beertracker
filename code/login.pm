@@ -39,7 +39,7 @@ my $REALM             = "Lsd";          # shown in Basic Auth browser prompt
 
 # authenticate($c, $htpasswd, $allow_anon) — authenticate the request, set $c->{username}.
 # Checks the login cookie first; falls back to HTTP Basic credentials.
-# Sends a 401 response and exits if neither is present or valid.
+# Sends a 401 response and sets $c->{username} to "" if neither is present or valid.
 # Optional $htpasswd overrides the default $HTPASSWD_FILE path.
 # If the resolved htpasswd file is missing, falls back to $HTPASSWD_FALLBACK.
 # Optional $allow_anon: if true and no credentials found, sets $c->{username} to ""
@@ -81,13 +81,13 @@ sub authenticate {
     }
   }
 
-  # Nothing worked — either allow anonymous access or send 401 and exit
+  # Nothing worked — either allow anonymous access or send 401 and return
   if ($allow_anon) {
     $c->{username} = "";
     return;
   }
   send_401($q);
-  exit 0;
+  $c->{username} = "";
 } # authenticate
 
 

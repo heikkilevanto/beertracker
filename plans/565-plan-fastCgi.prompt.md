@@ -33,7 +33,7 @@ These are all safe to change now — plain CGI is unaffected.
 | monthstat.pm line 362 | `exit()` leftover at end of function | Remove; falls through to caller |
 | superuser.pm line 56 — `copyproddata()` | `exit()` after redirect | Change to `return` |
 | util.pm line 181 — `util::error()` | `exit()` after printing error | Change to `die $msg` (POST eval already catches it; add a bare `eval` wrapper in GET path too) |
-| login.pm line 90 — auth failure | `exit 0` after sending 401 | **Needs design thought** — `login.pm` is also used by other scripts, so changing its exit behaviour affects them too. Options: pass a callback, return an error code and let the caller exit/die, or add a flag to `$c` that controls behaviour. Decide before implementing. |
+| index.cgi line 123 — auth failure | `exit 0 unless $username` after 401 sent | Change to `next unless $username` inside the request loop |
 
 **Test after A1:** Normal page load, bad-password 401, error condition, monthstat page — all should work under plain CGI.
 

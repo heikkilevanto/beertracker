@@ -116,10 +116,11 @@ my $plotfile = "";
 my $cmdfile = "";
 my $photodir = "";
 # Build a minimal context so login.pm can use the CGI object.
-# authenticate() sets $c_auth->{username}; sends 401 and exits on failure.
+# authenticate() sets $c_auth->{username}; sends 401 and returns empty username on failure.
 my $c_auth = { cgi => $q };
 login::authenticate($c_auth);
 my $username = $c_auth->{username};
+exit 0 unless $username;  # 401 already sent by authenticate()
 
 # Sudo mode, normally commented out
 #$username = "dennis" if ( $username eq "heikki" );  # Fake user to see one with less data
