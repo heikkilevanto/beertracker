@@ -15,6 +15,7 @@
    Options +FollowSymLinks +ExecCGI -Indexes
 
    AddHandler cgi-script .cgi
+   AddHandler fcgid-script .fcgi
    DirectoryIndex code/index.cgi
 
    # Authentication is handled by login.pm (cookie + HTTP Basic via CGIPassAuth).

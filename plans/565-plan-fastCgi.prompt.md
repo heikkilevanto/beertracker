@@ -10,10 +10,86 @@ can be done, tested, and merged while still running plain CGI. The actual
 switch to FastCGI is just an Apache config change in Phase C.
 
 
-DID NO WORK! FastrCgi did spawn a new process every time, just slowing things
-down. Claude talsk about needing spawn-fcgi + mod_proxy_fcgi instead of mod_fcgid, but that seems like a much bigger change. Maybe later...
 Stage A changes done and seem to work. The rest is stashed away.
+Apache modules loaded. There is a code/test.fcgi file that can be used to test 
+FastCGI and to demonstrate the persistent process behavior. It should be accessible at
+https://lsd.dk/beertracker-dev/code/test.fcgi
 
+## Lessons learned from test.fcgi
+
+### Auto-reload on code change (required for development workflow)
+
+A persistent process **does not reload when the script file changes**. Without a
+mechanism to force reload, every code edit requires `sudo apache2ctl restart`.
+
+Solution: record mtime of `$0` at startup; check it on every request; if
+changed, send a redirect response and `exit(0)`:
+
+    my $mtime = (stat($0))[9];  # outside loop
+
+    # inside loop, first thing:
+    if ((stat($0))[9] != $mtime) {
+        print $q->header(-status => '302 Found', -location => $q->url());
+        exit(0);
+    }
+
+**Critical**: must send a valid HTTP response before `exit`. Calling `exit`
+without output gives mod_fcgid "End of script output before headers" → 500.
+The browser follows the redirect, which hits the freshly-spawned process.
+
+Workflow after adding this: save file → reload browser once (exits old process)
+→ reload again (new code running). No Apache restart needed.
+
+### UTF-8: `binmode STDOUT` does not work under FastCGI
+
+`FCGI::Stream` (the object that replaces STDOUT) does not support PerlIO layers.
+`binmode STDOUT, ':utf8'` is silently ignored, even when set inside the loop.
+
+Any wide-character string (Unicode code point > 127) printed directly will
+produce the warning:
+> Use of wide characters in FCGI::Stream::PRINT is deprecated
+
+**Fix**: use `Encode::encode_utf8()` to convert to bytes before printing:
+
+    use Encode ();
+    print Encode::encode_utf8($html);
+
+Implication for beertracker: `index.cgi` and all modules contain hundreds of
+bare `print` statements and `print qq{...}` blocks that produce HTML. With
+`use utf8` in effect, all literals with non-ASCII characters (em dashes,
+Scandinavian chars in hardcoded strings, etc.) are wide strings. Every `print`
+path that reaches STDOUT needs to go through `Encode::encode_utf8`.
+
+Options to consider:
+1. Wrap every HTML-producing print in `encode_utf8(...)` — verbose and error-prone.
+2. Build the full HTML response into a scalar, then `print encode_utf8($output)` once per request.
+3. Tie or replace STDOUT with an encoding wrapper at the top of each loop iteration.
+
+Option 2 (accumulate then print) is the cleanest for beertracker's existing
+`print` style — replace `print` with `$out .= ` in HTML-producing code, then
+emit at the end.  That is a substantial refactor.
+
+Option 3 could be done with `tie` or by redirecting to an `IO::String`/`PerlIO`
+wrapper. Needs investigation.
+
+This is the biggest migration challenge. Needs a clear strategy before Phase B.
+
+### Dedicated log file for beertracker
+
+Under plain CGI, STDERR goes to the Apache error log and is readable.
+Under mod_fcgid, every STDERR line is prefixed with Apache timestamp, fcgid
+module info, PID, thread, and client IP — making it hard to read app-level log
+lines.
+
+Example of what a single `print STDERR "..."` produces in the error log:
+    [Wed Mar 04 12:52:54.978840 2026] [fcgid:warn] [pid 1601283:tid 1601315] [client 192.168.0.2:52970] mod_fcgid: stderr: test.fcgi: pid=1601933 request=3, referer: ...
+
+For a high-request app this becomes noisy fast. Consider:
+- Opening a dedicated log file (e.g. `beerdata/beertracker.log`) at startup
+  (outside the loop) and writing app log lines there.
+- Keep STDERR for genuine errors only.
+- The log file path can be derived from `$c->{basedir}` so it works in both
+  prod and dev.
 
 ## Apache Config Strategy
 
@@ -74,7 +150,9 @@ Move everything from the `$c_auth` construction down to (and including)
 `htmlfooter()` inside:
 
     while (my $q = CGI::Fast->new) {
-        binmode STDOUT, ":utf8";  # reset per request
+        # NOTE: binmode STDOUT, ":utf8" does NOT work here — FCGI::Stream ignores PerlIO layers.
+        # All HTML output must be encoded with Encode::encode_utf8() before printing.
+        # See "Lessons learned" section above for the full discussion.
         # ... all per-request code ...
     }
 
