@@ -18,8 +18,10 @@ https://lsd.dk/beertracker-dev/code/test.fcgi
 Key findings that explain the implementation choices below:
 
 - **Auto-reload**: A persistent process does not reload on file change. Solution
-  (B3): check `$0` mtime at top of loop and `exit(0)` if changed, after sending
-  a redirect so mod_fcgid gets a valid HTTP response (bare `exit` causes 500).
+  (B3): a `?reload=1` URL parameter triggers an `exit(0)` after sending a redirect,
+  so mod_fcgid gets a valid HTTP response (bare `exit` causes 500) and the next
+  request hits a freshly-loaded process. Reloading all `require`d modules via
+  mtime-checking was rejected as too complex given the number of modules.
 - **UTF-8**: `FCGI::Stream` does not support PerlIO layers — `binmode STDOUT, ':utf8'`
   is silently ignored. Solution (B2): redirect bare `print` via `select` to an
   in-memory scalar opened with `>:utf8`. Print the already-encoded byte string
@@ -30,14 +32,15 @@ Key findings that explain the implementation choices below:
   Unicode strings; without it params are raw bytes that double-encode in the
   `:utf8` buffer. `index.cgi` already uses `use CGI qw(-utf8)` so this is safe.
 - **STDERR**: under mod_fcgid, every STDERR line is wrapped with Apache/fcgid
-  noise and UTF-8 wide chars are mangled. Use a dedicated log file for app-level
-  debug output (A3); keep STDERR for genuine crash output only.
+  noise and UTF-8 wide chars are mangled. A dedicated log file (`beerdata/beertracker.log`,
+  handle in `$c->{log}`) is already in place (A3 done);
+  keep STDERR for genuine crash output only.
 
 ## Apache Config Strategy
 
 Both prod and dev run on the same machine; Apache points directly at the
-git-tracked `etc/apache-config.example.txt`. Single-user, so downtime is
-acceptable.
+git-tracked `etc/apache-config.example.txt` from the production site. Single-user, 
+so downtime is acceptable.
 
 Strategy: `index.cgi` stays live and untouched throughout the migration as a
 fallback. Phase B creates a new `index.fcgi` alongside it. Testing is done via
@@ -59,16 +62,19 @@ for both `index.cgi` and `index.fcgi`.
 
 ### A1. Remove / replace `exit()` calls
 
+The module-level fixes apply everywhere. The index.cgi-specific exits only need
+to be fixed in `index.fcgi` (apply when creating it in Phase B, not to `index.cgi`).
+
 | Location | Fix | Status |
 |---|---|---|
 | monthstat.pm — `exit()` at end of function | Remove | **DONE** |
 | superuser.pm `copyproddata()` — `exit()` after redirect | Changed to `return` | **DONE** |
 | util.pm `util::error()` — `exit()` | Changed to `die $msg` | **DONE** |
-| index.cgi — `exit 0 unless $username` (after auth) | Change to `next unless $username` | TODO |
-| index.cgi — `exit` after `copyproddata()` call | Change to `next` | TODO |
-| index.cgi — `exit` after POST redirect | Change to `next` | TODO |
-| index.cgi — `exit` after `do_export()` — see note | Change to `next` (see note) | TODO |
-| index.cgi — `exit()` at end of script (after GET eval) | Remove | TODO |
+| index.fcgi — `exit 0 unless $username` (after auth) | Change to `next unless $username` | TODO |
+| index.fcgi — `exit` after `copyproddata()` call | Change to `next` | TODO |
+| index.fcgi — `exit` after POST redirect | Change to `next` | TODO |
+| index.fcgi — `exit` after `do_export()` — see note | Change to `next` (see note) | TODO |
+| index.fcgi — `exit()` at end of script (after GET eval) | Remove | TODO |
 
 **Note on `do_export()`**: `do_export()` outputs its own `text/plain`
 content-type header and body before `htmlhead()` is ever called. In the
@@ -82,27 +88,9 @@ branch. See B2 for the exact structure.
 
 `htmlhead()` already takes `$c` and uses `$c->{cgi}`. Nothing to do.
 
-### A3. Dedicated log file
+### A3. Dedicated log file — **DONE**
 
-Open the log file at the top of index.cgi (outside any future loop) and store
-the handle in `$c`:
-
-    my $logpath = $workdir . "/beerdata/beertracker.log";
-    open my $log_fh, '>>', $logpath or warn "Cannot open log $logpath: $!";
-    $c->{log_fh} = $log_fh;
-
-Add `util::applog($c, $msg)` in util.pm:
-
-    sub applog {
-        my ($c, $msg) = @_;
-        my $ts = strftime("%Y-%m-%d %H:%M:%S", localtime);
-        print { $c->{log_fh} } "$ts  $msg\n" if $c->{log_fh};
-    } # applog
-
-Replace existing `print STDERR` debug lines in index.cgi with `util::applog`.
-Keep STDERR for genuine startup/crash errors only.
-
-**Test after A3:** `beerdata/beertracker.log` appears; entries written on page loads.
+`beerdata/beertracker.log` opened at startup, handle in `$c->{log}`. Nothing to do.
 
 ## Phase B: Create index.fcgi (runs in parallel with index.cgi)
 
@@ -169,14 +157,31 @@ All `exit` calls were already replaced with `next`/`return` in A1.
 
 In `index.fcgi`, add at the top of the loop after auth:
 
-    if ($c->{devversion} && util::param($c, 'reload')) {
-        print $q->header(-status => '302 Found', -location => $c->{url});
+    if (util::param($c, 'reload')) {
+        print $q->header(-status => '302 Found', -location => "$c->{url}?o=$c->{op}");
         exit(0);
     }
 
-Add a **Reload** link in the dev-mode page header pointing to `$c->{url}?reload=1`.
-Under plain CGI this is a no-op. Under FastCGI it exits the process; the
-follow-up GET hits a freshly-loaded one.
+Make the version number displayed in the page header a link to `$c->{href}?reload=1`
+(`$c->{href}` is already `$c->{url}?o=$c->{op}`, so this reloads the same page).
+
+Also add an automatic reload on version change. Record the version string
+(including commit count, as shown in the top bar) at startup outside the loop:
+
+    my $startup_version = $VERSION::version;  # or however the version is accessed
+
+At the top of each loop iteration, before auth, check:
+
+    if ($startup_version ne $VERSION::version) {
+        my $op = $q->param('o') || 'Graph';
+        print $q->header(-status => '302 Found', -location => $q->url() . "?o=$op");
+        exit(0);
+    }
+
+Since `VERSION.pm` is re-read only at startup, the version value is stable for
+the life of the process. A `git pull` to production updates the file on disk;
+the next request sees the mismatch and force-exits, so the following request
+loads fresh code automatically. No manual reload needed after deploys.
 
 **Test after B1–B3:** Hit `index.fcgi` directly. Full regression: page loads,
 POST, export, auth failure, UTF-8 characters. Check log file written. Check
@@ -217,3 +222,4 @@ process persistence via the reload link and log file.
   viable. `selectbrew` and other heavy queries are candidates.
 - **fcgid tuning**: if process count or memory becomes an issue, look at
   `FcgidMaxRequestsPerProcess`, `FcgidMaxProcesses`, etc.
+- **Cleanup**: once `index.fcgi` is stable in production, remove `index.cgi`.
