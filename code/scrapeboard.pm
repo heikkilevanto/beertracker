@@ -29,29 +29,29 @@ sub updateboard {
   my ($locparam, undef) = beerboard::get_location_param($c);
   
   if (!$scrapers{$locparam}) {
-    print STDERR "updateboard: No scraper for '$locparam'\n";
+    print { $c->{log} } "updateboard: No scraper for '$locparam'\n";
     return;  # No error page
   }
 
   my $script = $c->{scriptdir} . $scrapers{$locparam};
   my $json = `timeout 5s perl $script`;
   if ($!) {
-    print STDERR "updateboard: Timeout running $script: $!\n";
+    print { $c->{log} } "updateboard: Timeout running $script: $!\n";
     return;
   }
   chomp($json);
   if (!$json) {
-    print STDERR "updateboard: No output from scraper for $locparam\n";
+    print { $c->{log} } "updateboard: No output from scraper for $locparam\n";
     return;
   }
 
   my $beerlist = eval { JSON->new->utf8->decode($json) };
   if ($@) {
-    print STDERR "updateboard: JSON decode failed for $locparam: $@\n";
+    print { $c->{log} } "updateboard: JSON decode failed for $locparam: $@\n";
     return;
   }
 
-  print STDERR "updateboard: Scraped " . scalar(@$beerlist) . " beers for $locparam\n";
+  print { $c->{log} } "updateboard: Scraped " . scalar(@$beerlist) . " beers for $locparam\n";
 
   my $existing_brews = 0;
   my $inserted_brews = 0;
@@ -75,7 +75,7 @@ sub updateboard {
       my $sth = $c->{dbh}->prepare($sql);
       $sth->execute($maker);
       $prod_id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
-      print STDERR "updateboard: Inserted producer '$maker' (id $prod_id)\n";
+      print { $c->{log} } "updateboard: Inserted producer '$maker' (id $prod_id)\n";
     }
 
     # Ensure brew exists
@@ -105,7 +105,7 @@ sub updateboard {
         my $sql_update = "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?";
         my $sth_update = $c->{dbh}->prepare($sql_update);
         $sth_update->execute($defprice, $defvol, $brew_id);
-        print STDERR "updateboard: Updated brew '$brew_id' DefPrice to '$defprice', DefVol to '$defvol'\n";
+        print { $c->{log} } "updateboard: Updated brew '$brew_id' DefPrice to '$defprice', DefVol to '$defvol'\n";
       }
     } else {
       # Insert new brew
@@ -122,11 +122,11 @@ sub updateboard {
       $sth->execute($beer, $short_style, $style, $alc, $prod_id, $defprice, $defvol, $year);
       $brew_id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef);
       $inserted_brews++;
-      print STDERR "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";
+      print { $c->{log} } "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";
     }
   }
 
-  print STDERR "updateboard: $existing_brews brews already existed, $inserted_brews inserted\n";
+  print { $c->{log} } "updateboard: $existing_brews brews already existed, $inserted_brews inserted\n";
 
   # Get location ID
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);

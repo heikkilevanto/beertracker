@@ -55,7 +55,7 @@ sub startup_check {
   }
 
   if ( $db_version < $CODE_DB_VERSION ) {
-    print STDERR "migrate: DB version $db_version < code version $CODE_DB_VERSION — migration needed\n";
+    print { $c->{log} } "migrate: DB version $db_version < code version $CODE_DB_VERSION — migration needed\n";
     _backup_db($c);
     $c->{op} = 'migrate';
   }
@@ -104,19 +104,19 @@ sub run_migrations {
   my @pending = grep { $_->[0] > $db_version } @MIGRATIONS;
 
   if ( !@pending ) {
-    print STDERR "migrate: nothing to do (db_version=$db_version)\n";
+    print { $c->{log} } "migrate: nothing to do (db_version=$db_version)\n";
     return;
   }
 
   foreach my $m (@pending) {
     my ($id, $desc, $sub) = @$m;
-    print STDERR "migrate: running migration $id: $desc\n";
+    print { $c->{log} } "migrate: running migration $id: $desc\n";
     $sub->($c);
     # Update db_version immediately after each migration so a partial run
     # can be resumed and we don't re-apply earlier migrations.
     db::execute($c,
       "INSERT OR REPLACE INTO globals(k,v) VALUES('db_version',?)", $id);
-    print STDERR "migrate: migration $id done, db_version=$id\n";
+    print { $c->{log} } "migrate: migration $id done, db_version=$id\n";
   }
 
   $c->{migrating} = 0;
@@ -148,8 +148,8 @@ sub _backup_db {
   my $ts = strftime("%Y%m%dT%H%M%S", localtime);
   my $backup = "$dbfile.bak.$ts";
   File::Copy::copy($dbfile, $backup)
-    or print STDERR "migrate: WARNING: could not back up $dbfile to $backup: $!\n";
-  print STDERR "migrate: backup created: $backup\n";
+    or print { $c->{log} } "migrate: WARNING: could not back up $dbfile to $backup: $!\n";
+  print { $c->{log} } "migrate: backup created: $backup\n";
   _prune_backups($dbfile);
 } # _backup_db
 
@@ -161,7 +161,7 @@ sub _prune_backups {
   while ( scalar(@backups) > 3 ) {
     my $old = shift @backups;
     unlink $old
-      and print STDERR "migrate: removed old backup: $old\n";
+      and print { $util::log } "migrate: removed old backup: $old\n";
   }
 } # _prune_backups
 

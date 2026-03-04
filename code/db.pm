@@ -72,7 +72,7 @@ sub dberror {
     "SQL: $sql \n";
   $errmsg .= longmess("Stack Trace");
   #util::error($errmsg);
-  print STDERR $errmsg;
+  print { $c->{log} } $errmsg;
   print "\n\n"; # Works even before sending headers
   print "<pre>\n\n";
   print $errmsg;
@@ -125,7 +125,7 @@ sub logquery {
   $msg .= $sql;
   $msg .= " [" .  join(', ',@params).  "]" if (@params);
   $msg = substr($msg,0,239) unless (! $c->{devversion} );
-  print STDERR "$msg\n";
+  print { $c->{log} } "$msg\n";
 }
 
 # Run a simple DB query
@@ -269,7 +269,7 @@ sub getrecord {
   my $rec = $sth->fetchrow_hashref;
   $sth->finish;
   my $name = $rec->{Name} || "";
-  print STDERR "getrecord: $sql '$id' -> '$name'\n";
+  print { $c->{log} } "getrecord: $sql '$id' -> '$name'\n";
   return $rec;
 } # getrecord
 
@@ -300,7 +300,7 @@ sub getfieldswhere {
   my $where = shift;
   my $order = shift || "";
   my $sql = "select $fields from $table $where $order";
-  print STDERR "getfieldswhere: $sql \n";
+  print { $c->{log} } "getfieldswhere: $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute();
   my $rec = $sth->fetchrow_hashref;
@@ -346,10 +346,10 @@ sub deleterecord {
   my $id = shift;
   my $sql = "delete from $table " .
     " where id = ?";
-  print STDERR "deleterecord: $sql '$id' \n";
+  print { $c->{log} } "deleterecord: $sql '$id' \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( $id );
-  print STDERR "Deleted " . $sth->rows .
+  print { $c->{log} } "Deleted " . $sth->rows .
       " $table records for id '$id' \n";
 } # deleterecord
 
@@ -369,9 +369,9 @@ sub updaterecord {
     my $special = $1 if ( $f =~ s/^(-)// );
     my $val = util::param($c, $inputprefix.$f );
     if ( $special ) {
-      print STDERR "updaterecord: Met a special field '$f' \n";
+      print { $c->{log} } "updaterecord: Met a special field '$f' \n";
       if ( $val eq "new" ) {
-        print STDERR "updaterecord: Should insert a new $f \n";
+        print { $c->{log} } "updaterecord: Should insert a new $f \n";
         if ( $f =~ /location/i ) {
           $val = db::insertrecord($c, "LOCATIONS", "newloc");
         } elsif ( $f =~ /brew/i ) {
@@ -379,7 +379,7 @@ sub updaterecord {
         } elsif ( $f =~ /person/i ) {
           $val = db::insertrecord($c, "PERSONS", "newperson");
         } else {
-          print STDERR "updaterecord: Don't know how to insert a '$f' \n";
+          print { $c->{log} } "updaterecord: Don't know how to insert a '$f' \n";
           $val = "TODO";
         }
       }
@@ -388,16 +388,16 @@ sub updaterecord {
     $val = undef if ($val eq '');
     push @sets , "$f = ?";
     push @values, $val;
-    print STDERR "updaterecord: $f = " . util::loglist($val) . "\n";
+    print { $c->{log} } "updaterecord: $f = " . util::loglist($val) . "\n";
   }
   my $sql = "update $table set " .
     join( ", ", @sets) .
     " where id = ?";
-  print STDERR "updaterecord: $sql \n";
-  print STDERR "updaterecord: " . util::loglist( @values ) . " \n";
+  print { $c->{log} } "updaterecord: $sql \n";
+  print { $c->{log} } "updaterecord: " . util::loglist( @values ) . " \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @values, $id );
-   print STDERR "Updated " . $sth->rows .
+   print { $c->{log} } "Updated " . $sth->rows .
       " $table records for id '$id' : " . util::loglist( @values ) ." \n";
 } # updaterecord
 
@@ -416,30 +416,30 @@ sub insertrecord {
   my @values; # values to insert, in the same order
   for my $f ( db::tablefields($c, $table,undef,1)) {  # 1 indicates no -prefix
     my $val = util::param($c, $inputprefix.$f );
-    print STDERR "insertrecord: '$inputprefix' '$f' got value '$val' \n";
+    print { $c->{log} } "insertrecord: '$inputprefix' '$f' got value '$val' \n";
     if ( $val eq '' ) {
       $val =  $defaults->{$f} || "";
-      print STDERR "insertrecord: '$f' defaults to '$val' \n" if ($val);
+      print { $c->{log} } "insertrecord: '$f' defaults to '$val' \n" if ($val);
     }
     if ( $val eq "new" ) {
       if ( $f eq "ProducerLocation" ) {
-        print STDERR "Recursing to ProducerLocation ($inputprefix) \n";
+        print { $c->{log} } "Recursing to ProducerLocation ($inputprefix) \n";
         my $def = {};
         $def->{LocType} = "Producer";
         $def->{LocSubType} = util::param($c, "selbrewtype") || "Beer";
         $def->{ProducerLocation} = '';
         $val = db::insertrecord($c, "LOCATIONS", "newprod", $def );
-        print STDERR "Returned from ProducerLocation, id='$val'  \n";
+        print { $c->{log} } "Returned from ProducerLocation, id='$val'  \n";
       } elsif ( $f eq "Location" ) {
-        print STDERR "Recursing to Location ($inputprefix) \n";
+        print { $c->{log} } "Recursing to Location ($inputprefix) \n";
         my $def = {};
         $val = db::insertrecord($c, "LOCATIONS", "newloc", $def );
-        print STDERR "Returned from Location, id='$val'  \n";
+        print { $c->{log} } "Returned from Location, id='$val'  \n";
       } elsif ( $f eq "RelatedPerson" ) {
-        print STDERR "Recursing to RelatedPerson ($inputprefix) \n";
+        print { $c->{log} } "Recursing to RelatedPerson ($inputprefix) \n";
         my $def = {};
         $val = db::insertrecord($c, "PERSONS", "newperson", $def );
-        print STDERR "Returned from NewPerson, id='$val'  \n";
+        print { $c->{log} } "Returned from NewPerson, id='$val'  \n";
       }
       else {
         error ("insertrecord can not yet handle recursion to this type. p='$inputprefix' f='$f' ");
@@ -454,13 +454,13 @@ sub insertrecord {
   my $qlist = $fieldlist;
   $qlist =~ s/\w+/?/g; # Make a list like ( ?, ?, ?)
   my $sql = "insert into $table $fieldlist values $qlist";
-  print STDERR "insertrecord: $sql \n";
-  print STDERR "insertrecord: " . util::loglist( @values ) . "\n";
+  print { $c->{log} } "insertrecord: $sql \n";
+  print { $c->{log} } "insertrecord: " . util::loglist( @values ) . "\n";
   util::error("insertrecord: Nothing to insert into $table") unless @values;
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( @values );
   my $id = $c->{dbh}->last_insert_id(undef, undef, $table, undef) || undef;
-  print STDERR "Inserted $table id '$id' ". util::loglist(@values) . " \n";
+  print { $c->{log} } "Inserted $table id '$id' ". util::loglist(@values) . " \n";
   return $id;
 } # insertrecord
 

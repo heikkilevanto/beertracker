@@ -44,14 +44,14 @@ sub copyproddata {
   util::error("Can not copy prod database, we have opened the db connection")
     if ($c->{dbh});
 
-  print STDERR "Before: \n" . `ls -l $databasefile* ` . `ls -l ../beertracker/$databasefile*`;
+  print { $c->{log} } "Before: \n" . `ls -l $databasefile* ` . `ls -l ../beertracker/$databasefile*`;
   system("rm $databasefile-*");  # Remove old -shm and -wal files
-  print STDERR "rm $databasefile-* \n";
+  print { $c->{log} } "rm $databasefile-* \n";
   system("cp ../beertracker/$databasefile* $datadir"); # And copy all such files over
-  print STDERR "cp ../beertracker/$databasefile* $datadir \n";
+  print { $c->{log} } "cp ../beertracker/$databasefile* $datadir \n";
   graph::clearcachefiles( $c );
   system("cp ../beertracker/$photodir/* $photodir");
-  print STDERR "After: \n" . `ls -l $databasefile* ` . ` ls -l ../beertracker/$databasefile*`;
+  print { $c->{log} } "After: \n" . `ls -l $databasefile* ` . ` ls -l ../beertracker/$databasefile*`;
   print $c->{cgi}->redirect( "$c->{url}" ); # without the o=, so we don't copy again and again
   return;
 } # copyproddata
@@ -101,7 +101,7 @@ sub gitstatus {
   my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
   my $st = `$cmd` ;
   my $rc = $?;  # return code
-  print STDERR "gitstatus: $st \n";
+  print { $c->{log} } "gitstatus: $st \n";
   $st = encode_entities($st);
   print "<pre $style>\n$st\n</pre> \n";
   print "<hr>\n";
@@ -136,7 +136,7 @@ sub gitpull {
   print "Running $cmd <p/>\n";
   my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
   my $st = `$cmd` ;
-  print STDERR "gitpull: $st\n";
+  print { $c->{log} } "gitpull: $st\n";
   my $rc = $?;  # return code
   $st = encode_entities($st);
   print "<pre $style>\n$st\n</pre><p> \n";

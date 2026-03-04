@@ -90,10 +90,10 @@ sub bloodalc {
     # Assume .10 as a pessimistic value. Would need an alc meter to calibrate
 
   if ( !$bodyweight ) {
-    print STDERR "Can not calculate alc for $c->{username}, don't know body weight \n";
+    print { $c->{log} } "Can not calculate alc for $c->{username}, don't know body weight \n";
     return undef;
   }
-  #print STDERR "Bloodalc for '$effdate' bw='$bodyweight'\n";
+  #print { $c->{log} } "Bloodalc for '$effdate' bw='$bodyweight'\n";
   my $bloodalc = {};
   $bloodalc->{"date"} = $effdate;
   my $sql = q(
@@ -126,10 +126,10 @@ sub bloodalc {
     my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
     $max = $ba if ( $ba > $max );
     $bloodalc->{$id} = sprintf("%0.2f",$ba);
-    #print STDERR "BA:  '$id' '$stamp' : $ba \n";
+    #print { $c->{log} } "BA:  '$id' '$stamp' : $ba \n";
   }
   $bloodalc->{max} = sprintf("%0.2f", $max );
-  #print STDERR "BA:  max:'$bloodalc->{max}' \n";
+  #print { $c->{log} } "BA:  max:'$bloodalc->{max}' \n";
   if ( $alcinbody ) {
     my $now = util::datestr( "%H:%M", 0, 1);
     my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs
@@ -211,7 +211,7 @@ sub numbersline {
   print util::unit($rec->{alc},"%");
   print util::unit($rec->{drinks},"d");
   my $ba = $bloodalc->{ $rec->{id} } || "";
-  #print STDERR "'$rec->{id}' ba=$ba \n";
+  #print { $c->{log} } "'$rec->{id}' ba=$ba \n";
   print util::unit($ba,"/₀₀");
   if ( ! $rec->{generic} ) {  # No ratings or comments on generics like Beer,Mixed or House Red Wine
     print comments::avgratings($c, $rec->{rating_count}, $rec->{average_rating}, $rec->{comment_count});
@@ -440,7 +440,7 @@ sub oneday {
       db::pushback_row($c->{sth},$rec);
       last;
     }
-    #print STDERR "oneday: id='$rec->{id} l='$rec->{loc}' \n";
+    #print { $c->{log} } "oneday: id='$rec->{id} l='$rec->{loc}' \n";
     if ( $rec->{loc} != $loc ) {
       my $loc_total_with_adj = $locprsum + $current_adjustment_price;
       sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba);
@@ -497,7 +497,7 @@ sub mainlist {
   $form_counter = 0;  # Reset counter for each page load
   my $date = util::param($c,"date",util::datestr("%F") );
   my $ndays = util::paramnumber($c, "ndays", 7 ) || 7;
-  print STDERR "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
+  print { $c->{log} } "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
   my $original_ndays = $ndays;
   if (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays")) {
     print qq{<b>Main List</b><br/>\n};

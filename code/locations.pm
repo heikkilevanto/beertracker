@@ -298,27 +298,27 @@ sub deduplocations {
     if ( $paramname =~ /^Chk(\d+)$/ ) {
       my $dup = $1;
       my $sql = "UPDATE GLASSES set Location = ? where Location = ?  ";
-      print STDERR "$sql with '$id' and '$dup' \n";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
       my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
       util::error("Deduplicate Locations: Failed to update GLASSES") unless defined $rows;
-      print STDERR "Updated $rows glasses from $dup to $id\n";
+      print { $c->{log} } "Updated $rows glasses from $dup to $id\n";
 
       $sql = "UPDATE PERSONS set Location = ? where Location = ?  ";
-      print STDERR "$sql with '$id' and '$dup' \n";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
       $rows = $c->{dbh}->do($sql, undef, $id, $dup);
       util::error("Deduplicate Locations: Failed to update PERSONS") unless defined $rows;
-      print STDERR "Updated $rows persons from $dup to $id\n";
+      print { $c->{log} } "Updated $rows persons from $dup to $id\n";
 
       $sql = "UPDATE BREWS set ProducerLocation = ? where ProducerLocation = ?  ";
-      print STDERR "$sql with '$id' and '$dup' \n";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
       $rows = $c->{dbh}->do($sql, undef, $id, $dup);
       util::error("Deduplicate Locations: Failed to update BREWS") unless defined $rows;
-      print STDERR "Updated $rows brews from $dup to $id\n";
+      print { $c->{log} } "Updated $rows brews from $dup to $id\n";
 
       $sql = "DELETE FROM LOCATIONS WHERE Id = ? ";
       $rows = $c->{dbh}->do($sql, undef, $dup);
       util::error("Deduplicate Locations: Failed to delete location '$dup'") unless defined $rows;
-      print STDERR "Deleted $rows locations with id $dup\n";
+      print { $c->{log} } "Deleted $rows locations with id $dup\n";
     }
   }
 
@@ -370,7 +370,7 @@ sub selectlocation {
   my $disabled = shift || "";  # "disabled" or ""
 
   if ( $selected && $selected !~ /^\d+$/ ){
-    print STDERR "selectlocation called with non-numerical 'selected' argument: '$selected' \n";
+    print { $c->{log} } "selectlocation called with non-numerical 'selected' argument: '$selected' \n";
     $selected = 0;
   }
   my $where = "";

@@ -61,18 +61,18 @@ sub listrecords {
   $where = "where $where" if ($where);
 
   my $sql = "select * from $table $where $order";
-  print STDERR "listrecords: $sql ";
+  print { $c->{log} } "listrecords: $sql ";
   my $list_sth = $c->{dbh}->prepare($sql);
   my $paramlist = "";
   if ( $params ) {
     my @paramarr = ( $params ); # the simple case;
     @paramarr = @$params if ( ref $params eq 'ARRAY' );
     $list_sth->execute(@paramarr);
-    print STDERR "[" . join(',', @paramarr) . "]"
+    print { $c->{log} } "[" . join(',', @paramarr) . "]"
   } else {
     $list_sth->execute();
   }
-  print STDERR "\n";
+  print { $c->{log} } "\n";
 
   my $url = $c->{url};
   my $op = $c->{op};
@@ -150,7 +150,7 @@ sub listrecords {
     } elsif ( $f =~ /^None/i ) {
       $f = "";
     }
-    #print STDERR "i=$i f='$f' s='$sty' \n";
+    #print { $c->{log} } "i=$i f='$f' s='$sty' \n";
     $styles[$i] = $sty;
     $f =~ s/^-//;
     $f =~ s/'//g;

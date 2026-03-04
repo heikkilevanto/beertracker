@@ -199,7 +199,7 @@ sub do_export {
   for my $table (@tables) {
     my @ids = @{ $ids{$table} || [] };
     my $nrecs = scalar(@ids);
-    print STDERR "Exporting table '$table' ($nrecs rows) \n";
+    print { $c->{log} } "Exporting table '$table' ($nrecs rows) \n";
     print "\n-- Table: $table ($nrecs records) \n";
     next unless @ids;
 
@@ -232,7 +232,7 @@ sub insert_statement {
   }
 
   my $ins = "INSERT INTO $table (".join(",", @$cols_ref).") VALUES (".join(",", @vals).");";
-  #print STDERR "$ins \n";
+  #print { $c->{log} } "$ins \n";
   return $ins;
 }
 

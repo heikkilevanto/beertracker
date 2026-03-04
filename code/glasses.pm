@@ -213,7 +213,7 @@ sub maininputform {
   if ( !$c->{edit} ) {
     $tap = " $tap";
   }
-  print STDERR "Glass input form: hidenote='$hidenote' Note='$rec->{Note}' Tap='$tap'\n";
+  print { $c->{log} } "Glass input form: hidenote='$hidenote' Note='$rec->{Note}' Tap='$tap'\n";
   print "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' data-rawval='$rawtap' size='2' $clr/></td><td>\n";
   print "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' $sz20/>\n";
   print "</td></tr>\n";

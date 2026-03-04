@@ -73,7 +73,7 @@ sub yearsummary {
   else {
     $sql .= "order by price desc, name COLLATE NOCASE";
   }
-  print STDERR "u='$c->{username}' y=" . join( '-', @years ) . " $sql \n";
+  print { $c->{log} } "u='$c->{username}' y=" . join( '-', @years ) . " $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
 
   my $nlines = util::param( $c, "maxl" ) || 10;

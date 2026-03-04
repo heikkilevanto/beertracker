@@ -133,6 +133,18 @@ if ( $username =~ /^[a-zA-Z0-9]+$/ ) {
   util::error ("Bad username\n");
 }
 
+# Open log file (rotate if > 1MB, keep 3 generations)
+my $logfile = $datadir . "debug.log";
+if ( -f $logfile && -s $logfile > 1_000_000 ) {
+  for my $n ( reverse 1..2 ) {
+    rename "$logfile.$n", "$logfile." . ($n+1) if -f "$logfile.$n";
+  }
+  rename $logfile, "$logfile.1";
+}
+open( my $log, ">>", $logfile )
+  or die "Cannot open log file $logfile: $!\n";
+binmode $log, ":utf8";
+util::set_log($log);  # Let util.pm (and modules using $util::log) find it
 
 
 # the POST routine reads its own input parameters
@@ -161,6 +173,7 @@ my $c = {
   'altbgcolor'  => $altbgcolor,
   'devversion' => $devversion,
   'mobile'   => $mobile,
+  'log'      => $log,
 };
 # Input Parameters. Need to have a $c to get them.
 $c->{edit}= util::param($c,"e");  # Record to edit
@@ -178,15 +191,15 @@ login::prepare_cookie($c);  # Build fresh auth cookie; htmlhead() will send it.
 ################################################################################
 
 
-if ($devversion) { # Print a line in error.log, to see what errors come from this invocation
+if ($devversion) { # Print a line in the log, to see what errors come from this invocation
   my $now = localtime;
-  print STDERR  "\n\n" . $now->ymd . " " . $now->hms . " " .
+  print $log "\n\n" . $now->ymd . " " . $now->hms . " " .
      $q->request_method . " " . $ENV{'QUERY_STRING'}. " \n";
 }
 
 # Needs to be done early, before we send HTTP headers
 if ( $devversion && $c->{op} =~ /copyproddata/i ) {
-  print STDERR "Copying prod data to dev \n";
+  print $log "Copying prod data to dev \n";
   superuser::copyproddata($c);
   exit;
 }
@@ -206,7 +219,7 @@ if ( $q->request_method eq "POST" ) {
       foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
         my $value = $c->{cgi}->param($param);
         $debugparams .= "p: $param = '$value'\n";
-        print STDERR "   p: $param = '$value'\n" ; #if ($value);  # log also zeroes
+        print { $c->{log} } "   p: $param = '$value'\n" ; #if ($value);  # log also zeroes
       }
     }
 
@@ -302,7 +315,7 @@ if ( $c->{op} =~ /Board/i ) {
 } else { # Default to the graph
   # Log it, I have seen menus with no section selected! Must be a bad $op
   # but I don't know where it comes from.
-  print STDERR "Index.cgi: Default op '$c->{op}' \n"
+  print { $c->{log} } "Index.cgi: Default op '$c->{op}' \n"
     unless ( $c->{op} eq "Graph" );
   $c->{op} = "Graph" unless $c->{op};
   graph::graph($c);
@@ -316,7 +329,7 @@ htmlfooter();
 }; # end eval GET
 if ($@) {
   eval { $c->{dbh}->disconnect } if $c->{dbh};
-  print STDERR "GET error: $@\n";
+  print { $c->{log} } "GET error: $@\n";
 }
 exit();  # The rest should be subs only
 

@@ -49,26 +49,26 @@ sub update_taps {
 
     if ($current) {
       if ($current->{Brew} == $tap->{brew_id}) {
-        #print STDERR "taps: Tap $tap_num beer unchanged\n";
+        #print { $c->{log} } "taps: Tap $tap_num beer unchanged\n";
       } else {
         # Close old tap
         my $close_sql = "UPDATE tap_beers SET Gone = ? WHERE Id = ?";
         my $close_sth = $c->{dbh}->prepare($close_sql);
         $close_sth->execute($now, $current->{Id});
-        print STDERR "taps: Closed tap $tap_num at location $location_id\n";
+        print { $c->{log} } "taps: Closed tap $tap_num at location $location_id\n";
 
         # Insert new tap
         my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         my $insert_sth = $c->{dbh}->prepare($insert_sql);
         $insert_sth->execute($location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
-        print STDERR "taps: Opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
+        print { $c->{log} } "taps: Opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
       }
     } else {
       # Insert new tap
       my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
       my $insert_sth = $c->{dbh}->prepare($insert_sql);
       $insert_sth->execute($location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
-      print STDERR "taps: Opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
+      print { $c->{log} } "taps: Opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
     }
   }
 
@@ -81,20 +81,20 @@ sub update_taps {
     my $close_sql = "UPDATE tap_beers SET Gone = ? WHERE Id = ?";
     my $close_sth = $c->{dbh}->prepare($close_sql);
     $close_sth->execute($now, $row->{Id});
-    print STDERR "taps: Closed tap $row->{Tap} (not scraped) at location $location_id\n";
+    print { $c->{log} } "taps: Closed tap $row->{Tap} (not scraped) at location $location_id\n";
   }
 
   # Update LastSeen for active taps
   my $update_sql = "UPDATE tap_beers SET LastSeen = ? WHERE Location = ? AND Gone IS NULL";
   my $update_sth = $c->{dbh}->prepare($update_sql);
   $update_sth->execute($now, $location_id);
-  print STDERR "taps: Updated LastSeen for active taps at location $location_id\n";
+  print { $c->{log} } "taps: Updated LastSeen for active taps at location $location_id\n";
 
   # Add scrape marker 
   my $marker_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, NULL, NULL, ?, ?)";
   my $marker_sth = $c->{dbh}->prepare($marker_sql);
   $marker_sth->execute($location_id, $now, $now);
-  print STDERR "taps: Added scrape marker for location $location_id\n";
+  print { $c->{log} } "taps: Added scrape marker for location $location_id\n";
 } # update_taps
 
 ################################################################################

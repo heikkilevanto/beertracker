@@ -41,7 +41,7 @@ sub datastats {
   $sth->execute();
   while ( my $rec = $sth->fetchrow_hashref ) {
 
-    #print STDERR "U: ", JSON->new->encode($rec), "\n";
+    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
     print "<td align='right'>$rec->{recs}</td>\n";
     print "<td> glasses for <b>$rec->{username}</b> </td>\n";
@@ -57,7 +57,7 @@ sub datastats {
   $sth->execute();
   while ( my $rec = $sth->fetchrow_hashref ) {
 
-    #print STDERR "U: ", JSON->new->encode($rec), "\n";
+    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
     print "<td align='right'>$rec->{count}</td>\n";
     print "<td>glasses of <b>$rec->{BrewType}</b> </td>\n";
@@ -73,7 +73,7 @@ sub datastats {
   $sth->execute();
   while ( my $rec = $sth->fetchrow_hashref ) {
 
-    #print STDERR "U: ", JSON->new->encode($rec), "\n";
+    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
     print "<td align='right'>$rec->{count}</td>\n";
     print "<td>types of <b>$rec->{BrewType}</b> </td>\n";
@@ -94,7 +94,7 @@ sub datastats {
   $sth->execute();
   while ( my $rec = $sth->fetchrow_hashref ) {
 
-    #print STDERR "U: ", JSON->new->encode($rec), "\n";
+    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
     print "<td align='right'>$rec->{count}</td>\n";
     print "<td> producers of <b>$rec->{LocSubType}</b> </td>\n";
@@ -115,7 +115,7 @@ sub datastats {
 
   while ( my $rec = $sth->fetchrow_hashref ) {
 
-    #print STDERR "U: ", JSON->new->encode($rec), "\n";
+    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     if ( $rec->{LocType} =~ /Restaurant/i && $rec->{count} == 1 ) {
       $singles .= "$rec->{LocSubType}; ";
     }

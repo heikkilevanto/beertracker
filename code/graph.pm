@@ -25,7 +25,7 @@ my $onemonth = $oneyear / 12;
 sub clearcachefiles {
   my $c = shift;
   my $datadir = $c->{datadir};
-  print STDERR "clear: d='$datadir'\n";
+  print { $c->{log} } "clear: d='$datadir'\n";
   foreach my $pf ( glob($datadir."*") ) {
     next if ( $pf =~ /(\.data)|(.db.*)$/ ); # Always keep data files
     next if ( -d $pf ); # Skip subdirs, if we have such
@@ -96,7 +96,7 @@ sub oneday {
   my $drinksline = ""; # Individual drinks
   my @drinks;
   while ( my $rec = $g->{sth}->fetchrow_hashref ) {
-    print STDERR "$rec->{Id}: $rec->{EffDate} $rec->{BrewType}/$rec->{SubType} ='$rec->{StDrinks}' \n"
+    print { $c->{log} } "$rec->{Id}: $rec->{EffDate} $rec->{BrewType}/$rec->{SubType} ='$rec->{StDrinks}' \n"
       if ( ! $rec->{StDrinks}) ;
     $sum += $rec->{StDrinks};
     push (@drinks, $rec);
@@ -126,7 +126,7 @@ sub oneday {
     $cnt--;
   }
   if ( $cnt < 0 ) {
-    print STDERR "graph::oneday: Day '$day' has too many drinks. " .
+    print { $c->{log} } "graph::oneday: Day '$day' has too many drinks. " .
         "Increase here and in the plot command\n";
   }
   while ( $cnt-- > 0 ) {
@@ -181,7 +181,7 @@ sub makedatafile {
     order by effdate, Time ";
   # The Brew clause filters out 'empty' glasses like Restaurants.
   # The time offset is to sort records right, we don't use it for anything else
-  #print STDERR "$sql \n";
+  #print { $c->{log} } "$sql \n";
   $g->{sth} = $c->{dbh}->prepare($sql);
 
   my $date = $start;
@@ -362,9 +362,9 @@ sub graph {
 
   if (  -r $g->{pngfile} ) { # Have a cached file
     print "\n<!-- Cached graph op='$c->{op}' file='$g->{pngfile}' -->\n";
-    print STDERR "graph: Reusing a cached file $g->{pngfile} \n";
+    print { $c->{log} } "graph: Reusing a cached file $g->{pngfile} \n";
   } else { # Have to plot a new one
-    print STDERR "graph: Generating $g->{pngfile} for op '$c->{op}' \n";
+    print { $c->{log} } "graph: Generating $g->{pngfile} for op '$c->{op}' \n";
     makedatafile($g);
     plotgraph($g);
   }

@@ -67,7 +67,7 @@ sub imagetag {
   return "" unless ( $photo );
   my $orig = imagefilename($c,$photo, "orig");
   if ( ! -r $orig ) {
-    print STDERR "Photo file '$orig' not found \n";
+    print { $c->{log} } "Photo file '$orig' not found \n";
     return "";
   }
   my $fn = imagefilename($c,$photo, $width);
@@ -75,11 +75,11 @@ sub imagetag {
   if ( ! -r $fn ) { # Need to resize it
     my $size = $imagesizes{$width};
     $size = $size . "x". $size .">";
-    print STDERR "convert $orig -resize '$size' $fn \n";
+    print { $c->{log} } "convert $orig -resize '$size' $fn \n";
     my $conv = `convert $orig -resize '$size' $fn`;
     my $rc = $?;
     chomp($conv);
-    print STDERR "Resize failed with $rc: '$conv' \n" if ( $conv );
+    print { $c->{log} } "Resize failed with $rc: '$conv' \n" if ( $conv );
   }
   my $w    = $imagesizes{$width};
   my $href = $link_url || $orig;
@@ -134,25 +134,25 @@ sub savefile {
   my $storename = $prefix;
   my $dbname = imagefilename($c, $storename,"");  # To be saved in the db
   my $filename = imagefilename($c, $storename, "orig"); # file to save in
-  print STDERR "Saving image '$dbname' into '$filename' \n";
+  print { $c->{log} } "Saving image '$dbname' into '$filename' \n";
 
   util::error("FIle '$dbname' already exists, will not overwrite")
     if ( -e $filename );
   my $filehandle = $q->upload('photo');
   if ( ! $filehandle ) {
-    print STDERR "No upload filehandle in photos::savefile\n";
+    print { $c->{log} } "No upload filehandle in photos::savefile\n";
     return "";
   }
   my $tmpfilename = $q->tmpFileName( $filehandle );
   my $convcmd = "/usr/bin/convert $tmpfilename -auto-orient -strip $filename 2>&1";
-  print STDERR "About to run: $convcmd \n";
+  print { $c->{log} } "About to run: $convcmd \n";
   my $conv = `$convcmd` ;
     # -auto-orient turns them upside up. -strip removes the orientation, so
     # they don't get turned again when displaying.
   my $rc = $?;
-  print STDERR "Conv returned '$rc' and '$conv' \n" if ($rc || $conv); # Can this happen
+  print { $c->{log} } "Conv returned '$rc' and '$conv' \n" if ($rc || $conv); # Can this happen
   my $fsz = -s $filename;
-  print STDERR "Uploaded $fsz bytes into '$filename' \n";
+  print { $c->{log} } "Uploaded $fsz bytes into '$filename' \n";
   return $dbname; # The name without width-specs
 }# savefile
 
@@ -243,7 +243,7 @@ sub post_photo {
         "INSERT INTO photos (Filename, $col, Uploader, Caption, Public, Ts) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
         $src->{Filename}, $attach_id, $src->{Uploader}, $src->{Caption}, $src->{Public});
       my $new_id = $c->{dbh}->last_insert_id("","","","");
-      print STDERR "Added attachment: photo $new_id (copy of $photo_id) for $attach_type $attach_id\n";
+      print { $c->{log} } "Added attachment: photo $new_id (copy of $photo_id) for $attach_type $attach_id\n";
       $c->{redirect_url} = "$c->{url}?o=Photos&e=$new_id";
       return;
     }
@@ -253,7 +253,7 @@ sub post_photo {
       my $fname_row = $c->{dbh}->selectrow_hashref(
         "SELECT Filename FROM photos WHERE Id = ?", undef, $photo_id);
       db::execute($c, "DELETE FROM photos WHERE Id = ?", $photo_id);
-      print STDERR "Deleted photo id=$photo_id\n";
+      print { $c->{log} } "Deleted photo id=$photo_id\n";
       # Remove physical image files only when no other record references this filename
       if ($fname_row && $fname_row->{Filename}) {
         my ($remaining) = $c->{dbh}->selectrow_array(
@@ -264,9 +264,9 @@ sub post_photo {
           unlink $orig;
           my @scaled = glob("${base}+*w.jpg");
           unlink @scaled if @scaled;
-          print STDERR "Deleted image files for '$fname_row->{Filename}'\n";
+          print { $c->{log} } "Deleted image files for '$fname_row->{Filename}'\n";
         } else {
-          print STDERR "Photo '$fname_row->{Filename}' still has $remaining record(s), keeping files\n";
+          print { $c->{log} } "Photo '$fname_row->{Filename}' still has $remaining record(s), keeping files\n";
         }
       }
     } else {
@@ -275,7 +275,7 @@ sub post_photo {
       db::execute($c,
         "UPDATE photos SET Caption = ?, Public = ? WHERE Id = ?",
         $caption, $ispublic, $photo_id);
-      print STDERR "Updated photo id=$photo_id\n";
+      print { $c->{log} } "Updated photo id=$photo_id\n";
     }
     $c->{redirect_url} = $return_url;
     return;
@@ -309,7 +309,7 @@ sub post_photo {
     "INSERT INTO photos (Filename, $col, Uploader, Caption, Public, Ts) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
     $photoname, $entity_id, $uploader, $caption, $ispublic);
 
-  print STDERR "Inserted photo '$photoname' for $entity_type '$entity_id' uploader='" . ($uploader//"NULL") . "'\n";
+  print { $c->{log} } "Inserted photo '$photoname' for $entity_type '$entity_id' uploader='" . ($uploader//"NULL") . "'\n";
   $c->{redirect_url} = $return_url;
 } # post_photo
 

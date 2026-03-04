@@ -56,7 +56,7 @@ sub listbrewcomments {
        and Brew = ?
        and Glasses.username = ?
       order by GLASSES.Timestamp Desc ";
-  #print STDERR "listbrewcomments: id='$brew->{Id}': $sql \n";
+  #print { $c->{log} } "listbrewcomments: id='$brew->{Id}': $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id}, $c->{username});
   print "<div onclick='toggleElement(this.nextElementSibling);'>";
@@ -191,7 +191,7 @@ sub update_brew_defaults {
   if ($rows != 1) {
     util::error("Failed to update defaults for brew $brew_id");
   }
-  print STDERR "Updated brew $brew_id DefPrice to $price, DefVol to $vol\n";
+  print { $c->{log} } "Updated brew $brew_id DefPrice to $price, DefVol to $vol\n";
 } # update_brew_defaults
 
 ################################################################################
@@ -478,14 +478,14 @@ sub dedupbrews {
     if ( $paramname =~ /^Chk(\d+)$/ ) {
       my $dup = $1;
       my $sql = "UPDATE GLASSES set Brew = ? where Brew = ?  ";
-      print STDERR "$sql with '$id' and '$dup' \n";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
       my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
       util::error("Deduplicate brews: Failed to update glasses") unless $rows;
-      print STDERR "Updated $rows glasses from $dup to $id\n";
+      print { $c->{log} } "Updated $rows glasses from $dup to $id\n";
       $sql = "DELETE FROM Brews WHERE Id = ? ";
       $rows = $c->{dbh}->do($sql, undef, $dup);
       util::error("Deduplicate brews: Failed to delete brew '$dup'") unless $rows;
-      print STDERR "Deleted $rows brews with id  $dup\n";
+      print { $c->{log} } "Deleted $rows brews with id  $dup\n";
     }
   }
 } # dedupbrews

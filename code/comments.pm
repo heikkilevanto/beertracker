@@ -171,7 +171,7 @@ sub commentform {
   $s .= "<textarea name='comment' rows='3' cols='40' placeholder='$pl' >$comment</textarea><br/>\n";
 
   # Person involved in the comment
-  #print STDERR "cform: pn='$com->{PersName}' pi=$com->{PersId} \n";
+  #print { $c->{log} } "cform: pn='$com->{PersName}' pi=$com->{PersId} \n";
   $s .= persons::selectperson($c, 'person', $com->{PersId} );
   #$s .= "<br/>";
 
@@ -226,28 +226,28 @@ sub postcomment {
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($newname, $newfull, $newdesc, $newcont);
     my $newid = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
-    print STDERR "Inserted person '$newid' for comment '$comment_id' \n";
+    print { $c->{log} } "Inserted person '$newid' for comment '$comment_id' \n";
     $person = $newid;
   }
 
   if ($comment_id) { # Update existing comment
     if ( util::param($c,"submit") =~ /Delete Comment/i ) {
       my $rows = $c->{dbh}->do("DELETE FROM COMMENTS WHERE ID = ?", undef, $comment_id);
-      print STDERR "Deleted comment id '$comment_id' (rows=$rows) \n";
+      print { $c->{log} } "Deleted comment id '$comment_id' (rows=$rows) \n";
       $photo = ""; # make sure we don't look at the upload, even if it happened to be there
     } else { # must be a real update
       my $sql = "UPDATE comments SET Rating = ?, Comment = ?, Person = ?
                 WHERE Id = ? AND Glass = ?";
       my $sth = $c->{dbh}->prepare($sql);
       $sth->execute($rating, $comment, $person, $comment_id, $glass );
-      print STDERR "Updated comment '$comment_id' for glass  '$glass' \n";
+      print { $c->{log} } "Updated comment '$comment_id' for glass  '$glass' \n";
     }
   } else { # Insert new comment
     my $sql = "INSERT INTO comments (Glass, Rating, Comment, Person) VALUES (?, ?, ?, ?)";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($glass, $rating, $comment, $person);
     $comment_id = $c->{dbh}->last_insert_id(undef, undef, "COMMENTS", undef) || undef;
-    print STDERR "Inserted comment '$comment_id' for glass '$glass' \n";
+    print { $c->{log} } "Inserted comment '$comment_id' for glass '$glass' \n";
   }
 
   if ( $photo &&  $c->{cgi}->upload('photo') ) {  # We have a photo
@@ -257,7 +257,7 @@ sub postcomment {
                 WHERE Id = ? AND Glass = ?";  # Do we need both? Maybe username instead?
       my $sth = $c->{dbh}->prepare($sql);
       $sth->execute($photoname, $comment_id, $glass );
-      print STDERR "Updated photo name to '$photoname' for comment $comment_id \n";
+      print { $c->{log} } "Updated photo name to '$photoname' for comment $comment_id \n";
     }
   }
 

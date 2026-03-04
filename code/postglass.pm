@@ -31,7 +31,7 @@ sub postglass {
       where id = ? and username = ?";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute( $c->{edit}, $c->{username} );
-    print STDERR "Deleted " . $sth->rows .
+    print { $c->{log} } "Deleted " . $sth->rows .
       " Glass records for id '$c->{edit}'  \n";
     $c->{edit} = ""; # don't try to edit it any more
     graph::clearcachefiles($c);
@@ -48,7 +48,7 @@ sub postglass {
   my $brew;
   if ( $brewid ) {
     $brew = db::getrecord($c, "BREWS", $brewid );
-    print STDERR "postglass: Got brew '$brewid' = '$brew->{Name}' \n";
+    print { $c->{log} } "postglass: Got brew '$brewid' = '$brew->{Name}' \n";
   }
   my $locid = util::param($c,"Location");
   if ( !$locid ) { # Should not happen
@@ -84,7 +84,7 @@ sub postglass {
     $glass->{SubType} = $brew->{SubType} || $glass->{SubType};
     {
       no warnings;
-      print STDERR "postglass: sel='$selbrewtype'  ".
+      print { $c->{log} } "postglass: sel='$selbrewtype'  ".
       "gl.brewtype='$glass->{BrewType}'  br.brewtype='$brew->{BrewType} '" .
       "gl.subtype='$glass->{SubType}' br.subtype='$brew->{SubType}' \n";
     }
@@ -110,7 +110,7 @@ sub postglass {
   $glass->{Tap} =~ s/\D//g if $glass->{Tap};
 
   { no warnings;
-    print STDERR "postglass: Op:'$sub' U:'$c->{username},' " .
+    print { $c->{log} } "postglass: Op:'$sub' U:'$c->{username},' " .
       "Bt:'$glass->{BrewType}' Su:'$glass->{SubType}' Br:'$glass->{Brew}' " .
       "Lo:'$glass->{Location}' ".
       "Pr:'$glass->{Price}' Vo:'$glass->{Volume}' Al:'$glass->{Alc}' " .
@@ -146,7 +146,7 @@ sub postglass {
     $glass->{Note},
     $glass->{Tap},
     $glass->{Id}, $c->{username} );
-  print STDERR "Updated " . $sth->rows .
+  print { $c->{log} } "Updated " . $sth->rows .
     " Glass records for id '$c->{edit}'  \n";
 
   } else { # Create a new glass
@@ -171,7 +171,7 @@ sub postglass {
       $glass->{Tap}
       );
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
-    print STDERR "Inserted Glass id '$id' \n";
+    print { $c->{log} } "Inserted Glass id '$id' \n";
   }
 
   # If the brew has no DefPrice, set it from this glass
@@ -179,7 +179,7 @@ sub postglass {
     my $sql = "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($glass->{Price}, $glass->{Volume}, $brewid);
-    print STDERR "Updated brew '$brewid' with DefPrice '$glass->{Price}' and DefVol '$glass->{Volume}'\n";
+    print { $c->{log} } "Updated brew '$brewid' with DefPrice '$glass->{Price}' and DefVol '$glass->{Volume}'\n";
   }
 
   # If setdef checkbox is checked, update brew defaults
@@ -236,14 +236,14 @@ sub gettimestamp {
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute( $c->{username} );
     my $newstamp = $sth->fetchrow_array;
-    print STDERR "gettimestamp: 'L' is '$newstamp' \n";
+    print { $c->{log} } "gettimestamp: 'L' is '$newstamp' \n";
     ($d, $t) = split(" ",$newstamp);
   }
   util::error("Bad date '$d' ") unless ( $d =~ /^\d\d-\d\d-\d\d|$/ );
   util::error("Bad time '$t' ") unless ( $t =~ /^\d\d:\d\d(:\d\d|)?$/ );
   $glass->{Timestamp} = "$d $t";
 
-  print STDERR "gettimestamp: '$glass->{Timestamp}' \n";
+  print { $c->{log} } "gettimestamp: '$glass->{Timestamp}' \n";
 } # gettimestamp
 
 ################################################################################
@@ -262,7 +262,7 @@ sub getvalues {
     $glass->{Volume} = $1;
     # TODO: When copying to a different volume, the passed price may need adjustment.
     # If volume changed, scale price proportionally or use brew's default price per volume.
-    print STDERR "getvalues: s='$sub' v='$1' \n";
+    print { $c->{log} } "getvalues: s='$sub' v='$1' \n";
   }
   $glass->{Note} = util::param($c,"note");
 } # getvalues
@@ -360,12 +360,12 @@ $currency{"usd"} = 6.3;  # Varies bit over time
 ############## Helper for currency conversion (not currently used)
 sub curprice {
   my $v = shift;
-  #print STDERR "Checking '$v' for currency";
+  #print { $c->{log} } "Checking '$v' for currency";
   for my $c (keys(%currency)) {
     if ( $v =~ /^(-?[0-9.]+) *$c/i ) {
-      #print STDERR "Found currency $c, worth " . $currency{$c};
+      #print { $c->{log} } "Found currency $c, worth " . $currency{$c};
       my $dkk = int(0.5 + $1 * $currency{$c});
-      #print STDERR "That makes $dkk";
+      #print { $c->{log} } "That makes $dkk";
       return $dkk;
     }
   }
