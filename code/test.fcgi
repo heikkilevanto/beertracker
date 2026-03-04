@@ -2,9 +2,8 @@
 use strict;
 use warnings;
 use utf8;
-use CGI::Fast;
+use CGI::Fast qw(-utf8);
 use POSIX qw(strftime);
-use Encode ();
 
 my $count      = 0;
 my $pid        = $$;
@@ -30,6 +29,7 @@ while (my $q = CGI::Fast->new()) {
         if ($text ne '') {
             $log .= "\n" if $log ne '';
             $log .= $text;
+            print STDERR "Posted '$text' \n";
         }
         # Redirect to GET to avoid form resubmission on reload
         print $q->header(-status => '303 See Other', -location => $q->url());
@@ -49,7 +49,15 @@ while (my $q = CGI::Fast->new()) {
     $log_html =~ s/\n/<br>\n/g;
 
     print $q->header(-type => 'text/html', -charset => 'UTF-8');
-    print Encode::encode_utf8(qq{<!DOCTYPE html>
+
+    # Buffer all body output into a scalar via select().
+    # select() changes the default filehandle for print without touching the
+    # FCGI::Stream handle itself (which doesn't support open-based dup).
+    my $body = '';
+    open my $buf, '>:utf8', \$body or die "Cannot open scalar buffer: $!";
+    my $old_fh = select $buf;
+
+    print qq{<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -82,7 +90,13 @@ while (my $q = CGI::Fast->new()) {
   Edit and save this script: the next request detects the changed <b>Script mtime</b> and exits,
   so mod_fcgid spawns a fresh process — counter and log reset automatically, no Apache restart needed.<br>
   A manual <code>sudo apache2ctl restart</code> also resets everything.
-  Edit the page here! again and again
+  <pre>
+  AE: Æ æ
+  AA: Å å
+  O/: Ø ø
+  A:  Ä ä
+  O:  Ö ö
+  </pre>
 </p>
 
 <h3>Persistent log</h3>
@@ -93,5 +107,9 @@ while (my $q = CGI::Fast->new()) {
 </form>
 </body>
 </html>
-});
+};
+
+    # Restore real STDOUT and emit the UTF-8 encoded buffer directly
+    select $old_fh;
+    print $body;
 } # while
