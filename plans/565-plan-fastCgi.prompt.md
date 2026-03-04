@@ -9,113 +9,29 @@ running under FastCGI (it checks for the FCGI socket). This means Phase A and B
 can be done, tested, and merged while still running plain CGI. The actual
 switch to FastCGI is just an Apache config change in Phase C.
 
-
-Stage A changes done and seem to work. The rest is stashed away.
-Apache modules loaded. There is a code/test.fcgi file that can be used to test 
-FastCGI and to demonstrate the persistent process behavior. It should be accessible at
+Status: A1 (modules) and A2 are done. A1 (index.cgi exits) and A3 are still TODO.
+Apache modules loaded. `code/test.fcgi` exists for testing and is live at
 https://lsd.dk/beertracker-dev/code/test.fcgi
 
 ## Lessons learned from test.fcgi
 
-### Auto-reload on code change (required for development workflow)
+Key findings that explain the implementation choices below:
 
-A persistent process **does not reload when the script file changes**. Without a
-mechanism to force reload, every code edit requires `sudo apache2ctl restart`.
-
-Solution: record mtime of `$0` at startup; check it on every request; if
-changed, send a redirect response and `exit(0)`:
-
-    my $mtime = (stat($0))[9];  # outside loop
-
-    # inside loop, first thing:
-    if ((stat($0))[9] != $mtime) {
-        print $q->header(-status => '302 Found', -location => $q->url());
-        exit(0);
-    }
-
-**Critical**: must send a valid HTTP response before `exit`. Calling `exit`
-without output gives mod_fcgid "End of script output before headers" → 500.
-The browser follows the redirect, which hits the freshly-spawned process.
-
-Workflow after adding this: save file → reload browser once (exits old process)
-→ reload again (new code running). No Apache restart needed.
-
-### UTF-8: `binmode STDOUT` does not work under FastCGI
-
-`FCGI::Stream` (the object that replaces STDOUT) does not support PerlIO layers.
-`binmode STDOUT, ':utf8'` is silently ignored, and any wide-character string
-printed directly produces:
-> Use of wide characters in FCGI::Stream::PRINT is deprecated
-
-FCGI::Stream also does not support `open`-based dup operations (`open my $save, '>&', \*STDOUT`
-fails with "Operation 'OPEN' not supported on FCGI::Stream handle").
-
-**Solution: `select` + scalar buffer with `:utf8` layer.**
-
-Use `select` to redirect bare `print` to an in-memory scalar opened with the
-`:utf8` encoding layer. All existing `print` statements write Unicode strings
-into the buffer; the layer encodes them to UTF-8 bytes as they land. At the end
-of the request, restore the default filehandle with `select` and print the
-already-encoded byte string directly to FCGI::Stream:
-
-    # top of loop, after $q->header() is sent:
-    my $body = '';
-    open my $buf, '>:utf8', \$body or die $!;
-    my $old_fh = select $buf;
-
-    # ... all module print statements go into $body as UTF-8 bytes ...
-
-    # end of loop:
-    select $old_fh;
-    print $body;   # $body is already bytes — no Encode needed
-
-Key points:
-- `open '>:utf8', \$scalar` works fine on a plain Perl scalar filehandle.
-- `select` changes the default filehandle without touching the FCGI::Stream handle.
-- `$q->header()` must be printed **before** the `select` swap — it goes directly to FCGI::Stream.
-- No `use Encode` needed anywhere.
-- **No changes to any module required.** Only the loop body in `index.cgi` needs the three lines above.
-
-Verified working in `test.fcgi`.
-
-### UTF-8: POST params are raw bytes without the `-utf8` flag
-
-Without `use CGI::Fast qw(-utf8)`, `$q->param('text')` returns raw UTF-8 bytes
-(e.g. `Æ` arrives as `\xc3\x86`). When that byte string flows into the `:utf8`
-buffer it gets double-encoded and characters are mangled.
-
-**Fix**: always use the `-utf8` flag: `use CGI::Fast qw(-utf8)`. This decodes
-all incoming params to Perl Unicode strings automatically. `index.cgi` already
-does this (`use CGI qw(-utf8)`), so beertracker is safe on this front.
-
-
-### STDERR: UTF-8 characters are scrambled
-
-`print STDERR` with wide characters also hits FCGI::Stream's encoding limitation.
-Example: `Posted 'OE: Ø ø'` appears as `Posted 'OE: \xd8 \xf8'` in the error log.
-
-Not worth fixing at the STDERR level — the dedicated log file (see below) will
-handle app-level logging with proper encoding. Keep STDERR for genuine crash
-output only.
-
-### Dedicated log file for beertracker
-
-Under plain CGI, STDERR goes to the Apache error log and is readable.
-Under mod_fcgid, every STDERR line is prefixed with Apache timestamp, fcgid
-module info, PID, thread, and client IP — making it hard to read app-level log
-lines.
-
-Example of what a single `print STDERR "pid=33"` produces in the error log:
-    [Wed Mar 04 12:52:54.978840 2026] [fcgid:warn] [pid 1601283:tid 1601315] [client 192.168.0.2:52970] mod_fcgid: stderr: test.fcgi: pid=33, referer: ...
-
-For a high-request app this becomes noisy fast. Consider:
-- Opening a dedicated log file (e.g. `beerdata/beertracker.log`) at startup
-  (outside the loop) and writing app log lines there.
-- Keep STDERR for genuine errors only.
-- The log file path can be derived from `$c->{basedir}` so it works in both
-  prod and dev.
-
-**This must be done before the FastCGI switch** — see Phase A3.
+- **Auto-reload**: A persistent process does not reload on file change. Solution
+  (B3): check `$0` mtime at top of loop and `exit(0)` if changed, after sending
+  a redirect so mod_fcgid gets a valid HTTP response (bare `exit` causes 500).
+- **UTF-8**: `FCGI::Stream` does not support PerlIO layers — `binmode STDOUT, ':utf8'`
+  is silently ignored. Solution (B2): redirect bare `print` via `select` to an
+  in-memory scalar opened with `>:utf8`. Print the already-encoded byte string
+  to FCGI::Stream at the end of the loop. The HTTP headers from `htmlhead()`
+  must be printed to FCGI::Stream **before** the `select` swap, because
+  mod_fcgid parses them separately from the body.
+- **POST params**: use `CGI::Fast qw(-utf8)` to decode incoming params to
+  Unicode strings; without it params are raw bytes that double-encode in the
+  `:utf8` buffer. `index.cgi` already uses `use CGI qw(-utf8)` so this is safe.
+- **STDERR**: under mod_fcgid, every STDERR line is wrapped with Apache/fcgid
+  noise and UTF-8 wide chars are mangled. Use a dedicated log file for app-level
+  debug output (A3); keep STDERR for genuine crash output only.
 
 ## Apache Config Strategy
 
@@ -148,11 +64,17 @@ for both `index.cgi` and `index.fcgi`.
 | monthstat.pm — `exit()` at end of function | Remove | **DONE** |
 | superuser.pm `copyproddata()` — `exit()` after redirect | Changed to `return` | **DONE** |
 | util.pm `util::error()` — `exit()` | Changed to `die $msg` | **DONE** |
-| index.cgi line 123 — `exit 0 unless $username` | Change to `next unless $username` | TODO |
-| index.cgi line 191 — `exit` after redirect | Change to `next` | TODO |
-| index.cgi line 244 — `exit` after redirect | Change to `next` | TODO |
-| index.cgi line 256 — `exit` after redirect | Change to `next` | TODO |
-| index.cgi line 321 — `exit()` end of GET dispatch | Remove (falls through to `}`) | TODO |
+| index.cgi — `exit 0 unless $username` (after auth) | Change to `next unless $username` | TODO |
+| index.cgi — `exit` after `copyproddata()` call | Change to `next` | TODO |
+| index.cgi — `exit` after POST redirect | Change to `next` | TODO |
+| index.cgi — `exit` after `do_export()` — see note | Change to `next` (see note) | TODO |
+| index.cgi — `exit()` at end of script (after GET eval) | Remove | TODO |
+
+**Note on `do_export()`**: `do_export()` outputs its own `text/plain`
+content-type header and body before `htmlhead()` is ever called. In the
+FastCGI loop this exit becomes `next`, but because `do_export()` sends its
+own HTTP header, the `select`/buffer setup (B2) must be placed *after* this
+branch. See B2 for the exact structure.
 
 **Test after A1:** Normal page load, bad-password 401, error condition, monthstat page, export — all should work under plain CGI.
 
@@ -162,15 +84,14 @@ for both `index.cgi` and `index.fcgi`.
 
 ### A3. Dedicated log file
 
-Add this now — it works under plain CGI and is needed for debugging the FastCGI
-switch. In `index.cgi`, open the log file near the top (outside any future loop),
-store the handle in `$c`:
+Open the log file at the top of index.cgi (outside any future loop) and store
+the handle in `$c`:
 
-    my $logpath = $basedir . "/beerdata/beertracker.log";
+    my $logpath = $workdir . "/beerdata/beertracker.log";
     open my $log_fh, '>>', $logpath or warn "Cannot open log $logpath: $!";
     $c->{log_fh} = $log_fh;
 
-Add `util::applog($c, $msg)` — a simple helper that writes a timestamped line:
+Add `util::applog($c, $msg)` in util.pm:
 
     sub applog {
         my ($c, $msg) = @_;
@@ -178,10 +99,10 @@ Add `util::applog($c, $msg)` — a simple helper that writes a timestamped line:
         print { $c->{log_fh} } "$ts  $msg\n" if $c->{log_fh};
     } # applog
 
-Use `util::applog` for app-level debug output. Keep STDERR for genuine
-startup/crash errors only (it is noisy and mangles UTF-8 under mod_fcgid).
+Replace existing `print STDERR` debug lines in index.cgi with `util::applog`.
+Keep STDERR for genuine startup/crash errors only.
 
-**Test after A3:** Log file appears, entries written on page loads under plain CGI.
+**Test after A3:** `beerdata/beertracker.log` appears; entries written on page loads.
 
 ## Phase B: Create index.fcgi (runs in parallel with index.cgi)
 
@@ -209,29 +130,40 @@ with:
 
 ### B2. Wrap request body in the FastCGI loop
 
-In `index.fcgi`, move everything from the `$c_auth` construction down to (and
-including) `htmlfooter()` inside:
+In `index.fcgi`, move everything from the `$c_auth` construction down to
+(and including) `htmlfooter()` inside:
 
     while (my $q = CGI::Fast->new) {
-        # 1. Send HTTP headers directly (goes to FCGI::Stream as ASCII bytes — safe):
-        print $q->header(...);
 
-        # 2. Buffer all body output via select + :utf8 scalar:
+        # Handle DoExport before buffer setup — it sends its own content-type:
+        if ($c->{op} =~ /DoExport/i) {
+            export::do_export($c);  # outputs text/plain header + body to FCGI::Stream
+            next;
+        }
+
+        # Send HTML HTTP headers to FCGI::Stream before the select swap:
+        htmlhead($c);   # prints Content-Type + HTML <head> directly to FCGI::Stream
+
+        # Buffer remaining body output through a :utf8 layer:
         my $body = '';
         open my $buf, '>:utf8', \$body or die $!;
         my $old_fh = select $buf;
 
-        # ... all per-request code, all module print statements unchanged ...
+        # ... all per-request content dispatch, module print statements unchanged ...
 
-        # 3. Restore and emit:
+        # Restore and emit:
         select $old_fh;
         print $body;   # already UTF-8 bytes, no Encode needed
+
+        htmlfooter();
     }
 
-All `exit` calls were already replaced with `next`/`return` in A1.
+Note: `htmlhead()` currently prints both the HTTP `Content-Type` header and the
+HTML `<head>` block. Both go to FCGI::Stream before the `select` swap, which is
+correct. Under plain CGI, `CGI::Fast->new` returns an object once then undef —
+the loop runs exactly once, identical to current behaviour.
 
-Under plain CGI, `CGI::Fast->new` returns an object once then undef — the loop
-runs exactly once, identical to current behaviour. Safe to test under plain CGI.
+All `exit` calls were already replaced with `next`/`return` in A1.
 
 ### B3. Force-reload via URL parameter
 
@@ -243,13 +175,13 @@ In `index.fcgi`, add at the top of the loop after auth:
     }
 
 Add a **Reload** link in the dev-mode page header pointing to `$c->{url}?reload=1`.
-Under plain CGI this is a no-op (just loads the front page). Under FastCGI it
-kills the process; the follow-up GET hits a fresh one loaded from disk.
+Under plain CGI this is a no-op. Under FastCGI it exits the process; the
+follow-up GET hits a freshly-loaded one.
 
-**Test after B1–B3:** Hit `index.fcgi` directly in the browser. Full regression:
-page loads, POST, export, auth failure, UTF-8 characters. Check log file written.
-Check reload link kills and respawns the process (PID changes). `index.cgi`
-continues to work normally throughout.
+**Test after B1–B3:** Hit `index.fcgi` directly. Full regression: page loads,
+POST, export, auth failure, UTF-8 characters. Check log file written. Check
+reload link kills and respawns the process (PID changes). `index.cgi` continues
+to work normally throughout.
 
 ## Phase C: Cutover
 
@@ -273,20 +205,15 @@ Restart Apache. `index.cgi` remains on disk as an instant rollback target.
     git checkout etc/apache-config.example.txt
     sudo systemctl restart apache2
 
-**Test after C:** Same regression as Phase B, now via the default URL (no
-explicit filename). Confirm process persistence via the reload link and log file.
-
-## Phase D: Persistent ro database handle (follow-up)
-
-Once FastCGI is stable, declare `my $dbh_ro` outside the loop.
-In the GET path, replace `db::open_db($c, "ro")` with a reconnect-if-needed
-pattern using `$dbh_ro->ping`.
-POST continues to open a fresh rw handle per request.
+**Test after C:** Same regression as Phase B, now via the default URL. Confirm
+process persistence via the reload link and log file.
 
 ## Follow-ups
 
+- **Persistent ro dbh**: declare `my $dbh_ro` outside the loop. In the GET
+  path, replace `db::open_db($c, "ro")` with a reconnect-if-needed pattern
+  using `$dbh_ro->ping`. POST continues to open a fresh rw handle per request.
 - **In-process caching**: with a persistent process, module-level caches become
-  viable. `selectbrew` and other heavy queries are candidates. To be planned
-  separately.
-- **fcgid tuning**: if process count or memory use becomes an issue, look at
-  `FcgidMaxRequestsPerProcess`, `FcgidMaxProcesses`, etc. Not needed upfront.
+  viable. `selectbrew` and other heavy queries are candidates.
+- **fcgid tuning**: if process count or memory becomes an issue, look at
+  `FcgidMaxRequestsPerProcess`, `FcgidMaxProcesses`, etc.
