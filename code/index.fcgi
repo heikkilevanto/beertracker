@@ -39,7 +39,6 @@ use Text::LevenshteinXS qw(distance);
 
 use URI::Escape;
 use CGI::Fast qw( -utf8 );
-my $q = CGI::Fast->new;
 
 ################################################################################
 # Fix the current directory
@@ -92,7 +91,6 @@ require "./code/login.pm";  # Cookie-based authentication
 # Constants and setup
 ################################################################################
 
-my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
 my $workdir = cwd();
 my $devversion = 0;  # Changes a few display details if on the development version
 $devversion = 1 unless ( $ENV{"SCRIPT_NAME"} =~ /index\.(cgi|fcgi)/ );
@@ -111,28 +109,8 @@ if (  $devversion ) {
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
 my $datadir = "./beerdata/";
 my $scriptdir = "./scripts/";  # screen scraping scripts
-my $plotfile = "";
-my $cmdfile = "";
-my $photodir = "";
-# Build a minimal context so login.pm can use the CGI object.
-# authenticate() sets $c_auth->{username}; sends 401 and returns empty username on failure.
-my $c_auth = { cgi => $q };
-login::authenticate($c_auth);
-my $username = $c_auth->{username};
-exit 0 unless $username;  # 401 already sent by authenticate()
 
-# Sudo mode, normally commented out
-#$username = "dennis" if ( $username eq "heikki" );  # Fake user to see one with less data
-
-if ( $username =~ /^[a-zA-Z0-9]+$/ ) {
-  $plotfile = $datadir . $username . ".plot";
-  $cmdfile  = $datadir . $username . ".cmd";
-  $photodir = $datadir . $username . ".photo";
-} else {
-  util::error ("Bad username\n");
-}
-
-# Open log file (rotate if > 1MB, keep 3 generations)
+# Open log file once per process (rotate if > 1MB, keep 3 generations)
 my $logfile = $datadir . "debug.log";
 if ( -f $logfile && -s $logfile > 1_000_000 ) {
   for my $n ( reverse 1..2 ) {
@@ -145,6 +123,31 @@ open( my $log, ">>", $logfile )
 binmode $log, ":utf8";
 util::set_log($log);  # Let util.pm (and modules using $util::log) find it
 
+################################################################################
+# Main FastCGI loop — runs once per request; CGI::Fast falls back to plain CGI
+################################################################################
+while (my $q = CGI::Fast->new) {
+  my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
+  my $plotfile = "";
+  my $cmdfile = "";
+  my $photodir = "";
+# Build a minimal context so login.pm can use the CGI object.
+# authenticate() sets $c_auth->{username}; sends 401 and returns empty username on failure.
+my $c_auth = { cgi => $q };
+login::authenticate($c_auth);
+my $username = $c_auth->{username};
+next unless $username;  # 401 already sent by authenticate()
+
+# Sudo mode, normally commented out
+#$username = "dennis" if ( $username eq "heikki" );  # Fake user to see one with less data
+
+if ( $username =~ /^[a-zA-Z0-9]+$/ ) {
+  $plotfile = $datadir . $username . ".plot";
+  $cmdfile  = $datadir . $username . ".cmd";
+  $photodir = $datadir . $username . ".photo";
+} else {
+  util::error ("Bad username\n");
+}
 
 # the POST routine reads its own input parameters
 
@@ -200,7 +203,7 @@ if ($devversion) { # Print a line in the log, to see what errors come from this 
 if ( $devversion && $c->{op} =~ /copyproddata/i ) {
   print $log "Copying prod data to dev \n";
   superuser::copyproddata($c);
-  exit;
+  next;
 }
 
 
@@ -253,23 +256,28 @@ if ( $q->request_method eq "POST" ) {
 
   # Redirect back to the op, but not editing
   print $c->{cgi}->redirect( $c->{redirect_url} || "$c->{url}?o=$c->{op}" );
-  exit;
+  next;
 }
 
-eval {
-
+# GET request handling
 db::open_db($c, "ro");  # GET requests are read-only by default
 
 migrate::startup_check($c);  # Redirect to migration form if DB is behind code version
 
-# Datafile export needs to be done before HTML head, as we output text/plain
+# DoExport sends its own text/plain header; handle before buffer setup
 if ( $c->{op} =~ /DoExport/i ) {
   export::do_export($c);
-  exit;
+  next;
 }
 
-htmlhead($c); # Ok, now we can commit to making a HTML page
+htmlhead($c); # Content-Type + HTML head → directly to FCGI::Stream
 
+# Buffer remaining body through a :utf8 layer (FCGI::Stream ignores binmode :utf8)
+my $body = '';
+open my $buf, '>:utf8', \$body or die "Cannot open body buffer: $!";
+my $old_fh = select $buf;
+
+eval {
 print util::topline($c);
 print "<div class='content-wrapper'>\n";
 
@@ -323,14 +331,18 @@ if ( $c->{op} =~ /Board/i ) {
 }
 
 $c->{dbh}->disconnect;
-htmlfooter();
 
 }; # end eval GET
 if ($@) {
   eval { $c->{dbh}->disconnect } if $c->{dbh};
   print { $c->{log} } "GET error: $@\n";
 }
-exit();  # The rest should be subs only
+
+select $old_fh;  # Restore output to FCGI::Stream
+print $body;     # Emit UTF-8 encoded body
+htmlfooter();
+
+} # end while (FastCGI loop)
 
 # End of main
 
