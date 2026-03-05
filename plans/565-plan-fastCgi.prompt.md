@@ -172,7 +172,7 @@ request and a code-change:
         exit(0);
     }
 
-Make the version number in the page header a link to `$c->{href}&reload=1`.
+Make the version number in the page header a link to `$c->{href}&reload=1`. **DONE**
 A `git pull` to production updates `VERSION.pm` on disk; the next request sees
 the mtime change, force-exits, and the following request loads fresh code.
 No manual reload needed after deploys.

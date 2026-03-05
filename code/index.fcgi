@@ -99,11 +99,11 @@ $devversion = 1 if ( $workdir =~ /-dev|-old/ );
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.
 #                  RrGgBb
-my $bgcolor =    "#003000";
-my $altbgcolor = "#004810";
+my $bgcolor =    "#001800";  # Darker than index.cgi so fcgi vs cgi is visually obvious
+my $altbgcolor = "#002408";
 if (  $devversion ) {
-  $bgcolor = "#003050" ;
-  $altbgcolor = "#004850";
+  $bgcolor = "#001828" ;
+  $altbgcolor = "#002438";
 }
 # Constants
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
@@ -121,20 +121,27 @@ if ( -f $logfile && -s $logfile > 1_000_000 ) {
 open( my $log, ">>", $logfile )
   or die "Cannot open log file $logfile: $!\n";
 binmode $log, ":utf8";
+$log->autoflush(1);  # Flush after every write so log is live under FastCGI
 util::set_log($log);  # Let util.pm (and modules using $util::log) find it
 
 # Record startup mtimes for auto-reload detection
 my $mtime0    = (stat($0))[9];
 my $mtime_ver = (stat("code/VERSION.pm"))[9];
 
+{ my $now = localtime; print { $log } "\n" . $now->ymd . " " . $now->hms . " fcgi startup pid=$$\n"; }
+
 ################################################################################
 # Main FastCGI loop — runs once per request; CGI::Fast falls back to plain CGI
 ################################################################################
 while (my $q = CGI::Fast->new) {
   # Reload if the script or VERSION.pm changed (e.g. after git pull)
-  if ( $q->param('reload') ||
-       (stat($0))[9]              != $mtime0 ||
-       (stat("code/VERSION.pm"))[9] != $mtime_ver ) {
+  my $reload_reason = $q->param('reload')                       ? "manual reload request"
+                    : (stat($0))[9]             != $mtime0      ? "script $0 changed on disk"
+                    : (stat("code/VERSION.pm"))[9] != $mtime_ver ? "code/VERSION.pm changed on disk"
+                    : "";
+  if ( $reload_reason ) {
+    my $now = localtime;
+    print { $log } $now->ymd . " " . $now->hms . " fcgi reloading pid=$$ ($reload_reason)\n";
     my $op = $q->param('o') || 'Graph';
     print $q->header(-status => '302 Found', -location => $q->url() . "?o=$op");
     exit(0);
@@ -355,6 +362,8 @@ print $body;     # Emit UTF-8 encoded body
 htmlfooter();
 
 } # end while (FastCGI loop)
+
+{ my $now = localtime; print { $log } $now->ymd . " " . $now->hms . " fcgi exit pid=$$\n"; }
 
 # End of main
 
