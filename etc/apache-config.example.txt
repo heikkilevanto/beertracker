@@ -16,6 +16,7 @@
 
    AddHandler cgi-script .cgi
    AddHandler fcgid-script .fcgi
+   FcgidMaxRequestLen 10485760
    DirectoryIndex index.fcgi index.cgi
 
    # Authentication is handled by login.pm (cookie + HTTP Basic via CGIPassAuth).
