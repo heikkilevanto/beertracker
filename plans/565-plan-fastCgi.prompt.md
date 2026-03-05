@@ -155,33 +155,27 @@ All `exit` calls were already replaced with `next`/`return` in A1.
 
 ### B3. Force-reload via URL parameter
 
-In `index.fcgi`, add at the top of the loop after auth:
+In `index.fcgi`, record the mtimes of `$0` and `code/VERSION.pm` at startup,
+outside the loop:
 
-    if (util::param($c, 'reload')) {
-        print $q->header(-status => '302 Found', -location => "$c->{url}?o=$c->{op}");
-        exit(0);
-    }
+    my $mtime0    = (stat($0))[9];
+    my $mtime_ver = (stat("code/VERSION.pm"))[9];
 
-Make the version number displayed in the page header a link to `$c->{href}?reload=1`
-(`$c->{href}` is already `$c->{url}?o=$c->{op}`, so this reloads the same page).
+At the top of each loop iteration, before auth, check for both a manual reload
+request and a code-change:
 
-Also add an automatic reload on version change. Record the version string
-(including commit count, as shown in the top bar) at startup outside the loop:
-
-    my $startup_version = $VERSION::version;  # or however the version is accessed
-
-At the top of each loop iteration, before auth, check:
-
-    if ($startup_version ne $VERSION::version) {
+    if ( $q->param('reload') ||
+         (stat($0))[9]              != $mtime0 ||
+         (stat("code/VERSION.pm"))[9] != $mtime_ver ) {
         my $op = $q->param('o') || 'Graph';
         print $q->header(-status => '302 Found', -location => $q->url() . "?o=$op");
         exit(0);
     }
 
-Since `VERSION.pm` is re-read only at startup, the version value is stable for
-the life of the process. A `git pull` to production updates the file on disk;
-the next request sees the mismatch and force-exits, so the following request
-loads fresh code automatically. No manual reload needed after deploys.
+Make the version number in the page header a link to `$c->{href}&reload=1`.
+A `git pull` to production updates `VERSION.pm` on disk; the next request sees
+the mtime change, force-exits, and the following request loads fresh code.
+No manual reload needed after deploys.
 
 **Test after B1–B3:** Hit `index.fcgi` directly. Full regression: page loads,
 POST, export, auth failure, UTF-8 characters. Check log file written. Check

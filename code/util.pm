@@ -307,10 +307,9 @@ sub topline {
   }
   $s .= $name;
   my $v = Version::version_info();
-  $s .= "&nbsp;\n";
-  $s .= "$v->{tag}+$v->{commits}";
-  $s .= "+" if ($v->{dirty});
-  $s .= "&nbsp;\n";
+  my $vertext = $v->{tag} . "+" . $v->{commits} . ( $v->{dirty} ? "+" : "" );
+  my $reload_url = $c->{url} . "?o=$c->{op}&reload=1";
+  $s .= "&nbsp;<a href='$reload_url'><span>$vertext</span></a>&nbsp;";
 
   $s .= topstats($c);
 
