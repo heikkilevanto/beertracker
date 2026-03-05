@@ -132,6 +132,8 @@ my $mtime_ver = (stat("code/VERSION.pm"))[9];
   print { $log } "\n" . $now->ymd . " " . $now->hms . " fcgi startup pid=$$" . $dev_info . " workdir=$workdir\n";
 }
 
+my $dbh_ro;  # Persistent read-only dbh, reused across requests
+
 ################################################################################
 # Main FastCGI loop — runs once per request; CGI::Fast falls back to plain CGI
 ################################################################################
@@ -281,7 +283,13 @@ if ( $q->request_method eq "POST" ) {
 }
 
 # GET request handling
-db::open_db($c, "ro");  # GET requests are read-only by default
+# Reuse persistent ro dbh if alive, otherwise reconnect
+if ( !$dbh_ro || !$dbh_ro->ping ) {
+  db::open_db($c, "ro");
+  $dbh_ro = $c->{dbh};
+} else {
+  $c->{dbh} = $dbh_ro;
+}
 
 migrate::startup_check($c);  # Redirect to migration form if DB is behind code version
 
@@ -351,11 +359,11 @@ if ( $c->{op} =~ /Board/i ) {
   mainlist::mainlist($c);
 }
 
-$c->{dbh}->disconnect;
+$c->{dbh} = undef;  # Don't disconnect; keep $dbh_ro alive for next request
 
 }; # end eval GET
 if ($@) {
-  eval { $c->{dbh}->disconnect } if $c->{dbh};
+  eval { $dbh_ro->disconnect; $dbh_ro = undef } if $dbh_ro;  # Drop on error, reconnect next request
   print { $c->{log} } "GET error: $@\n";
 }
 
