@@ -123,10 +123,22 @@ open( my $log, ">>", $logfile )
 binmode $log, ":utf8";
 util::set_log($log);  # Let util.pm (and modules using $util::log) find it
 
+# Record startup mtimes for auto-reload detection
+my $mtime0    = (stat($0))[9];
+my $mtime_ver = (stat("code/VERSION.pm"))[9];
+
 ################################################################################
 # Main FastCGI loop — runs once per request; CGI::Fast falls back to plain CGI
 ################################################################################
 while (my $q = CGI::Fast->new) {
+  # Reload if the script or VERSION.pm changed (e.g. after git pull)
+  if ( $q->param('reload') ||
+       (stat($0))[9]              != $mtime0 ||
+       (stat("code/VERSION.pm"))[9] != $mtime_ver ) {
+    my $op = $q->param('o') || 'Graph';
+    print $q->header(-status => '302 Found', -location => $q->url() . "?o=$op");
+    exit(0);
+  }
   my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
   my $plotfile = "";
   my $cmdfile = "";
