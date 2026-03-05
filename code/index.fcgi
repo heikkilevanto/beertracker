@@ -93,7 +93,6 @@ require "./code/login.pm";  # Cookie-based authentication
 
 my $workdir = cwd();
 my $devversion = 0;  # Changes a few display details if on the development version
-$devversion = 1 unless ( $ENV{"SCRIPT_NAME"} =~ /index\.(cgi|fcgi)/ );
 $devversion = 1 if ( $workdir =~ /-dev|-old/ );
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
@@ -128,7 +127,10 @@ util::set_log($log);  # Let util.pm (and modules using $util::log) find it
 my $mtime0    = (stat($0))[9];
 my $mtime_ver = (stat("code/VERSION.pm"))[9];
 
-{ my $now = localtime; print { $log } "\n" . $now->ymd . " " . $now->hms . " fcgi startup pid=$$\n"; }
+{ my $now = localtime;
+  my $dev_info = $devversion ? " DEV" : " PROD";
+  print { $log } "\n" . $now->ymd . " " . $now->hms . " fcgi startup pid=$$" . $dev_info . " workdir=$workdir\n";
+}
 
 ################################################################################
 # Main FastCGI loop — runs once per request; CGI::Fast falls back to plain CGI
