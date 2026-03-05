@@ -132,6 +132,8 @@ my $mtime_ver = (stat("code/VERSION.pm"))[9];
   print { $log } "\n" . $now->ymd . " " . $now->hms . " fcgi startup pid=$$" . $dev_info . " workdir=$workdir\n";
 }
 
+my $process_start = time();
+my $request_count = 0;
 my $dbh_ro;  # Persistent read-only dbh, reused across requests
 
 ################################################################################
@@ -145,11 +147,13 @@ while (my $q = CGI::Fast->new) {
                     : "";
   if ( $reload_reason ) {
     my $now = localtime;
-    print { $log } $now->ymd . " " . $now->hms . " fcgi reloading pid=$$ ($reload_reason)\n";
+    my $uptime = time() - $process_start;
+    print { $log } $now->ymd . " " . $now->hms . " fcgi reloading pid=$$ ($reload_reason) requests=$request_count uptime=${uptime}s\n";
     my $op = $q->param('o') || 'Graph';
     print $q->header(-status => '302 Found', -location => $q->url() . "?o=$op");
     exit(0);
   }
+  $request_count++;
   my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
   my $plotfile = "";
   my $cmdfile = "";
@@ -373,7 +377,10 @@ htmlfooter();
 
 } # end while (FastCGI loop)
 
-{ my $now = localtime; print { $log } $now->ymd . " " . $now->hms . " fcgi exit pid=$$\n"; }
+{ my $now = localtime;
+  my $uptime = time() - $process_start;
+  print { $log } $now->ymd . " " . $now->hms . " fcgi exit pid=$$ requests=$request_count uptime=${uptime}s\n";
+}
 
 # End of main
 
