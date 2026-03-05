@@ -138,12 +138,12 @@ sub savefile {
 
   util::error("FIle '$dbname' already exists, will not overwrite")
     if ( -e $filename );
-  my $filehandle = $q->upload('photo');
+  my $filehandle = $c->{cgi}->upload('photo');
   if ( ! $filehandle ) {
     print { $c->{log} } "No upload filehandle in photos::savefile\n";
     return "";
   }
-  my $tmpfilename = $q->tmpFileName( $filehandle );
+  my $tmpfilename = $c->{cgi}->tmpFileName( $filehandle );
   my $convcmd = "/usr/bin/convert $tmpfilename -auto-orient -strip $filename 2>&1";
   print { $c->{log} } "About to run: $convcmd \n";
   my $conv = `$convcmd` ;
