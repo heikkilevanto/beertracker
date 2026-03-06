@@ -7,8 +7,6 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use POSIX qw(strftime localtime locale_h);
-
 
 
 # Helper to make a link on the about page
@@ -110,35 +108,7 @@ sub about {
   print "It collects no personally identifiable information beyond what you enter.<br/>\n";
   print "No information is shared with any third parties. <p>\n";
 
-  print "<p><hr/>\n";
-  #print "<b>Debug info </b><br/>\n";  # TODO - Add new debug helpers here if needed
-  #print "&nbsp; <a href='$url?o=Datafile&maxl=30' target='_blank' ><span>Tail of the data file</span></a><br/>\n";
-  #print "&nbsp; <a href='$url?o=Datafile'  target='_blank' ><span>Download the whole data file</span></a><br/>\n";
 
-
-  print "<b>Loaded modules</b>\n";
-  my @sysmodules;
-  my $tot = 0;
-  print "<table class=data>";
-  print "<tr><td>Module</td><td>Lines</td><td>Modified</td></tr>\n";
-  for my $mod ("./code/index.cgi", sort keys %INC) {
-      my $file = $INC{$mod} || $mod; 
-      (my $short = $mod) =~ s/\.pm$//;
-      if ($file =~ m{\./code/}) {
-          my $lines = 0;
-          if (open my $fh, '<', $file) {
-              $lines++ while <$fh>;
-              close $fh;
-          }
-          $short =~ s/\.\/code\///;
-          my @st = stat($file);
-          my $mtime = strftime "%Y-%m-%d %H:%M", localtime $st[9];
-          print "<tr><td>$short</td><td class='num'>$lines</td><td>$mtime</td></tr>\n";
-          $tot += $lines;
-      }
-  }
-  print "<tr><td>= Total</td><td class='num'>$tot</td><td>&nbsp;</td></tr>\n";
-  print "</table>\n";
 
 } # About
 

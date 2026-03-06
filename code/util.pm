@@ -366,6 +366,7 @@ sub showmenu {
         }
     }
 
+    push @more, { label => "Debug", url => "o=Debug" };
     push @more, { label => "About", url => "o=About" };
     push @menu, { label => "More ...", children => \@more };
 
