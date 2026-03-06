@@ -54,7 +54,7 @@ sub open_db {
     my ($msg, $dbh) = @_;
     dberror($c, $msg);
     return 0; # rethrow the error after logging
-    # Then we catch it in index.cgi, dump parameters, and roll back
+    # Then we catch it in index.fcgi, dump parameters, and roll back
   };
 
 }

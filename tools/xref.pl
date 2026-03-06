@@ -13,7 +13,7 @@ use File::Basename;
 
 my $targetsub = $ARGV[0] || "";
 my $dir = 'code';
-my $fileglobs = "$dir/*.cgi $dir/*.pm" ;
+my $fileglobs = "$dir/*.fcgi $dir/*.cgi $dir/*.pm" ;
 my @files = glob($fileglobs);
 
 

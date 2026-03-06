@@ -1,6 +1,6 @@
 # Cookie-based authentication for beertracker (and other projects).
 #
-# Usage in index.cgi:
+# Usage in index.fcgi:
 #   Build a minimal $c = { cgi => $q } before the full context is assembled,
 #   call login::authenticate($c) to set $c->{username}, then after the full $c
 #   is built call login::prepare_cookie($c) so htmlhead() can send the cookie.

@@ -38,7 +38,7 @@ our @MIGRATIONS = (
 
 ################################################################################
 # startup_check($c)
-# Called from index.cgi after db::open_db($c,'ro') and before htmlhead().
+# Called from index.fcgi after db::open_db($c,'ro') and before htmlhead().
 # - Missing globals table  → treat db_version as 0.
 # - db_version > code      → fatal error.
 # - db_version < code      → take backup, set $c->{op}='migrate', return.
@@ -120,7 +120,7 @@ sub run_migrations {
   }
 
   $c->{migrating} = 0;
-  # Success — the caller (index.cgi) will COMMIT.
+  # Success — the caller (index.fcgi) will COMMIT.
   # On any error DBI throws, the caller rolls back and db_version stays unchanged.
   $c->{redirect_url} = $c->{url};  # After migration, go to the default page.
 } # run_migrations
