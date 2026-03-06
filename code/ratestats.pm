@@ -1,6 +1,6 @@
 # ratestats.pm
 # Simple procedural Perl module for producing a ratings histogram
-# Fits the BeerTracker style (required from index.cgi and used as ratestats::FUNC)
+# Fits the BeerTracker style (required from index.fcgi and used as ratestats::FUNC)
 
 package ratestats;
 use strict;

@@ -6,18 +6,18 @@
 
 
 ## Architecture Overview
-BeerTracker is a procedural Perl CGI web application for personal beer tracking. It uses SQLite for data storage and runs under Apache. The main entry point is `code/index.cgi`, which dispatches requests to focused modules in `code/` based on the `o` parameter (e.g., `o=Board` for beerboard.pm).
+BeerTracker is a procedural Perl FastCGI web application for personal beer tracking. It uses SQLite for data storage and runs under Apache. The main entry point is `code/index.fcgi`, which dispatches requests to focused modules in `code/` based on the `o` parameter (e.g., `o=Board` for beerboard.pm).
 
 Key components:
 - **Database**: SQLite file `beerdata/beertracker.db` with schema in `code/db.schema`. Tables: glasses (drinking events), brews (beverages), locations (places), persons, comments, taps.
 - **Modules**: ~30 Perl modules in `code/` for specific functionalities (e.g., beerboard.pm for bar beer lists, db.pm for database helpers). We try to keep modules focused and small, ideally <300 lines, but some are larger.
-- **CGI Handling**: `code/index.cgi` handles all requests, routing based on `o` parameter. POST requests are wrapped in eval for error handling.
+- **CGI Handling**: `code/index.fcgi` handles all requests, routing based on `o` parameter. POST requests are wrapped in eval for error handling.
 - **Templates**: HTML is generated directly in Perl using print statements with qq{} for multi-line strings.  
 - **Scraping**: Perl scripts in `scripts/` scrape beer menus from bar websites (e.g., oelbaren.pl).
-- **Static Assets**: CSS/JS in `static/`, served with cache-busting timestamps from index.cgi. We can safely
+- **Static Assets**: CSS/JS in `static/`, served with cache-busting timestamps from index.fcgi. We can safely
 assume that they are loaded and available when generating HTML.
 
-Data flows from browser forms to index.cgi, which calls module post*() functions for writes, then redirects to display pages.
+Data flows from browser forms to index.fcgi, which calls module post*() functions for writes, then redirects to display pages.
 
 ## Development Workflow
 - **Dev Environment**: Work in `beertracker-dev` directory (blue background indicates dev mode).
@@ -33,12 +33,12 @@ They should be named like '557-photo.md' where 557 is the issue number. Can be d
 - **Parameter Handling**: Use `util::param($c, "key")` for CGI params; handles GET/POST uniformly.
 - **Database Access**: Direct SQL with DBI; `db::open_db($c, "rw")` for POST requests, "ro" for GET requests. Foreign keys enforced. db.pm has helpers for common queries. Use those when possible, to get consistent logging and error handling.
 - **Error Handling**: `util::error()` for fatal errors; database errors logged to STDERR and shown in HTML. In dev mode we should aim to log all SQL statements, but not in production.
-- **Rollback** Index.cgi catches errors, and rolls back transactions. 
+- **Rollback** Index.fcgi catches errors, and rolls back transactions. 
 - **Filtering**: Use `q` param for grep-style filtering (e.g., `?q=IPA`); 
 - **Links**: Build URLs as `$c->{url}?o=Operation&e=ID`; use `uri_escape_utf8()` for params.
 - **Display Helpers**: `util::unit()` for values with units (e.g., "33<small>cl</small>"); `util::datestr()` for dates.
 - **Scraping**: Use LWP::UserAgent and XML::LibXML; output JSON to STDOUT for beer lists.
-- **UTF-8**: All source and data is UTF-8; set `binmode STDOUT, ":utf8"` in index.cgi
+- **UTF-8**: All source and data is UTF-8; set `binmode STDOUT, ":utf8"` in index.fcgi
 - **No Frameworks**: Pure Perl, no ORM or web framework; procedural style with modules.
 - The system lives in the local time zone. Since beer drinking often spans midnight, we offset the date by 6 hours to group late-night drinking into the previous day. This is handled in SQL queries with `datetime(Timestamp, '-6 hours')`.
 
@@ -66,7 +66,7 @@ are still some inline scripts in the HTML for simplicity.
 - **Version Control**: Commit logical units of work. Include descriptive commit messages. Keep history clean and meaningful.
 
 ## Common Tasks
-- **Add New Operation**: Add dispatch in index.cgi (POST in eval block, GET in main if-elsif chain), create module in `code/`.
+- **Add New Operation**: Add dispatch in index.fcgi (POST in eval block, GET in main if-elsif chain), create module in `code/`.
 - **Database Query**: Prepare with `$sth = $c->{dbh}->prepare($sql); $sth->execute(@params);` while loop for results. Or use the helpers in db.pm when possible.
 - **Form Handling**: Hidden inputs for state; `accept-charset='UTF-8'`; redirect after POST.
 - **Beer Board**: Scrape to JSON, store in tap_beers table, display in beerboard.pm with expand/collapse JS.

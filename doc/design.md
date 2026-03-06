@@ -33,8 +33,8 @@ use it for real in January 2016, and have been using the system ever since.
 
 ## Architecture
 
-BeerTracker is a lightweight web application built with procedural Perl CGI
-scripts and SQLite as the backend. The main entry point is `index.cgi`, which
+BeerTracker is a lightweight web application built with procedural Perl FastCGI
+and SQLite as the backend. The main entry point is `index.fcgi`, which
 loads short, focused modules for handling forms, reports, and utilities. This
 is controlled by the `?o=Module` url parameter.
 
@@ -96,7 +96,7 @@ managed exclusively by `code/migrate.pm`.
 Originally BeerTracker was one large script, but for version 3 I split it into
 many smaller modules. Later I moved them all to live under .../code. The
 definitive list of them is in the `require` statements near the beginning of
-index.cgi. I will add more modules when features creep in, and/or when I 
+index.fcgi. I will add more modules when features creep in, and/or when I 
 refactor larger modules into a few smaller ones. Therefore this list is
 almost certain to be out of date.
 
@@ -189,7 +189,7 @@ New scrapers should follow this format and be registered in `scrapeboard.pm`.
 
 
 ## Configuration and Deployment
-Beertracker lives as a cgi script under Apache. There is a config example under
+Beertracker lives as a FastCGI script under Apache (mod_fcgid). There is a config example under
 etc.
 
 The site is protected by regular htpassword, so you need to create those the

@@ -7,7 +7,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-# Log file handle. Defaults to STDERR; overridden by index.cgi after opening the log file.
+# Log file handle. Defaults to STDERR; overridden by index.fcgi after opening the log file.
 our $log = \*STDERR;
 
 sub set_log {
@@ -89,7 +89,7 @@ sub namesimilarity {
   return 0 if lc($name1) eq lc($name2);  # Exact match (case-insensitive)
   return 999 unless $name1 && $name2;  # Large number for missing names
   
-  # Calculate Levenshtein distance (loaded in index.cgi)
+  # Calculate Levenshtein distance (loaded in index.fcgi)
   my $dist = Text::LevenshteinXS::distance($name1, $name2);
   
   return $dist;
