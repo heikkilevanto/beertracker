@@ -130,7 +130,7 @@ my $mtime_ver = (stat("code/VERSION.pm"))[9];
 
 { my $now = localtime;
   my $dev_info = $devversion ? " DEV" : " PROD";
-  print { $log } "\n" . $now->ymd . " " . $now->hms . " fcgi startup pid=$$" . $dev_info . " workdir=$workdir\n";
+  print { $log } "\n" . $now->ymd . " " . $now->hms . " fcgi startup pid=$$ $dev_info \n";
 }
 
 my $process_start = time();
@@ -219,12 +219,9 @@ login::prepare_cookie($c);  # Build fresh auth cookie; htmlhead() will send it.
 # Main program
 ################################################################################
 
-
-if ($devversion) { # Print a line in the log, to see what errors come from this invocation
-  my $now = localtime;
-  print $log "\n\n" . $now->ymd . " " . $now->hms . " " .
-     $q->request_method . " " . $ENV{'QUERY_STRING'}. " \n";
-}
+my $now = localtime;
+print $log "\n\n" . $now->ymd . " " . $now->hms . " " .
+    $q->request_method . " " . $ENV{'QUERY_STRING'}. " \n";
 
 # Needs to be done early, before we send HTTP headers
 if ( $devversion && $c->{op} =~ /copyproddata/i ) {
@@ -232,7 +229,6 @@ if ( $devversion && $c->{op} =~ /copyproddata/i ) {
   superuser::copyproddata($c);
   next;
 }
-
 
 if ( !$c->{op}) {
   $c->{op} = "Graph";  # Default to showing the graph
