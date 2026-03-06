@@ -96,13 +96,12 @@ my $devversion = 0;  # Changes a few display details if on the development versi
 $devversion = 1 if ( $workdir =~ /-dev|-old/ );
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
-# I am not running the real thing.
-#                  RrGgBb
-my $bgcolor =    "#001800";  # Darker than index.cgi so fcgi vs cgi is visually obvious
-my $altbgcolor = "#002408";
-if (  $devversion ) {
-  $bgcolor = "#001828" ;
-  $altbgcolor = "#002438";
+# I am not running the real thing.  RrGgBb
+my $bgcolor =    "#021802";  
+my $altbgcolor = "#063611";
+if ( $devversion ) {
+  $bgcolor = "#002038" ;
+  $altbgcolor = "#012f4b";
 }
 # Constants
 my $onedrink = 33 * 4.6 ; # A regular danish beer, 33 cl at 4.6%
@@ -182,9 +181,6 @@ if ( $username =~ /^[a-zA-Z0-9]+$/ ) {
 # Global variables
 # Mostly from reading the file, used in various places
 ################################################################################
-# TODO - Remove most of these
-my %ratesum; # sum of ratings for every beer
-my %ratecount; # count of ratings for every beer, for averaging
 
 # Collect all 'global' variables here in one context that gets passed around
 # a lot.
