@@ -48,6 +48,26 @@ sub listrecords {
   my $extraparams = shift || undef;  # params for special fields, like lat/long to measure from
   my $maxrecords = shift || 20;  # show this many records initially, rest hidden
 
+  # Build cache key from all inputs that affect the rendered HTML.
+  my $params_str = "";
+  if ( $params ) {
+    my @pa = ref $params eq 'ARRAY' ? @$params : ($params);
+    $params_str = join("\x1f", @pa);
+  }
+  my $extraparams_str = "";
+  if ( $extraparams ) {
+    $extraparams_str = join("\x1f", map { "$_=$extraparams->{$_}" } sort keys %$extraparams);
+  }
+  my $mobile = $c->{mobile} ? 1 : 0;
+  my $cache_key = join("\x1e", "listrecords", $c->{username}, $c->{op},
+                       $table, $sort, $where, $params_str, $extraparams_str,
+                       $maxrecords, $mobile);
+  my $cached = cache::get($c, $cache_key);
+  if ( defined $cached ) {
+    print { $c->{log} } "listrecords: cache hit for $table\n";
+    return $cached;
+  }
+
   my @fields = db::tablefields($c, $table, "", 1);
   my $order = "";
   for my $f ( @fields ) {
@@ -289,6 +309,7 @@ sub listrecords {
   $s .= "</div>\n";
   $list_sth->finish;
 
+  cache::set($c, $cache_key, $s);
   return $s;
 }
 

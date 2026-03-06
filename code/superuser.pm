@@ -142,6 +142,7 @@ sub gitpull {
   print "<pre $style>\n$st\n</pre><p> \n";
   print "Go back to <a href='$c->{url}?o=GitStatus'><span>Git Status</span></a>\n";
   print "Or the <a href='$c->{url}?o=Graph'><span>Main list</span></a>\n";
+  cache::clear($c, "gitpull");  # Code changed; force fresh renders on next request
 }
 
 

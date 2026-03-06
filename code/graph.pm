@@ -39,6 +39,7 @@ sub clearcachefiles {
   my $lastfile = $datadir . $c->{username} . '.last';
   open my $fh, '>', $lastfile or util::error("Could not create $lastfile: $!");
   close $fh;
+  cache::clear($c, "copyproddata");  # Prod data replaced; cached queries are stale
 } # clearcachefiles
 
 ################################################################################

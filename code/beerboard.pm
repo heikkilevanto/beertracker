@@ -22,12 +22,12 @@ sub beerboard {
   my $qrylim = util::param($c,"f");
 
   my ($locparam, $foundrec) = get_location_param($c);
-  
+
   if (!$scrapeboard::scrapers{$locparam}) {
     print "Sorry, no  beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
     $locparam="Ølbaren"; # A good default
   }
-  
+
   render_location_selector($c, $locparam);
 
   my ($beerlist, $last_epoch) = load_beerlist_from_db($c, $locparam, $qrylim);

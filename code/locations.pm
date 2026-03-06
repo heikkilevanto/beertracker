@@ -383,40 +383,52 @@ sub selectlocation {
   } elsif ( $prods eq "non" ) {
     $where = "where LOCATIONS.LocType <>  \"Producer\" ";
   }
-  my $sql = "
-  select
-    LOCATIONS.Id,
-    LOCATIONS.Name,
-    LOCATIONS.LocType,
-    LOCATIONS.LocSubType,
-    LOCATIONS.Lat,
-    LOCATIONS.Lon
-  from LOCATIONS
-  left join GLASSES on GLASSES.Location = LOCATIONS.Id
-  $where
-  group by LOCATIONS.id
-  order by max(GLASSES.Timestamp) DESC
-  ";
-  my $list_sth = $c->{dbh}->prepare($sql);
-  $list_sth->execute(); # username ?
-  my $opts = "";
-  my $current = "";
-  while ( my ($id, $name, $type, $subtype, $lat, $lon ) = $list_sth->fetchrow_array ) {
-    if ($type) {
-      $type = "[$type]";
-    } else {
-      $type = "";
+  # The opts list is the expensive part. Cache per user and location filter type.
+  my $cache_key = "selectlocation_opts:$c->{username}:$prods";
+  my $opts = cache::get($c, $cache_key);
+
+  if ( !defined $opts ) {
+    my $sql = "
+    select
+      LOCATIONS.Id,
+      LOCATIONS.Name,
+      LOCATIONS.LocType,
+      LOCATIONS.LocSubType,
+      LOCATIONS.Lat,
+      LOCATIONS.Lon
+    from LOCATIONS
+    left join GLASSES on GLASSES.Location = LOCATIONS.Id
+    $where
+    group by LOCATIONS.id
+    order by max(GLASSES.Timestamp) DESC
+    ";
+    my $list_sth = $c->{dbh}->prepare($sql);
+    $list_sth->execute();
+    $opts = "";
+    while ( my ($id, $name, $type, $subtype, $lat, $lon ) = $list_sth->fetchrow_array ) {
+      if ($type) {
+        $type = "[$type]";
+      } else {
+        $type = "";
+      }
+      my $dist = "";
+      if ($lat && $lon) {
+        $dist = "<span lat=$lat lon=$lon style='pointer-events:none; font-size: xx-small;'> ??? </span>";
+      }
+      my $substtr = $subtype ? "locsubtype='$subtype'" : "";
+      $opts .= "      <div class='dropdown-item' id='$id' $substtr>$name $type $dist</div>\n";
     }
-    my $dist = "";
-    if ($lat && $lon) {
-      $dist = "<span lat=$lat lon=$lon style='pointer-events:none; font-size: xx-small;'> ??? </span>";
-    }
-    my $substtr = $subtype ? "locsubtype='$subtype'" : "";
-    $opts .= "      <div class='dropdown-item' id='$id' $substtr>$name $type $dist</div>\n";
-    if ( $id eq $selected ) {
-      $current = $name;
-    }
+    cache::set($c, $cache_key, $opts);
   }
+
+  # Look up the display name of the selected location (cheap primary-key lookup)
+  my $current = "";
+  if ( $selected ) {
+    ($current) = $c->{dbh}->selectrow_array(
+      "SELECT Name FROM LOCATIONS WHERE Id = ?", undef, $selected);
+    $current //= "";
+  }
+
   my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield, $skip, $disabled );
   $s .= "<script>geotabledist();</script>\n";
   return $s;

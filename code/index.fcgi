@@ -75,6 +75,7 @@ require "./code/aboutpage.pm"; # The About page
 require "./code/VERSION.pm"; # auto-generated version info
 require "./code/superuser.pm"; # Superuser functions: Copåy prod data, git pull
 require "./code/db.pm"; # Various database helpers
+require "./code/cache.pm"; # In-process cache for expensive queries
 require "./code/geo.pm"; # Geo coordinate stuff
 require "./code/ratestats.pm"; # Histogram of the ratings
 require "./code/export.pm"; # Export the users own data
@@ -134,6 +135,7 @@ my $mtime_ver = (stat("code/VERSION.pm"))[9];
 my $process_start = time();
 my $request_count = 0;
 my $dbh_ro;  # Persistent read-only dbh, reused across requests
+my $cache = {};  # In-process cache, lives for the lifetime of the process
 
 ################################################################################
 # Main FastCGI loop — runs once per request; CGI::Fast falls back to plain CGI
@@ -147,7 +149,7 @@ while (my $q = CGI::Fast->new) {
   if ( $reload_reason ) {
     my $now = localtime;
     my $uptime = time() - $process_start;
-    print { $log } $now->ymd . " " . $now->hms . " fcgi reloading pid=$$ ($reload_reason) requests=$request_count uptime=${uptime}s\n";
+    print { $log } $now->ymd . " " . $now->hms . " fcgi reloading pid=$$ ($reload_reason) requests=$request_count uptime=${uptime}s " . cache::stats({cache=>$cache}) . "\n";
     my $op = $q->param('o') || 'Graph';
     print $q->header(-status => '302 Found', -location => $q->url() . "?o=$op");
     exit(0);
@@ -199,6 +201,7 @@ my $c = {
   'devversion' => $devversion,
   'mobile'   => $mobile,
   'log'      => $log,
+  'cache'    => $cache,
 };
 # Input Parameters. Need to have a $c to get them.
 $c->{edit}= util::param($c,"e");  # Record to edit
@@ -277,6 +280,7 @@ if ( $q->request_method eq "POST" ) {
     $c->{dbh}->rollback;
   }
 
+  cache::clear($c, "POST");  # Data may have changed; invalidate all cached lists
   # Redirect back to the op, but not editing
   print $c->{cgi}->redirect( $c->{redirect_url} || "$c->{url}?o=$c->{op}" );
   next;
