@@ -72,6 +72,7 @@ require "./code/taps.pm"; # Updating tap_beers table
 require "./code/inputs.pm"; # Helper routines for input forms
 require "./code/listrecords.pm"; # A way to produce a nice list from db records
 require "./code/aboutpage.pm"; # The About page
+require "./code/debug.pm"; # The Debug page
 require "./code/VERSION.pm"; # auto-generated version info
 require "./code/superuser.pm"; # Superuser functions: Copåy prod data, git pull
 require "./code/db.pm"; # Various database helpers
@@ -331,6 +332,8 @@ if ( $c->{op} =~ /Board/i ) {
   ratestats::ratings_histogram($c);
 } elsif ( $c->{op} =~ /About/i ) {
   aboutpage::about($c);
+} elsif ( $c->{op} =~ /Debug/i ) {
+  debug::debugpage($c);
 } elsif ( $c->{op} =~ /Brew/i ) {
   brews::listbrews($c);
 } elsif ( $c->{op} =~ /Person/i ) {
