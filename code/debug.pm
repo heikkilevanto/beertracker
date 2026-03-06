@@ -43,6 +43,27 @@ sub debugpage {
   print "<tr><td>= Total</td><td class='num'>$tot</td><td>&nbsp;</td></tr>\n";
   print "</table>\n";
 
+  # Log tail
+  print "<h3>Log tail</h3>\n";
+  my $logfile = $c->{datadir} . "debug.log";
+  if ( ! -f $logfile ) {
+    print "<p>No log file found.</p>\n";
+  } elsif ( !open my $fh, '<:utf8', $logfile ) {
+    print "<p>Cannot open log file: $!</p>\n";
+  } else {
+    my @lines = <$fh>;
+    close $fh;
+    my @tail = @lines > 100 ? @lines[-100..-1] : @lines;
+    print "<pre style='font-size:0.8em; overflow:auto; max-height:40em;'>";
+    for my $line (@tail) {
+      $line =~ s/&/&amp;/g;
+      $line =~ s/</&lt;/g;
+      $line =~ s/>/&gt;/g;
+      print $line;
+    }
+    print "</pre>\n";
+  }
+
 } # debugpage
 
 
