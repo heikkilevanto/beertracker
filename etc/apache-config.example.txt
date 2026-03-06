@@ -19,7 +19,7 @@ FcgidMaxRequestLen 10485760
 
    AddHandler cgi-script .cgi
    AddHandler fcgid-script .fcgi
-   DirectoryIndex index.fcgi index.cgi
+   DirectoryIndex code/index.fcgi code/index.cgi
 
    # Authentication is handled by login.pm (cookie + HTTP Basic via CGIPassAuth).
    # No Apache-level auth required; access to the app is open at the Apache level.
