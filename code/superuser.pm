@@ -131,6 +131,7 @@ sub gitstatus {
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git fetch
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git pull --ff-only
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git branch --list
+    www-data ALL=(heikki) NOPASSWD: /usr/bin/git log *
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git checkout *
       </pre>\n";
   }
@@ -165,6 +166,32 @@ sub gitstatus {
     print "</table>\n";
   } else {
     print "Could not get branch list in $p: $? <br>'$branches'<br>\n";
+  }
+
+  # List last 5 commits and offer checkout by SHA
+  my $lcmd = $cdcmd . "sudo -u heikki /usr/bin/git log -5 --pretty=format:%h%x09%ci%x09%s 2>&1";
+  my $logout = `$lcmd`;
+  if ( $? == 0 && $logout ) {
+    print "<hr>\n<b>Recent commits:</b><br>\n";
+    print "<table>\n";
+    for my $line ( split /\n/, $logout ) {
+      my ($sha, $ts, $msg) = split /\t/, $line, 3;
+      next unless $sha && $sha =~ /^[0-9a-f]+$/;
+      $ts =~ s/:\d\d \+\S+$//;  # trim seconds and timezone
+      $msg = encode_entities($msg // "");
+      my $loading = "document.body.innerHTML=\"<p>Checking out $sha ...</p>\"";
+      my $reloc = "window.location.href=\"$c->{url}?o=GitCheckout&p=$p&b=" .
+                  uri_escape_utf8($sha) . "\"";
+      print "<tr>";
+      print "<td><tt>$sha</tt></td>";
+      print "<td>$ts</td>";
+      print "<td>$msg</td>";
+      print "<td><button onclick='$loading;$reloc'>Checkout</button></td>";
+      print "</tr>\n";
+    }
+    print "</table>\n";
+  } elsif ( $logout =~ /a password is required/ ) {
+    print "Add to sudoers: <pre>    www-data ALL=(heikki) NOPASSWD: /usr/bin/git log *</pre>\n";
   }
 } # gitstatus
 
