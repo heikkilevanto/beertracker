@@ -179,12 +179,13 @@ sub paramnumber {
 # Helper to make an error message
 sub error {
   my $msg = shift;
-  print "\n\n";  # Works if have sent headers or not
-  print "<pre>\n";
   $msg = "ERROR  <br>\n$msg\n\n";
   $msg .= longmess("Stack Trace:");
-  print "$msg\n";
   print $util::log "ERROR: $msg\n";
+  print STDERR "ERROR: $msg\n";
+  print "\n\n";  # Works if have sent headers or not
+  print "<pre>\n";
+  print "$msg\n";
   die $msg;
 }
 

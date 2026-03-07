@@ -20,8 +20,12 @@ use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
 use File::Basename;
-use Cwd qw(cwd);
+use Cwd qw(abs_path cwd);
 use HTML::Entities;
+
+# Captured once at module load. In FastCGI the process cwd can drift between
+# requests, so we use this for a stable default and to build absolute paths.
+my $STARTUP_DIR = abs_path(cwd());
 use URI::Escape qw(uri_escape_utf8);
 
 ################################################################################
@@ -69,6 +73,22 @@ sub checksuperuser {
   util::error("Not allowed") unless $c->{username} eq "heikki";
 }
 
+# Helper: check superuser, validate param 'p' (must start with 'beertracker').
+# Returns ($p, $gitdir) where $gitdir is the absolute path to the repo.
+# Never chdirs - callers prefix shell commands with "cd $gitdir &&" instead.
+sub git_prepare {
+  my ($c) = @_;
+  checksuperuser($c);
+  my $p = util::param($c, "p", basename($STARTUP_DIR));
+  util::error("Bad path '$p'") unless $p =~ /^beertracker/ ;
+  my $gitdir = "$STARTUP_DIR/../$p";
+  unless ( -d $gitdir ) {
+    print { $c->{log} } "Directory not found: $gitdir\n";
+    util::error("Directory not found: '$p'");
+  }
+  return ($p, $gitdir);
+}
+
 
 ################################################################################
 # Show git status
@@ -82,12 +102,10 @@ sub checksuperuser {
 
 sub gitstatus {
   my $c = shift;
-  checksuperuser($c);
-  my $cur = basename(cwd());
-  my $p = util::param($c, "p", $cur);
-  util::error("Bad path '$p'") unless $p =~ /^beertracker/ ;
+  my ($p, $gitdir) = git_prepare($c);
   print "<b>Git status for <i>'$p'</i> </b><p/>\n";
-  for my $d ( <../beertracker*> ) { #/  #The / needed to sync Kate's highlight
+  # List other beertracker directories
+  for my $d ( glob("$STARTUP_DIR/../beertracker*") ) {
     my $b = basename($d);
     next if ($b eq $p );
     my $loading = "document.body.innerHTML=\"<p>Switching to $b</p>\"";
@@ -96,11 +114,10 @@ sub gitstatus {
        "<i>'$b'</i></a>)<br>\n";
   }
   print "<p/>\n";
-  chdir("../$p") or
-    util::error("Can not chdir to '$p' ");
-  my $cmd = "sudo -u heikki /usr/bin/git fetch 2>&1 && " .
-            "sudo -u heikki /usr/bin/git status -uno 2>&1 " ;
-  print "Running $cmd <p/>\n";
+  my $cdcmd = "cd " . quotemeta($gitdir) . " && ";
+  my $cmd = $cdcmd . "sudo -u heikki /usr/bin/git fetch 2>&1 && " .
+                     "sudo -u heikki /usr/bin/git status -uno 2>&1 " ;
+  print "Running git fetch &amp;&amp; git status in $p <p/>\n";
   my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
   my $st = `$cmd` ;
   my $rc = $?;  # return code
@@ -125,10 +142,10 @@ sub gitstatus {
   }
 
   # List branches and offer checkout
-  my $bcmd = "sudo -u heikki /usr/bin/git branch --list  2>&1";
+  my $bcmd = $cdcmd . "sudo -u heikki /usr/bin/git branch --list  2>&1";
   my $branches = `$bcmd`;
   if ( $? == 0 && $branches ) {
-    print "<hr>\n<b>Branches:</b><br>Running $bcmd<br>\n";
+    print "<hr>\n<b>Branches:</b><br>Running git branch --list in $p<br>\n";
     print "<table>\n";
     for my $line ( split /\n/, $branches ) {
       my $branch = $line;
@@ -147,7 +164,7 @@ sub gitstatus {
     }
     print "</table>\n";
   } else {
-    print "Could not get branch list: $bcmd: $? <br>'$branches'<br>\n";
+    print "Could not get branch list in $p: $? <br>'$branches'<br>\n";
   }
 } # gitstatus
 
@@ -156,22 +173,17 @@ sub gitstatus {
 ################################################################################
 sub gitpull {
   my $c = shift;
-  checksuperuser($c);
-  my $cur = basename(cwd());
-  my $p = util::param($c, "p", $cur);
-  util::error("Bad path '$p'") unless $p =~ /^beertracker/ ;
+  my ($p, $gitdir) = git_prepare($c);
   print "<b>Doing a Git pull for <i>'$p'</i> </b><p/>\n";
-  chdir("../$p") or
-    util::error("Can not chdir to '$p' ");
-  my $cmd = "sudo -u heikki /usr/bin/git pull --ff-only 2>&1";
-  print "Running $cmd <p/>\n";
+  my $cmd = "cd " . quotemeta($gitdir) . " && sudo -u heikki /usr/bin/git pull --ff-only 2>&1";
+  print "Running git pull --ff-only in $p <p/>\n";
   my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
   my $st = `$cmd` ;
   print { $c->{log} } "gitpull: $st\n";
   my $rc = $?;  # return code
   $st = encode_entities($st);
   print "<pre $style>\n$st\n</pre><p> \n";
-  print "Go back to <a href='$c->{url}?o=GitStatus'><span>Git Status</span></a>\n";
+  print "Go back to <a href='$c->{url}?o=GitStatus&p=$p'><span>Git Status</span></a>\n";
   print "Or the <a href='$c->{url}?o=Graph'><span>Main list</span></a>\n";
   cache::clear($c, "gitpull");  # Code changed; force fresh renders on next request
 }
@@ -183,17 +195,12 @@ sub gitpull {
 ################################################################################
 sub gitcheckout {
   my $c = shift;
-  checksuperuser($c);
-  my $cur = basename(cwd());
-  my $p = util::param($c, "p", $cur);
-  util::error("Bad path '$p'") unless $p =~ /^beertracker[\w-]*$/ ;
+  my ($p, $gitdir) = git_prepare($c);
   my $b = util::param($c, "b", "");
   util::error("Bad branch name '$b'") unless $b =~ /^[\w\.\-\/]+$/ ;
   print "<b>Checking out branch <i>'$b'</i> in <i>'$p'</i></b><p/>\n";
-  chdir("../$p") or
-    util::error("Can not chdir to '$p' ");
-  my $cmd = "sudo -u heikki /usr/bin/git checkout " . quotemeta($b) . " 2>&1";
-  print "Running $cmd <p/>\n";
+  my $cmd = "cd " . quotemeta($gitdir) . " && sudo -u heikki /usr/bin/git checkout " . quotemeta($b) . " 2>&1";
+  print "Running git checkout $b in $p <p/>\n";
   my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
   my $st = `$cmd` ;
   print { $c->{log} } "gitcheckout: $st\n";
