@@ -114,7 +114,7 @@ sub gitstatus {
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git status -uno
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git fetch
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git pull --ff-only
-    www-data ALL=(heikki) NOPASSWD: /usr/bin/git branch -a
+    www-data ALL=(heikki) NOPASSWD: /usr/bin/git branch --list
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git checkout *
       </pre>\n";
   }
@@ -125,10 +125,10 @@ sub gitstatus {
   }
 
   # List branches and offer checkout
-  my $bcmd = "sudo -u heikki /usr/bin/git branch -a 2>&1";
+  my $bcmd = "sudo -u heikki /usr/bin/git branch --list  2>&1";
   my $branches = `$bcmd`;
   if ( $? == 0 && $branches ) {
-    print "<hr>\n<b>Branches:</b><br>\n";
+    print "<hr>\n<b>Branches:</b>Running $bcmd<br>\n";
     for my $line ( split /\n/, $branches ) {
       my $branch = $line;
       $branch =~ s/^\s*\*?\s*//;   # strip leading spaces and current-branch marker
@@ -142,6 +142,8 @@ sub gitstatus {
       print " <button onclick='$loading;$reloc'>Checkout</button>" unless $current;
       print "<br>\n";
     }
+  } else {
+    print "Could not get branch list: $bcmd: $? <br>'$branches'<br>\n";
   }
 } # gitstatus
 
