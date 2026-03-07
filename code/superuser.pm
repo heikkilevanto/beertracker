@@ -173,7 +173,8 @@ sub gitstatus {
   my $logout = `$lcmd`;
   if ( $? == 0 && $logout ) {
     print "<hr>\n<b>Recent commits:</b><br>\n";
-    print "<table>\n";
+    print "<div style='overflow-x: auto;'>\n";
+    print "<table style='white-space: nowrap;'>\n";
     for my $line ( split /\n/, $logout ) {
       my ($sha, $ts, $msg) = split /\t/, $line, 3;
       next unless $sha && $sha =~ /^[0-9a-f]+$/;
@@ -185,11 +186,14 @@ sub gitstatus {
       print "<tr>";
       print "<td><tt>$sha</tt></td>";
       print "<td>$ts</td>";
-      print "<td>$msg</td>";
       print "<td><button onclick='$loading;$reloc'>Checkout</button></td>";
+      print "</tr>\n";
+      print "<tr>";
+      print "<td colspan='3'>$msg</td>";
       print "</tr>\n";
     }
     print "</table>\n";
+    print "</div>\n";
   } elsif ( $logout =~ /a password is required/ ) {
     print "Add to sudoers: <pre>    www-data ALL=(heikki) NOPASSWD: /usr/bin/git log *</pre>\n";
   }
