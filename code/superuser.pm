@@ -7,7 +7,9 @@
 # with data that is up to date. Only available in the dev version.
 #
 # - gitstatus: Shows the git status on both dev and production version, and allows
-# a git pull to be run on any of them.
+# a git pull to be run on any of them. Also lists branches and offers checkout.
+#
+# - gitcheckout: Checks out a branch for testing.
 
 package superuser;
 use strict;
@@ -20,6 +22,7 @@ use POSIX qw(strftime localtime locale_h);
 use File::Basename;
 use Cwd qw(cwd);
 use HTML::Entities;
+use URI::Escape qw(uri_escape_utf8);
 
 ################################################################################
 # Copy production database to dev
@@ -111,6 +114,8 @@ sub gitstatus {
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git status -uno
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git fetch
     www-data ALL=(heikki) NOPASSWD: /usr/bin/git pull --ff-only
+    www-data ALL=(heikki) NOPASSWD: /usr/bin/git branch -a
+    www-data ALL=(heikki) NOPASSWD: /usr/bin/git checkout *
       </pre>\n";
   }
   if ( ! $rc && $st =~ /can be fast-forwarded/ ) {
@@ -118,7 +123,27 @@ sub gitstatus {
     my $reloc = "window.location.href=\"$c->{url}?o=GitPull&p=$p\"";
     print "Are you sure you want to do a <button onclick='$loading;$reloc'>Git Pull</button><br>\n";
   }
-}
+
+  # List branches and offer checkout
+  my $bcmd = "sudo -u heikki /usr/bin/git branch -a 2>&1";
+  my $branches = `$bcmd`;
+  if ( $? == 0 && $branches ) {
+    print "<hr>\n<b>Branches:</b><br>\n";
+    for my $line ( split /\n/, $branches ) {
+      my $branch = $line;
+      $branch =~ s/^\s*\*?\s*//;   # strip leading spaces and current-branch marker
+      $branch =~ s/\s.*$//;        # strip trailing annotations
+      next unless $branch =~ /^[\w\.\-\/]+$/;  # only safe branch names
+      my $current = ( $line =~ /^\*/ ) ? " <b>(current)</b>" : "";
+      my $loading = "document.body.innerHTML=\"<p>Checking out $branch ...</p>\"";
+      my $reloc = "window.location.href=\"$c->{url}?o=GitCheckout&p=$p&b=" .
+                  uri_escape_utf8($branch) . "\"";
+      print "&nbsp;$branch$current";
+      print " <button onclick='$loading;$reloc'>Checkout</button>" unless $current;
+      print "<br>\n";
+    }
+  }
+} # gitstatus
 
 ################################################################################
 # Do a git pull
@@ -144,6 +169,39 @@ sub gitpull {
   print "Or the <a href='$c->{url}?o=Graph'><span>Main list</span></a>\n";
   cache::clear($c, "gitpull");  # Code changed; force fresh renders on next request
 }
+
+
+
+################################################################################
+# Checkout a git branch for testing
+################################################################################
+sub gitcheckout {
+  my $c = shift;
+  checksuperuser($c);
+  my $cur = basename(cwd());
+  my $p = util::param($c, "p", $cur);
+  util::error("Bad path '$p'") unless $p =~ /^beertracker[\w-]*$/ ;
+  my $b = util::param($c, "b", "");
+  util::error("Bad branch name '$b'") unless $b =~ /^[\w\.\-\/]+$/ ;
+  print "<b>Checking out branch <i>'$b'</i> in <i>'$p'</i></b><p/>\n";
+  chdir("../$p") or
+    util::error("Can not chdir to '$p' ");
+  my $cmd = "sudo -u heikki /usr/bin/git checkout " . quotemeta($b) . " 2>&1";
+  print "Running $cmd <p/>\n";
+  my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
+  my $st = `$cmd` ;
+  print { $c->{log} } "gitcheckout: $st\n";
+  my $rc = $?;  # return code
+  $st = encode_entities($st);
+  print "<pre $style>\n$st\n</pre><p> \n";
+  if ( $rc && $st =~ /a password is required/ ) {
+    print "Make sure you have this line in /etc/sudoers.d/beertracker: <br>\n";
+    print "<pre>    www-data ALL=(heikki) NOPASSWD: /usr/bin/git checkout *</pre>\n";
+  }
+  print "Go back to <a href='$c->{url}?o=GitStatus&p=$p'><span>Git Status</span></a>\n";
+  print "Or the <a href='$c->{url}?o=Graph'><span>Main list</span></a>\n";
+  cache::clear($c, "gitcheckout");  # Code changed; force fresh renders on next request
+} # gitcheckout
 
 
 
