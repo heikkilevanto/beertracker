@@ -107,7 +107,6 @@ sub gitstatus {
   print { $c->{log} } "gitstatus: $st \n";
   $st = encode_entities($st);
   print "<pre $style>\n$st\n</pre> \n";
-  print "<hr>\n";
   if ( $rc && $st =~ /a password is required/ ) {
     print "Make sure you have these lines in /etc/sudoers.d/beertracker: <br>\n";
     print "<pre>
@@ -119,6 +118,7 @@ sub gitstatus {
       </pre>\n";
   }
   if ( ! $rc && $st =~ /can be fast-forwarded/ ) {
+    print "<hr>\n";
     my $loading = 'document.body.innerHTML = "<p>Pulling ...</p>";';
     my $reloc = "window.location.href=\"$c->{url}?o=GitPull&p=$p\"";
     print "Are you sure you want to do a <button onclick='$loading;$reloc'>Git Pull</button><br>\n";
