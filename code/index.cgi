@@ -312,6 +312,8 @@ if ( $c->{op} =~ /Board/i ) {
   superuser::gitstatus($c);
 } elsif ( $c->{op} =~ /GitPull/i ) {
   superuser::gitpull($c);
+} elsif ( $c->{op} =~ /GitCheckout/i ) {
+  superuser::gitcheckout($c);
 } elsif ( $c->{op} =~ /Full/i ) {
   glasses::maininputform($c);
   mainlist::mainlist($c);
