@@ -98,6 +98,7 @@ sub listrecords {
   my $op = $c->{op};
 
   my $s = "";
+  $s .= "<!-- listrecords: $sql -->\n"; 
   $s .= "<style>
     .top-border td { border-top: 2px solid white; }
     </style>\n";
@@ -111,6 +112,8 @@ sub listrecords {
   my @styles;  # One for each column
 
   # Table headers
+  $s .=  "<!-- listrecords: table headers -->\n"; 
+
   $s .= "<thead>";
 
   # Filter inputs also work as column headers, and sort buttons on dbl-click
@@ -190,6 +193,7 @@ sub listrecords {
   }
   $s .= "</tr>\n";
   $s .= "</thead><tbody>\n";
+  $s .=  "<!-- listrecords: table headers done, now the body -->\n"; 
 
   my $cutoff = util::datestr("%F", -7);  # a week ago, display full date
 
@@ -298,7 +302,10 @@ sub listrecords {
     $s .= "$tds</tr>\n";
   }
   $s .= "</tbody></table>\n";
+  $s .= "<!-- listrecords: table body done -->\n"; 
+
   if ($hashidden) {
+    $s .= "<!-- listrecords: more link -->\n"; 
     $s .= "<div style='text-align: left; margin-top: 10px;'>";
     $s .= "<a href='javascript:void(0);' onclick='showMoreRecords(this);'><span>More...</span></a>";
     $s .= "</div>\n";
@@ -306,7 +313,8 @@ sub listrecords {
   if ($geotable) {
     $s .= "<script>geotabledist();</script>\n";
   }
-  $s .= "</div>\n";
+  $s .= "<!-- listrecords: all done for $sql -->\n"; 
+
   $list_sth->finish;
 
   cache::set($c, $cache_key, $s);

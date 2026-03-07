@@ -207,6 +207,10 @@ sub locationdeduplist {
   my $c = shift; # context
   my $loc = shift;
   print "<!-- locationdeduplist -->\n";
+  print "<div onclick='toggleElement(this.nextElementSibling);'>";
+  print "<b>Deduplicate</b><br/>\n";
+  print "</div>\n";
+  print "<div style='display: none;'>\n";
   print "<form method='POST' accept-charset='UTF-8' class='no-print' >\n";
   print "Mark locations that are duplicates of <b>[$loc->{Id}] $loc->{Name}</b> ";
   print "and click here: \n";
@@ -222,6 +226,7 @@ sub locationdeduplist {
   $extra->{refname} = $loc->{Name};
   print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}", undef, $extra );
   print "</form>\n";
+  print "</div>\n";
   print "<!-- locationdeduplist end -->\n";
 
   print "<hr/>\n";
