@@ -128,7 +128,8 @@ sub gitstatus {
   my $bcmd = "sudo -u heikki /usr/bin/git branch --list  2>&1";
   my $branches = `$bcmd`;
   if ( $? == 0 && $branches ) {
-    print "<hr>\n<b>Branches:</b>Running $bcmd<br>\n";
+    print "<hr>\n<b>Branches:</b><br>Running $bcmd<br>\n";
+    print "<table>\n";
     for my $line ( split /\n/, $branches ) {
       my $branch = $line;
       $branch =~ s/^\s*\*?\s*//;   # strip leading spaces and current-branch marker
@@ -138,10 +139,13 @@ sub gitstatus {
       my $loading = "document.body.innerHTML=\"<p>Checking out $branch ...</p>\"";
       my $reloc = "window.location.href=\"$c->{url}?o=GitCheckout&p=$p&b=" .
                   uri_escape_utf8($branch) . "\"";
-      print "&nbsp;$branch$current";
+      print "<tr>";
+      print "<td>&nbsp;$branch</td>";
+      print "<td>$current";
       print " <button onclick='$loading;$reloc'>Checkout</button>" unless $current;
-      print "<br>\n";
+      print "</td></tr>\n";
     }
+    print "</table>\n";
   } else {
     print "Could not get branch list: $bcmd: $? <br>'$branches'<br>\n";
   }
