@@ -143,7 +143,7 @@ sub gitstatus {
   }
 
   # List branches and offer checkout
-  my $bcmd = $cdcmd . "sudo -u heikki /usr/bin/git branch --list  2>&1";
+  my $bcmd = $cdcmd . "sudo -u heikki /usr/bin/git branch -a  2>&1";
   my $branches = `$bcmd`;
   if ( $? == 0 && $branches ) {
     print "<hr>\n<b>Branches:</b><br>Running git branch --list in $p<br>\n";
