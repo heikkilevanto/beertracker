@@ -43,7 +43,7 @@ sub clear {
   my $msg = "cache: cleared $entries entries";
   $msg .= " ($reason)" if $reason;
   print { $c->{log} } "$msg\n";
-  $c->{cache} = {};
+  %{ $c->{cache} } = ();  # Empty in-place so the $cache ref in index.fcgi stays valid
 } # clear
 
 # Return a one-line stats summary for logging.
