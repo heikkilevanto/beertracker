@@ -14,7 +14,7 @@ So this plan must **not** reuse `mig_005`.
 
 ---
 
-## Phase 1 - Schema + migrate.pm (mig_006)
+## Phase 1 - Schema + migrate.pm (mig_006) ✓ DONE
 
 Phase 1 is a single migration pass in one new migration function, recommended name:
 - `mig_006_comments_model_phase1`

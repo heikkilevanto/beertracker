@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 5;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 6;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
@@ -34,6 +34,7 @@ our @MIGRATIONS = (
   [3, 'add Photo column to locations_list view', \&mig_003_locations_list_photo],
   [4, 'add Photo column to persons_list and brews_list views', \&mig_004_persons_brews_list_photo],
   [5, 'add index on photos(Glass) for mainlist performance', \&mig_005_idx_photos_glass],
+  [6, 'comments model phase 1 (types/location/visibility/multi-person)', \&mig_006_comments_model_phase1],
 );
 
 ################################################################################
@@ -300,5 +301,245 @@ sub mig_005_idx_photos_glass {
   my $c = shift;
   db::execute($c, "CREATE INDEX IF NOT EXISTS idx_photos_glass ON photos(Glass)");
 } # mig_005_idx_photos_glass
+
+################################################################################
+sub mig_006_comments_model_phase1 {
+  my $c = shift;
+
+  # --- 1. New columns on comments ---
+  db::execute($c, "ALTER TABLE comments ADD COLUMN CommentType TEXT");
+  db::execute($c, "ALTER TABLE comments ADD COLUMN Ts DATETIME");
+  db::execute($c, "ALTER TABLE comments ADD COLUMN Location INTEGER");
+  db::execute($c, "ALTER TABLE comments ADD COLUMN Username TEXT");
+
+  # --- 2. Many-to-many person join table ---
+  db::execute($c, q{
+    CREATE TABLE IF NOT EXISTS comment_persons (
+      Comment INTEGER NOT NULL,
+      Person  INTEGER NOT NULL,
+      PRIMARY KEY (Comment, Person),
+      FOREIGN KEY (Comment) REFERENCES comments(Id) ON DELETE CASCADE,
+      FOREIGN KEY (Person)  REFERENCES persons(Id)
+    )
+  });
+
+  # --- 3. Indexes ---
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_comments_type     ON comments(CommentType)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_comments_location ON comments(Location)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_comments_username ON comments(Username)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_comments_ts       ON comments(Ts)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_comment_persons_person  ON comment_persons(Person)");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_comment_persons_comment ON comment_persons(Comment)");
+
+  # --- 4. Backfill data ---
+
+  # comment_persons from legacy single-person field
+  db::execute($c, q{
+    INSERT OR IGNORE INTO comment_persons (Comment, Person)
+    SELECT Id, Person FROM comments WHERE Person IS NOT NULL
+  });
+
+  # Location: copy from the linked glass only when the glass is empty (no brew)
+  db::execute($c, q{
+    UPDATE comments
+    SET Location = (
+      SELECT g.Location FROM glasses g
+      WHERE g.Id = comments.Glass AND g.Brew IS NULL
+    )
+    WHERE Location IS NULL
+      AND Glass IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM glasses g WHERE g.Id = comments.Glass AND g.Brew IS NULL
+      )
+  });
+
+  # Username: take ownership from the glass owner
+  db::execute($c, q{
+    UPDATE comments
+    SET Username = (SELECT g.Username FROM glasses g WHERE g.Id = comments.Glass)
+    WHERE Username IS NULL
+      AND Glass IS NOT NULL
+      AND EXISTS (SELECT 1 FROM glasses g WHERE g.Id = comments.Glass)
+  });
+
+  # Ts: prefer glass timestamp, fall back to current time
+  db::execute($c, q{
+    UPDATE comments
+    SET Ts = COALESCE(
+      (SELECT g.Timestamp FROM glasses g WHERE g.Id = comments.Glass),
+      CURRENT_TIMESTAMP
+    )
+    WHERE Ts IS NULL
+  });
+
+  # CommentType inference chain (in order — earlier rules take priority)
+  db::execute($c, q{
+    UPDATE comments SET CommentType = 'brew'
+    WHERE CommentType IS NULL
+      AND Glass IS NOT NULL
+      AND EXISTS (SELECT 1 FROM glasses g WHERE g.Id = comments.Glass AND g.Brew IS NOT NULL)
+  });
+
+  db::execute($c, q{
+    UPDATE comments SET CommentType = 'meal'
+    WHERE CommentType IS NULL
+      AND Glass IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM glasses g
+        WHERE g.Id = comments.Glass
+          AND g.Brew IS NULL
+          AND g.BrewType IN ('Restaurant', 'Meal')
+      )
+  });
+
+  db::execute($c, q{
+    UPDATE comments SET CommentType = 'night'
+    WHERE CommentType IS NULL
+      AND (
+        (
+          Glass IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM glasses g
+            WHERE g.Id = comments.Glass
+              AND g.Brew IS NULL
+              AND g.BrewType = 'Night'
+          )
+        ) OR (
+          Location IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM comment_persons cp WHERE cp.Comment = comments.Id
+          )
+        )
+      )
+  });
+
+  db::execute($c, q{
+    UPDATE comments SET CommentType = 'location'
+    WHERE CommentType IS NULL
+      AND Location IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM comment_persons cp WHERE cp.Comment = comments.Id
+      )
+  });
+
+  db::execute($c, q{
+    UPDATE comments SET CommentType = 'person'
+    WHERE CommentType IS NULL
+      AND Glass IS NULL
+      AND EXISTS (
+        SELECT 1 FROM comment_persons cp WHERE cp.Comment = comments.Id
+      )
+  });
+
+  db::execute($c, q{
+    UPDATE comments SET CommentType = 'glass' WHERE CommentType IS NULL
+  });
+
+  # --- 5. Rebuild views ---
+
+  # compers is not used anywhere in code — drop it
+  db::execute($c, "DROP VIEW IF EXISTS compers");
+
+  # persons_list: switch from comments.Person join to comment_persons
+  db::execute($c, "DROP VIEW IF EXISTS persons_list");
+  db::execute($c, q{
+    CREATE VIEW persons_list AS
+    SELECT
+      persons.Id,
+      persons.Name,
+      'trmob' AS trmob,
+      count(DISTINCT comments.Id) - 1 AS Com,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      locations.Name AS Location,
+      'tr' AS tr,
+      'Clr' AS Clr,
+      persons.description,
+      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS Photo
+    FROM persons
+    LEFT JOIN comment_persons cp ON cp.Person = persons.Id
+    LEFT JOIN comments ON comments.Id = cp.Comment
+    LEFT JOIN glasses ON glasses.Id = comments.Glass
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    GROUP BY persons.Id
+  });
+
+  # loc_ratings: add direct comments.Location path in addition to glass-routed path
+  db::execute($c, "DROP VIEW IF EXISTS loc_ratings");
+  db::execute($c, q{
+    CREATE VIEW loc_ratings AS
+    SELECT
+      l.id,
+      avg(CASE WHEN merged.Brew IS NOT NULL THEN merged.Rating END) AS brew_avg,
+      count(CASE WHEN merged.Brew IS NOT NULL THEN merged.Rating END) AS brew_count,
+      count(CASE WHEN merged.Brew IS NOT NULL THEN merged.Comment END) AS brew_comments,
+      avg(CASE WHEN merged.Brew IS NULL THEN merged.Rating END) AS loc_avg,
+      count(CASE WHEN merged.Brew IS NULL THEN merged.Rating END) AS loc_count,
+      count(CASE WHEN merged.Brew IS NULL THEN merged.Comment END) AS loc_comments
+    FROM locations l
+    LEFT JOIN (
+      SELECT g.Location AS loc_id, c.Rating, c.Comment, g.Brew
+        FROM comments c JOIN glasses g ON g.Id = c.Glass
+      UNION ALL
+      SELECT c.Location AS loc_id, c.Rating, c.Comment, NULL AS Brew
+        FROM comments c WHERE c.Location IS NOT NULL AND c.Glass IS NULL
+    ) merged ON merged.loc_id = l.Id
+    WHERE l.LocType <> 'Producer'
+    GROUP BY l.Id
+  });
+
+  # location_ratings: same extension for direct location path
+  db::execute($c, "DROP VIEW IF EXISTS location_ratings");
+  db::execute($c, q{
+    CREATE VIEW location_ratings AS
+    SELECT
+      l.id,
+      count(merged.Rating)   AS rating_count,
+      avg(merged.Rating)     AS rating_average,
+      count(merged.Comment)  AS comment_count
+    FROM locations l
+    LEFT JOIN (
+      SELECT g.Location AS loc_id, c.Rating, c.Comment
+        FROM comments c JOIN glasses g ON g.Id = c.Glass
+      UNION ALL
+      SELECT c.Location AS loc_id, c.Rating, c.Comment
+        FROM comments c WHERE c.Location IS NOT NULL AND c.Glass IS NULL
+    ) merged ON merged.loc_id = l.Id
+    WHERE l.LocType <> 'Producer'
+    GROUP BY l.Id
+  });
+
+  # comments_list: add CommentType column, remove Photo (already NULL after mig_002),
+  # use COALESCE(glass timestamp, comments.Ts) for sort/display
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, q{
+    CREATE VIEW comments_list AS
+    SELECT
+      comments.Id,
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS Last,
+      locations.Name AS LocName,
+      'tr' AS tr,
+      '' AS Clr,
+      brews.Name AS BrewName,
+      ploc.Name AS Prod,
+      'tr' AS tr,
+      comments.Rating AS Rate,
+      persons.Name AS PersonName,
+      comments.CommentType AS CommentType,
+      comments.Comment AS Comment,
+      'tr' AS tr,
+      '' AS None,
+      glasses.Username AS Xusername
+    FROM comments
+    LEFT JOIN glasses ON glasses.Id = comments.Glass
+    LEFT JOIN brews ON brews.Id = glasses.Brew
+    LEFT JOIN persons ON persons.Id = comments.Person
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    LEFT JOIN locations ploc ON ploc.Id = brews.ProducerLocation
+    ORDER BY Last DESC
+  });
+
+} # mig_006_comments_model_phase1
 
 1;
