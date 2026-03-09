@@ -4,11 +4,22 @@
 
 function initDropdown(container) {
   const filterInput   = container.querySelector(".dropdown-filter");
-  const hiddenInput   = container.querySelector("input[type=hidden]");
+  const hiddenInput   = container.querySelector(".dropdown-main input[type=hidden]");
   const dropdownList  = container.querySelector(".dropdown-list");
   const newDiv        = container.querySelector(".dropdown-new");
   const isMulti       = container.getAttribute('data-multi') === '1';
   const chipsDiv      = container.querySelector('.dropdown-chips');
+
+  // Delegated removal handler covers both pre-rendered and dynamically added chips
+  if (chipsDiv) {
+    chipsDiv.addEventListener('click', (e) => {
+      const removeBtn = e.target.closest('.chip-remove');
+      if (removeBtn) {
+        e.preventDefault();
+        removeBtn.closest('.chip-wrapper').remove();
+      }
+    });
+  }
 
   // Select item
   dropdownList.addEventListener("click", (event) => {

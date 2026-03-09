@@ -34,6 +34,7 @@ sub dropdown {
   my $disabled      = shift || "";   # "disabled" or ""
   my $enablescan    = shift || "";   # "scan" to enable barcode scanning
   my $multi         = shift || "";   # "multi" to enable chip multi-select
+  my $prechips      = shift || "";   # pre-rendered chip HTML for multi-select edit
 
   my $newdiv = "";
   my $actions = "";
@@ -54,7 +55,7 @@ sub dropdown {
   }
 
   my $multiattr = $multi eq 'multi' ? " data-multi='1'" : "";
-  my $chipsdiv  = $multi eq 'multi' ? "<div class='dropdown-chips'></div>\n  " : "";
+  my $chipsdiv  = $multi eq 'multi' ? "<div class='dropdown-chips'>$prechips</div>\n  " : "";
   my $s = <<"HTML";
 <!-- DROPDOWN START: input='$inputname' -->
 <div id="dropdown-$inputname" class="dropdown"$multiattr>

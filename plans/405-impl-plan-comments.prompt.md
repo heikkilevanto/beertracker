@@ -243,7 +243,7 @@ Wire this mode into existing comment person selector in `comments.pm`.
 
 ---
 
-## Phase 5 - Posting comments
+## Phase 5 - Posting comments ✓ DONE
 
 Update `postcomment()` in `code/comments.pm`:
 - Write `CommentType`, `Ts`, `Location`, `Username`.

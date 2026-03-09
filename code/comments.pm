@@ -178,10 +178,37 @@ sub commentform {
   my $pl = "Add a new comment" ;
   $s .= "<textarea name='comment' rows='3' cols='40' placeholder='$pl' >$comment</textarea><br/>\n";
 
-  # Person involved in the comment
-  #print { $c->{log} } "cform: pn='$com->{PersName}' pi=$com->{PersId} \n";
-  $s .= persons::selectperson($c, 'person', $com->{PersId}, '', '', '', 'multi');
-  #$s .= "<br/>";
+  # CommentType selector
+  my @ctypes = qw(brew night meal location person glass);
+  my $curtype = $com->{CommentType} || 'brew';
+  $s .= "<select name='commenttype' id='commenttype'>\n";
+  for my $ct (@ctypes) {
+    my $sel = ($curtype eq $ct) ? ' selected' : '';
+    $s .= "<option value='$ct'$sel>$ct</option>\n";
+  }
+  $s .= "</select>\n";
+  $s .= "<script>replaceSelectWithCustom(document.getElementById('commenttype'));</script>\n";
+
+  # Privacy toggle removed - all comments are private by default
+
+  # Person involved in the comment — pre-populate chips for existing persons
+  my $prechips = '';
+  if ( $com && $com->{Id} ) {
+    my $psth = $c->{dbh}->prepare(
+      "SELECT p.Id, p.Name FROM comment_persons cp
+       JOIN persons p ON p.Id = cp.Person
+       WHERE cp.Comment = ? ORDER BY p.Name");
+    $psth->execute($com->{Id});
+    while ( my ($pid, $pname) = $psth->fetchrow_array ) {
+      $prechips .= "<span class='chip-wrapper'>" .
+        "<span class='dropdown-chip'>" . util::htmlesc($pname) .
+        " <a class='chip-remove' href='#'>&times;</a></span>" .
+        "<input type='hidden' name='person_id' value='$pid'/>" .
+        "</span>\n";
+    }
+  }
+  $s .= persons::selectperson($c, 'person', undef, '', '', '', 'multi', $prechips);
+
 
   # Rating dropdown
   $s .= "<select name='rating' id='rating'>\n";
@@ -212,67 +239,79 @@ sub commentform {
 # Handle submitted comment form
 ################################################################################
 sub postcomment {
-  # TODO - Use util helpers, to get recurstion right
-  # New person -> New Location and New RelatedPerson ?
   my $c = shift;
 
-  my $glass = util::param($c, "glass");
+  my $glass      = util::param($c, "glass");
   my $comment_id = util::param($c, "comment_id");
-  my $rating = util::param($c, "rating") || undef;
-  my $comment = util::param($c, "comment") || undef;
-  my $person = util::param($c, "person") || undef;
-  my $photo= util::param($c, "photo") || undef;
+  my $rating     = util::param($c, "rating")    || undef;
+  my $comment    = util::param($c, "comment")   || undef;
+  my $commenttype= util::param($c, "commenttype") || undef;
+  my $private    = util::param($c, "private")   || "";
+  my $person     = util::param($c, "person")    || undef; # legacy / new-person sentinel
 
-  if ( $person && $person eq "new" ) {  # Adding a new person
+  # Collect chip person IDs (multi-value)
+  my @person_ids = $c->{cgi}->multi_param('person_id');
+  @person_ids = grep { $_ && $_ =~ /^\d+$/ } @person_ids; # only plain integers
+
+  # All comments are private (owned by this user)
+  my $username = $c->{username};
+
+  # Infer timestamp: use glass timestamp when available, else now
+  my $ts = undef;
+  if ( $glass ) {
+    ($ts) = $c->{dbh}->selectrow_array(
+      "SELECT Timestamp FROM glasses WHERE Id = ?", undef, $glass);
+  }
+  $ts //= util::datestr("%Y-%m-%d %H:%M:%S", 0, 1);
+
+  if ( $person && $person eq "new" ) {  # Adding a new person via dropdown-new form
     my $newname = util::param($c,"newpersonName") || undef;
     my $newfull = util::param($c,"newpersonFullName") || undef;
     my $newdesc = util::param($c,"newpersonDescription") || undef;
     my $newcont = util::param($c,"newpersonContact") || undef;
-    error ("A Person must have a name" )
-       unless $newname;
-    my $sql = "INSERT INTO persons (Name, FullName, Description, Contact) VALUES (?, ?, ?, ?)";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute($newname, $newfull, $newdesc, $newcont);
-    my $newid = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef) || undef;
+    util::error("A Person must have a name") unless $newname;
+    db::execute($c, "INSERT INTO persons (Name, FullName, Description, Contact) VALUES (?, ?, ?, ?)",
+      $newname, $newfull, $newdesc, $newcont);
+    my $newid = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef);
     print { $c->{log} } "Inserted person '$newid' for comment '$comment_id' \n";
-    $person = $newid;
+    push @person_ids, $newid;  # treat the new person as a chip
+    $person = undef;
   }
 
   if ($comment_id) { # Update existing comment
     if ( util::param($c,"submit") =~ /Delete Comment/i ) {
-      my $rows = $c->{dbh}->do("DELETE FROM COMMENTS WHERE ID = ?", undef, $comment_id);
-      print { $c->{log} } "Deleted comment id '$comment_id' (rows=$rows) \n";
-      $photo = ""; # make sure we don't look at the upload, even if it happened to be there
-    } else { # must be a real update
-      my $sql = "UPDATE comments SET Rating = ?, Comment = ?, Person = ?
-                WHERE Id = ? AND Glass = ?";
-      my $sth = $c->{dbh}->prepare($sql);
-      $sth->execute($rating, $comment, $person, $comment_id, $glass );
-      print { $c->{log} } "Updated comment '$comment_id' for glass  '$glass' \n";
+      db::execute($c, "DELETE FROM comments WHERE Id = ?", $comment_id);
+      print { $c->{log} } "Deleted comment id '$comment_id' \n";
+    } else { # real update
+      db::execute($c,
+        "UPDATE comments SET Rating=?, Comment=?, CommentType=?, Username=?, Ts=?
+         WHERE Id=? AND Glass IS NOT DISTINCT FROM ?",
+        $rating, $comment, $commenttype, $username, $ts, $comment_id, $glass || undef);
+      print { $c->{log} } "Updated comment '$comment_id' for glass '$glass' \n";
+      # Rewrite comment_persons for this comment
+      db::execute($c, "DELETE FROM comment_persons WHERE Comment = ?", $comment_id);
+      for my $pid (@person_ids) {
+        db::execute($c, "INSERT OR IGNORE INTO comment_persons (Comment, Person) VALUES (?,?)",
+          $comment_id, $pid);
+      }
     }
   } else { # Insert new comment
-    my $sql = "INSERT INTO comments (Glass, Rating, Comment, Person) VALUES (?, ?, ?, ?)";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute($glass, $rating, $comment, $person);
-    $comment_id = $c->{dbh}->last_insert_id(undef, undef, "COMMENTS", undef) || undef;
+    db::execute($c,
+      "INSERT INTO comments (Glass, Rating, Comment, CommentType, Username, Ts)
+       VALUES (?, ?, ?, ?, ?, ?)",
+      $glass || undef, $rating, $comment, $commenttype, $username, $ts);
+    $comment_id = $c->{dbh}->last_insert_id(undef, undef, "COMMENTS", undef);
     print { $c->{log} } "Inserted comment '$comment_id' for glass '$glass' \n";
-  }
-
-  if ( $photo &&  $c->{cgi}->upload('photo') ) {  # We have a photo
-    my $photoname = photos::savefile($c, "c-$comment_id");
-    if ($photoname) {
-      my $sql = "UPDATE comments SET Photo = ?
-                WHERE Id = ? AND Glass = ?";  # Do we need both? Maybe username instead?
-      my $sth = $c->{dbh}->prepare($sql);
-      $sth->execute($photoname, $comment_id, $glass );
-      print { $c->{log} } "Updated photo name to '$photoname' for comment $comment_id \n";
+    for my $pid (@person_ids) {
+      db::execute($c, "INSERT OR IGNORE INTO comment_persons (Comment, Person) VALUES (?,?)",
+        $comment_id, $pid);
     }
   }
 
   # Redirect to avoid duplicate form submission on refresh
   $c->{redirect} = "$c->{url}?o=$c->{op}&e=$c->{edit}&glass=$glass";
   return "";
-}
+} # postcomment
 
 
 ################################################################################
