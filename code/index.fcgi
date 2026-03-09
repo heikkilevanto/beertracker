@@ -153,7 +153,8 @@ while (my $q = CGI::Fast->new) {
     print { $log } "\n". $now->ymd . " " . $now->hms . " fcgi reloading pid=$$ ($reload_reason) requests=$request_count uptime=${uptime}s " . cache::stats({cache=>$cache}) . "\n";
     my $op = $q->param('o') || 'Graph';
     print $q->header(-status => '302 Found', -location => $q->url() . "?o=$op");
-    last;  # Exit the loop cleanly so FCGI can finish the request before the process ends
+    $CGI::Fast::Ext_Request->Finish();  # Explicitly commit the response before exiting
+    last;  # Exit the loop cleanly
   }
   $request_count++;
   my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
