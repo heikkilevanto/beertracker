@@ -150,11 +150,13 @@ while (my $q = CGI::Fast->new) {
   if ( $reload_reason ) {
     my $now = localtime;
     my $uptime = time() - $process_start;
-    print { $log } "\n". $now->ymd . " " . $now->hms . " fcgi reloading pid=$$ ($reload_reason) requests=$request_count uptime=${uptime}s " . cache::stats({cache=>$cache}) . "\n";
+    print { $log } "\n". $now->ymd . " " . $now->hms . " fcgi reloading pid=$$ ($reload_reason) requests=$request_count uptime=${uptime}s " . cache::stats({cache=>$cache}) . " fh=" . select() . "\n";
     my $op = $q->param('o') || 'Graph';
+    $| = 1;  # Disable PerlIO buffering so the 302 reaches FCGI::Stream::PRINT immediately
     print $q->header(-status => '302 Found', -location => $q->url() . "?o=$op");
-    $CGI::Fast::Ext_Request->Finish();  # Explicitly commit the response before exiting
-    last;  # Exit the loop cleanly
+    $CGI::Fast::Ext_Request->Flush();   # Flush FCGI C-buffer to the socket
+    $CGI::Fast::Ext_Request->Finish();  # End the FCGI request
+    last;
   }
   $request_count++;
   my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
