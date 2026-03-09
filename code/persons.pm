@@ -36,8 +36,7 @@ sub showpersondetails {
   my $pers_seen_sql = "
   select
     comments.*,
-    PERSONS.Name as PersName,
-    PERSONS.Id as PersId,
+    group_concat(cp_persons.Name, ', ') as PeopleNames,
     strftime('%Y-%m-%d %w', g.timestamp, '-06:00') as effdate,
     strftime('%H:%M', g.timestamp, '-06:00') as time,
     g.Location as loc,
@@ -47,17 +46,22 @@ sub showpersondetails {
     g.subtype as subtype,
     g.id as id
   from comments
-  left join persons on persons.id = comments.person
+  left join comment_persons cp on cp.Comment = comments.Id
+  left join persons cp_persons on cp_persons.Id = cp.Person
   left join glasses g on g.id = comments.glass
   left join locations l on l.id = g.location
-  where
-  comments.Glass in  (
-      select Glass from comments c2
-      where c2.person = ?
-      and username = ?)
-    order by g.Timestamp desc, comments.id desc
+  where comments.Glass in (
+    select c2.Glass from comments c2
+    join comment_persons cp2 on cp2.Comment = c2.Id
+    join glasses g2 on g2.Id = c2.Glass
+    where cp2.Person = ?
+      and g2.username = ?
+      and c2.Glass IS NOT NULL)
+  and (comments.Username IS NULL OR comments.Username = ?)
+  group by comments.Id
+  order by COALESCE(g.Timestamp, comments.Ts) desc, comments.id desc
   ";
-  my $sth = db::query($c, $pers_seen_sql, $pers->{Id}, $c->{username} );
+  my $sth = db::query($c, $pers_seen_sql, $pers->{Id}, $c->{username}, $c->{username} );
   my $curgl = "";
   while ( my $rec = $sth->fetchrow_hashref) {
     if ( $curgl ne $rec->{Glass} ) {

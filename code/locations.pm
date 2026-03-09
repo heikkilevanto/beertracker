@@ -45,30 +45,47 @@ sub listlocationcomments {
   my $c = shift;
   my $loc = shift;
   print "<!-- listlocationcomments -->\n";
+
+  # Two paths:
+  # 1. Glass-routed: empty glasses at this location (no brew, any BrewType)
+  # 2. Direct: comments.Location = this location, no glass
+  # Visibility: glass-routed uses glasses.Username; direct uses comments.Username
+  # (NULL = public, visible to all)
+  # See loc_ratings view for ratings of the location vs the brews there
   my $sql = "
     SELECT
-      COMMENTS.* ,
-      strftime('%Y-%m-%d', GLASSES.Timestamp,'-06:00') as Date,
-      strftime('%H:%M', GLASSES.Timestamp) as Time,
-      PERSONS.Name as PersName,
-      PERSONS.ID as Pid,
+      COMMENTS.Id,
+      COMMENTS.Glass,
+      COMMENTS.Comment,
+      COMMENTS.Rating,
+      COMMENTS.CommentType,
+      COMMENTS.Ts,
+      strftime('%Y-%m-%d', COALESCE(GLASSES.Timestamp, COMMENTS.Ts), '-06:00') as Date,
+      strftime('%H:%M',    COALESCE(GLASSES.Timestamp, COMMENTS.Ts))            as Time,
+      group_concat(cp_persons.Name, ', ') as PeopleNames,
       GLASSES.Id as Gid,
       GLASSES.BrewType,
       GLASSES.SubType
-      from GLASSES, COMMENTS
-      LEFT JOIN PERSONS on PERSONS.ID = COMMENTS.Person
-      where Comments.glass = glasses.id
-      and (glasses.brew IS NULL or glasses.brew = '')
-      and glasses.BrewType in ( 'Restaurant', 'Night')
-      and glasses.username = ?
-      and Glasses.location = ?
-      order by Glasses.Timestamp desc
+    FROM COMMENTS
+    LEFT JOIN GLASSES ON GLASSES.Id = COMMENTS.Glass
+    LEFT JOIN comment_persons cp ON cp.Comment = COMMENTS.Id
+    LEFT JOIN persons cp_persons ON cp_persons.Id = cp.Person
+    WHERE (
+      (COMMENTS.Glass IS NOT NULL
+       AND GLASSES.Location = ?
+       AND (GLASSES.Brew IS NULL OR GLASSES.Brew = '')
+       AND GLASSES.Username = ?)
+      OR
+      (COMMENTS.Location = ?
+       AND COMMENTS.Glass IS NULL
+       AND (COMMENTS.Username IS NULL OR COMMENTS.Username = ?))
+    )
+    GROUP BY COMMENTS.Id
+    ORDER BY COALESCE(GLASSES.Timestamp, COMMENTS.Ts) DESC
   ";
-#        and ( glasses.brew = '' OR glasses.brew = NULL )
-# See loc_ratings view for ratings of the location vs the brews there
 
   my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($c->{username}, $loc->{Id});
+  $sth->execute($loc->{Id}, $c->{username}, $loc->{Id}, $c->{username});
   print "<div onclick='toggleElement(this.nextElementSibling);'>" .
         "<b>Comments for $loc->{Name}</b> [$loc->{Id}]</div>\n";
   print "<div style='overflow-x: auto;'>";
@@ -78,36 +95,38 @@ sub listlocationcomments {
   my $comcount = 0;
   my $perscount = 0;
   my $count = 0;
-  my $lastglass = "";
+  my $lastgroup = "";
   while ( my $com = $sth->fetchrow_hashref ) {
-    if ( $lastglass ne $com->{Gid} ) {
+    my $groupkey = $com->{Gid} // "c-$com->{Id}"; # per-glass or per direct comment
+    if ( $lastgroup ne $groupkey ) {
       $count++;
       if ( $count == 8 ) {
         print "<div onclick='this.style=\"display:none\"; toggleElement(this.nextElementSibling)'>More...</div>";
         print "<div style='display:none'>";
-        # TODO - Hide the following entries in a div
       }
       print "<p>\n";
-      print "<a href='$c->{url}?o=Full&e=$com->{Glass}&ec=$com->{Id}'><b>";
-      print "$com->{Date}</b></a>\n";
-      my $tim = $com->{Time};
-      $tim = "($tim)" if ($tim lt "06:00");
-      print "$tim\n";
-      print "<span style='font-size: xx-small'>[$com->{Glass}]</span>\n";
-      print "[$com->{BrewType}/$com->{SubType}]\n";
-      $lastglass = $com->{Gid};
+      if ( $com->{Gid} ) {  # glass-routed: show glass link + type
+        print "<a href='$c->{url}?o=Full&e=$com->{Glass}&ec=$com->{Id}'><b>";
+        print "$com->{Date}</b></a>\n";
+        my $tim = $com->{Time};
+        $tim = "($tim)" if ($tim lt "06:00");
+        print "$tim\n";
+        print "<span style='font-size: xx-small'>[$com->{Glass}]</span>\n";
+        print "[$com->{BrewType}/$com->{SubType}]\n";
+      } else {  # direct location comment
+        print "<b>$com->{Date}</b> $com->{Time}\n";
+      }
+      $lastgroup = $groupkey;
       print "<br/>";
     }
     print comments::commentline($c,$com);
     print "<br/>";
-    $perscount++ if ( $com->{PersName} );
+    $perscount++ if ( $com->{PeopleNames} );
     $comcount++ if ($com->{Comment});
     if ( $com->{Rating} ) {
       $ratesum += $com->{Rating};
       $ratecount++;
     }
-
-    # TODO - Photo thumbnail in its own row
   }
   if ( $count >= 8 ) {
     print "</div>\n";
@@ -128,7 +147,7 @@ sub listlocationcomments {
   }
   print "</div>";
   $sth->finish;
-  print "<!-- listbrewcomments end -->\n";
+  print "<!-- listlocationcomments end -->\n";
   print "<hr/>\n";
 } # listlocationcomments
 

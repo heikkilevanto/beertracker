@@ -240,16 +240,22 @@ sub commentlines {
     my $sql = "select COMMENTS.*,
       PERSONS.Name as PersName,
       PERSONS.Id as PersId,
+      group_concat(cp_persons.Name, ', ') as PeopleNames,
       (select count(*) from photos where photos.Comment = comments.Id) as photocount
       from comments
       left join PERSONS on persons.id = comments.person
+      left join comment_persons cp on cp.Comment = comments.Id
+      left join persons cp_persons on cp_persons.Id = cp.Person
       where glass = ?
-      order by Id"; # To keep the order consistent
+      group by comments.Id
+      order by comments.Id"; # To keep the order consistent
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($rec->{id});
     print "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
       my $comid = $com->{Id}; # Save before clearing
+      # Prefer PeopleNames (from comment_persons) over legacy PersName
+      $com->{PersName} = $com->{PeopleNames} if $com->{PeopleNames};
       $com->{Id} = ""; # Disable the edit link with id
       my $phothtml = $com->{photocount} ? photos::thumbnails_html($c, 'Comment', $comid) : '';
       print "<li>". comments::commentline($c, $com). $phothtml . "</li>\n  ";  # </div>\n";

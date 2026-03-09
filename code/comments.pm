@@ -48,7 +48,11 @@ sub commentline {
           "<span style='font-size: xx-small'>[$cr->{Id}]</span></a>\n"
         if ( $cr->{Id} );
   $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );
-  $s .= "<b>$cr->{PersName}:</b>\n" if ( $cr->{PersName} );
+  my $people = $cr->{PeopleNames} || $cr->{PersName} || "";
+  $s .= "<b>$people:</b>\n" if $people;
+  my $ctype = $cr->{CommentType} || '';
+  $s .= "<span style='font-size:xx-small; color:#bbb'>[$ctype]</span> \n"
+    if $ctype && $ctype ne 'brew';
   $s .= "<i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
   $s .= photos::thumbnails_html($c, 'Comment', $cr->{Id}) if $cr->{Id};
 
@@ -109,11 +113,15 @@ sub listcomments {
 
   my $sql = "select COMMENTS.*,
     PERSONS.Name as PersName,
-    PERSONS.Id as PersId
+    PERSONS.Id as PersId,
+    group_concat(cp_persons.Name, ', ') as PeopleNames
     from comments
     left join PERSONS on persons.id = comments.person
+    left join comment_persons cp on cp.Comment = comments.Id
+    left join persons cp_persons on cp_persons.Id = cp.Person
     where glass = ?
-    order by Id"; # To keep the order consistent
+    group by comments.Id
+    order by comments.Id"; # To keep the order consistent
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($glassid);
 

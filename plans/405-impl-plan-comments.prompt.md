@@ -206,7 +206,7 @@ Keep legacy columns for compatibility in this phase:
 
 ---
 
-## Phase 2 - Mainlist display
+## Phase 2 - Mainlist display ✓ DONE
 
 Update `code/mainlist.pm` and `code/comments.pm` read paths only:
 - `listcomments($c, $glassid)`: join through `comment_persons` and show `GROUP_CONCAT(persons.Name, ', ')`.
@@ -217,7 +217,7 @@ Update `code/mainlist.pm` and `code/comments.pm` read paths only:
 
 ---
 
-## Phase 3 - Other display pages
+## Phase 3 - Other display pages ✓ DONE
 
 Read-path updates only:
 - `code/locations.pm` `listlocationcomments()`: show direct location comments (`comments.Location = ?`) and glass-routed comments (`glasses.Location = ?`), with visibility filter `comments.Username IS NULL OR comments.Username = ?`.
