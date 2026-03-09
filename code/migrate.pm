@@ -150,18 +150,19 @@ sub _backup_db {
   File::Copy::copy($dbfile, $backup)
     or print { $c->{log} } "migrate: WARNING: could not back up $dbfile to $backup: $!\n";
   print { $c->{log} } "migrate: backup created: $backup\n";
-  _prune_backups($dbfile);
+  _prune_backups($c, $dbfile);
 } # _backup_db
 
 # Keep at most 3 backups; delete the oldest ones.
 sub _prune_backups {
+  my $c = shift;
   my $dbfile = shift;
   my $pattern = "$dbfile.bak.";
   my @backups = sort glob("${pattern}*");
   while ( scalar(@backups) > 3 ) {
     my $old = shift @backups;
     unlink $old
-      and print { $util::log } "migrate: removed old backup: $old\n";
+      and print { $c->{log} } "migrate: removed old backup: $old\n";
   }
 } # _prune_backups
 
