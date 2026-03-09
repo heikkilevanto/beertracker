@@ -1,103 +1,284 @@
-# Plan: Issue #405 — Comments data-model (phased)
+# Plan: Issue #405 - Comments data-model (phased)
 
-**TL;DR:** Schema lands in one migration sweep (mig_005). Then iterative phases, each independently testable: display mainlist → display other lists → postglass form → post comments → rest. Multi-person selection extends the existing `initDropdown` with `data-multi="1"`.
-
----
-
-## Phase 1 — Schema + migrate.pm (mig_005)
-
-All schema work in a single migration. Consolidate into one mig_005:
-- `ALTER TABLE comments ADD COLUMN` for `CommentType`, `Ts`, `Location`, `Username` + indexes
-- `CREATE TABLE comment_persons` + index
-- Data backfill:
-  - `comment_persons` from `comments.Person`
-  - `comments.Location` from empty glasses (Brew IS NULL only)
-  - `comments.Username` from `glasses.username` where `Glass IS NOT NULL`
-  - `CommentType` inference chain (in order):
-    - `brew` — glass has a Brew
-    - `meal` — empty glass, BrewType IN ('Restaurant','Meal')
-    - `night` — empty glass BrewType 'Night', OR location + people (regardless of whether a glass is present, since brew/meal are already handled)
-    - `location` — Location set, no people
-    - `person` — person in comment_persons, no glass
-    - `glass` — fallback (anything remaining)
-- Rebuild `compers` view: drop `comments.Photo` ref, fix duplicate `com_cnt`, join `comment_persons` for people concat
-- Rebuild `persons_list` view: join `comment_persons` instead of `comments.Person`
-- Rebuild `loc_ratings` / `location_ratings` views: include direct `comments.Location = l.id` path alongside glass-routed path
-- Rebuild `comments_list` view: add `CommentType`, drop `Photo` column
-- **Do not drop** `comments.Person` or `comments.Photo` yet — kept as dead columns until Phase 6
-
-Run `tools/dbdump.sh` to update `code/db.schema`.
-
-**Testable:** site loads without errors; existing data unchanged; views return sensible data; `perl -c` all modules.
+**TL;DR:** Photos are already done (migrations 002-005). For issue #405, start at `mig_006` with one schema sweep: add explicit comment target/type fields plus a many-to-many person link table, then update read paths, then posting/UI, then legacy cleanup.
 
 ---
 
-## Phase 2 — Mainlist display
+## Current baseline (as of this update)
 
-Update `code/mainlist.pm` and `code/comments.pm` display path only (no posting changes yet):
-- `listcomments($c, $glassid)`: join `comment_persons` with `GROUP_CONCAT(persons.Name, ', ')` for people; show a small `CommentType` badge when not `brew`
-- Mainlist glass rows: use `CommentType` from `compers` view if needed
-- No form changes — existing comment form still posts as before
+- `code/migrate.pm` currently ends at DB version 5 (`mig_005_idx_photos_glass`).
+- Photo migration is complete and should stay out of scope for this plan.
+- Existing `comments` table still has legacy columns `Person` and `Photo`.
 
-**Testable:** mainlist renders correctly with multi-person names and type badges; existing single-person comments unaffected.
-
----
-
-## Phase 3 — Other display pages
-
-Update display (read) paths only:
-- `code/locations.pm` `listlocationcomments()`: rewrite query to show direct location comments first (`comments.Location = ?`), then brew/glass comments (`glasses.Location = ?`); join `comment_persons`; respect `Username IS NULL OR Username = ?`; use `listrecords()` for rendering (not hand-rolled HTML)
-- `code/persons.pm` `showpersondetails()`: replace `comments.Person` subquery with `comment_persons` join; show `CommentType = 'person'` comments initially
-- `code/comments.pm` `listallcomments()`: add `CommentType` column to display
-
-**Testable:** location page shows direct comments + brew comments in correct order; person page shows person-type comments via `comment_persons`.
-
-**Display rule (applies across all display phases):** prefer `glasses.Timestamp` for ordering and display when `Glass` is set; otherwise fall back to `comments.Ts`.
+So this plan must **not** reuse `mig_005`.
 
 ---
 
-## Phase 4 — Multi-person chip UI (inputs.js / inputs.css)
+## Phase 1 - Schema + migrate.pm (mig_006)
 
-Build the chip infrastructure before it is wired into the comment form in Phase 5. No Perl changes in this phase:
-- `static/inputs.js`: add `data-multi="1"` branch to `initDropdown` — on item select, append a chip `<span>Name <a class='remove'>×</a></span>` and a hidden `<input name="person_id" value="N">` to the form; do not replace the filter text or close the list (allows adding more people); on chip `×` click, remove chip and its hidden input
-- `static/inputs.css`: minimal pill-chip styles (rounded, remove button)
-- Add `data-multi="1"` to the existing person dropdown in the comment form (`selectPerson` in `comments.pm`) so the chip UI is live and testable — posting still only saves the first `person_id` (or the legacy `Person` column) until Phase 5 wires up the full loop
+Phase 1 is a single migration pass in one new migration function, recommended name:
+- `mig_006_comments_model_phase1`
 
-**Testable:** comment form shows chip UI; multiple people can be added/removed visually; chips produce hidden inputs; posting still works (saves one person as before).
+Update registry/version:
+- `our $CODE_DB_VERSION = 6;`
+- Add `[6, 'comments model phase 1 (types/location/visibility/multi-person)', \&mig_006_comments_model_phase1],`
+
+### 1) Exact schema DDL
+
+Add new columns to `comments`:
+
+```sql
+ALTER TABLE comments ADD COLUMN CommentType TEXT;
+ALTER TABLE comments ADD COLUMN Ts DATETIME;
+ALTER TABLE comments ADD COLUMN Location INTEGER;
+ALTER TABLE comments ADD COLUMN Username TEXT;
+```
+
+Create multi-person join table:
+
+```sql
+CREATE TABLE IF NOT EXISTS comment_persons (
+  Comment INTEGER NOT NULL,
+  Person INTEGER NOT NULL,
+  PRIMARY KEY (Comment, Person),
+  FOREIGN KEY (Comment) REFERENCES comments(Id) ON DELETE CASCADE,
+  FOREIGN KEY (Person) REFERENCES persons(Id)
+);
+```
+
+Create indexes (exact names):
+
+```sql
+CREATE INDEX IF NOT EXISTS idx_comments_type ON comments(CommentType);
+CREATE INDEX IF NOT EXISTS idx_comments_location ON comments(Location);
+CREATE INDEX IF NOT EXISTS idx_comments_username ON comments(Username);
+CREATE INDEX IF NOT EXISTS idx_comments_ts ON comments(Ts);
+
+CREATE INDEX IF NOT EXISTS idx_comment_persons_person ON comment_persons(Person);
+CREATE INDEX IF NOT EXISTS idx_comment_persons_comment ON comment_persons(Comment);
+```
+
+### 2) Backfill data (exact order)
+
+Backfill `comment_persons` from legacy single-person data:
+
+```sql
+INSERT OR IGNORE INTO comment_persons (Comment, Person)
+SELECT Id, Person
+FROM comments
+WHERE Person IS NOT NULL;
+```
+
+Backfill `comments.Location` only from empty glasses:
+
+```sql
+UPDATE comments
+SET Location = (
+  SELECT g.Location
+  FROM glasses g
+  WHERE g.Id = comments.Glass
+    AND g.Brew IS NULL
+)
+WHERE Location IS NULL
+  AND Glass IS NOT NULL
+  AND EXISTS (
+    SELECT 1
+    FROM glasses g
+    WHERE g.Id = comments.Glass
+      AND g.Brew IS NULL
+  );
+```
+
+Backfill visibility owner (`comments.Username`) from linked glass owner:
+
+```sql
+UPDATE comments
+SET Username = (
+  SELECT g.Username
+  FROM glasses g
+  WHERE g.Id = comments.Glass
+)
+WHERE Username IS NULL
+  AND Glass IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM glasses g WHERE g.Id = comments.Glass
+  );
+```
+
+Backfill timestamp (`comments.Ts`) from glass timestamp when available, else now:
+
+```sql
+UPDATE comments
+SET Ts = COALESCE(
+  (SELECT g.Timestamp FROM glasses g WHERE g.Id = comments.Glass),
+  CURRENT_TIMESTAMP
+)
+WHERE Ts IS NULL;
+```
+
+Infer `CommentType` in this exact chain:
+
+```sql
+UPDATE comments
+SET CommentType = 'brew'
+WHERE CommentType IS NULL
+  AND Glass IS NOT NULL
+  AND EXISTS (
+    SELECT 1 FROM glasses g WHERE g.Id = comments.Glass AND g.Brew IS NOT NULL
+  );
+
+UPDATE comments
+SET CommentType = 'meal'
+WHERE CommentType IS NULL
+  AND Glass IS NOT NULL
+  AND EXISTS (
+    SELECT 1
+    FROM glasses g
+    WHERE g.Id = comments.Glass
+      AND g.Brew IS NULL
+      AND g.BrewType IN ('Restaurant', 'Meal')
+  );
+
+UPDATE comments
+SET CommentType = 'night'
+WHERE CommentType IS NULL
+  AND (
+    (
+      Glass IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM glasses g
+        WHERE g.Id = comments.Glass
+          AND g.Brew IS NULL
+          AND g.BrewType = 'Night'
+      )
+    )
+    OR (
+      Location IS NOT NULL
+      AND EXISTS (
+        SELECT 1 FROM comment_persons cp WHERE cp.Comment = comments.Id
+      )
+    )
+  );
+
+UPDATE comments
+SET CommentType = 'location'
+WHERE CommentType IS NULL
+  AND Location IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM comment_persons cp WHERE cp.Comment = comments.Id
+  );
+
+UPDATE comments
+SET CommentType = 'person'
+WHERE CommentType IS NULL
+  AND EXISTS (
+    SELECT 1 FROM comment_persons cp WHERE cp.Comment = comments.Id
+  )
+  AND Glass IS NULL;
+
+UPDATE comments
+SET CommentType = 'glass'
+WHERE CommentType IS NULL;
+```
+
+### 3) View rebuilds in Phase 1 migration
+
+Rebuild these views inside `mig_006_comments_model_phase1`:
+- `compers`: remove `comments.Photo`, remove duplicate `com_cnt`, get people via `comment_persons`.
+- `persons_list`: use `comment_persons` instead of `comments.Person`.
+- `loc_ratings` and `location_ratings`: include comments directly linked by `comments.Location = locations.Id` in addition to glass-linked rows.
+- `comments_list`: include `CommentType`, remove `Photo` output column.
+
+Keep legacy columns for compatibility in this phase:
+- `comments.Person` stays for now.
+- `comments.Photo` stays for now (already unused by photo UI).
+
+### 4) Phase 1 verification
+
+- `perl -c code/*.pm`
+- Open the site and verify migration page shows only `mig_006` pending.
+- Spot-check row counts:
+  - `SELECT count(*) FROM comment_persons;`
+  - `SELECT CommentType, count(*) FROM comments GROUP BY CommentType;`
+  - `SELECT count(*) FROM comments WHERE Ts IS NULL;` should be 0
+- Run `tools/dbdump.sh` and commit updated `code/db.schema`.
 
 ---
 
-## Phase 5 — Posting comments
+## Phase 2 - Mainlist display
+
+Update `code/mainlist.pm` and `code/comments.pm` read paths only:
+- `listcomments($c, $glassid)`: join through `comment_persons` and show `GROUP_CONCAT(persons.Name, ', ')`.
+- Show a compact type badge when `CommentType != 'brew'`.
+- Keep posting behavior unchanged in this phase.
+
+**Testable:** current comments still render; multi-person names appear for migrated data.
+
+---
+
+## Phase 3 - Other display pages
+
+Read-path updates only:
+- `code/locations.pm` `listlocationcomments()`: show direct location comments (`comments.Location = ?`) and glass-routed comments (`glasses.Location = ?`), with visibility filter `comments.Username IS NULL OR comments.Username = ?`.
+- `code/persons.pm` `showpersondetails()`: replace legacy `comments.Person` lookup with `comment_persons` join.
+- `code/comments.pm` `listallcomments()`: include `CommentType` in listing.
+
+Display ordering rule for all lists:
+- Use `COALESCE(glasses.Timestamp, comments.Ts)` for sorting and shown date/time.
+
+---
+
+## Phase 4 - Multi-person chip UI (inputs.js / inputs.css)
+
+UI-only foundation before backend write-path changes:
+- Extend `initDropdown` for `data-multi="1"`.
+- Selected person adds chip + hidden `<input name="person_id" value="N">`.
+- Removing chip removes its hidden input.
+- Do not close dropdown after each select.
+
+Wire this mode into existing comment person selector in `comments.pm`.
+
+**Testable:** UI supports add/remove multiple persons; backend still behaves as before.
+
+---
+
+## Phase 5 - Posting comments
 
 Update `postcomment()` in `code/comments.pm`:
-- Read `CommentType` from form — form always provides an explicit value; default to `brew` if glass has a brew, else `glass`
-- Read `location_id` param for glass-less comments; write to `comments.Location`
-- Write `Username`, `Ts`, `Location`, `CommentType` on INSERT and UPDATE
-- Loop `person_id[]` params → INSERT into `comment_persons` after comment INSERT; keep `person=new` path working (opens person edit form as fallback, same as the existing `data-action='new'` link in the dropdown)
-- Remove legacy `UPDATE comments SET Photo = ?` path (photos handled by `photos::post_photo`)
-- Remove single-`Person` column from INSERT/UPDATE SQL
-- Update comment form HTML:
-  - `CommentType` selector (`<select>` styled via `initCustomSelect`): `brew`, `night`, `meal`, `location`, `person`, `glass` — auto-infer default from context
-  - Replace single-person dropdown with `data-multi="1"` version (chip UI from Phase 4)
-  - `Username` privacy toggle: lock icon / checkbox "Private" — checked = `$c->{username}`, unchecked = NULL
+- Write `CommentType`, `Ts`, `Location`, `Username`.
+- Read and persist all `person_id[]` to `comment_persons`.
+- Keep `person=new` flow working.
+- Remove old `comments.Photo` update logic.
+- Stop writing legacy `comments.Person` in normal path.
 
-**Testable:** new comments save with type + multiple people + privacy; edit existing comment round-trips correctly.
+Form updates:
+- Explicit `CommentType` selector: `brew`, `night`, `meal`, `location`, `person`, `glass`.
+- Multi-person selector uses Phase 4 chips.
+- Privacy toggle maps to `Username` set/unset.
 
----
-
-## Phase 6 — Rest + cleanup
-
-- `code/listrecords.pm`, `code/brews.pm`: update any `comments.Photo` / `comments.Person` column references
-- `export.pm`: filter `WHERE comments.Username IS NULL OR comments.Username = ?` (skip other users' private comments)
-- Drop `comments.Person` and `comments.Photo` columns (SQLite table-recreate) in a new `mig_006`; rebuild `comments_list` view a second time (first rebuild in Phase 1 removed the `Photo` column reference; this rebuild removes the column itself from the view definition) — run `tools/dbdump.sh` again
-- Final manual verification of all test cases
-
-**Testable:** export works; no remaining references to dropped columns; DB schema is clean.
+**Testable:** create/edit round-trip works for multi-person + type + privacy.
 
 ---
 
-## Verification (across all phases)
-- After Phase 1: `perl -c` all modules, browse the site, inspect `compers` and `persons_list` row counts
-- After each display phase: visually verify the relevant page
-- After Phase 5: full comment round-trip, multi-person, privacy toggle
-- Before Phase 6 prod deploy: take a DB backup, then `git pull` (migrations run automatically on first page load)
+## Phase 6 - Cleanup migration (mig_007)
+
+Add a second schema migration for cleanup only:
+- New migration function: `mig_007_comments_cleanup_drop_legacy`
+- Bump `CODE_DB_VERSION` to 7 when this lands.
+- Recreate `comments` table without `Person` and `Photo` (SQLite table-copy pattern).
+- Rebuild views again so none reference dropped columns.
+
+Also update remaining code references:
+- `code/listrecords.pm`, `code/brews.pm`, `export.pm`, and any lingering `comments.Person` or `comments.Photo` SQL.
+
+Run `tools/dbdump.sh` after migration and commit `code/db.schema`.
+
+---
+
+## Final verification checklist
+
+- Migration path works from DB version 5 -> 6 -> 7.
+- No SQL errors on page loads using comments/locations/persons/mainlist.
+- Privacy filter works (public or own private).
+- No references remain to dropped legacy columns after Phase 6.
