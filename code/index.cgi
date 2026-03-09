@@ -218,9 +218,11 @@ if ( $q->request_method eq "POST" ) {
 
     if ( $c->{devversion} ) {
       foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
-        my $value = $c->{cgi}->param($param);
-        $debugparams .= "p: $param = '$value'\n";
-        print { $c->{log} } "   p: $param = '$value'\n" ; #if ($value);  # log also zeroes
+        my @values = $c->{cgi}->multi_param($param);
+        foreach my $value (@values) {
+          $debugparams .= "p: $param = '$value'\n";
+          print { $c->{log} } "   p: $param = '$value'\n";
+        }
       }
     }
 

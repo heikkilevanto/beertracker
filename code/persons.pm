@@ -147,6 +147,7 @@ sub selectperson {
   my $width = shift || "";
   my $newpersonfield = shift || ""; # If set, allows the 'new' option
   my $disabled = shift || "";  # "disabled" or ""
+  my $multi = shift || "";  # "multi" for chip multi-select
   my $sql = "
   select
     PERSONS.Id,
@@ -170,7 +171,7 @@ sub selectperson {
       $current = $name;
     }
   }
-  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "PERSONS", "newperson", "Id|Username", $disabled );
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "PERSONS", "newperson", "Id|Username", $disabled, "", $multi );
   return $s;
 } # selectperson
 

@@ -99,3 +99,33 @@
 .custom-select-item:hover {
   background-color: var(--altbgcolor, #eee);
 }
+
+/* Multi-select chips */
+.dropdown-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0;
+  min-height: 0;
+}
+
+.dropdown-chip {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--altbgcolor, #ddd);
+  border-radius: 12px;
+  padding: 2px 8px 2px 10px;
+  font-size: small;
+  white-space: nowrap;
+}
+
+.chip-remove {
+  margin-left: 4px;
+  color: #999;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.chip-remove:hover {
+  color: #333;
+}

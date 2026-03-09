@@ -7,6 +7,8 @@ function initDropdown(container) {
   const hiddenInput   = container.querySelector("input[type=hidden]");
   const dropdownList  = container.querySelector(".dropdown-list");
   const newDiv        = container.querySelector(".dropdown-new");
+  const isMulti       = container.getAttribute('data-multi') === '1';
+  const chipsDiv      = container.querySelector('.dropdown-chips');
 
   // Select item
   dropdownList.addEventListener("click", (event) => {
@@ -42,40 +44,69 @@ function initDropdown(container) {
     }
 
     // Regular item selection
-    filterInput.value = item.textContent;
-    filterInput.oldvalue = "";
-    hiddenInput.value = item.id;
-    dropdownList.style.display = "none";
+    if (isMulti && chipsDiv) {
+      // Prevent adding the same person twice
+      const already = Array.from(chipsDiv.querySelectorAll('input[type=hidden]'))
+        .some(h => h.value === item.id);
+      if (!already) {
+        const wrapper = document.createElement('span');
+        wrapper.className = 'chip-wrapper';
+        const chip = document.createElement('span');
+        chip.className = 'dropdown-chip';
+        chip.textContent = item.textContent.trim() + ' ';
+        const removeBtn = document.createElement('a');
+        removeBtn.className = 'chip-remove';
+        removeBtn.href = '#';
+        removeBtn.textContent = '\u00d7';
+        removeBtn.addEventListener('click', (e) => { e.preventDefault(); wrapper.remove(); });
+        chip.appendChild(removeBtn);
+        const chipHidden = document.createElement('input');
+        chipHidden.type = 'hidden';
+        chipHidden.name = hiddenInput.name + '_id';
+        chipHidden.value = item.id;
+        wrapper.appendChild(chip);
+        wrapper.appendChild(chipHidden);
+        chipsDiv.appendChild(wrapper);
+      }
+      filterInput.value = '';
+      filterInput.oldvalue = '';
+      filterItems(filterInput, dropdownList);
+    } else {
+      filterInput.value = item.textContent;
+      filterInput.oldvalue = "";
+      hiddenInput.value = item.id;
+      dropdownList.style.display = "none";
 
-    // update alc if present
-    const alcinp = document.getElementById("alc");
-    const selalc = item.getAttribute("alc");
-    if (alcinp && selalc) alcinp.value = selalc + "%";
+      // update alc if present
+      const alcinp = document.getElementById("alc");
+      const selalc = item.getAttribute("alc");
+      if (alcinp && selalc) alcinp.value = selalc + "%";
 
-    // update pr if present
-    const prinp = document.getElementById("pr");
-    const selpr = item.getAttribute("defprice");
-    if (prinp && selpr && selpr.trim()) prinp.value = selpr + ".-";
+      // update pr if present
+      const prinp = document.getElementById("pr");
+      const selpr = item.getAttribute("defprice");
+      if (prinp && selpr && selpr.trim()) prinp.value = selpr + ".-";
 
-    // update vol if present
-    const volinp = document.getElementById("vol");
-    const selvol = item.getAttribute("defvol");
-    if (volinp && selvol && selvol.trim()) volinp.value = selvol + "c"
+      // update vol if present
+      const volinp = document.getElementById("vol");
+      const selvol = item.getAttribute("defvol");
+      if (volinp && selvol && selvol.trim()) volinp.value = selvol + "c"
 
-    // update subtype if Restaurant brewtype
-    const selbrewtype = document.getElementById("selbrewtype");
-    const selbrewsubtype = document.getElementById("selbrewsubtype");
-    const locsubtype = item.getAttribute("locsubtype");
-    if (selbrewtype && selbrewsubtype && locsubtype && selbrewtype.value === "Restaurant") {
-      selbrewsubtype.value = locsubtype;
-    }
+      // update subtype if Restaurant brewtype
+      const selbrewtype = document.getElementById("selbrewtype");
+      const selbrewsubtype = document.getElementById("selbrewsubtype");
+      const locsubtype = item.getAttribute("locsubtype");
+      if (selbrewtype && selbrewsubtype && locsubtype && selbrewtype.value === "Restaurant") {
+        selbrewsubtype.value = locsubtype;
+      }
 
-    // show note if generic brew
-    if ( item.textContent.includes("(Gen)") ){
-      const noteline = document.getElementById("noteline");
-      if ( noteline ) noteline.hidden = false;
-      const toggle = document.getElementById("notetag");
-      if (toggle) toggle.hidden = true;
+      // show note if generic brew
+      if ( item.textContent.includes("(Gen)") ){
+        const noteline = document.getElementById("noteline");
+        if ( noteline ) noteline.hidden = false;
+        const toggle = document.getElementById("notetag");
+        if (toggle) toggle.hidden = true;
+      }
     }
   });
 

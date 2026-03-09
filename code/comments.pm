@@ -180,7 +180,7 @@ sub commentform {
 
   # Person involved in the comment
   #print { $c->{log} } "cform: pn='$com->{PersName}' pi=$com->{PersId} \n";
-  $s .= persons::selectperson($c, 'person', $com->{PersId} );
+  $s .= persons::selectperson($c, 'person', $com->{PersId}, '', '', '', 'multi');
   #$s .= "<br/>";
 
   # Rating dropdown

@@ -33,6 +33,7 @@ sub dropdown {
   my $skipnewfields = shift || "";
   my $disabled      = shift || "";   # "disabled" or ""
   my $enablescan    = shift || "";   # "scan" to enable barcode scanning
+  my $multi         = shift || "";   # "multi" to enable chip multi-select
 
   my $newdiv = "";
   my $actions = "";
@@ -52,10 +53,12 @@ sub dropdown {
     $options = "<div class='dropdown-item' id='actions'>$actions</div>\n$options";
   }
 
+  my $multiattr = $multi eq 'multi' ? " data-multi='1'" : "";
+  my $chipsdiv  = $multi eq 'multi' ? "<div class='dropdown-chips'></div>\n  " : "";
   my $s = <<"HTML";
 <!-- DROPDOWN START: input='$inputname' -->
-<div id="dropdown-$inputname" class="dropdown">
-  <div class="dropdown-main">
+<div id="dropdown-$inputname" class="dropdown"$multiattr>
+  $chipsdiv<div class="dropdown-main">
     <input type="text"
            class="dropdown-filter"
            autocomplete="off"

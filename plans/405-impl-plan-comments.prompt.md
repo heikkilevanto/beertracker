@@ -229,7 +229,7 @@ Display ordering rule for all lists:
 
 ---
 
-## Phase 4 - Multi-person chip UI (inputs.js / inputs.css)
+## Phase 4 - Multi-person chip UI (inputs.js / inputs.css) ✓ DONE
 
 UI-only foundation before backend write-path changes:
 - Extend `initDropdown` for `data-multi="1"`.
