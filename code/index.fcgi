@@ -152,11 +152,19 @@ while (my $q = CGI::Fast->new) {
     my $uptime = time() - $process_start;
     print { $log } "\n". $now->ymd . " " . $now->hms . " fcgi reloading pid=$$ ($reload_reason) requests=$request_count uptime=${uptime}s " . cache::stats({cache=>$cache}) . " fh=" . select() . "\n";
     my $op = $q->param('o') || 'Graph';
-    $| = 1;  # Disable PerlIO buffering so the 302 reaches FCGI::Stream::PRINT immediately
+    $| = 1;
     print $q->header(-status => '302 Found', -location => $q->url() . "?o=$op");
-    $CGI::Fast::Ext_Request->Flush();   # Flush FCGI C-buffer to the socket
-    $CGI::Fast::Ext_Request->Finish();  # End the FCGI request
-    last;
+    $CGI::Fast::Ext_Request->Flush();
+    $CGI::Fast::Ext_Request->Finish();
+    # exec replaces this process in-place, keeping the same PID and FCGI socket.
+    # mod_fcgid never sees a gap in availability, so the follow-up request lands
+    # in the fresh process instead of hitting a connection reset.
+    eval { $dbh_ro->disconnect } if $dbh_ro;
+    exec $^X, $0
+      or do {
+        print { $log } localtime->hms . " exec $0 failed: $!\n";
+        die "exec $0 failed: $!";
+      };
   }
   $request_count++;
   my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
