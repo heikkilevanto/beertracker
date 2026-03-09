@@ -416,17 +416,19 @@ sub photo_attached_str {
       SELECT c.Comment AS Txt,
              c.Glass   AS Gid,
              c.Rating  AS Rating,
-             p.Name    AS PersName,
+             group_concat(p.Name, ', ') AS PersName,
              l.Name    AS Loc,
              b.Name    AS Brew,
              pl.Name   AS Producer
         FROM comments c
-        LEFT JOIN persons p     ON p.Id = c.Person
+        LEFT JOIN comment_persons cp ON cp.Comment = c.Id
+        LEFT JOIN persons p     ON p.Id = cp.Person
         LEFT JOIN glasses g    ON g.Id  = c.Glass
         LEFT JOIN locations l  ON l.Id  = g.Location
         LEFT JOIN brews b      ON b.Id  = g.Brew
         LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
        WHERE c.Id = ?
+       GROUP BY c.Id
     }, undef, $cid);
     if ($row) {
       # only emit a comment line when there's something useful to show

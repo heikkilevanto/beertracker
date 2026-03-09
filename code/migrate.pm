@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 6;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 8;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
@@ -35,6 +35,8 @@ our @MIGRATIONS = (
   [4, 'add Photo column to persons_list and brews_list views', \&mig_004_persons_brews_list_photo],
   [5, 'add index on photos(Glass) for mainlist performance', \&mig_005_idx_photos_glass],
   [6, 'comments model phase 1 (types/location/visibility/multi-person)', \&mig_006_comments_model_phase1],
+  [7, 'merge person-only comments for same glass into one', \&mig_007_merge_person_only_comments],
+  [8, 'drop legacy comments.Person and comments.Photo columns', \&mig_008_drop_legacy_comment_columns],
 );
 
 ################################################################################
@@ -541,5 +543,125 @@ sub mig_006_comments_model_phase1 {
   });
 
 } # mig_006_comments_model_phase1
+
+################################################################################
+sub mig_007_merge_person_only_comments {
+  my $c = shift;
+
+  # For each glass that has any person-only comment (no text, no rating),
+  # merge all its person-only comments into a single "keeper" comment:
+  #   - If the glass also has a real comment (text or rating), keeper = MIN Id of real comments.
+  #   - Otherwise, keeper = MIN Id of all comments for that glass.
+  # All person links from surplus person-only comments are moved to the keeper,
+  # then the surplus comments and their comment_persons rows are deleted.
+
+  # Build a temp table of (Glass, keeper_id) — one row per affected glass.
+  db::execute($c, q{
+    CREATE TEMP TABLE _mig7_keepers AS
+    SELECT gpo.Glass,
+      COALESCE(
+        MIN(CASE WHEN (c.Comment IS NOT NULL AND c.Comment != '')
+                   OR (c.Rating  IS NOT NULL AND c.Rating  != 0)
+             THEN c.Id END),
+        MIN(c.Id)
+      ) AS keeper_id
+    FROM (
+      SELECT DISTINCT Glass FROM comments
+      WHERE Glass IS NOT NULL
+        AND (Comment IS NULL OR Comment = '')
+        AND (Rating  IS NULL OR Rating  = 0)
+    ) gpo
+    JOIN comments c ON c.Glass = gpo.Glass
+    GROUP BY gpo.Glass
+  });
+
+  # Step 1: Copy person links from surplus person-only comments to the keeper.
+  # OR IGNORE handles cases where the person is already linked to the keeper.
+  db::execute($c, q{
+    INSERT OR IGNORE INTO comment_persons (Comment, Person)
+    SELECT k.keeper_id, cp.Person
+    FROM _mig7_keepers k
+    JOIN comments surplus ON surplus.Glass = k.Glass
+    JOIN comment_persons cp ON cp.Comment = surplus.Id
+    WHERE (surplus.Comment IS NULL OR surplus.Comment = '')
+      AND (surplus.Rating  IS NULL OR surplus.Rating  = 0)
+      AND surplus.Id != k.keeper_id
+  });
+
+  # Step 2: Delete comment_persons rows for surplus person-only comments.
+  db::execute($c, q{
+    DELETE FROM comment_persons
+    WHERE Comment IN (
+      SELECT surplus.Id
+      FROM _mig7_keepers k
+      JOIN comments surplus ON surplus.Glass = k.Glass
+      WHERE (surplus.Comment IS NULL OR surplus.Comment = '')
+        AND (surplus.Rating  IS NULL OR surplus.Rating  = 0)
+        AND surplus.Id != k.keeper_id
+    )
+  });
+
+  # Step 3: Delete the surplus person-only comments themselves.
+  db::execute($c, q{
+    DELETE FROM comments
+    WHERE Id IN (
+      SELECT surplus.Id
+      FROM _mig7_keepers k
+      JOIN comments surplus ON surplus.Glass = k.Glass
+      WHERE (surplus.Comment IS NULL OR surplus.Comment = '')
+        AND (surplus.Rating  IS NULL OR surplus.Rating  = 0)
+        AND surplus.Id != k.keeper_id
+    )
+  });
+
+  db::execute($c, "DROP TABLE IF EXISTS _mig7_keepers");
+
+} # mig_007_merge_person_only_comments
+
+################################################################################
+sub mig_008_drop_legacy_comment_columns {
+  my $c = shift;
+
+  # Drop the legacy comments.Person (superseded by comment_persons join table)
+  # and comments.Photo (superseded by the photos table; nulled out in mig_002).
+  # SQLite 3.35+ supports ALTER TABLE DROP COLUMN, but only when no view or
+  # index references the column, so drop those first.
+
+  db::execute($c, "DROP INDEX IF EXISTS idx_comments_person");
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, q{
+    CREATE VIEW comments_list AS
+    SELECT
+      comments.Id,
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS Last,
+      locations.Name AS LocName,
+      'tr' AS tr,
+      '' AS Clr,
+      brews.Name AS BrewName,
+      ploc.Name AS Prod,
+      'tr' AS tr,
+      comments.Rating AS Rate,
+      group_concat(persons.Name, ', ') AS PersonName,
+      comments.CommentType AS CommentType,
+      comments.Comment AS Comment,
+      'tr' AS tr,
+      '' AS None,
+      glasses.Username AS Xusername
+    FROM comments
+    LEFT JOIN glasses ON glasses.Id = comments.Glass
+    LEFT JOIN brews ON brews.Id = glasses.Brew
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons ON persons.Id = cp.Person
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    LEFT JOIN locations ploc ON ploc.Id = brews.ProducerLocation
+    GROUP BY comments.Id
+    ORDER BY Last DESC
+  });
+
+  db::execute($c, "ALTER TABLE comments DROP COLUMN Person");
+  db::execute($c, "ALTER TABLE comments DROP COLUMN Photo");
+
+} # mig_008_drop_legacy_comment_columns
 
 1;

@@ -238,12 +238,9 @@ sub commentlines {
   my $rec = shift;
   if ( $rec->{comcount} ) {
     my $sql = "select COMMENTS.*,
-      PERSONS.Name as PersName,
-      PERSONS.Id as PersId,
       group_concat(cp_persons.Name, ', ') as PeopleNames,
       (select count(*) from photos where photos.Comment = comments.Id) as photocount
       from comments
-      left join PERSONS on persons.id = comments.person
       left join comment_persons cp on cp.Comment = comments.Id
       left join persons cp_persons on cp_persons.Id = cp.Person
       where glass = ?

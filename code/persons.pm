@@ -155,7 +155,8 @@ sub selectperson {
     PERSONS.Name,
     strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
   from PERSONS
-  left join COMMENTS on COMMENTS.Person = Persons.Id
+  left join comment_persons cp on cp.Person = Persons.Id
+  left join COMMENTS on COMMENTS.Id = cp.Comment
   left join GLASSES on GLASSES.Id = COMMENTS.Glass
   group by Persons.id
   order by GLASSES.Timestamp DESC

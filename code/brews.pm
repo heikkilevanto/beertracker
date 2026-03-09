@@ -40,9 +40,8 @@ sub listbrewcomments {
       strftime('%H:%M', GLASSES.Timestamp) as Time,
       comments.Rating as Rating,
       COMMENTS.Comment,
-      PERSONS.Id as Pid,
-      PERSONS.Name as Person,
-      COMMENTS.Photo as XPhoto,
+      group_concat(PERSONS.Id, ',') as Pid,
+      group_concat(PERSONS.Name, ', ') as Person,
       GLASSES.Id as Gid,
       GLASSES.Brew as Brew,
       Glasses.Volume,
@@ -50,11 +49,13 @@ sub listbrewcomments {
       Locations.Name as Loc,
       Locations.Id as Lid
       from COMMENTS, GLASSES
-      LEFT JOIN PERSONS on PERSONS.id = COMMENTS.Person
+      LEFT JOIN comment_persons cp ON cp.Comment = COMMENTS.Id
+      LEFT JOIN PERSONS on PERSONS.id = cp.Person
       LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
       where COMMENTS.glass = GLASSES.id
        and Brew = ?
        and Glasses.username = ?
+      group by COMMENTS.Id
       order by GLASSES.Timestamp Desc ";
   #print { $c->{log} } "listbrewcomments: id='$brew->{Id}': $sql \n";
   my $sth = $c->{dbh}->prepare($sql);

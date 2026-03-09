@@ -292,6 +292,7 @@ if ( !$dbh_ro || !$dbh_ro->ping ) {
   $dbh_ro = $c->{dbh};
 } else {
   $c->{dbh} = $dbh_ro;
+  $c->{databasefile} = db::dbfile();
 }
 
 migrate::startup_check($c);  # Redirect to migration form if DB is behind code version

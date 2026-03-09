@@ -112,11 +112,8 @@ sub listcomments {
   my $s = "";
 
   my $sql = "select COMMENTS.*,
-    PERSONS.Name as PersName,
-    PERSONS.Id as PersId,
     group_concat(cp_persons.Name, ', ') as PeopleNames
     from comments
-    left join PERSONS on persons.id = comments.person
     left join comment_persons cp on cp.Comment = comments.Id
     left join persons cp_persons on cp_persons.Id = cp.Person
     where glass = ?
