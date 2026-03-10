@@ -187,6 +187,12 @@ sub postglass {
     brews::update_brew_defaults($c, $brewid, $glass->{Price}, $glass->{Volume});
   }
 
+  # Preserve date parameter in redirect to maintain list position
+  my $date = util::param($c, "date");
+  if ($date) {
+    $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$date";
+  }
+
   graph::clearcachefiles($c);
 } # postglass
 

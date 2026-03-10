@@ -44,7 +44,12 @@ sub commentline {
   my $cr = shift; # The comment to display, from sql like one in listcomments
   my $glid = $cr->{Glass};
   my $s = "";
-  $s .= "<a href='$c->{url}?o=Full&e=$glid&ec=$cr->{Id}'>" .
+  
+  # Preserve date parameter if present for list positioning
+  my $date = util::param($c, "date");
+  my $date_param = $date ? "&date=$date" : "";
+  
+  $s .= "<a href='$c->{url}?o=Full&e=$glid&ec=$cr->{Id}$date_param'>" .
           "<span style='font-size: xx-small'>[$cr->{Id}]</span></a>\n"
         if ( $cr->{Id} );
   $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );
@@ -303,6 +308,12 @@ sub postcomment {
       db::execute($c, "INSERT OR IGNORE INTO comment_persons (Comment, Person) VALUES (?,?)",
         $comment_id, $pid);
     }
+  }
+
+  # Preserve date parameter in redirect to maintain list position
+  my $date_from_url = util::param($c, "date");
+  if ($date_from_url) {
+    $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$date_from_url";
   }
 
   # Redirect to avoid duplicate form submission on refresh

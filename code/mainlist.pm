@@ -183,8 +183,13 @@ sub nameline {
   $time = "($time)" if ($time lt "0600");
   my $op = $c->{op};
   $op = "Graph" if ( $op eq "Person" ); # Edit the glass, even if coming from persons
+  
+  # Extract date from effdate for positioning the list when editing
+  my ($date) = util::splitdate($rec->{effdate});
+  my $date_param = $date ? "&date=$date" : "";
+  
   print "<span style='white-space: nowrap;'>\n";
-  print "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
+  print "<a href='$c->{url}?o=$op&e=$rec->{id}$date_param'>" .
         "<span>$time</span></a> \n";
   print styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}) . " \n";
   print "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
