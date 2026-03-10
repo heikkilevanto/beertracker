@@ -185,6 +185,7 @@ sub nameline {
   $op = "Graph" if ( $op eq "Person" ); # Edit the glass, even if coming from persons
   
   # Extract date from effdate for positioning the list when editing
+  # effdate is "YYYY-MM-DD w" format; we only need the date part
   my ($date) = util::splitdate($rec->{effdate});
   my $date_param = $date ? "&date=$date" : "";
   
@@ -507,7 +508,7 @@ sub mainlist {
   
   # If editing a glass and no date provided, get date from that glass
   if (!$date && $c->{edit}) {
-    my $sql = "SELECT strftime('%Y-%m-%d', timestamp, '-06:00') as effdate FROM glasses WHERE id = ? AND username = ?";
+    my $sql = "SELECT strftime('%Y-%m-%d', Timestamp, '-06:00') as effdate FROM glasses WHERE id = ? AND username = ?";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($c->{edit}, $c->{username});
     my $row = $sth->fetchrow_hashref();

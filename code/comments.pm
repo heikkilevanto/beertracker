@@ -316,8 +316,6 @@ sub postcomment {
     $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$date_from_url";
   }
 
-  # Redirect to avoid duplicate form submission on refresh
-  $c->{redirect} = "$c->{url}?o=$c->{op}&e=$c->{edit}&glass=$glass";
   return "";
 } # postcomment
 
