@@ -311,9 +311,9 @@ sub postcomment {
   }
 
   # Preserve date parameter in redirect to maintain list position
-  my $date_from_url = util::param($c, "date");
-  if ($date_from_url) {
-    $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$date_from_url";
+  my $date = util::param($c, "date");
+  if ($date) {
+    $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$date";
   }
 
   return "";

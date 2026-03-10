@@ -509,9 +509,7 @@ sub mainlist {
   # If editing a glass and no date provided, get date from that glass
   if (!$date && $c->{edit}) {
     my $sql = "SELECT strftime('%Y-%m-%d', Timestamp, '-06:00') as effdate FROM glasses WHERE id = ? AND username = ?";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute($c->{edit}, $c->{username});
-    my $row = $sth->fetchrow_hashref();
+    my $row = db::queryrecord($c, $sql, $c->{edit}, $c->{username});
     $date = $row->{effdate} if $row;
   }
   
