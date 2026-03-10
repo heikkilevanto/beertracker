@@ -312,8 +312,13 @@ sub postcomment {
 
   # Preserve date parameter in redirect to maintain list position
   my $date = util::param($c, "date");
-  if ($date) {
-    $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$date";
+  my $date_param = $date ? "&date=$date" : "";
+  
+  # If editing a glass, stay on that glass edit page
+  if ($c->{edit}) {
+    $c->{redirect_url} = "$c->{url}?o=$c->{op}&e=$c->{edit}$date_param";
+  } elsif ($date) {
+    $c->{redirect_url} = "$c->{url}?o=$c->{op}$date_param";
   }
 
   return "";
