@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 8;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 10;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
@@ -37,6 +37,8 @@ our @MIGRATIONS = (
   [6, 'comments model phase 1 (types/location/visibility/multi-person)', \&mig_006_comments_model_phase1],
   [7, 'merge person-only comments for same glass into one', \&mig_007_merge_person_only_comments],
   [8, 'drop legacy comments.Person and comments.Photo columns', \&mig_008_drop_legacy_comment_columns],
+  [9,  'fix comments_list Xusername for glass-less comments', \&mig_009_fix_comments_list_xusername],
+  [10, 'add Brew column to comments, update comments_list view',  \&mig_010_comments_brew_column],
 );
 
 ################################################################################
@@ -663,5 +665,90 @@ sub mig_008_drop_legacy_comment_columns {
   db::execute($c, "ALTER TABLE comments DROP COLUMN Photo");
 
 } # mig_008_drop_legacy_comment_columns
+
+sub mig_009_fix_comments_list_xusername {
+  my $c = shift;
+
+  # comments_list used glasses.Username as Xusername, which is NULL for
+  # glass-less comments, making them invisible on the comments list page.
+  # Fix: use COALESCE(glasses.Username, comments.Username).
+
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, q{
+    CREATE VIEW comments_list AS
+    SELECT
+      comments.Id,
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS Last,
+      locations.Name AS LocName,
+      'tr' AS tr,
+      '' AS Clr,
+      brews.Name AS BrewName,
+      ploc.Name AS Prod,
+      'tr' AS tr,
+      comments.Rating AS Rate,
+      group_concat(persons.Name, ', ') AS PersonName,
+      comments.CommentType AS CommentType,
+      comments.Comment AS Comment,
+      'tr' AS tr,
+      '' AS None,
+      COALESCE(glasses.Username, comments.Username) AS Xusername
+    FROM comments
+    LEFT JOIN glasses ON glasses.Id = comments.Glass
+    LEFT JOIN brews ON brews.Id = glasses.Brew
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons ON persons.Id = cp.Person
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    LEFT JOIN locations ploc ON ploc.Id = brews.ProducerLocation
+    GROUP BY comments.Id
+    ORDER BY Last DESC
+  });
+
+} # mig_009_fix_comments_list_xusername
+
+sub mig_010_comments_brew_column {
+  my $c = shift;
+
+  # Add a Brew FK to comments so glass-less comments can reference a specific brew.
+  db::execute($c, "ALTER TABLE comments ADD COLUMN Brew INTEGER REFERENCES brews(Id)");
+  db::execute($c, "CREATE INDEX idx_comments_brew ON comments(Brew)");
+
+  # Recreate comments_list so BrewName, LocName, Prod and Xusername all
+  # fall back to the comment's own Brew/Location when there is no glass.
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, q{
+    CREATE VIEW comments_list AS
+    SELECT
+      comments.Id,
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS Last,
+      COALESCE(loc_comment.Name, loc_glass.Name) AS LocName,
+      'tr' AS tr,
+      '' AS Clr,
+      COALESCE(brew_comment.Name, brew_glass.Name) AS BrewName,
+      COALESCE(ploc_comment.Name, ploc_glass.Name) AS Prod,
+      'tr' AS tr,
+      comments.Rating AS Rate,
+      group_concat(persons.Name, ', ') AS PersonName,
+      comments.CommentType AS CommentType,
+      comments.Comment AS Comment,
+      'tr' AS tr,
+      '' AS None,
+      COALESCE(glasses.Username, comments.Username) AS Xusername
+    FROM comments
+    LEFT JOIN glasses       ON glasses.Id       = comments.Glass
+    LEFT JOIN brews brew_glass   ON brew_glass.Id   = glasses.Brew
+    LEFT JOIN brews brew_comment ON brew_comment.Id = comments.Brew
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons            ON persons.Id  = cp.Person
+    LEFT JOIN locations loc_glass   ON loc_glass.Id   = glasses.Location
+    LEFT JOIN locations loc_comment ON loc_comment.Id = comments.Location
+    LEFT JOIN locations ploc_glass   ON ploc_glass.Id   = brew_glass.ProducerLocation
+    LEFT JOIN locations ploc_comment ON ploc_comment.Id = brew_comment.ProducerLocation
+    GROUP BY comments.Id
+    ORDER BY Last DESC
+  });
+
+} # mig_010_comments_brew_column
 
 1;

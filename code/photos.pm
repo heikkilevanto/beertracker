@@ -436,7 +436,7 @@ sub photo_attached_str {
         # make the comment id itself a link to the glass full view
         my $clink;
         if (defined $row->{Gid} && $row->{Gid} ne '') {
-          $clink = "<a href='$c->{url}?o=Full&e=$row->{Gid}&ec=$cid'>" .
+          $clink = "<a href='$c->{url}?o=Comment&e=$cid'>" .
                    "<span>$cid</span></a>";
         } else {
           $clink = $cid;

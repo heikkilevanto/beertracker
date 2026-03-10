@@ -71,7 +71,7 @@ sub listbrewcomments {
   my $sty = "style='border-bottom: 1px solid white; vertical-align: top;' ";
   while ( my $com = $sth->fetchrow_hashref ) {
     print "<tr><td $sty>\n";
-    print "<a href='$c->{url}?o=Full&e=$com->{Gid}&ec=$com->{Cid}'><span>";
+    print "<a href='$c->{url}?o=Comment&e=$com->{Cid}'><span>";
     print "$com->{Date}</span></a><br/> \n";
     my $tim = $com->{Time};
     $tim = "($tim)" if ($tim lt "06:00");

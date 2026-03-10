@@ -230,7 +230,7 @@ sub listrecords {
       } elsif ( $fn =~ /Sub|Id/ ) {
         if ($v) {
           if ($c->{op} =~ /Comment/i) {
-            $v = "<a href='$url?o=Full&ec=$v'><span>[$v]</span></a>";
+            $v = "<a href='$url?o=Comment&e=$v'><span>[$v]</span></a>";
           } else {
             $v = "[$v]";
           }

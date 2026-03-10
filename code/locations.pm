@@ -106,7 +106,7 @@ sub listlocationcomments {
       }
       print "<p>\n";
       if ( $com->{Gid} ) {  # glass-routed: show glass link + type
-        print "<a href='$c->{url}?o=Full&e=$com->{Glass}&ec=$com->{Id}'><b>";
+        print "<a href='$c->{url}?o=Comment&e=$com->{Id}'><b>";
         print "$com->{Date}</b></a>\n";
         my $tim = $com->{Time};
         $tim = "($tim)" if ($tim lt "06:00");

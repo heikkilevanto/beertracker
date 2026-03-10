@@ -44,7 +44,7 @@ sub commentline {
   my $cr = shift; # The comment to display, from sql like one in listcomments
   my $glid = $cr->{Glass};
   my $s = "";
-  $s .= "<a href='$c->{url}?o=Full&e=$glid&ec=$cr->{Id}'>" .
+  $s .= "<a href='$c->{url}?o=Comment&e=$cr->{Id}'>" .
           "<span style='font-size: xx-small'>[$cr->{Id}]</span></a>\n"
         if ( $cr->{Id} );
   $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );
@@ -96,7 +96,7 @@ sub listallcomments {
   my $c = shift; # context
 
   print "<b>Comments by $c->{username}</b> ";
-  #print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
+  print "&nbsp;<a href='$c->{url}?o=Comment&e=new&returnto=comments'><span>(New)</span></a>";
   print "<br/>\n";
   print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", "Xusername=?", $c->{username} );
   return;
@@ -108,6 +108,8 @@ sub listallcomments {
 sub listcomments {
   my $c = shift; # context
   my $glassid = shift;
+  my $brew     = shift || "";
+  my $location = shift || "";
 
   my $s = "";
 
@@ -123,18 +125,15 @@ sub listcomments {
   $sth->execute($glassid);
 
   $s .= "&nbsp;<br/>\n";
-  my $editcommentid = util::param($c, "ec", 0);
-  my $editcommentrec;
   $s .= "<ul style='margin:0; padding-left:1.2em;'>\n";
   while ( my $cr = $sth->fetchrow_hashref ) {
-    $s .= "<li>" . commentline($c,$cr,$glassid) . "</li>\n";
-    if ( $editcommentid && $cr->{Id} == $editcommentid ) {
-      $editcommentrec = $cr;
-    }
+    $s .= "<li>" . commentline($c,$cr) . "</li>\n";
   }
   $s .= "</ul>\n";
-  $s .= commentform($c, $editcommentrec, $glassid);
-
+  my $newurl = "$c->{url}?o=Comment&e=new&glass=$glassid&commenttype=brew";
+  $newurl .= "&brew=$brew"         if $brew;
+  $newurl .= "&location=$location" if $location;
+  $s .= "<a href='$newurl'><span>(New comment)</span></a>\n";
   return $s;
 } # listcomments
 
@@ -143,31 +142,23 @@ sub listcomments {
 ################################################################################
 
 sub commentform {
-  my $c = shift;
-  my $com = shift;
-  my $glassid = shift;
+  my $c          = shift;
+  my $com        = shift // {};
+  my $glassid    = shift || "";
+  my $cancel_url = shift || "$c->{url}?o=Comment";
+  my $returnto   = shift || "";
 
   my $s="";
   $s .= "<!-- Comment editing form -->\n";
-
-  my $hidden = "hidden";
-  if ( $com ) {
-    $hidden = "";
-  }
-  $s .= "<span onclick='document.getElementById(\"commentform\").hidden ^= true'>(Add comment)</span>\n";
-  $s .= photos::photo_form($c, glass => $glassid) . "\n";
-  $s .= "<div  id='commentform' $hidden>\n";
+  $s .= photos::photo_form($c, glass => $glassid) . "\n" if $glassid;
   $s .= "<form method='post' action='$c->{url}' enctype='multipart/form-data'>\n";
   $s .= "<input type='hidden' name='commentedit' value='1'>\n"; # To distinguish from glass submit
   $s .= "<input type='hidden' name='o' value='$c->{op}'>\n";
   $s .= "<input type='hidden' name='e' value='$c->{edit}'>\n";
-  $s .= "<input type='hidden' name='ce' value='$com->{Id}'>\n" if ( $com->{Id} );
   $s .= "<input type='hidden' name='glass' value='$glassid'>\n";
-
-  # If editing, include the comment ID
-  if ($com && $com->{Id}) {
+  $s .= "<input type='hidden' name='returnto' value='$returnto'>\n" if $returnto;
+  if ($com->{Id}) {
     $s .= "<input type='hidden' name='comment_id' value='$com->{Id}'>\n";
-    $s .= "<br/>Editing comment $com->{Id} <br/>";
   }
 
   # Comment text area
@@ -188,9 +179,9 @@ sub commentform {
 
   # Privacy toggle removed - all comments are private by default
 
-  # Person involved in the comment — pre-populate chips for existing persons
+  # Person involved in the comment — pre-populate chips for existing persons or prefill
   my $prechips = '';
-  if ( $com && $com->{Id} ) {
+  if ( $com->{Id} ) {
     my $psth = $c->{dbh}->prepare(
       "SELECT p.Id, p.Name FROM comment_persons cp
        JOIN persons p ON p.Id = cp.Person
@@ -203,11 +194,23 @@ sub commentform {
         "<input type='hidden' name='person_id' value='$pid'/>" .
         "</span>\n";
     }
+  } elsif ($com->{_prefill_person_id}) {
+    my $pid   = $com->{_prefill_person_id};
+    my $pname = $com->{_prefill_person_name} || $pid;
+    $prechips .= "<span class='chip-wrapper'>" .
+      "<span class='dropdown-chip'>" . util::htmlesc($pname) .
+      " <a class='chip-remove' href='#'>&times;</a></span>" .
+      "<input type='hidden' name='person_id' value='$pid'/>" .
+      "</span>\n";
   }
   $s .= persons::selectperson($c, 'person', undef, '', '', '', 'multi', $prechips);
 
+  # Location selector
+  $s .= locations::selectlocation($c, 'Location', $com->{Location}||'', '', 'non');
 
-  # Rating dropdown
+  # Brew selector
+  $s .= brews::selectbrew($c, $com->{Brew}||'');
+
   $s .= "<select name='rating' id='rating'>\n";
   $s .= "<option value=''>Rating</option>\n";
   my $r = $com->{Rating} || 0;
@@ -222,15 +225,118 @@ sub commentform {
   # Submit button
   my $button_text = $com->{Id} ? "Update Comment" : "Add Comment";
   $s .= "<input type='submit' name='submit' value='$button_text'>\n";
-  $s .= "<a href='$c->{url}?o=$c->{op}&e=$c->{edit}'><span>Cancel</span></a>\n";
+  $s .= "<a href='$cancel_url'><span>Cancel</span></a>\n";
   $s .= "<input type='submit' name='submit' value='Delete Comment'>\n" if ( $com->{Id} );
-
-
   $s .= "</form>\n";
-  $s .= "</div>\n";
-
   return $s;
 }
+
+################################################################################
+# Standalone comment edit/create page  (o=Comment&e=<id> or with prefill params)
+################################################################################
+
+sub editcomment {
+  my $c = shift;
+  my $ec = $c->{edit};
+  $ec = undef unless ($ec && $ec =~ /^\d+$/);  # only numeric ids are real comments
+  my $com = undef;
+
+  # Prefill from GET params (used when creating a new comment)
+  my $prefill_glass= util::param($c, "glass")       || "";
+  my $prefill_type = util::param($c, "commenttype") || "";
+  my $prefill_pid  = util::param($c, "person")      || "";
+  my $prefill_loc  = util::param($c, "location")    || "";
+  my $prefill_brew = util::param($c, "brew")        || "";
+
+  if ($ec) {
+    my $sql = q{
+      SELECT c.*,
+        strftime('%Y-%m-%d %w', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
+        strftime('%H:%M',       COALESCE(g.Timestamp, c.Ts))           AS effhm,
+        b.Name    AS brewname,  b.Id    AS brewid,
+        ploc.Name AS prodname,
+        gloc.Name AS locname,   gloc.Id AS locid
+      FROM comments c
+      LEFT JOIN glasses   g    ON g.Id    = c.Glass
+      LEFT JOIN brews     b    ON b.Id    = g.Brew
+      LEFT JOIN locations gloc ON gloc.Id = g.Location
+      LEFT JOIN locations ploc ON ploc.Id = b.ProducerLocation
+      WHERE c.Id = ?
+        AND ( (c.Glass IS NOT NULL AND g.Username = ?)
+           OR (c.Glass IS NULL     AND c.Username = ?) )
+    };
+    $com = $c->{dbh}->selectrow_hashref($sql, undef, $ec, $c->{username}, $c->{username});
+    util::error("Comment $ec not found") unless $com;
+  }
+
+  print "<b>" . ( $ec ? "Edit comment $ec" : "New comment" ) . "</b><br/>\n";
+
+  # Context header
+  if ($com && $com->{Glass}) {
+    my ($date, $wd) = util::splitdate($com->{effdate});
+    my $glass_url = "$c->{url}?o=Full&e=$com->{Glass}&date=$date&ndays=1";
+    print "On: <a href='$glass_url'><span>$wd $date $com->{effhm}";
+    print " \@$com->{locname}" if $com->{locname};
+    print "</span></a>";
+    if ($com->{brewname}) {
+      my $sep = $com->{prodname} ? " $com->{prodname}: " : " ";
+      print " <a href='$c->{url}?o=Brew&e=$com->{brewid}'><span>$sep$com->{brewname}</span></a>";
+    }
+    print "<br/>\n";
+  } elsif ($com && $com->{Location}) {
+    my ($locname) = $c->{dbh}->selectrow_array(
+      "SELECT Name FROM locations WHERE Id = ?", undef, $com->{Location});
+    print "On location: <a href='$c->{url}?o=Location&e=$com->{Location}'>" .
+          "<span>" . ($locname || $com->{Location}) . "</span></a><br/>\n";
+  } elsif ($prefill_glass) {
+    # New comment for a known glass — show context and fetch brew/location for prefill
+    my ($gdate, $gloc, $glocid, $gbrew, $gbrewid) = $c->{dbh}->selectrow_array(q{
+      SELECT strftime('%Y-%m-%d %w %H:%M', g.Timestamp, '-06:00'),
+             gloc.Name, g.Location, b.Name, g.Brew
+      FROM glasses g
+      LEFT JOIN locations gloc ON gloc.Id = g.Location
+      LEFT JOIN brews b ON b.Id = g.Brew
+      WHERE g.Id = ? AND g.Username = ?}, undef, $prefill_glass, $c->{username});
+    if ($gdate) {
+      my ($date, $wd) = util::splitdate($gdate);
+      print "On: <a href='$c->{url}?o=Full&e=$prefill_glass&date=$date&ndays=1'>" .
+            "<span>$wd $date";
+      print " \@$gloc" if $gloc;
+      print " $gbrew"  if $gbrew;
+      print "</span></a><br/>\n";
+      # Prefill brew/location from the glass unless already specified in GET params
+      $prefill_loc  ||= $glocid  if $glocid;
+      $prefill_brew ||= $gbrewid if $gbrewid;
+    }
+  }
+
+  # For new comment: seed $com with prefill values so commentform uses them
+  unless ($com) {
+    $com = { CommentType => $prefill_type || 'brew' };
+    $com->{Location} = $prefill_loc if $prefill_loc && $prefill_loc =~ /^\d+$/;
+    $com->{Brew}     = $prefill_brew if $prefill_brew && $prefill_brew =~ /^\d+$/;
+    if ($prefill_pid) {
+      my ($pname) = $c->{dbh}->selectrow_array(
+        "SELECT Name FROM persons WHERE Id = ?", undef, $prefill_pid);
+      $com->{_prefill_person_id}   = $prefill_pid;
+      $com->{_prefill_person_name} = $pname || $prefill_pid;
+    }
+  }
+
+  # Cancel: back to that day in mainlist if we know the glass, or to returnto page
+  my $returnto   = util::param($c, "returnto") || "";
+  $returnto      =~ s/[^a-z]//g;  # Restrict to lowercase letters only (safe page names)
+  my $cancel_url = $returnto ? "$c->{url}?o=$returnto" : "$c->{url}?o=Comment";
+  my $glass_id   = $com->{Glass} || $prefill_glass || "";
+  if ($glass_id) {
+    my ($effdate) = $c->{dbh}->selectrow_array(
+      "SELECT strftime('%Y-%m-%d', Timestamp, '-06:00') FROM glasses WHERE Id = ? AND Username = ?",
+      undef, $glass_id, $c->{username});
+    $cancel_url = "$c->{url}?o=Full&date=$effdate&ndays=1" if $effdate;
+  }
+
+  print commentform($c, $com, $glass_id, $cancel_url, $returnto);
+} # editcomment
 
 ################################################################################
 # Handle submitted comment form
@@ -245,6 +351,10 @@ sub postcomment {
   my $commenttype= util::param($c, "commenttype") || undef;
   my $private    = util::param($c, "private")   || "";
   my $person     = util::param($c, "person")    || undef; # legacy / new-person sentinel
+  my $location   = util::param($c, "Location")  || undef;
+  my $brew       = util::param($c, "Brew")      || undef;
+  $location = undef unless ($location && $location =~ /^\d+$/);
+  $brew     = undef unless ($brew     && $brew     =~ /^\d+$/);
 
   # Collect chip person IDs (multi-value)
   my @person_ids = $c->{cgi}->multi_param('person_id');
@@ -281,9 +391,11 @@ sub postcomment {
       print { $c->{log} } "Deleted comment id '$comment_id' \n";
     } else { # real update
       db::execute($c,
-        "UPDATE comments SET Rating=?, Comment=?, CommentType=?, Username=?, Ts=?
+        "UPDATE comments SET Rating=?, Comment=?, CommentType=?, Username=?, Ts=?,
+         Location=?, Brew=?
          WHERE Id=? AND Glass IS NOT DISTINCT FROM ?",
-        $rating, $comment, $commenttype, $username, $ts, $comment_id, $glass || undef);
+        $rating, $comment, $commenttype, $username, $ts,
+        $location, $brew, $comment_id, $glass || undef);
       print { $c->{log} } "Updated comment '$comment_id' for glass '$glass' \n";
       # Rewrite comment_persons for this comment
       db::execute($c, "DELETE FROM comment_persons WHERE Comment = ?", $comment_id);
@@ -294,9 +406,9 @@ sub postcomment {
     }
   } else { # Insert new comment
     db::execute($c,
-      "INSERT INTO comments (Glass, Rating, Comment, CommentType, Username, Ts)
-       VALUES (?, ?, ?, ?, ?, ?)",
-      $glass || undef, $rating, $comment, $commenttype, $username, $ts);
+      "INSERT INTO comments (Glass, Rating, Comment, CommentType, Username, Ts, Location, Brew)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      $glass || undef, $rating, $comment, $commenttype, $username, $ts, $location, $brew);
     $comment_id = $c->{dbh}->last_insert_id(undef, undef, "COMMENTS", undef);
     print { $c->{log} } "Inserted comment '$comment_id' for glass '$glass' \n";
     for my $pid (@person_ids) {
@@ -313,9 +425,11 @@ sub postcomment {
       undef, $glass, $c->{username});
   }
   if ( $effdate ) {
-    $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$effdate&ndays=1";
+    $c->{redirect_url} = "$c->{url}?o=Full&date=$effdate&ndays=1";
   } else {
-    $c->{redirect_url} = "$c->{url}?o=$c->{op}";
+    my $returnto = util::param($c, "returnto") || "";
+    $returnto =~ s/[^a-z]//g;  # Restrict to lowercase letters only
+    $c->{redirect_url} = $returnto ? "$c->{url}?o=$returnto" : "$c->{url}?o=comments";
   }
   return "";
 } # postcomment

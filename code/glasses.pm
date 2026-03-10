@@ -262,7 +262,7 @@ sub maininputform {
   print "</td></tr>\n";
   print "</table>\n";
   print "</form>\n";
-  print comments::listcomments($c, $rec->{Id});
+  print comments::listcomments($c, $rec->{Id}, $rec->{Brew}, $rec->{Location});
   print "<hr/>";
 
   # Javascript trickery

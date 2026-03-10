@@ -351,7 +351,11 @@ if ( $c->{op} =~ /Board/i ) {
 } elsif ( $c->{op} =~ /Photo/i ) {
   photos::listphotos($c);
 } elsif ( $c->{op} =~ /Comment/i ) {
-  comments::listallcomments($c);
+  if ( $c->{edit} ) {
+    comments::editcomment($c);
+  } else {
+    comments::listallcomments($c);
+  }
 } elsif ( $c->{op} =~ /Location/i ) {
   locations::listlocations($c);
 } elsif ( $c->{op} =~ /migrate/i ) {

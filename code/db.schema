@@ -73,9 +73,10 @@ create table comments (
     Glass integer,  -- Can be null if we delete the glass.
     Comment text, -- Any kind of comment
     Rating integer,  -- 1 (worst) to 9 (best)
-    CommentType text, Ts datetime, Location integer, Username text,  -- filename of the photo
+    CommentType TEXT, Ts DATETIME, Location INTEGER, Brew INTEGER, Username TEXT,
 
-    foreign key (Glass) references Glasses(id) on delete set null
+    foreign key (Glass) references Glasses(id) on delete set null,
+    foreign key (Brew)  references brews(Id)
 );
 
 -- table persons
@@ -443,11 +444,11 @@ create view comments_list as
       comments.Id,
       strftime('%Y-%m-%d %w ', coalesce(glasses.Timestamp, comments.Ts), '-06:00') ||
         strftime('%H:%M', coalesce(glasses.Timestamp, comments.Ts)) as Last,
-      locations.Name as LocName,
+      coalesce(loc_comment.Name, loc_glass.Name) as LocName,
       'tr' as tr,
       '' as Clr,
-      brews.Name as BrewName,
-      ploc.Name as Prod,
+      coalesce(brew_comment.Name, brew_glass.Name) as BrewName,
+      coalesce(ploc_comment.Name, ploc_glass.Name) as Prod,
       'tr' as tr,
       comments.Rating as Rate,
       group_concat(persons.Name, ', ') as PersonName,
@@ -455,14 +456,17 @@ create view comments_list as
       comments.Comment as Comment,
       'tr' as tr,
       '' as None,
-      glasses.Username as Xusername
+      coalesce(glasses.Username, comments.Username) as Xusername
     from comments
-    left join glasses on glasses.Id = comments.Glass
-    left join brews on brews.Id = glasses.Brew
+    left join glasses       on glasses.Id       = comments.Glass
+    left join brews brew_glass   on brew_glass.Id   = glasses.Brew
+    left join brews brew_comment on brew_comment.Id = comments.Brew
     left join comment_persons cp on cp.Comment = comments.Id
-    left join persons on persons.Id = cp.Person
-    left join locations on locations.Id = glasses.Location
-    left join locations ploc on ploc.Id = brews.ProducerLocation
+    left join persons            on persons.Id  = cp.Person
+    left join locations loc_glass   on loc_glass.Id   = glasses.Location
+    left join locations loc_comment on loc_comment.Id = comments.Location
+    left join locations ploc_glass   on ploc_glass.Id   = brew_glass.ProducerLocation
+    left join locations ploc_comment on ploc_comment.Id = brew_comment.ProducerLocation
     group by comments.Id
     order by Last desc;
 

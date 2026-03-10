@@ -41,6 +41,8 @@ They should be named like '557-photo.md' where 557 is the issue number. Can be d
 - **UTF-8**: All source and data is UTF-8; set `binmode STDOUT, ":utf8"` in index.fcgi
 - **No Frameworks**: Pure Perl, no ORM or web framework; procedural style with modules.
 - The system lives in the local time zone. Since beer drinking often spans midnight, we offset the date by 6 hours to group late-night drinking into the previous day. This is handled in SQL queries with `datetime(Timestamp, '-6 hours')`.
+- When ever editing any code, touch **code/version.pm** to trigger a reload. Do not change the version
+number, that is done at commit time.
 
 ## Code Style Details
 - **General Principles**: Write clean, readable, maintainable code. Use meaningful variable and function names. Include comments for complex logic. Follow Perl best practices.
