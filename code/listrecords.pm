@@ -228,7 +228,13 @@ sub listrecords {
       } elsif ( $fn =~ /Clr/ ) {
         $v="&nbsp;";
       } elsif ( $fn =~ /Sub|Id/ ) {
-        $v = "[$v]" if ($v);
+        if ($v) {
+          if ($c->{op} =~ /Comment/i) {
+            $v = "<a href='$url?o=Full&ec=$v'><span>[$v]</span></a>";
+          } else {
+            $v = "[$v]";
+          }
+        }
       } elsif ( $fn eq "Type" ) {
         $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
         if ($v) {
