@@ -503,7 +503,20 @@ sub oneday {
 sub mainlist {
   my $c = shift;
   $form_counter = 0;  # Reset counter for each page load
-  my $date = util::param($c,"date",util::datestr("%F") );
+  my $date = util::param($c,"date");
+  
+  # If editing a glass and no date provided, get date from that glass
+  if (!$date && $c->{edit}) {
+    my $sql = "SELECT strftime('%Y-%m-%d', timestamp, '-06:00') as effdate FROM glasses WHERE id = ? AND username = ?";
+    my $sth = $c->{dbh}->prepare($sql);
+    $sth->execute($c->{edit}, $c->{username});
+    my $row = $sth->fetchrow_hashref();
+    $date = $row->{effdate} if $row;
+  }
+  
+  # Default to today if still no date
+  $date ||= util::datestr("%F");
+  
   my $ndays = util::paramnumber($c, "ndays", 7 ) || 7;
   print { $c->{log} } "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
   my $original_ndays = $ndays;
