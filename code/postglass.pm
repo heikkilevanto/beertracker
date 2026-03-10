@@ -148,6 +148,9 @@ sub postglass {
     $glass->{Id}, $c->{username} );
   print { $c->{log} } "Updated " . $sth->rows .
     " Glass records for id '$c->{edit}'  \n";
+  my ($effdate) = $c->{dbh}->selectrow_array(
+    "SELECT strftime('%Y-%m-%d', ?, '-06:00')", undef, $glass->{Timestamp});
+  $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$effdate&ndays=1" if $effdate;
 
   } else { # Create a new glass
     my $sql = "insert into GLASSES

@@ -250,10 +250,9 @@ sub commentlines {
     $sth->execute($rec->{id});
     print "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
-      my $comid = $com->{Id}; # Save before clearing
+      my $comid = $com->{Id};
       # Prefer PeopleNames (from comment_persons) over legacy PersName
       $com->{PersName} = $com->{PeopleNames} if $com->{PeopleNames};
-      $com->{Id} = ""; # Disable the edit link with id
       my $phothtml = $com->{photocount} ? photos::thumbnails_html($c, 'Comment', $comid) : '';
       print "<li>". comments::commentline($c, $com). $phothtml . "</li>\n  ";  # </div>\n";
     }
@@ -500,15 +499,34 @@ sub mainlist {
   $form_counter = 0;  # Reset counter for each page load
   my $date = util::param($c,"date",util::datestr("%F") );
   my $ndays = util::paramnumber($c, "ndays", 7 ) || 7;
+  # If no explicit date= param, try to derive from e= (glass) or ec= (comment)
+  my $derived_date;
+  if ( !defined $c->{cgi}->param("date") ) {
+    if ( $c->{edit} ) {
+      ($derived_date) = $c->{dbh}->selectrow_array(
+        "SELECT strftime('%Y-%m-%d', Timestamp, '-06:00') FROM glasses WHERE Id = ? AND Username = ?",
+        undef, $c->{edit}, $c->{username});
+    } elsif ( my $ec = util::param($c, "ec") ) {
+      ($derived_date) = $c->{dbh}->selectrow_array(
+        "SELECT strftime('%Y-%m-%d', g.Timestamp, '-06:00')
+         FROM comments c JOIN glasses g ON g.Id = c.Glass
+         WHERE c.Id = ? AND g.Username = ?",
+        undef, $ec, $c->{username});
+    }
+    if ( $derived_date ) {
+      $date = $derived_date;
+      $ndays = 1;
+    }
+  }
   print { $c->{log} } "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
   my $original_ndays = $ndays;
-  if (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays")) {
+  if (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays") || $derived_date) {
     print qq{<b>Main List</b><br/>\n};
     print qq{<form method="GET">\n};
     print qq{<input type="hidden" name="o" value="$c->{op}" />\n};
     print qq{<table>\n};
     print qq{<tr><td>Date from:</td><td><input type="text" name="date" value="$date" style="width: 8em;" /></td></tr>\n};
-    print qq{<tr><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days back</td></tr>\n};
+    print qq{<tr><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days &nbsp; <a href="$c->{url}?o=$c->{op}"><span>def</span></a></td></tr>\n};
     print qq{</table>\n};
     print qq{</form><br/>\n};
   }

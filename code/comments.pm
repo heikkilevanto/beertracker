@@ -305,8 +305,18 @@ sub postcomment {
     }
   }
 
-  # Redirect to avoid duplicate form submission on refresh
-  $c->{redirect} = "$c->{url}?o=$c->{op}&e=$c->{edit}&glass=$glass";
+  # Redirect to avoid duplicate form submission on refresh, back to the glass's date
+  my $effdate;
+  if ( $glass ) {
+    ($effdate) = $c->{dbh}->selectrow_array(
+      "SELECT strftime('%Y-%m-%d', Timestamp, '-06:00') FROM glasses WHERE Id = ? AND Username = ?",
+      undef, $glass, $c->{username});
+  }
+  if ( $effdate ) {
+    $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$effdate&ndays=1";
+  } else {
+    $c->{redirect_url} = "$c->{url}?o=$c->{op}";
+  }
   return "";
 } # postcomment
 
