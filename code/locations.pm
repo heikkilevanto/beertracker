@@ -87,7 +87,10 @@ sub listlocationcomments {
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($loc->{Id}, $c->{username}, $loc->{Id}, $c->{username});
   print "<div onclick='toggleElement(this.nextElementSibling);'>" .
-        "<b>Comments for $loc->{Name}</b> [$loc->{Id}]</div>\n";
+        "<b>Comments for $loc->{Name}</b> [$loc->{Id}]" .
+        "&nbsp;<a href='$c->{url}?o=Comment&e=new&location=$loc->{Id}&commenttype=location'" .
+        " onclick='event.stopPropagation()'><span>(new)</span></a>" .
+        "</div>\n";
   print "<div style='overflow-x: auto;'>";
 
   my $ratesum = 0;

@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^touch /home/heikki/proj/beertracker-dev/code/VERSION\\.pm$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

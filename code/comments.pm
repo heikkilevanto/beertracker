@@ -429,7 +429,7 @@ sub postcomment {
   } else {
     my $returnto = util::param($c, "returnto") || "";
     $returnto =~ s/[^a-z]//g;  # Restrict to lowercase letters only
-    $c->{redirect_url} = $returnto ? "$c->{url}?o=$returnto" : "$c->{url}?o=comments";
+    $c->{redirect_url} = $returnto ? "$c->{url}?o=$returnto" : "$c->{url}?o=comment";
   }
   return "";
 } # postcomment
