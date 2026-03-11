@@ -116,6 +116,7 @@ sub editperson {
     my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";
     print photos::thumbnails_html($c, 'Person', $p->{Id});
     print photos::photo_form($c, person => $p->{Id}, public_default => 0, return_url => $return_url);
+    print "&nbsp;<a href='$c->{url}?o=Comment&e=new&person=$p->{Id}&commenttype=person'><span>(new comment)</span></a>\n";
     print "<hr/>\n";
   }
 

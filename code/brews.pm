@@ -53,7 +53,7 @@ sub listbrewcomments {
       LEFT JOIN PERSONS on PERSONS.id = cp.Person
       LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
       where COMMENTS.glass = GLASSES.id
-       and Brew = ?
+       and GLASSES.Brew = ?
        and Glasses.username = ?
       group by COMMENTS.Id
       order by GLASSES.Timestamp Desc ";
@@ -218,7 +218,7 @@ sub listbrewglasses {
       from GLASSES
       LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
       LEFT JOIN COMMENTS on COMMENTS.Glass = GLASSES.Id
-      WHERE Brew = ?
+      WHERE GLASSES.Brew = ?
         and Glasses.username = ?
       order by GLASSES.Timestamp Desc ";
   my $sth = $c->{dbh}->prepare($sql);
@@ -385,6 +385,7 @@ sub editbrew {
       my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";
       print photos::thumbnails_html($c, 'Brew', $p->{Id});
       print photos::photo_form($c, brew => $p->{Id}, public_default => 1, return_url => $return_url);
+      print "&nbsp;<a href='$c->{url}?o=Comment&e=new&brew=$p->{Id}&commenttype=brew'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
       listbrewcomments($c, $p);
       listbrewtaps($c, $p);

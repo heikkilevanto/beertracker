@@ -28,6 +28,7 @@ changes (alter table) require manual steps; document those in commit message. Ch
 - **Deployment**: Git pull code to production, should migrate the database on first run if schema changed. / Apache config in `etc/apache-config.example.txt` is mostly stable; avoid changes there if possible. It is actually used as the real Apache config in production. The dev version runs from the same config, so changes there should be tested carefully.
 - **Plan files**: are kept under plans. They are used to track AI instructions for implementing a change.
 They should be named like '557-photo.md' where 557 is the issue number. Can be deleted manually after the issue is done, or kept for historical reference.
+
 ## Key Patterns and Conventions
 - **Context Hash**: Pass `$c` hash containing globals (username, dbh, url, etc.) to all functions.
 - **Parameter Handling**: Use `util::param($c, "key")` for CGI params; handles GET/POST uniformly.
@@ -43,6 +44,7 @@ They should be named like '557-photo.md' where 557 is the issue number. Can be d
 - The system lives in the local time zone. Since beer drinking often spans midnight, we offset the date by 6 hours to group late-night drinking into the previous day. This is handled in SQL queries with `datetime(Timestamp, '-6 hours')`.
 - When ever editing any code, touch **code/version.pm** to trigger a reload. Do not change the version
 number, that is done at commit time.
+- All links should have the text inside a <span> element. For example: `<a href='...?o=Comment&e=123'><span>[123]</span></a>`. This is to make the link style apply only to the underline.
 
 ## Code Style Details
 - **General Principles**: Write clean, readable, maintainable code. Use meaningful variable and function names. Include comments for complex logic. Follow Perl best practices.
