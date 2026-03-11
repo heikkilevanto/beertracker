@@ -48,15 +48,15 @@ sub listbrewcomments {
       Glasses.Price,
       Locations.Name as Loc,
       Locations.Id as Lid
-      from COMMENTS, GLASSES
+      FROM GLASSES
+      LEFT JOIN COMMENTS ON COMMENTS.glass = GLASSES.id
       LEFT JOIN comment_persons cp ON cp.Comment = COMMENTS.Id
       LEFT JOIN PERSONS on PERSONS.id = cp.Person
       LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
-      where COMMENTS.glass = GLASSES.id
-       and GLASSES.Brew = ?
-       and Glasses.username = ?
-      group by COMMENTS.Id
-      order by GLASSES.Timestamp Desc ";
+      WHERE GLASSES.Brew = ?
+        AND GLASSES.username = ?
+      GROUP BY COMMENTS.Id
+      ORDER BY GLASSES.Timestamp DESC ";
   #print { $c->{log} } "listbrewcomments: id='$brew->{Id}': $sql \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id}, $c->{username});
@@ -211,16 +211,16 @@ sub listbrewglasses {
       COMMENTS.Comment,
       GLASSES.Id as Gid,
       GLASSES.Brew as Brew,
-      Glasses.Volume,
-      Glasses.Price,
-      Locations.Name as Loc,
-      Locations.Id as Lid
-      from GLASSES
-      LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
-      LEFT JOIN COMMENTS on COMMENTS.Glass = GLASSES.Id
+      GLASSES.Volume,
+      GLASSES.Price,
+      LOCATIONS.Name as Loc,
+      LOCATIONS.Id as Lid
+      FROM GLASSES
+      LEFT JOIN COMMENTS ON COMMENTS.Glass = GLASSES.Id
+      LEFT JOIN LOCATIONS ON LOCATIONS.Id = GLASSES.Location
       WHERE GLASSES.Brew = ?
-        and Glasses.username = ?
-      order by GLASSES.Timestamp Desc ";
+        AND GLASSES.username = ?
+      ORDER BY GLASSES.Timestamp DESC ";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($brew->{Id}, $c->{username});
   my $glcount = 0;
