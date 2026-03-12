@@ -181,7 +181,7 @@ select
 from
     glasses g
 left join
-    comments c on c.glass = g.id
+    comments c on c.glass = g.id and c.CommentType = 'brew'
 where g.brew is not null
 group by
     g.brew;

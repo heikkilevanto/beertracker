@@ -28,6 +28,7 @@ changes (alter table) require manual steps; document those in commit message. Ch
 - **Deployment**: Git pull code to production, should migrate the database on first run if schema changed. / Apache config in `etc/apache-config.example.txt` is mostly stable; avoid changes there if possible. It is actually used as the real Apache config in production. The dev version runs from the same config, so changes there should be tested carefully.
 - **Plan files**: are kept under plans. They are used to track AI instructions for implementing a change.
 They should be named like '557-photo.md' where 557 is the issue number. Can be deleted manually after the issue is done, or kept for historical reference.
+- **Database changes**: should always be done with the migration module migration.pm, and the migration scripts should be added to the repo. This way we have a clear history of all database changes, and they can be applied in production with the migration tool. The migration scripts should be idempotent, so that they can be safely run multiple times if needed.
 
 ## Key Patterns and Conventions
 - **Context Hash**: Pass `$c` hash containing globals (username, dbh, url, etc.) to all functions.

@@ -76,8 +76,8 @@ sub listbrewcomments {
     my $tim = $com->{Time};
     $tim = "($tim)" if ($tim lt "06:00");
     print "$tim\n";
-    print "<span style='font-size: xx-small'>" .
-          "[$com->{Cid}]</span>";
+    print "<a href='$c->{url}?o=Comment&e=$com->{Cid}'>" .
+          "<span style='font-size: xx-small'>[$com->{Cid}]</span></a>";
     print "</td>\n";
 
     print "<td style='border-bottom: 1px solid white'>\n";

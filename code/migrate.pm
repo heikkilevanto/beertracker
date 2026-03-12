@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 10;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 11;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
@@ -39,6 +39,7 @@ our @MIGRATIONS = (
   [8, 'drop legacy comments.Person and comments.Photo columns', \&mig_008_drop_legacy_comment_columns],
   [9,  'fix comments_list Xusername for glass-less comments', \&mig_009_fix_comments_list_xusername],
   [10, 'add Brew column to comments, update comments_list view',  \&mig_010_comments_brew_column],
+  [11, 'rebuild brew_ratings view to only count CommentType=brew ratings', \&mig_011_brew_ratings_type_filter],
 );
 
 ################################################################################
@@ -750,5 +751,24 @@ sub mig_010_comments_brew_column {
   });
 
 } # mig_010_comments_brew_column
+
+################################################################################
+sub mig_011_brew_ratings_type_filter {
+  my $c = shift;
+  db::execute($c, "DROP VIEW IF EXISTS brew_ratings");
+  db::execute($c, q{
+    CREATE VIEW brew_ratings AS
+    SELECT
+        g.brew,
+        count(g.brew) AS glass_count,
+        count(CASE WHEN c.rating IS NOT NULL AND c.rating != '' THEN 1 END) AS rating_count,
+        avg(CASE WHEN c.rating IS NOT NULL AND c.rating != '' THEN c.rating END) AS average_rating,
+        count(CASE WHEN c.comment IS NOT NULL AND c.comment != '' THEN 1 END) AS comment_count
+    FROM glasses g
+    LEFT JOIN comments c ON c.glass = g.id AND c.CommentType = 'brew'
+    WHERE g.brew IS NOT NULL
+    GROUP BY g.brew
+  });
+} # mig_011_brew_ratings_type_filter
 
 1;
