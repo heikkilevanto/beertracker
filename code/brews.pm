@@ -23,7 +23,7 @@ sub listbrews {
   print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
   print "<br/>\n";
   print listrecords::listrecords($c, "BREWS_LIST", "Last-",
-    "(xUsername = ? OR xUsername IS NULL)", $c->{username} );
+    "xUsername = ?", $c->{username} );
   return;
 } # listbrews
 
@@ -316,7 +316,7 @@ sub brewdeduplist {
   my $sort = $c->{sort} || "Last-";
   my $extra = {};
   $extra->{refname} = $brew->{Name};
-  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id} AND (xUsername = ? OR xUsername IS NULL)", $c->{username}, $extra);
+  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id} AND xUsername = ?", $c->{username}, $extra);
   print "</form>\n";
   print "</div>\n";
   print "<!-- brewdeduplist end -->\n";

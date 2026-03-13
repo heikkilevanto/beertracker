@@ -211,13 +211,13 @@ sub locationvisits {
 sub producerbrews {
   my $c = shift;
   my $p = shift;
-  my $countsql = "select count(*) as cnt from producer_brews_list where xProducer = ?";
-  my $nbrews = db::queryrecord($c, $countsql, $p->{Name});
+  my $countsql = "select count(distinct xId) as cnt from producer_brews_list where xProducer = ? and xUsername = ?";
+  my $nbrews = db::queryrecord($c, $countsql, $p->{Name}, $c->{username});
   print "<b>$nbrews->{cnt} Brews by $p->{Name} </b><br/>\n";
   my $oldop = $c->{op};
   $c->{op} = "Brew";  # Make name links to point to brews, not locations
   print listrecords::listrecords($c, "producer_brews_list", "Last-",
-    "xProducer = ? AND (xUsername = ? OR xUsername IS NULL)", [$p->{Name}, $c->{username}]);
+    "xProducer = ? AND xUsername = ?", [$p->{Name}, $c->{username}]);
   $c->{op} = $oldop;
   print "<hr>\n";
 } # producerbrews

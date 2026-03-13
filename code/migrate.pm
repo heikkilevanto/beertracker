@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 12;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 14;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
@@ -41,6 +41,8 @@ our @MIGRATIONS = (
   [10, 'add Brew column to comments, update comments_list view',  \&mig_010_comments_brew_column],
   [11, 'rebuild brew_ratings view to only count CommentType=brew ratings', \&mig_011_brew_ratings_type_filter],
   [12, 'brew_ratings per-user: add Username; rebuild brew list views with per-user stats', \&mig_012_brew_ratings_per_user],
+  [13, 'brews_list per user via users x brews, so all brews are visible with user-only stats/count', \&mig_013_brews_list_user_crossjoin],
+  [14, 'rebuild brews_dedup_list and producer_brews_list as per-(brew,user) rows', \&mig_014_other_brew_views_user_crossjoin],
 );
 
 ################################################################################
@@ -870,5 +872,102 @@ sub mig_012_brew_ratings_per_user {
   });
 
 } # mig_012_brew_ratings_per_user
+
+################################################################################
+sub mig_013_brews_list_user_crossjoin {
+  my $c = shift;
+
+  # Build brews_list as one row per (brew, user). This guarantees each user
+  # sees all brews (including those only tasted by others) while keeping
+  # Stats/Count scoped to that specific user.
+  db::execute($c, "DROP VIEW IF EXISTS brews_list");
+  db::execute($c, q{
+    CREATE VIEW brews_list AS
+    WITH users AS (
+      SELECT DISTINCT Username FROM glasses
+    )
+    SELECT
+      brews.Id,
+      brews.Name,
+      ploc.Name AS Producer,
+      brews.IsGeneric,
+      'tr' AS tr,
+      brews.Alc AS Alc,
+      brews.BrewType || ', ' || brews.Subtype AS Type,
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS Stats,
+      count(glasses.Id) AS Count,
+      'tr' AS tr,
+      'Clr' AS Clr,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      locations.Name AS Location,
+      (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
+      users.Username AS xUsername
+    FROM brews
+    CROSS JOIN users
+    LEFT JOIN locations ploc ON ploc.Id = brews.ProducerLocation
+    LEFT JOIN glasses ON glasses.Brew = brews.Id AND glasses.Username = users.Username
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
+    GROUP BY brews.Id, users.Username
+  });
+} # mig_013_brews_list_user_crossjoin
+
+################################################################################
+sub mig_014_other_brew_views_user_crossjoin {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS brews_dedup_list");
+  db::execute($c, q{
+    CREATE VIEW brews_dedup_list AS
+    WITH users AS (
+      SELECT DISTINCT Username FROM glasses
+    )
+    SELECT
+        brews.Id,
+        'Chk' AS Chk,
+        brews.Name,
+        '?' AS Sim,
+        ploc.Name AS Producer,
+        brews.Alc AS Alc,
+        brews.BrewType || ', ' || brews.Subtype AS Type,
+        strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+          strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+        locations.Name AS Location,
+        r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS Stats,
+        count(glasses.Id) AS Count,
+        users.Username AS xUsername
+    FROM brews
+    CROSS JOIN users
+    LEFT JOIN locations ploc ON ploc.id = brews.ProducerLocation
+    LEFT JOIN glasses ON glasses.Brew = brews.Id AND glasses.Username = users.Username
+    LEFT JOIN locations ON locations.id = glasses.Location
+    LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
+    GROUP BY brews.id, users.Username
+  });
+
+  db::execute($c, "DROP VIEW IF EXISTS producer_brews_list");
+  db::execute($c, q{
+    CREATE VIEW producer_brews_list AS
+    WITH users AS (
+      SELECT DISTINCT Username FROM glasses
+    )
+    SELECT
+        brews.Id AS xId,
+        brews.Name,
+        ploc.Name AS xProducer,
+        brews.Alc AS Alc,
+        brews.Subtype AS Sub,
+        r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS Stats,
+        strftime('%Y-%m-%d', max(glasses.Timestamp), '-06:00') AS Last,
+        users.Username AS xUsername
+    FROM brews
+    CROSS JOIN users
+    LEFT JOIN locations ploc ON ploc.id = brews.ProducerLocation
+    LEFT JOIN glasses ON glasses.Brew = brews.Id AND glasses.Username = users.Username
+    LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
+    GROUP BY brews.id, users.Username
+  });
+} # mig_014_other_brew_views_user_crossjoin
 
 1;
