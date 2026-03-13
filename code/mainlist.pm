@@ -53,14 +53,14 @@ sub glassquery {
     left join brews on brews.id = glasses.brew
     left join locations on locations.id = brews.producerlocation
     left join locations gloc on gloc.id = glasses.location
-    left join brew_ratings br on glasses.brew = br.brew
-    where Username = ?
+    left join brew_ratings br on glasses.brew = br.brew AND br.Username = ?
+    where glasses.Username = ?
       and effdate <= ?
     order by timestamp desc
   };
   # TODO - Location stats?
   # TODO - Price guesses for various sizes? (Needed for copy buttons to different volumes)
-  my $sth = db::query($c, $sql, $c->{username}, $date);
+  my $sth = db::query($c, $sql, $c->{username}, $c->{username}, $date);
   return $sth;
 } # glassquery
 

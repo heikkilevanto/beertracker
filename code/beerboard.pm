@@ -245,16 +245,9 @@ sub load_beerlist_from_db {
       JOIN tap_beers tb ON ct.Id = tb.Id
       JOIN brews b ON ct.Brew = b.Id
       LEFT JOIN locations pl ON b.ProducerLocation = pl.Id
-      -- TODO: Replace with a user_brew_ratings view once brew_ratings is refactored to be per-user
       LEFT JOIN (
-        SELECT g.Brew,
-               count(CASE WHEN c.Rating IS NOT NULL AND c.Rating != '' THEN 1 END) as rating_count,
-               avg(CASE WHEN c.Rating IS NOT NULL AND c.Rating != '' THEN c.Rating END) as average_rating,
-               count(CASE WHEN c.Comment IS NOT NULL AND c.Comment != '' THEN 1 END) as comment_count
-        FROM glasses g
-        LEFT JOIN comments c ON c.Glass = g.Id AND c.CommentType = 'brew'
-        WHERE g.Brew IS NOT NULL AND g.Username = ?
-        GROUP BY g.Brew
+        SELECT brew, rating_count, average_rating, comment_count
+        FROM brew_ratings WHERE Username = ?
       ) ur ON ur.Brew = ct.Brew
       LEFT JOIN (
         SELECT Brew,

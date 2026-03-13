@@ -22,7 +22,8 @@ sub listbrews {
   print "<b>Brews</b> ";
   print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
   print "<br/>\n";
-  print listrecords::listrecords($c, "BREWS_LIST", "Last-" );
+  print listrecords::listrecords($c, "BREWS_LIST", "Last-",
+    "(xUsername = ? OR xUsername IS NULL)", $c->{username} );
   return;
 } # listbrews
 
@@ -315,7 +316,7 @@ sub brewdeduplist {
   my $sort = $c->{sort} || "Last-";
   my $extra = {};
   $extra->{refname} = $brew->{Name};
-  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id}" , undef, $extra);
+  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id} AND (xUsername = ? OR xUsername IS NULL)", $c->{username}, $extra);
   print "</form>\n";
   print "</div>\n";
   print "<!-- brewdeduplist end -->\n";
@@ -433,12 +434,13 @@ sub selectbrew {
       left join GLASSES on GLASSES.Brew= BREWS.ID
       left join LOCATIONS on LOCATIONS.Id = BREWS.ProducerLocation
       left join LOCATIONS as SeenLocations on SeenLocations.Id = GLASSES.Location
-      left join brew_ratings br on BREWS.Id = br.brew
+      left join (select brew, rating_count, average_rating, comment_count
+                 from brew_ratings where Username = ?) br on br.brew = BREWS.Id
       group by BREWS.id
       order by max(GLASSES.Timestamp) DESC
       ";
     my $list_sth = $c->{dbh}->prepare($sql);
-    $list_sth->execute();
+    $list_sth->execute($c->{username});
 
     $opts = "";
     while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $barcode, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {

@@ -217,7 +217,7 @@ sub producerbrews {
   my $oldop = $c->{op};
   $c->{op} = "Brew";  # Make name links to point to brews, not locations
   print listrecords::listrecords($c, "producer_brews_list", "Last-",
-    "xProducer = ?", $p->{Name});
+    "xProducer = ? AND (xUsername = ? OR xUsername IS NULL)", [$p->{Name}, $c->{username}]);
   $c->{op} = $oldop;
   print "<hr>\n";
 } # producerbrews

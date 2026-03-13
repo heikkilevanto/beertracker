@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 11;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 12;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
@@ -40,6 +40,7 @@ our @MIGRATIONS = (
   [9,  'fix comments_list Xusername for glass-less comments', \&mig_009_fix_comments_list_xusername],
   [10, 'add Brew column to comments, update comments_list view',  \&mig_010_comments_brew_column],
   [11, 'rebuild brew_ratings view to only count CommentType=brew ratings', \&mig_011_brew_ratings_type_filter],
+  [12, 'brew_ratings per-user: add Username; rebuild brew list views with per-user stats', \&mig_012_brew_ratings_per_user],
 );
 
 ################################################################################
@@ -770,5 +771,104 @@ sub mig_011_brew_ratings_type_filter {
     GROUP BY g.brew
   });
 } # mig_011_brew_ratings_type_filter
+
+################################################################################
+sub mig_012_brew_ratings_per_user {
+  my $c = shift;
+
+  # Add Username to brew_ratings so each user has their own row per brew
+  db::execute($c, "DROP VIEW IF EXISTS brew_ratings");
+  db::execute($c, q{
+    CREATE VIEW brew_ratings AS
+    SELECT
+        g.Username,
+        g.brew,
+        count(g.brew) AS glass_count,
+        count(CASE WHEN c.rating IS NOT NULL AND c.rating != '' THEN 1 END) AS rating_count,
+        avg(CASE WHEN c.rating IS NOT NULL AND c.rating != '' THEN c.rating END) AS average_rating,
+        count(CASE WHEN c.comment IS NOT NULL AND c.comment != '' THEN 1 END) AS comment_count
+    FROM glasses g
+    LEFT JOIN comments c ON c.glass = g.id AND c.CommentType = 'brew'
+    WHERE g.brew IS NOT NULL
+    GROUP BY g.Username, g.brew
+  });
+
+  # Rebuild brews_list with xUsername column and per-user brew_ratings join.
+  # Grouping by (brews.Id, glasses.Username) gives one row per (brew, user);
+  # the xUsername filter in listrecords callers restricts to current user only
+  # while brews with NULL username (never tasted by anyone) still appear.
+  db::execute($c, "DROP VIEW IF EXISTS brews_list");
+  db::execute($c, q{
+    CREATE VIEW brews_list AS
+    SELECT
+      brews.Id,
+      brews.Name,
+      ploc.Name AS Producer,
+      brews.IsGeneric,
+      'tr' AS tr,
+      brews.Alc AS Alc,
+      brews.BrewType || ', ' || brews.Subtype AS Type,
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS Stats,
+      count(glasses.Id) AS Count,
+      'tr' AS tr,
+      'Clr' AS Clr,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      locations.Name AS Location,
+      (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
+      glasses.Username AS xUsername
+    FROM brews
+    LEFT JOIN locations ploc ON ploc.Id = brews.ProducerLocation
+    LEFT JOIN glasses ON glasses.Brew = brews.Id
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = glasses.Username
+    GROUP BY brews.Id, glasses.Username
+  });
+
+  db::execute($c, "DROP VIEW IF EXISTS brews_dedup_list");
+  db::execute($c, q{
+    CREATE VIEW brews_dedup_list AS
+    SELECT
+        brews.Id,
+        'Chk' AS Chk,
+        brews.Name,
+        '?' AS Sim,
+        ploc.Name AS Producer,
+        brews.Alc AS Alc,
+        brews.BrewType || ', ' || brews.Subtype AS Type,
+        strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+          strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+        locations.Name AS Location,
+        r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS Stats,
+        count(glasses.Id) AS Count,
+        glasses.Username AS xUsername
+    FROM brews
+    LEFT JOIN locations ploc ON ploc.id = brews.ProducerLocation
+    LEFT JOIN glasses ON glasses.Brew = brews.Id
+    LEFT JOIN locations ON locations.id = glasses.Location
+    LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = glasses.Username
+    GROUP BY brews.id, glasses.Username
+  });
+
+  db::execute($c, "DROP VIEW IF EXISTS producer_brews_list");
+  db::execute($c, q{
+    CREATE VIEW producer_brews_list AS
+    SELECT
+        brews.Id AS xId,
+        brews.Name,
+        ploc.Name AS xProducer,
+        brews.Alc AS Alc,
+        brews.Subtype AS Sub,
+        r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS Stats,
+        strftime('%Y-%m-%d', max(glasses.Timestamp), '-06:00') AS Last,
+        glasses.Username AS xUsername
+    FROM brews
+    LEFT JOIN locations ploc ON ploc.id = brews.ProducerLocation
+    LEFT JOIN glasses ON glasses.Brew = brews.Id
+    LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = glasses.Username
+    GROUP BY brews.id, glasses.Username
+  });
+
+} # mig_012_brew_ratings_per_user
 
 1;
