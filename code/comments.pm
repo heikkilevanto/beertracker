@@ -150,7 +150,7 @@ sub commentform {
 
   my $s="";
   $s .= "<!-- Comment editing form -->\n";
-  $s .= photos::photo_form($c, glass => $glassid) . "\n" if $glassid;
+  # Photo link is placed below the form (see end of this function)
   $s .= "<form method='post' action='$c->{url}' enctype='multipart/form-data'>\n";
   $s .= "<input type='hidden' name='commentedit' value='1'>\n"; # To distinguish from glass submit
   $s .= "<input type='hidden' name='o' value='$c->{op}'>\n";
@@ -161,7 +161,7 @@ sub commentform {
     $s .= "<input type='hidden' name='comment_id' value='$com->{Id}'>\n";
   }
 
-  # Comment text area
+  # Comment text area (always shown)
   my $comment = $com->{Comment} || "";
   my $pl = "Add a new comment" ;
   $s .= "<textarea name='comment' rows='3' cols='40' placeholder='$pl' >$comment</textarea><br/>\n";
@@ -203,13 +203,20 @@ sub commentform {
       "<input type='hidden' name='person_id' value='$pid'/>" .
       "</span>\n";
   }
+  # Person selector (conditionally shown based on commenttype; always shown if pre-populated)
+  $s .= "<div id='commentfield-person'>\n";
   $s .= persons::selectperson($c, 'person', undef, '', '', '', 'multi', $prechips);
+  $s .= "</div>\n";
 
-  # Location selector
+  # Location selector (conditionally shown)
+  $s .= "<div id='commentfield-location'>\n";
   $s .= locations::selectlocation($c, 'Location', $com->{Location}||'', '', 'non');
+  $s .= "</div>\n";
 
-  # Brew selector
+  # Brew selector (conditionally shown)
+  $s .= "<div id='commentfield-brew'>\n";
   $s .= brews::selectbrew($c, $com->{Brew}||'');
+  $s .= "</div>\n";
 
   $s .= "<select name='rating' id='rating'>\n";
   $s .= "<option value=''>Rating</option>\n";
@@ -228,6 +235,65 @@ sub commentform {
   $s .= "<a href='$cancel_url'><span>Cancel</span></a>\n";
   $s .= "<input type='submit' name='submit' value='Delete Comment'>\n" if ( $com->{Id} );
   $s .= "</form>\n";
+
+  # Photo upload link (moved below the form)
+  $s .= photos::photo_form($c, glass => $glassid) . "\n" if $glassid;
+
+  # "Add another comment on the same item" link
+  if ($glassid) {
+    my $another_url = "$c->{url}?o=Comment&e=new&glass=$glassid&commenttype=$curtype";
+    $s .= "<a href='$another_url'><span>(Add another comment)</span></a><br/>\n";
+  } elsif ($com->{Brew}) {
+    my $another_url = "$c->{url}?o=Comment&e=new&brew=$com->{Brew}&commenttype=brew";
+    $s .= "<a href='$another_url'><span>(Add another comment)</span></a><br/>\n";
+  } elsif ($com->{Location}) {
+    my $another_url = "$c->{url}?o=Comment&e=new&location=$com->{Location}&commenttype=location";
+    $s .= "<a href='$another_url'><span>(Add another comment)</span></a><br/>\n";
+  }
+
+  # "Show all fields" link and JS for field visibility based on commenttype
+  $s .= "<a href='#' onclick='showAllCommentFields(); return false;'><span>(Show all fields)</span></a>\n";
+  $s .= <<'JSEND';
+<script>
+function updateCommentFields() {
+  var typeEl = document.getElementById('commenttype');
+  var type = typeEl ? typeEl.value : 'brew';
+  var brewDiv     = document.getElementById('commentfield-brew');
+  var personDiv   = document.getElementById('commentfield-person');
+  var locationDiv = document.getElementById('commentfield-location');
+
+  function hasValue(div) {
+    if (!div) return false;
+    var hidden = div.querySelector('input[type=hidden][name=Brew], input[type=hidden][name=Location]');
+    if (hidden && hidden.value) return true;
+    var personInputs = div.querySelectorAll('input[name=person_id]');
+    return personInputs.length > 0;
+  }
+
+  var showBrew     = (type === 'brew' || type === 'meal' || type === 'glass') || hasValue(brewDiv);
+  var showPerson   = (type === 'person') || hasValue(personDiv);
+  var showLocation = (type !== 'glass') || hasValue(locationDiv);
+
+  if (brewDiv)     brewDiv.hidden     = !showBrew;
+  if (personDiv)   personDiv.hidden   = !showPerson;
+  if (locationDiv) locationDiv.hidden = !showLocation;
+}
+
+function showAllCommentFields() {
+  ['commentfield-brew', 'commentfield-person', 'commentfield-location'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.hidden = false;
+  });
+}
+
+var commenttypeEl = document.getElementById('commenttype');
+if (commenttypeEl) {
+  commenttypeEl.addEventListener('change', updateCommentFields);
+  updateCommentFields();
+}
+</script>
+JSEND
+
   return $s;
 }
 
@@ -277,12 +343,11 @@ sub editcomment {
     my $glass_url = "$c->{url}?o=Full&e=$com->{Glass}&date=$date&ndays=1";
     print "On: <a href='$glass_url'><span>$wd $date $com->{effhm}";
     print " \@$com->{locname}" if $com->{locname};
-    print "</span></a>";
+    print "</span></a><br/>\n";  # newline after time and location
     if ($com->{brewname}) {
-      my $sep = $com->{prodname} ? " $com->{prodname}: " : " ";
-      print " <a href='$c->{url}?o=Brew&e=$com->{brewid}'><span>$sep$com->{brewname}</span></a>";
+      my $sep = $com->{prodname} ? "$com->{prodname}: " : "";
+      print "<a href='$c->{url}?o=Brew&e=$com->{brewid}'><span>$sep$com->{brewname}</span></a><br/>\n";
     }
-    print "<br/>\n";
   } elsif ($com && $com->{Location}) {
     my ($locname) = $c->{dbh}->selectrow_array(
       "SELECT Name FROM locations WHERE Id = ?", undef, $com->{Location});
@@ -302,8 +367,12 @@ sub editcomment {
       print "On: <a href='$c->{url}?o=Full&e=$prefill_glass&date=$date&ndays=1'>" .
             "<span>$wd $date";
       print " \@$gloc" if $gloc;
-      print " $gbrew"  if $gbrew;
-      print "</span></a><br/>\n";
+      print "</span></a><br/>\n";  # newline after time and location
+      if ($gbrew && $gbrewid) {
+        print "<a href='$c->{url}?o=Brew&e=$gbrewid'><span>$gbrew</span></a><br/>\n";
+      } elsif ($gbrew) {
+        print "$gbrew<br/>\n";
+      }
       # Prefill brew/location from the glass unless already specified in GET params
       $prefill_loc  ||= $glocid  if $glocid;
       $prefill_brew ||= $gbrewid if $gbrewid;
