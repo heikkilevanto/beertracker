@@ -213,7 +213,8 @@ the DB is left unchanged.
 To add a migration: write a `mig_NNN_description` sub, register it in
 `@MIGRATIONS`, and bump `$CODE_DB_VERSION`.
 
-Do not edit the schema file directly; implement schema changes as migrations in `code/migrate.pm` and verify them locally. After verifying, run
+Do not edit the schema file directly; implement schema changes as migrations in 
+`code/migrate.pm` and verify them locally. After verifying, run
 `tools/dbdump.sh` and commit `doc/db.schema` together with the migration code.
 
 ### Git trickery

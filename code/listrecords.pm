@@ -103,7 +103,7 @@ sub listrecords {
     .top-border td { border-top: 2px solid white; }
     </style>\n";
   my $geotable = "";
-  if ( $extraparams && $extraparams->{lat} eq '?' && $extraparams->{lon} eq '?' ) {
+  if ( $extraparams && (($extraparams->{lat} // '') eq '?') && (($extraparams->{lon} // '') eq '?') ) {
     $geotable = "id='geotable'";
   }
   my $tableattrs = "$geotable data-maxrecords='$maxrecords'";

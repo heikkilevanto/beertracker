@@ -59,8 +59,7 @@ sub listbrewcomments {
       GROUP BY COMMENTS.Id
       ORDER BY GLASSES.Timestamp DESC ";
   #print { $c->{log} } "listbrewcomments: id='$brew->{Id}': $sql \n";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($brew->{Id}, $c->{username});
+  my $sth = db::query($c, $sql, $brew->{Id}, $c->{username});
   print "<div onclick='toggleElement(this.nextElementSibling);'>";
   print "Comments and ratings for <b>$brew->{Name}</b> <br/>\n";
   print "</div>\n";
@@ -71,40 +70,51 @@ sub listbrewcomments {
   my $comcount = 0;
   my $sty = "style='border-bottom: 1px solid white; vertical-align: top;' ";
   while ( my $com = $sth->fetchrow_hashref ) {
+    my $cid = defined $com->{Cid} ? $com->{Cid} : "";
+    my $date = defined $com->{Date} ? $com->{Date} : "";
+    my $tim = defined $com->{Time} ? $com->{Time} : "";
+    my $rating = defined $com->{Rating} ? $com->{Rating} : undef;
+    my $comment = defined $com->{Comment} ? $com->{Comment} : undef;
+    my $lid = defined $com->{Lid} ? $com->{Lid} : undef;
+    my $loc = defined $com->{Loc} ? $com->{Loc} : "";
+    my $volume = defined $com->{Volume} ? $com->{Volume} : undef;
+    my $price = defined $com->{Price} ? $com->{Price} : undef;
+    my $person = defined $com->{Person} ? $com->{Person} : undef;
+    my $pid = defined $com->{Pid} ? $com->{Pid} : "";
+
     print "<tr><td $sty>\n";
-    print "<a href='$c->{url}?o=Comment&e=$com->{Cid}'><span>";
-    print "$com->{Date}</span></a><br/> \n";
-    my $tim = $com->{Time};
-    $tim = "($tim)" if ($tim lt "06:00");
+    print "<a href='$c->{url}?o=Comment&e=$cid'><span>";
+    print "$date</span></a><br/> \n";
+    if ( defined $tim && $tim ne '' && $tim lt "06:00" ) { $tim = "($tim)"; }
     print "$tim\n";
-    print "<a href='$c->{url}?o=Comment&e=$com->{Cid}'>" .
-          "<span style='font-size: xx-small'>[$com->{Cid}]</span></a>";
+    print "<a href='$c->{url}?o=Comment&e=$cid'>" .
+          "<span style='font-size: xx-small'>[$cid]</span></a>";
     print "</td>\n";
 
     print "<td style='border-bottom: 1px solid white'>\n";
-    if ( $com->{Rating} ) {
-      print "<b>($com->{Rating})</b>\n";
-      $ratesum += $com->{Rating};
+    if ( defined $rating ) {
+      print "<b>($rating)</b>\n";
+      $ratesum += $rating;
       $ratecount++;
     }
     print "</td>\n";
 
     print "<td style='border-bottom: 1px solid white; vertical-align: top; white-space:normal'>\n";
-    if ( $com->{Lid} ) {
-      print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span><b>$com->{Loc}</b></span></a> &nbsp;";
+    if ( $lid ) {
+      print "<a href='$c->{url}?o=Location&e=$lid' ><span><b>$loc</b></span></a> &nbsp;";
     } else {
-      print "<b>$com->{Loc}</b> &nbsp;" if $com->{Loc};
+      print "<b>$loc</b> &nbsp;" if $loc;
     }
-    print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
-    print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
+    print util::unit($volume,"c")   if ( $volume ) ;
+    print util::unit($price,",-")   if ( $price ) ;
     print "<br/>";
-    print "<i>$com->{Comment}</i>" if $com->{Comment};
-    $comcount++ if ($com->{Comment});
+    print "<i>$comment</i>" if $comment;
+    $comcount++ if ($comment);
     print "</td>\n";
 
     print "<td $sty>\n";
-    if ( $com->{Person} ) {
-      print "<a href='$c->{url}?o=Person&e=$com->{Pid}'><span style='font-weight: bold;'>$com->{Person}</span></a>\n";
+    if ( $person ) {
+      print "<a href='$c->{url}?o=Person&e=$pid'><span style='font-weight: bold;'>$person</span></a>\n";
     }
     print "</td>\n";
     # TODO - Photo thumbnail in its own TD
@@ -144,8 +154,7 @@ sub listbrewprices {
     WHERE Brew = ?
       AND username = ?
     ORDER by Timestamp DESC";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($brew->{Id}, $c->{username});
+  my $sth = db::query($c, $sql, $brew->{Id}, $c->{username});
   print "<div onclick='toggleElement(this.nextElementSibling);'>";
   print "Latest prices for <b>$brew->{Name}</b> <br/>\n";
   print "</div>\n";
@@ -189,8 +198,8 @@ sub listbrewprices {
 ################################################################################
 sub update_brew_defaults {
   my ($c, $brew_id, $price, $vol) = @_;
-  my $rows = $c->{dbh}->do("UPDATE brews SET DefPrice = ?, DefVol = ? WHERE Id = ?", undef, $price, $vol, $brew_id);
-  if ($rows != 1) {
+  my $rows = db::execute($c, "UPDATE brews SET DefPrice = ?, DefVol = ? WHERE Id = ?", $price, $vol, $brew_id);
+  if (!defined $rows || $rows != 1) {
     util::error("Failed to update defaults for brew $brew_id");
   }
   print { $c->{log} } "Updated brew $brew_id DefPrice to $price, DefVol to $vol\n";
@@ -222,8 +231,7 @@ sub listbrewglasses {
       WHERE GLASSES.Brew = ?
         AND GLASSES.username = ?
       ORDER BY GLASSES.Timestamp DESC ";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($brew->{Id}, $c->{username});
+  my $sth = db::query($c, $sql, $brew->{Id}, $c->{username});
   my $glcount = 0;
   my %years;
   my $firstrec;
@@ -335,11 +343,8 @@ sub editbrew {
   my $duplicate_id = $c->{duplicate};
   if ($duplicate_id) {
     # Load the brew to duplicate
-    my $sql = "select * from BREWS where id = ?";
-    my $get_sth = $c->{dbh}->prepare($sql);
-    $get_sth->execute($duplicate_id);
-    $p = $get_sth->fetchrow_hashref;
-    $get_sth->finish;
+    my $p = db::getrecord($c, "BREWS", $duplicate_id);
+    $p ||= {};
     $p->{Id} = "new";
     $submit = "Insert";
     print "<b>Duplicating Brew $duplicate_id: $p->{Name}</b><br/>\n";
@@ -351,11 +356,7 @@ sub editbrew {
     print "<b>Inserting a new brew<br/>\n";
     $submit = "Insert";
   } else {
-    my $sql = "select * from BREWS where id = ?";
-    my $get_sth = $c->{dbh}->prepare($sql);
-    $get_sth->execute($c->{edit});
-    $p = $get_sth->fetchrow_hashref;
-    $get_sth->finish;
+    $p = db::getrecord($c, "BREWS", $c->{edit});
     print "<b>Editing Brew $p->{Id}: $p->{Name}</b><br/>\n";
   }
   if ( $p->{Id} ) {  # found the brew
