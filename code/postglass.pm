@@ -77,6 +77,7 @@ sub postglass {
     $glass->{Alc} = 0;
     $glass->{StDrinks} = 0;
     $glass->{Note} = util::param($c,"note");  # Get note from form, don't inherit
+    $glass->{Tap} = undef;  # Don't inherit tap from previous glass
     gettimestamp($c, $glass);
     $glass->{Price} = util::paramnumber($c, "pr");
   } else { # real glass
