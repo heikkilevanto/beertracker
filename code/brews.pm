@@ -498,6 +498,25 @@ sub dedupbrews {
       my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
       util::error("Deduplicate brews: Failed to update glasses") unless $rows;
       print { $c->{log} } "Updated $rows glasses from $dup to $id\n";
+
+      $sql = "UPDATE COMMENTS set Brew = ? where Brew = ?  ";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
+      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      util::error("Deduplicate brews: Failed to update comments") unless defined $rows;
+      print { $c->{log} } "Updated $rows comments from $dup to $id\n";
+
+      $sql = "UPDATE TAP_BEERS set Brew = ? where Brew = ?  ";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
+      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      util::error("Deduplicate brews: Failed to update tap_beers") unless defined $rows;
+      print { $c->{log} } "Updated $rows tap_beers from $dup to $id\n";
+
+      $sql = "UPDATE PHOTOS set Brew = ? where Brew = ?  ";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
+      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      util::error("Deduplicate brews: Failed to update photos") unless defined $rows;
+      print { $c->{log} } "Updated $rows photos from $dup to $id\n";
+
       $sql = "DELETE FROM Brews WHERE Id = ? ";
       $rows = $c->{dbh}->do($sql, undef, $dup);
       util::error("Deduplicate brews: Failed to delete brew '$dup'") unless $rows;
