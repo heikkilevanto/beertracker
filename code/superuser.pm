@@ -214,8 +214,8 @@ sub gitpull {
   my $rc = $?;  # return code
   $st = encode_entities($st);
   print "<pre $style>\n$st\n</pre><p> \n";
-  print "Go back to <a href='$c->{url}?o=GitStatus&p=$p'><span>Git Status</span></a>\n";
-  print "Or the <a href='$c->{url}?o=Graph'><span>Main list</span></a>\n";
+  print "Go back to <a href='$c->{url}?o=GitStatus&p=$p&reload=1'><span>Git Status</span></a>\n";
+  print "Or the <a href='$c->{url}?o=Graph&reload=1'><span>Main list</span></a>\n";
   cache::clear($c, "gitpull");  # Code changed; force fresh renders on next request
 }
 
@@ -242,8 +242,8 @@ sub gitcheckout {
     print "Make sure you have this line in /etc/sudoers.d/beertracker: <br>\n";
     print "<pre>    www-data ALL=(heikki) NOPASSWD: /usr/bin/git checkout *</pre>\n";
   }
-  print "Go back to <a href='$c->{url}?o=GitStatus&p=$p'><span>Git Status</span></a>\n";
-  print "Or the <a href='$c->{url}?o=Graph'><span>Main list</span></a>\n";
+  print "Go back to <a href='$c->{url}?o=GitStatus&p=$p&reload=1'><span>Git Status</span></a>\n";
+  print "Or the <a href='$c->{url}?o=Graph&reload=1'><span>Main list</span></a>\n";
   cache::clear($c, "gitcheckout");  # Code changed; force fresh renders on next request
 } # gitcheckout
 
