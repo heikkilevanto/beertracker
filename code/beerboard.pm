@@ -98,7 +98,7 @@ sub beerboard {
 
       my $dispid = $id;
 
-      my $seenline = seenline($c, $e->{brew_id});
+      my $seenline = seenline($c, $e->{seen_count}, $e->{seen_min_date}, $e->{seen_max_date});
 
       render_beer_row($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons);
 
@@ -118,21 +118,10 @@ sub beerboard {
 # Small helpers
 ################################################################################
 
-# Helper to produce a "Seen" line
+# Helper to produce a "Seen" line (pure formatting, data comes from main SQL)
 sub seenline {
   my $c = shift;
-  my $brew_id = shift;
-  return "" unless $brew_id;
-  my $sql = q{
-    select count(id),
-           strftime('%Y-%m-%d', min(timestamp), '-06:00') as min_date,
-           strftime('%Y-%m-%d', max(timestamp), '-06:00') as max_date
-    from glasses
-    where brew = ?
-  };
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($brew_id);
-  my ($count, $min_date, $max_date) = $sth->fetchrow_array;
+  my ($count, $min_date, $max_date) = @_;
   return "" unless $count;
   my $times_word = $count == 1 ? "time" : "times";
   my $seenline = "Seen <b>$count</b> $times_word";
@@ -220,10 +209,7 @@ sub get_location_param {
             "where username = ? " .
             "order by stamp desc ".
             "limit 1";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( $c->{username} );
-  my $foundrec = $sth->fetchrow_hashref;
-  $sth->finish;
+  my $foundrec = db::queryrecord($c, $sql, $c->{username});
 
   my $locparam = util::param($c,"loc") || $foundrec->{loc} || "";
   $locparam =~ s/^ +//; # Drop the leading space for guessed locations
@@ -239,10 +225,10 @@ sub load_beerlist_from_db {
   my $loc_id = $loc_rec->{Id};
   
   # Get the latest scrape marker
-  my $marker_sql = "SELECT strftime('%s', LastSeen) as last_epoch FROM tap_beers WHERE Location = ? AND Tap IS NULL ORDER BY LastSeen DESC LIMIT 1";
-  my $marker_sth = $c->{dbh}->prepare($marker_sql);
-  $marker_sth->execute($loc_id);
-  my ($last_epoch) = $marker_sth->fetchrow_array;
+  my ($last_epoch) = db::queryarray($c,
+    "SELECT strftime('%s', LastSeen) as last_epoch FROM tap_beers " .
+    "WHERE Location = ? AND Tap IS NULL ORDER BY LastSeen DESC LIMIT 1",
+    $loc_id);
   
   # Load from DB
   my $sql = "SELECT 
@@ -250,19 +236,38 @@ sub load_beerlist_from_db {
       pl.Name AS maker, pl.Id AS maker_id, 
       b.SubType AS type, b.Alc AS alc,
       tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
-      br.rating_count, br.average_rating, br.comment_count, 
+      ur.rating_count, ur.average_rating, ur.comment_count,
       strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
       strftime('%H:%M', tb.FirstSeen) as first_seen_time, 
-      strftime('%s', tb.FirstSeen) as first_seen_ts
+      strftime('%s', tb.FirstSeen) as first_seen_ts,
+      ug.seen_count, ug.seen_min_date, ug.seen_max_date
     FROM current_taps ct
       JOIN tap_beers tb ON ct.Id = tb.Id
       JOIN brews b ON ct.Brew = b.Id
       LEFT JOIN locations pl ON b.ProducerLocation = pl.Id
-      LEFT JOIN brew_ratings br ON b.Id = br.brew
+      -- TODO: Replace with a user_brew_ratings view once brew_ratings is refactored to be per-user
+      LEFT JOIN (
+        SELECT g.Brew,
+               count(CASE WHEN c.Rating IS NOT NULL AND c.Rating != '' THEN 1 END) as rating_count,
+               avg(CASE WHEN c.Rating IS NOT NULL AND c.Rating != '' THEN c.Rating END) as average_rating,
+               count(CASE WHEN c.Comment IS NOT NULL AND c.Comment != '' THEN 1 END) as comment_count
+        FROM glasses g
+        LEFT JOIN comments c ON c.Glass = g.Id AND c.CommentType = 'brew'
+        WHERE g.Brew IS NOT NULL AND g.Username = ?
+        GROUP BY g.Brew
+      ) ur ON ur.Brew = ct.Brew
+      LEFT JOIN (
+        SELECT Brew,
+               count(Id) as seen_count,
+               strftime('%Y-%m-%d', min(Timestamp), '-06:00') as seen_min_date,
+               strftime('%Y-%m-%d', max(Timestamp), '-06:00') as seen_max_date
+        FROM glasses
+        WHERE Username = ?
+        GROUP BY Brew
+      ) ug ON ug.Brew = ct.Brew
     WHERE ct.Location = ?
     ORDER BY ct.Tap";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($loc_id);
+  my $sth = db::query($c, $sql, $c->{username}, $c->{username}, $loc_id);
   
   my $beerlist = [];
   while (my $row = $sth->fetchrow_hashref) {
@@ -291,7 +296,10 @@ sub load_beerlist_from_db {
       comment_count => $row->{comment_count},
       first_seen_date => $row->{first_seen_date},
       first_seen_time => $row->{first_seen_time},
-      first_seen_ts => $row->{first_seen_ts}
+      first_seen_ts => $row->{first_seen_ts},
+      seen_count => $row->{seen_count},
+      seen_min_date => $row->{seen_min_date},
+      seen_max_date => $row->{seen_max_date}
     };
   }
   

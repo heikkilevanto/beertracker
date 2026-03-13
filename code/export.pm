@@ -115,7 +115,7 @@ sub do_export {
 
 
   # Get all tables from sqlite_master ---
-  my @tables = db::queryarray(
+  my @tables = db::queryrecordarray(
     $c, "SELECT name FROM sqlite_master
       WHERE type='table' and name NOT LIKE 'sqlite_%' ORDER BY name" );
   @tables = map { lc $_ } @tables;    # lowercase table names
@@ -133,7 +133,7 @@ sub do_export {
   }
 
   # Collect glasses IDs
-  my @glasses_ids = db::queryarray($c, "
+  my @glasses_ids = db::queryrecordarray($c, "
       SELECT Id FROM Glasses
       WHERE Username=? AND strftime ('%Y-%m-%d', Timestamp,'-06:00') BETWEEN ? AND ?
   ", $c->{username}, $datefrom, $dateto);
@@ -147,7 +147,7 @@ sub do_export {
   $ids{glasses} = \@glasses_ids;
 
   # Always include comments for selected glasses
-  my @comments = db::queryarray($c, "
+  my @comments = db::queryrecordarray($c, "
       SELECT Id FROM Comments WHERE Glass IN ($glasses_list)");
   $ids{comments} = \@comments;
 
@@ -156,21 +156,21 @@ sub do_export {
   my @loc_ids;
   my @person_ids;
   if ( $mode eq 'full' ) {
-    @brew_ids      = db::queryarray($c, "SELECT Id FROM Brews");
-    @loc_ids       = db::queryarray($c, "SELECT Id FROM Locations");
-    @person_ids    = db::queryarray($c, "SELECT Id FROM Persons");
+    @brew_ids      = db::queryrecordarray($c, "SELECT Id FROM Brews");
+    @loc_ids       = db::queryrecordarray($c, "SELECT Id FROM Locations");
+    @person_ids    = db::queryrecordarray($c, "SELECT Id FROM Persons");
   } else {
-    @brew_ids = db::queryarray($c,
+    @brew_ids = db::queryrecordarray($c,
         "SELECT DISTINCT Brew FROM glasses
          WHERE Id IN ($glasses_list) AND Brew IS NOT NULL");
-    @loc_ids = db::queryarray($c,
+    @loc_ids = db::queryrecordarray($c,
         "SELECT DISTINCT Location FROM Glasses
          WHERE Id IN ($glasses_list) AND Location IS NOT NULL");
-    push @loc_ids, db::queryarray($c, # also include producer locations from the brews
+    push @loc_ids, db::queryrecordarray($c, # also include producer locations from the brews
         "SELECT DISTINCT ProducerLocation FROM Brews
          WHERE Id IN (" . join(",", @brew_ids) . ") AND ProducerLocation IS NOT NULL");
 
-    my @person_ids = db::queryarray($c,
+    my @person_ids = db::queryrecordarray($c,
         "SELECT DISTINCT Person FROM Comments WHERE Glass IN ($glasses_list) AND Person IS NOT NULL");
   }
   $ids{brews} = \@brew_ids;
@@ -189,7 +189,7 @@ sub do_export {
   # Drop/create statements from sqlite_master ---
   if ($schema && $schema eq 'dropcreate') {
     for my $table (@tables) {
-      my ($create_sql) = db::queryarray($c,
+      my ($create_sql) = db::queryrecordarray($c,
           "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", $table);
       print "DROP TABLE IF EXISTS $table;\n$create_sql;\n\n";
     }

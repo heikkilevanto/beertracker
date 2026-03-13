@@ -232,15 +232,18 @@ sub topstats {
    sum(stdrinks) as drinks
  from GLASSES
  where username = ?
- and effdate = ( select max (strftime('%Y-%m-%d', timestamp, '-06:00' ) ) from GLASSES )
+ and effdate = ( select max (strftime('%Y-%m-%d', timestamp, '-06:00' ) ) from GLASSES where username = ? )
  and Brew is not null
    ";
-  my $rec = db::queryrecord($c, $sql, $c->{username});
+  my $rec = db::queryrecord($c, $sql, $c->{username}, $c->{username});
   util::error("Something wrong in topstats query: $sql") unless ($rec);
+  return "" unless $rec->{effdate};  # No glasses recorded for this user
   return "" if ( $rec->{daydiff} > 6 );
+  $rec->{drinks} ||= 0;
+  $rec->{price}  ||= 0;
   my ($date, $wday) = splitdate( "$rec->{effdate} $rec->{wday}" );
   my $ba = mainlist::bloodalc( $c, $rec->{effdate});
-  my $banow = $ba->{now};
+  my $banow = $ba->{now} // 0;
   if ( $banow > 1 ) {
     $banow = sprintf("%1.1f", $banow);
   } elsif ( $banow > 0 ) {

@@ -178,13 +178,17 @@ sub queryrecordarray {
 
 
 # Run a simple query, and return the first (only?) record as an array
+# Returns multiple columns from one row, e.g. (count, min_date, max_date)
 sub queryarray {
   logquery(@_);
   my $c = shift;
   my $sql = shift;
   my @params = @_;
-  my $recs = $c->{dbh}->selectcol_arrayref($sql,undef, @params);
-  return @$recs;
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute(@params);
+  my @row = $sth->fetchrow_array;
+  $sth->finish;
+  return @row;
 }
 
 # Run a simple query and returns a <select> tag with <options> inside it
