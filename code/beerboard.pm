@@ -8,6 +8,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use POSIX qw(strftime localtime);
+use URI::Escape qw(uri_escape_utf8);
 
 
 
@@ -47,8 +48,9 @@ sub beerboard {
 
   my $nbeers = 0;
     if ($c->{qry}) {
+      my $loc_esc = uri_escape_utf8($locparam);
       print "Filter:<b>$c->{qry}</b> " .
-        "(<a href='$c->{url}?o=$c->{op}&loc=$locparam'><span>Clear</span></a>) " .
+        "(<a href='$c->{url}?o=$c->{op}&loc=$loc_esc'><span>Clear</span></a>) " .
         "<p>\n";
     }
 
@@ -200,7 +202,8 @@ sub render_location_selector {
   if ($locrec && $locrec->{Website}) {
     print " &nbsp; <i><a href='$locrec->{Website}' target='_blank' ><span>www</span></a></i>" ;
   }
-  print "&nbsp; (<a href='$c->{url}?o=$c->{op}&loc=$locparam&q=PA'><span>PA</span></a>) "
+  my $loc_esc = uri_escape_utf8($locparam);
+  print "&nbsp; (<a href='$c->{url}?o=$c->{op}&loc=$loc_esc&q=PA'><span>PA</span></a>) "
     if ($c->{qry} ne "PA" );
 
   print scrapeboard::post_form($c, 'updateboard', $locparam, '(Reload)');

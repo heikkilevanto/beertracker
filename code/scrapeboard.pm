@@ -8,6 +8,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use JSON;
+use URI::Escape qw(uri_escape_utf8);
 
 # Beerlist scraping scripts
 our %scrapers;
@@ -154,7 +155,7 @@ sub updateboard {
   taps::update_taps($c, $loc_id, $beerlist);
 
   # Redirect back to showing the board, for this location
-  $c->{redirect_url} = "$c->{url}?o=Board&loc=$locparam";
+  $c->{redirect_url} = "$c->{url}?o=Board&loc=" . uri_escape_utf8($locparam);
 }
 
 # Helper to create a POST form for triggering an operation
@@ -162,7 +163,7 @@ sub post_form {
   my ($c, $op, $loc, $label) = @_;
   my $form_id = "form_" . $op . "_" . ($loc || 'none');
   $form_id =~ s/\W/_/g;  # sanitize
-  my $form = "<form id='$form_id' method='POST' action='$c->{url}' style='display:inline;'>";
+  my $form = "<form id='$form_id' method='POST' accept-charset='UTF-8' action='$c->{url}' style='display:inline;'>";
   $form .= "<input type='hidden' name='o' value='$op'>";
   $form .= "<input type='hidden' name='loc' value='$loc'>" if $loc;
   $form .= "</form>";
