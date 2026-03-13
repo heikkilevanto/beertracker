@@ -391,6 +391,7 @@ sub adjustment_form {
       <input type='hidden' name='time' value='$last_glass_time:00'/>
       <input type='hidden' name='vol' value='0'/>
       <input type='hidden' name='alc' value='0'/>
+      <input type='hidden' name='tap' value=''/>
       <input type='hidden' name='pr' id='pr_$form_id' value='0'/>
       <input type='hidden' name='note' id='note_$form_id' value=''/>
       <button type='submit' style='font-size:small;'>Save ±</button>
