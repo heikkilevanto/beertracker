@@ -171,15 +171,12 @@ while (my $q = CGI::Fast->new) {
   my $plotfile = "";
   my $cmdfile = "";
   my $photodir = "";
-# Build a minimal context so login.pm can use the CGI object.
+# Build a minimal context so login.pm can use the CGI object. 
 # authenticate() sets $c_auth->{username}; sends 401 and returns empty username on failure.
 my $c_auth = { cgi => $q };
 login::authenticate($c_auth);
 my $username = $c_auth->{username};
 next unless $username;  # 401 already sent by authenticate()
-
-# Sudo mode, normally commented out
-#$username = "dennis" if ( $username eq "heikki" );  # Fake user to see one with less data
 
 if ( $username =~ /^[a-zA-Z0-9]+$/ ) {
   $plotfile = $datadir . $username . ".plot";
@@ -224,6 +221,15 @@ $c->{duplicate} = util::param($c,"duplicate");  # ID of brew to duplicate
 $c->{href} = "$c->{url}?o=$c->{op}";
 
 login::prepare_cookie($c);  # Build fresh auth cookie; htmlhead() will send it.
+
+# Dev sudo: set $sudo_as to browse/post as another user without affecting the auth cookie.
+# Requires editing this file to enable — intentional, so it needs machine access.
+my $sudo_as = "";  # e.g. "dennis"
+# $sudo_as = "dennis"; # Uncomment to debug as dennis.
+if ( $devversion && $sudo_as ) {
+  $c->{username} = $sudo_as;
+  warn "sudo: acting as '$sudo_as'\n";
+}
 
 
 ################################################################################
