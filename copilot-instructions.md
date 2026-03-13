@@ -9,7 +9,7 @@
 BeerTracker is a procedural Perl FastCGI web application for personal beer tracking. It uses SQLite for data storage and runs under Apache. The main entry point is `code/index.fcgi`, which dispatches requests to focused modules in `code/` based on the `o` parameter (e.g., `o=Board` for beerboard.pm).
 
 Key components:
-- **Database**: SQLite file `beerdata/beertracker.db` with schema in `code/db.schema`. Tables: glasses (drinking events), brews (beverages), locations (places), persons, comments, taps.
+- **Database**: SQLite file `beerdata/beertracker.db` with schema in `doc/db.schema`. Tables: glasses (drinking events), brews (beverages), locations (places), persons, comments, taps.
 - **Modules**: ~30 Perl modules in `code/` for specific functionalities (e.g., beerboard.pm for bar beer lists, db.pm for database helpers). We try to keep modules focused and small, ideally <300 lines, but some are larger.
 - **CGI Handling**: `code/index.fcgi` handles all requests, routing based on `o` parameter. POST requests are wrapped in eval for error handling.
 - **Templates**: HTML is generated directly in Perl using print statements with qq{} for multi-line strings.  
@@ -21,7 +21,7 @@ Data flows from browser forms to index.fcgi, which calls module post*() function
 
 ## Development Workflow
 - **Dev Environment**: Work in `beertracker-dev` directory (blue background indicates dev mode).
-- **Database Changes**: Edit schema in SQLite, run `tools/dbdump.sh` to update `code/db.schema`, commit. Git post-merge hook warns if schema changed. Use `tools/dbchange.sh` to apply schema updates in production. Some 
+- **Database Changes**: Implement schema changes via `code/migrate.pm` migrations; after verifying locally, run `tools/dbdump.sh` to update `doc/db.schema` and commit both. Use `tools/dbchange.sh` to apply schema updates in production. Some 
 changes (alter table) require manual steps; document those in commit message. Changes to views and indexes work well with dbchange.sh.
 - **Versioning**: Git pre-commit hook runs `tools/makeversion.sh` to update `code/VERSION.pm` with commit count.
 - **Testing**: No automated tests; manually test CGI under Apache. Use `superuser::copyproddata()` to sync production data to dev.

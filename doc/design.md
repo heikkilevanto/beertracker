@@ -211,8 +211,10 @@ the form runs the missing migrations inside the normal transaction, updating
 the DB is left unchanged.
 
 To add a migration: write a `mig_NNN_description` sub, register it in
-`@MIGRATIONS`, and bump `$CODE_DB_VERSION`. After verifying, run
-`tools/dbdump.sh` and commit `code/db.schema` together with the migration code.
+`@MIGRATIONS`, and bump `$CODE_DB_VERSION`.
+
+Do not edit the schema file directly; implement schema changes as migrations in `code/migrate.pm` and verify them locally. After verifying, run
+`tools/dbdump.sh` and commit `doc/db.schema` together with the migration code.
 
 ### Git trickery
 The git hook `pre-commit` invokes `tools/makeversion.sh` which updates the
@@ -222,7 +224,7 @@ so the about page and the top line can show where we are going.
 Schema changes (adding tables, columns, indexes, views) must be implemented as
 migration subs in `code/migrate.pm` following the process described above.
 After verifying a migration locally, run `tools/dbdump.sh` to update
-`code/db.schema`, then commit both together. On production, `git pull` followed
+`doc/db.schema`, then commit both together. On production, `git pull` followed
 by the first page load will detect the version mismatch and apply the
 migrations automatically.
 

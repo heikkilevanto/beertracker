@@ -3,7 +3,7 @@
 # A script to update the database structure
 # Keeping the data
 
-echo "Updating the database structure from db.schema"
+echo "Updating the database structure from doc/db.schema"
 cd beerdata || exit 1
 #set -euo pipefail
 
@@ -16,10 +16,10 @@ do
 done
 
 
-ls -l ../code/db.schema  data.dump
+ls -l ../doc/db.schema  data.dump
 
 echo `date "+%F %X"` Importing schema
-if ! sqlite3 beertracker.db < ../code/db.schema
+if ! sqlite3 beertracker.db < ../doc/db.schema
 then
   echo "Errors importing the schema"
   exit 1
