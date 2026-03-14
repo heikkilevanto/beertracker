@@ -1,0 +1,52 @@
+#!/bin/bash
+# time-stat: estimate time spent on the project from git commit timestamps.
+#
+# Heuristic (same as the popular "git-hours" tool):
+#   - Walk commits in chronological order.
+#   - If the gap to the next commit is <= SESSION_GAP hours, they belong to
+#     the same coding session.
+#   - Each session's duration = (last_commit - first_commit) + SESSION_START bonus
+#     (the bonus accounts for work done before making the first commit).
+#   - Sum all sessions.
+#
+# Tune via environment variables:
+#   SESSION_GAP=2    max hours between commits in the same session (default 2)
+#   SESSION_START=1  hours added at the start of each session (default 1)
+
+SESSION_GAP=${SESSION_GAP:-2}
+SESSION_START=${SESSION_START:-1}
+
+cd "$(dirname "$0")/.."
+
+git log --format="%at" --reverse | awk \
+  -v gap="$SESSION_GAP" \
+  -v start_bonus="$SESSION_START" '
+BEGIN {
+  sessions = 0
+  total_secs = 0
+  prev = 0
+  session_start = 0
+}
+{
+  ts = $1 + 0
+  if (prev == 0) {
+    sessions = 1
+    session_start = ts
+  } else if (ts - prev > gap * 3600) {
+    # gap too large — close current session and start a new one
+    total_secs += (prev - session_start) + start_bonus * 3600
+    sessions++
+    session_start = ts
+  }
+  prev = ts
+}
+END {
+  if (prev > 0)
+    total_secs += (prev - session_start) + start_bonus * 3600
+  hours = total_secs / 3600
+  days  = hours / 8
+  printf "Estimated time : %.0f hours  (%.1f eight-hour days)\n", hours, days
+  printf "Sessions       : %d\n", sessions
+  printf "Parameters     : session gap = %g h,  startup bonus = %g h/session\n", gap, start_bonus
+}
+'

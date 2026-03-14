@@ -8,12 +8,18 @@ set -e
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO"
 
+SESSION_GAP=${SESSION_GAP:-2}
+SESSION_START=${SESSION_START:-1}
+
 # Find the date of the first commit
 FIRST_DATE=$(git log --reverse --format="%as" | head -1)
 if [[ -z "$FIRST_DATE" ]]; then
   echo "No commits found." >&2
   exit 1
 fi
+
+# All commit timestamps in chronological order (computed once)
+ALL_TS=$(git log --format="%at" --reverse)
 
 FIRST_YEAR="${FIRST_DATE%%-*}"
 FIRST_MONTH="${FIRST_DATE#*-}"; FIRST_MONTH="${FIRST_MONTH%%-*}"
@@ -22,8 +28,8 @@ TODAY=$(date +%Y-%m-%d)
 CUR_YEAR="${TODAY%%-*}"
 CUR_MONTH="${TODAY#*-}"; CUR_MONTH="${CUR_MONTH%%-*}"
 
-printf "%-7s  %-8s  %6s  %s\n" "Month" "Commit" "LOC" "Commits"
-printf "%-7s  %-8s  %6s  %s\n" "-------" "--------" "------" "-------"
+printf "%-7s  %6s  %s\n" "Month" "LOC" "Hours"
+printf "%-7s  %6s  %s\n" "-------" "------" "-----"
 
 year=$FIRST_YEAR
 month=$FIRST_MONTH
@@ -47,10 +53,20 @@ while true; do
           git show "${commit}:${f}" 2>/dev/null | wc -l
         done \
       | awk '{s += $1} END {print s+0}')
-    ncommits=$(git rev-list --count --before="$cutoff" HEAD 2>/dev/null)
-    printf "%04d-%02d  %-8s  %6d  %d\n" $year $((10#$month)) "$commit" "$loc" "$ncommits"
+    # Cumulative hours up to this cutoff using the session heuristic
+    cutoff_ts=$(date -d "$cutoff" +%s 2>/dev/null || date -j -f "%Y-%m-%d" "$cutoff" +%s)
+    hours=$(echo "$ALL_TS" | awk \
+      -v gap="$SESSION_GAP" -v bonus="$SESSION_START" -v upto="$cutoff_ts" '
+      BEGIN { total=0; prev=0; sess_start=0 }
+      { ts=$1+0; if (ts >= upto) next
+        if (prev==0) { sess_start=ts }
+        else if (ts-prev > gap*3600) { total += (prev-sess_start)+bonus*3600; sess_start=ts }
+        prev=ts }
+      END { if (prev>0) total += (prev-sess_start)+bonus*3600; printf "%.0f", total/3600 }
+    ')
+    printf "%04d-%02d  %6d  %s\n" $year $((10#$month)) "$loc" "$hours"
   else
-    printf "%04d-%02d  %-8s  %6d  0\n" $year $((10#$month)) "(none)" 0
+    printf "%04d-%02d  %6d  0\n" $year $((10#$month)) 0
   fi
 
   # Advance to next month; stop after we've processed the current month

@@ -8,8 +8,8 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 OUTFILE="$REPO/loc-stat.png"
 
 # Run loc-stat, skip the 2-line header; emit data as YYYY-MM-01 for full-date timefmt
-# Columns: date  loc  commits
-DATA=$(cd "$REPO" && tools/loc-stat | tail -n +3 | awk '{print $1 "-01", $3, $4}')
+# Columns: date  loc  hours
+DATA=$(cd "$REPO" && tools/loc-stat | tail -n +3 | awk '{print $1 "-01", $2, $3}')
 
 FIRST_YEAR=$(echo "$DATA" | head -1 | cut -d- -f1)
 LAST_YEAR=$(echo "$DATA"  | tail -1 | cut -d- -f1)
@@ -32,9 +32,9 @@ TAG_CMDS=$(cd "$REPO" && git tag --sort=creatordate --format='%(creatordate:shor
 gnuplot << GNUPLOT
 set terminal png size 1400,700
 set output "$OUTFILE"
-set title "BeerTracker - Lines of Code and Commits"
+set title "BeerTracker - Lines of Code and Hours"
 set ylabel "Lines of Code"
-set y2label "Cumulative Commits"
+set y2label "Cumulative Hours"
 set ytics nomirror
 set y2tics
 set xdata time
@@ -51,7 +51,7 @@ set rmargin 10
 set bmargin 5
 $TAG_CMDS
 plot "-" using 1:2 with lines lw 2 lc rgb "#4488cc" title "LOC", \
-     "-" using 1:3 with lines lw 2 lc rgb "#44aa44" axes x1y2 title "Commits"
+     "-" using 1:3 with lines lw 2 lc rgb "#44aa44" axes x1y2 title "Hours"
 $DATA
 e
 $DATA
