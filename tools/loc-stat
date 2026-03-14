@@ -1,0 +1,62 @@
+#!/bin/bash
+# loc-stat: count lines of code at the start of each month since the first commit.
+# Counts *.cgi, *.fcgi, *.pm, *.pl files.
+# Uses git object access only — no checkout, no worktree changes.
+
+set -e
+
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO"
+
+# Find the date of the first commit
+FIRST_DATE=$(git log --reverse --format="%as" | head -1)
+if [[ -z "$FIRST_DATE" ]]; then
+  echo "No commits found." >&2
+  exit 1
+fi
+
+FIRST_YEAR="${FIRST_DATE%%-*}"
+FIRST_MONTH="${FIRST_DATE#*-}"; FIRST_MONTH="${FIRST_MONTH%%-*}"
+
+TODAY=$(date +%Y-%m-%d)
+CUR_YEAR="${TODAY%%-*}"
+CUR_MONTH="${TODAY#*-}"; CUR_MONTH="${CUR_MONTH%%-*}"
+
+printf "%-7s  %-8s  %s\n" "Month" "Commit" "LOC"
+printf "%-7s  %-8s  %s\n" "-------" "--------" "---"
+
+year=$FIRST_YEAR
+month=$FIRST_MONTH
+
+while true; do
+  # Compute start of next month — use that as the --before cutoff
+  next_month=$((10#$month + 1))
+  next_year=$year
+  if [[ $next_month -gt 12 ]]; then
+    next_month=1
+    next_year=$((year + 1))
+  fi
+  cutoff=$(printf "%04d-%02d-01" $next_year $next_month)
+
+  commit=$(git log --before="$cutoff" -1 --format="%h" 2>/dev/null)
+
+  if [[ -n "$commit" ]]; then
+    loc=$(git ls-tree -r --name-only "$commit" 2>/dev/null \
+      | grep -E '\.(cgi|fcgi|pm|pl)$' \
+      | while IFS= read -r f; do
+          git show "${commit}:${f}" 2>/dev/null | wc -l
+        done \
+      | awk '{s += $1} END {print s+0}')
+    printf "%04d-%02d  %-8s  %d\n" $year $((10#$month)) "$commit" "$loc"
+  else
+    printf "%04d-%02d  %-8s  0\n" $year $((10#$month)) "(none)"
+  fi
+
+  # Advance to next month; stop after we've processed the current month
+  month=$next_month
+  year=$next_year
+  if [[ $year -gt $CUR_YEAR ]] || \
+     [[ $year -eq $CUR_YEAR && $month -gt $((10#$CUR_MONTH)) ]]; then
+    break
+  fi
+done

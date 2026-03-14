@@ -1,0 +1,53 @@
+#!/bin/bash
+# loc-plot: plot lines of code over time using loc-stat and gnuplot.
+# Output: loc-stat.png in the repo root.
+
+set -e
+
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+OUTFILE="$REPO/loc-stat.png"
+
+# Run loc-stat, skip the 2-line header; emit data as YYYY-MM-01 for full-date timefmt
+DATA=$(cd "$REPO" && tools/loc-stat | tail -n +3 | awk '{print $1 "-01", $3}')
+
+FIRST_YEAR=$(echo "$DATA" | head -1 | cut -d- -f1)
+LAST_YEAR=$(echo "$DATA"  | tail -1 | cut -d- -f1)
+XMIN="$((FIRST_YEAR - 1))-07-01"
+XMAX="$((LAST_YEAR  + 1))-06-01"
+
+# Build gnuplot arrow+label commands for each tag
+TAG_CMDS=$(cd "$REPO" && git tag --sort=creatordate --format='%(creatordate:short) %(refname:short)' \
+  | awk '
+    BEGIN { n=0 }
+    {
+      date=$1; tag=$2; n++
+      # alternate label height between graph 0.97 and 0.88 to reduce overlap
+      ypos = (n % 2 == 1) ? "graph 0.97" : "graph 0.88"
+      print "set arrow " n " from \"" date "\", graph 0 to \"" date "\", graph 1 nohead lc rgb \"#cc4444\" lw 1 dt 2"
+      print "set label " n " \"" tag "\" at \"" date "\", " ypos " rotate by 90 right font \",9\" tc rgb \"#cc4444\""
+    }
+  ')
+
+gnuplot << GNUPLOT
+set terminal png size 1400,700
+set output "$OUTFILE"
+set title "BeerTracker - Lines of Code"
+set ylabel "Lines of Code"
+set xdata time
+set timefmt "%Y-%m-%d"
+set format x "%Y"
+set xrange ["$XMIN":"$XMAX"]
+set xtics rotate by -45
+set xtics 31557600
+set grid ytics
+set key off
+set style data lines
+set lmargin 10
+set bmargin 5
+$TAG_CMDS
+plot "-" using 1:2 with lines lw 2 lc rgb "#4488cc"
+$DATA
+e
+GNUPLOT
+
+echo "Written: $OUTFILE"
