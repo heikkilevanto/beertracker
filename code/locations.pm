@@ -86,11 +86,9 @@ sub listlocationcomments {
 
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($loc->{Id}, $c->{username}, $loc->{Id}, $c->{username});
-  print "<div onclick='toggleElement(this.nextElementSibling);'>" .
-        "<b>Comments for $loc->{Name}</b> [$loc->{Id}]" .
-        "&nbsp;<a href='$c->{url}?o=Comment&e=new&location=$loc->{Id}&commenttype=location'" .
-        " onclick='event.stopPropagation()'><span>(new)</span></a>" .
-        "</div>\n";
+    print "<div onclick='toggleElement(this.nextElementSibling);'>" .
+      "<b>Comments for $loc->{Name}</b> [$loc->{Id}]" .
+      "</div>\n";
   print "<div style='overflow-x: auto;'>";
 
   my $ratesum = 0;
@@ -302,6 +300,7 @@ sub editlocation {
       my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";
       print photos::thumbnails_html($c, 'Location', $p->{Id});
       print photos::photo_form($c, location => $p->{Id}, public_default => 1, return_url => $return_url);
+      print "&nbsp;<a href='$c->{url}?o=Comment&e=new&location=$p->{Id}&commenttype=location' onclick='event.stopPropagation()'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
       listlocationcomments($c,$p);
       locationvisits($c, $p );
