@@ -1,7 +1,8 @@
 # Beertracker database schema
-# Schema dumped at 2026-03-13 16:52 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-03-14 13:02 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
+# Any changes must be done by adding a migration to migrater.pm, then they will be applied automatically
 
 pragma foreign_keys=off;
 
@@ -404,6 +405,9 @@ create view brew_ratings as
 -- view brews_list
 drop view if exists brews_list;
 create view brews_list as
+    with users as (
+      select distinct Username from glasses
+    )
     select
       brews.Id,
       brews.Name,
@@ -420,17 +424,21 @@ create view brews_list as
         strftime('%H:%M', max(glasses.Timestamp)) as Last,
       locations.Name as Location,
       (select Filename from photos where Brew = brews.Id order by Ts desc limit 1) as Photo,
-      glasses.Username as xUsername
+      users.Username as xUsername
     from brews
+    cross join users
     left join locations ploc on ploc.Id = brews.ProducerLocation
-    left join glasses on glasses.Brew = brews.Id
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
     left join locations on locations.Id = glasses.Location
-    left join brew_ratings r on r.Brew = brews.Id and r.Username = glasses.Username
-    group by brews.Id, glasses.Username;
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.Id, users.Username;
 
 -- view brews_dedup_list
 drop view if exists brews_dedup_list;
 create view brews_dedup_list as
+    with users as (
+      select distinct Username from glasses
+    )
     select
         brews.Id,
         'Chk' as Chk,
@@ -444,17 +452,21 @@ create view brews_dedup_list as
         locations.Name as Location,
         r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
         count(glasses.Id) as Count,
-        glasses.Username as xUsername
+        users.Username as xUsername
     from brews
+    cross join users
     left join locations ploc on ploc.id = brews.ProducerLocation
-    left join glasses on glasses.Brew = brews.Id
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
     left join locations on locations.id = glasses.Location
-    left join brew_ratings r on r.Brew = brews.Id and r.Username = glasses.Username
-    group by brews.id, glasses.Username;
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.id, users.Username;
 
 -- view producer_brews_list
 drop view if exists producer_brews_list;
 create view producer_brews_list as
+    with users as (
+      select distinct Username from glasses
+    )
     select
         brews.Id as xId,
         brews.Name,
@@ -463,12 +475,13 @@ create view producer_brews_list as
         brews.Subtype as Sub,
         r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
         strftime('%Y-%m-%d', max(glasses.Timestamp), '-06:00') as Last,
-        glasses.Username as xUsername
+        users.Username as xUsername
     from brews
+    cross join users
     left join locations ploc on ploc.id = brews.ProducerLocation
-    left join glasses on glasses.Brew = brews.Id
-    left join brew_ratings r on r.Brew = brews.Id and r.Username = glasses.Username
-    group by brews.id, glasses.Username;
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.id, users.Username;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 

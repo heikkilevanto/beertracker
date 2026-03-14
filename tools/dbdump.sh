@@ -30,6 +30,7 @@ echo "# Beertracker database schema" >../doc/db.schema
 date "+# Schema dumped at %F %H:%M with $BASE/scripts/dbdump.sh" >> ../doc/db.schema
 echo "# Do not edit directly, unless you plan to run scripts/dbchange immediately" >>../doc/db.schema
 echo "# The schema lives inside the sqlite database!" >>../doc/db.schema
+echo "# Any changes must be done by adding a migration to migrate.pm, then they will be applied automatically" >>../doc/db.schema
 echo "" >>../doc/db.schema
 
 perl -ne '
