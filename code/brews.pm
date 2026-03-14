@@ -23,7 +23,7 @@ sub listbrews {
   print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
   print "<br/>\n";
   print listrecords::listrecords($c, "BREWS_LIST", "Last-",
-    "xUsername = ?", $c->{username} );
+    "xUsername = ?", $c->{username} ); # for getting user-specific ratings and counts
   return;
 } # listbrews
 
@@ -343,7 +343,7 @@ sub editbrew {
   my $duplicate_id = $c->{duplicate};
   if ($duplicate_id) {
     # Load the brew to duplicate
-    my $p = db::getrecord($c, "BREWS", $duplicate_id);
+    $p = db::getrecord($c, "BREWS", $duplicate_id);
     $p ||= {};
     $p->{Id} = "new";
     $submit = "Insert";
@@ -440,8 +440,7 @@ sub selectbrew {
       group by BREWS.id
       order by max(GLASSES.Timestamp) DESC
       ";
-    my $list_sth = $c->{dbh}->prepare($sql);
-    $list_sth->execute($c->{username});
+    my $list_sth = db::query($c, $sql, $c->{username});
 
     $opts = "";
     while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $barcode, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {
@@ -475,8 +474,7 @@ sub selectbrew {
   # Look up the display name of the selected brew (cheap primary-key lookup)
   my $current = "";
   if ( $selected ) {
-    ($current) = $c->{dbh}->selectrow_array(
-      "SELECT Name FROM BREWS WHERE Id = ?", undef, $selected);
+    ($current) = db::queryarray($c, "SELECT Name FROM BREWS WHERE Id = ?", $selected);
     $current //= "";
   }
 
@@ -496,30 +494,30 @@ sub dedupbrews {
       my $dup = $1;
       my $sql = "UPDATE GLASSES set Brew = ? where Brew = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
-      my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      my $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update glasses") unless $rows;
       print { $c->{log} } "Updated $rows glasses from $dup to $id\n";
 
       $sql = "UPDATE COMMENTS set Brew = ? where Brew = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
-      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update comments") unless defined $rows;
       print { $c->{log} } "Updated $rows comments from $dup to $id\n";
 
       $sql = "UPDATE TAP_BEERS set Brew = ? where Brew = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
-      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update tap_beers") unless defined $rows;
       print { $c->{log} } "Updated $rows tap_beers from $dup to $id\n";
 
       $sql = "UPDATE PHOTOS set Brew = ? where Brew = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
-      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update photos") unless defined $rows;
       print { $c->{log} } "Updated $rows photos from $dup to $id\n";
 
       $sql = "DELETE FROM Brews WHERE Id = ? ";
-      $rows = $c->{dbh}->do($sql, undef, $dup);
+      $rows = db::execute($c, $sql, $dup);
       util::error("Deduplicate brews: Failed to delete brew '$dup'") unless $rows;
       print { $c->{log} } "Deleted $rows brews with id  $dup\n";
     }
@@ -580,8 +578,7 @@ sub listbrewtaps {
   my $sql = qq{
     SELECT * FROM brew_taps WHERE Brew = ? ORDER BY Gone DESC, FirstSeen DESC
   };
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($brew->{Id});
+  my $sth = db::query($c, $sql, $brew->{Id});
   my $taps = $sth->fetchall_arrayref({});
 
   my @current = grep { !defined $_->{Gone} } @$taps;

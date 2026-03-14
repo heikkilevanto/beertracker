@@ -21,14 +21,12 @@ Data flows from browser forms to index.fcgi, which calls module post*() function
 
 ## Development Workflow
 - **Dev Environment**: Work in `beertracker-dev` directory (blue background indicates dev mode).
-- **Database Changes**: Implement schema changes via `code/migrate.pm` migrations; after verifying locally, run `tools/dbdump.sh` to update `doc/db.schema` and commit both. Use `tools/dbchange.sh` to apply schema updates in production. Some 
-changes (alter table) require manual steps; document those in commit message. Changes to views and indexes work well with dbchange.sh.
+- **Database Changes**: Implement schema changes via `code/migrate.pm` migrations. Remind the user to run `tools/dbdump.sh` to update `doc/db.schema` and commit both. Some changes (alter table) require manual steps; document those in commit message. Changes to views and indexes, and adding columns work well with dbchange.sh. Do not ever use sqlite to change the schema, nor edit doc/db.schema directly.
 - **Versioning**: Git pre-commit hook runs `tools/makeversion.sh` to update `code/VERSION.pm` with commit count.
 - **Testing**: No automated tests; manually test CGI under Apache. Use `superuser::copyproddata()` to sync production data to dev.
 - **Deployment**: Git pull code to production, should migrate the database on first run if schema changed. / Apache config in `etc/apache-config.example.txt` is mostly stable; avoid changes there if possible. It is actually used as the real Apache config in production. The dev version runs from the same config, so changes there should be tested carefully.
 - **Plan files**: are kept under plans. They are used to track AI instructions for implementing a change.
 They should be named like '557-photo.md' where 557 is the issue number. Can be deleted manually after the issue is done, or kept for historical reference.
-- **Database changes**: should always be done with the migration module migration.pm, and the migration scripts should be added to the repo. This way we have a clear history of all database changes, and they can be applied in production with the migration tool. The migration scripts should be idempotent, so that they can be safely run multiple times if needed.
 
 ## Key Patterns and Conventions
 - **Context Hash**: Pass `$c` hash containing globals (username, dbh, url, etc.) to all functions.
