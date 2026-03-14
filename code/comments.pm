@@ -148,9 +148,9 @@ sub commentform {
   my $cancel_url = shift || "$c->{url}?o=Comment";
   my $returnto   = shift || "";
 
+  my $lcol = "vertical-align:top; padding:0.2em 0.5em 0 0; white-space:nowrap; color:#999; font-size:small; text-align:right";
   my $s="";
   $s .= "<!-- Comment editing form -->\n";
-  # Photo link is placed below the form (see end of this function)
   $s .= "<form method='post' action='$c->{url}' enctype='multipart/form-data'>\n";
   $s .= "<input type='hidden' name='commentedit' value='1'>\n"; # To distinguish from glass submit
   $s .= "<input type='hidden' name='o' value='$c->{op}'>\n";
@@ -161,25 +161,43 @@ sub commentform {
     $s .= "<input type='hidden' name='comment_id' value='$com->{Id}'>\n";
   }
 
-  # Comment text area (always shown)
-  my $comment = $com->{Comment} || "";
-  my $pl = "Add a new comment" ;
-  $s .= "<textarea name='comment' rows='3' cols='40' placeholder='$pl' >$comment</textarea><br/>\n";
+  $s .= "<table style='border-collapse:collapse'>\n";
 
-  # CommentType selector
   my @ctypes = qw(brew night meal location person glass);
   my $curtype = $com->{CommentType} || 'brew';
-  $s .= "<select name='commenttype' id='commenttype'>\n";
+  my $loctext  = util::htmlesc($com->{locname}  || $com->{_glass_locname}  || "");
+  my $brewtext = util::htmlesc($com->{brewname} || $com->{_glass_brewname} || "");
+  my $ts_display = $com->{Ts} || $com->{_glass_ts} || "";
+  $ts_display =~ s/:\d+$//;  # remove seconds
+
+  # Type row
+  $s .= "<tr>\n";
+  $s .= "  <td style='$lcol'>Type</td>\n";
+  $s .= "  <td>\n";
+  $s .= "    <select name='commenttype' id='commenttype'>\n";
   for my $ct (@ctypes) {
     my $sel = ($curtype eq $ct) ? ' selected' : '';
-    $s .= "<option value='$ct'$sel>$ct</option>\n";
+    $s .= "      <option value='$ct'$sel>$ct</option>\n";
   }
-  $s .= "</select>\n";
-  $s .= "<script>replaceSelectWithCustom(document.getElementById('commenttype'));</script>\n";
+  $s .= "    </select>\n";
+  $s .= "    <script>replaceSelectWithCustom(document.getElementById('commenttype'));</script>\n";
+  $s .= "  </td>\n";
+  $s .= "</tr>\n";
 
-  # Privacy toggle removed - all comments are private by default
+  # Context row: read-only text for night (loc+ts) and glass (loc+brew) types
+  $s .= "<tr id='row-context' hidden>\n";
+  $s .= "  <td style='$lcol'>On</td>\n";
+  $s .= "  <td>\n";
+  $s .= "    <div id='night-display' hidden><span style='color:#aaa'>$loctext</span>";
+  $s .= " &nbsp;<span style='color:#aaa'>$ts_display</span>" if $ts_display;
+  $s .= "</div>\n";
+  $s .= "    <div id='glass-display' hidden><span style='color:#aaa'>$loctext</span>";
+  $s .= " &nbsp;<span style='color:#aaa'>$brewtext</span>" if $brewtext;
+  $s .= "</div>\n";
+  $s .= "  </td>\n";
+  $s .= "</tr>\n";
 
-  # Person involved in the comment — pre-populate chips for existing persons or prefill
+  # Person row
   my $prechips = '';
   if ( $com->{Id} ) {
     my $psth = $c->{dbh}->prepare(
@@ -203,41 +221,95 @@ sub commentform {
       "<input type='hidden' name='person_id' value='$pid'/>" .
       "</span>\n";
   }
-  # Person selector (conditionally shown based on commenttype; always shown if pre-populated)
-  $s .= "<div id='commentfield-person'>\n";
+  $s .= "<tr id='row-person'>\n";
+  $s .= "  <td style='$lcol'>Person</td>\n";
+  $s .= "  <td>\n";
   $s .= persons::selectperson($c, 'person', undef, '', '', '', 'multi', $prechips);
-  $s .= "</div>\n";
+  $s .= "  </td>\n";
+  $s .= "</tr>\n";
 
-  # Location selector (conditionally shown)
-  $s .= "<div id='commentfield-location'>\n";
-  $s .= locations::selectlocation($c, 'Location', $com->{Location}||'', '', 'non');
-  $s .= "</div>\n";
-
-  # Brew selector (conditionally shown)
-  $s .= "<div id='commentfield-brew'>\n";
+  # Brew row
+  $s .= "<tr id='row-brew'>\n";
+  $s .= "  <td style='$lcol'>Brew</td>\n";
+  $s .= "  <td>\n";
   $s .= brews::selectbrew($c, $com->{Brew}||'');
-  $s .= "</div>\n";
+  $s .= "  </td>\n";
+  $s .= "</tr>\n";
 
-  $s .= "<select name='rating' id='rating'>\n";
-  $s .= "<option value=''>Rating</option>\n";
+  # Location row
+  $s .= "<tr id='row-location'>\n";
+  $s .= "  <td style='$lcol'>Location</td>\n";
+  $s .= "  <td>\n";
+  $s .= locations::selectlocation($c, 'Location', $com->{Location}||'', '', 'non');
+  $s .= "  </td>\n";
+  $s .= "</tr>\n";
+
+  # Timestamp row (hidden by default, shown with "show all")
+  my $ts_val = $com->{Ts} || "";
+  $ts_val =~ s/ /T/;    # datetime-local format
+  $ts_val =~ s/:\d+$//; # remove seconds
+  $s .= "<tr id='row-ts' hidden>\n";
+  $s .= "  <td style='$lcol'>Timestamp</td>\n";
+  $s .= "  <td><input type='datetime-local' name='ts' value='$ts_val'></td>\n";
+  $s .= "</tr>\n";
+
+  # Public row (hidden by default)
+  my $is_public = ($com->{Id} && !$com->{Username}) ? " checked" : "";
+  $s .= "<tr id='row-public' hidden>\n";
+  $s .= "  <td></td>\n";
+  $s .= "  <td><label><input type='checkbox' name='public' value='1'$is_public>" .
+        " <span style='color:#aaa; font-size:small'>Public comment</span></label></td>\n";
+  $s .= "</tr>\n";
+
+  # Comment row
+  my $comment = $com->{Comment} || "";
+  my $pl = "Add a new comment";
+  $s .= "<tr>\n";
+  $s .= "  <td style='$lcol'>Comment</td>\n";
+  $s .= "  <td><textarea name='comment' rows='3' cols='40' placeholder='$pl'>$comment</textarea></td>\n";
+  $s .= "</tr>\n";
+
+  # Rating row
+  $s .= "<tr>\n";
+  $s .= "  <td style='$lcol'>Rating</td>\n";
+  $s .= "  <td>\n";
+  $s .= "    <select name='rating' id='rating'>\n";
+  $s .= "    <option value=''>Rating</option>\n";
   my $r = $com->{Rating} || 0;
   for my $i (1 .. $#ratings) {  # Skip "Zero"
     my $selected = ($r == $i) ? " selected" : "";
     my $class = get_rating_class($i);
-    $s .= "<option class='$class' value='$i'$selected>$i: $ratings[$i]</option>\n";
+    $s .= "    <option class='$class' value='$i'$selected>$i: $ratings[$i]</option>\n";
   }
-  $s .= "</select>\n";
-  $s .= "<script>replaceSelectWithCustom(document.getElementById('rating'));</script>\n";
+  $s .= "    </select>\n";
+  $s .= "    <script>replaceSelectWithCustom(document.getElementById('rating'));</script>\n";
+  $s .= "  </td>\n";
+  $s .= "</tr>\n";
 
-  # Submit button
+  # Buttons row
   my $button_text = $com->{Id} ? "Update Comment" : "Add Comment";
-  $s .= "<input type='submit' name='submit' value='$button_text'>\n";
-  $s .= "<a href='$cancel_url'><span>Cancel</span></a>\n";
-  $s .= "<input type='submit' name='submit' value='Delete Comment'>\n" if ( $com->{Id} );
+  $s .= "<tr>\n";
+  $s .= "  <td></td>\n";
+  $s .= "  <td>\n";
+  $s .= "    <input type='submit' name='submit' value='$button_text'>\n";
+  $s .= "    &nbsp;<a href='$cancel_url'><span>Cancel</span></a>\n";
+  $s .= "    &nbsp;<input type='submit' name='submit' value='Delete Comment'>\n" if $com->{Id};
+  $s .= "    &nbsp;<a href='#' id='show-all-link'><span>(Show all fields)</span></a>\n";
+  $s .= "  </td>\n";
+  $s .= "</tr>\n";
+  $s .= "</table>\n";
   $s .= "</form>\n";
 
-  # Photo upload link (moved below the form)
-  $s .= photos::photo_form($c, glass => $glassid) . "\n" if $glassid;
+  # Photos attached to this comment
+  if ($com->{Id}) {
+    my $thumbs = photos::thumbnails_html($c, 'Comment', $com->{Id});
+    $s .= $thumbs if $thumbs;
+  }
+
+  # Photo upload link — only for saved comments
+  if ($com->{Id}) {
+    $s .= photos::photo_form($c, comment => $com->{Id}) . "\n";
+  }
 
   # "Add another comment on the same item" link
   if ($glassid) {
@@ -251,51 +323,172 @@ sub commentform {
     $s .= "<a href='$another_url'><span>(Add another comment)</span></a><br/>\n";
   }
 
-  # "Show all fields" link and JS for field visibility based on commenttype
-  $s .= "<a href='#' onclick='showAllCommentFields(); return false;'><span>(Show all fields)</span></a>\n";
+  # Other comments on the same item
+  $s .= sibling_comments_html($c, $com, $glassid);
+
+  # JS: show/hide rows based on comment type, and "show all" toggle
   $s .= <<'JSEND';
 <script>
-function updateCommentFields() {
-  var typeEl = document.getElementById('commenttype');
-  var type = typeEl ? typeEl.value : 'brew';
-  var brewDiv     = document.getElementById('commentfield-brew');
-  var personDiv   = document.getElementById('commentfield-person');
-  var locationDiv = document.getElementById('commentfield-location');
+(function () {
+  var showAll = false;
+  var entityRows = ['row-person', 'row-brew', 'row-location'];
+  var typeToRow = {
+    brew:     'row-brew',
+    meal:     'row-brew',
+    glass:    null,
+    night:    null,
+    location: 'row-location',
+    person:   'row-person'
+  };
 
-  function hasValue(div) {
-    if (!div) return false;
-    var hidden = div.querySelector('input[type=hidden][name=Brew], input[type=hidden][name=Location]');
-    if (hidden && hidden.value) return true;
-    var personInputs = div.querySelectorAll('input[name=person_id]');
-    return personInputs.length > 0;
+  function hasValue(rowId) {
+    var row = document.getElementById(rowId);
+    if (!row) return false;
+    var h = row.querySelector(
+      'input[type=hidden][name="Location"], input[type=hidden][name="Brew"]');
+    if (h && h.value) return true;
+    return row.querySelectorAll('input[name=person_id]').length > 0;
   }
 
-  var showBrew     = (type === 'brew' || type === 'meal' || type === 'glass') || hasValue(brewDiv);
-  var showPerson   = (type === 'person') || hasValue(personDiv);
-  var showLocation = (type !== 'glass') || hasValue(locationDiv);
+  function updateCommentFields() {
+    var typeEl = document.getElementById('commenttype');
+    var type   = typeEl ? typeEl.value : 'brew';
 
-  if (brewDiv)     brewDiv.hidden     = !showBrew;
-  if (personDiv)   personDiv.hidden   = !showPerson;
-  if (locationDiv) locationDiv.hidden = !showLocation;
-}
+    // Context row (night/glass read-only text)
+    var contextRow = document.getElementById('row-context');
+    var nightDisp  = document.getElementById('night-display');
+    var glassDisp  = document.getElementById('glass-display');
+    if (type === 'night') {
+      if (contextRow) contextRow.hidden = false;
+      if (nightDisp)  nightDisp.hidden  = false;
+      if (glassDisp)  glassDisp.hidden  = true;
+    } else if (type === 'glass') {
+      if (contextRow) contextRow.hidden = false;
+      if (nightDisp)  nightDisp.hidden  = true;
+      if (glassDisp)  glassDisp.hidden  = false;
+    } else {
+      if (contextRow) contextRow.hidden = true;
+    }
 
-function showAllCommentFields() {
-  ['commentfield-brew', 'commentfield-person', 'commentfield-location'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.hidden = false;
-  });
-}
+    // Entity rows: show primary unconditionally, others only if populated or showAll
+    var primaryRowId = typeToRow[type];
+    entityRows.forEach(function (rowId) {
+      var row = document.getElementById(rowId);
+      if (!row) return;
+      row.hidden = !(rowId === primaryRowId || showAll || hasValue(rowId));
+    });
 
-var commenttypeEl = document.getElementById('commenttype');
-if (commenttypeEl) {
-  commenttypeEl.addEventListener('change', updateCommentFields);
-  updateCommentFields();
-}
+    // Extra rows revealed by showAll
+    if (showAll) {
+      ['row-ts', 'row-public'].forEach(function (id) {
+        var row = document.getElementById(id);
+        if (row) row.hidden = false;
+      });
+    }
+  }
+
+  function showAllCommentFields() {
+    showAll = true;
+    updateCommentFields();
+    var link = document.getElementById('show-all-link');
+    if (link) link.hidden = true;
+  }
+
+  var showAllLink = document.getElementById('show-all-link');
+  if (showAllLink) {
+    showAllLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      showAllCommentFields();
+    });
+  }
+
+  var ctypeEl = document.getElementById('commenttype');
+  if (ctypeEl) {
+    ctypeEl.addEventListener('change', updateCommentFields);
+    updateCommentFields();
+  }
+}());
 </script>
 JSEND
 
   return $s;
-}
+} # commentform
+
+################################################################################
+# Other comments on the same item (glass / brew / location), excluding $com
+################################################################################
+sub sibling_comments_html {
+  my $c       = shift;
+  my $com     = shift;
+  my $glassid = shift;
+
+  my ($sql, @params, $label);
+
+  if ($glassid) {
+    my ($locname, $effdate) = $c->{dbh}->selectrow_array(
+      "SELECT l.Name, strftime('%Y-%m-%d', g.Timestamp, '-06:00')
+       FROM glasses g LEFT JOIN locations l ON l.Id = g.Location
+       WHERE g.Id = ?", undef, $glassid);
+    my $ctx = $effdate || "this session";
+    $ctx .= " \@$locname" if $locname;
+    $label = "Other comments on $ctx:";
+    $sql = q{
+      SELECT c.*, group_concat(p.Name, ', ') as PeopleNames
+      FROM comments c
+      LEFT JOIN comment_persons cp ON cp.Comment = c.Id
+      LEFT JOIN persons p ON p.Id = cp.Person
+      WHERE c.Glass = ?
+      GROUP BY c.Id ORDER BY c.Id};
+    @params = ($glassid);
+  } elsif ($com->{Brew}) {
+    my ($brewname) = $c->{dbh}->selectrow_array(
+      "SELECT Name FROM brews WHERE Id = ?", undef, $com->{Brew});
+    $label = "Other comments on ${\ ($brewname || 'this brew')}:";
+    $sql = q{
+      SELECT c.*, group_concat(p.Name, ', ') as PeopleNames
+      FROM comments c
+      LEFT JOIN glasses g ON g.Id = c.Glass
+      LEFT JOIN comment_persons cp ON cp.Comment = c.Id
+      LEFT JOIN persons p ON p.Id = cp.Person
+      WHERE c.Brew = ? AND c.CommentType = 'brew'
+        AND (g.Username = ? OR (c.Glass IS NULL AND c.Username = ?))
+      GROUP BY c.Id ORDER BY c.Id};
+    @params = ($com->{Brew}, $c->{username}, $c->{username});
+  } elsif ($com->{Location}) {
+    my ($locname) = $c->{dbh}->selectrow_array(
+      "SELECT Name FROM locations WHERE Id = ?", undef, $com->{Location});
+    $label = "Other comments at ${\ ($locname || 'this location')}:";
+    $sql = q{
+      SELECT c.*, group_concat(p.Name, ', ') as PeopleNames
+      FROM comments c
+      LEFT JOIN glasses g ON g.Id = c.Glass
+      LEFT JOIN comment_persons cp ON cp.Comment = c.Id
+      LEFT JOIN persons p ON p.Id = cp.Person
+      WHERE c.Location = ? AND c.CommentType = 'location'
+        AND (g.Username = ? OR (c.Glass IS NULL AND c.Username = ?))
+      GROUP BY c.Id ORDER BY c.Id};
+    @params = ($com->{Location}, $c->{username}, $c->{username});
+  } else {
+    return "";
+  }
+
+  my $sth = $c->{dbh}->prepare($sql);
+  $sth->execute(@params);
+
+  my @rows;
+  while (my $cr = $sth->fetchrow_hashref) {
+    next if $com->{Id} && $cr->{Id} == $com->{Id};  # exclude current comment
+    push @rows, commentline($c, $cr);
+  }
+  return "" unless @rows;
+
+  my $s = "<hr style='border-color:#444; margin:0.5em 0'>\n";
+  $s .= "<b>$label</b>\n";
+  $s .= "<ul style='margin:0; padding-left:1.2em;'>\n";
+  $s .= "<li>$_</li>\n" for @rows;
+  $s .= "</ul>\n";
+  return $s;
+} # sibling_comments_html
 
 ################################################################################
 # Standalone comment edit/create page  (o=Comment&e=<id> or with prefill params)
@@ -337,6 +530,8 @@ sub editcomment {
 
   print "<b>" . ( $ec ? "Edit comment $ec" : "New comment" ) . "</b><br/>\n";
 
+  my ($gloc, $gbrew, $gts);  # glass display data for commentform (set below if prefill_glass)
+
   # Context header
   if ($com && $com->{Glass}) {
     my ($date, $wd) = util::splitdate($com->{effdate});
@@ -355,9 +550,10 @@ sub editcomment {
           "<span>" . ($locname || $com->{Location}) . "</span></a><br/>\n";
   } elsif ($prefill_glass) {
     # New comment for a known glass — show context and fetch brew/location for prefill
-    my ($gdate, $gloc, $glocid, $gbrew, $gbrewid) = $c->{dbh}->selectrow_array(q{
+    my ($gdate, $glocid, $gbrewid);
+    ($gdate, $gloc, $glocid, $gbrew, $gbrewid, $gts) = $c->{dbh}->selectrow_array(q{
       SELECT strftime('%Y-%m-%d %w %H:%M', g.Timestamp, '-06:00'),
-             gloc.Name, g.Location, b.Name, g.Brew
+             gloc.Name, g.Location, b.Name, g.Brew, g.Timestamp
       FROM glasses g
       LEFT JOIN locations gloc ON gloc.Id = g.Location
       LEFT JOIN brews b ON b.Id = g.Brew
@@ -390,6 +586,10 @@ sub editcomment {
       $com->{_prefill_person_id}   = $prefill_pid;
       $com->{_prefill_person_name} = $pname || $prefill_pid;
     }
+    # Pass glass display data for night/glass text display in commentform
+    $com->{_glass_locname}  = $gloc if $gloc;
+    $com->{_glass_brewname} = $gbrew if $gbrew;
+    $com->{Ts}              = $gts  if $gts && !$com->{Ts};
   }
 
   # Cancel: back to that day in mainlist if we know the glass, or to returnto page
@@ -418,7 +618,7 @@ sub postcomment {
   my $rating     = util::param($c, "rating")    || undef;
   my $comment    = util::param($c, "comment")   || undef;
   my $commenttype= util::param($c, "commenttype") || undef;
-  my $private    = util::param($c, "private")   || "";
+  my $public     = util::param($c, "public")    || ""; # public=1 means no username stored
   my $person     = util::param($c, "person")    || undef; # legacy / new-person sentinel
   my $location   = util::param($c, "Location")  || undef;
   my $brew       = util::param($c, "Brew")      || undef;
@@ -429,12 +629,17 @@ sub postcomment {
   my @person_ids = $c->{cgi}->multi_param('person_id');
   @person_ids = grep { $_ && $_ =~ /^\d+$/ } @person_ids; # only plain integers
 
-  # All comments are private (owned by this user)
-  my $username = $c->{username};
+  # Username: private (default) uses current user; public comment stores no username
+  my $username = $public ? undef : $c->{username};
 
-  # Infer timestamp: use glass timestamp when available, else now
-  my $ts = undef;
-  if ( $glass ) {
+  # Timestamp: user-supplied override takes priority, then glass timestamp, then now
+  my $ts_override = util::param($c, "ts") || "";
+  $ts_override =~ s/T/ /;           # datetime-local uses T as separator
+  $ts_override .= ":00" if $ts_override =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+  my $ts;
+  if ($ts_override =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) {
+    $ts = $ts_override;
+  } elsif ( $glass ) {
     ($ts) = $c->{dbh}->selectrow_array(
       "SELECT Timestamp FROM glasses WHERE Id = ?", undef, $glass);
   }

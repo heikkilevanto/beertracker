@@ -41,8 +41,7 @@ They should be named like '557-photo.md' where 557 is the issue number. Can be d
 - **UTF-8**: All source and data is UTF-8; set `binmode STDOUT, ":utf8"` in index.fcgi
 - **No Frameworks**: Pure Perl, no ORM or web framework; procedural style with modules.
 - The system lives in the local time zone. Since beer drinking often spans midnight, we offset the date by 6 hours to group late-night drinking into the previous day. This is handled in SQL queries with `datetime(Timestamp, '-6 hours')`.
-- When ever editing any code, touch **code/version.pm** to trigger a reload. Do not change the version
-number, that is done at commit time.
+- After editing any code (and checking it with perl -c), touch **code/version.pm** to trigger a reload. Do not change the version number, that is done at commit time.
 - All links should have the text inside a <span> element. For example: `<a href='...?o=Comment&e=123'><span>[123]</span></a>`. This is to make the link style apply only to the underline.
 
 ## Code Style Details
