@@ -124,6 +124,14 @@ binmode $log, ":utf8";
 $log->autoflush(1);  # Flush after every write so log is live under FastCGI
 util::set_log($log);  # Let util.pm (and modules using $util::log) find it
 
+# Redirect STDERR to the log file so XS/OS-level messages appear in the log
+open(STDERR, ">&", $log) or warn "Cannot redirect STDERR to log: $!";
+# Add timestamps to Perl warnings (e.g. "Use of uninitialized value")
+$SIG{__WARN__} = sub {
+    my $now = localtime;
+    print { $log } $now->hms . " WARN: " . $_[0];
+};
+
 # Record startup mtimes for auto-reload detection
 my $mtime0    = (stat($0))[9];
 my $mtime_ver = (stat("code/VERSION.pm"))[9];
