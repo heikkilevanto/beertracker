@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 14;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 15;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
@@ -43,6 +43,7 @@ our @MIGRATIONS = (
   [12, 'brew_ratings per-user: add Username; rebuild brew list views with per-user stats', \&mig_012_brew_ratings_per_user],
   [13, 'brews_list per user via users x brews, so all brews are visible with user-only stats/count', \&mig_013_brews_list_user_crossjoin],
   [14, 'rebuild brews_dedup_list and producer_brews_list as per-(brew,user) rows', \&mig_014_other_brew_views_user_crossjoin],
+  [15, 'add Photos column to comments_list view', \&mig_015_comments_list_photos],
 );
 
 ################################################################################
@@ -969,5 +970,44 @@ sub mig_014_other_brew_views_user_crossjoin {
     GROUP BY brews.id, users.Username
   });
 } # mig_014_other_brew_views_user_crossjoin
+
+################################################################################
+sub mig_015_comments_list_photos {
+  my $c = shift;
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, q{
+    CREATE VIEW comments_list AS
+    SELECT
+      comments.Id,
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS Last,
+      COALESCE(loc_comment.Name, loc_glass.Name) AS LocName,
+      'tr' AS tr,
+      '' AS Clr,
+      COALESCE(brew_comment.Name, brew_glass.Name) AS BrewName,
+      COALESCE(ploc_comment.Name, ploc_glass.Name) AS Prod,
+      'tr' AS tr,
+      comments.Rating AS Rate,
+      group_concat(persons.Name, ', ') AS PersonName,
+      comments.CommentType AS CommentType,
+      comments.Comment AS Comment,
+      'tr' AS tr,
+      (SELECT group_concat(Filename, '|') FROM photos WHERE Comment = comments.Id) AS Photos,
+      '' AS None,
+      COALESCE(glasses.Username, comments.Username) AS Xusername
+    FROM comments
+    LEFT JOIN glasses       ON glasses.Id       = comments.Glass
+    LEFT JOIN brews brew_glass   ON brew_glass.Id   = glasses.Brew
+    LEFT JOIN brews brew_comment ON brew_comment.Id = comments.Brew
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons            ON persons.Id  = cp.Person
+    LEFT JOIN locations loc_glass   ON loc_glass.Id   = glasses.Location
+    LEFT JOIN locations loc_comment ON loc_comment.Id = comments.Location
+    LEFT JOIN locations ploc_glass   ON ploc_glass.Id   = brew_glass.ProducerLocation
+    LEFT JOIN locations ploc_comment ON ploc_comment.Id = brew_comment.ProducerLocation
+    GROUP BY comments.Id
+    ORDER BY Last DESC
+  });
+} # mig_015_comments_list_photos
 
 1;

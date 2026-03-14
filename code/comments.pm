@@ -592,17 +592,11 @@ sub editcomment {
     $com->{Ts}              = $gts  if $gts && !$com->{Ts};
   }
 
-  # Cancel: back to that day in mainlist if we know the glass, or to returnto page
+  # Cancel: always back to the comments list
   my $returnto   = util::param($c, "returnto") || "";
   $returnto      =~ s/[^a-z]//g;  # Restrict to lowercase letters only (safe page names)
   my $cancel_url = $returnto ? "$c->{url}?o=$returnto" : "$c->{url}?o=Comment";
   my $glass_id   = $com->{Glass} || $prefill_glass || "";
-  if ($glass_id) {
-    my ($effdate) = $c->{dbh}->selectrow_array(
-      "SELECT strftime('%Y-%m-%d', Timestamp, '-06:00') FROM glasses WHERE Id = ? AND Username = ?",
-      undef, $glass_id, $c->{username});
-    $cancel_url = "$c->{url}?o=Full&date=$effdate&ndays=1" if $effdate;
-  }
 
   print commentform($c, $com, $glass_id, $cancel_url, $returnto);
 } # editcomment

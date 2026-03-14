@@ -250,11 +250,9 @@ sub commentlines {
     $sth->execute($rec->{id});
     print "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
-      my $comid = $com->{Id};
       # Prefer PeopleNames (from comment_persons) over legacy PersName
       $com->{PersName} = $com->{PeopleNames} if $com->{PeopleNames};
-      my $phothtml = $com->{photocount} ? photos::thumbnails_html($c, 'Comment', $comid) : '';
-      print "<li>". comments::commentline($c, $com). $phothtml . "</li>\n  ";  # </div>\n";
+      print "<li>". comments::commentline($c, $com). "</li>\n  ";
     }
     print "</ul>\n";
   }
