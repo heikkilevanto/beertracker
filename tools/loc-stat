@@ -42,7 +42,7 @@ while true; do
 
   if [[ -n "$commit" ]]; then
     loc=$(git ls-tree -r --name-only "$commit" 2>/dev/null \
-      | grep -E '\.(cgi|fcgi|pm|pl)$' \
+      | grep -E '\.(cgi|fcgi|pm|pl|css|js)$' \
       | while IFS= read -r f; do
           git show "${commit}:${f}" 2>/dev/null | wc -l
         done \
