@@ -43,7 +43,7 @@ use CGI::Fast qw( -utf8 );
 ################################################################################
 # Fix the current directory
 ################################################################################
-# This is necessary after we moved index.cgi into the code dir
+# This is necessary after we moved index.fcgi into the code dir
 if ( cwd() =~ /\/code$/ ) {
   chdir("..")
     or util::error("Can not chdir to .. from code/: $!" );
@@ -380,7 +380,7 @@ if ( $c->{op} =~ /Board/i ) {
 } else { # Default to the graph
   # Log it, I have seen menus with no section selected! Must be a bad $op
   # but I don't know where it comes from.
-  print { $c->{log} } "Index.cgi: Default op '$c->{op}' \n"
+  print { $c->{log} } "Index.fcgi: Default op '$c->{op}' \n"
     unless ( $c->{op} eq "Graph" );
   $c->{op} = "Graph" unless $c->{op};
   graph::graph($c);
