@@ -229,6 +229,14 @@ After verifying a migration locally, run `tools/dbdump.sh` to update
 by the first page load will detect the version mismatch and apply the
 migrations automatically.
 
+### Releasing a version
+When about to release a new version, try to follow this checklist:
+- Decide on a feature freeze. Bugs can still be fixed
+- Verify that each module is in a reasonable state. 
+- Verify most of functionality
+- Get a summary of major changes since last version
+- Use GitHub to release a version
+
 ## See also
 - The project lives on github at https://github.com/heikkilevanto/beertracker. 
 - Bugs and feature requests are logged at /issues at github. There are a few 
