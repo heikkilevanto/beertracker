@@ -53,8 +53,7 @@ sub monthstat {
   order by calmon
   };
 
-  my $sum_sth = $c->{dbh}->prepare($sumsql);
-  $sum_sth->execute( @sql_params );
+  my $sum_sth = db::query($c, $sumsql, @sql_params);
   while ( my ( $calmon, $pr, $drinks, $last ) = $sum_sth->fetchrow_array ) {
     $monthdrinks{$calmon} = $drinks;
     $monthprices{$calmon} = $pr;       # negative prices for buying box wines

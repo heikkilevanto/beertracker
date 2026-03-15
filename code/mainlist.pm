@@ -109,8 +109,7 @@ sub bloodalc {
       and volume > 0
     order by timestamp
   );
-  my $get_sth = $c->{dbh}->prepare($sql);
-  $get_sth->execute($effdate, $c->{username});
+  my $get_sth = db::query($c, $sql, $effdate, $c->{username});
   my $alcinbody = 0;
   my $balctime = 0;
   my $max = 0 ;

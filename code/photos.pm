@@ -235,8 +235,7 @@ sub post_photo {
         $attach_id = util::param($c, 'attach_person_id') || undef;
       }
       util::error("No entity selected for attachment") unless $attach_id;
-      my $src = $c->{dbh}->selectrow_hashref(
-        "SELECT * FROM photos WHERE Id = ?", undef, $photo_id);
+      my $src = db::queryrecord($c, "SELECT * FROM photos WHERE Id = ?", $photo_id);
       util::error("Source photo $photo_id not found") unless $src;
       my $col = ucfirst($attach_type);
       db::execute($c,
@@ -250,14 +249,12 @@ sub post_photo {
 
     if ( $submit =~ /Delete/i ) {
       # Fetch filename before deleting so we can clean up files if last record
-      my $fname_row = $c->{dbh}->selectrow_hashref(
-        "SELECT Filename FROM photos WHERE Id = ?", undef, $photo_id);
+      my $fname_row = db::queryrecord($c, "SELECT Filename FROM photos WHERE Id = ?", $photo_id);
       db::execute($c, "DELETE FROM photos WHERE Id = ?", $photo_id);
       print { $c->{log} } "Deleted photo id=$photo_id\n";
       # Remove physical image files only when no other record references this filename
       if ($fname_row && $fname_row->{Filename}) {
-        my ($remaining) = $c->{dbh}->selectrow_array(
-          "SELECT COUNT(*) FROM photos WHERE Filename = ?", undef, $fname_row->{Filename});
+        my ($remaining) = db::queryarray($c, "SELECT COUNT(*) FROM photos WHERE Filename = ?", $fname_row->{Filename});
         if ($remaining == 0) {
           my $orig = imagefilename($c, $fname_row->{Filename}, 'orig');
           (my $base = $orig) =~ s/\+orig\.jpg$//;
@@ -389,7 +386,7 @@ sub photo_attached_str {
   if ( $p->{Glass} ) {
     my $gid = $p->{Glass};
     my $glink = "<a href='$c->{url}?o=Full&e=$gid'><span>$gid</span></a>";
-    my $row = $c->{dbh}->selectrow_hashref(q{
+    my $row = db::queryrecord($c, q{
       SELECT l.Name  AS Loc,
              b.Name  AS Brew,
              pl.Name AS Producer
@@ -398,7 +395,7 @@ sub photo_attached_str {
         LEFT JOIN brews b      ON b.Id  = g.Brew
         LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
        WHERE g.Id = ?
-    }, undef, $gid);
+    }, $gid);
     if ($row) {
       my $s = "G[$glink]:";
       $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
@@ -412,14 +409,14 @@ sub photo_attached_str {
 
   if ( $p->{Comment} ) {
     my $cid = $p->{Comment};
-    my $row = $c->{dbh}->selectrow_hashref(q{
-      SELECT c.Comment AS Txt,
-             c.Glass   AS Gid,
-             c.Rating  AS Rating,
-             group_concat(p.Name, ', ') AS PersName,
-             l.Name    AS Loc,
-             b.Name    AS Brew,
-             pl.Name   AS Producer
+        my $row = db::queryrecord($c, q{
+         SELECT c.Comment AS Txt,
+          c.Glass   AS Gid,
+          c.Rating  AS Rating,
+          group_concat(p.Name, ', ') AS PersName,
+          l.Name    AS Loc,
+          b.Name    AS Brew,
+          pl.Name   AS Producer
         FROM comments c
         LEFT JOIN comment_persons cp ON cp.Comment = c.Id
         LEFT JOIN persons p     ON p.Id = cp.Person
@@ -427,9 +424,9 @@ sub photo_attached_str {
         LEFT JOIN locations l  ON l.Id  = g.Location
         LEFT JOIN brews b      ON b.Id  = g.Brew
         LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
-       WHERE c.Id = ?
-       GROUP BY c.Id
-    }, undef, $cid);
+          WHERE c.Id = ?
+          GROUP BY c.Id
+        }, $cid);
     if ($row) {
       # only emit a comment line when there's something useful to show
       if ( defined $row->{Rating} || $row->{PersName} || $row->{Txt} ) {
@@ -467,9 +464,7 @@ sub photo_attached_str {
   if ( $p->{Location} ) {
     my $lid = $p->{Location};
     my $llink = "<a href='$c->{url}?o=Location&e=$lid'><span>$lid</span></a>";
-    my $row = $c->{dbh}->selectrow_hashref(
-      "SELECT Name, Description FROM locations WHERE Id = ?",
-      undef, $lid);
+    my $row = db::queryrecord($c, "SELECT Name, Description FROM locations WHERE Id = ?", $lid);
     if ($row) {
       my $s = "L[$llink]: <b>$row->{Name}</b>";
       $s .= " &mdash; " . util::htmlesc(substr($row->{Description}, 0, 80))
@@ -483,9 +478,7 @@ sub photo_attached_str {
   if ( $p->{Person} ) {
     my $peid = $p->{Person};
     my $pelink = "<a href='$c->{url}?o=Person&e=$peid'><span>$peid</span></a>";
-    my $row = $c->{dbh}->selectrow_hashref(
-      "SELECT Name, Description FROM persons WHERE Id = ?",
-      undef, $peid);
+    my $row = db::queryrecord($c, "SELECT Name, Description FROM persons WHERE Id = ?", $peid);
     if ($row) {
       my $s = "P[$pelink]: <b>$row->{Name}</b>";
       $s .= " &mdash; " . util::htmlesc(substr($row->{Description}, 0, 80))
@@ -499,12 +492,12 @@ sub photo_attached_str {
   if ( $p->{Brew} ) {
     my $bid = $p->{Brew};
     my $blink = "<a href='$c->{url}?o=Brew&e=$bid'><span>$bid</span></a>";
-    my $row = $c->{dbh}->selectrow_hashref(q{
+    my $row = db::queryrecord($c, q{
       SELECT b.Name, b.Details, pl.Name AS Producer
         FROM brews b
         LEFT JOIN locations pl ON pl.Id = b.ProducerLocation
        WHERE b.Id = ?
-    }, undef, $bid);
+    }, $bid);
     if ($row) {
       my $s = "B[$blink]:";
       $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};

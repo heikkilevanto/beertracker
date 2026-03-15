@@ -73,17 +73,14 @@ sub updateboard {
     } else {
       # Insert new producer
       my $sql = "INSERT INTO LOCATIONS (Name, LocType, LocSubType) VALUES (?, 'Producer', 'Beer')";
-      my $sth = $c->{dbh}->prepare($sql);
-      $sth->execute($maker);
+      db::execute($c, $sql, $maker);
       $prod_id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
       print { $c->{log} } "updateboard: Inserted producer '$maker' (id $prod_id)\n";
     }
 
     # Ensure brew exists
     my $sql_check = "SELECT Id, DefPrice, DefVol FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
-    my $sth_check = $c->{dbh}->prepare($sql_check);
-    $sth_check->execute($beer, $prod_id);
-    my ($brew_id, $current_defprice, $current_defvol) = $sth_check->fetchrow_array;
+    my ($brew_id, $current_defprice, $current_defvol) = db::queryarray($c, $sql_check, $beer, $prod_id);
 
     # Compute defprice and defvol from scraped data
     my $defprice;
@@ -104,8 +101,7 @@ sub updateboard {
       if ( ($current_defprice // '') ne ($defprice // '') ||
            ($current_defvol // '') ne ($defvol // '') ) {
         my $sql_update = "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?";
-        my $sth_update = $c->{dbh}->prepare($sql_update);
-        $sth_update->execute($defprice, $defvol, $brew_id);
+        db::execute($c, $sql_update, $defprice, $defvol, $brew_id);
         print { $c->{log} } "updateboard: Updated brew '$brew_id' DefPrice to '$defprice', DefVol to '$defvol'\n";
       }
     } else {
@@ -119,8 +115,7 @@ sub updateboard {
       my $sql = "INSERT INTO BREWS ".
         "(Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation, DefPrice, DefVol, Year) " .
         "VALUES (?, 'Beer', ?, ?, ?, ?, ?, ?, ?)";
-      my $sth = $c->{dbh}->prepare($sql);
-      $sth->execute($beer, $short_style, $style, $alc, $prod_id, $defprice, $defvol, $year);
+      db::execute($c, $sql, $beer, $short_style, $style, $alc, $prod_id, $defprice, $defvol, $year);
       $brew_id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef);
       $inserted_brews++;
       print { $c->{log} } "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";
@@ -143,9 +138,7 @@ sub updateboard {
       my $prod_rec = db::findrecord($c, "LOCATIONS", "Name", $maker, "collate nocase");
       if ($prod_rec) {
         my $sql = "SELECT Id FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
-        my $sth = $c->{dbh}->prepare($sql);
-        $sth->execute($beer, $prod_rec->{Id});
-        my ($brew_id) = $sth->fetchrow_array;
+          my ($brew_id) = db::queryarray($c, $sql, $beer, $prod_rec->{Id});
         $e->{brew_id} = $brew_id;
       }
     }

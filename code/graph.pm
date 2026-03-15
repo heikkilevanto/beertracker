@@ -183,7 +183,7 @@ sub makedatafile {
   # The Brew clause filters out 'empty' glasses like Restaurants.
   # The time offset is to sort records right, we don't use it for anything else
   #print { $c->{log} } "$sql \n";
-  $g->{sth} = $c->{dbh}->prepare($sql);
+  $g->{sth} = db::query($c, $sql);
 
   my $date = $start;
   $date -= 7 * $oneday; # Start earlier to prime the average

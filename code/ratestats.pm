@@ -155,9 +155,7 @@ sub histogram_data {
     $sql .= ' WHERE ' . join(' AND ', @where);
     $sql .= ' GROUP BY comments.Rating ORDER BY comments.Rating';
 
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute(@bind);
-
+    my $sth = db::query($c, $sql, @bind);
     my $rows = $sth->fetchall_arrayref({});
 
     my @counts = (0) x 10;

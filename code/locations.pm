@@ -84,8 +84,7 @@ sub listlocationcomments {
     ORDER BY COALESCE(GLASSES.Timestamp, COMMENTS.Ts) DESC
   ";
 
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($loc->{Id}, $c->{username}, $loc->{Id}, $c->{username});
+  my $sth = db::query($c, $sql, $loc->{Id}, $c->{username}, $loc->{Id}, $c->{username});
     print "<div onclick='toggleElement(this.nextElementSibling);'>" .
       "<b>Comments for $loc->{Name}</b> [$loc->{Id}]" .
       "</div>\n";
@@ -268,10 +267,7 @@ sub editlocation {
     $submit = "Insert";
   } else {
     my $sql = "select * from Locations where id = ?";
-    my $get_sth = $c->{dbh}->prepare($sql);
-    $get_sth->execute($c->{edit});
-    $p = $get_sth->fetchrow_hashref;
-    $get_sth->finish;
+    $p = db::queryrecord($c, $sql, $c->{edit});
     print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
   }
 
@@ -325,24 +321,24 @@ sub deduplocations {
       my $dup = $1;
       my $sql = "UPDATE GLASSES set Location = ? where Location = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
-      my $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      my $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate Locations: Failed to update GLASSES") unless defined $rows;
       print { $c->{log} } "Updated $rows glasses from $dup to $id\n";
 
       $sql = "UPDATE PERSONS set Location = ? where Location = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
-      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate Locations: Failed to update PERSONS") unless defined $rows;
       print { $c->{log} } "Updated $rows persons from $dup to $id\n";
 
       $sql = "UPDATE BREWS set ProducerLocation = ? where ProducerLocation = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
-      $rows = $c->{dbh}->do($sql, undef, $id, $dup);
+      $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate Locations: Failed to update BREWS") unless defined $rows;
       print { $c->{log} } "Updated $rows brews from $dup to $id\n";
 
       $sql = "DELETE FROM LOCATIONS WHERE Id = ? ";
-      $rows = $c->{dbh}->do($sql, undef, $dup);
+      $rows = db::execute($c, $sql, $dup);
       util::error("Deduplicate Locations: Failed to delete location '$dup'") unless defined $rows;
       print { $c->{log} } "Deleted $rows locations with id $dup\n";
     }
@@ -362,17 +358,17 @@ sub postlocation {
   }
 
   if ( $id eq "new" ) {
-    my $name = $c->{cgi}->param("newlocName");
+    my $name = util::param($c, "newlocName");
     my $section = "newloc";
     if ( ! $name ) {
-      $name = $c->{cgi}->param("Name");
+      $name = util::param($c, "Name");
       $section = "";
     }
     util::error ("A Location must have a name" )
       unless $name;
     $id = db::insertrecord($c, "LOCATIONS", $section);
   } else {
-    my $name = $c->{cgi}->param("Name");
+    my $name = util::param($c, "Name");
     util::error ("A Location must have a name" )
       unless $name;
     $id = db::updaterecord($c, "LOCATIONS", $id,  "");
@@ -428,8 +424,7 @@ sub selectlocation {
     group by LOCATIONS.id
     order by max(GLASSES.Timestamp) DESC
     ";
-    my $list_sth = $c->{dbh}->prepare($sql);
-    $list_sth->execute();
+    my $list_sth = db::query($c, $sql);
     $opts = "";
     while ( my ($id, $name, $type, $subtype, $lat, $lon ) = $list_sth->fetchrow_array ) {
       if ($type) {
@@ -450,8 +445,7 @@ sub selectlocation {
   # Look up the display name of the selected location (cheap primary-key lookup)
   my $current = "";
   if ( $selected ) {
-    ($current) = $c->{dbh}->selectrow_array(
-      "SELECT Name FROM LOCATIONS WHERE Id = ?", undef, $selected);
+    ($current) = db::queryarray($c, "SELECT Name FROM LOCATIONS WHERE Id = ?", $selected);
     $current //= "";
   }
 

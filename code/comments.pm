@@ -121,8 +121,7 @@ sub listcomments {
     where glass = ?
     group by comments.Id
     order by comments.Id"; # To keep the order consistent
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute($glassid);
+  my $sth = db::query($c, $sql, $glassid);
 
   $s .= "&nbsp;<br/>\n";
   $s .= "<ul style='margin:0; padding-left:1.2em;'>\n";
@@ -200,11 +199,10 @@ sub commentform {
   # Person row
   my $prechips = '';
   if ( $com->{Id} ) {
-    my $psth = $c->{dbh}->prepare(
+    my $psth = db::query($c,
       "SELECT p.Id, p.Name FROM comment_persons cp
        JOIN persons p ON p.Id = cp.Person
-       WHERE cp.Comment = ? ORDER BY p.Name");
-    $psth->execute($com->{Id});
+       WHERE cp.Comment = ? ORDER BY p.Name", $com->{Id});
     while ( my ($pid, $pname) = $psth->fetchrow_array ) {
       $prechips .= "<span class='chip-wrapper'>" .
         "<span class='dropdown-chip'>" . util::htmlesc($pname) .
@@ -425,10 +423,10 @@ sub sibling_comments_html {
   my ($sql, @params, $label);
 
   if ($glassid) {
-    my ($locname, $effdate) = $c->{dbh}->selectrow_array(
+    my ($locname, $effdate) = db::queryarray($c,
       "SELECT l.Name, strftime('%Y-%m-%d', g.Timestamp, '-06:00')
        FROM glasses g LEFT JOIN locations l ON l.Id = g.Location
-       WHERE g.Id = ?", undef, $glassid);
+       WHERE g.Id = ?", $glassid);
     my $ctx = $effdate || "this session";
     $ctx .= " \@$locname" if $locname;
     $label = "Other comments on $ctx:";
@@ -441,8 +439,8 @@ sub sibling_comments_html {
       GROUP BY c.Id ORDER BY c.Id};
     @params = ($glassid);
   } elsif ($com->{Brew}) {
-    my ($brewname) = $c->{dbh}->selectrow_array(
-      "SELECT Name FROM brews WHERE Id = ?", undef, $com->{Brew});
+    my ($brewname) = db::queryarray($c,
+      "SELECT Name FROM brews WHERE Id = ?", $com->{Brew});
     $label = "Other comments on ${\ ($brewname || 'this brew')}:";
     $sql = q{
       SELECT c.*, group_concat(p.Name, ', ') as PeopleNames
@@ -455,8 +453,8 @@ sub sibling_comments_html {
       GROUP BY c.Id ORDER BY c.Id};
     @params = ($com->{Brew}, $c->{username}, $c->{username});
   } elsif ($com->{Location}) {
-    my ($locname) = $c->{dbh}->selectrow_array(
-      "SELECT Name FROM locations WHERE Id = ?", undef, $com->{Location});
+    my ($locname) = db::queryarray($c,
+      "SELECT Name FROM locations WHERE Id = ?", $com->{Location});
     $label = "Other comments at ${\ ($locname || 'this location')}:";
     $sql = q{
       SELECT c.*, group_concat(p.Name, ', ') as PeopleNames
@@ -472,8 +470,7 @@ sub sibling_comments_html {
     return "";
   }
 
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute(@params);
+  my $sth = db::query($c, $sql, @params);
 
   my @rows;
   while (my $cr = $sth->fetchrow_hashref) {
@@ -524,7 +521,7 @@ sub editcomment {
         AND ( (c.Glass IS NOT NULL AND g.Username = ?)
            OR (c.Glass IS NULL     AND c.Username = ?) )
     };
-    $com = $c->{dbh}->selectrow_hashref($sql, undef, $ec, $c->{username}, $c->{username});
+    $com = db::queryrecord($c, $sql, $ec, $c->{username}, $c->{username});
     util::error("Comment $ec not found") unless $com;
   }
 
@@ -551,13 +548,13 @@ sub editcomment {
   } elsif ($prefill_glass) {
     # New comment for a known glass — show context and fetch brew/location for prefill
     my ($gdate, $glocid, $gbrewid);
-    ($gdate, $gloc, $glocid, $gbrew, $gbrewid, $gts) = $c->{dbh}->selectrow_array(q{
-      SELECT strftime('%Y-%m-%d %w %H:%M', g.Timestamp, '-06:00'),
-             gloc.Name, g.Location, b.Name, g.Brew, g.Timestamp
-      FROM glasses g
-      LEFT JOIN locations gloc ON gloc.Id = g.Location
-      LEFT JOIN brews b ON b.Id = g.Brew
-      WHERE g.Id = ? AND g.Username = ?}, undef, $prefill_glass, $c->{username});
+        ($gdate, $gloc, $glocid, $gbrew, $gbrewid, $gts) = db::queryarray($c, q{
+          SELECT strftime('%Y-%m-%d %w %H:%M', g.Timestamp, '-06:00'),
+            gloc.Name, g.Location, b.Name, g.Brew, g.Timestamp
+          FROM glasses g
+          LEFT JOIN locations gloc ON gloc.Id = g.Location
+          LEFT JOIN brews b ON b.Id = g.Brew
+          WHERE g.Id = ? AND g.Username = ?}, $prefill_glass, $c->{username});
     if ($gdate) {
       my ($date, $wd) = util::splitdate($gdate);
       print "On: <a href='$c->{url}?o=Full&e=$prefill_glass&date=$date&ndays=1'>" .
@@ -581,8 +578,8 @@ sub editcomment {
     $com->{Location} = $prefill_loc if $prefill_loc && $prefill_loc =~ /^\d+$/;
     $com->{Brew}     = $prefill_brew if $prefill_brew && $prefill_brew =~ /^\d+$/;
     if ($prefill_pid) {
-      my ($pname) = $c->{dbh}->selectrow_array(
-        "SELECT Name FROM persons WHERE Id = ?", undef, $prefill_pid);
+      my ($pname) = db::queryarray($c,
+        "SELECT Name FROM persons WHERE Id = ?", $prefill_pid);
       $com->{_prefill_person_id}   = $prefill_pid;
       $com->{_prefill_person_name} = $pname || $prefill_pid;
     }
@@ -634,8 +631,8 @@ sub postcomment {
   if ($ts_override =~ /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/) {
     $ts = $ts_override;
   } elsif ( $glass ) {
-    ($ts) = $c->{dbh}->selectrow_array(
-      "SELECT Timestamp FROM glasses WHERE Id = ?", undef, $glass);
+    ($ts) = db::queryarray($c,
+      "SELECT Timestamp FROM glasses WHERE Id = ?", $glass);
   }
   $ts //= util::datestr("%Y-%m-%d %H:%M:%S", 0, 1);
 

@@ -130,7 +130,7 @@ sub editperson {
 sub postperson {
   my $c = shift; # context
   # Validate
-  my $name = $c->{cgi}->param("Name");
+  my $name = util::param($c, "Name");
   util::error ("A Person must have a name" )
     unless $name;
   db::postrecord($c, "PERSONS");
@@ -162,8 +162,7 @@ sub selectperson {
   group by Persons.id
   order by GLASSES.Timestamp DESC
   ";
-  my $list_sth = $c->{dbh}->prepare($sql);
-  $list_sth->execute(); # username ?
+  my $list_sth = db::query($c, $sql);
 
   my $opts = "";
 

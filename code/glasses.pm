@@ -39,8 +39,7 @@ sub selectbrewtype {
   my $c = shift;
   my $selected = shift || "";
   my $sql = "select distinct BrewType from Glasses WHERE BrewType != 'Adjustment'";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( );
+  my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $bt = $sth->fetchrow_array ) {
     my $se = "";
@@ -124,8 +123,7 @@ sub selectbrewsubtype {
     WHERE BrewType in ("Restaurant","Night", "Bar","Feedback")
     GROUP BY brewtype,SubType
     ORDER BY last_time DESC ';
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( );
+  my $sth = db::query($c, $sql );
   my $s = "";
   while ( my $bt = $sth->fetchrow_hashref ) {
     next unless ( $bt->{SubType} );
@@ -354,15 +352,11 @@ sub findrec {
               "where username = ? " .
               "order by timestamp desc ".
               "limit 1";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute( $c->{username} );
-    $id = $sth->fetchrow_array;
+    ($id) = db::queryarray($c, $sql, $c->{username});
   }
   my $sql = "select * from glasses " .
             "where id = ? and username = ? ";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( $id, $c->{username} );
-  my $rec = $sth->fetchrow_hashref;
+  my $rec = db::queryrecord($c, $sql, $id, $c->{username});
   return $rec;
 }
 

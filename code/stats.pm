@@ -37,8 +37,7 @@ sub datastats {
   print "<tr><td></td><td><b>Users</b></td></tr>\n";
   my $sql =
 "select username as username, count(*) as recs from glasses group by username order by username";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute();
+  my $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
 
     #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
@@ -53,8 +52,7 @@ sub datastats {
   print "<tr><td></td><td><b>Glasses </b></td></tr>\n";
   $sql = "select brewtype, count(*) as count from glasses "
     . "group by brewtype order by count desc";
-  $sth = $c->{dbh}->prepare($sql);
-  $sth->execute();
+  $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
 
     #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
@@ -69,8 +67,7 @@ sub datastats {
   print "<tr><td></td><td><b>Brews </b></td></tr>\n";
   $sql = "select brewtype, count(*) as count from brews "
     . "group by brewtype order by count desc";
-  $sth = $c->{dbh}->prepare($sql);
-  $sth->execute();
+  $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
 
     #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
@@ -90,8 +87,7 @@ sub datastats {
     . "from locations where LocType = 'Producer' "
     . "group by LocType, LocSubType "
     . "order by LocType, count desc,  LocSubType ";
-  $sth = $c->{dbh}->prepare($sql);
-  $sth->execute();
+  $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
 
     #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
@@ -109,8 +105,7 @@ sub datastats {
     . "from locations where LocType <> 'Producer' "
     . "group by LocType, LocSubType "
     . "order by LocType, count desc,  LocSubType COLLATE NOCASE";
-  $sth = $c->{dbh}->prepare($sql);
-  $sth->execute();
+  $sth = db::query($c, $sql);
   my $singles = "";
 
   while ( my $rec = $sth->fetchrow_hashref ) {
@@ -169,8 +164,7 @@ sub dailystats {
 
   # Unfortunately group_concat will not take a delimiter. If a place name
   # has a comma, it looks a bit silly. Usually clear enough from context.
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( $c->{username} );
+  my $sth = db::query($c, $sql, $c->{username});
   my $prev = 0;
   while ( my $rec = $sth->fetchrow_hashref ) {
     my $jul     = $rec->{julian};

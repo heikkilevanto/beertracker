@@ -82,16 +82,13 @@ sub listrecords {
 
   my $sql = "select * from $table $where $order";
   print { $c->{log} } "listrecords: $sql ";
-  my $list_sth = $c->{dbh}->prepare($sql);
   my $paramlist = "";
+  my @paramarr = ();
   if ( $params ) {
-    my @paramarr = ( $params ); # the simple case;
-    @paramarr = @$params if ( ref $params eq 'ARRAY' );
-    $list_sth->execute(@paramarr);
-    print { $c->{log} } "[" . join(',', @paramarr) . "]"
-  } else {
-    $list_sth->execute();
+    @paramarr = ref $params eq 'ARRAY' ? @$params : ($params);
   }
+  my $list_sth = @paramarr ? db::query($c, $sql, @paramarr) : db::query($c, $sql);
+  if (@paramarr) { print { $c->{log} } "[" . join(',', @paramarr) . "]" }
   print { $c->{log} } "\n";
 
   my $url = $c->{url};

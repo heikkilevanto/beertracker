@@ -24,15 +24,13 @@ require "./code/glasses.pm";  # For findrec and volumes
 sub postglass {
   my $c = shift; # context
 
-  my $sub = $c->{cgi}->param("submit") || "";
+  my $sub = util::param($c, "submit") || "";
 
   if ( $sub eq "Del" ) {
     my $sql = "delete from GLASSES
       where id = ? and username = ?";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute( $c->{edit}, $c->{username} );
-    print { $c->{log} } "Deleted " . $sth->rows .
-      " Glass records for id '$c->{edit}'  \n";
+    db::execute($c, $sql, $c->{edit}, $c->{username});
+    print { $c->{log} } "Deleted glass id '$c->{edit}'\n";
     $c->{edit} = ""; # don't try to edit it any more
     graph::clearcachefiles($c);
     return;
@@ -133,8 +131,7 @@ sub postglass {
         tap = ?
       where id = ? and username = ?
     ";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute(
+  db::execute($c, $sql,
     $glass->{Timestamp},
     $glass->{BrewType},
     $glass->{SubType},
@@ -147,10 +144,8 @@ sub postglass {
     $glass->{Note},
     $glass->{Tap},
     $glass->{Id}, $c->{username} );
-  print { $c->{log} } "Updated " . $sth->rows .
-    " Glass records for id '$c->{edit}'  \n";
-  my ($effdate) = $c->{dbh}->selectrow_array(
-    "SELECT strftime('%Y-%m-%d', ?, '-06:00')", undef, $glass->{Timestamp});
+  print { $c->{log} } "Updated glass id '$c->{edit}'\n";
+  my ($effdate) = db::queryarray($c, "SELECT strftime('%Y-%m-%d', ?, '-06:00')", $glass->{Timestamp});
   $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$effdate&ndays=1" if $effdate;
 
   } else { # Create a new glass
@@ -159,8 +154,7 @@ sub postglass {
         Location, Brew, Price, Volume, Alc, StDrinks, Note, Tap )
       values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ? )
       ";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute(
+    db::execute($c, $sql,
       $c->{username},
       $glass->{Timestamp},
       $glass->{BrewType},
