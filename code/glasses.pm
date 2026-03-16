@@ -145,6 +145,13 @@ sub selectbrewsubtype {
 # special considerations.
 sub maininputform {
   my $c = shift;
+  my $cache_key = "maininputform:$c->{username}:$c->{op}:" . ($c->{edit} || 0);
+  my $cached = cache::get($c, $cache_key);
+  if ($cached) {
+    print { $c->{log} } "maininputform: cache hit\n" if $c->{devversion};
+    print $cached;
+    return;
+  }
   my $rec = findrec($c); # Get defaults, or the record we are editing
 
   # Formatting magic
@@ -153,14 +160,14 @@ sub maininputform {
   my $sz8 = "size='8'  $clr";
   my $sz20 = "size='20' $clr";
 
-  print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
-        "onClick='setdate();' " .
-        "enctype='multipart/form-data'>\n";
-  print "<table>\n";
+  my $html = "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+             "onClick='setdate();' " .
+             "enctype='multipart/form-data'>\n";
+  $html .= "<table>\n";
 
-  print "<tr><td width='100px'>Id $rec->{Id}</td>\n";
+  $html .= "<tr><td width='100px'>Id $rec->{Id}</td>\n";
   my $stamp = util::datestr("%F %T");
-  print "<td>" ; # <input name='stamp' value='$stamp' size=25 $clr/>";
+  $html .= "<td>" ; # <input name='stamp' value='$stamp' size=25 $clr/>";
   my ($date,$time) = ( "", "");
   ($date,$time) = split ( ' ',$rec->{Timestamp} ) if ($rec->{Timestamp} );
   my ($rawdate, $rawtime) = ($date, $time);  # Save real values before leading-space marker
@@ -168,22 +175,22 @@ sub maininputform {
     $date =" $date";  # Mark the time as speculative
     $time =" $time";
   }
-  print "<input name='date' id='date' value='$date' data-rawval='$rawdate' " .
-        "pattern=' ?([LlYy])?(\\d\\d\\d\\d-\\d\\d-\\d\\d)?' " .
-        "placeholder='YYYY-MM-DD' $sz8 /> &nbsp;\n";
-        # Could not make alternative pattern work, so I use a sequence of L/Y
-        # and a valid date. Note also the leading space
-  print "<input name='time' id='time' value='$time' data-rawval='$rawtime' " .
-        "pattern=' ?\\d\\d(:?\\d\\d)?(:?\\d\\d)?' ".
-        "placeholder='HH:MM' $sz8/> &nbsp;\n";
+  $html .= "<input name='date' id='date' value='$date' data-rawval='$rawdate' " .
+           "pattern=' ?([LlYy])?(\\d\\d\\d\\d-\\d\\d-\\d\\d)?' " .
+           "placeholder='YYYY-MM-DD' $sz8 /> &nbsp;\n";
+           # Could not make alternative pattern work, so I use a sequence of L/Y
+           # and a valid date. Note also the leading space
+  $html .= "<input name='time' id='time' value='$time' data-rawval='$rawtime' " .
+           "pattern=' ?\\d\\d(:?\\d\\d)?(:?\\d\\d)?' ".
+           "placeholder='HH:MM' $sz8/> &nbsp;\n";
   my $onclick = "onclick='selectNearest(\"#dropdown-Location\")'";
-  print "<tr><td $onclick>Location</td>\n";
-  print "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname", "non") .
+  $html .= "<tr><td $onclick>Location</td>\n";
+  $html .= "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname", "non") .
     "</td></tr>\n";
 
   # Brew style
-  print "<tr><td width='100px' style='vertical-align:top; max-width:100px;'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
-  print "<td>\n";
+  $html .= "<tr><td width='100px' style='vertical-align:top; max-width:100px;'>" . selectbrewtype($c,$rec->{BrewType}) ."</td>\n";
+  $html .= "<td>\n";
 
   # Brew, or  subtype
   my $hidesub = "";
@@ -193,11 +200,11 @@ sub maininputform {
   } else {
     $hidesub = "style=display:none";
   }
-  print "<span $hidesub data-empty=2>". selectbrewsubtype($c,$rec). "</span>";
-  print "<span $hidebrew data-empty=1>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</span>";
-  print "</td>\n";
+  $html .= "<span $hidesub data-empty=2>". selectbrewsubtype($c,$rec). "</span>";
+  $html .= "<span $hidebrew data-empty=1>". brews::selectbrew($c,$rec->{Brew},$rec->{BrewType}). "</span>";
+  $html .= "</td>\n";
 
-  print "</tr>\n";
+  $html .= "</tr>\n";
 
   # Note for the glass
   my $hidenote = "hidden";
@@ -211,57 +218,56 @@ sub maininputform {
   if ( !$c->{edit} ) {
     $tap = " $tap";
   }
-  print { $c->{log} } "Glass input form: hidenote='$hidenote' Note='$rec->{Note}' Tap='$tap'\n";
-  print "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' data-rawval='$rawtap' size='2' $clr/></td><td>\n";
-  print "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' $sz20/>\n";
-  print "</td></tr>\n";
+  $html .= "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' data-rawval='$rawtap' size='2' $clr/></td><td>\n";
+  $html .= "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' $sz20/>\n";
+  $html .= "</td></tr>\n";
 
   # (note toggle),  Vol, Alc, and Price
-  print "<tr>";
+  $html .= "<tr>";
   my $notetxt = "(more)";
   $notetxt = "" if ( !$hidenote);
-  print "<td id='leftcol'><div id='notetag' onclick='shownote();'>$notetxt</div></td>";
-  print "<td id='avp' >\n";
+  $html .= "<td id='leftcol'><div id='notetag' onclick='shownote();'>$notetxt</div></td>";
+  $html .= "<td id='avp' >\n";
   my $vol = $rec->{Volume} || "";
   $vol .= "c" if ($vol);
-  print "<input name='vol' id='vol' placeholder='vol' $sz4 value='$vol' data-empty=1 />\n";
+  $html .= "<input name='vol' id='vol' placeholder='vol' $sz4 value='$vol' data-empty=1 />\n";
   my $alc = $rec->{Alc} || "";
   $alc .= "%" if ($alc);
-  print "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' data-empty=1 />\n";
+  $html .= "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' data-empty=1 />\n";
   my $pr = $rec->{Price} || "0";
   $pr .= ".-" if ($pr);
-  print "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' required />\n";
-  print "</td></tr>\n";
+  $html .= "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' required />\n";
+  $html .= "</td></tr>\n";
 
   # Buttons
-  print "<tr><td>\n";
-  print " <input type='hidden' name='o' value='$c->{op}' />\n";
+  $html .= "<tr><td>\n";
+  $html .= " <input type='hidden' name='o' value='$c->{op}' />\n";
   if ($c->{edit}) {
-    print " <input type='hidden' name='e' value='$rec->{Id}' />\n";
-    print " <input type='submit' name='submit' value='Save' id='save' />\n";
-    print "</td><td>\n";
-    print " <input type='submit' name='submit' value='Del' formnovalidate />\n";
-    print "<a href='$c->{url}?o=$c->{op}' ><span>cancel</span></a>";
+    $html .= " <input type='hidden' name='e' value='$rec->{Id}' />\n";
+    $html .= " <input type='submit' name='submit' value='Save' id='save' />\n";
+    $html .= "</td><td>\n";
+    $html .= " <input type='submit' name='submit' value='Del' formnovalidate />\n";
+    $html .= "<a href='$c->{url}?o=$c->{op}' ><span>cancel</span></a>";
   } else { # New glass
-    print " <input type='hidden' name='e' id='edit-e' value='$rec->{Id}' disabled/>\n";
-    print "<span id='new-buttons'><input type='submit' name='submit' value='Record'/></span>\n";
-    print "<span id='edit-buttons' style='display:none'><input type='submit' name='submit' value='Save' id='save'/></span>\n";
-    print "</td><td>\n";
-    print "<span id='new-buttons-right'>\n";
-    print " <input type='button' value='Clr' onclick='clearinputs()'/>\n";
-    print " <input type='button' value='Edit' onclick='editrecord()'/>\n";
-    print "</span>\n";
-    print "<span id='edit-buttons-right' style='display:none'>\n";
-    print " <input type='submit' name='submit' value='Del' formnovalidate/>\n";
-    print " <a href='$c->{url}?o=$c->{op}'><span>cancel</span></a>\n";
-    print "</span>\n";
+    $html .= " <input type='hidden' name='e' id='edit-e' value='$rec->{Id}' disabled/>\n";
+    $html .= "<span id='new-buttons'><input type='submit' name='submit' value='Record'/></span>\n";
+    $html .= "<span id='edit-buttons' style='display:none'><input type='submit' name='submit' value='Save' id='save'/></span>\n";
+    $html .= "</td><td>\n";
+    $html .= "<span id='new-buttons-right'>\n";
+    $html .= " <input type='button' value='Clr' onclick='clearinputs()'/>\n";
+    $html .= " <input type='button' value='Edit' onclick='editrecord()'/>\n";
+    $html .= "</span>\n";
+    $html .= "<span id='edit-buttons-right' style='display:none'>\n";
+    $html .= " <input type='submit' name='submit' value='Del' formnovalidate/>\n";
+    $html .= " <a href='$c->{url}?o=$c->{op}'><span>cancel</span></a>\n";
+    $html .= "</span>\n";
   }
-  print "&nbsp;" ;
-  print "</td></tr>\n";
-  print "</table>\n";
-  print "</form>\n";
-  print comments::listcomments($c, $rec->{Id}, $rec->{Brew}, $rec->{Location});
-  print "<hr/>";
+  $html .= "&nbsp;" ;
+  $html .= "</td></tr>\n";
+  $html .= "</table>\n";
+  $html .= "</form>\n";
+  $html .= comments::listcomments($c, $rec->{Id}, $rec->{Brew}, $rec->{Location});
+  $html .= "<hr/>";
 
   # Javascript trickery
   my $script = <<'SCRIPTEND';
@@ -337,7 +343,9 @@ sub maininputform {
       document.getElementById('edit-buttons-right').style.display = '';
     }
 SCRIPTEND
-  print "<script defer>$script</script>\n";
+  $html .= "<script defer>$script</script>\n";
+  cache::set($c, $cache_key, $html);
+  print $html;
 } # maininputform
 
 
