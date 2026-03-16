@@ -1,5 +1,7 @@
 ## Plan: Repo-wide Perl module cleanup (scan results)
 
+
+
 NOTE: This audit strictly follows the repository's procedural Perl style (see copilot-instructions.md). At the end there's a very short "optional modernization" note with ideas you can ignore; do not apply modernization without approval.
 
 Overview
@@ -7,13 +9,11 @@ Overview
 - Scope: thorough, read-only audit of all files in `code/` for style consistency, dead code, duplication, SQL/HTML safety, and refactor opportunities.
 - High-level findings: (1) a few high-impact logic/DB issues that can break runtime; (2) many medium-risk XSS/escaping problems where DB values are printed directly into HTML; (3) some SQL-building patterns that interpolate values into SQL and should be parameterized.
 
-Top-priority tasks
+Top-priority tasks (remaining)
 ------------------
-1. Fix `db::open_db` write-permission check and unqualified `error()` calls in `code/db.pm` (priority: 1, effort: quick). These cause read-only opens to fail and raise runtime exceptions.
-2. Fix parentheses/array-size bug in `code/graph.pm` `addsums` (priority: 2, effort: quick). This produces incorrect graph data.
-3. Replace or limit SQL string interpolation in `code/listrecords.pm` and selected callers (priority: 3, effort: medium). This is the primary SQL-safety surface.
-4. Site-wide output escaping: wrap DB/user strings with `util::htmlesc()` where embedded in HTML or attributes (priority: 4, effort: medium). This reduces XSS and broken pages.
-5. Harden external-process invocations (`convert`, scrapers, shell `cp`/`rm`) and check return codes (priority: 5, effort: medium).
+1. Replace or limit SQL string interpolation in `code/listrecords.pm` and selected callers (priority: 1, effort: medium). This is the primary SQL-safety surface.
+2. Site-wide output escaping: wrap DB/user strings with `util::htmlesc()` where embedded in HTML or attributes (priority: 2, effort: medium). This reduces XSS and broken pages.
+3. Harden external-process invocations (`convert`, scrapers, shell `cp`/`rm`) and check return codes (priority: 3, effort: medium).
 
 Per-file findings and recommendations
 ------------------------------------
@@ -21,17 +21,13 @@ Per-file findings and recommendations
 The following lists concrete issues per file. Each entry: issue, severity, location, suggested fix (adhering to the project's style).
 
 - `code/db.pm`
-  - Issue: `open_db` requires the DB file to be writable unconditionally, causing 'ro' opens to fail.
-    - Severity: HIGH
-    - Location: `open_db` write-check (`-w $databasefile`).
-    - Suggested fix: Only require write-permission when opening in writable mode. If mode is 'ro', skip the -w check.
-  - Issue: `error(...)` called unqualified in several places (e.g., `updaterecord`/`postrecord`), but the project uses `util::error`.
-    - Severity: HIGH
-    - Suggested fix: Replace `error(...)` with `util::error(...)` (fully qualify). Run `perl -c` and exercise DB write flows.
+  - Status: unqualified `error(...)` calls were replaced with `util::error(...)` in this audit pass.
+    - Severity: LOW (fixed)
+    - Notes: The previous concern about the `open_db` write-permission check is intentional for this project and has been removed from the action list per project policy.
 - `code/graph.pm`
-  - Issue: Logical bug in `addsums` due to incorrect parentheses: `scalar(@{ $g->{last7} } > 7 )`.
-    - Severity: HIGH
-    - Suggested fix: Correct to `scalar(@{ $g->{last7} }) > 7`. Add a small regression check for sums/averages.
+  - Status: `addsums` parentheses bug corrected in this audit pass (now uses `scalar(@{ $g->{last7} }) > 7`).
+    - Severity: LOW (fixed)
+    - Suggested follow-up: add a small regression check for sums/averages to avoid future regressions.
 
 
 - `code/listrecords.pm`
@@ -60,9 +56,9 @@ The following lists concrete issues per file. Each entry: issue, severity, locat
     - Suggested fix: Use `util::htmlesc()` for attribute values and `encode_json()` or `util::htmlesc()` for inline JS content.
 
 - `code/photos.pm`
-  - Issue: Calls ImageMagick `convert` using backticks with uploaded file names; no robust return-code handling.
-    - Severity: MEDIUM
-    - Suggested fix: Use list-form `system()` or check `$?` after backticks and `util::error()` on failure. Validate temp filenames and ensure they are not user-controlled paths.
+  - Status: `convert` calls moved from backticks to list-form `system()` with return-code checks; upload temp-file readability and destination directory creation are now verified.
+    - Severity: LOW (fixed)
+    - Suggested follow-up: consider additional tests for various image formats and error paths.
 
 - `code/scrapeboard.pm`
   - Issue: Runs external scraper scripts via backticks; captures output but may ignore failures.

@@ -76,10 +76,14 @@ sub imagetag {
     my $size = $imagesizes{$width};
     $size = $size . "x". $size .">";
     print { $c->{log} } "convert $orig -resize '$size' $fn \n";
-    my $conv = `convert $orig -resize '$size' $fn`;
-    my $rc = $?;
-    chomp($conv);
-    print { $c->{log} } "Resize failed with $rc: '$conv' \n" if ( $conv );
+    my @cmd = ('/usr/bin/convert', $orig, '-resize', $size, $fn);
+    print { $c->{log} } "Running: " . join(' ', @cmd) . "\n";
+    my $rc = system(@cmd);
+    if ($rc != 0) {
+      my $exit = $rc >> 8;
+      print { $c->{log} } "Resize failed rc=$rc exit=$exit for $orig -> $fn\n";
+      return ""; # return empty tag when conversion fails
+    }
   }
   my $w    = $imagesizes{$width};
   my $href = $link_url || $orig;
@@ -144,13 +148,24 @@ sub savefile {
     return "";
   }
   my $tmpfilename = $c->{cgi}->tmpFileName( $filehandle );
-  my $convcmd = "/usr/bin/convert $tmpfilename -auto-orient -strip $filename 2>&1";
-  print { $c->{log} } "About to run: $convcmd \n";
-  my $conv = `$convcmd` ;
-    # -auto-orient turns them upside up. -strip removes the orientation, so
-    # they don't get turned again when displaying.
-  my $rc = $?;
-  print { $c->{log} } "Conv returned '$rc' and '$conv' \n" if ($rc || $conv); # Can this happen
+  unless ( -r $tmpfilename ) {
+    util::error("Upload temp file '$tmpfilename' not readable");
+  }
+  # Ensure destination directory exists
+  use File::Basename;
+  my $destdir = dirname($filename);
+  unless ( -d $destdir ) {
+    unless (mkdir $destdir) {
+      util::error("Could not create photo directory '$destdir': $!");
+    }
+  }
+  my @cmd = ('/usr/bin/convert', $tmpfilename, '-auto-orient', '-strip', $filename);
+  print { $c->{log} } "Running: " . join(' ', @cmd) . "\n";
+  my $rc = system(@cmd);
+  if ($rc != 0) {
+    my $exit = $rc >> 8;
+    util::error("Image convert failed (exit=$exit) while creating $filename");
+  }
   my $fsz = -s $filename;
   print { $c->{log} } "Uploaded $fsz bytes into '$filename' \n";
   return $dbname; # The name without width-specs
