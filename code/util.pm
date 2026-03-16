@@ -243,7 +243,7 @@ sub topstats {
   $rec->{price}  ||= 0;
   my ($date, $wday) = splitdate( "$rec->{effdate} $rec->{wday}" );
   my $ba = mainlist::bloodalc( $c, $rec->{effdate});
-  my $banow = $ba->{now} // 0;
+  my $banow = mainlist::bloodalcnow( $c, $rec->{effdate}) // 0;
   if ( $banow > 1 ) {
     $banow = sprintf("%1.1f", $banow);
   } elsif ( $banow > 0 ) {

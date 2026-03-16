@@ -73,7 +73,6 @@ sub glassquery {
 #  $bloodalc{$id} = ba after ingesting that glass
 #  $bloodalc{"max"} = max ba for the date
 #  $bloodalc{"now"} = ba at current time (if effdate = curr date)
-#  $bloodalc{"gone"} = time when alc all gone
 ################################################################################
 #
 # TODO: This might be refactored so that the loop is outisde this function,
@@ -83,6 +82,9 @@ sub glassquery {
 sub bloodalc {
   my $c = shift;
   my $effdate = shift; # effdate we are interested in
+  my $cache_key = "bloodalc:" . $c->{username} . ":" . $effdate;
+  my $cached = cache::get($c, $cache_key);
+  return $cached if $cached;
   my $bodyweight;  # in kg, for blood alc calculations
   $bodyweight = 120 if ( $c->{username} eq "heikki" );  # TODO - Move these somewhere else
   $bodyweight =  83 if ( $c->{username} eq "dennis" );
@@ -129,26 +131,45 @@ sub bloodalc {
   }
   $bloodalc->{max} = sprintf("%0.2f", $max );
   #print { $c->{log} } "BA:  max:'$bloodalc->{max}' \n";
-  if ( $alcinbody ) {
-    my $now = util::datestr( "%H:%M", 0, 1);
-    my $drtime = $1 + $2/60 if ($now =~/^(\d\d):(\d\d)/ ); # frac hrs
-    $drtime += 24 if ( $drtime < $balctime ); # past midnight
-    my $timediff = $drtime - $balctime;
-    if ( $timediff >= 0 ) {
-      $alcinbody -= $burnrate * $bodyweight * $timediff;
-      $alcinbody = 0 if ( $alcinbody < 0);
-      my $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-      $bloodalc->{"now"} = sprintf("%0.2f", $curba );
-      my $lasts = $alcinbody / ( $burnrate * $bodyweight );
-      my $gone = $drtime + $lasts;
-      $gone -= 24 if ( $gone > 24 );
-      $bloodalc->{"gone"} = sprintf( "%02d:%02d", int($gone), ( $gone - int($gone) ) * 60 );
-    }
-  }
-  return $bloodalc;
+  # Save final state so callers (and bloodalcnow) can compute transient 'now'
+  $bloodalc->{last_alcinbody} = $alcinbody;
+  $bloodalc->{last_balctime}  = $balctime;
+  $bloodalc->{bodyweight}    = $bodyweight;
+  $bloodalc->{burnrate}      = $burnrate;
 
+  # Cache the computed bloodalc blob for this user+date
+  cache::set($c, $cache_key, $bloodalc);
+  return $bloodalc;
 } # bloodalc
 
+
+
+  # Compute current blood alcohol for an effdate by using the cached/static
+  # bloodalc data and applying the time-based burn since the last drink.
+  sub bloodalcnow {
+    my $c = shift;
+    my $effdate = shift;
+    my $ba = bloodalc($c, $effdate);
+    return undef unless $ba;
+    return 0 unless $ba->{last_alcinbody} && defined $ba->{last_balctime};
+    my $alcinbody = $ba->{last_alcinbody};
+    my $balctime   = $ba->{last_balctime};
+    my $bodyweight = $ba->{bodyweight} // 0;
+    my $burnrate   = $ba->{burnrate} // .10;
+    return 0 unless $bodyweight; # cannot compute without bodyweight
+
+    my $now = util::datestr( "%H:%M", 0, 1);
+    my ($h,$m) = (0,0);
+    ($h,$m) = ($1,$2) if ( $now =~ /^(\d?\d):(\d\d)/ );
+    my $drtime = $h + $m/60;
+    $drtime += 24 if ( $drtime < $balctime ); # past midnight
+    my $timediff = $drtime - $balctime;
+    return 0 if ( $timediff < 0 );
+    $alcinbody -= $burnrate * $bodyweight * $timediff;
+    $alcinbody = 0 if ( $alcinbody < 0);
+    my $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+    return sprintf("%0.2f", $curba );
+  }
 
 ################################################################################
 # List glasses for one day
