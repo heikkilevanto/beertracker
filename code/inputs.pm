@@ -44,7 +44,7 @@ sub dropdown {
     $actions .= "<span class='action-link' data-action='scan' style='cursor: pointer;'>(scan)</span>";
   }
   if ($tablename) {
-    $actions .= "<span class='action-link' data-action='new' style='cursor: pointer; float: right;'>(new)</span>";
+    $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>(new)</span>";
     $newdiv  = "<div class='dropdown-new' id='newdiv-$inputname' hidden>\n";
     $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname, "", $skipnewfields);
     $newdiv .= "</div>";

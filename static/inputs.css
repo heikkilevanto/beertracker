@@ -45,6 +45,19 @@
   background-color: var(--altbgcolor, #eee);
 }
 
+/* Action links inside the actions row */
+.action-link {
+  cursor: pointer;
+  display: inline-block;
+  font-size: 0.85em;
+  line-height: 1;
+}
+
+/* Small gap between multiple action links (e.g. (scan) (new)) */
+.action-link + .action-link {
+  margin-left: 8px;
+}
+
 /* Container for “new record” input form */
 .dropdown-new {
   padding-left: 10px;

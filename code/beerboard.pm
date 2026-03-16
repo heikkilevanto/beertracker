@@ -146,6 +146,7 @@ sub seenline {
 } # seenline
 
 sub format_date_relative {
+  # TODO - Should probably be in util.pm
   my ($date_str, $time_str) = @_;
   return "" unless $date_str;
   my $now_utc6 = time() - 6 * 3600;
@@ -176,10 +177,8 @@ sub render_location_selector {
   $url =~ s/"/&quot;/g;
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
   print "Beer list \n";
-  print "<select onchange=\"document.location='$url?o=Board&loc=' + encodeURIComponent(this.value);\" style='display:inline-block; width:5.5em;'>\n";
-  if (!$scrapeboard::scrapers{$locparam}) { #Include the current location, even if no scraper
-    $scrapeboard::scrapers{$locparam} = ""; #that way, the pulldown looks reasonable
-  }
+  print "<select onchange=\"document.location='$url?o=Board&loc=' + 
+       encodeURIComponent(this.value);\" style='display:inline-block; width:5.5em;'>\n";
   for my $l ( sort(keys(%scrapeboard::scrapers)) ) {
     my $sel = "";
     $sel = "selected" if ( $l eq $locparam);

@@ -250,6 +250,7 @@ print $log "\n\n" . $now->ymd . " " . $now->hms . " " .
     $q->request_method . " " . $ENV{'QUERY_STRING'}. " \n";
 
 # Needs to be done early, before we send HTTP headers
+# TODO - Really?
 if ( $devversion && $c->{op} =~ /copyproddata/i ) {
   print $log "Copying prod data to dev \n";
   superuser::copyproddata($c);
@@ -300,7 +301,6 @@ if ( $q->request_method eq "POST" ) {
     $c->{dbh}->disconnect;
   };
   if ( $@ ) {
-    #db::dberror($c,"$@\n$debugparams");
     util::error("$@\n$debugparams");
     $c->{dbh}->rollback;
   }

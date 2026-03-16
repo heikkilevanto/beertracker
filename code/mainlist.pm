@@ -78,7 +78,7 @@ sub glassquery {
 # TODO: This might be refactored so that the loop is outisde this function,
 # and the func takes a hash with all the necessary data for the calculation,
 # and returns a new hash, including the ba at the time of the drink.
-
+# TODO: Maybe move into its own module?
 sub bloodalc {
   my $c = shift;
   my $effdate = shift; # effdate we are interested in
@@ -142,34 +142,32 @@ sub bloodalc {
   return $bloodalc;
 } # bloodalc
 
+# Compute current blood alcohol for an effdate by using the cached/static
+# bloodalc data and applying the time-based burn since the last drink.
+sub bloodalcnow {
+  my $c = shift;
+  my $effdate = shift;
+  my $ba = bloodalc($c, $effdate);
+  return undef unless $ba;
+  return 0 unless $ba->{last_alcinbody} && defined $ba->{last_balctime};
+  my $alcinbody = $ba->{last_alcinbody};
+  my $balctime   = $ba->{last_balctime};
+  my $bodyweight = $ba->{bodyweight} // 0;
+  my $burnrate   = $ba->{burnrate} // .10;
+  return 0 unless $bodyweight; # cannot compute without bodyweight
 
-
-  # Compute current blood alcohol for an effdate by using the cached/static
-  # bloodalc data and applying the time-based burn since the last drink.
-  sub bloodalcnow {
-    my $c = shift;
-    my $effdate = shift;
-    my $ba = bloodalc($c, $effdate);
-    return undef unless $ba;
-    return 0 unless $ba->{last_alcinbody} && defined $ba->{last_balctime};
-    my $alcinbody = $ba->{last_alcinbody};
-    my $balctime   = $ba->{last_balctime};
-    my $bodyweight = $ba->{bodyweight} // 0;
-    my $burnrate   = $ba->{burnrate} // .10;
-    return 0 unless $bodyweight; # cannot compute without bodyweight
-
-    my $now = util::datestr( "%H:%M", 0, 1);
-    my ($h,$m) = (0,0);
-    ($h,$m) = ($1,$2) if ( $now =~ /^(\d?\d):(\d\d)/ );
-    my $drtime = $h + $m/60;
-    $drtime += 24 if ( $drtime < $balctime ); # past midnight
-    my $timediff = $drtime - $balctime;
-    return 0 if ( $timediff < 0 );
-    $alcinbody -= $burnrate * $bodyweight * $timediff;
-    $alcinbody = 0 if ( $alcinbody < 0);
-    my $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
-    return sprintf("%0.2f", $curba );
-  }
+  my $now = util::datestr( "%H:%M", 0, 1);
+  my ($h,$m) = (0,0);
+  ($h,$m) = ($1,$2) if ( $now =~ /^(\d?\d):(\d\d)/ );
+  my $drtime = $h + $m/60;
+  $drtime += 24 if ( $drtime < $balctime ); # past midnight
+  my $timediff = $drtime - $balctime;
+  return 0 if ( $timediff < 0 );
+  $alcinbody -= $burnrate * $bodyweight * $timediff;
+  $alcinbody = 0 if ( $alcinbody < 0);
+  my $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
+  return sprintf("%0.2f", $curba );
+}
 
 ################################################################################
 # List glasses for one day

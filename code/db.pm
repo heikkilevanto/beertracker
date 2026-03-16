@@ -44,10 +44,8 @@ sub open_db {
     or util::error($DBI::errstr);
   $c->{dbh}->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
   if ( $mode ne "ro" ) {
-    $c->{dbh}->do('PRAGMA journal_mode = OFF'); # We don't need no fancyu journaling
+    $c->{dbh}->do('PRAGMA journal_mode = OFF'); # We don't need no fancy journaling
     $c->{dbh}->do('PRAGMA synchronous = OFF'); # No fsyncs needed, I trust my file system
-    #$c->{dbh}->do('PRAGMA journal_mode = WAL'); # Avoid locking problems with SqLiteBrowser
-    # But watch out for file permissions on the -wal and -sha files
     $c->{dbh}->do('PRAGMA foreign_keys = ON'); # Enforce foreign keys
   }
 
@@ -238,8 +236,7 @@ sub queryselect {
 # header if yes.
 # (Tried to set it directly inside $sth, but that did not work)
 # Bit dirty, keeps the buffered record in a hash indexed by the $sth.
-# This works since this is a cgi script that does not run very long, so the
-# buffer will not grow very large within one HTTP request.
+# Should be ok even for fcgi script that runs for quite a while
 
 my %buffer;
 
