@@ -29,19 +29,6 @@ sub aboutlink {
   "</a></$tag>\n";
 }
 
-
-
-# Helper to find where a system module comes from
-# NOT USED NOW, kept as a reference. Too slow for the hundred modules we find
-sub deb_pkg {
-    my ($file) = @_;
-    my $pkg = `dpkg -S '$file' 2>/dev/null`;
-    $pkg =~ s/:.*//s;   # strip filename part
-    chomp $pkg;
-    return $pkg || 'unknown';
-}
-
-
 ################################################################################
 # About page
 ################################################################################
@@ -88,7 +75,6 @@ sub about {
   print "</ul><p>\n";
   print "Other useful links: <ul>";
   print aboutlink("Events", "https://www.beercph.dk/");
-  #print aboutlink("Ratebeer", "https://www.ratebeer.com");   # RIP RB Feb 2025
   print aboutlink("Untappd", "https://untappd.com");
   print "</ul><p>\n";
   print "<hr/>";

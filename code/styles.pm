@@ -18,11 +18,11 @@ use utf8;  # Source code and string literals are utf-8
 # be used for the few non-brew items that need special color, like restaurants
 # Returns just the color string with no prefix.
 sub brewcolor {
-  my $brew = shift;
+  my ($c, $brew) = @_;
 
   # TODO - Add prefixes for beers
   # TODO - Check against actual brew styles in the db
-  my @drinkcolors = (   # color, pattern. First match counts, so order matters
+    my @drinkcolors = (   # color, pattern. First match counts, so order matters
       "003000", "restaurant|night|feedback", # regular bg color, no highlight
       "808080", "adjustment", # gray for payment adjustments
       "eac4a6", "wine[, ]+white",
@@ -47,6 +47,9 @@ sub brewcolor {
       "9400d3", ".",   # # dark-violet, aggressive pink to show we don't have a color
       );
 
+      # Use configured background color as the default first color
+      $drinkcolors[0] = $c->{bgcolor} if ( defined $c && defined $c->{bgcolor} );
+
   my $type;
   if ( $brew =~ /^\[?(\w+)(,(.+))?\]?$/i ) {
     $type = "$1";
@@ -69,7 +72,7 @@ sub brewcolor {
 sub brewtextstyle {
   my $c = shift;
   my $brew = shift;
-  my $bkg = brewcolor($brew);
+  my $bkg = brewcolor($c, $brew);
   my $lum = ( hex($1) + hex($2) + hex($3) ) /3  if ($bkg =~ /^(..)(..)(..)/i );
   my $fg = $c->{bgcolor};
   if ($lum < 64) {  # If a fairly dark color

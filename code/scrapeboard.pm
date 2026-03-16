@@ -107,7 +107,7 @@ sub updateboard {
     } else {
       # Insert new brew
       my $short_style = styles::shortbeerstyle($style);
-      # Extract year from beer name if present (pattern: 20[23][0-9])
+      # Extract year from beer name if present 
       my $year = undef;
       if ($beer =~ /(20[23][0-9])/) {
         $year = $1;
