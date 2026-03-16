@@ -329,7 +329,7 @@ sub showmenu {
 
     # --- Main ---
     my @main = (
-        { label => "List only", url => "o=Full" },
+        { label => "List only",  url => "o=Full" },
         { label => "With Graph", url => "o=Graph" },
         { label => "Beer Board", url => "o=Board" },
     );
@@ -337,6 +337,7 @@ sub showmenu {
 
     # --- Stats ---
     my @stats = (
+        { label => "Days",    url => "o=short" },
         { label => "Months",  url => "o=Months" },
         { label => "Years",   url => "o=Years" },
         { label => "Data",    url => "o=DataStats" },

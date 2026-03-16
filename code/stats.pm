@@ -17,7 +17,7 @@ use URI::Escape;
 ################################################################################
 # Statistics of the data file
 ################################################################################
-# TODO - Get more interesting stats. Histograms of ratings for different things, etc
+# TODO - Get more interesting stats. 
 # NOTE - Maybe later get global values and values for current user.
 sub datastats {
   my $c = shift;
@@ -35,12 +35,10 @@ sub datastats {
 
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td></td><td><b>Users</b></td></tr>\n";
-  my $sql =
-"select username as username, count(*) as recs from glasses group by username order by username";
+  my $sql = "select username as username, count(*) as recs " .
+            "from glasses group by username order by username";
   my $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
-
-    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
     print "<td align='right'>$rec->{recs}</td>\n";
     print "<td> glasses for <b>$rec->{username}</b> </td>\n";
@@ -54,8 +52,6 @@ sub datastats {
     . "group by brewtype order by count desc";
   $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
-
-    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
     print "<td align='right'>$rec->{count}</td>\n";
     print "<td>glasses of <b>$rec->{BrewType}</b> </td>\n";
@@ -66,11 +62,9 @@ sub datastats {
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td></td><td><b>Brews </b></td></tr>\n";
   $sql = "select brewtype, count(*) as count from brews "
-    . "group by brewtype order by count desc";
+       . "group by brewtype order by count desc";
   $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
-
-    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
     print "<td align='right'>$rec->{count}</td>\n";
     print "<td>types of <b>$rec->{BrewType}</b> </td>\n";
@@ -89,8 +83,6 @@ sub datastats {
     . "order by LocType, count desc,  LocSubType ";
   $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
-
-    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     print "<tr>\n";
     print "<td align='right'>$rec->{count}</td>\n";
     print "<td> producers of <b>$rec->{LocSubType}</b> </td>\n";
@@ -109,8 +101,6 @@ sub datastats {
   my $singles = "";
 
   while ( my $rec = $sth->fetchrow_hashref ) {
-
-    #print { $c->{log} } "U: ", JSON->new->encode($rec), "\n";
     if ( $rec->{LocType} =~ /Restaurant/i && $rec->{count} == 1 ) {
       $singles .= "$rec->{LocSubType}; ";
     }
@@ -124,7 +114,7 @@ sub datastats {
   }
   $sth->finish;
   if ($singles) {
-    $singles =~ s/, *$//;    # remove trailing comma
+    $singles =~ s/; *$//;    # remove trailing semicolon
     print "<tr><td></td><td>And <b>one</b> of each of these types of Restaurants:</td></tr> \n";
     print "<tr><td></td><td>$singles</td></tr> \n";
   }
