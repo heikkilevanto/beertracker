@@ -10,6 +10,9 @@ use utf8;  # Source code and string literals are utf-8
 use Carp qw(longmess);
 
 use DBI;
+# Process-local SQL logging limit and counter. Controls logging across requests
+our $log_sql_limit = 100;  # default: log first 100 SQL statements per process
+our $log_sql_count = 0;    # counter of logged statements (persists until process reload)
 
 # use Data::Dumper;   # Useful when debugging
 # local $Data::Dumper::Terse = 1;
@@ -114,8 +117,19 @@ sub logquery {
   my $c = shift;
   my $sql = shift;
   my @params = @_;
-  my($pkg,$fname,$lineno,$sub) = caller(1);
-  my $msg = "$sub: ";
+
+  # If limit is not positive, skip logging entirely
+  return unless ( $log_sql_limit && $log_sql_limit > 0 );
+
+  # If we've already reached the process-wide limit, skip logging
+  return if ( $log_sql_count >= $log_sql_limit );
+
+  # Increment the process-wide counter and proceed to log
+  $log_sql_count++;
+
+  my($pkg,$fname,$lineno,$sub) = caller(2);
+  unless (defined $sub) { ($pkg,$fname,$lineno,$sub) = caller(1); }
+  my $msg = (defined $sub ? "$sub: " : "(unknown): ");
 
   # Clean whitespace
   $sql =~ s/\s+/ /g;

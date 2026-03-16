@@ -220,6 +220,7 @@ my $c = {
   'log'      => $log,
   'cache'    => $cache,
 };
+
 # Input Parameters. Need to have a $c to get them.
 $c->{edit}= util::param($c,"e");  # Record to edit
 $c->{qry} = util::param($c,"q");  # filter query, greps the list
