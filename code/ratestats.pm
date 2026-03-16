@@ -1,6 +1,7 @@
 # ratestats.pm
 # Simple procedural Perl module for producing a ratings histogram
 # Fits the BeerTracker style (required from index.fcgi and used as ratestats::FUNC)
+# Experimenting with Chart.js for the graph.
 
 package ratestats;
 use strict;
@@ -25,7 +26,7 @@ sub ratings_histogram {
     my $html = '';
 
     # Minimal responsive CSS
-    $html .= <<"CSS";
+    $html .= <<"CSSX";
 <style>
 .chart-container {
   max-width: 600px;   /* maximum width */
@@ -47,7 +48,7 @@ sub ratings_histogram {
   }
 }
 </style>
-CSS
+CSSX
 
     $html .= histogram_form($c, $filter);
     $html .= qq{<div class="chart-container">};

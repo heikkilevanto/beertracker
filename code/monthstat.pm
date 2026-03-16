@@ -9,8 +9,7 @@ use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
 
-
-# --- insert new functions here ---
+# TODO - Split this into smaller functions, it is quite long as it is
 
 sub monthstat {
   my $c      = shift;
@@ -56,7 +55,7 @@ sub monthstat {
   my $sum_sth = db::query($c, $sumsql, @sql_params);
   while ( my ( $calmon, $pr, $drinks, $last ) = $sum_sth->fetchrow_array ) {
     $monthdrinks{$calmon} = $drinks;
-    $monthprices{$calmon} = $pr;       # negative prices for buying box wines
+    $monthprices{$calmon} = $pr;   
     $lastmonthday         = $last;     # Remember the last day
     if ( !$firsty ) {
       $firsty = $1 if ( $calmon =~ /^(\d\d\d\d)/ );
@@ -103,7 +102,7 @@ sub monthstat {
   $yearcolors[ $y-- ] = "#FFFF00";    # yellow
   $yearcolors[ $y-- ] = "#C0C000";
   $yearcolors[ $y-- ] = "#808000";
-  $yearcolors[ $y-- ] = "#C000C0";    # purple 2014 # not yet visible in 2024
+  $yearcolors[ $y-- ] = "#C000C0";    # purple 2014 # not yet visible in 2026
   $yearcolors[ $y-- ] = "#800080";
   $yearcolors[ $y-- ] = "#400040";
 

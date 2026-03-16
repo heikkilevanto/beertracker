@@ -13,10 +13,11 @@ use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
 
-
+# TODO - Should probably html-escale values from the db
+# TODO - This is basically one too-long function.
 
 ################################################################################
-# A hlper to decide to make a line break in the display format
+# A helper to decide to make a line break in the display format
 # Returns the string to do so, or nothing if not a TR field
 sub linebreak {
   my $c = shift;
