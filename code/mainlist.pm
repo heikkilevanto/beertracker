@@ -181,16 +181,17 @@ sub locationhead {
   my $locname = $rec->{locname};
   my $locwebsite = $rec->{locwebsite} || '';
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
-  print "<br/>";
+  my $html = "";
   my $display = "@" . $locname;
-  print "<b><a href='$c->{url}?o=$c->{op}&date=$date'><span>$wd $date</span></a> " .
+  $html .= "<br/>";
+  $html .= "<b><a href='$c->{url}?o=$c->{op}&date=$date'><span>$wd $date</span></a> " .
     "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$display</span></a> </b>";
-  print " <span style='font-size: x-small;'>[$rec->{loc}]</span>\n";
-  print "<a href='$locwebsite' target='_blank'><span style='font-size: x-small;'>www</span></a>"
+  $html .= " <span style='font-size: x-small;'>[$rec->{loc}]</span>\n";
+  $html .= "<a href='$locwebsite' target='_blank'><span style='font-size: x-small;'>www</span></a>"
     if ( $locwebsite );
-  print "<br/>";
-  print "<br/>" unless ( $rec->{PersName} ); # not for person detail list
-  return ( $rec->{effdate}, $rec->{loc}, "@".$locname, "$wd $date", $date );
+  $html .= "<br/>";
+  $html .= "<br/>" unless ( $rec->{PersName} ); # not for person detail list
+  return ( $html, $rec->{effdate}, $rec->{loc}, "@".$locname, "$wd $date", $date );
 }
 
 sub nameline {
@@ -199,23 +200,25 @@ sub nameline {
   my $rec = shift;
   my $locationid = shift; # The location we are at, not producer of current drink
   my $locationname = shift;
+  my $html = "";
   my $time = $rec->{time};
   $time = "($time)" if ($time lt "0600");
   my $op = $c->{op};
   $op = "Graph" if ( $op eq "Person" ); # Edit the glass, even if coming from persons
-  print "<span style='white-space: nowrap;'>\n";
-  print "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
+  $html .= "<span style='white-space: nowrap;'>\n";
+  $html .= "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
         "<span>$time</span></a> \n";
-  print styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}) . " \n";
-  print "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
+  $html .= styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}) . " \n";
+  $html .= "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
   if ( $rec->{brewname} ) {
-    print "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;
+    $html .= "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;
   } elsif ($locationid) {
-    print "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>$locationname</b></span></a> " ;
+    $html .= "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>$locationname</b></span></a> " ;
   }
-  print "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
-  print "</span>\n";
-  print "<br/>\n"
+  $html .= "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
+  $html .= "</span>\n";
+  $html .= "<br/>\n";
+  return $html;
 }
 
 sub numbersline {
@@ -225,37 +228,40 @@ sub numbersline {
   my $c = shift;
   my $rec = shift;
   my $bloodalc = shift;
-  #print "<span style='font-size: x-small;'>[$rec->{id}] </span>";
-  print "<b>".util::unit($rec->{vol},"c")."</b>";
-  print util::unit($rec->{price},",-");
-  print util::unit($rec->{alc},"%");
-  print util::unit($rec->{drinks},"d");
+  my $html = "";
+  #$html .= "<span style='font-size: x-small;'>[$rec->{id}] </span>";
+  $html .= "<b>".util::unit($rec->{vol},"c")."</b>";
+  $html .= util::unit($rec->{price},",-");
+  $html .= util::unit($rec->{alc},"%");
+  $html .= util::unit($rec->{drinks},"d");
   my $ba = $bloodalc->{ $rec->{id} } || "";
   #print { $c->{log} } "'$rec->{id}' ba=$ba \n";
-  print util::unit($ba,"/₀₀");
+  $html .= util::unit($ba,"/\x{2080}\x{2080}");
   if ( ! $rec->{generic} ) {  # No ratings or comments on generics like Beer,Mixed or House Red Wine
-    print comments::avgratings($c, $rec->{rating_count}, $rec->{average_rating}, $rec->{comment_count});
+    $html .= comments::avgratings($c, $rec->{rating_count}, $rec->{average_rating}, $rec->{comment_count});
   }
   if ( $rec->{note} ) {
-    print " (<i>$rec->{note}</i>)";
+    $html .= " (<i>$rec->{note}</i>)";
   }
   if ( $rec->{tap} ) {
-    print " #$rec->{tap}";
+    $html .= " #$rec->{tap}";
   }
-  print "<br/>\n"
+  $html .= "<br/>\n";
+  return $html;
 }
 
 sub photoline {
   my $c = shift;
   my $rec = shift;
-  return unless $rec->{photocount};  # skip query for the common case
+  return "" unless $rec->{photocount};  # skip query for the common case
   my $html = photos::thumbnails_html($c, 'Glass', $rec->{id});
-  print $html if $html;
+  return $html || "";
 } # photoline
 
 sub commentlines {
   my $c = shift;
   my $rec = shift;
+  my $html = "";
   if ( $rec->{comcount} ) {
     my $sql = "select COMMENTS.*,
       group_concat(cp_persons.Name, ', ') as PeopleNames,
@@ -268,20 +274,22 @@ sub commentlines {
       order by comments.Id"; # To keep the order consistent
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($rec->{id});
-    print "<ul style='margin:0; padding-left:1.2em;'>\n";
+    $html .= "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
       # Prefer PeopleNames (from comment_persons) over legacy PersName
       $com->{PersName} = $com->{PeopleNames} if $com->{PeopleNames};
-      print "<li>". comments::commentline($c, $com). "</li>\n  ";
+      $html .= "<li>". comments::commentline($c, $com). "</li>\n  ";
     }
-    print "</ul>\n";
+    $html .= "</ul>\n";
   }
+  return $html;
 }
 
 sub buttonline {
   # edit (copy 25) (copy 40)
   my $c = shift;
   my $rec = shift;
+  my $html = "";
   my %vols;     # guess sizes for small/large beers
   $vols{$rec->{vol}} = 1 if ($rec->{vol});
   # TODO - more logic, if 20, say 20/30, if 25, say 25/40,
@@ -309,26 +317,27 @@ sub buttonline {
   foreach my $volx (sort {no warnings; $a <=> $b || $a cmp $b} keys(%vols) ){
     # The sort order defaults to numerical, but if that fails, takes
     # alphabetical ('R' for restaurant). Note the "no warnings".
-    print "<form method='POST' style='display:inline;' class='no-print' onClick='setdate();'>\n";
-    print "<input type='hidden' name='Location'  value='$locid' />\n";
-    print "<input type='hidden' name='Brew'  value='$brewid' />\n";
-    print "<input type='hidden' name='selbrewtype'  value='$rec->{brewtype}' />\n";
-    print "<input type='hidden' name='date' id='date' value=' ' />\n";
-    print "<input type='hidden' name='time' id='time' value=' ' />\n";
+    $html .= "<form method='POST' style='display:inline;' class='no-print' onClick='setdate();'>\n";
+    $html .= "<input type='hidden' name='Location'  value='$locid' />\n";
+    $html .= "<input type='hidden' name='Brew'  value='$brewid' />\n";
+    $html .= "<input type='hidden' name='selbrewtype'  value='$rec->{brewtype}' />\n";
+    $html .= "<input type='hidden' name='date' id='date' value=' ' />\n";
+    $html .= "<input type='hidden' name='time' id='time' value=' ' />\n";
     # For copy buttons, pass the original price only if volume matches, else leave empty to trigger guessing
     my $copy_price = ($rec->{vol} && $volx == $rec->{vol} && defined $rec->{price}) ? $rec->{price} : '';
     my $tap_val = $rec->{tap} // '';
     my $orig_vol_val = $rec->{vol} // '';
-    print "<input type='hidden' name='pr' value='$copy_price' />\n";
-    print "<input type='hidden' name='tap' value='$tap_val' />\n";
-    print "<input type='hidden' name='orig_vol' value='$orig_vol_val' />\n";
-    print "<input type='hidden' name='o' value='$c->{op}' />\n";  # Stay on page
-    print "<input type='hidden' name='q' value='$c->{qry}' />\n";
-    print "<input type='submit' name='submit' value='Copy $volx' " .
+    $html .= "<input type='hidden' name='pr' value='$copy_price' />\n";
+    $html .= "<input type='hidden' name='tap' value='$tap_val' />\n";
+    $html .= "<input type='hidden' name='orig_vol' value='$orig_vol_val' />\n";
+    $html .= "<input type='hidden' name='o' value='$c->{op}' />\n";  # Stay on page
+    $html .= "<input type='hidden' name='q' value='$c->{qry}' />\n";
+    $html .= "<input type='submit' name='submit' value='Copy $volx' " .
                 "style='display: inline; font-size: small' />\n";
-    print "</form>\n";
+    $html .= "</form>\n";
   }
-  print "<br/>\n";
+  $html .= "<br/>\n";
+  return $html;
 } # buttonline
 
 sub sumline {
@@ -337,15 +346,17 @@ sub sumline {
   my $drinksum = shift;
   my $prsum = shift;
   my $balc = shift;
-  #print "<table border=0 style='table-layout: fixed' > <tr>";
-  print "<table border=0 > <tr>";
+  my $html = "";
+  #$html .= "<table border=0 style='table-layout: fixed' > <tr>";
+  $html .= "<table border=0 > <tr>";
   my $attr = "align='right'  ";
-  print "<td>=</td>\n";
-  print "<td $attr width='50px' ><b>" . util::unit($prsum,".-") . "</b></td>\n";
-  print "<td $attr width='50px' ><b>" . util::unit($drinksum, "d") . "</b></td>\n";
-  print "<td $attr width='53px' ><b>" . util::unit($balc, "/₀₀") . "</b></td>\n";
-  print "<td>&nbsp; <b>$txt</b></td>";
-  print "</tr></table>";
+  $html .= "<td>=</td>\n";
+  $html .= "<td $attr width='50px' ><b>" . util::unit($prsum,".-") . "</b></td>\n";
+  $html .= "<td $attr width='50px' ><b>" . util::unit($drinksum, "d") . "</b></td>\n";
+  $html .= "<td $attr width='53px' ><b>" . util::unit($balc, "/\x{2080}\x{2080}") . "</b></td>\n";
+  $html .= "<td>&nbsp; <b>$txt</b></td>";
+  $html .= "</tr></table>";
+  return $html;
 }
 
 sub adjustment_form {
@@ -369,10 +380,11 @@ sub adjustment_form {
   $sth->finish();
   return unless $adjustment_brew_id;  # No adjustment brew configured
   
+  my $html = "";
   if ($current_adjustment) {
     # Adjustment exists - show delete button with amount
     my $sign = $current_adjustment_price >= 0 ? '+' : '';
-    print qq{<div id='adjform_$form_id' style='display:none;'>
+    $html .= qq{<div id='adjform_$form_id' style='display:none;'>
     <form method='POST' style='display:inline; margin-left:1em;'>
       <span style='font-size:small;'>Adjustment: ${sign}${current_adjustment_price}.-</span>
       <input type='hidden' name='o' value='Glass'/>
@@ -395,7 +407,7 @@ sub adjustment_form {
   } else {
     # No adjustment - show entry form
     my ($date) = split(' ', $effdate);
-    print qq{<div id='adjform_$form_id' style='display:none;'>
+    $html .= qq{<div id='adjform_$form_id' style='display:none;'>
     <form method='POST' style='display:inline; margin-left:1em;' onsubmit='return updateAdjustment_$form_id();'>
       <span style='font-size:small;'>Expected: ${locprsum}.-, Paid:</span>
       <input name='actualpaid' id='actualpaid_$form_id' size='4' required style='font-size:small;'/>
@@ -437,14 +449,17 @@ sub adjustment_form {
     })();
     </script>};
   }
-  print "<br/>\n";
+  $html .= "<br/>\n";
+  return $html;
 } # adjustment_form
 
 sub oneday {
   my $c = shift;
   my $rec = db::peekrow($c->{sth});
-  return unless ($rec);
-  my ($effdate, $loc, $locname,$weekday, $date ) = locationhead($c, $rec);
+  return "" unless ($rec);
+  my $html = "";
+  my ($lhtml, $effdate, $loc, $locname,$weekday, $date ) = locationhead($c, $rec);
+  $html .= $lhtml;
   my $balc = bloodalc($c,$date);
   my $locdrsum = 0;  # drinks for the location
   my $locprsum = 0;  # price for the location
@@ -456,7 +471,7 @@ sub oneday {
   my $current_adjustment_price = 0;  # Track adjustment amount
   my $last_glass_time = undef;  # Track time of last glass in location session
   while ( $rec = db::nextrow($c->{sth}) ) {
-    #print JSON->new->encode($rec) . "<br>";
+    #$html .= JSON->new->encode($rec) . "<br>";
     if ( $rec->{effdate} ne $effdate ) {
       db::pushback_row($c->{sth},$rec);
       last;
@@ -464,9 +479,10 @@ sub oneday {
     #print { $c->{log} } "oneday: id='$rec->{id} l='$rec->{loc}' \n";
     if ( $rec->{loc} != $loc ) {
       my $loc_total_with_adj = $locprsum + $current_adjustment_price;
-      sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba);
-      adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
-      ($effdate, $loc, $locname, $weekday, $date) = locationhead($c, $rec);
+      $html .= sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba);
+      $html .= adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
+      ($lhtml, $effdate, $loc, $locname, $weekday, $date) = locationhead($c, $rec);
+      $html .= $lhtml;
       $locdrsum = 0;
       $locprsum = 0;
       $locmaxba = 0;
@@ -492,20 +508,21 @@ sub oneday {
     $daydrsum += $rec->{drinks} if ($rec->{drinks});
     $locdrsum += $rec->{drinks} if ($rec->{drinks});
     $locmaxba = $balc->{$rec->{id}} if $balc->{$rec->{id}} && $balc->{$rec->{id}} > $locmaxba;
-    nameline($c, $rec, $loc, $locname);
-    numbersline($c,$rec,$balc);
-    photoline($c,$rec);
-    commentlines($c,$rec);
-    buttonline($c,$rec);
-    print "<br/>\n";
+    $html .= nameline($c, $rec, $loc, $locname);
+    $html .= numbersline($c,$rec,$balc);
+    $html .= photoline($c,$rec);
+    $html .= commentlines($c,$rec);
+    $html .= buttonline($c,$rec);
+    $html .= "<br/>\n";
   }
   my $loc_total_with_adj = $locprsum + $current_adjustment_price;
-  sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba);
-  adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
+  $html .= sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba);
+  $html .= adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
   if ($location_count > 1) {
-    sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
+    $html .= sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
   }
-  print "<hr/>";
+  $html .= "<hr/>";
+  return $html;
 
 } # oneday
 
@@ -539,26 +556,37 @@ sub mainlist {
   }
   print { $c->{log} } "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
   my $original_ndays = $ndays;
-  if (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays") || $derived_date) {
-    print qq{<b>Main List</b><br/>\n};
-    print qq{<form method="GET">\n};
-    print qq{<input type="hidden" name="o" value="$c->{op}" />\n};
-    print qq{<table>\n};
-    print qq{<tr><td>Date from:</td><td><input type="text" name="date" value="$date" style="width: 8em;" /></td></tr>\n};
-    print qq{<tr><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days &nbsp; <a href="$c->{url}?o=$c->{op}"><span>def</span></a></td></tr>\n};
-    print qq{</table>\n};
-    print qq{</form><br/>\n};
+  my $show_form = (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays") || $derived_date) ? 1 : 0;
+  my $cache_key = "mainlist:$c->{username}:$c->{op}:$c->{qry}:$date:$original_ndays:$show_form";
+  my $cached_html = cache::get($c, $cache_key);
+  if ($cached_html) {
+    print { $c->{log} } "mainlist: cache hit\n" if $c->{devversion};
+    print $cached_html;
+    return;
+  }
+  my $html = "";
+  if ($show_form) {
+    $html .= qq{<b>Main List</b><br/>\n};
+    $html .= qq{<form method="GET">\n};
+    $html .= qq{<input type="hidden" name="o" value="$c->{op}" />\n};
+    $html .= qq{<table>\n};
+    $html .= qq{<tr><td>Date from:</td><td><input type="text" name="date" value="$date" style="width: 8em;" /></td></tr>\n};
+    $html .= qq{<tr><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days &nbsp; <a href="$c->{url}?o=$c->{op}"><span>def</span></a></td></tr>\n};
+    $html .= qq{</table>\n};
+    $html .= qq{</form><br/>\n};
   }
   $c->{sth} = glassquery($c, $date);
   while ( $ndays-- ) {
-    oneday($c);
+    $html .= oneday($c);
   }
   my $next_rec = db::peekrow($c->{sth});
   if ($next_rec) {
     my ($new_date) = split(' ', $next_rec->{effdate});
-    print qq{<a href="$c->{url}?o=$c->{op}&date=$new_date&ndays=$original_ndays"><span>Older records</span></a><br/>\n};
+    $html .= qq{<a href="$c->{url}?o=$c->{op}&date=$new_date&ndays=$original_ndays"><span>Older records</span></a><br/>\n};
   }
   $c->{sth}->finish;
+  cache::set($c, $cache_key, $html);
+  print $html;
 }
 
 ################################################################################
