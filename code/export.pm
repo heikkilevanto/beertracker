@@ -170,8 +170,8 @@ sub do_export {
         "SELECT DISTINCT ProducerLocation FROM Brews
          WHERE Id IN (" . join(",", @brew_ids) . ") AND ProducerLocation IS NOT NULL");
 
-    my @person_ids = db::queryrecordarray($c,
-        "SELECT DISTINCT Person FROM Comments WHERE Glass IN ($glasses_list) AND Person IS NOT NULL");
+    @person_ids = db::queryrecordarray($c,
+      "SELECT DISTINCT cp.Person FROM comment_persons cp JOIN comments c ON cp.Comment = c.Id WHERE c.Glass IN ($glasses_list) AND cp.Person IS NOT NULL");
   }
   $ids{brews} = \@brew_ids;
   $ids{locations} = \@loc_ids;
