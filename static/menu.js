@@ -3,9 +3,9 @@
 function initMenu(menuData, containerId, toggleButtonId) {
   const container = document.getElementById(containerId);
   if (!container || !menuData || !menuData.menu) return;
+  
 
   function buildMenu(items, currentLabel) {
-
     const ul = document.createElement("ul");
 
     items.forEach(item => {
@@ -33,7 +33,7 @@ function initMenu(menuData, containerId, toggleButtonId) {
         li.appendChild(span);
         li.appendChild(childList);
 
-        if (item.children.some(c => c.url.toLowerCase() === currentLabel.toLowerCase())) {
+        if (currentLabel && item.children.some(c => c.url.toLowerCase() === currentLabel.toLowerCase())) {
           // Note, this works on max 2-level menu. Fix later if needed
           childList.style.display = "block";
           span.classList.add("open-parent");
@@ -47,7 +47,7 @@ function initMenu(menuData, containerId, toggleButtonId) {
         // TODO if (item.url.toLowerCase().startsWith(currentLabel.toLowerCase())) {
         // Or something like that
 
-        if (item.url.toLowerCase() === currentLabel.toLowerCase()) {
+        if (currentLabel && item.url.toLowerCase() === currentLabel.toLowerCase()) {
           a.classList.add("current");
         }
         if (item.children && item.children.some(c => c.url === currentLabel)) {

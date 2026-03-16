@@ -535,7 +535,7 @@ sub postbrew {
   my $setdefaultvol = util::param($c, "setdefaultvol");
   if ($setdefaultprice && $setdefaultvol) {
     update_brew_defaults($c, $id, $setdefaultprice, $setdefaultvol);
-    $c->{redirect_url} = "?o=Brews&e=$id";
+    $c->{redirect_url} = "?o=Brew&e=$id";
     return;
   }
   if ( util::param($c,"dedup") ) {
