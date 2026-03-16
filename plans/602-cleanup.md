@@ -1,67 +1,113 @@
 ## Plan: Repo-wide Perl module cleanup (scan results)
 
-Summary
--------
-- Focus: standardize DB access to `db::*` helpers and param access to `util::param`.
-- Primary risk: many modules use direct `$c->{dbh}->prepare`/`execute`/`selectrow_*` and `$c->{cgi}->param` leading to inconsistent sanitization and logging.
-- Next steps recommended: grep for direct DB and CGI usages, then convert low-risk places to `db::query`/`db::execute` and `util::param`.
+NOTE: This audit strictly follows the repository's procedural Perl style (see copilot-instructions.md). At the end there's a very short "optional modernization" note with ideas you can ignore; do not apply modernization without approval.
 
-Per-module findings
--------------------
+Overview
+--------
+- Scope: thorough, read-only audit of all files in `code/` for style consistency, dead code, duplication, SQL/HTML safety, and refactor opportunities.
+- High-level findings: (1) a few high-impact logic/DB issues that can break runtime; (2) many medium-risk XSS/escaping problems where DB values are printed directly into HTML; (3) some SQL-building patterns that interpolate values into SQL and should be parameterized.
+
+Top-priority tasks
+------------------
+1. Fix `db::open_db` write-permission check and unqualified `error()` calls in `code/db.pm` (priority: 1, effort: quick). These cause read-only opens to fail and raise runtime exceptions.
+2. Fix parentheses/array-size bug in `code/graph.pm` `addsums` (priority: 2, effort: quick). This produces incorrect graph data.
+3. Replace or limit SQL string interpolation in `code/listrecords.pm` and selected callers (priority: 3, effort: medium). This is the primary SQL-safety surface.
+4. Site-wide output escaping: wrap DB/user strings with `util::htmlesc()` where embedded in HTML or attributes (priority: 4, effort: medium). This reduces XSS and broken pages.
+5. Harden external-process invocations (`convert`, scrapers, shell `cp`/`rm`) and check return codes (priority: 5, effort: medium).
+
+Per-file findings and recommendations
+------------------------------------
+
+The following lists concrete issues per file. Each entry: issue, severity, location, suggested fix (adhering to the project's style).
 
 - `code/db.pm`
-  - Summary: central DB helper; canonical API exists.
-  - Issues: none critical.
-  - Suggestion: document and advertise preferred wrappers (e.g., `db::queryrecord`).
+  - Issue: `open_db` requires the DB file to be writable unconditionally, causing 'ro' opens to fail.
+    - Severity: HIGH
+    - Location: `open_db` write-check (`-w $databasefile`).
+    - Suggested fix: Only require write-permission when opening in writable mode. If mode is 'ro', skip the -w check.
+  - Issue: `error(...)` called unqualified in several places (e.g., `updaterecord`/`postrecord`), but the project uses `util::error`.
+    - Severity: HIGH
+    - Suggested fix: Replace `error(...)` with `util::error(...)` (fully qualify). Run `perl -c` and exercise DB write flows.
+- `code/graph.pm`
+  - Issue: Logical bug in `addsums` due to incorrect parentheses: `scalar(@{ $g->{last7} } > 7 )`.
+    - Severity: HIGH
+    - Suggested fix: Correct to `scalar(@{ $g->{last7} }) > 7`. Add a small regression check for sums/averages.
 
-- `code/util.pm`
-  - Summary: param normalization and helpers.
-  - Issues: callers still use raw CGI params in many places.
-  - Suggestion: document `util::param` as required API for param reads.
 
-- `code/comments.pm`
-  - Summary: comment display & posting.
-  - Critical: direct `$c->{dbh}->prepare`/`selectrow_*` usage.
-  - Important: direct `$c->{cgi}->param`/`multi_param` usage.
+- `code/listrecords.pm`
+  - Issue: `listrecords` concatenates a `$where` string directly into SQL; many callers construct interpolated WHERE fragments.
+    - Severity: HIGH
+    - Suggested fix: Change `listrecords` to accept a parameterized WHERE clause plus bind values (e.g., `($where_clause, @bind)`) or enforce callers to validate numeric inputs. Start by auditing call-sites that interpolate untrusted values.
+  - Issue: Rendering loop prints DB values directly into HTML table cells.
+    - Severity: MEDIUM
+    - Suggested fix: Use `util::htmlesc()` when printing values into HTML.
 
-  ## Plan: Repo-wide Perl module cleanup (scan results)
+- Widespread (many modules: `glasses.pm`, `brews.pm`, `persons.pm`, `comments.pm`, `locations.pm`, `beerboard.pm`, `mainlist.pm`, `inputs.pm`, `photos.pm`, `export.pm`, `aboutpage.pm`, `stats.pm`, `monthstat.pm`, `yearstat.pm`, `ratestats.pm`)
+  - Issue: Many places print DB-origin strings directly into HTML or JS without escaping, causing XSS or broken markup if values contain quotes/HTML.
+    - Severity: MEDIUM (per-file instances vary)
+    - Suggested fix: Audit templates and printing sites; apply `util::htmlesc()` for HTML text and `uri_escape_utf8()` for query params. For JS data, prefer `encode_json()` to produce safe JS literals.
 
-  Summary
-  -------
-  - Focus: standardize DB access to `db::*` helpers and param access to `util::param`.
-  - Progress: Many low-risk conversions have been completed (see "Completed" below). This plan now lists remaining hotspots and next steps.
+- `code/postglass.pm`
+  - Issue: Date validation regex is wrong/ambiguous: `if ( $d =~ /^\\d\\d-\\d\\d-\\d\\d|$/ )` (alternation binds incorrectly).
+    - Severity: MEDIUM
+    - Suggested fix: Use a clear pattern such as `^\\d{4}-\\d{2}-\\d{2}$` or `^(?:\\d{4}-\\d{2}-\\d{2})?$` depending on whether empty allowed.
+  - Issue: Printing user/DB values into HTML without escaping.
+    - Suggested fix: `util::htmlesc()` for HTML output.
 
-  Completed
-  ---------
-  - Converted many `prepare`/`execute`/`selectrow_*` usages to `db::query`, `db::queryrecord`, `db::queryarray`, or `db::execute` in multiple modules (examples: `glasses.pm`, `stats.pm`, `photos.pm`, `persons.pm`, `locations.pm`, `monthstat.pm`, `yearstat.pm`, `ratestats.pm`, `graph.pm`, `postglass.pm`, `taps.pm`).
-  - Replaced many raw param reads with `util::param` where appropriate.
+- `code/listrecords.pm`, `code/brews.pm`, `code/inputs.pm`, `code/glasses.pm`, `code/locations.pm`, `code/comments.pm`, `code/persons.pm`, `code/beerboard.pm`, `code/mainlist.pm`
+  - Issue: Attribute and JS interpolation sometimes uses raw DB values; may break HTML/JS.
+    - Severity: MEDIUM
+    - Suggested fix: Use `util::htmlesc()` for attribute values and `encode_json()` or `util::htmlesc()` for inline JS content.
 
-  Remaining hotspots (manual review recommended)
-  --------------------------------------------
-  - `code/scrapeboard.pm`
-    - Issues: `last_insert_id` usage after inserts; scraper input sanitization still needs explicit validation. Consider using `db::insertrecord` when inserting from structured form data or add explicit validation steps before `db::execute`.
+- `code/photos.pm`
+  - Issue: Calls ImageMagick `convert` using backticks with uploaded file names; no robust return-code handling.
+    - Severity: MEDIUM
+    - Suggested fix: Use list-form `system()` or check `$?` after backticks and `util::error()` on failure. Validate temp filenames and ensure they are not user-controlled paths.
 
-  - `code/photos.pm`
-    - Issues: `last_insert_id` usage and a few remaining `$c->{cgi}->param('return_url')` locations that intentionally bypass `util::param` due to allowed characters. Review whether `util::param` can be extended or those usages should be wrapped with a documented exception.
+- `code/scrapeboard.pm`
+  - Issue: Runs external scraper scripts via backticks; captures output but may ignore failures.
+    - Severity: MEDIUM
+    - Suggested fix: Ensure only fixed, internal scripts are called, capture stderr, check exit codes, and log or surface failures rather than silently proceeding.
 
-  - `code/brews.pm` and `code/locations.pm`
-    - Issues: loops that enumerate CGI parameter names (e.g., `foreach my $paramname ($c->{cgi}->param)`) — these are intentional for checkbox lists/dedup flows; consider keeping but document and, where possible, replace with explicit `util::param` reads for known field names.
+- `code/superuser.pm`
+  - Issue: Uses shell `rm`/`cp` with interpolated paths in `copyproddata` and related functions.
+    - Severity: MEDIUM
+    - Suggested fix: Prefer Perl file-copy APIs (File::Copy) or carefully shell-escape inputs and check return codes.
 
-  - `code/yearstat.pm`
-    - Issues: uses `selectcol_arrayref` directly on `$c->{dbh}`. Option: add small `db::selectcol_arrayref($c,$sql,@params)` helper in `db.pm` or convert call-sites to use `db::query` + `fetchall_arrayref`.
+- `code/login.pm`
+  - Issue: `read_secret` currently `die`s on missing secret file; produce hard exit instead of controlled `util::error()`.
+    - Severity: MEDIUM
+    - Suggested fix: Convert `die` to `util::error()` so failures produce consistent HTTP-friendly errors.
 
-  Notes
-  -----
-  - `last_insert_id` calls were left where conversion would require more structural changes (e.g., replacing raw INSERT + last_insert_id with `db::insertrecord`). We can add `db::insertrecord` call-sites later where the insert originates directly from form fields.
-  - `multi_param` usages (enumerating multi-valued inputs) were left as-is; these are acceptable in places where truly multiple values are expected. If you want, I can add a `util::multparam` wrapper for consistency.
+- Misc minor items (low severity)
+  - `code/cache.pm`: assume `$c->{log}` exists — consider defensive checks or documenting the requirement.
+  - `code/yearstat.pm`: use `uri_escape_utf8()` consistently for query params in links.
+  - `code/ratestats.pm`: build JS data using `encode_json()` to avoid breaking quotes.
+  - `code/debug.pm`: ensure debug output is protected and does not leak sensitive content in production.
 
-  Next actions (suggested)
-  -----------------------
-  1. Add small helper `db::selectcol_arrayref($c,$sql,@params)` if you prefer replacing `selectcol_arrayref` call-sites for consistency. (Low risk)
-  2. Convert `last_insert_id` patterns where the insert is from CGI fields to `db::insertrecord` (requires checking field mapping). (Medium risk)
-  3. Audit and sanitize scraper outputs in `code/scrapeboard.pm` before DB writes. (Medium risk)
-  4. Document `multi_param` usage or add a `util::multparam` wrapper. (Low risk)
+Effort estimates
+----------------
+- Quick (<1h): fix `db::open_db` permission check, fix unqualified `error()` calls, fix `graph.pm` parentheses bug.
+- Medium (1–4h): refactor `listrecords` to accept parameterized WHERE / audit callers, site-wide escaping changes (spread across many files), harden external process calls, photos `convert` error handling.
 
-  If you want, I can: (A) implement `db::selectcol_arrayref`, (B) convert selected `last_insert_id` flows to `db::insertrecord`, and (C) add a `util::multparam` wrapper — tell me which subset to do next.
+Suggested immediate next steps
+----------------------------
+1. Apply the two high-impact quick fixes in `code/db.pm` and `code/graph.pm` and run `perl -c` across the repo.
+2. Create a follow-up PR that: (a) converts `listrecords` to accept a parametrized WHERE clause with bind args, (b) updates a few high-traffic callers (e.g., glasses, brews, mainlist) to use placeholders.
+3. Run a focused escaping pass: add `util::htmlesc()` in the 10 most-visible printing sites (mainlist, beerboard, glasses, brews, listrecords, comments, persons, locations, postglass, inputs).
+4. Harden external calls and image handling by adding return-code checks and error paths.
 
-  -- End of updated plan
+Optional modernization notes (very short)
+--------------------------------------
+- If you later consider modernization: introduce a minimal templating helper to centralize escaping, and a thin DB wrapper that enforces parameterized queries everywhere. Also add unit/regression tests for `graph` and DB helper flows.
+
+Next steps for me if you want me to continue
+-------------------------------------------
+- I can (A) implement the quick fixes now, (B) prepare a PR that changes `listrecords` to accept parameterized WHERE + update a few callers, or (C) run a site-wide escaping sweep. Tell me which of A/B/C to do next.
+
+Detailed per-file findings (raw, actionable)
+-------------------------------------------
+
+The full per-file findings were generated by a thorough read of `code/`. If you want the verbatim per-file JSON-style findings inserted here, tell me and I will append them; otherwise this plan captures the concrete, prioritized actions.
+
+-- End of plan

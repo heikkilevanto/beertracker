@@ -365,8 +365,8 @@ sub updaterecord {
   my $id = shift;
   my $inputprefix = shift || "";  # "newloc" means inputs are "newlocName" etc
 
-  error ( "Can not update a $table record without id ") unless ($id) ;
-  error ( "Bad id '$id' for updating a $table record ") unless ( $id =~ /^\d+$/ );
+  util::error ( "Can not update a $table record without id " ) unless ($id) ;
+  util::error ( "Bad id '$id' for updating a $table record " ) unless ( $id =~ /^\d+$/ );
   my @sets;
   my @values;
   for my $f ( db::tablefields($c, $table)) {
@@ -446,7 +446,7 @@ sub insertrecord {
         print { $c->{log} } "Returned from NewPerson, id='$val'  \n";
       }
       else {
-        error ("insertrecord can not yet handle recursion to this type. p='$inputprefix' f='$f' ");
+        util::error ("insertrecord can not yet handle recursion to this type. p='$inputprefix' f='$f' ");
       }
     }
     $val = util::trim($val);

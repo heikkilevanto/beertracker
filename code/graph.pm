@@ -32,7 +32,7 @@ sub clearcachefiles {
     if ( $pf =~ /\/$c->{username}.*png/ ||   # All png files for this user
          -M $pf > 7 ) {  # And any file older than a week
       unlink ($pf)
-        or error ("Could not unlink $pf $!");
+        or util::error ("Could not unlink $pf: $!");
       }
   }
   # Create a zero-sized file called username.last
@@ -53,11 +53,11 @@ sub addsums {
   my $day = shift;
   push( @{ $g->{last7} }, $v);
   $g->{sum7} += $v;
-  if ( scalar(@{ $g->{last7} } > 7 ) ) {
+  if ( scalar(@{ $g->{last7} }) > 7 ) {
     $g->{sum7} -= shift( @{$g->{last7} } );
   }
   push( @{ $g->{last30} }, $v);
-  if ( scalar(@{ $g->{last30} } > 30 ) ) {
+  if ( scalar(@{ $g->{last30} }) > 30 ) {
     shift( @{$g->{last30} } );
   }
   my $w = 1;
