@@ -391,44 +391,8 @@ sub showmenu {
 END
 }
 
-################################################################################
-# Old stuff
-################################################################################
-# Some helpers from the old index.cgi. For now they are not used at all.
-# Kept here for future reference, in case I wish to reintroduce them.
-
-# # Helper to make a google link
-#sub glink {
-#   my $qry = shift;
-#   my $txt = shift || "Google";
-#   return "" unless $qry;
-#   $qry = uri_escape_utf8($qry);
-#   my $lnk = "&nbsp;<i>(<a href='https://www.google.com/search?q=$qry'" .
-#     " target='_blank' class='no-print'><span>$txt</span></a>)</i>\n";
-#   return $lnk;
-# }
-
-#
-# # Helper to make a Untappd search link
-#sub utlink {
-#   my $qry = shift;
-#   my $txt = shift || "Untappd";
-#   return "" unless $qry;
-#   $qry = uri_escape_utf8($qry);
-#   my $lnk = "<i>(<a href='https://untappd.com/search?q=$qry'" .
-#     " target='_blank' class='no-print'><span>$txt<span></a>)</i>\n";
-#   return $lnk;
-# }
-
-#sub maplink {
-#   my $g = shift;
-#   my $txt = shift || "Map";
-#   return "" unless $g;
-#   my ( $la, $lo, undef ) = geo($g);
-#   my $lnk = "<a href='https://www.google.com/maps/place/$la,$lo' " .
-#   "target='_blank' class='no-print'><span>$txt</span></a>";
-#   return $lnk;
-# }
+# Here used to be some commented-out helpers for making links to Google,
+# Untappd, and Google Maps. Check out tag v3.2 to see them if you need.
 
 
 ################################################################################
