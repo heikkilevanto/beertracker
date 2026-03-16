@@ -539,20 +539,6 @@ sub mainlist {
   }
   print { $c->{log} } "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
   my $original_ndays = $ndays;
-
-  # Build a cache key for the full mainlist (include possible query filter)
-  my $full_key = "mainlist_full:" . $c->{username} . ":" . $date . ":" . $original_ndays . ":" . ($c->{qry} // "");
-  my $cached_full = cache::get($c, $full_key);
-  if ( $cached_full ) {
-    print $cached_full;
-    return;
-  }
-
-  # Capture mainlist output so we can cache the whole result afterwards
-  my $mlbody = '';
-  open my $mlbuf, '>:utf8', \$mlbody or die "Cannot open mainlist buffer: $!";
-  my $old_sel = select $mlbuf;
-
   if (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays") || $derived_date) {
     print qq{<b>Main List</b><br/>\n};
     print qq{<form method="GET">\n};
@@ -563,11 +549,8 @@ sub mainlist {
     print qq{</table>\n};
     print qq{</form><br/>\n};
   }
-
   $c->{sth} = glassquery($c, $date);
   while ( $ndays-- ) {
-    my $peek = db::peekrow($c->{sth});
-    last unless $peek;
     oneday($c);
   }
   my $next_rec = db::peekrow($c->{sth});
@@ -576,10 +559,6 @@ sub mainlist {
     print qq{<a href="$c->{url}?o=$c->{op}&date=$new_date&ndays=$original_ndays"><span>Older records</span></a><br/>\n};
   }
   $c->{sth}->finish;
-
-  select $old_sel; # restore original selected filehandle
-  cache::set($c, $full_key, $mlbody);
-  print $mlbody;
 }
 
 ################################################################################
