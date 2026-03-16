@@ -24,22 +24,23 @@ my $onemonth = $oneyear / 12;
 ################################################################################
 sub clearcachefiles {
   my $c = shift;
+  my $reason = shift || "";
   my $datadir = $c->{datadir};
   print { $c->{log} } "clear: d='$datadir'\n";
   foreach my $pf ( glob($datadir."*") ) {
-    next if ( $pf =~ /(\.data)|(.db.*)$/ ); # Always keep data files
+    next if ( $pf =~ /(\.data)|(db.*)$/ ); # Always keep data files
     next if ( -d $pf ); # Skip subdirs, if we have such
     if ( $pf =~ /\/$c->{username}.*png/ ||   # All png files for this user
          -M $pf > 7 ) {  # And any file older than a week
       unlink ($pf)
-        or util::error ("Could not unlink $pf: $!");
+        or error ("Could not unlink $pf $!");
       }
   }
   # Create a zero-sized file called username.last
   my $lastfile = $datadir . $c->{username} . '.last';
   open my $fh, '>', $lastfile or util::error("Could not create $lastfile: $!");
   close $fh;
-  cache::clear($c, "copyproddata");  # Prod data replaced; cached queries are stale
+  cache::clear($c, $reason);  
 } # clearcachefiles
 
 ################################################################################
@@ -53,11 +54,11 @@ sub addsums {
   my $day = shift;
   push( @{ $g->{last7} }, $v);
   $g->{sum7} += $v;
-  if ( scalar(@{ $g->{last7} }) > 7 ) {
+  if ( scalar(@{ $g->{last7} } > 7 ) ) {
     $g->{sum7} -= shift( @{$g->{last7} } );
   }
   push( @{ $g->{last30} }, $v);
-  if ( scalar(@{ $g->{last30} }) > 30 ) {
+  if ( scalar(@{ $g->{last30} } > 30 ) ) {
     shift( @{$g->{last30} } );
   }
   my $w = 1;
@@ -116,7 +117,7 @@ sub oneday {
       $drinksline .= "$y 0xffffff "; # White separator for locaton changes
       $cnt--;
     }
-    my $color = styles::brewcolor($c, $style);
+    my $color = styles::brewcolor($c,$style);
     my $y = $top;
     if ( $r->{StDrinks} < 0.2 ) {
       $y = $top + 0.2; # Show at least something visible

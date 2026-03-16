@@ -21,6 +21,7 @@ require "./code/glasses.pm";  # For findrec and volumes
 ################################################################################
 # POST handler for glass records
 ################################################################################
+# TODO - This is quite a long function, split into smaller ones for readability and maintainability.
 sub postglass {
   my $c = shift; # context
 
@@ -32,7 +33,7 @@ sub postglass {
     db::execute($c, $sql, $c->{edit}, $c->{username});
     print { $c->{log} } "Deleted glass id '$c->{edit}'\n";
     $c->{edit} = ""; # don't try to edit it any more
-    graph::clearcachefiles($c);
+    graph::clearcachefiles($c, "postglass");
     return;
   } # delete
 
@@ -185,7 +186,7 @@ sub postglass {
     brews::update_brew_defaults($c, $brewid, $glass->{Price}, $glass->{Volume});
   }
 
-  graph::clearcachefiles($c);
+  graph::clearcachefiles($c,"postglass");  
 } # postglass
 
 ################################################################################
@@ -239,7 +240,8 @@ sub gettimestamp {
   }
   util::error("Bad date '$d' ") unless ( $d =~ /^\d\d-\d\d-\d\d|$/ );
   util::error("Bad time '$t' ") unless ( $t =~ /^\d\d:\d\d(:\d\d|)?$/ );
-  $glass->{Timestamp} = "$d $t";
+  # TODO - Check hours not past 24. Check minutes and seconds not past 60. 
+$glass->{Timestamp} = "$d $t";
 
   print { $c->{log} } "gettimestamp: '$glass->{Timestamp}' \n";
 } # gettimestamp

@@ -217,6 +217,7 @@ sub gitpull {
   print "Go back to <a href='$c->{url}?o=GitStatus&p=$p&reload=1'><span>Git Status</span></a>\n";
   print "Or the <a href='$c->{url}?o=Graph&reload=1'><span>Main list</span></a>\n";
   cache::clear($c, "gitpull");  # Code changed; force fresh renders on next request
+  graph::clearcachefiles($c, "gitcheckout"); # clear graphs as well
 }
 
 
@@ -245,6 +246,8 @@ sub gitcheckout {
   print "Go back to <a href='$c->{url}?o=GitStatus&p=$p&reload=1'><span>Git Status</span></a>\n";
   print "Or the <a href='$c->{url}?o=Graph&reload=1'><span>Main list</span></a>\n";
   cache::clear($c, "gitcheckout");  # Code changed; force fresh renders on next request
+  graph::clearcachefiles($c, "gitcheckout"); 
+
 } # gitcheckout
 
 

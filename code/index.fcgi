@@ -366,7 +366,7 @@ if ( $c->{op} =~ /Board/i ) {
 } elsif ( $c->{op} =~ /Photo/i ) {
   photos::listphotos($c);
 } elsif ( $c->{op} =~ /Comment/i ) {
-  if ( $c->{edit} ) {
+  if ( $c->{edit} ) { # TODO- check this inside comments.pm 
     comments::editcomment($c);
   } else {
     comments::listallcomments($c);
@@ -401,8 +401,8 @@ $c->{dbh} = undef;  # Don't disconnect; keep $dbh_ro alive for next request
 
 }; # end eval GET
 if ($@) {
-  eval { $dbh_ro->disconnect; $dbh_ro = undef } if $dbh_ro;  # Drop on error, reconnect next request
   print { $c->{log} } "GET error: $@\n";
+  eval { $dbh_ro->disconnect; $dbh_ro = undef } if $dbh_ro;  # Drop on error, reconnect next request
 }
 
 select $old_fh;  # Restore output to FCGI::Stream

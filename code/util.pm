@@ -121,10 +121,10 @@ sub datestr {
   my $clockhours = strftime("%H", localtime($starttime));
   $starttime = $starttime - $clockhours*3600 + 12 * 3600;
     # Adjust time to the noon of the same date
-    # This is to fix dates jumping when script running close to miodnight,
+    # This is to fix dates jumping when script running close to midnight,
     # when we switch between DST and normal time. See issue #153
   my $usetime = $starttime;
-  if ( $form =~ /%T/ || $exact ) { # If we want the time (when making a timestamp),
+  if ( $form =~ /%[THM]/ || $exact ) { # If we want the time (when making a timestamp),
     $usetime = time();   # base it on unmodified time
   }
   my $dstr = strftime ($form, localtime($usetime + $delta *60*60*24));
