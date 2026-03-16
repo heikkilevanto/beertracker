@@ -1,6 +1,7 @@
 # Part of my beertracker
 # Stuff for comment records and photos (TODO)
 
+# TODO - This too big for a module. Split it somehow.
 
 package comments;
 

@@ -527,7 +527,7 @@ sub dedupbrews {
 ################################################################################
 # Update a brew, posted from the form in the selection above
 ################################################################################
-# TODO - Calculate subtype, if not set. Make a separate helper, use in import
+# TODO - Calculate subtype, if not set. Make a separate helper
 sub postbrew {
   my $c = shift; # context
   my $id = shift || $c->{edit};

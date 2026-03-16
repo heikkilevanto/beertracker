@@ -103,6 +103,7 @@ sub migrate_form {
 ################################################################################
 # run_migrations($c)
 # POST handler (called inside the shared BEGIN TRANSACTION / COMMIT block).
+# That also handles clearing the memory cache. 
 # Runs each pending migration in order; updates globals.db_version after each.
 ################################################################################
 sub run_migrations {
