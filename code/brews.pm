@@ -170,12 +170,15 @@ sub listbrewprices {
     print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
     print "</td><td $sty>\n";
     if ( $com->{Price} && $com->{Volume} ) {
+      my $is_default = ( ($brew->{DefPrice} // "") eq $com->{Price} &&
+                         ($brew->{DefVol}   // "") eq $com->{Volume} );
       print "<form method='POST' accept-charset='UTF-8' style='display:inline;'>\n";
       print "<input type='hidden' name='o' value='Brews' />\n";
       print "<input type='hidden' name='e' value='$brew->{Id}' />\n";
       print "<input type='hidden' name='setdefaultprice' value='$com->{Price}' />\n";
       print "<input type='hidden' name='setdefaultvol' value='$com->{Volume}' />\n";
-      print "<input type='submit' value='Def' style='font-size: x-small;' />\n";
+      my $disabled = $is_default ? " disabled" : "";
+      print "<input type='submit' value='Def' style='font-size: x-small;'$disabled />\n";
       print "</form>\n";
     } else {
       print "&nbsp;";
@@ -290,8 +293,13 @@ sub listbrewglasses {
   print "</div>\n";
   print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
   if ( $glcount) {
-    print "$glcount Glasses between ";
-    print "$firstrec->{Date} and $lastrec->{Date}\n"
+    my $first = util::reldate($firstrec->{Date});
+    my $last  = util::reldate($lastrec->{Date});
+    if ( $first eq $last ) {
+      print "$glcount Glasses on $first\n";
+    } else {
+      print "$glcount Glasses between $first and $last\n";
+    }
   } else {
     print "Not a single glass";
   }
