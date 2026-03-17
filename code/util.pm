@@ -136,6 +136,18 @@ sub now {
   return datestr("%F %T", 0, 1);
 } # now
 
+# Convert a YYYY-MM-DD date string to a relative label (today, yesterday, or the date itself)
+# Uses the 6-hour offset so late-night drinks count as the previous day.
+sub reldate {
+  my $date = shift || return "";
+  my $now_utc6 = time() - 6 * 3600;
+  my $today     = strftime('%Y-%m-%d', localtime($now_utc6));
+  my $yesterday = strftime('%Y-%m-%d', localtime($now_utc6 - 86400));
+  return "today"     if $date eq $today;
+  return "yesterday" if $date eq $yesterday;
+  return $date;
+} # reldate
+
 
 ################################################################################
 # Helpers for cgi parameters
