@@ -28,7 +28,7 @@ use it for real in January 2016, and have been using the system ever since.
 - v3.0 Jul'25: Sqlite for all data, redesign ui, split into modules
 - v3.1 Aug'25: Rating stats, photos, geo coordinates, generic brews, refactoring
 - v3.2 Jan'26: Tracking beer taps, prices, AI-assisted refactoring
-
+- v3.3  soon   Fast cgi, caching, db migration tool, barcodes, multi-persons
 
 
 ## Architecture
