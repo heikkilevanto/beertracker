@@ -1,8 +1,11 @@
 # Beertracker database schema
-# Schema dumped at 2026-03-14 13:02 with beertracker-dev/scripts/dbdump.sh
-# Do not edit directly, unless you plan to run scripts/dbchange immediately
-# The schema lives inside the sqlite database!
-# Any changes must be done by adding a migration to migrater.pm, then they will be applied automatically
+# Schema dumped at 2026-03-17 13:09 with beertracker-dev/tools/dbdump.sh
+# Do not edit directly, unless you plan to run tools/dbchange immediately
+# The actual schema lives inside the sqlite database!
+# Most changes must be done by adding a migration to migrate.pm, then they will be applied 
+# automatically to both dev and production systems.
+# A few difficult changes can be done manually here, but that requires running tools/dbchange
+# in both dev and production, and needs to be coordinated with related code releases.
 
 pragma foreign_keys=off;
 
@@ -28,7 +31,7 @@ create table glasses (
     Alc decimal, 
     StDrinks decimal, -- Calculated from volume and alc
     Note text, -- note for this one glass, like what mixed beer
-    Tap integer, 
+    Tap integer, -- Which tap number the brew came from
 
     foreign key (Brew) references Brews(id),
     foreign key (Location) references Locations(id)
@@ -40,6 +43,7 @@ create table brews (
 
     -- A brew is something I can drink
     -- Brews are shared between users
+    -- Brews can be created manually, or when scraping a beer board for a bar
 
     Id integer primary key,
     Name text,  -- The name I know the brew as
@@ -53,7 +57,7 @@ create table brews (
     Flavor text, -- Hops, Grapes, spices, barrels, etc
     Year decimal,
     Details text, -- Other things worth noticing
-    IsGeneric text,  -- House wine, mixed beer. "1" for generics, null or "0" for not
+    IsGeneric text,  -- House wine, mixed beer. "1" for generics, null for not
     DefPrice text, -- default price
     DefVol text,   -- default volume, matching the def price
     Barcode text,  -- bar code on the bottle or box
@@ -65,16 +69,21 @@ create table brews (
 drop table if exists comments;
 create table comments (
 
-    -- Comments are tied to glasses, so they are private for the user
-    -- They refer to the brew in the glass by default, but if there is none,
-    -- then to they can refer to the 'empty' glass itself (restaurant, night)
-    -- or to the person metioned in the comment.
+    -- Comments are mostly private, they have a username to indicate the owner. 
+    -- If null, the comment is public.
+    -- The CommentType tells what type of item the comment refers to, and
+    -- the Glass, Location, or Brew refer to the actual item. 
+    -- Comments can also refer to a number of persons, via the comment_persons table
 
     Id integer primary key,
     Glass integer,  -- Can be null if we delete the glass.
     Comment text, -- Any kind of comment
     Rating integer,  -- 1 (worst) to 9 (best)
-    CommentType text, Ts datetime, Location integer, Username text, Brew integer references brews(Id),  -- filename of the photo
+    CommentType text, -- brew, location, person, night, meal, glass
+    Ts datetime, 
+    Location integer, 
+    Username text, 
+    Brew integer references brews(Id), 
 
     foreign key (Glass) references Glasses(id) on delete set null
 );
@@ -84,6 +93,7 @@ drop table if exists persons;
 create table persons (
 
     -- Various people I meet at the watering holes, or otherwise wish to remember
+    -- Note that the comments_persons table maps many comments to many persons
 
     Id integer primary key,
     Name text not null,  -- The name I know the person as
@@ -96,38 +106,53 @@ create table persons (
     foreign key (Location) references Locations(id)
 );
 
+-- table comment_persons
+drop table if exists comment_persons;
+create table comment_persons (
+  Comment integer not null,
+  Person  integer not null,
+  primary key (Comment, Person),
+  foreign key (Comment) references comments(Id) on delete cascade,
+  foreign key (Person)  references persons(Id)
+);
+
+
 -- table locations
 drop table if exists locations;
 create table locations (
 
-    -- Location is anything with a physical address
-    -- They can be bars, restaurants, and producers of beer, wine, etc
-    -- Even private homes.
+  -- Location is anything with a physical address
+  -- They can be bars, restaurants, and producers of beer, wine, etc
+  -- Even private homes.
 
-    Id integer primary key,
-    Name text not null, -- The name I know for the place
-    OfficialName text, -- Mostly for producers
-    Description text,  -- Any kind of additiona info
-    LocType text,    -- "Restaurant", "Producer"
-    LocSubType text, -- Rest type "Bar", or producer of what "Beer"
-    Website text,
-    Contact text,
-    Address text,
-    Lat real,  -- Geo coordinate latitude
-    Lon real   -- longitude
+  Id integer primary key,
+  Name text not null, -- The name I know for the place
+  OfficialName text, -- Mostly for producers
+  Description text,  -- Any kind of additiona info
+  LocType text,    -- "Restaurant", "Producer"
+  LocSubType text, -- Rest type "Bar", or producer of what "Beer"
+  Website text,
+  Contact text,   -- email, website, etc
+  Address text,
+  Lat real,  -- Geo coordinate latitude
+  Lon real   -- longitude
 
 );
 
--- table if
-drop table if exists if;
+-- table tap_beers
+drop table if exists "tap_beers";
 create table if not exists "tap_beers" (
+
+  -- Keeps track of what beer I have seen on what tap number at the various locations
+  -- Used for collecting historical data of the beers, and maybe later for some statistics
+
 	"Id"	integer,
-	"Location"	integer not null,
+	"Location"	integer not null,   
 	"Tap"	integer,
 	"Brew"	integer,
-	"FirstSeen"	datetime not null default current_timestamp,
-	"LastSeen"	datetime not null default current_timestamp,
-	"Gone"	datetime, 
+	"FirstSeen"	datetime not null default current_timestamp, -- When it came on
+	"LastSeen"	datetime not null default current_timestamp, -- Last seen at this tap
+	"Gone"	datetime,  -- When the beer was no longer on the (same) tap
   "SizeS" decimal, "PriceS" decimal, 
   "SizeM" decimal, "PriceM" decimal, 
   "SizeL" decimal, "PriceL" decimal,
@@ -137,37 +162,39 @@ create table if not exists "tap_beers" (
 	foreign key("Location") references "Locations"("id")
 );
 
-analyze sqlite_schema;
-
--- table globals
-drop table if exists globals;
-create table globals (k text primary key, v text);
-
 -- table photos
 drop table if exists photos;
 create table photos (
-      Id integer primary key,
-      Filename text not null, 
-      Caption text,
-      Glass integer,
-      Location integer,
-      Person integer,
-      Comment integer,
-      Brew integer,
-      Uploader text,
-      Public integer not null default 0,
-      Ts datetime default current_timestamp
-    );
 
--- table comment_persons
-drop table if exists comment_persons;
-create table comment_persons (
-      Comment integer not null,
-      Person  integer not null,
-      primary key (Comment, Person),
-      foreign key (Comment) references comments(Id) on delete cascade,
-      foreign key (Person)  references persons(Id)
-    );
+  -- Keeps track of the photos attached to comments, locations, brews, etc
+
+  Id integer primary key,
+  Filename text not null, -- The base file name
+  Caption text,  -- Small caption if needed
+  Glass integer, -- If the photo refers to a glass
+  Location integer, -- Or a location
+  Person integer,   -- or a person
+  Comment integer,  -- or a comment
+  Brew integer,     -- or a brew
+  Uploader text,    -- Username of who uploaded it
+  Public integer not null default 0, -- Indicates that anyone may see it
+  Ts datetime default current_timestamp
+);
+
+-- table globals
+drop table if exists globals;
+create table globals (
+
+  -- Used for keeping a few global settings. 
+  -- For now, only the database version, so we can see if we need to run
+  -- a migration. 
+  -- More uses will come later.
+
+  k text primary key, 
+  v text
+);
+
+analyze sqlite_schema;
 
 -- view locations_dedup_list
 drop view if exists locations_dedup_list;
@@ -187,55 +214,57 @@ select
 -- view glassrec
 drop view if exists glassrec;
 create view glassrec as
-      select
-        glasses.id as glassid,
-        glasses.username as username,
-        datetime(glasses.timestamp) as stamp,
-        strftime ('%w', glasses.timestamp, '-06:00' ) as wdaynumber,  /* as number, monday=1 */
-        strftime ('%Y-%m-%d', glasses.timestamp) as date,
-        strftime ('%Y', glasses.timestamp) as year,
-        strftime ('%H:%M:%S', glasses.timestamp) as time,
-        glasses.brewtype as type,
-        coalesce(brews.subtype, brews.country) as subtype,
-        strftime ('%Y-%m-%d', glasses.timestamp,'-06:00') as effdate,
-        locations.Id as locid,
-        locations.name as loc,
-        ploc.name as maker,
-        brews.Id as brewid,
-        brews.name as name,
-        volume as vol,
-        coalesce(Brews.brewstyle,'') || ' ' ||
-          coalesce(Brews.region,'')  || ' ' ||
-          coalesce(Brews.country,'') || ' ' ||
-          coalesce(Brews.details,'') || ' ' ||
-          coalesce(Brews.year,'')
-          as style,
-        glasses.alc as alc,
-        price as pr
-      from glasses , locations
-      left join brews  on glasses.Brew = Brews.id
-      left join locations ploc on ploc.id = Brews.ProducerLocation
-      where glasses.Location = locations.id;
+  -- Used in the main list
+  select
+    glasses.id as glassid,
+    glasses.username as username,
+    datetime(glasses.timestamp) as stamp,
+    strftime ('%w', glasses.timestamp, '-06:00' ) as wdaynumber,  /* as number, monday=1 */
+    strftime ('%Y-%m-%d', glasses.timestamp) as date,
+    strftime ('%Y', glasses.timestamp) as year,
+    strftime ('%H:%M:%S', glasses.timestamp) as time,
+    glasses.brewtype as type,
+    coalesce(brews.subtype, brews.country) as subtype,
+    strftime ('%Y-%m-%d', glasses.timestamp,'-06:00') as effdate,
+    locations.Id as locid,
+    locations.name as loc,
+    ploc.name as maker,
+    brews.Id as brewid,
+    brews.name as name,
+    volume as vol,
+    coalesce(Brews.brewstyle,'') || ' ' ||
+      coalesce(Brews.region,'')  || ' ' ||
+      coalesce(Brews.country,'') || ' ' ||
+      coalesce(Brews.details,'') || ' ' ||
+      coalesce(Brews.year,'')
+      as style,
+    glasses.alc as alc,
+    price as pr
+  from glasses , locations
+  left join brews  on glasses.Brew = Brews.id
+  left join locations ploc on ploc.id = Brews.ProducerLocation
+  where glasses.Location = locations.id;
 
 -- view LatestPrices
 drop view if exists LatestPrices;
 create view LatestPrices as
-select g.Username,
-       g.Location,
-       l.Name as LocationName,
-       g.Brew,
-       g.Volume,
-       g.Price,
-       g.Timestamp,
-       latest.Count
+select 
+  g.Username,
+  g.Location,
+  l.Name as LocationName,
+  g.Brew,
+  g.Volume,
+  g.Price,
+  g.Timestamp,
+  latest.Count
 from glasses g
 join (
-    select Username, Location, Brew, Volume, max(Timestamp) as MaxTime, count(*) as Count
-    from glasses
+  select Username, Location, Brew, Volume, max(Timestamp) as MaxTime, count(*) as Count
+  from glasses
 	where price > 0
-    group by Username, Location, Brew, Volume
+  group by Username, Location, Brew, Volume
 ) latest
-  on g.Username = latest.Username
+   on g.Username = latest.Username
  and g.Location = latest.Location
  and g.Brew = latest.Brew
  and g.Volume = latest.Volume
@@ -354,39 +383,6 @@ create view location_ratings as
     where l.LocType <> 'Producer'
     group by l.Id;
 
--- view comments_list
-drop view if exists comments_list;
-create view comments_list as
-    select
-      comments.Id,
-      strftime('%Y-%m-%d %w ', coalesce(glasses.Timestamp, comments.Ts), '-06:00') ||
-        strftime('%H:%M', coalesce(glasses.Timestamp, comments.Ts)) as Last,
-      coalesce(loc_comment.Name, loc_glass.Name) as LocName,
-      'tr' as tr,
-      '' as Clr,
-      coalesce(brew_comment.Name, brew_glass.Name) as BrewName,
-      coalesce(ploc_comment.Name, ploc_glass.Name) as Prod,
-      'tr' as tr,
-      comments.Rating as Rate,
-      group_concat(persons.Name, ', ') as PersonName,
-      comments.CommentType as CommentType,
-      comments.Comment as Comment,
-      'tr' as tr,
-      '' as None,
-      coalesce(glasses.Username, comments.Username) as Xusername
-    from comments
-    left join glasses       on glasses.Id       = comments.Glass
-    left join brews brew_glass   on brew_glass.Id   = glasses.Brew
-    left join brews brew_comment on brew_comment.Id = comments.Brew
-    left join comment_persons cp on cp.Comment = comments.Id
-    left join persons            on persons.Id  = cp.Person
-    left join locations loc_glass   on loc_glass.Id   = glasses.Location
-    left join locations loc_comment on loc_comment.Id = comments.Location
-    left join locations ploc_glass   on ploc_glass.Id   = brew_glass.ProducerLocation
-    left join locations ploc_comment on ploc_comment.Id = brew_comment.ProducerLocation
-    group by comments.Id
-    order by Last desc;
-
 -- view brew_ratings
 drop view if exists brew_ratings;
 create view brew_ratings as
@@ -482,6 +478,40 @@ create view producer_brews_list as
     left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
     left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
     group by brews.id, users.Username;
+
+-- view comments_list
+drop view if exists comments_list;
+create view comments_list as
+    select
+      comments.Id,
+      strftime('%Y-%m-%d %w ', coalesce(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', coalesce(glasses.Timestamp, comments.Ts)) as Last,
+      coalesce(loc_comment.Name, loc_glass.Name) as LocName,
+      'tr' as tr,
+      '' as Clr,
+      coalesce(brew_comment.Name, brew_glass.Name) as BrewName,
+      coalesce(ploc_comment.Name, ploc_glass.Name) as Prod,
+      'tr' as tr,
+      comments.Rating as Rate,
+      group_concat(persons.Name, ', ') as PersonName,
+      comments.CommentType as CommentType,
+      comments.Comment as Comment,
+      'tr' as tr,
+      (select group_concat(Filename, '|') from photos where Comment = comments.Id) as Photos,
+      '' as None,
+      coalesce(glasses.Username, comments.Username) as Xusername
+    from comments
+    left join glasses       on glasses.Id       = comments.Glass
+    left join brews brew_glass   on brew_glass.Id   = glasses.Brew
+    left join brews brew_comment on brew_comment.Id = comments.Brew
+    left join comment_persons cp on cp.Comment = comments.Id
+    left join persons            on persons.Id  = cp.Person
+    left join locations loc_glass   on loc_glass.Id   = glasses.Location
+    left join locations loc_comment on loc_comment.Id = comments.Location
+    left join locations ploc_glass   on ploc_glass.Id   = brew_glass.ProducerLocation
+    left join locations ploc_comment on ploc_comment.Id = brew_comment.ProducerLocation
+    group by comments.Id
+    order by Last desc;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
