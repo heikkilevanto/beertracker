@@ -37,8 +37,8 @@ sub listbrewcomments {
   my $sql = "
     SELECT
       COMMENTS.Id as Cid,
-      strftime('%Y-%m-%d', COALESCE(GLASSES.Timestamp, COMMENTS.Ts), '-06:00') as Date,
-      strftime('%H:%M', COALESCE(GLASSES.Timestamp, COMMENTS.Ts)) as Time,
+      strftime('%Y-%m-%d', COALESCE(COMMENTS.Ts, GLASSES.Timestamp), '-06:00') as Date,
+      strftime('%H:%M', COALESCE(COMMENTS.Ts, GLASSES.Timestamp)) as Time,
       COMMENTS.Rating as Rating,
       COMMENTS.Comment,
       group_concat(PERSONS.Id, ',') as Pid,
@@ -56,9 +56,9 @@ sub listbrewcomments {
       LEFT JOIN LOCATIONS COMLOC on COMLOC.Id = COMMENTS.Location
       LEFT JOIN LOCATIONS GLASSLOC on GLASSLOC.Id = GLASSES.Location
       WHERE (COMMENTS.Brew = ? OR GLASSES.Brew = ?)
-        AND COMMENTS.Username = ?
+        AND (COMMENTS.Username = ? OR COMMENTS.Username IS NULL)
       GROUP BY COMMENTS.Id
-      ORDER BY COALESCE(GLASSES.Timestamp, COMMENTS.Ts) DESC ";
+      ORDER BY COALESCE(COMMENTS.Ts, GLASSES.Timestamp) DESC ";
   #print { $c->{log} } "listbrewcomments: id='$brew->{Id}': $sql \n";
   my $sth = db::query($c, $sql, $brew->{Id}, $brew->{Id}, $c->{username});
   print "<div onclick='toggleElement(this.nextElementSibling);'>";
