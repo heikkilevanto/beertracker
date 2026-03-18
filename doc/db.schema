@@ -1,7 +1,7 @@
 # Beertracker database schema
-# Schema dumped at 2026-03-17 13:09 with beertracker-dev/tools/dbdump.sh
-# Do not edit directly, unless you plan to run tools/dbchange immediately
-# The actual schema lives inside the sqlite database!
+# Schema dumped at 2026-03-18 15:24 with beertracker-dev/scripts/dbdump.sh
+# Do not edit directly, unless you plan to run scripts/dbchange immediately
+# The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
 # automatically to both dev and production systems.
 # A few difficult changes can be done manually here, but that requires running tools/dbchange
@@ -116,7 +116,6 @@ create table comment_persons (
   foreign key (Person)  references persons(Id)
 );
 
-
 -- table locations
 drop table if exists locations;
 create table locations (
@@ -139,7 +138,7 @@ create table locations (
 
 );
 
--- table tap_beers
+-- table "tap_beers"
 drop table if exists "tap_beers";
 create table if not exists "tap_beers" (
 
@@ -243,7 +242,8 @@ create view glassrec as
   from glasses , locations
   left join brews  on glasses.Brew = Brews.id
   left join locations ploc on ploc.id = Brews.ProducerLocation
-  where glasses.Location = locations.id;
+  where glasses.Location = locations.id
+;
 
 -- view LatestPrices
 drop view if exists LatestPrices;
