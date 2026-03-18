@@ -48,7 +48,8 @@ sub brewcolor {
       );
 
       # Use configured background color as the default first color
-      $drinkcolors[0] = $c->{bgcolor} if ( defined $c && defined $c->{bgcolor} );
+      $drinkcolors[0] = $c->{bgcolor};
+      $drinkcolors[0] =~ s/^#?([0-9a-f]+).*/$1/i;  # Strip off any leading '#' 
 
   my $type;
   if ( $brew =~ /^\[?(\w+)(,(.+))?\]?$/i ) {
@@ -60,7 +61,6 @@ sub brewcolor {
   for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
     my $pat = $drinkcolors[$i+1];
     if ( $type =~ /$pat/i ) {
-      #print $util::log "brewcolor: got '$drinkcolors[$i]' for '$type' via '$pat' \n";
       return $drinkcolors[$i] ;
     }
   }
