@@ -231,11 +231,13 @@ migrations automatically.
 
 ### Releasing a version
 When about to release a new version, try to follow this checklist:
-- Decide on a feature freeze. Bugs can still be fixed
-- Verify that each module is in a reasonable state. 
-- Verify most of functionality
-- Get a summary of major changes since last version
-- Use GitHub to release a version
+- [ ] Decide on a feature freeze. Bugs can still be fixed
+- [ ] Verify that each module is in a reasonable state. 
+- [ ] Verify most of functionality
+- [ ] Get a summary of major changes since last version
+- [ ] Use the release candidate for a couple of days to find last details
+- [ ] Draft release notes
+- [ ] Use GitHub to release a version
 
 ## See also
 - The project lives on github at https://github.com/heikkilevanto/beertracker. 
