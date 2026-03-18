@@ -37,29 +37,30 @@ sub listbrewcomments {
   my $sql = "
     SELECT
       COMMENTS.Id as Cid,
-      strftime('%Y-%m-%d', GLASSES.Timestamp,'-06:00') as Date,
-      strftime('%H:%M', GLASSES.Timestamp) as Time,
-      comments.Rating as Rating,
+      strftime('%Y-%m-%d', COALESCE(GLASSES.Timestamp, COMMENTS.Ts), '-06:00') as Date,
+      strftime('%H:%M', COALESCE(GLASSES.Timestamp, COMMENTS.Ts)) as Time,
+      COMMENTS.Rating as Rating,
       COMMENTS.Comment,
       group_concat(PERSONS.Id, ',') as Pid,
       group_concat(PERSONS.Name, ', ') as Person,
       GLASSES.Id as Gid,
       GLASSES.Brew as Brew,
-      Glasses.Volume,
-      Glasses.Price,
-      Locations.Name as Loc,
-      Locations.Id as Lid
-      FROM GLASSES
-      LEFT JOIN COMMENTS ON COMMENTS.glass = GLASSES.id
+      GLASSES.Volume,
+      GLASSES.Price,
+      COALESCE(COMLOC.Name, GLASSLOC.Name) as Loc,
+      COALESCE(COMLOC.Id, GLASSLOC.Id) as Lid
+      FROM COMMENTS
+      LEFT JOIN GLASSES ON GLASSES.Id = COMMENTS.Glass
       LEFT JOIN comment_persons cp ON cp.Comment = COMMENTS.Id
       LEFT JOIN PERSONS on PERSONS.id = cp.Person
-      LEFT JOIN LOCATIONS on LOCATIONS.Id = GLASSES.Location
-      WHERE GLASSES.Brew = ?
-        AND GLASSES.username = ?
+      LEFT JOIN LOCATIONS COMLOC on COMLOC.Id = COMMENTS.Location
+      LEFT JOIN LOCATIONS GLASSLOC on GLASSLOC.Id = GLASSES.Location
+      WHERE (COMMENTS.Brew = ? OR GLASSES.Brew = ?)
+        AND COMMENTS.Username = ?
       GROUP BY COMMENTS.Id
-      ORDER BY GLASSES.Timestamp DESC ";
+      ORDER BY COALESCE(GLASSES.Timestamp, COMMENTS.Ts) DESC ";
   #print { $c->{log} } "listbrewcomments: id='$brew->{Id}': $sql \n";
-  my $sth = db::query($c, $sql, $brew->{Id}, $c->{username});
+  my $sth = db::query($c, $sql, $brew->{Id}, $brew->{Id}, $c->{username});
   print "<div onclick='toggleElement(this.nextElementSibling);'>";
   print "Comments and ratings for <b>$brew->{Name}</b> <br/>\n";
   print "</div>\n";
