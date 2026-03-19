@@ -266,7 +266,7 @@ sub maininputform {
   $html .= "</td></tr>\n";
   $html .= "</table>\n";
   $html .= "</form>\n";
-  $html .= comments::listcomments($c, $rec->{Id}, $rec->{Brew}, $rec->{Location});
+  $html .= comments::listcomments($c, $rec->{Id}, $rec->{Brew}, $rec->{Location}, $rec->{BrewType});
   $html .= "<hr/>";
 
   # Javascript trickery

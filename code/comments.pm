@@ -111,6 +111,17 @@ sub listcomments {
   my $glassid = shift;
   my $brew     = shift || "";
   my $location = shift || "";
+  my $brewtype = shift || "";
+
+  # Derive the default comment type from the glass type
+  my $commenttype;
+  if ( $brewtype eq 'Night' ) {
+    $commenttype = 'night';
+  } elsif ( $brewtype =~ /^(Restaurant|Meal|Bar|Feedback)$/ ) {
+    $commenttype = 'location';
+  } else {
+    $commenttype = 'brew';
+  }
 
   my $s = "";
 
@@ -130,7 +141,7 @@ sub listcomments {
     $s .= "<li>" . commentline($c,$cr) . "</li>\n";
   }
   $s .= "</ul>\n";
-  my $newurl = "$c->{url}?o=Comment&e=new&glass=$glassid&commenttype=brew";
+  my $newurl = "$c->{url}?o=Comment&e=new&glass=$glassid&commenttype=$commenttype";
   $newurl .= "&brew=$brew"         if $brew;
   $newurl .= "&location=$location" if $location;
   $s .= "<a href='$newurl'><span>(New comment)</span></a>\n";
