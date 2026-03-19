@@ -67,5 +67,6 @@ yourself, file a pull request.
  - The [User Manual](./doc/manual.md) (Badly out of date!)
  - The [Design Document](./doc/design.md) (Not at all ready!)
  - The [Source Code](https://github.com/heikkilevanto/beertracker)
+ - [Closing GitHub Milestones](./doc/closing-milestones.md) - How to mark milestones as complete
 
 

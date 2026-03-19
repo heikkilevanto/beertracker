@@ -238,6 +238,7 @@ When about to release a new version, try to follow this checklist:
 - [ ] Use the release candidate for a couple of days to find last details
 - [ ] Draft release notes
 - [ ] Use GitHub to release a version
+- [ ] Close the corresponding GitHub milestone (see `doc/closing-milestones.md`)
 
 ## See also
 - The project lives on github at https://github.com/heikkilevanto/beertracker. 
