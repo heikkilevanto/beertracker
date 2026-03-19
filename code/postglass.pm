@@ -62,13 +62,19 @@ sub postglass {
   my $selbrewtype = util::param($c,"selbrewtype") || $brew->{BrewType};
   $glass->{BrewType} = $selbrewtype;  # Trust the input more than location
   if ( glasses::isemptyglass($selbrewtype) ) { # 'empty' glass
-    $glass->{Brew} = undef;  
+    $glass->{Brew} = undef;
     $glass->{Volume} = undef;
     $glass->{Alc} = undef;
     $glass->{StDrinks} = "0";
     $glass->{SubType} = util::param($c,"selbrewsubtype") ;
     gettimestamp($c, $glass);
     $glass->{Price} = util::paramnumber($c, "pr");
+    # If the user explicitly entered 'X' for price, store NULL (undef)
+    if ( util::param($c, "pr") =~ /^\s*x/i ) {
+      $glass->{Price} = undef;
+    }
+    # Empty glasses must not have a tap attached
+    $glass->{Tap} = undef;
   } elsif ( $selbrewtype eq 'Adjustment' ) { # payment adjustment glass
     $glass->{Brew} = $brewid;
     $glass->{SubType} = util::param($c,"selbrewsubtype") ; # 'Up' or 'Dn'
@@ -108,6 +114,11 @@ sub postglass {
     $glass->{Tap} = $formtap;  # Editing, or an explicit tap value was passed
   }
   $glass->{Tap} =~ s/\D//g if $glass->{Tap};
+
+  # Ensure empty glasses never have a tap, even if a tap value was passed
+  if ( glasses::isemptyglass($glass->{BrewType}) ) {
+    $glass->{Tap} = undef;
+  }
 
   { no warnings;
     print { $c->{log} } "postglass: Op:'$sub' U:'$c->{username},' " .
@@ -344,7 +355,7 @@ sub fixprice {
   }
   # TODO - Currencies, next time I travel
   if ( $pr =~ /^x/i ) {  # X indicates no price, no guessing
-    $glass->{Price} = "0";
+    $glass->{Price} = undef;
     return;
   }
  } # fixprice
