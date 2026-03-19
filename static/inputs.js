@@ -26,8 +26,13 @@ function initDropdown(container) {
     const item = event.target.closest('.dropdown-item');
     if (!item) return;
 
-    // Check if clicking on an action link (scan/new)
-    const actionLink = event.target.closest('.action-link');
+    // Check if clicking on an action link (scan/new).
+    // If the user clicked in the padding of the actions container (not directly on a span),
+    // fall back to finding the first action-link inside the item.
+    let actionLink = event.target.closest('.action-link');
+    if (!actionLink && item.id === 'actions') {
+      actionLink = item.querySelector('.action-link');
+    }
     if (actionLink) {
       const action = actionLink.getAttribute('data-action');
       if (action === 'scan') {
@@ -53,6 +58,9 @@ function initDropdown(container) {
         return;
       }
     }
+
+    // Don't treat the actions row as a selectable item
+    if (item.id === 'actions') return;
 
     // Regular item selection
     if (isMulti && chipsDiv) {
