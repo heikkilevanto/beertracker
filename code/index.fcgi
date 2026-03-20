@@ -323,12 +323,6 @@ if ( !$dbh_ro || !$dbh_ro->ping ) {
 
 migrate::startup_check($c);  # Redirect to migration form if DB is behind code version
 
-# DoExport sends its own text/plain header; handle before buffer setup
-if ( $c->{op} =~ /DoExport/i ) {
-  export::do_export($c);
-  next;
-}
-
 htmlhead($c); # Content-Type + HTML head → directly to FCGI::Stream
 
 # Buffer remaining body through a :utf8 layer (FCGI::Stream ignores binmode :utf8)
@@ -376,7 +370,7 @@ if ( $c->{op} =~ /Board/i ) {
 } elsif ( $c->{op} =~ /migrate/i ) {
   migrate::migrate_form($c);
 } elsif ( $c->{op} =~ /Export/i ) {
-  export::exportform($c);
+  export::exportpage($c);
 } elsif ( $c->{op} =~ /GitStatus/i ) {
   superuser::gitstatus($c);
 } elsif ( $c->{op} =~ /GitPull/i ) {

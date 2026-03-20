@@ -73,6 +73,11 @@ sub checksuperuser {
   util::error("Not allowed") unless $c->{username} eq "heikki";
 }
 
+sub is_superuser {
+  my $c = shift;
+  return $c->{username} eq "heikki" ? 1 : 0;
+} # is_superuser
+
 # Helper: check superuser, validate param 'p' (must start with 'beertracker').
 # Returns ($p, $gitdir) where $gitdir is the absolute path to the repo.
 # Never chdirs - callers prefix shell commands with "cd $gitdir &&" instead.
