@@ -231,6 +231,8 @@ migrations automatically.
 
 ### Releasing a version
 When about to release a new version, try to follow this checklist:
+- [ ] Define a milestone for the release (can be done early)
+- [ ] Assign milestones to issues that need to be fixed for the release (also early)
 - [ ] Decide on a feature freeze. Bugs can still be fixed
 - [ ] Verify that each module is in a reasonable state. 
 - [ ] Verify most of functionality
@@ -238,6 +240,7 @@ When about to release a new version, try to follow this checklist:
 - [ ] Use the release candidate for a couple of days to find last details
 - [ ] Draft release notes
 - [ ] Use GitHub to release a version
+- [ ] Make sure the milestone is marked as done
 
 ## See also
 - The project lives on github at https://github.com/heikkilevanto/beertracker. 
