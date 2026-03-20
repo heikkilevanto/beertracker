@@ -230,6 +230,9 @@ by the first page load will detect the version mismatch and apply the
 migrations automatically.
 
 ### Releasing a version
+Start considering a new release when we have 100 or 200 commits, as shows on the
+top stats. 
+
 When about to release a new version, try to follow this checklist:
 - [ ] Define a milestone for the release (can be done early)
 - [ ] Assign milestones to issues that need to be fixed for the release (also early)
