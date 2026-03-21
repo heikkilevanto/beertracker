@@ -360,7 +360,7 @@ if ( $c->{op} =~ /Board/i ) {
 } elsif ( $c->{op} =~ /Photo/i ) {
   photos::listphotos($c);
 } elsif ( $c->{op} =~ /Comment/i ) {
-  if ( $c->{edit} ) { # TODO- check this inside comments.pm 
+  if ( $c->{edit} ) { # TODO - check this inside comments.pm 
     comments::editcomment($c);
   } else {
     comments::listallcomments($c);
