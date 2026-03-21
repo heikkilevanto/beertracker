@@ -44,6 +44,7 @@ our @MIGRATIONS = (
   [13, 'brews_list per user via users x brews, so all brews are visible with user-only stats/count', \&mig_013_brews_list_user_crossjoin],
   [14, 'rebuild brews_dedup_list and producer_brews_list as per-(brew,user) rows', \&mig_014_other_brew_views_user_crossjoin],
   [15, 'add Photos column to comments_list view', \&mig_015_comments_list_photos],
+  # v3.3 released here. Earlier migrations should be deleted soon
 );
 
 ################################################################################

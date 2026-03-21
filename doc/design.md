@@ -242,6 +242,8 @@ When about to release a new version, try to follow this checklist:
 - [ ] Get a summary of major changes since last version
 - [ ] Use the release candidate for a couple of days to find last details
 - [ ] Draft release notes
+- [ ] Tag the version locally. 
+- [ ] Make a small commit, or run tools/makeversion manually. Commit the version number. push --tags
 - [ ] Use GitHub to release a version
 - [ ] Make sure the milestone is marked as done
 
