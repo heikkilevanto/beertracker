@@ -161,6 +161,27 @@
     `;
     closeBtn.addEventListener('click', stopScanning);
 
+    // Fixed ✕ cancel button in top-right corner — always visible on mobile
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = '✕';
+    cancelBtn.setAttribute('aria-label', 'Cancel scanning');
+    cancelBtn.style.cssText = `
+      position: fixed;
+      top: 12px;
+      right: 16px;
+      z-index: 10001;
+      padding: 6px 14px;
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      background: rgba(80, 80, 80, 0.85);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      touch-action: manipulation;
+    `;
+    cancelBtn.addEventListener('click', stopScanning);
+
     // Add CSS animation
     const style = document.createElement('style');
     style.textContent = `
@@ -179,6 +200,7 @@
     container.appendChild(status);
     container.appendChild(manualInput);
     container.appendChild(closeBtn);
+    scannerOverlay.appendChild(cancelBtn);
     scannerOverlay.appendChild(container);
     document.body.appendChild(scannerOverlay);
 
