@@ -85,7 +85,7 @@ sub imagetag {
   my $href = $link_url || $orig;
   my $tgt  = $link_url ? "" : " target='_blank'";
   my $itag = "<img src='$fn' width='$w' style='vertical-align:top' />";
-  my $tag  = "<a href='$href'$tgt style='margin-right:6px; display:inline-block'>$itag</a>\n";
+  my $tag  = "<a href='$href'$tgt style='margin-right:6px; margin-bottom:6px; display:inline-block'>$itag</a>\n";
   return $tag;
 } # imagetag
 
