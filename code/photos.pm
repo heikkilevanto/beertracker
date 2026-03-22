@@ -121,7 +121,7 @@ sub thumbnails_html {
     my $editurl = "$c->{url}?o=Photos&e=$p->{Id}";
     $s .= imagetag($c, $p->{Filename}, 'thumb', $editurl);
   }
-  return "<div style='margin-left:1.2em; margin-top:3px'>$s</div>\n";
+  return "<div style='margin-left:1.2em; margin-top:6px; margin-bottom:6px'>$s</div>\n";
 } # thumbnails_html
 
 

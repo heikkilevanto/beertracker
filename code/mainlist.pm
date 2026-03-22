@@ -334,6 +334,9 @@ sub buttonline {
                 "style='display: inline; font-size: small' />\n";
     $html .= "</form>\n";
   }
+  if (glasses::isemptyglass($rec->{brewtype}) || $rec->{photocount}) {
+    $html .= photos::photo_form($c, glass => $rec->{id}) . "\n";
+  }
   $html .= "<br/>\n";
   return $html;
 } # buttonline

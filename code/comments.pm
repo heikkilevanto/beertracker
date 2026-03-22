@@ -318,7 +318,8 @@ sub commentform {
 
   # Photo upload link — only for saved comments
   if ($com->{Id}) {
-    $s .= photos::photo_form($c, comment => $com->{Id}) . "\n";
+    $s .= photos::photo_form($c, comment => $com->{Id},
+        return_url => "$c->{url}?o=Comment&e=$com->{Id}") . "\n";
   }
 
   # "Add another comment on the same item" link

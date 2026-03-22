@@ -266,6 +266,10 @@ sub maininputform {
   $html .= "</td></tr>\n";
   $html .= "</table>\n";
   $html .= "</form>\n";
+  if ($c->{edit}) {
+    $html .= photos::photo_form($c, glass => $rec->{Id},
+        return_url => "$c->{url}?o=$c->{op}&e=$rec->{Id}") . "\n";
+  }
   $html .= comments::listcomments($c, $rec->{Id}, $rec->{Brew}, $rec->{Location}, $rec->{BrewType});
   $html .= "<hr/>";
 
