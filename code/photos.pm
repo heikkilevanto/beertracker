@@ -400,7 +400,8 @@ sub photo_attached_str {
     my $row = db::queryrecord($c, q{
       SELECT l.Name  AS Loc,
              b.Name  AS Brew,
-             pl.Name AS Producer
+             pl.Name AS Producer,
+             g.BrewType AS BrewType
         FROM glasses g
         LEFT JOIN locations l  ON l.Id  = g.Location
         LEFT JOIN brews b      ON b.Id  = g.Brew
@@ -409,6 +410,7 @@ sub photo_attached_str {
     }, $gid);
     if ($row) {
       my $s = "G[$glink]:";
+      $s .= " [" . lc($row->{BrewType}) . "]" if $row->{BrewType} && !$row->{Brew};
       $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
       $s .= " <b>$row->{Brew}</b>"      if $row->{Brew};
       $s .= " \@<b>$row->{Loc}</b>"     if $row->{Loc};
@@ -427,7 +429,8 @@ sub photo_attached_str {
           group_concat(p.Name, ', ') AS PersName,
           l.Name    AS Loc,
           b.Name    AS Brew,
-          pl.Name   AS Producer
+          pl.Name   AS Producer,
+          g.BrewType AS BrewType
         FROM comments c
         LEFT JOIN comment_persons cp ON cp.Comment = c.Id
         LEFT JOIN persons p     ON p.Id = cp.Person
@@ -450,6 +453,7 @@ sub photo_attached_str {
           $clink = $cid;
         }
         my $s = "C[$clink]:";
+        $s .= " [" . lc($row->{BrewType}) . "]" if $row->{BrewType} && !$row->{Brew};
         $s .= " <i>$row->{Producer}:</i>" if $row->{Producer};
         $s .= " <b>$row->{Brew}</b>"      if $row->{Brew};
         $s .= " \@<b>$row->{Loc}</b>"     if $row->{Loc};
