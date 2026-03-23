@@ -337,6 +337,13 @@ sub buttonline {
   if (glasses::isemptyglass($rec->{brewtype}) || $rec->{photocount}) {
     $html .= photos::photo_form($c, glass => $rec->{id}) . "\n";
   }
+  if (glasses::isemptyglass($rec->{brewtype}) || $rec->{comcount}) {
+    my $ctype = $rec->{brewtype} eq 'Night'                          ? 'night'
+              : $rec->{brewtype} =~ /^(Restaurant|Bar|Feedback)$/i   ? 'location'
+              :                                                         'brew';
+    $html .= "<a href='$c->{url}?o=Comment&e=new&glass=$rec->{id}&commenttype=$ctype'>" .
+             "<span>(Comment)</span></a>\n";
+  }
   $html .= "<br/>\n";
   return $html;
 } # buttonline
@@ -368,6 +375,7 @@ sub adjustment_form {
   my $current_adjustment = shift;
   my $current_adjustment_price = shift || 0;
   my $last_glass_time = shift || "23:59";  # Default to end of day if no glasses
+  my ($date) = split(' ', $effdate);
   
   # Generate unique ID for this form instance (to handle multiple sessions at same location)
   $form_counter++;
@@ -393,6 +401,21 @@ sub adjustment_form {
       <input type='hidden' name='e' value='$current_adjustment'/>
       <button type='submit' style='font-size:small;'>Delete ±</button>
     </form>
+    <br/>
+    <form method='POST' style='display:inline; margin-left:1em;' accept-charset='UTF-8'>
+      <input type='hidden' name='o' value='Glass'/>
+      <input type='hidden' name='submit' value='Insert'/>
+      <input type='hidden' name='Location' value='$locationid'/>
+      <input type='hidden' name='date' value='$date'/>
+      <input type='hidden' name='time' value='$last_glass_time:00'/>
+      <select name='selbrewtype' style='font-size:small;'>
+        <option value='Night'>Night</option>
+        <option value='Restaurant'>Restaurant</option>
+        <option value='Bar'>Bar</option>
+        <option value='Feedback'>Feedback</option>
+      </select>
+      <button type='submit' style='font-size:small;'>Add empty</button>
+    </form>
     </div>
     <script>
     (function() {
@@ -407,7 +430,6 @@ sub adjustment_form {
     </script>};
   } else {
     # No adjustment - show entry form
-    my ($date) = split(' ', $effdate);
     $html .= qq{<div id='adjform_$form_id' style='display:none;'>
     <form method='POST' style='display:inline; margin-left:1em;' onsubmit='return updateAdjustment_$form_id();'>
       <span style='font-size:small;'>Expected: ${locprsum}.-, Paid:</span>
@@ -426,6 +448,21 @@ sub adjustment_form {
       <input type='hidden' name='pr' id='pr_$form_id' value='0'/>
       <input type='hidden' name='note' id='note_$form_id' value=''/>
       <button type='submit' style='font-size:small;'>Save ±</button>
+    </form>
+    <br/>
+    <form method='POST' style='display:inline; margin-left:1em;' accept-charset='UTF-8'>
+      <input type='hidden' name='o' value='Glass'/>
+      <input type='hidden' name='submit' value='Insert'/>
+      <input type='hidden' name='Location' value='$locationid'/>
+      <input type='hidden' name='date' value='$date'/>
+      <input type='hidden' name='time' value='$last_glass_time:00'/>
+      <select name='selbrewtype' style='font-size:small;'>
+        <option value='Night'>Night</option>
+        <option value='Restaurant'>Restaurant</option>
+        <option value='Bar'>Bar</option>
+        <option value='Feedback'>Feedback</option>
+      </select>
+      <button type='submit' style='font-size:small;'>Add empty</button>
     </form>
     </div>
     <script>
