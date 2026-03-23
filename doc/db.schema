@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-03-18 15:24 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-03-23 18:27 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
@@ -101,7 +101,8 @@ create table persons (
     Description text, -- Any kind of comment
     Contact text,  -- Phone, email, or such
     Location integer,  -- Where the person belongs (bar, home, brewery)
-    RelatedPerson integer, -- Persons partner, or such
+    RelatedPerson integer,  -- Persons partner, or such
+    Tags text,   -- Keywords for the person, like 'øb-staff'
 
     foreign key (Location) references Locations(id)
 );
@@ -134,9 +135,8 @@ create table locations (
   Contact text,   -- email, website, etc
   Address text,
   Lat real,  -- Geo coordinate latitude
-  Lon real   -- longitude
-
-);
+  Lon real,   -- longitude
+  Tags text);
 
 -- table "tap_beers"
 drop table if exists "tap_beers";
@@ -301,46 +301,6 @@ select
   strftime('%Y-%m-%d', Gone) as GoneFormatted 
 from tap_beers 
 join locations on tap_beers.Location = locations.Id;
-
--- view locations_list
-drop view if exists locations_list;
-create view locations_list as
-    select
-      locations.Id,
-      locations.Name,
-      locations.LocType || ', ' || locations.LocSubType as Type,
-      '' as trmob,
-      locations.lat || ' ' || locations.lon as Geo,
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) as Last,
-      r.rating_count || ';' || r.rating_average || ';' || r.comment_count as Stats,
-      (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as Photo
-    from locations
-    left join glasses on glasses.Location = locations.Id
-    left join location_ratings r on r.id = glasses.Id
-    group by locations.Id;
-
--- view persons_list
-drop view if exists persons_list;
-create view persons_list as
-    select
-      persons.Id,
-      persons.Name,
-      'trmob' as trmob,
-      count(distinct comments.Id) - 1 as Com,
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) as Last,
-      locations.Name as Location,
-      'tr' as tr,
-      'Clr' as Clr,
-      persons.description,
-      (select Filename from photos where Person = persons.Id order by Ts desc limit 1) as Photo
-    from persons
-    left join comment_persons cp on cp.Person = persons.Id
-    left join comments on comments.Id = cp.Comment
-    left join glasses on glasses.Id = comments.Glass
-    left join locations on locations.Id = glasses.Location
-    group by persons.Id;
 
 -- view loc_ratings
 drop view if exists loc_ratings;
@@ -512,6 +472,48 @@ create view comments_list as
     left join locations ploc_comment on ploc_comment.Id = brew_comment.ProducerLocation
     group by comments.Id
     order by Last desc;
+
+-- view persons_list
+drop view if exists persons_list;
+create view persons_list as
+    select
+      persons.Id,
+      persons.Name,
+      'trmob' as trmob,
+      count(distinct comments.Id) - 1 as Com,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) as Last,
+      locations.Name as Location,
+      'tr' as tr,
+      'Clr' as Clr,
+      persons.description,
+      (select Filename from photos where Person = persons.Id order by Ts desc limit 1) as Photo,
+      persons.Tags
+    from persons
+    left join comment_persons cp on cp.Person = persons.Id
+    left join comments on comments.Id = cp.Comment
+    left join glasses on glasses.Id = comments.Glass
+    left join locations on locations.Id = glasses.Location
+    group by persons.Id;
+
+-- view locations_list
+drop view if exists locations_list;
+create view locations_list as
+    select
+      locations.Id,
+      locations.Name,
+      locations.LocType || ', ' || locations.LocSubType as Type,
+      '' as trmob,
+      locations.lat || ' ' || locations.lon as Geo,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) as Last,
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count as Stats,
+      (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as Photo,
+      locations.Tags
+    from locations
+    left join glasses on glasses.Location = locations.Id
+    left join location_ratings r on r.id = glasses.Id
+    group by locations.Id;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
