@@ -60,29 +60,7 @@ function initDropdown(container) {
 
     // Regular item selection
     if (isMulti && chipsDiv) {
-      // Prevent adding the same person twice
-      const already = Array.from(chipsDiv.querySelectorAll('input[type=hidden]'))
-        .some(h => h.value === item.id);
-      if (!already) {
-        const wrapper = document.createElement('span');
-        wrapper.className = 'chip-wrapper';
-        const chip = document.createElement('span');
-        chip.className = 'dropdown-chip';
-        chip.textContent = item.textContent.trim() + ' ';
-        const removeBtn = document.createElement('a');
-        removeBtn.className = 'chip-remove';
-        removeBtn.href = '#';
-        removeBtn.textContent = '\u00d7';
-        removeBtn.addEventListener('click', (e) => { e.preventDefault(); wrapper.remove(); });
-        chip.appendChild(removeBtn);
-        const chipHidden = document.createElement('input');
-        chipHidden.type = 'hidden';
-        chipHidden.name = hiddenInput.name + '_id';
-        chipHidden.value = item.id;
-        wrapper.appendChild(chip);
-        wrapper.appendChild(chipHidden);
-        chipsDiv.appendChild(wrapper);
-      }
+      addChip(chipsDiv, hiddenInput, item);
       filterInput.value = '';
       filterInput.oldvalue = '';
       filterItems(filterInput, dropdownList);
@@ -219,13 +197,135 @@ function scanBarcodeForDropdown(container, filterInput, hiddenInput, dropdownLis
   }, 30000);
 }
 
+// Add a chip to the chips container for a given dropdown item (deduplicates by id)
+function addChip(chipsDiv, hiddenInput, item) {
+  const already = Array.from(chipsDiv.querySelectorAll('input[type=hidden]'))
+    .some(h => h.value === item.id);
+  if (already) return;
+  const wrapper = document.createElement('span');
+  wrapper.className = 'chip-wrapper';
+  const chip = document.createElement('span');
+  chip.className = 'dropdown-chip';
+  chip.textContent = item.textContent.trim() + ' ';
+  const removeBtn = document.createElement('a');
+  removeBtn.className = 'chip-remove';
+  removeBtn.href = '#';
+  removeBtn.textContent = '\u00d7';
+  removeBtn.addEventListener('click', (e) => { e.preventDefault(); wrapper.remove(); });
+  chip.appendChild(removeBtn);
+  const chipHidden = document.createElement('input');
+  chipHidden.type = 'hidden';
+  chipHidden.name = hiddenInput.name + '_id';
+  chipHidden.value = item.id;
+  wrapper.appendChild(chip);
+  wrapper.appendChild(chipHidden);
+  chipsDiv.appendChild(wrapper);
+} // addChip
+
+// Get or create the tag-suggestion row (prepended to the top of the list)
+function getOrCreateTagRow(dropdownList) {
+  let tagRow = dropdownList.querySelector('.dropdown-tag-row');
+  if (!tagRow) {
+    tagRow = document.createElement('div');
+    tagRow.className = 'dropdown-tag-row';
+    tagRow.id = 'tag-row';
+    dropdownList.prepend(tagRow);
+  }
+  return tagRow;
+} // getOrCreateTagRow
+
+// Render tag chips and optional "All of #tag" link into tagRow.
+// tagSearch is the lowercased text after '#' (empty string means show all items with any tag).
+function renderTagRow(tagRow, tagSearch, dropdownList, filterInput) {
+  const container = dropdownList.closest('.dropdown');
+  const isMulti   = container && container.getAttribute('data-multi') === '1';
+  const chipsDiv  = container && container.querySelector('.dropdown-chips');
+  const hiddenInput = container && container.querySelector('.dropdown-main input[type=hidden]');
+
+  // Collect unique matching tags from all items, in list (recency) order, cap at 8
+  const seenTags = new Set();
+  const matchingTags = [];
+  Array.from(dropdownList.querySelectorAll('.dropdown-item')).forEach(item => {
+    if (item.id === 'tag-row' || item.id === 'actions') return;
+    const rawTags = (item.getAttribute('tags') || '').trim();
+    if (!rawTags) return;
+    rawTags.split(/\s+/).forEach(tag => {
+      if (!tag) return;
+      const tagLower = tag.toLowerCase();
+      if (seenTags.has(tagLower)) return;
+      if (tagSearch === '' || tagLower.startsWith(tagSearch)) {
+        seenTags.add(tagLower);
+        matchingTags.push(tag);
+      }
+    });
+  });
+
+  tagRow.innerHTML = '';
+  matchingTags.slice(0, 8).forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-suggestion';
+    chip.textContent = '#' + tag;
+    chip.addEventListener('mousedown', e => e.preventDefault());
+    chip.addEventListener('click', e => {
+      e.stopPropagation();
+      filterInput.value = '#' + tag.toLowerCase();
+      filterItems(filterInput, dropdownList);
+      filterInput.focus();
+    });
+    tagRow.appendChild(chip);
+  });
+
+  // "All of #tag" link — only when exactly one tag matches
+  if (matchingTags.length === 1) {
+    const tag = matchingTags[0];
+    const link = document.createElement('a');
+    link.className = 'tag-select-all';
+    link.href = '#';
+    link.textContent = 'All of #' + tag;
+    link.addEventListener('mousedown', e => e.preventDefault());
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      filterInput.value = '#' + tag.toLowerCase();
+      filterItems(filterInput, dropdownList);
+      const visible = Array.from(dropdownList.querySelectorAll('.dropdown-item'))
+        .filter(item => item.id !== 'tag-row' && item.id !== 'actions' && item.style.display !== 'none');
+      if (isMulti && chipsDiv && hiddenInput) {
+        visible.forEach(item => addChip(chipsDiv, hiddenInput, item));
+        filterInput.value = '';
+        filterInput.oldvalue = '';
+        filterItems(filterInput, dropdownList);
+      } else if (hiddenInput && visible.length > 0) {
+        const first = visible[0];
+        filterInput.value = first.textContent.trim();
+        filterInput.oldvalue = '';
+        hiddenInput.value = first.id;
+        dropdownList.style.display = 'none';
+      }
+    });
+    tagRow.appendChild(link);
+  }
+} // renderTagRow
+
 function filterItems(filterInput, dropdownList) {
   const selbrewtype = document.getElementById("selbrewtype");
   const filter = filterInput.value.toLowerCase();
-  const isLocationFilter = filter.startsWith('@');
-  const isDotFilter = filter === '.' || filter === '@';
+  const isTagFilter      = filter.startsWith('#');
+  const isLocationFilter = !isTagFilter && filter.startsWith('@');
+  const isDotFilter      = !isTagFilter && (filter === '.' || filter === '@');
   let searchTerm = filter;
-  
+
+  // Manage tag-suggestion row and actions row visibility
+  const tagRow     = getOrCreateTagRow(dropdownList);
+  const actionsItem = dropdownList.querySelector('[id="actions"]');
+  if (isTagFilter) {
+    if (actionsItem) actionsItem.style.display = 'none';
+    tagRow.style.display = '';
+    renderTagRow(tagRow, filter.substring(1), dropdownList, filterInput);
+  } else {
+    tagRow.style.display = 'none';
+    // actionsItem visibility is handled by the normal text-match pass below
+  }
+
   // If user types just a dot or @, use the current selected location
   if (isDotFilter) {
     const locationInput = document.querySelector('input[name="Location"][type="hidden"]');
@@ -241,16 +341,28 @@ function filterItems(filterInput, dropdownList) {
   } else if (isLocationFilter) {
     searchTerm = filter.substring(1);
   }
-  
+
   Array.from(dropdownList.children).forEach(item => {
+    if (item.id === 'tag-row') return; // managed above
+    if (isTagFilter && item.id === 'actions') return; // already hidden above
+
     let disp = '';
     const brewtype = item.getAttribute("brewtype");
     if (selbrewtype && brewtype && selbrewtype.value !== brewtype) {
       disp = 'none';
     }
-    
+
+    if (isTagFilter) {
+      const tagSearch = filter.substring(1);
+      const rawTags = (item.getAttribute('tags') || '').trim();
+      if (tagSearch === '') {
+        if (!rawTags) disp = 'none';
+      } else {
+        const tagList = rawTags ? rawTags.split(/\s+/).filter(t => t) : [];
+        if (!tagList.some(t => t.toLowerCase().startsWith(tagSearch))) disp = 'none';
+      }
     // Filter by location (seenat) if starts with @ or is just a dot, otherwise by display text
-    if (isLocationFilter || isDotFilter) {
+    } else if (isLocationFilter || isDotFilter) {
       const seenat = (item.getAttribute("seenat") || "").toLowerCase();
       if (!seenat.includes(searchTerm)) {
         disp = 'none';
@@ -260,7 +372,7 @@ function filterItems(filterInput, dropdownList) {
         disp = 'none';
       }
     }
-    
+
     item.style.display = disp;
   });
 }

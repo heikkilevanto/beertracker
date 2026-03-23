@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 15;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 16;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
@@ -45,6 +45,7 @@ our @MIGRATIONS = (
   [14, 'rebuild brews_dedup_list and producer_brews_list as per-(brew,user) rows', \&mig_014_other_brew_views_user_crossjoin],
   [15, 'add Photos column to comments_list view', \&mig_015_comments_list_photos],
   # v3.3 released here 21-Mar-2026.  Earlier migrations should be deleted soon
+  [16, 'add Tags to persons and locations', \&mig_016_add_tags_to_persons_and_locations],
 );
 
 ################################################################################
@@ -1011,5 +1012,58 @@ sub mig_015_comments_list_photos {
     ORDER BY Last DESC
   });
 } # mig_015_comments_list_photos
+
+################################################################################
+sub mig_016_add_tags_to_persons_and_locations {
+  my $c = shift;
+
+  db::execute($c, "ALTER TABLE persons ADD COLUMN Tags TEXT");
+  db::execute($c, "ALTER TABLE locations ADD COLUMN Tags TEXT");
+
+  db::execute($c, "DROP VIEW IF EXISTS persons_list");
+  db::execute($c, q{
+    CREATE VIEW persons_list AS
+    SELECT
+      persons.Id,
+      persons.Name,
+      'trmob' AS trmob,
+      count(DISTINCT comments.Id) - 1 AS Com,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      locations.Name AS Location,
+      'tr' AS tr,
+      'Clr' AS Clr,
+      persons.description,
+      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
+      persons.Tags
+    FROM persons
+    LEFT JOIN comment_persons cp ON cp.Person = persons.Id
+    LEFT JOIN comments ON comments.Id = cp.Comment
+    LEFT JOIN glasses ON glasses.Id = comments.Glass
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    GROUP BY persons.Id
+  });
+
+  db::execute($c, "DROP VIEW IF EXISTS locations_list");
+  db::execute($c, q{
+    CREATE VIEW locations_list AS
+    SELECT
+      locations.Id,
+      locations.Name,
+      locations.LocType || ', ' || locations.LocSubType AS Type,
+      '' AS trmob,
+      locations.lat || ' ' || locations.lon AS Geo,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS Stats,
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
+      locations.Tags
+    FROM locations
+    LEFT JOIN glasses ON glasses.Location = locations.Id
+    LEFT JOIN location_ratings r ON r.id = glasses.Id
+    GROUP BY locations.Id
+  });
+
+} # mig_016_add_tags_to_persons_and_locations
 
 1;

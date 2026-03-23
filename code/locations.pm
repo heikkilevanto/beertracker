@@ -365,11 +365,14 @@ sub postlocation {
     }
     util::error ("A Location must have a name" )
       unless $name;
+    $c->{cgi}->param('Tags', util::clean_tags(util::param($c, 'Tags')));
+    $c->{cgi}->param('newlocTags', util::clean_tags(util::param($c, 'newlocTags')));
     $id = db::insertrecord($c, "LOCATIONS", $section);
   } else {
     my $name = util::param($c, "Name");
     util::error ("A Location must have a name" )
       unless $name;
+    $c->{cgi}->param('Tags', util::clean_tags(util::param($c, 'Tags')));
     $id = db::updaterecord($c, "LOCATIONS", $id,  "");
   }
   return $id;
@@ -416,7 +419,8 @@ sub selectlocation {
       LOCATIONS.LocType,
       LOCATIONS.LocSubType,
       LOCATIONS.Lat,
-      LOCATIONS.Lon
+      LOCATIONS.Lon,
+      LOCATIONS.Tags
     from LOCATIONS
     left join GLASSES on GLASSES.Location = LOCATIONS.Id
     $where
@@ -425,7 +429,7 @@ sub selectlocation {
     ";
     my $list_sth = db::query($c, $sql);
     $opts = "";
-    while ( my ($id, $name, $type, $subtype, $lat, $lon ) = $list_sth->fetchrow_array ) {
+    while ( my ($id, $name, $type, $subtype, $lat, $lon, $tags) = $list_sth->fetchrow_array ) {
       if ($type) {
         $type = "[$type]";
       } else {
@@ -436,7 +440,8 @@ sub selectlocation {
         $dist = "<span lat=$lat lon=$lon style='pointer-events:none; font-size: xx-small;'> ??? </span>";
       }
       my $substtr = $subtype ? "locsubtype='$subtype'" : "";
-      $opts .= "      <div class='dropdown-item' id='$id' $substtr>$name $type $dist</div>\n";
+      my $tags_attr = $tags ? " tags='" . util::htmlesc($tags) . "'" : "";
+      $opts .= "      <div class='dropdown-item' id='$id' $substtr$tags_attr>$name $type $dist</div>\n";
     }
     cache::set($c, $cache_key, $opts);
   }

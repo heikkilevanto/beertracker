@@ -165,6 +165,14 @@ sub param {
   return $val;
 }
 
+# Normalise a Tags field: strip leading '#' from each word, collapse whitespace.
+sub clean_tags {
+  my $raw = shift // '';
+  my @words = grep { $_ ne '' } split /\s+/, $raw;
+  @words = map { s/^#+//r } @words;  # strip one or more leading '#'
+  return join(' ', @words);
+} # clean_tags
+
 # Escape HTML special characters
 sub htmlesc {
   my $s = shift // '';

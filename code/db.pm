@@ -135,7 +135,7 @@ sub logquery {
   # trunc long lists
   $sql =~ s/\bwhere\s+(\w+)\s+in\s*\(\s*([^,()]+(?:\s*,\s*[^,()]+){0,5})\s*,[^)]*\)/where $1 in ($2,..)/i;
   $msg .= $sql;
-  $msg .= " [" .  join(', ',@params).  "]" if (@params);
+  $msg .= " [" .  join(', ', map { defined $_ ? $_ : 'NULL' } @params).  "]" if (@params);
   $msg = substr($msg,0,239) unless (! $c->{devversion} );
   print { $c->{log} } "$msg\n";
 }

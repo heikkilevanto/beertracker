@@ -133,6 +133,7 @@ sub postperson {
   my $name = util::param($c, "Name");
   util::error ("A Person must have a name" )
     unless $name;
+  $c->{cgi}->param('Tags', util::clean_tags(util::param($c, 'Tags')));
   db::postrecord($c, "PERSONS");
   return;
 
@@ -154,7 +155,8 @@ sub selectperson {
   select
     PERSONS.Id,
     PERSONS.Name,
-    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last,
+    PERSONS.Tags
   from PERSONS
   left join comment_persons cp on cp.Person = Persons.Id
   left join COMMENTS on COMMENTS.Id = cp.Comment
@@ -167,8 +169,9 @@ sub selectperson {
   my $opts = "";
 
   my $current = "";
-  while ( my ($id, $name ) = $list_sth->fetchrow_array ) {
-    $opts .= "      <div class='dropdown-item' id='$id'>$name</div>\n";
+  while ( my ($id, $name, $last, $tags) = $list_sth->fetchrow_array ) {
+    my $tags_attr = $tags ? " tags='" . util::htmlesc($tags) . "'" : "";
+    $opts .= "      <div class='dropdown-item' id='$id'$tags_attr>$name</div>\n";
     if ( $id eq $selected ) {
       $current = $name;
     }

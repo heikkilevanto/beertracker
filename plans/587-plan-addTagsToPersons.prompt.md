@@ -30,7 +30,6 @@
      - any individual tag in the item's space-separated `tags` attribute **starts with** `searchTerm`
      - (word-start match: split tags by whitespace, check `tag.startsWith(searchTerm)`)
    - This avoids partial-word false matches (e.g. `ar` will not match `bar`)
-   - The `actions` row is always kept visible
 
 ### Tag-suggestion row
 
@@ -41,14 +40,14 @@
    **Clicking a tag chip (both single- and multi-select):**
    - Sets the filter to `#<tag>`, re-runs `filterItems` (name list updates to only matching items)
    - Does **not** auto-select anything — user sees the filtered list and can pick from it
+   - In multi-select dropdowns, makes the "All of #tag" link appear if it wasn't already (see next)
 
    **"All of #tag" link:** when exactly one tag matches the current prefix, append an `<a class='tag-select-all'>All of #tag</a>` link at the end of the tag row (after the chip). Clicking it:
    - Runs `filterItems` for that exact tag
    - **Multi-select:** adds all now-visible `.dropdown-item`s as chips (deduplicating), then clears the filter
    - **Single-select:** selects the first now-visible `.dropdown-item` (same logic as a click), closes the dropdown
 
-6. Remove the Enter-key approach entirely (not implemented).
-
+6. Add necessary CSS in `inputs.css` for `.tag-suggestion` chips (e.g. light background, rounded corners, padding) and the `.tag-select-all` link (e.g. smaller font, margin-left).
 ---
 
 ## Phase 4 — Documentation
@@ -56,6 +55,8 @@
 7. Update **`doc/design.md`**: describe the Tags field on persons and locations, and the `#tag` filter syntax in dropdowns.
 
 8. Update **`doc/manual.md`**: user-facing description of how to use tags (add them in edit forms, filter with `#` in person/location selectors).
+
+9. Move this plan to plans/done. 
 
 ---
 

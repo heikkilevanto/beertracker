@@ -142,3 +142,31 @@
 .chip-remove:hover {
   color: #333;
 }
+
+/* Tag-suggestion row shown when filter starts with '#' */
+.dropdown-tag-row {
+  padding: 4px;
+  white-space: nowrap;
+  border-bottom: 1px solid #555;
+}
+
+.tag-suggestion {
+  display: inline-block;
+  background-color: var(--altbgcolor, #2a3a4a);
+  border: 1px solid #556;
+  border-radius: 10px;
+  padding: 1px 8px;
+  margin-right: 4px;
+  font-size: 0.85em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tag-suggestion:hover {
+  background-color: #3a4a6a;
+}
+
+.tag-select-all {
+  font-size: 0.8em;
+  margin-left: 8px;
+}
