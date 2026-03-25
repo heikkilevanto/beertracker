@@ -24,10 +24,23 @@ our %volumes = ( # Comment is displayed on the About page
 
 ################################################################################
 # Helper to decide if a glass is "empty"
+# Canonical list: all empty glass types live here
 ################################################################################
+my @empty_types = qw(Restaurant Night Bar Meal);
+
 sub isemptyglass {
   my $type = shift;
-  return $type =~ /Restaurant|Night|Bar/;
+  return grep { $type eq $_ } @empty_types;
+}
+
+# Returns HTML <option> elements for all empty glass types
+sub emptyglass_options {
+  return join('', map { "        <option value='$_'>$_</option>\n" } @empty_types);
+}
+
+# Returns a SQL-ready quoted, comma-separated list: "Restaurant","Night",...
+sub emptyglass_sql_list {
+  return join(', ', map { qq{"$_"} } @empty_types);
 }
 
 ################################################################################
@@ -120,7 +133,7 @@ sub selectbrewsubtype {
   my $rec = shift;
   my $sql = 'SELECT BrewType, SubType, MAX(timestamp) AS last_time
     FROM glasses
-    WHERE BrewType in ("Restaurant","Night", "Bar")
+    WHERE BrewType in (' . emptyglass_sql_list() . ')
     GROUP BY brewtype,SubType
     ORDER BY last_time DESC ';
   my $sth = db::query($c, $sql );

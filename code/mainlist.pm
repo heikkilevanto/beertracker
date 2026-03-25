@@ -291,7 +291,7 @@ sub buttonline {
   my %vols;     # guess sizes for small/large beers
   $vols{$rec->{vol}} = 1 if ($rec->{vol});
   # TODO - more logic, if 20, say 20/30, if 25, say 25/40,
-  if ( $rec->{brewtype} =~ /Night|Restaurant|Adjustment/i) {
+  if ( glasses::isemptyglass($rec->{brewtype}) || $rec->{brewtype} =~ /Adjustment/i ) {
     %vols=(); # nothing to copy
   } elsif ( $rec->{brewtype}  eq "Wine" ) {
     $vols{12} = 1;
@@ -409,10 +409,7 @@ sub adjustment_form {
       <input type='hidden' name='date' value='$date'/>
       <input type='hidden' name='time' value='$last_glass_time:00'/>
       <select name='selbrewtype' style='font-size:small;'>
-        <option value='Night'>Night</option>
-        <option value='Restaurant'>Restaurant</option>
-        <option value='Bar'>Bar</option>
-      </select>
+        @{[glasses::emptyglass_options()]}      </select>
       <button type='submit' style='font-size:small;'>Add empty</button>
     </form>
     </div>
@@ -456,10 +453,7 @@ sub adjustment_form {
       <input type='hidden' name='date' value='$date'/>
       <input type='hidden' name='time' value='$last_glass_time:00'/>
       <select name='selbrewtype' style='font-size:small;'>
-        <option value='Night'>Night</option>
-        <option value='Restaurant'>Restaurant</option>
-        <option value='Bar'>Bar</option>
-      </select>
+        @{[glasses::emptyglass_options()]}      </select>
       <button type='submit' style='font-size:small;'>Add empty</button>
     </form>
     </div>
