@@ -170,3 +170,9 @@
   font-size: 0.8em;
   margin-left: 8px;
 }
+
+.tag-no-match {
+  font-size: 0.85em;
+  font-style: italic;
+  opacity: 0.7;
+}
