@@ -236,11 +236,16 @@ function getOrCreateTagRow(dropdownList) {
 
 // Render tag chips and optional "All of #tag" link into tagRow.
 // tagSearch is the lowercased text after '#' (empty string means show all items with any tag).
+// A trailing space in tagSearch means exact (case-insensitive) match instead of prefix match.
 function renderTagRow(tagRow, tagSearch, dropdownList, filterInput) {
   const container = dropdownList.closest('.dropdown');
   const isMulti   = container && container.getAttribute('data-multi') === '1';
   const chipsDiv  = container && container.querySelector('.dropdown-chips');
   const hiddenInput = container && container.querySelector('.dropdown-main input[type=hidden]');
+
+  // Trailing space triggers exact match; otherwise prefix match
+  const isExact = tagSearch.endsWith(' ');
+  const searchKey = isExact ? tagSearch.trimEnd() : tagSearch;
 
   // Collect unique matching tags from all items, in list (recency) order, cap at 8
   const seenTags = new Set();
@@ -253,7 +258,7 @@ function renderTagRow(tagRow, tagSearch, dropdownList, filterInput) {
       if (!tag) return;
       const tagLower = tag.toLowerCase();
       if (seenTags.has(tagLower)) return;
-      if (tagSearch === '' || tagLower.startsWith(tagSearch)) {
+      if (searchKey === '' || (isExact ? tagLower === searchKey : tagLower.startsWith(searchKey))) {
         seenTags.add(tagLower);
         matchingTags.push(tag);
       }
@@ -261,6 +266,16 @@ function renderTagRow(tagRow, tagSearch, dropdownList, filterInput) {
   });
 
   tagRow.innerHTML = '';
+
+  // Show "no tags" message when search is non-empty but nothing matches
+  if (matchingTags.length === 0 && searchKey !== '') {
+    const msg = document.createElement('span');
+    msg.className = 'tag-no-match';
+    msg.textContent = 'no tags like #' + searchKey;
+    tagRow.appendChild(msg);
+    return;
+  }
+
   matchingTags.slice(0, 8).forEach(tag => {
     const chip = document.createElement('span');
     chip.className = 'tag-suggestion';
@@ -268,7 +283,8 @@ function renderTagRow(tagRow, tagSearch, dropdownList, filterInput) {
     chip.addEventListener('mousedown', e => e.preventDefault());
     chip.addEventListener('click', e => {
       e.stopPropagation();
-      filterInput.value = '#' + tag.toLowerCase();
+      // Trailing space triggers exact match on this specific tag
+      filterInput.value = '#' + tag.toLowerCase() + ' ';
       filterItems(filterInput, dropdownList);
       filterInput.focus();
     });
@@ -285,7 +301,8 @@ function renderTagRow(tagRow, tagSearch, dropdownList, filterInput) {
     link.addEventListener('mousedown', e => e.preventDefault());
     link.addEventListener('click', e => {
       e.preventDefault();
-      filterInput.value = '#' + tag.toLowerCase();
+      // Use exact match (trailing space) to avoid selecting items from similarly-named tags
+      filterInput.value = '#' + tag.toLowerCase() + ' ';
       filterItems(filterInput, dropdownList);
       const visible = Array.from(dropdownList.querySelectorAll('.dropdown-item'))
         .filter(item => item.id !== 'tag-row' && item.id !== 'actions' && item.style.display !== 'none');
@@ -354,12 +371,18 @@ function filterItems(filterInput, dropdownList) {
 
     if (isTagFilter) {
       const tagSearch = filter.substring(1);
+      const isExact = tagSearch.endsWith(' ');
+      const searchKey = isExact ? tagSearch.trimEnd() : tagSearch;
       const rawTags = (item.getAttribute('tags') || '').trim();
-      if (tagSearch === '') {
+      if (searchKey === '') {
         if (!rawTags) disp = 'none';
       } else {
         const tagList = rawTags ? rawTags.split(/\s+/).filter(t => t) : [];
-        if (!tagList.some(t => t.toLowerCase().startsWith(tagSearch))) disp = 'none';
+        if (isExact) {
+          if (!tagList.some(t => t.toLowerCase() === searchKey)) disp = 'none';
+        } else {
+          if (!tagList.some(t => t.toLowerCase().startsWith(searchKey))) disp = 'none';
+        }
       }
     // Filter by location (seenat) if starts with @ or is just a dot, otherwise by display text
     } else if (isLocationFilter || isDotFilter) {
