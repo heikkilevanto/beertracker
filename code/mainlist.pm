@@ -291,7 +291,7 @@ sub buttonline {
   my %vols;     # guess sizes for small/large beers
   $vols{$rec->{vol}} = 1 if ($rec->{vol});
   # TODO - more logic, if 20, say 20/30, if 25, say 25/40,
-  if ( $rec->{brewtype} =~ /Night|Restaurant|Feedback|Adjustment/i) {
+  if ( $rec->{brewtype} =~ /Night|Restaurant|Adjustment/i) {
     %vols=(); # nothing to copy
   } elsif ( $rec->{brewtype}  eq "Wine" ) {
     $vols{12} = 1;
@@ -339,7 +339,7 @@ sub buttonline {
   }
   if (glasses::isemptyglass($rec->{brewtype}) || $rec->{comcount}) {
     my $ctype = $rec->{brewtype} eq 'Night'                          ? 'night'
-              : $rec->{brewtype} =~ /^(Restaurant|Bar|Feedback)$/i   ? 'location'
+              : $rec->{brewtype} =~ /^(Restaurant|Bar)$/i            ? 'location'
               :                                                         'brew';
     $html .= "<a href='$c->{url}?o=Comment&e=new&glass=$rec->{id}&commenttype=$ctype'>" .
              "<span>(Comment)</span></a>\n";
@@ -412,7 +412,6 @@ sub adjustment_form {
         <option value='Night'>Night</option>
         <option value='Restaurant'>Restaurant</option>
         <option value='Bar'>Bar</option>
-        <option value='Feedback'>Feedback</option>
       </select>
       <button type='submit' style='font-size:small;'>Add empty</button>
     </form>
@@ -460,7 +459,6 @@ sub adjustment_form {
         <option value='Night'>Night</option>
         <option value='Restaurant'>Restaurant</option>
         <option value='Bar'>Bar</option>
-        <option value='Feedback'>Feedback</option>
       </select>
       <button type='submit' style='font-size:small;'>Add empty</button>
     </form>

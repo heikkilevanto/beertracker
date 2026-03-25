@@ -76,11 +76,11 @@ To add a new location, select "new location" from the dropdown and fill in the d
 
 ### Record Type
 
-Choose what you're tracking: Beer, Wine, Booze, Restaurant, Night, Bar, or Feedback.
+Choose what you're tracking: Beer, Wine, Booze, Restaurant, Night, or Bar.
 
 **Beer/Wine/Booze** show the normal fields - which drink, volume, alcohol percentage, and price.
 
-**Restaurant/Night/Bar/Feedback** are for recording visits without specific drinks. The brew fields hide, and you just enter the type of place and how much you spent. This is handy for tracking restaurant visits or nights out, and for anchoring comments.
+**Restaurant/Night/Bar** are for recording visits without specific drinks. The brew fields hide, and you just enter the type of place and how much you spent. This is handy for tracking restaurant visits or nights out, and for anchoring comments.
 
 ### What You're Drinking
 
@@ -181,7 +181,7 @@ per comment.
 
 **Multiple comments**: You can add multiple comments to the same entry over time. Each comment gets timestamped, so you can track how your opinion changes.
 
-**Empty entries for comments**: Sometimes you want to comment on a general experience rather than a specific drink. That's what the "Feedback" record type is for - it creates an entry with no drink details that you can hang comments on.
+**Empty entries for comments**: Sometimes you want to comment on a general experience rather than a specific drink. Use the Restaurant, Night, or Bar type to create an entry with no drink details that you can hang comments on.
 
 **Finding comments**: Use the "Comments" filter link at the top of the full list to see only entries that have comments. Similarly, "Ratings" shows only entries you've rated. This makes it easy to review your tasting notes when deciding what to order.
 

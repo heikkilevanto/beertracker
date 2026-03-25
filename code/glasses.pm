@@ -27,7 +27,7 @@ our %volumes = ( # Comment is displayed on the About page
 ################################################################################
 sub isemptyglass {
   my $type = shift;
-  return $type =~ /Restaurant|Night|Bar|Feedback/;
+  return $type =~ /Restaurant|Night|Bar/;
 }
 
 ################################################################################
@@ -120,7 +120,7 @@ sub selectbrewsubtype {
   my $rec = shift;
   my $sql = 'SELECT BrewType, SubType, MAX(timestamp) AS last_time
     FROM glasses
-    WHERE BrewType in ("Restaurant","Night", "Bar","Feedback")
+    WHERE BrewType in ("Restaurant","Night", "Bar")
     GROUP BY brewtype,SubType
     ORDER BY last_time DESC ';
   my $sth = db::query($c, $sql );

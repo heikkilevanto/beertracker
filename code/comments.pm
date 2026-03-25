@@ -117,7 +117,7 @@ sub listcomments {
   my $commenttype;
   if ( $brewtype eq 'Night' ) {
     $commenttype = 'night';
-  } elsif ( $brewtype =~ /^(Restaurant|Meal|Bar|Feedback)$/ ) {
+  } elsif ( $brewtype =~ /^(Restaurant|Meal|Bar)$/ ) {
     $commenttype = 'location';
   } else {
     $commenttype = 'brew';
