@@ -85,6 +85,86 @@ HTML
 
 
 ################################################################################
+# Fetch all unique tags from a table column "Tags", deduplicated, sorted by
+# first occurrence (i.e. in the order they appear in the result set).
+################################################################################
+
+sub get_available_tags {
+  my $c = shift;
+  my $table = shift;
+  # Validate table name to prevent SQL injection (only alphanumeric + underscore)
+  return () unless $table && $table =~ /^\w+$/;
+  my $sql = "SELECT Tags FROM $table WHERE Tags IS NOT NULL AND Tags != ''";
+  my $sth = db::query($c, $sql);
+  my %seen;
+  my @tags;
+  while ( my ($tags_val) = $sth->fetchrow_array ) {
+    for my $tag (split /\s+/, $tags_val) {
+      next unless $tag;
+      next if $seen{lc($tag)};
+      $seen{lc($tag)} = 1;
+      push @tags, $tag;
+    }
+  }
+  return @tags;
+} # get_available_tags
+
+
+################################################################################
+# Chip-based tag editor for a Tags text field.
+# Returns an open <td> (caller appends </td></tr>).
+################################################################################
+
+sub taginput {
+  my $c              = shift;
+  my $fieldname      = shift;
+  my $value          = shift // "";
+  my $available_tags = shift || [];   # arrayref of all unique tags in the table
+  my $disabled       = shift || "";   # "disabled" or ""
+
+  # Parse space-separated current tags
+  my @current_tags = grep { $_ } split /\s+/, $value;
+
+  # Build current-tag chips HTML (no × button here; JS/enableEditing adds it)
+  my $chips_html = "";
+  for my $tag (@current_tags) {
+    $chips_html .= "<span class='tag-chip-wrapper' data-tag='" . util::htmlesc($tag) . "'>"
+      . "<span class='tag-chip'>#" . util::htmlesc($tag) . "</span>"
+      . "</span>\n";
+  }
+
+  # Build available-tags HTML (skip tags already selected)
+  my %current_set = map { lc($_) => 1 } @current_tags;
+  my $avail_html = "";
+  for my $tag (@$available_tags) {
+    next if $current_set{lc($tag)};
+    $avail_html .= "<span class='tag-available-chip' data-tag='" . util::htmlesc($tag) . "'>"
+      . "#" . util::htmlesc($tag) . "</span>\n";
+  }
+  my $avail_section = $avail_html
+    ? "<div class='tag-available-list'>$avail_html</div>"
+    : "";
+
+  my $hidden_attr = $disabled ? "hidden" : "";
+  my $val_esc     = util::htmlesc($value);
+
+  my $s = "";
+  $s .= "<td>\n";
+  $s .= "<div class='tag-input' id='taginput-$fieldname'>\n";
+  $s .= "  <div class='tag-current-chips'>$chips_html</div>\n";
+  $s .= "  <div class='tag-edit-box' $hidden_attr>\n";
+  $s .= "    <input type='text' class='tag-text-input' placeholder='add tag\x{2026}' autocomplete='off' />\n";
+  $s .= "    $avail_section\n";
+  $s .= "  </div>\n";
+  $s .= "  <input type='hidden' name='$fieldname' value='$val_esc' />\n";
+  $s .= "</div>\n";
+  $s .= "<script>initTagInput(document.getElementById('taginput-$fieldname'));</script>\n";
+  # Note: does NOT close </td>; the inputform loop does that
+  return $s;
+} # taginput
+
+
+################################################################################
 # Make a simple input form for a given table
 ################################################################################
 
@@ -161,6 +241,11 @@ sub inputform {
       if ( $f =~ /Barcode/i ) {
         # Special handling for barcode field - add scan link
         $form .= barcodeInput($c, $inpname, $rec->{$f}, $disabled );
+      } elsif ( $f =~ /^Tags$/i && !$inputprefix ) {
+        # Chip-based tag editor (only for top-level forms, not inline new-record forms)
+        my @avail = get_available_tags($c, $table);
+        my $tagval = ( $rec && defined($rec->{$f}) ) ? $rec->{$f} : "";
+        $form .= taginput($c, $inpname, $tagval, \@avail, $disabled);
       } else {
         my $pass = "";
         if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself

@@ -401,6 +401,100 @@ function filterItems(filterInput, dropdownList) {
 }
 
 
+// Initialise a chip-based tag editor rendered by inputs.pm::taginput().
+function initTagInput(container) {
+  if (!container) return;
+  const hiddenInput   = container.querySelector('input[type="hidden"]');
+  const currentChips  = container.querySelector('.tag-current-chips');
+  const textInput     = container.querySelector('.tag-text-input');
+  const availableList = container.querySelector('.tag-available-list');
+
+  // Return the list of tag strings currently shown as chips.
+  function getChipTags() {
+    return Array.from(currentChips.querySelectorAll('.tag-chip-wrapper'))
+      .map(w => w.getAttribute('data-tag'))
+      .filter(Boolean);
+  }
+
+  // Write chip-tags back to the hidden input and hide already-selected
+  // items in the available list.
+  function syncHidden() {
+    if (hiddenInput) hiddenInput.value = getChipTags().join(' ');
+    if (!availableList) return;
+    const current = new Set(getChipTags().map(t => t.toLowerCase()));
+    availableList.querySelectorAll('.tag-available-chip').forEach(chip => {
+      const tag = chip.getAttribute('data-tag');
+      chip.style.display = tag && current.has(tag.toLowerCase()) ? 'none' : '';
+    });
+  }
+
+  // Add a chip for the given tag string (strips leading # characters).
+  function addTagChip(tag) {
+    tag = tag.replace(/^#+/, '').trim();
+    if (!tag) return;
+    if (getChipTags().map(t => t.toLowerCase()).includes(tag.toLowerCase())) return;
+
+    const wrapper = document.createElement('span');
+    wrapper.className = 'tag-chip-wrapper';
+    wrapper.setAttribute('data-tag', tag);
+
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.textContent = '#' + tag;
+
+    const removeBtn = document.createElement('a');
+    removeBtn.className = 'tag-chip-remove';
+    removeBtn.href = '#';
+    removeBtn.textContent = '\u00d7';
+    chip.appendChild(removeBtn);
+
+    wrapper.appendChild(chip);
+    currentChips.appendChild(wrapper);
+    syncHidden();
+  }
+
+  // Delegated handler for × buttons on current chips.
+  currentChips.addEventListener('click', (e) => {
+    const btn = e.target.closest('.tag-chip-remove');
+    if (!btn) return;
+    e.preventDefault();
+    btn.closest('.tag-chip-wrapper').remove();
+    syncHidden();
+  });
+
+  // Click on an available-tag chip adds it to the selection.
+  if (availableList) {
+    availableList.addEventListener('click', (e) => {
+      const chip = e.target.closest('.tag-available-chip');
+      if (!chip) return;
+      e.preventDefault();
+      addTagChip(chip.getAttribute('data-tag'));
+    });
+  }
+
+  // Text input: commit on Space, Enter, or comma; also commit on blur.
+  if (textInput) {
+    textInput.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        const tag = textInput.value.trim();
+        if (tag) {
+          addTagChip(tag);
+          textInput.value = '';
+        }
+      }
+    });
+    textInput.addEventListener('blur', () => {
+      const tag = textInput.value.trim();
+      if (tag) { addTagChip(tag); textInput.value = ''; }
+    });
+  }
+
+  // Initialise: hide available chips that are already selected.
+  syncHidden();
+} // initTagInput
+
+
 // Enable editing mode for forms that start in display-only mode
 function enableEditing(form) {
   // Enable all disabled inputs
@@ -418,6 +512,21 @@ function enableEditing(form) {
   // Show barcode scan links
   const barcodeLinks = form.querySelectorAll('.barcode-scan-link');
   barcodeLinks.forEach(link => link.hidden = false);
+
+  // Show tag edit boxes and add × buttons to pre-rendered tag chips.
+  form.querySelectorAll('.tag-edit-box').forEach(el => el.hidden = false);
+  form.querySelectorAll('.tag-chip-wrapper').forEach(wrapper => {
+    if (!wrapper.querySelector('.tag-chip-remove')) {
+      const chip = wrapper.querySelector('.tag-chip');
+      if (chip) {
+        const removeBtn = document.createElement('a');
+        removeBtn.className = 'tag-chip-remove';
+        removeBtn.href = '#';
+        removeBtn.textContent = '\u00d7';
+        chip.appendChild(removeBtn);
+      }
+    }
+  });
   
   // Hide Edit button, show Submit button(s)
   const editBtn = form.querySelector('.edit-enable-btn');

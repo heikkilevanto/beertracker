@@ -175,3 +175,79 @@
   font-style: italic;
   opacity: 0.7;
 }
+
+/* ── Tag chip editor (inputs.pm::taginput) ───────────────────────────────── */
+
+.tag-input {
+  display: inline-block;
+  min-width: 180px;
+}
+
+/* Row of currently-selected tag chips */
+.tag-current-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 1.4em;
+}
+
+.tag-chip-wrapper {
+  display: inline-flex;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--altbgcolor, #ddd);
+  border-radius: 10px;
+  padding: 2px 8px;
+  font-size: small;
+  white-space: nowrap;
+}
+
+.tag-chip-remove {
+  margin-left: 4px;
+  color: #999;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.tag-chip-remove:hover {
+  color: #333;
+}
+
+/* Edit controls: text input + available-tag row */
+.tag-edit-box {
+  margin-top: 4px;
+}
+
+.tag-text-input {
+  margin-bottom: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Row of available (not yet selected) tags */
+.tag-available-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.tag-available-chip {
+  display: inline-block;
+  background-color: var(--altbgcolor, #ddd);
+  border: 1px dashed #888;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: small;
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+.tag-available-chip:hover {
+  opacity: 1;
+}
+
