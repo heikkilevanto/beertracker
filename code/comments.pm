@@ -297,13 +297,12 @@ sub commentform {
   $s .= "</tr>\n";
 
   # Buttons row
-  my $button_text = $com->{Id} ? "Update Comment" : "Add Comment";
+  my $button_text = $com->{Id} ? "Upd" : "Add";
   $s .= "<tr>\n";
-  $s .= "  <td></td>\n";
-  $s .= "  <td>\n";
+  $s .= "  <td colspan='2'>\n";
   $s .= "    <input type='submit' name='submit' value='$button_text'>\n";
   $s .= "    &nbsp;<a href='$cancel_url'><span>Cancel</span></a>\n";
-  $s .= "    &nbsp;<input type='submit' name='submit' value='Delete Comment'>\n" if $com->{Id};
+  $s .= "    &nbsp;<input type='submit' name='submit' value='Del'>\n" if $com->{Id};
   $s .= "    &nbsp;<a href='#' id='show-all-link'><span>(Show all fields)</span></a>\n";
   $s .= "  </td>\n";
   $s .= "</tr>\n";
@@ -664,7 +663,7 @@ sub postcomment {
   }
 
   if ($comment_id) { # Update existing comment
-    if ( util::param($c,"submit") =~ /Delete Comment/i ) {
+    if ( util::param($c,"submit") =~ /^Del/i ) {
       db::execute($c, "DELETE FROM comments WHERE Id = ?", $comment_id);
       print { $c->{log} } "Deleted comment id '$comment_id' \n";
     } else { # real update

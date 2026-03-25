@@ -146,7 +146,6 @@
 /* Tag-suggestion row shown when filter starts with '#' */
 .dropdown-tag-row {
   padding: 4px;
-  white-space: nowrap;
   border-bottom: 1px solid #555;
 }
 
