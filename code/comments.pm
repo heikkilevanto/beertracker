@@ -43,6 +43,7 @@ sub get_rating_class {
 sub commentline {
   my $c = shift;
   my $cr = shift; # The comment to display, from sql like one in listcomments
+  my $showtimestamp = shift || 0;
   my $glid = $cr->{Glass};
   my $s = "";
   $s .= "<a href='$c->{url}?o=Comment&e=$cr->{Id}'>" .
@@ -54,7 +55,16 @@ sub commentline {
   my $ctype = $cr->{CommentType} || '';
   $s .= "<span style='font-size:xx-small; color:#bbb'>[$ctype]</span> \n"
     if $ctype && $ctype ne 'brew';
-  $s .= "<i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
+  if ($showtimestamp && $cr->{effdate}) {
+    my $date = substr($cr->{effdate}, 0, 10);
+    $s .= "<span style='font-size:xx-small; color:#bbb'>$date</span>";
+    if ($cr->{loc} && $cr->{locname}) {
+      $s .= " <a href='$c->{url}?o=Location&e=$cr->{loc}'>" .
+            "<span style='font-size:xx-small'>\@$cr->{locname}</span></a>";
+    }
+    $s .= "<br/>\n" if $cr->{Comment};
+  }
+  $s .= "&nbsp;&nbsp;<i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
   $s .= photos::thumbnails_html($c, 'Comment', $cr->{Id}) if $cr->{Id};
 
   return $s;
