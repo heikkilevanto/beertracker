@@ -98,7 +98,8 @@ sub editperson {
     print "<b>New Person:</b><br/>";
   }
 
-  print inputs::inputform( $c, "PERSONS", $p );
+  my $tags_ref = db::all_tags($c, "PERSONS");
+  print inputs::inputform( $c, "PERSONS", $p, "", "", "<br/>", "Id", $tags_ref );
   if ( $c->{edit} =~ /^new/i ) {
     print "<br/><input type='submit' name='submit' value='Insert Person' />\n";
   } else {

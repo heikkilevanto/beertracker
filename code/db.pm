@@ -85,6 +85,21 @@ sub dberror {
 # General db helpers
 ################################################################################
 
+########## Get all distinct tag words from a table's Tags column
+# Returns a sorted arrayref of unique tag strings.
+sub all_tags {
+  my $c = shift;
+  my $table = shift;  # e.g. "PERSONS" or "LOCATIONS" — always comes from our own code
+  my $sth = query($c, "SELECT DISTINCT Tags FROM $table WHERE Tags IS NOT NULL AND Tags != ''");
+  my %seen;
+  while ( my ($tags_str) = $sth->fetchrow_array ) {
+    for my $tag ( split /\s+/, $tags_str ) {
+      $seen{$tag} = 1 if $tag;
+    }
+  }
+  return [ sort keys %seen ];
+} # all_tags
+
 ########## Get all field names for a table
 sub tablefields {
   my $c = shift;

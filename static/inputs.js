@@ -2,6 +2,124 @@
 
 // Dropdown with filtering and (new)
 
+// Tags chip input widget (issue 624)
+function initTagsInput(container) {
+  if (!container) return;
+  const currentDiv  = container.querySelector('.tags-current');
+  const availableDiv = container.querySelector('.tags-available');
+  const hiddenInput = container.querySelector('input[type=hidden][name=Tags]');
+  const newBtn      = container.querySelector('.tag-new-btn');
+  const newField    = container.querySelector('.tags-new-field');
+  const newInput    = container.querySelector('.tags-new-input');
+  const addBtn      = container.querySelector('.tags-add-btn');
+
+  // Delegated remove-chip handler — covers pre-rendered and dynamically added chips
+  currentDiv.addEventListener('click', (e) => {
+    const removeLink = e.target.closest('.chip-remove');
+    if (!removeLink) return;
+    e.preventDefault();
+    const wrapper = removeLink.closest('.chip-wrapper');
+    const tag = wrapper.querySelector('.chip-label').textContent.trim();
+    wrapper.remove();
+    refreshBreaks(currentDiv, '.chip-wrapper', 5);
+    // Re-enable corresponding available chip
+    if (availableDiv) {
+      const avChip = availableDiv.querySelector(`.tag-available-chip[data-tag="${tag}"]`);
+      if (avChip) avChip.classList.remove('used');
+    }
+  });
+
+  // Click on an available chip → add to current chips
+  if (availableDiv) {
+    availableDiv.addEventListener('click', (e) => {
+      const chip = e.target.closest('.tag-available-chip');
+      if (!chip || chip.classList.contains('tag-new-btn') || chip.classList.contains('used')) return;
+      const tag = chip.getAttribute('data-tag');
+      addCurrentChip(tag);
+      chip.classList.add('used');
+    });
+  }
+
+  // (New tag) chip → reveal text input
+  if (newBtn && newField) {
+    newBtn.addEventListener('click', () => {
+      newField.hidden = false;
+      if (newInput) newInput.focus();
+    });
+  }
+
+  // Commit a new tag from the free-text input
+  function commitNewTag() {
+    if (!newInput) return;
+    const tag = newInput.value.trim().replace(/^#+/, '').toLowerCase();
+    if (!tag) return;
+    const existing = Array.from(currentDiv.querySelectorAll('.chip-label'))
+      .map(el => el.textContent.trim().toLowerCase());
+    if (!existing.includes(tag)) {
+      addCurrentChip(tag);
+      // Grey out in available if it happens to exist there
+      if (availableDiv) {
+        const avChip = availableDiv.querySelector(`.tag-available-chip[data-tag="${tag}"]`);
+        if (avChip) avChip.classList.add('used');
+      }
+    }
+    newInput.value = '';
+    if (newField) newField.hidden = true;
+  }
+
+  if (addBtn) addBtn.addEventListener('click', commitNewTag);
+  if (newInput) {
+    newInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter')  { e.preventDefault(); commitNewTag(); }
+      if (e.key === 'Escape') { if (newField) newField.hidden = true; newInput.value = ''; }
+    });
+  }
+
+  // Pre-submit: collect chip labels and write to the hidden Tags input
+  const form = container.closest('form');
+  if (form && hiddenInput) {
+    form.addEventListener('submit', () => {
+      const labels = Array.from(currentDiv.querySelectorAll('.chip-label'))
+        .map(el => el.textContent.trim())
+        .filter(t => t);
+      hiddenInput.value = labels.join(' ');
+    }, true); // capture phase
+  }
+
+  // Helper: create and append a current-tag chip
+  function addCurrentChip(tag) {
+    const wrapper = document.createElement('span');
+    wrapper.className = 'chip-wrapper';
+    const chip = document.createElement('span');
+    chip.className = 'dropdown-chip';
+    const label = document.createElement('span');
+    label.className = 'chip-label';
+    label.textContent = tag;
+    const removeLink = document.createElement('a');
+    removeLink.className = 'chip-remove';
+    removeLink.href = '#';
+    removeLink.textContent = '\u00d7';
+    chip.appendChild(label);
+    chip.appendChild(removeLink);
+    wrapper.appendChild(chip);
+    currentDiv.appendChild(wrapper);
+    refreshBreaks(currentDiv, '.chip-wrapper', 5);
+  }
+
+  // Helper: remove all .tag-line-break elements and re-insert after every nth chip
+  function refreshBreaks(div, selector, n) {
+    div.querySelectorAll('.tag-line-break').forEach(el => el.remove());
+    const items = Array.from(div.querySelectorAll(selector));
+    items.forEach((item, i) => {
+      if ((i + 1) % n === 0) {
+        const br = document.createElement('span');
+        br.className = 'tag-line-break';
+        item.after(br);
+      }
+    });
+  }
+} // initTagsInput
+
 function initDropdown(container) {
   const filterInput   = container.querySelector(".dropdown-filter");
   const hiddenInput   = container.querySelector(".dropdown-main input[type=hidden]");
@@ -418,7 +536,13 @@ function enableEditing(form) {
   // Show barcode scan links
   const barcodeLinks = form.querySelectorAll('.barcode-scan-link');
   barcodeLinks.forEach(link => link.hidden = false);
-  
+
+  // Show tags-available sections and chip-remove links
+  const tagsAvailableDivs = form.querySelectorAll('.tags-available');
+  tagsAvailableDivs.forEach(div => div.hidden = false);
+  const tagChipRemoves = form.querySelectorAll('.tags-input .chip-remove');
+  tagChipRemoves.forEach(a => a.hidden = false);
+
   // Hide Edit button, show Submit button(s)
   const editBtn = form.querySelector('.edit-enable-btn');
   if (editBtn) editBtn.hidden = true;

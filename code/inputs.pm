@@ -96,6 +96,7 @@ sub inputform {
   my $placeholderprefix = shift || "";
   my $separatortag = shift || "<br/>";
   my $skipfields = shift || "Id"; # regexp. "Id|HiddenField|AlsoThis"  "all" for showing all
+  my $available_tags_ref = shift; # Optional: arrayref of all known tag strings for chip UI
 
   # Determine if we should disable fields (editing existing, not new)
   my $disabled = "";
@@ -161,6 +162,9 @@ sub inputform {
       if ( $f =~ /Barcode/i ) {
         # Special handling for barcode field - add scan link
         $form .= barcodeInput($c, $inpname, $rec->{$f}, $disabled );
+      } elsif ( $f =~ /^Tags$/i && $available_tags_ref ) {
+        my $tag_val = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        $form .= tagsinput($c, $tag_val, $available_tags_ref, $disabled);
       } else {
         my $pass = "";
         if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
@@ -186,6 +190,71 @@ sub inputform {
 
   return $form;
 } # inputform
+
+################################################################################
+# Tags chip input widget
+################################################################################
+# Renders current tags as removable chips, and all known tags as addable chips.
+# $current   - space-separated string of current tag values (may be undef/"")
+# $available - sorted arrayref of all distinct tag strings from the DB
+# $disabled  - "disabled" or "" (controls initial locked state)
+# Returns a <td>...</td> block (without closing </td> — parent adds it).
+sub tagsinput {
+  my $c         = shift;
+  my $current   = shift // "";
+  my $available = shift;   # arrayref
+  my $disabled  = shift || "";
+
+  my @current_tags   = grep { $_ } split /\s+/, $current;
+  my $remove_hidden  = $disabled ? " hidden" : "";
+  my $avail_hidden   = $disabled ? " hidden" : "";
+
+  # Render current tags as chips
+  my $chips = "";
+  my $chip_count = 0;
+  foreach my $tag (@current_tags) {
+    my $esc = util::htmlesc($tag);
+    $chips .= "<span class='chip-wrapper'>"
+           .  "<span class='dropdown-chip'>"
+           .  "<span class='chip-label'>$esc</span>"
+           .  " <a class='chip-remove' href='#'$remove_hidden>&times;</a>"
+           .  "</span>"
+           .  "</span>\n";
+    $chip_count++;
+    $chips .= "<span class='tag-line-break'></span>\n" if ($chip_count % 5 == 0);
+  }
+
+  # Render available tags as addable chips
+  my $avail_html = "";
+  if ($available) {
+    my %current_set = map { lc($_) => 1 } @current_tags;
+    my $avail_count = 0;
+    foreach my $tag (@$available) {
+      my $esc  = util::htmlesc($tag);
+      my $used = $current_set{lc($tag)} ? " used" : "";
+      $avail_html .= "<span class='tag-available-chip$used' data-tag='$esc'>$esc</span>\n";
+      $avail_count++;
+      $avail_html .= "<span class='tag-line-break'></span>\n" if ($avail_count % 5 == 0);
+    }
+    $avail_html .= "<span class='tag-available-chip tag-new-btn'>(New tag)</span>\n";
+    $avail_html .= "<span class='tags-new-field' hidden>"
+               .  "<input type='text' class='tags-new-input' placeholder='new tag' autocomplete='off'/>"
+               .  "<button type='button' class='tags-add-btn'>Add</button>"
+               .  "</span>\n";
+  }
+
+  my $s = "<td>\n";
+  $s .= "<div class='tags-input' id='tags-input-Tags'>\n";
+  $s .= "  <div class='tags-current'>$chips</div>\n";
+  if ($available) {
+    $s .= "  <div class='tags-available'$avail_hidden>$avail_html</div>\n";
+  }
+  $s .= "  <input type='hidden' name='Tags' id='Tags' value='" . util::htmlesc($current) . "'/>\n";
+  $s .= "</div>\n";
+  $s .= "<script>initTagsInput(document.getElementById('tags-input-Tags'));</script>\n";
+  # No closing </td> — parent (inputform) adds it
+  return $s;
+} # tagsinput
 
 ################################################################################
 # Barcode input field with scan button

@@ -274,8 +274,9 @@ sub editlocation {
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
-    print inputs::inputform($c, "LOCATIONS", $p );
-    
+    my $tags_ref = db::all_tags($c, "LOCATIONS");
+    print inputs::inputform($c, "LOCATIONS", $p, "", "", "<br/>", "Id", $tags_ref );
+
     if ( $p->{Id} ne "new" ) {
       # Editing existing record: show Edit button, hide submit
       print "<button type='button' class='edit-enable-btn' onclick='enableEditing(this.form)'>Edit</button>\n";
