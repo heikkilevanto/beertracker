@@ -443,7 +443,7 @@ sub _sibling_section {
   my @rows;
   while (my $cr = $sth->fetchrow_hashref) {
     next if $com->{Id} && $cr->{Id} == $com->{Id};  # exclude current comment
-    push @rows, commentline($c, $cr);
+    push @rows, commentline($c, $cr, 1);  # 1 = show date and location
   }
   return "" unless @rows;
   my $s = "<hr style='border-color:#444; margin:0.5em 0'>\n";
@@ -483,12 +483,17 @@ sub sibling_comments_html {
     my $ctx = $effdate || "this session";
     $ctx .= " \@$locname" if $locname;
     $s .= _sibling_section($c, $com, "Other comments on $ctx:",
-      q{SELECT c.*, group_concat(p.Name, ', ') as PeopleNames
+      q{SELECT c.*,
+          group_concat(p.Name, ', ') as PeopleNames,
+          strftime('%Y-%m-%d', g.Timestamp, '-06:00') AS effdate,
+          gl.Id AS loc, gl.Name AS locname
         FROM comments c
+        LEFT JOIN glasses g ON g.Id = c.Glass
+        LEFT JOIN locations gl ON gl.Id = g.Location
         LEFT JOIN comment_persons cp ON cp.Comment = c.Id
         LEFT JOIN persons p ON p.Id = cp.Person
         WHERE c.Glass = ?
-        GROUP BY c.Id ORDER BY c.Id},
+        GROUP BY c.Id ORDER BY COALESCE(g.Timestamp, c.Ts) DESC, c.Id DESC},
       $glassid);
   }
 
@@ -506,14 +511,20 @@ sub sibling_comments_html {
     my $label = "Comments on " . ($brewname || "brew $brew_id") . ":";
     $label .= " " . avgratings($c, $cnt, $avg, undef) if $avg;
     $s .= _sibling_section($c, $com, $label,
-      q{SELECT c.*, group_concat(p.Name, ', ') as PeopleNames
+      q{SELECT c.*,
+          group_concat(p.Name, ', ') as PeopleNames,
+          strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
+          COALESCE(comloc.Id, glassloc.Id) AS loc,
+          COALESCE(comloc.Name, glassloc.Name) AS locname
         FROM comments c
         LEFT JOIN glasses g ON g.Id = c.Glass
+        LEFT JOIN locations glassloc ON glassloc.Id = g.Location
+        LEFT JOIN locations comloc ON comloc.Id = c.Location
         LEFT JOIN comment_persons cp ON cp.Comment = c.Id
         LEFT JOIN persons p ON p.Id = cp.Person
         WHERE c.Brew = ? AND c.CommentType = 'brew'
           AND (g.Username = ? OR (c.Glass IS NULL AND c.Username = ?))
-        GROUP BY c.Id ORDER BY c.Id},
+        GROUP BY c.Id ORDER BY COALESCE(g.Timestamp, c.Ts) DESC, c.Id DESC},
       $brew_id, $c->{username}, $c->{username});
   }
 
@@ -526,16 +537,22 @@ sub sibling_comments_html {
       $com->{Id});
     while (my ($pid, $pname) = $psth->fetchrow_array) {
       $s .= _sibling_section($c, $com, "Comments on $pname:",
-        q{SELECT c.*, group_concat(p2.Name, ', ') as PeopleNames
+        q{SELECT c.*,
+            group_concat(p2.Name, ', ') as PeopleNames,
+            strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
+            COALESCE(comloc.Id, glassloc.Id) AS loc,
+            COALESCE(comloc.Name, glassloc.Name) AS locname
           FROM comments c
           LEFT JOIN glasses g ON g.Id = c.Glass
+          LEFT JOIN locations glassloc ON glassloc.Id = g.Location
+          LEFT JOIN locations comloc ON comloc.Id = c.Location
           LEFT JOIN comment_persons cp2 ON cp2.Comment = c.Id
           LEFT JOIN persons p2 ON p2.Id = cp2.Person
           WHERE EXISTS (SELECT 1 FROM comment_persons cp3
                         WHERE cp3.Comment = c.Id AND cp3.Person = ?)
             AND c.CommentType = 'person'
             AND (g.Username = ? OR (c.Glass IS NULL AND c.Username = ?))
-          GROUP BY c.Id ORDER BY c.Id},
+          GROUP BY c.Id ORDER BY COALESCE(g.Timestamp, c.Ts) DESC, c.Id DESC},
         $pid, $c->{username}, $c->{username});
     }
   }
@@ -545,14 +562,20 @@ sub sibling_comments_html {
     my ($locname) = db::queryarray($c,
       "SELECT Name FROM locations WHERE Id = ?", $loc_id);
     $s .= _sibling_section($c, $com, "Comments at " . ($locname || "this location") . ":",
-      q{SELECT c.*, group_concat(p.Name, ', ') as PeopleNames
+      q{SELECT c.*,
+          group_concat(p.Name, ', ') as PeopleNames,
+          strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
+          COALESCE(comloc.Id, glassloc.Id) AS loc,
+          COALESCE(comloc.Name, glassloc.Name) AS locname
         FROM comments c
         LEFT JOIN glasses g ON g.Id = c.Glass
+        LEFT JOIN locations glassloc ON glassloc.Id = g.Location
+        LEFT JOIN locations comloc ON comloc.Id = c.Location
         LEFT JOIN comment_persons cp ON cp.Comment = c.Id
         LEFT JOIN persons p ON p.Id = cp.Person
         WHERE c.Location = ? AND c.CommentType = 'location'
           AND (g.Username = ? OR (c.Glass IS NULL AND c.Username = ?))
-        GROUP BY c.Id ORDER BY c.Id},
+        GROUP BY c.Id ORDER BY COALESCE(g.Timestamp, c.Ts) DESC, c.Id DESC},
       $loc_id, $c->{username}, $c->{username});
   }
 
