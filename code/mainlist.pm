@@ -27,7 +27,7 @@ sub glassquery {
       glasses.id as id,
       strftime('%Y-%m-%d %w', timestamp, '-06:00') as effdate,
       strftime('%H:%M', timestamp) as time,
-      timestamp,
+      timestamp as stamp,
       glasses.price as price,
       glasses.volume as vol,
       glasses.alc as alc,
@@ -74,17 +74,13 @@ sub glassquery {
 #  $bloodalc{"max"} = max ba for the date
 #  $bloodalc{"now"} = ba at current time (if effdate = curr date)
 ################################################################################
-#
-# TODO: This might be refactored so that the loop is outisde this function,
-# and the func takes a hash with all the necessary data for the calculation,
-# and returns a new hash, including the ba at the time of the drink.
-# TODO: Maybe move into its own module?
-sub bloodalc {
+# Compute blood alcohol from a pre-fetched list of glasses (DESC timestamp order).
+# Iterates from the back (chronological order). Sets $rec->{ba} on each record.
+# Returns a hashref with {max, last_alcinbody, last_balctime, bodyweight, burnrate}.
+sub bloodalc_compute {
   my $c = shift;
-  my $effdate = shift; # effdate we are interested in
-  my $cache_key = "bloodalc:" . $c->{username} . ":" . $effdate;
-  my $cached = cache::get($c, $cache_key);
-  return $cached if $cached;
+  my $glasses = shift; # arrayref of hashrefs, DESC timestamp order, with {id, timestamp, drinks}
+  my $result = {};
   my $bodyweight;  # in kg, for blood alc calculations
   $bodyweight = 120 if ( $c->{username} eq "heikki" );  # TODO - Move these somewhere else
   $bodyweight =  83 if ( $c->{username} eq "dennis" );
@@ -93,50 +89,64 @@ sub bloodalc {
 
   if ( !$bodyweight ) {
     print { $c->{log} } "Can not calculate alc for $c->{username}, don't know body weight \n";
-    return undef;
+    return $result;
   }
-  #print { $c->{log} } "Bloodalc for '$effdate' bw='$bodyweight'\n";
-  my $bloodalc = {};
-  $bloodalc->{"date"} = $effdate;
-  my $sql = q(
-    select
-      id,
-      strftime ('%Y-%m-%d', timestamp,'-06:00') as effdate,
-      stdrinks as stdrinks,
-      timestamp as stamp
-    from glasses
-    where effdate = ?
-      and username = ?
-      and stdrinks > 0
-      and volume > 0
-    order by timestamp
-  );
-  my $get_sth = db::query($c, $sql, $effdate, $c->{username});
   my $alcinbody = 0;
   my $balctime = 0;
-  my $max = 0 ;
-  while ( my ($id, $eff, $stdrinks, $stamp) = $get_sth->fetchrow_array ) {
-    next unless $stdrinks;
-    my $drtime = $1 + $2/60 if ($stamp =~/ (\d?\d):(\d\d)/ ); # frac hrs
+  my $max = 0;
+  # Glasses are in DESC timestamp order; iterate from the back for chronological order
+  foreach my $rec ( reverse @$glasses ) {
+    my $stdrinks = $rec->{drinks};
+    next unless $stdrinks && $stdrinks > 0;
+    my $stamp = $rec->{stamp}; # 'stamp' alias set in both glassquery and bloodalc wrapper SQL
+    my $drtime = $1 + $2/60 if ($stamp =~ / (\d?\d):(\d\d)/ ); # frac hrs
     $drtime += 24 if ( $drtime < $balctime ); # past midnight
     my $timediff = $drtime - $balctime;
     $balctime = $drtime;
     $alcinbody -= $burnrate * $bodyweight * $timediff;
-    $alcinbody = 0 if ( $alcinbody < 0);
-    $alcinbody += $stdrinks * 12 ; # grams of alc in std drink
+    $alcinbody = 0 if ( $alcinbody < 0 );
+    $alcinbody += $stdrinks * 12; # grams of alc in std drink
     my $ba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
     $max = $ba if ( $ba > $max );
-    $bloodalc->{$id} = sprintf("%0.2f",$ba);
-    #print { $c->{log} } "BA:  '$id' '$stamp' : $ba \n";
+    $rec->{ba} = sprintf("%0.2f", $ba);
+    #print { $c->{log} } "BA:  '$rec->{id}' '$stamp' : $ba \n";
   }
-  $bloodalc->{max} = sprintf("%0.2f", $max );
-  #print { $c->{log} } "BA:  max:'$bloodalc->{max}' \n";
-  # Save final state so callers (and bloodalcnow) can compute transient 'now'
-  $bloodalc->{last_alcinbody} = $alcinbody;
-  $bloodalc->{last_balctime}  = $balctime;
-  $bloodalc->{bodyweight}    = $bodyweight;
-  $bloodalc->{burnrate}      = $burnrate;
+  $result->{max}            = sprintf("%0.2f", $max);
+  $result->{last_alcinbody} = $alcinbody;
+  $result->{last_balctime}  = $balctime;
+  $result->{bodyweight}     = $bodyweight;
+  $result->{burnrate}       = $burnrate;
+  return $result;
+} # bloodalc_compute
 
+# Thin wrapper: fetches glasses for an effdate, calls bloodalc_compute, caches result.
+# Also populates per-ID BA entries for backward compat with current oneday
+# (will be removed in Phase 2 when oneday uses $rec->{ba} directly).
+sub bloodalc {
+  my $c = shift;
+  my $effdate = shift; # effdate we are interested in
+  my $cache_key = "bloodalc:" . $c->{username} . ":" . $effdate;
+  my $cached = cache::get($c, $cache_key);
+  return $cached if $cached;
+  my $sql = q(
+    select
+      id as id,
+      stdrinks as drinks,
+      timestamp as stamp
+    from glasses
+    where strftime('%Y-%m-%d', timestamp, '-06:00') = ?
+      and username = ?
+      and stdrinks > 0
+      and volume > 0
+    order by timestamp desc
+  );
+  my $get_sth = db::query($c, $sql, $effdate, $c->{username});
+  my @glasses;
+  while ( my $row = $get_sth->fetchrow_hashref ) {
+    push @glasses, $row;
+  }
+  my $bloodalc = bloodalc_compute($c, \@glasses);
+  $bloodalc->{date} = $effdate;
   # Cache the computed bloodalc blob for this user+date
   cache::set($c, $cache_key, $bloodalc);
   return $bloodalc;
@@ -225,15 +235,13 @@ sub numbersline {
   # The ratings and comments are globally for that brew.
   my $c = shift;
   my $rec = shift;
-  my $bloodalc = shift;
   my $html = "";
   #$html .= "<span style='font-size: x-small;'>[$rec->{id}] </span>";
   $html .= "<b>".util::unit($rec->{vol},"c")."</b>";
   $html .= util::unit($rec->{price},",-");
   $html .= util::unit($rec->{alc},"%");
   $html .= util::unit($rec->{drinks},"d");
-  my $ba = $bloodalc->{ $rec->{id} } || "";
-  #print { $c->{log} } "'$rec->{id}' ba=$ba \n";
+  my $ba = $rec->{ba} || "";
   $html .= util::unit($ba,"/\x{2080}\x{2080}");
   if ( ! $rec->{generic} ) {  # No ratings or comments on generics like Beer,Mixed or House Red Wine
     $html .= comments::avgratings($c, $rec->{rating_count}, $rec->{average_rating}, $rec->{comment_count});
@@ -485,12 +493,27 @@ sub adjustment_form {
 
 sub oneday {
   my $c = shift;
-  my $rec = db::peekrow($c->{sth});
-  return "" unless ($rec);
+  return "" unless db::peekrow($c->{sth});
+
+  # Pass 1: collect all records for this day into @glasses
+  my $day_effdate = db::peekrow($c->{sth})->{effdate};
+  my @glasses;
+  while ( my $row = db::nextrow($c->{sth}) ) {
+    if ( $row->{effdate} ne $day_effdate ) {
+      db::pushback_row($c->{sth}, $row);
+      last;
+    }
+    push @glasses, $row;
+  }
+  return "" unless @glasses;
+
+  # Annotate each record with {ba} and get day max for sumline
+  my $balc = bloodalc_compute($c, \@glasses);
+
+  # Pass 2: render
   my $html = "";
-  my ($lhtml, $effdate, $loc, $locname,$weekday, $date ) = locationhead($c, $rec);
+  my ($lhtml, $effdate, $loc, $locname, $weekday, $date) = locationhead($c, $glasses[0]);
   $html .= $lhtml;
-  my $balc = bloodalc($c,$date);
   my $locdrsum = 0;  # drinks for the location
   my $locprsum = 0;  # price for the location
   my $locmaxba = 0;  # max blood alc for the location
@@ -500,12 +523,7 @@ sub oneday {
   my $current_adjustment = undef;  # Track adjustment glass for current location session
   my $current_adjustment_price = 0;  # Track adjustment amount
   my $last_glass_time = undef;  # Track time of last glass in location session
-  while ( $rec = db::nextrow($c->{sth}) ) {
-    #$html .= JSON->new->encode($rec) . "<br>";
-    if ( $rec->{effdate} ne $effdate ) {
-      db::pushback_row($c->{sth},$rec);
-      last;
-    }
+  foreach my $rec (@glasses) {
     #print { $c->{log} } "oneday: id='$rec->{id} l='$rec->{loc}' \n";
     if ( $rec->{loc} != $loc ) {
       my $loc_total_with_adj = $locprsum + $current_adjustment_price;
@@ -537,9 +555,9 @@ sub oneday {
     $last_glass_time = $rec->{time} if $rec->{time};
     $daydrsum += $rec->{drinks} if ($rec->{drinks});
     $locdrsum += $rec->{drinks} if ($rec->{drinks});
-    $locmaxba = $balc->{$rec->{id}} if $balc->{$rec->{id}} && $balc->{$rec->{id}} > $locmaxba;
+    $locmaxba = $rec->{ba} if $rec->{ba} && $rec->{ba} > $locmaxba;
     $html .= nameline($c, $rec, $loc, $locname);
-    $html .= numbersline($c,$rec,$balc);
+    $html .= numbersline($c, $rec);
     $html .= photoline($c,$rec);
     $html .= commentlines($c,$rec);
     $html .= buttonline($c,$rec);
