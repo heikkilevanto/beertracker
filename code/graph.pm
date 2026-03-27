@@ -86,13 +86,6 @@ sub oneday {
   my $today = shift;
   my $c = $g->{c};
   my $alc = "NaN";
-  if ( $g->{range} < 95 ) { # Over 3m we don't show them anyway.
-    my $bloodalc = mainlist::bloodalc($c,$day);
-    $alc = $bloodalc->{max} * 10 ; # scale to display
-    $alc = "NaN" if ($alc < 0.2 );
-    # TODO - Refactor the stepwise calculation into its own routine in mainlist,
-    # and use that wihtin in the loop below.
-  }
   $g->{sth}->execute( $c->{username}, $day );
   my $sum = 0;
   my $drinksline = ""; # Individual drinks
@@ -102,6 +95,11 @@ sub oneday {
       if ( ! $rec->{StDrinks}) ;
     $sum += $rec->{StDrinks};
     push (@drinks, $rec);
+  }
+  if ( $g->{range} < 95 ) { # Over 3m we don't show them anyway.
+    my $bloodalc = mainlist::bloodalc_compute($c, [reverse @drinks]); # @drinks is ASC; bloodalc_compute expects DESC
+    $alc = $bloodalc->{max} * 10; # scale to display
+    $alc = "NaN" if ($alc < 0.2);
   }
   my $top = $sum;
   my $cnt = 20;
@@ -171,6 +169,8 @@ sub makedatafile {
       Id,
       strftime('%Y-%m-%d', Timestamp, '-06:00') as EffDate,
       strftime('%H:%M', Timestamp, '-06:00' ) as Time,
+      Timestamp as stamp,
+      StDrinks as drinks,
       BrewType,
       SubType,
       StDrinks,
