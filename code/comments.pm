@@ -39,11 +39,13 @@ sub get_rating_class {
 
 ################################################################################
 # Display a comment on a single line
+# $flags: 0/undef = no extra info
+#   letter string: d=date, t=time, l=location, b=brew, p=persons(no-op), y=type badge
 ################################################################################
 sub commentline {
   my $c = shift;
   my $cr = shift; # The comment to display, from sql like one in listcomments
-  my $showtimestamp = shift || 0;
+  my $flags = shift || 0;
   my $glid = $cr->{Glass};
   my $s = "";
   $s .= "<a href='$c->{url}?o=Comment&e=$cr->{Id}'>" .
@@ -53,16 +55,41 @@ sub commentline {
   my $people = $cr->{PeopleNames} || $cr->{PersName} || "";
   $s .= "<b>$people:</b>\n" if $people;
   my $ctype = $cr->{CommentType} || '';
-  $s .= "<span style='font-size:xx-small; color:#bbb'>[$ctype]</span> \n"
-    if $ctype && $ctype ne 'brew';
-  if ($showtimestamp && $cr->{effdate}) {
-    my $date = substr($cr->{effdate}, 0, 10);
-    $s .= "<span style='font-size:xx-small; color:#bbb'>$date</span>";
-    if ($cr->{loc} && $cr->{locname}) {
-      $s .= " <a href='$c->{url}?o=Location&e=$cr->{loc}'>" .
-            "<span style='font-size:xx-small'>\@$cr->{locname}</span></a>";
+  # Type badge: shown when no flags or when 'y' flag present
+  if ($ctype && $ctype ne 'brew') {
+    if (!$flags || index($flags, 'y') >= 0) {
+      $s .= "<span style='font-size:xx-small; color:#bbb'>[$ctype]</span> \n";
     }
-    $s .= "<br/>\n" if $cr->{Comment};
+  }
+  if ($flags) {
+    # Letter-based flags: build extra info line
+    my $extra = "";
+    if (index($flags, 'd') >= 0 && $cr->{effdate}) {
+      my $date = substr($cr->{effdate}, 0, 10);
+      $extra .= "<span style='font-size:xx-small; color:#bbb'>$date</span>";
+    }
+    if (index($flags, 't') >= 0 && $cr->{time}) {
+      $extra .= " " if $extra;
+      $extra .= "<span style='font-size:xx-small; color:#bbb'>$cr->{time}</span>";
+    }
+    if (index($flags, 'l') >= 0 && $cr->{loc} && $cr->{locname}) {
+      $extra .= " " if $extra;
+      $extra .= "<a href='$c->{url}?o=Location&e=$cr->{loc}'>" .
+                "<span style='font-size:xx-small'>\@$cr->{locname}</span></a>";
+    }
+    if (index($flags, 'b') >= 0 && $cr->{brewname}) {
+      $extra .= " " if $extra;
+      if ($cr->{Brew}) {
+        $extra .= "<a href='$c->{url}?o=Brew&e=$cr->{Brew}'>" .
+                  "<span style='font-size:xx-small'>$cr->{brewname}</span></a>";
+      } else {
+        $extra .= "<span style='font-size:xx-small; color:#bbb'>$cr->{brewname}</span>";
+      }
+    }
+    if ($extra) {
+      $s .= $extra;
+      $s .= "<br/>\n" if $cr->{Comment};
+    }
   }
   $s .= "&nbsp;&nbsp;<i>$cr->{Comment} </i>\n" if ( $cr->{Comment} );
   $s .= photos::thumbnails_html($c, 'Comment', $cr->{Id}) if $cr->{Id};
@@ -438,12 +465,12 @@ JSEND
 # Render one group of sibling comments (private helper)
 ################################################################################
 sub _sibling_section {
-  my ($c, $com, $label, $sql, @params) = @_;
+  my ($c, $com, $label, $flags, $sql, @params) = @_;
   my $sth = db::query($c, $sql, @params);
   my @rows;
   while (my $cr = $sth->fetchrow_hashref) {
     next if $com->{Id} && $cr->{Id} == $com->{Id};  # exclude current comment
-    push @rows, commentline($c, $cr, 1);  # 1 = show date and location
+    push @rows, commentline($c, $cr, $flags);
   }
   return "" unless @rows;
   my $s = "<hr style='border-color:#444; margin:0.5em 0'>\n";
@@ -482,14 +509,17 @@ sub sibling_comments_html {
        WHERE g.Id = ?", $glassid);
     my $ctx = $effdate || "this session";
     $ctx .= " \@$locname" if $locname;
-    $s .= _sibling_section($c, $com, "Other comments on $ctx:",
+    $s .= _sibling_section($c, $com, "Other comments on $ctx:", "bty",
       q{SELECT c.*,
           group_concat(p.Name, ', ') as PeopleNames,
           strftime('%Y-%m-%d', g.Timestamp, '-06:00') AS effdate,
-          gl.Id AS loc, gl.Name AS locname
+          strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
+          gl.Id AS loc, gl.Name AS locname,
+          br.Name AS brewname
         FROM comments c
         LEFT JOIN glasses g ON g.Id = c.Glass
         LEFT JOIN locations gl ON gl.Id = g.Location
+        LEFT JOIN brews br ON br.Id = c.Brew
         LEFT JOIN comment_persons cp ON cp.Comment = c.Id
         LEFT JOIN persons p ON p.Id = cp.Person
         WHERE c.Glass = ?
@@ -510,16 +540,19 @@ sub sibling_comments_html {
       $c->{username}, $c->{username}, $brew_id);
     my $label = "Comments on " . ($brewname || "brew $brew_id") . ":";
     $label .= " " . avgratings($c, $cnt, $avg, undef) if $avg;
-    $s .= _sibling_section($c, $com, $label,
+    $s .= _sibling_section($c, $com, $label, "dlty",
       q{SELECT c.*,
           group_concat(p.Name, ', ') as PeopleNames,
           strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
+          strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
           COALESCE(comloc.Id, glassloc.Id) AS loc,
-          COALESCE(comloc.Name, glassloc.Name) AS locname
+          COALESCE(comloc.Name, glassloc.Name) AS locname,
+          br.Name AS brewname
         FROM comments c
         LEFT JOIN glasses g ON g.Id = c.Glass
         LEFT JOIN locations glassloc ON glassloc.Id = g.Location
         LEFT JOIN locations comloc ON comloc.Id = c.Location
+        LEFT JOIN brews br ON br.Id = c.Brew
         LEFT JOIN comment_persons cp ON cp.Comment = c.Id
         LEFT JOIN persons p ON p.Id = cp.Person
         WHERE c.Brew = ? AND c.CommentType = 'brew'
@@ -536,16 +569,19 @@ sub sibling_comments_html {
         WHERE cp.Comment = ? ORDER BY p.Name},
       $com->{Id});
     while (my ($pid, $pname) = $psth->fetchrow_array) {
-      $s .= _sibling_section($c, $com, "Comments on $pname:",
+      $s .= _sibling_section($c, $com, "Comments on $pname:", "dltby",
         q{SELECT c.*,
             group_concat(p2.Name, ', ') as PeopleNames,
             strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
+            strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
             COALESCE(comloc.Id, glassloc.Id) AS loc,
-            COALESCE(comloc.Name, glassloc.Name) AS locname
+            COALESCE(comloc.Name, glassloc.Name) AS locname,
+            br.Name AS brewname
           FROM comments c
           LEFT JOIN glasses g ON g.Id = c.Glass
           LEFT JOIN locations glassloc ON glassloc.Id = g.Location
           LEFT JOIN locations comloc ON comloc.Id = c.Location
+          LEFT JOIN brews br ON br.Id = c.Brew
           LEFT JOIN comment_persons cp2 ON cp2.Comment = c.Id
           LEFT JOIN persons p2 ON p2.Id = cp2.Person
           WHERE EXISTS (SELECT 1 FROM comment_persons cp3
@@ -561,16 +597,19 @@ sub sibling_comments_html {
   if ($loc_id) {
     my ($locname) = db::queryarray($c,
       "SELECT Name FROM locations WHERE Id = ?", $loc_id);
-    $s .= _sibling_section($c, $com, "Comments at " . ($locname || "this location") . ":",
+    $s .= _sibling_section($c, $com, "Comments at " . ($locname || "this location") . ":", "dtby",
       q{SELECT c.*,
           group_concat(p.Name, ', ') as PeopleNames,
           strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
+          strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
           COALESCE(comloc.Id, glassloc.Id) AS loc,
-          COALESCE(comloc.Name, glassloc.Name) AS locname
+          COALESCE(comloc.Name, glassloc.Name) AS locname,
+          br.Name AS brewname
         FROM comments c
         LEFT JOIN glasses g ON g.Id = c.Glass
         LEFT JOIN locations glassloc ON glassloc.Id = g.Location
         LEFT JOIN locations comloc ON comloc.Id = c.Location
+        LEFT JOIN brews br ON br.Id = c.Brew
         LEFT JOIN comment_persons cp ON cp.Comment = c.Id
         LEFT JOIN persons p ON p.Id = cp.Person
         WHERE c.Location = ? AND c.CommentType = 'location'

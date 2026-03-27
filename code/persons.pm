@@ -69,7 +69,7 @@ sub showpersondetails {
       mainlist::locationhead($c,$rec);
       mainlist::nameline($c,$rec);
     }
-    print comments::commentline($c, $rec, 1), "<br/>\n";
+    print comments::commentline($c, $rec, "dlty"), "<br/>\n";
   }
 
 } # showpersondetails
