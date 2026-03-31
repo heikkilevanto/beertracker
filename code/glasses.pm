@@ -26,7 +26,8 @@ our %volumes = ( # Comment is displayed on the About page
 # Helper to decide if a glass is "empty"
 # Canonical list: all empty glass types live here
 ################################################################################
-my @empty_types = qw(Restaurant Night Meal);
+my @empty_types = qw(Night Meal Restaurant );
+  # Night first, as it is most likely to be used on main list day summary line.
 
 sub isemptyglass {
   my $type = shift;
