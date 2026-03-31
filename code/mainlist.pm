@@ -404,14 +404,14 @@ sub adjustment_form {
     $html .= qq{<div id='adjform_$form_id' style='display:none;'>
     <form method='POST' style='display:inline; margin-left:1em;'>
       <span style='font-size:small;'>Adjustment: ${sign}${current_adjustment_price}.-</span>
-      <input type='hidden' name='o' value='Glass'/>
+      <input type='hidden' name='o' value='Graph'/>
       <input type='hidden' name='submit' value='Del'/>
       <input type='hidden' name='e' value='$current_adjustment'/>
       <button type='submit' style='font-size:small;'>Delete ±</button>
     </form>
     <br/>
     <form method='POST' style='display:inline; margin-left:1em;' accept-charset='UTF-8'>
-      <input type='hidden' name='o' value='Glass'/>
+      <input type='hidden' name='o' value='Graph'/>
       <input type='hidden' name='submit' value='Insert'/>
       <input type='hidden' name='Location' value='$locationid'/>
       <input type='hidden' name='date' value='$date'/>
@@ -438,7 +438,7 @@ sub adjustment_form {
     <form method='POST' style='display:inline; margin-left:1em;' onsubmit='return updateAdjustment_$form_id();'>
       <span style='font-size:small;'>Expected: ${locprsum}.-, Paid:</span>
       <input name='actualpaid' id='actualpaid_$form_id' size='4' required style='font-size:small;'/>
-      <input type='hidden' name='o' value='Glass'/>
+      <input type='hidden' name='o' value='Graph'/>
       <input type='hidden' name='submit' value='Insert'/>
       <input type='hidden' name='Location' value='$locationid'/>
       <input type='hidden' name='Brew' value='$adjustment_brew_id'/>
@@ -455,7 +455,7 @@ sub adjustment_form {
     </form>
     <br/>
     <form method='POST' style='display:inline; margin-left:1em;' accept-charset='UTF-8'>
-      <input type='hidden' name='o' value='Glass'/>
+      <input type='hidden' name='o' value='Graph'/>
       <input type='hidden' name='submit' value='Insert'/>
       <input type='hidden' name='Location' value='$locationid'/>
       <input type='hidden' name='date' value='$date'/>
