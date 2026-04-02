@@ -26,9 +26,9 @@ sub yearline {
   $price  = util::unit( sprintf( "%6d",   $price ),  ".-" ) || "";
   $drinks = util::unit( sprintf( "%7.1f", $drinks ), "d" ) if ($drinks);
   $visits = sprintf( "%4d", $visits ) if ($visits);
-  $s .= "<td align='right'>&nbsp; $price &nbsp; </td>";
-  $s .= "<td align='right'> &nbsp; $drinks  &nbsp; </td>";
-  $s .= "<td align='right'> &nbsp; $visits  &nbsp; </td>";
+  $s .= "<td class='num'>&nbsp; $price &nbsp; </td>";
+  $s .= "<td class='num'> &nbsp; $drinks  &nbsp; </td>";
+  $s .= "<td class='num'> &nbsp; $visits  &nbsp; </td>";
   $s .= "<td> &nbsp; $name </td>";
   $s .= "</tr>\n";
   return $s;
@@ -98,9 +98,9 @@ sub yearsummary {
     my $yrlink =
       "<a href='$c->{url}?o=$c->{op}&q=$y&maxl=20'><span>$y</span></a>";
     print "<tr><td colspan='4'><br/>Year <b>$yrlink</b> $sofar</td></tr>\n";
-    print "<tr><td align='right'>Kroner &nbsp;</td>"
-      . "<td align='right'>Drinks &nbsp;</td>"
-      . "<td align='right'>Visits&nbsp;</td><td></td></tr>\n";
+    print "<tr><td class='num'>Kroner &nbsp;</td>"
+      . "<td class='num'>Drinks &nbsp;</td>"
+      . "<td class='num'>Visits&nbsp;</td><td></td></tr>\n";
     $sth->execute( "$y", $c->{username} );
     my $ln = $nlines;
 
