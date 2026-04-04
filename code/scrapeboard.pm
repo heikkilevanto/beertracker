@@ -119,6 +119,7 @@ sub updateboard {
       $inserted_brews++;
       print { $c->{log} } "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";
     }
+    $e->{brew_id} = $brew_id;
   }
 
   print { $c->{log} } "updateboard: $existing_brews brews already existed, $inserted_brews inserted\n";
@@ -126,22 +127,6 @@ sub updateboard {
   # Get location ID
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
   my $loc_id = $loc_rec->{Id};
-
-  # Add brew_id to each beer and save updated JSON
-  my $cachefile = $c->{datadir} . $scrapers{$locparam};
-  $cachefile =~ s/\.pl/.cache/;
-  foreach my $e (@$beerlist) {
-    my $maker = $e->{maker} || "";
-    my $beer = $e->{beer} || "";
-    if ($maker && $beer) {
-      my $prod_rec = db::findrecord($c, "LOCATIONS", "Name", $maker, "collate nocase");
-      if ($prod_rec) {
-        my $sql = "SELECT Id FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
-          my ($brew_id) = db::queryarray($c, $sql, $beer, $prod_rec->{Id});
-        $e->{brew_id} = $brew_id;
-      }
-    }
-  }
 
   # Update taps
   taps::update_taps($c, $loc_id, $beerlist);
