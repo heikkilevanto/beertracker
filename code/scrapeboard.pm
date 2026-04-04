@@ -53,7 +53,17 @@ sub updateboard {
 
   print { $c->{log} } "updateboard: Scraped " . scalar(@$beerlist) . " beers for $locparam\n";
 
-  my $existing_brews = 0;
+  # Get location ID
+  my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
+  my $loc_id = $loc_rec->{Id};
+
+  # Fetch current board upfront: tap_num -> { Brew, BrewName, Producer }
+  my %current_board;
+  my $cur_sth = db::query($c, "SELECT Tap, Brew, BrewName, Producer FROM current_taps WHERE Location = ?", $loc_id);
+  while (my $row = $cur_sth->fetchrow_hashref) {
+    $current_board{$row->{Tap}} = $row;
+  }
+
   my $inserted_brews = 0;
 
   foreach my $e (@$beerlist) {
@@ -61,10 +71,18 @@ sub updateboard {
     my $beer = $e->{beer} || "";
     my $style = $e->{type} || "";
     my $alc = $e->{alc} || "";
+    my $tap_num = $e->{id};
 
     next unless $maker && $beer;  # Skip incomplete entries
 
-    # Ensure producer exists
+    # Check if this tap is unchanged - reuse brew_id without any DB lookups
+    my $cur = $current_board{$tap_num};
+    if ($cur && ($cur->{BrewName} // '') eq $beer && ($cur->{Producer} // '') eq $maker) {
+      $e->{brew_id} = $cur->{Brew};
+      next;
+    }
+
+    # Tap is new or changed - ensure producer exists
     my $prod_rec = db::findrecord($c, "LOCATIONS", "Name", $maker, "collate nocase");
     my $prod_id;
     if ($prod_rec) {
@@ -78,43 +96,21 @@ sub updateboard {
     }
 
     # Ensure brew exists
-    my $sql_check = "SELECT Id, DefPrice, DefVol FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
-    my ($brew_id, $current_defprice, $current_defvol) = db::queryarray($c, $sql_check, $beer, $prod_id);
+    my $sql_check = "SELECT Id FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
+    my ($brew_id) = db::queryarray($c, $sql_check, $beer, $prod_id);
 
-    # Compute defprice and defvol from scraped data
-    my $defprice;
-    my $defvol;
-    if ($e->{sizePrice} && ref($e->{sizePrice}) eq 'ARRAY') {
-      my @sizes = sort { $a->{vol} <=> $b->{vol} } @{$e->{sizePrice}};
-      my $count = scalar @sizes;
-      if ($count >= 1) {
-        my $def_index = ($count == 1) ? 0 : 1;
-        $defvol = $sizes[$def_index]->{vol};
-        $defprice = $sizes[$def_index]->{price};
-      }
-    }
-
-    if ($brew_id) {
-      $existing_brews++;
-      # Update DefPrice/DefVol if different
-      if ( ($current_defprice // '') ne ($defprice // '') ||
-           ($current_defvol // '') ne ($defvol // '') ) {
-        my $sql_update = "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?";
-        db::execute($c, $sql_update, $defprice, $defvol, $brew_id);
-        print { $c->{log} } "updateboard: Updated brew '$brew_id' DefPrice to '$defprice', DefVol to '$defvol'\n";
-      }
-    } else {
+    if (!$brew_id) {
       # Insert new brew
       my $short_style = styles::shortbeerstyle($style);
-      # Extract year from beer name if present 
+      # Extract year from beer name if present
       my $year = undef;
       if ($beer =~ /(20[23][0-9])/) {
         $year = $1;
       }
-      my $sql = "INSERT INTO BREWS ".
-        "(Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation, DefPrice, DefVol, Year) " .
-        "VALUES (?, 'Beer', ?, ?, ?, ?, ?, ?, ?)";
-      db::execute($c, $sql, $beer, $short_style, $style, $alc, $prod_id, $defprice, $defvol, $year);
+      my $sql = "INSERT INTO BREWS " .
+        "(Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation, Year) " .
+        "VALUES (?, 'Beer', ?, ?, ?, ?, ?)";
+      db::execute($c, $sql, $beer, $short_style, $style, $alc, $prod_id, $year);
       $brew_id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef);
       $inserted_brews++;
       print { $c->{log} } "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";
@@ -122,11 +118,7 @@ sub updateboard {
     $e->{brew_id} = $brew_id;
   }
 
-  print { $c->{log} } "updateboard: $existing_brews brews already existed, $inserted_brews inserted\n";
-
-  # Get location ID
-  my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
-  my $loc_id = $loc_rec->{Id};
+  print { $c->{log} } "updateboard: $inserted_brews new brews inserted\n" if $inserted_brews;
 
   # Update taps
   taps::update_taps($c, $loc_id, $beerlist);

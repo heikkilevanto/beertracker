@@ -19,12 +19,29 @@ sub update_taps {
   my $now = util::now();
   my %scraped_taps;
 
+  # Fetch all current active taps for this location upfront
+  my %current;
+  my $cur_sth = db::query($c, "SELECT Tap, Brew, Id FROM current_taps WHERE Location = ?", $location_id);
+  while (my $row = $cur_sth->fetchrow_hashref) {
+    $current{$row->{Tap}} = $row;
+  }
+
   foreach my $tap (@$beerlist) {
     next unless $tap->{brew_id};
     my $tap_num = $tap->{id};
     $scraped_taps{$tap_num} = 1;
 
-    # Prepare size/price data
+    my $cur = $current{$tap_num};
+    if ($cur && $cur->{Brew} == $tap->{brew_id}) {
+      next;  # Brew unchanged - LastSeen updated below
+    }
+
+    # Close old tap if brew has changed
+    if ($cur) {
+      db::execute($c, "UPDATE tap_beers SET Gone = ? WHERE Id = ?", $now, $cur->{Id});
+    }
+
+    # Insert tap (new or changed)
     my @sizes = sort { ($a->{vol} || 0) <=> ($b->{vol} || 0) } @{$tap->{sizePrice} || []};
     my ($sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
     if (@sizes >= 1) {
@@ -41,51 +58,17 @@ sub update_taps {
       $priceL = $sizes[2]->{price};
     }
 
-    # Check current active tap
-    my $sql = "SELECT * FROM current_taps WHERE Location = ? AND Tap = ?";
-    my $sth = db::query($c, $sql, $location_id, $tap_num);
-    my $current = $sth->fetchrow_hashref;
-
-    if ($current) {
-      if ($current->{Brew} == $tap->{brew_id}) {
-        # Brew unchanged; update prices if they changed
-        if ( ($current->{SizeS} // 0) != ($sizeS // 0) ||
-             ($current->{PriceS} // 0) != ($priceS // 0) ||
-             ($current->{SizeM} // 0) != ($sizeM // 0) ||
-             ($current->{PriceM} // 0) != ($priceM // 0) ||
-             ($current->{SizeL} // 0) != ($sizeL // 0) ||
-             ($current->{PriceL} // 0) != ($priceL // 0) ) {
-          my $price_sql = "UPDATE tap_beers SET SizeS=?, PriceS=?, SizeM=?, PriceM=?, SizeL=?, PriceL=? WHERE Id=?";
-          db::execute($c, $price_sql, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL, $current->{Id});
-          print { $c->{log} } "taps: Updated prices for tap $tap_num at location $location_id\n";
-        }
-      } else {
-        # Close old tap
-        my $close_sql = "UPDATE tap_beers SET Gone = ? WHERE Id = ?";
-        db::execute($c, $close_sql, $now, $current->{Id});
-        #print { $c->{log} } "taps: Closed tap $tap_num at location $location_id\n";
-
-        # Insert new tap
-        my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        db::execute($c, $insert_sql, $location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
-        print { $c->{log} } "taps: Closed and opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
-      }
-    } else {
-      # Insert new tap
-      my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-      db::execute($c, $insert_sql, $location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
-      print { $c->{log} } "taps: Opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
-    }
+    my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    db::execute($c, $insert_sql, $location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
+    my $action = $cur ? "Closed and opened" : "Opened";
+    print { $c->{log} } "taps: $action tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
   }
 
-  # Close missing taps
-  my $missing_sql = "SELECT Tap, Id FROM current_taps WHERE Location = ?";
-  my $missing_sth = db::query($c, $missing_sql, $location_id);
-  while (my $row = $missing_sth->fetchrow_hashref) {
-    next if $scraped_taps{$row->{Tap}};
-    my $close_sql = "UPDATE tap_beers SET Gone = ? WHERE Id = ?";
-    db::execute($c, $close_sql, $now, $row->{Id});
-    print { $c->{log} } "taps: Closed tap $row->{Tap} (not scraped) at location $location_id\n";
+  # Close taps that were not in the scraped list
+  foreach my $tap_num (keys %current) {
+    next if $scraped_taps{$tap_num};
+    db::execute($c, "UPDATE tap_beers SET Gone = ? WHERE Id = ?", $now, $current{$tap_num}{Id});
+    print { $c->{log} } "taps: Closed tap $tap_num (not scraped) at location $location_id\n";
   }
 
   # Update LastSeen for active taps
