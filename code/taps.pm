@@ -53,12 +53,12 @@ sub update_taps {
         # Close old tap
         my $close_sql = "UPDATE tap_beers SET Gone = ? WHERE Id = ?";
         db::execute($c, $close_sql, $now, $current->{Id});
-        print { $c->{log} } "taps: Closed tap $tap_num at location $location_id\n";
+        #print { $c->{log} } "taps: Closed tap $tap_num at location $location_id\n";
 
         # Insert new tap
         my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         db::execute($c, $insert_sql, $location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
-        print { $c->{log} } "taps: Opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
+        print { $c->{log} } "taps: Closed and opened tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
       }
     } else {
       # Insert new tap
@@ -81,12 +81,12 @@ sub update_taps {
   # Update LastSeen for active taps
   my $update_sql = "UPDATE tap_beers SET LastSeen = ? WHERE Location = ? AND Gone IS NULL";
   db::execute($c, $update_sql, $now, $location_id);
-  print { $c->{log} } "taps: Updated LastSeen for active taps at location $location_id\n";
+  #print { $c->{log} } "taps: Updated LastSeen for active taps at location $location_id\n";
 
   # Add scrape marker 
   my $marker_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, NULL, NULL, ?, ?)";
   db::execute($c, $marker_sql, $location_id, $now, $now);
-  print { $c->{log} } "taps: Added scrape marker for location $location_id\n";
+  #print { $c->{log} } "taps: Added scrape marker for location $location_id\n";
 } # update_taps
 
 ################################################################################
