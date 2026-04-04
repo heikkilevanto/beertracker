@@ -57,9 +57,9 @@ sub updateboard {
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
   my $loc_id = $loc_rec->{Id};
 
-  # Fetch current board upfront: tap_num -> { Brew, BrewName, Producer }
+  # Fetch current board upfront: tap_num -> { Id, Brew, BrewName, Producer }
   my %current_board;
-  my $cur_sth = db::query($c, "SELECT Tap, Brew, BrewName, Producer FROM current_taps WHERE Location = ?", $loc_id);
+  my $cur_sth = db::query($c, "SELECT Tap, Brew, Id, BrewName, Producer FROM current_taps WHERE Location = ?", $loc_id);
   while (my $row = $cur_sth->fetchrow_hashref) {
     $current_board{$row->{Tap}} = $row;
   }
@@ -121,7 +121,7 @@ sub updateboard {
   print { $c->{log} } "updateboard: $inserted_brews new brews inserted\n" if $inserted_brews;
 
   # Update taps
-  taps::update_taps($c, $loc_id, $beerlist);
+  taps::update_taps($c, $loc_id, $beerlist, \%current_board);
 
   # Redirect back to showing the board, for this location
   $c->{redirect_url} = "$c->{url}?o=Board&loc=" . uri_escape_utf8($locparam);

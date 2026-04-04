@@ -15,15 +15,20 @@ sub update_taps {
   my $c = shift;
   my $location_id = shift;
   my $beerlist = shift;
+  my $current_ref = shift;  # Pre-fetched current board from scrapeboard.pm
 
   my $now = util::now();
   my %scraped_taps;
 
-  # Fetch all current active taps for this location upfront
+  # Use pre-fetched current taps if provided, otherwise fetch here
   my %current;
-  my $cur_sth = db::query($c, "SELECT Tap, Brew, Id FROM current_taps WHERE Location = ?", $location_id);
-  while (my $row = $cur_sth->fetchrow_hashref) {
-    $current{$row->{Tap}} = $row;
+  if ($current_ref) {
+    %current = %$current_ref;
+  } else {
+    my $cur_sth = db::query($c, "SELECT Tap, Brew, Id FROM current_taps WHERE Location = ?", $location_id);
+    while (my $row = $cur_sth->fetchrow_hashref) {
+      $current{$row->{Tap}} = $row;
+    }
   }
 
   foreach my $tap (@$beerlist) {
