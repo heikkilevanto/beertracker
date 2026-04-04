@@ -3,11 +3,8 @@
 package aboutpage;
 use strict;
 use warnings;
-
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
-
-
 
 # Helper to make a link on the about page
 # These links should have the URL visible
@@ -37,7 +34,7 @@ sub about {
   my $c = shift;
 
   print "<h2>Beertracker</h2>\n";
-  print "Copyright 2016-2025 Heikki Levanto. <br/>";
+  print "Copyright 2016-2026 Heikki Levanto. <br/>";
   print "Beertracker is my little script to help me remember all the beers I meet.\n";
   print "It is Open Source (GPL v2)\n";
   print "<hr/>";
@@ -93,11 +90,7 @@ sub about {
   print "No third-party cookies or trackers of any kind. <br/>\n";
   print "It collects no personally identifiable information beyond what you enter.<br/>\n";
   print "No information is shared with any third parties. <p>\n";
-
-
-
 } # About
-
 
 ################################################################################
 # Report module loaded ok

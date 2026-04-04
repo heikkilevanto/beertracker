@@ -4,6 +4,7 @@ Simple script to track the beers I drink
 Goals for this project:
  - Help me remember what beers I have been drinking, and how I liked them
  - Keep track of money and alcohol consumption
+ - Coding and using AI just for the fun of it
 
 What this is not
  - Cloud based - I want to host it myself
@@ -43,13 +44,11 @@ You need to set up a .htpasswd to protect the main directory. First time with
 `htpasswd -c .htpasswd username`. For later users, do *not* include the `-c`.
 
 You also need to make a directory under it called beerdata, and create a
-sqlite database with some basic data. There is no script for doing that yet.
-
+sqlite database with some basic data. There is no script for doing that (yet).
 
 Point your browser to beerdata. You should see a dark input form. If not, check
 /var/log/apache2/error.log. If you do, enter a test beer or two, and look at
 the lists.
-
 
 ## Problems
 If you are just starting, I may be willing to help with technical issues, especially
@@ -61,11 +60,7 @@ If you run into bugs and real problems, please file them as issues on GitHub, at
 https://github.com/heikkilevanto/beertracker/issues. Even better, if you can fix it
 yourself, file a pull request.
 
-
-
 ## See also
  - The [User Manual](./doc/manual.md) (Badly out of date!)
  - The [Design Document](./doc/design.md) (Not at all ready!)
  - The [Source Code](https://github.com/heikkilevanto/beertracker)
-
-
