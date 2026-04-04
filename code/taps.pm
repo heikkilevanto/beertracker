@@ -48,7 +48,17 @@ sub update_taps {
 
     if ($current) {
       if ($current->{Brew} == $tap->{brew_id}) {
-        #print { $c->{log} } "taps: Tap $tap_num beer unchanged\n";
+        # Brew unchanged; update prices if they changed
+        if ( ($current->{SizeS} // 0) != ($sizeS // 0) ||
+             ($current->{PriceS} // 0) != ($priceS // 0) ||
+             ($current->{SizeM} // 0) != ($sizeM // 0) ||
+             ($current->{PriceM} // 0) != ($priceM // 0) ||
+             ($current->{SizeL} // 0) != ($sizeL // 0) ||
+             ($current->{PriceL} // 0) != ($priceL // 0) ) {
+          my $price_sql = "UPDATE tap_beers SET SizeS=?, PriceS=?, SizeM=?, PriceM=?, SizeL=?, PriceL=? WHERE Id=?";
+          db::execute($c, $price_sql, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL, $current->{Id});
+          print { $c->{log} } "taps: Updated prices for tap $tap_num at location $location_id\n";
+        }
       } else {
         # Close old tap
         my $close_sql = "UPDATE tap_beers SET Gone = ? WHERE Id = ?";
