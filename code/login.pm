@@ -32,6 +32,7 @@ my $SECRET_FILE       = "/etc/lsd/login.secret";
 my $COOKIE_NAME       = "lsd_login";
 my $COOKIE_MAX_AGE    = 14 * 86400;  # 14 days in seconds
 my $REALM             = "Lsd";          # shown in Basic Auth browser prompt
+my $LOCALHOST_USER    = "heikki";       # username for unauthenticated requests from 127.0.0.1
 
 ################################################################################
 # Public functions
@@ -81,7 +82,12 @@ sub authenticate {
     }
   }
 
-  # Nothing worked — either allow anonymous access or send 401 and return
+  # Nothing worked — check for localhost fallback, then allow anon or send 401
+  if ($ENV{REMOTE_ADDR} && $ENV{REMOTE_ADDR} eq "127.0.0.1") {
+    warn "login: no credentials, accepting localhost request as '$LOCALHOST_USER'\n";
+    $c->{username} = $LOCALHOST_USER;
+    return;
+  }
   if ($allow_anon) {
     $c->{username} = "";
     return;

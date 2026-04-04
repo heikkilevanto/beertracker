@@ -14,11 +14,10 @@ use URI::Escape qw(uri_escape_utf8);
 our %scrapers;
 $scrapers{"Ølbaren"} = "oelbaren.pl";
 $scrapers{"Taphouse"} = "taphouse.pl";
-$scrapers{"Fermentoren"} = "fermentoren.pl";
 $scrapers{"Brus"} = "brus.pl";
+# These use untappd for showing their board, which is nasty to scrape.
+#$scrapers{"Fermentoren"} = "fermentoren.pl";
 #$scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
-# Ølsnedkerens web site is broken, does not show a beer list at all
-# See #368
 
 ################################################################################
 # Update board: scrape and ensure brews/producers exist in DB
@@ -27,7 +26,7 @@ $scrapers{"Brus"} = "brus.pl";
 sub updateboard {
   my $c = shift;
 
-  my ($locparam, undef) = beerboard::get_location_param($c);
+  my $locparam = util::param($c,"loc");
   
   if (!$scrapers{$locparam}) {
     print { $c->{log} } "updateboard: No scraper for '$locparam'\n";
