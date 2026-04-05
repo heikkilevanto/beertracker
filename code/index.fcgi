@@ -96,6 +96,22 @@ require "./code/login.pm";  # Cookie-based authentication
 my $workdir = cwd();
 my $devversion = 0;  # Changes a few display details if on the development version
 $devversion = 1 if ( $workdir =~ /-dev|-old/ );
+my $git_branch = "";
+my $git_dirty = 0;
+if ( $devversion ) {
+  # Read branch from .git/HEAD directly - no git command needed
+  my $headfile = "$workdir/.git/HEAD";
+  if ( open my $fh, '<', $headfile ) {
+    my $head = <$fh>;
+    close $fh;
+    $git_branch = $1 if $head =~ m{ref: refs/heads/(.+)};
+    chomp $git_branch;
+  }
+  # git status -uno is in sudoers for www-data
+  my $cdcmd = "cd " . quotemeta($workdir) . " && ";
+  my $gitstatus = `$cdcmd sudo -u heikki /usr/bin/git status -uno 2>/dev/null`;
+  $git_dirty = ($gitstatus !~ /nothing to commit/) ? 1 : 0;
+}
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.  RrGgBb
@@ -137,7 +153,7 @@ my $mtime0    = (stat($0))[9];
 my $mtime_ver = (stat("code/VERSION.pm"))[9];
 
 { my $now = localtime;
-  my $dev_info = $devversion ? " DEV" : " PROD";
+  my $dev_info = $devversion ? " DEV branch=$git_branch dirty=$git_dirty" : " PROD";
   print { $log } "\n" . $now->ymd . " " . $now->hms . " fcgi startup pid=$$ $dev_info \n";
 }
 
@@ -216,6 +232,8 @@ my $c = {
   'bgcolor'  => $bgcolor,
   'altbgcolor'  => $altbgcolor,
   'devversion' => $devversion,
+  'branch'   => $git_branch,
+  'git_dirty' => $git_dirty,
   'mobile'   => $mobile,
   'log'      => $log,
   'cache'    => $cache,

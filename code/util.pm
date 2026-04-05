@@ -327,11 +327,31 @@ sub topline {
   $s .= showmenu($c);
   my $name = "Beertracker";
   if ( $c->{devversion} ) {
-    $name =~ s/tracker/-DEV/;
+    my $branch = $c->{branch} || "";
+    my $label = "DEV";
+    if ( $branch && $branch ne "master" ) {
+      if ( $branch =~ /(\d+)/ ) {
+        $label = "#$1";
+      } else {
+        (my $last = $branch) =~ s{.*/}{}; # last path component
+        my @skip = map { $_ => 1 } qw(analyze fix add update show make get set
+          create implement refactor improve enhance beer beertracker the a);
+        my %skip = @skip;
+        my @words = split /-/, $last;
+        my ($word) = grep { !$skip{$_} } @words;
+        $label = $word || $words[-1] || "DEV";
+      }
+    }
+    if ( $label eq "DEV" ) {
+      $name =~ s/tracker/-DEV/;
+    } else {
+      $name = "#$label";
+    }
   }
   $s .= $name;
   my $v = Version::version_info();
-  my $vertext = $v->{tag} . "+" . $v->{commits} . ( $v->{dirty} ? "+" : "" );
+  my $vertext = $v->{tag} . "+" . $v->{commits};
+  $vertext .= "*" if $c->{git_dirty};
   my $reload_url = $c->{url} . "?o=$c->{op}&reload=1";
   $s .= "&nbsp;<a href='$reload_url'><span>$vertext</span></a>&nbsp;";
 
