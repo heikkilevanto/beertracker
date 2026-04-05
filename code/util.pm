@@ -209,30 +209,32 @@ sub error {
   die $msg;
 }
 
-# Helper to get version info
-# Takes a relative dir path, defaults to the current one
-# A bit tricky code, but seems to work
+# Helper to get version info from another git working directory.
+# Takes a relative dir path (e.g. "../beertracker" or "../beertracker-dev").
+# Runs git commands in that directory and returns a hash-ref with the same
+# fields as Version::version_info() in index.fcgi.
 sub getversioninfo {
-    my ($file, $namespace) = @_;
-    $file = "$file/code/VERSION.pm";
-    $namespace ||= 'VersionTemp' . int(rand(1000000));
+    my ($dir) = @_;
+    my $tag    = _gitcmd( $dir, 'describe', '--tags', '--abbrev=0' ) || 'v0.0.0';
+    my $count  = _gitcmd( $dir, 'rev-list', "$tag..HEAD", '--count' ) || '0';
+    my $commit = _gitcmd( $dir, 'rev-parse', '--short', 'HEAD' ) || 'unknown';
+    my $branch = _gitcmd( $dir, 'rev-parse', '--abbrev-ref', 'HEAD' ) || 'unknown';
+    my $dirty  = ( _gitcmd( $dir, 'status', '--porcelain' ) =~ /\S/ ) ? 1 : 0;
+    my @t = localtime;
+    my $date = sprintf( "%04d-%02d-%02d %02d:%02d:%02d",
+                        $t[5]+1900, $t[4]+1, $t[3], $t[2], $t[1], $t[0] );
+    return { tag => $tag, commits => $count, date => $date,
+             commit => $commit, branch => $branch, dirty => $dirty };
+}
 
-    my $code = do {
-        open my $fh, '<', $file or error("Can't open $file: $!");
-        local $/;
-        <$fh>;
-    };
-
-    # Replace package name with unique one
-    $code =~ s/\bpackage\s+Version\b/package $namespace/;
-
-    my $full = "package main; no warnings; eval q{$code};";
-    my $ok = eval $full;
-    error( "Error loading $file: $@") if $@;
-
-    no strict 'refs';
-    my $func = "${namespace}::version_info";
-    return $func->();
+# Run a git command in the given directory; return trimmed stdout, '' on failure.
+sub _gitcmd {
+    my ( $dir, @args ) = @_;
+    open my $fh, '-|', 'git', '-C', $dir, @args or return '';
+    my $out = do { local $/; <$fh> };
+    close $fh;
+    chomp $out;
+    return $out;
 }
 
 ################################################################################

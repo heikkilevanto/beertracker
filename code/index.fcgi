@@ -73,7 +73,6 @@ require "./code/inputs.pm"; # Helper routines for input forms
 require "./code/listrecords.pm"; # A way to produce a nice list from db records
 require "./code/aboutpage.pm"; # The About page
 require "./code/debug.pm"; # The Debug page
-require "./code/VERSION.pm"; # auto-generated version info
 require "./code/superuser.pm"; # Superuser functions: Copåy prod data, git pull
 require "./code/db.pm"; # Various database helpers
 require "./code/cache.pm"; # In-process cache for expensive queries
@@ -88,6 +87,39 @@ require "./code/login.pm";  # Cookie-based authentication
 
 
 
+
+################################################################################
+# Version info — computed once per FCGI process start from git metadata
+################################################################################
+package Version;
+my $_version_cache;
+
+# Run a git subcommand; return trimmed stdout, '' on failure.
+sub _git {
+    my @args = @_;
+    open my $fh, '-|', 'git', @args or return '';
+    my $out = do { local $/; <$fh> };
+    close $fh;
+    chomp $out;
+    return $out;
+}
+
+sub version_info {
+    unless ( $_version_cache ) {
+        my $tag    = _git( 'describe', '--tags', '--abbrev=0' ) || 'v0.0.0';
+        my $count  = _git( 'rev-list', "$tag..HEAD", '--count' ) || '0';
+        my $commit = _git( 'rev-parse', '--short', 'HEAD' ) || 'unknown';
+        my $branch = _git( 'rev-parse', '--abbrev-ref', 'HEAD' ) || 'unknown';
+        my $dirty  = ( _git( 'status', '--porcelain' ) =~ /\S/ ) ? 1 : 0;
+        my @t = localtime;
+        my $date = sprintf( "%04d-%02d-%02d %02d:%02d:%02d",
+                            $t[5]+1900, $t[4]+1, $t[3], $t[2], $t[1], $t[0] );
+        $_version_cache = { tag => $tag, commits => $count, date => $date,
+                            commit => $commit, branch => $branch, dirty => $dirty };
+    }
+    return $_version_cache;
+}
+package main;
 
 ################################################################################
 # Constants and setup
@@ -132,9 +164,8 @@ $SIG{__WARN__} = sub {
     print { $log } $now->hms . " WARN: " . $_[0];
 };
 
-# Record startup mtimes for auto-reload detection
+# Record startup mtime for auto-reload detection
 my $mtime0    = (stat($0))[9];
-my $mtime_ver = (stat("code/VERSION.pm"))[9];
 
 { my $now = localtime;
   my $dev_info = $devversion ? " DEV" : " PROD";
@@ -150,10 +181,9 @@ my $cache = {};  # In-process cache, lives for the lifetime of the process
 # Main FastCGI loop — runs once per request; CGI::Fast falls back to plain CGI
 ################################################################################
 while (my $q = CGI::Fast->new) {
-  # Reload if the script or VERSION.pm changed (e.g. after git pull)
+  # Reload if the script changed (e.g. after git pull)
   my $reload_reason = $q->param('reload')                       ? "manual reload request"
                     : (stat($0))[9]             != $mtime0      ? "script $0 changed on disk"
-                    : (stat("code/VERSION.pm"))[9] != $mtime_ver ? "code/VERSION.pm changed on disk"
                     : "";
   if ( $reload_reason ) {
     my $now = localtime;

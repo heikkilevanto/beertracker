@@ -22,7 +22,7 @@ Data flows from browser forms to index.fcgi, which calls module post*() function
 ## Development Workflow
 - **Dev Environment**: Work in `beertracker-dev` directory (blue background indicates dev mode).
 - **Database Changes**: Implement schema changes via `code/migrate.pm` migrations. Remind the user to run `tools/dbdump.sh` to update `doc/db.schema` and commit both. Some changes (alter table) require manual steps; document those in commit message. Changes to views and indexes, and adding columns work well with dbchange.sh. Do not ever use sqlite to change the schema, nor edit doc/db.schema directly.
-- **Versioning**: Git pre-commit hook runs `tools/makeversion.sh` to update `code/VERSION.pm` with commit count.
+- **Versioning**: Version info (tag, commit count, hash, branch) is computed at FCGI process startup in `code/index.fcgi` by running `git` commands and caching the result in `Version::version_info()`.
 - **Testing**: No automated tests; manually test CGI under Apache. Use `superuser::copyproddata()` to sync production data to dev.
 - **Deployment**: Git pull code to production, should migrate the database on first run if schema changed. / Apache config in `etc/apache-config.example.txt` is mostly stable; avoid changes there if possible. It is actually used as the real Apache config in production. The dev version runs from the same config, so changes there should be tested carefully.
 - **Plan files**: are kept under plans. They are used to track AI instructions for implementing a change.
@@ -41,7 +41,7 @@ They should be named like '557-photo.md' where 557 is the issue number. Once don
 - **UTF-8**: All source and data is UTF-8; set `binmode STDOUT, ":utf8"` in index.fcgi
 - **No Frameworks**: Pure Perl, no ORM or web framework; procedural style with modules.
 - The system lives in the local time zone. Since beer drinking often spans midnight, we offset the date by 6 hours to group late-night drinking into the previous day. This is handled in SQL queries with `datetime(Timestamp, '-6 hours')`.
-- After editing any code (and checking it with perl -c), touch **code/VERSION.pm** to trigger a reload. Do not change the version number, that is done at commit time. Do the touch in a separate call, so I can allow that without confirmation.
+- After editing any code (and checking it with perl -c), touch **code/index.fcgi** to trigger a reload. Do the touch in a separate call, so I can allow that without confirmation.
 - All links should have the text inside a <span> element. For example: `<a href='...?o=Comment&e=123'><span>[123]</span></a>`. This is to make the link style apply only to the underline.
 
 ## Code Style Details

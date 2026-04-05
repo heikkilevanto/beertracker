@@ -133,7 +133,6 @@ Other utilities:
 - `code/scrapeboard.pm` - Scraping and updating beer boards
 - `code/superuser.pm` - Superuser functions: Copy prod data, git pull
 - `code/util.pm` - Various helper functions
-- `code/VERSION.pm` - auto-generated version info
 
 There are also a small number of javascript and css files under static
 
@@ -218,9 +217,10 @@ Do not edit the schema file directly; implement schema changes as migrations in
 `tools/dbdump.sh` and commit `doc/db.schema` together with the migration code.
 
 ### Git trickery
-The git hook `pre-commit` invokes `tools/makeversion.sh` which updates the
-code/VERSION.pm with the current version number and a count of commits since,
-so the about page and the top line can show where we are going.
+Version info (tag, commit count, commit hash, branch) is computed at FCGI
+process startup by running `git` commands from within `index.fcgi` itself.
+The result is cached for the lifetime of the process in `Version::version_info()`.
+There is no generated file to keep in sync.
 
 Schema changes (adding tables, columns, indexes, views) must be implemented as
 migration subs in `code/migrate.pm` following the process described above.
@@ -243,7 +243,6 @@ When about to release a new version, try to follow this checklist:
 - [ ] Use the release candidate for a couple of days to find last details
 - [ ] Draft release notes
 - [ ] Tag the version locally. 
-- [ ] Make a small commit, or run tools/makeversion manually. Commit the version number. push --tags
 - [ ] Use GitHub to release a version
 - [ ] Make sure the milestone is marked as done
 
