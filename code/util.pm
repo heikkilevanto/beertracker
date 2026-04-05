@@ -7,13 +7,6 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-# Log file handle. Defaults to STDERR; overridden by index.fcgi after opening the log file.
-our $log = \*STDERR;
-
-sub set_log {
-  $log = shift;
-} # set_log
-
 use POSIX qw(strftime localtime locale_h);
 use Carp qw(longmess);
 use JSON;
@@ -201,7 +194,6 @@ sub error {
   my $msg = shift;
   $msg = "ERROR  <br>\n$msg\n\n";
   $msg .= longmess("Stack Trace:");
-  print $util::log "ERROR: $msg\n";
   print STDERR "ERROR: $msg\n";
   print "\n\n";  # Works if have sent headers or not
   print "<pre>\n";

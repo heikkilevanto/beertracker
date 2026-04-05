@@ -137,8 +137,7 @@ if ( -f $logfile && -s $logfile > 1_000_000 ) {
 open( my $log, ">>", $logfile )
   or die "Cannot open log file $logfile: $!\n";
 binmode $log, ":utf8";
-$log->autoflush(1);  # Flush after every write so log is live under FastCGI
-util::set_log($log);  # Let util.pm (and modules using $util::log) find it
+# No autoflush — log is flushed once at the end of each request
 
 # Redirect STDERR to the log file so XS/OS-level messages appear in the log
 open(STDERR, ">&", $log) or warn "Cannot redirect STDERR to log: $!";
@@ -147,7 +146,6 @@ $SIG{__WARN__} = sub {
     my $now = localtime;
     print { $log } $now->hms . " WARN: " . $_[0];
 };
-
 # Record startup mtimes for auto-reload detection
 my $mtime0    = (stat($0))[9];
 my $mtime_ver = (stat("code/VERSION.pm"))[9];
@@ -190,6 +188,7 @@ while (my $q = CGI::Fast->new) {
         die "exec $0 failed: $!";
       };
   }
+  
   $request_count++;
   my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
   my $plotfile = "";
@@ -326,6 +325,7 @@ if ( $q->request_method eq "POST" ) {
   cache::clear($c, "POST");  # Data may have changed; invalidate all cached lists
   # Redirect back to the op, but not editing
   print $c->{cgi}->redirect( $c->{redirect_url} || "$c->{url}?o=$c->{op}" );
+  $log->flush;
   next;
 }
 
@@ -420,6 +420,7 @@ if ($@) {
 select $old_fh;  # Restore output to FCGI::Stream
 print $body;     # Emit UTF-8 encoded body
 htmlfooter();
+$log->flush;
 
 } # end while (FastCGI loop)
 
