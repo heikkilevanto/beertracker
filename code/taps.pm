@@ -81,7 +81,10 @@ sub update_taps {
   db::execute($c, $update_sql, $now, $location_id);
   #print { $c->{log} } "taps: Updated LastSeen for active taps at location $location_id\n";
 
-  # Add scrape marker 
+  # Add scrape marker (one per location, indicating last scrape time)
+  # TODO: Once duplicate markers are cleaned up, switch to option 3:
+  # only insert if none exists, update LastSeen otherwise.
+  db::execute($c, "DELETE FROM tap_beers WHERE Location = ? AND Tap IS NULL AND Brew IS NULL", $location_id);
   my $marker_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, NULL, NULL, ?, ?)";
   db::execute($c, $marker_sql, $location_id, $now, $now);
   #print { $c->{log} } "taps: Added scrape marker for location $location_id\n";
