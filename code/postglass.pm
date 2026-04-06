@@ -28,10 +28,15 @@ sub postglass {
   my $sub = util::param($c, "submit") || "";
 
   if ( $sub eq "Del" ) {
+    my $rec = db::getrecord($c, "GLASSES", $c->{edit});
     my $sql = "delete from GLASSES
       where id = ? and username = ?";
     db::execute($c, $sql, $c->{edit}, $c->{username});
+    my @cols = sort grep { defined $rec->{$_} } keys %$rec;
+    my $collist = join(", ", @cols);
+    my $vallist = join(", ", map { $c->{dbh}->quote($rec->{$_}) } @cols);
     print { $c->{log} } "Deleted glass id '$c->{edit}'\n";
+    print { $c->{log} } "Undelete with: INSERT INTO glasses ($collist) VALUES ($vallist);\n";
     $c->{edit} = ""; # don't try to edit it any more
     graph::clearcachefiles($c, "postglass");
     return;
