@@ -232,7 +232,8 @@ sub load_beerlist_from_db {
   # Load from DB
   my $sql = "SELECT 
       ct.Tap, ct.Brew, ct.BrewName AS beer, 
-      pl.Name AS maker, pl.Id AS maker_id, 
+      b.ShortName AS brew_short_name,
+      pl.Name AS maker, pl.Id AS maker_id, pl.ShortName AS maker_short_name,
       b.SubType AS type, b.Alc AS alc,
       tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
       ur.rating_count, ur.average_rating, ur.comment_count,
@@ -278,7 +279,9 @@ sub load_beerlist_from_db {
       id => $row->{Tap},
       maker => $row->{maker} || "",
       maker_id => $row->{maker_id},
+      maker_short_name => $row->{maker_short_name},
       beer => $row->{beer} || "",
+      brew_short_name => $row->{brew_short_name},
       type => $row->{type} || "",
       alc => $row->{alc} || "",
       brew_id => $row->{Brew},
@@ -308,25 +311,45 @@ sub prepare_beer_entry_data {
   $sty = styles::shortbeerstyle($sty);
   print "<!-- sty='$origsty' -> '$sty'\n'$e->{'beer'}' -> '$beer'\n'$e->{'maker'}' -> '$mak' -->\n";
 
-  my $dispmak = $mak;
-  $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu|Brauerei)\b//ig; #stop words
-  $dispmak =~ s/.*(Schneider).*/$1/i;
-  $dispmak =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
-  $dispmak =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
-  $dispmak =~ s/^ +//;
-  $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
-  $dispmak =~ s/[ -].*$// ; # first word
-  if ( $beer =~ /$dispmak/ || !$mak) {
-    $dispmak = ""; # Same word in the beer, don't repeat
+  my $dispmak;
+  if ( $e->{maker_short_name} ) {
+    # Use the manually set short name for the maker
+    $dispmak = $e->{maker_short_name};
+    $dispmak =~ s/'//g;
+    if ( $beer =~ /$dispmak/ || !$mak) {
+      $dispmak = ""; # Same word in the beer, don't repeat
+    } else {
+      $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$dispmak</i></a>" if ($dispmak && $e->{maker_id});
+    }
   } else {
-    $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$dispmak</i></a>" if ($dispmak && $e->{maker_id});
+    # Fall back to regex-based shortening
+    $dispmak = $mak;
+    $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu|Brauerei)\b//ig; #stop words
+    $dispmak =~ s/.*(Schneider).*/$1/i;
+    $dispmak =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
+    $dispmak =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
+    $dispmak =~ s/^ +//;
+    $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
+    $dispmak =~ s/[ -].*$// ; # first word
+    if ( $beer =~ /$dispmak/ || !$mak) {
+      $dispmak = ""; # Same word in the beer, don't repeat
+    } else {
+      $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$dispmak</i></a>" if ($dispmak && $e->{maker_id});
+    }
   }
-  $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
-  $beer =~ s/.*(Hopfenweisse).*/$1/;
-  $beer =~ s/.*(Ungespundet).*/$1/;
-  if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
-    $mak = "Schlenkerla";
-    $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$mak</i></a>" if ($e->{maker_id});
+
+  if ( $e->{brew_short_name} ) {
+    # Use the manually set short name for the brew
+    $beer = $e->{brew_short_name};
+  } else {
+    # Fall back to regex-based shortening
+    $beer =~ s/(Warsteiner).*/$1/;  # Shorten some long beer names
+    $beer =~ s/.*(Hopfenweisse).*/$1/;
+    $beer =~ s/.*(Ungespundet).*/$1/;
+    if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
+      $mak = "Schlenkerla";
+      $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$mak</i></a>" if ($e->{maker_id});
+    }
   }
   my $dispbeer = "<a href='$c->{url}?o=Brew&e=$e->{brew_id}'><b>$beer</b></a>" if ($e->{brew_id});
 

@@ -26,11 +26,12 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 16;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 17;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   # v3.3 released here 21-Mar-2026.  Earlier migrations should be deleted soon
   [16, 'add Tags to persons and locations', \&mig_016_add_tags_to_persons_and_locations],
+  [17, 'add ShortName to brews and locations', \&mig_017_add_shortname_to_brews_and_locations],
 );
 
 ################################################################################
@@ -220,5 +221,14 @@ sub mig_016_add_tags_to_persons_and_locations {
   });
 
 } # mig_016_add_tags_to_persons_and_locations
+
+################################################################################
+sub mig_017_add_shortname_to_brews_and_locations {
+  my $c = shift;
+
+  db::execute($c, "ALTER TABLE brews ADD COLUMN ShortName TEXT");
+  db::execute($c, "ALTER TABLE locations ADD COLUMN ShortName TEXT");
+
+} # mig_017_add_shortname_to_brews_and_locations
 
 1;

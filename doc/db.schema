@@ -61,6 +61,7 @@ create table brews (
     DefPrice text, -- default price
     DefVol text,   -- default volume, matching the def price
     Barcode text,  -- bar code on the bottle or box
+    ShortName text,  -- Short name for display on the beer board
 
     foreign key (ProducerLocation) references Locations(id)
 );
@@ -136,7 +137,8 @@ create table locations (
   Address text,
   Lat real,  -- Geo coordinate latitude
   Lon real,   -- longitude
-  Tags text);
+  Tags text,
+  ShortName text);  -- Short name for display on the beer board
 
 -- table "tap_beers"
 drop table if exists "tap_beers";
