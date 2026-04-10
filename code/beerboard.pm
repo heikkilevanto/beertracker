@@ -315,11 +315,10 @@ sub prepare_beer_entry_data {
   if ( $e->{maker_short_name} ) {
     # Use the manually set short name for the maker
     $dispmak = $e->{maker_short_name};
-    $dispmak =~ s/'//g;
     if ( $beer =~ /$dispmak/ || !$mak) {
       $dispmak = ""; # Same word in the beer, don't repeat
     } else {
-      $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$dispmak</i></a>" if ($dispmak && $e->{maker_id});
+      $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><span><i>$dispmak</i></span></a>" if ($dispmak && $e->{maker_id});
     }
   } else {
     # Fall back to regex-based shortening
@@ -334,7 +333,7 @@ sub prepare_beer_entry_data {
     if ( $beer =~ /$dispmak/ || !$mak) {
       $dispmak = ""; # Same word in the beer, don't repeat
     } else {
-      $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$dispmak</i></a>" if ($dispmak && $e->{maker_id});
+      $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><span><i>$dispmak</i></span></a>" if ($dispmak && $e->{maker_id});
     }
   }
 
@@ -348,10 +347,10 @@ sub prepare_beer_entry_data {
     $beer =~ s/.*(Ungespundet).*/$1/;
     if ( $beer =~ s/Aecht Schlenkerla Rauchbier[ -]*// ) {
       $mak = "Schlenkerla";
-      $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$mak</i></a>" if ($e->{maker_id});
+      $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><span><i>$mak</i></span></a>" if ($e->{maker_id});
     }
   }
-  my $dispbeer = "<a href='$c->{url}?o=Brew&e=$e->{brew_id}'><b>$beer</b></a>" if ($e->{brew_id});
+  my $dispbeer = "<a href='$c->{url}?o=Brew&e=$e->{brew_id}'><span><b>$beer</b></span></a>" if ($e->{brew_id});
 
   $mak =~ s/'//g; # Apostrophes break the input form below
   $beer =~ s/'//g; # So just drop them
