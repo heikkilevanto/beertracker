@@ -57,7 +57,7 @@ sub listrecords {
   }
   my $extraparams_str = "";
   if ( $extraparams ) {
-    $extraparams_str = join("\x1f", map { "$_=$extraparams->{$_}" } sort keys %$extraparams);
+    $extraparams_str = join("\x1f", map { "$_=" . ($extraparams->{$_} // "") } sort keys %$extraparams);
   }
   my $mobile = $c->{mobile} ? 1 : 0;
   my $cache_key = join("\x1e", "listrecords", $c->{username}, $c->{op},
