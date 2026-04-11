@@ -26,11 +26,12 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 16;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 17;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   # v3.3 released here 21-Mar-2026.  Earlier migrations should be deleted soon
   [16, 'add Tags to persons and locations', \&mig_016_add_tags_to_persons_and_locations],
+  [17, 'add Country and Region to locations', \&mig_017_add_country_region_to_locations],
 );
 
 ################################################################################
@@ -220,5 +221,55 @@ sub mig_016_add_tags_to_persons_and_locations {
   });
 
 } # mig_016_add_tags_to_persons_and_locations
+
+################################################################################
+sub mig_017_add_country_region_to_locations {
+  my $c = shift;
+
+  db::execute($c, "ALTER TABLE locations ADD COLUMN Country TEXT");
+  db::execute($c, "ALTER TABLE locations ADD COLUMN Region TEXT");
+
+  db::execute($c, "DROP VIEW IF EXISTS locations_list");
+  db::execute($c, q{
+    CREATE VIEW locations_list AS
+    SELECT
+      locations.Id,
+      locations.Name,
+      locations.LocType || ', ' || locations.LocSubType AS Type,
+      '' AS trmob,
+      locations.lat || ' ' || locations.lon AS Geo,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS Stats,
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
+      locations.Tags,
+      locations.Country,
+      locations.Region
+    FROM locations
+    LEFT JOIN glasses ON glasses.Location = locations.Id
+    LEFT JOIN location_ratings r ON r.id = glasses.Id
+    GROUP BY locations.Id
+  });
+
+  # Back-populate Country and Region from existing brews (most frequent non-empty value)
+  db::execute($c, q{
+    UPDATE locations
+    SET
+      Country = (
+        SELECT Country FROM brews
+        WHERE brews.ProducerLocation = locations.Id
+          AND brews.Country IS NOT NULL AND brews.Country != ''
+        GROUP BY Country ORDER BY COUNT(*) DESC LIMIT 1
+      ),
+      Region = (
+        SELECT Region FROM brews
+        WHERE brews.ProducerLocation = locations.Id
+          AND brews.Region IS NOT NULL AND brews.Region != ''
+        GROUP BY Region ORDER BY COUNT(*) DESC LIMIT 1
+      )
+    WHERE locations.LocType = 'Producer'
+  });
+
+} # mig_017_add_country_region_to_locations
 
 1;
