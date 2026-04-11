@@ -82,15 +82,11 @@ sub listrecords {
   $where = "where $where" if ($where);
 
   my $sql = "select * from $table $where $order";
-  print { $c->{log} } "listrecords: $sql ";
-  my $paramlist = "";
   my @paramarr = ();
   if ( $params ) {
     @paramarr = ref $params eq 'ARRAY' ? @$params : ($params);
   }
   my $list_sth = @paramarr ? db::query($c, $sql, @paramarr) : db::query($c, $sql);
-  if (@paramarr) { print { $c->{log} } "[" . join(',', @paramarr) . "]" }
-  print { $c->{log} } "\n";
 
   my $url = $c->{url};
   my $op = $c->{op};
