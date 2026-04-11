@@ -22,8 +22,8 @@ Add `scripts/untappd.pl` — a generic scraper for any venue's public Untappd pa
    - `LWP::UserAgent` with a browser `User-Agent` header and `timeout => 10`
    - `XML::LibXML->load_html(recover => 1, suppress_errors => 1)`
    - Find all menu sections; select where heading contains "tap" (case-insensitive) — handles both "Fadølsudvalg // **Tap** beer" and plain "**Tap** beer"
-   - Extract per-item: tap number, beer name (strip leading `"N. "` prefix), style, ABV, maker
-   - No prices → placeholder `sizePrice => [{vol => "S"}, {vol => "L"}]`
+   - Extract per-item: tap number, beer name (strip leading `"N. "` prefix), style, ABV, maker, Untappd beer URL (the `href` on the beer name link, e.g. `https://untappd.com/b/olsnedkeren-kosmisk-kaos/5693144`) → store as `untappdurl`
+   - No prices → empty `sizePrice => []` (taps.pm handles this gracefully; "S"/"L" string placeholders cause numeric warnings)
    - Output via `JSON->new->pretty(1)->ascii(1)->canonical(1)->encode(\@taps)`
    - `$debug` flag for STDERR verbosity
 
@@ -33,7 +33,7 @@ Add `scripts/untappd.pl` — a generic scraper for any venue's public Untappd pa
 
 3. Change all `%scrapers` entries to use array refs `["script.pl", "arg"]` — no backward-compat plain strings needed
 4. In `updateboard()`, unpack `($script, $arg)` from the array ref and call `` `timeout 5s perl $script $arg` `` — `$arg` is hardcoded, not user input, so no injection risk
-5. Add entries for all venues from issue #639:
+5. Add entries for all venues from issue #639, one at a time, testing each with `perl scripts/untappd.pl arg` before committing:
    - `$scrapers{"Ølsnedkeren"} = ["untappd.pl", "olsnedkeren/415314"]` (keep old `oelsnedkeren.pl` commented out)
    - `$scrapers{"Bootleggers"} = ["untappd.pl", "bootleggers-craft-beer-bar-frb/10845482"]`
    - `$scrapers{"Fermentoren"} = ["untappd.pl", "fermentoren-cph/127076"]` (keep old `fermentoren.pl` commented out)

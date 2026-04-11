@@ -337,7 +337,7 @@ sub fixprice {
     my $sql = "SELECT SizeS, PriceS, SizeM, PriceM, SizeL, PriceL FROM tap_beers WHERE Location = ? AND Brew = ?";
     my $sth = db::query($c, $sql, $locid, $brewid);
     my $row = $sth->fetchrow_hashref();
-    if ($row) {
+    if ($row && $vol =~ /^\d/) {
       if ($row->{SizeS} && $row->{SizeS} == $vol && $row->{PriceS}) {
         $glass->{Price} = $row->{PriceS};
       } elsif ($row->{SizeM} && $row->{SizeM} == $vol && $row->{PriceM}) {

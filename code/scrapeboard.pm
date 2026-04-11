@@ -11,11 +11,16 @@ use JSON;
 use URI::Escape qw(uri_escape_utf8);
 
 # Beerlist scraping scripts
+# Each entry is ["script.pl", "arg"] where arg is passed to the script.
 our %scrapers;
-$scrapers{"Ølbaren"} = "oelbaren.pl";
-$scrapers{"Taphouse"} = "taphouse.pl";
-$scrapers{"Brus"} = "brus.pl";
-# These use untappd for showing their board, which is nasty to scrape.
+$scrapers{"Ølbaren"}   = ["oelbaren.pl"];
+$scrapers{"Taphouse"}  = ["taphouse.pl"];
+$scrapers{"Brus"}      = ["brus.pl"];
+$scrapers{"Ølsnedkeren"} = ["untappd.pl", "olsnedkeren/415314"];
+$scrapers{"Bootleggers"}  = ["untappd.pl", "bootleggers-craft-beer-bar-frb/10845482"];
+# Fermentoren is temporarily closed:
+#$scrapers{"Fermentoren"}  = ["untappd.pl", "fermentoren-cph/127076"];
+# Old per-venue untappd scrapers, superseded by untappd.pl:
 #$scrapers{"Fermentoren"} = "fermentoren.pl";
 #$scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
 
@@ -33,8 +38,10 @@ sub updateboard {
     return;  # No error page
   }
 
-  my $script = $c->{scriptdir} . $scrapers{$locparam};
-  my $json = `timeout 5s perl $script`;
+  my ($scriptfile, $arg) = @{ $scrapers{$locparam} };
+  my $script = $c->{scriptdir} . $scriptfile;
+  $arg //= '';
+  my $json = `timeout 5s perl $script $arg`;
   if ($!) {
     print { $c->{log} } "updateboard: Timeout running $script: $!\n";
     return;
