@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-03-23 18:27 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-04-11 23:18 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
@@ -101,8 +101,7 @@ create table persons (
     Description text, -- Any kind of comment
     Contact text,  -- Phone, email, or such
     Location integer,  -- Where the person belongs (bar, home, brewery)
-    RelatedPerson integer,  -- Persons partner, or such
-    Tags text,   -- Keywords for the person, like 'øb-staff'
+    RelatedPerson integer, Tags text, -- Persons partner, or such
 
     foreign key (Location) references Locations(id)
 );
@@ -135,8 +134,9 @@ create table locations (
   Contact text,   -- email, website, etc
   Address text,
   Lat real,  -- Geo coordinate latitude
-  Lon real,   -- longitude
-  Tags text);
+  Lon real   -- longitude
+
+, Tags text, Country text, Region text);
 
 -- table "tap_beers"
 drop table if exists "tap_beers";
@@ -509,7 +509,9 @@ create view locations_list as
         strftime('%H:%M', max(glasses.Timestamp)) as Last,
       r.rating_count || ';' || r.rating_average || ';' || r.comment_count as Stats,
       (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as Photo,
-      locations.Tags
+      locations.Tags,
+      locations.Country,
+      locations.Region
     from locations
     left join glasses on glasses.Location = locations.Id
     left join location_ratings r on r.id = glasses.Id

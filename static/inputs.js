@@ -203,6 +203,17 @@ function initDropdown(container) {
       const selvol = item.getAttribute("defvol");
       if (volinp && selvol && selvol.trim()) volinp.value = selvol + "c"
 
+      // update Country and Region from producer (only for ProducerLocation dropdowns)
+      if (hiddenInput.name.match(/ProducerLocation$/i)) {
+        const fieldPrefix = hiddenInput.name.replace(/ProducerLocation$/i, '');
+        const countryinp = document.querySelector("[name='" + fieldPrefix + "Country']");
+        const selcountry = item.getAttribute("country");
+        if (countryinp && selcountry && !countryinp.value.trim()) countryinp.value = selcountry;
+        const regioninp = document.querySelector("[name='" + fieldPrefix + "Region']");
+        const selregion = item.getAttribute("region");
+        if (regioninp && selregion && !regioninp.value.trim()) regioninp.value = selregion;
+      }
+
       // update subtype if Restaurant brewtype
       const selbrewtype = document.getElementById("selbrewtype");
       const selbrewsubtype = document.getElementById("selbrewsubtype");

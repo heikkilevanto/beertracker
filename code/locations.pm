@@ -421,7 +421,9 @@ sub selectlocation {
       LOCATIONS.LocSubType,
       LOCATIONS.Lat,
       LOCATIONS.Lon,
-      LOCATIONS.Tags
+      LOCATIONS.Tags,
+      LOCATIONS.Country,
+      LOCATIONS.Region
     from LOCATIONS
     left join GLASSES on GLASSES.Location = LOCATIONS.Id
     $where
@@ -430,7 +432,7 @@ sub selectlocation {
     ";
     my $list_sth = db::query($c, $sql);
     $opts = "";
-    while ( my ($id, $name, $type, $subtype, $lat, $lon, $tags) = $list_sth->fetchrow_array ) {
+    while ( my ($id, $name, $type, $subtype, $lat, $lon, $tags, $country, $region) = $list_sth->fetchrow_array ) {
       if ($type) {
         $type = "[$type]";
       } else {
@@ -441,8 +443,10 @@ sub selectlocation {
         $dist = "<span lat=$lat lon=$lon style='pointer-events:none; font-size: xx-small;'> ??? </span>";
       }
       my $substtr = $subtype ? "locsubtype='$subtype'" : "";
-      my $tags_attr = $tags ? " tags='" . util::htmlesc($tags) . "'" : "";
-      $opts .= "      <div class='dropdown-item' id='$id' $substtr$tags_attr>$name $type $dist</div>\n";
+      my $tags_attr    = $tags    ? " tags='"    . util::htmlesc($tags)    . "'" : "";
+      my $country_attr = $country ? " country='" . util::htmlesc($country) . "'" : "";
+      my $region_attr  = $region  ? " region='"  . util::htmlesc($region)  . "'" : "";
+      $opts .= "      <div class='dropdown-item' id='$id' $substtr$tags_attr$country_attr$region_attr>$name $type $dist</div>\n";
     }
     cache::set($c, $cache_key, $opts);
   }

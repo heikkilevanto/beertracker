@@ -362,7 +362,7 @@ sub editbrew {
     $p->{Id} = "new";
     $p->{BrewType} = "Beer"; # Some decent defaults
     $p->{SubType} = "NEIPA"; # More for guiding the input than true values
-    $p->{Country} = "DK";
+    # Country left empty so it can be auto-filled from the selected producer
     print "<b>Inserting a new brew<br/>\n";
     $submit = "Insert";
   } else {
