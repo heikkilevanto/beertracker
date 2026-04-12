@@ -277,27 +277,11 @@ sub mig_017_add_country_region_to_locations {
 sub mig_018_expand_country_codes {
   my $c = shift;
 
-  # Map of ISO 2-letter codes to full country names
-  my %codes = (
-    'DK' => 'Denmark',         'DE' => 'Germany',        'SE' => 'Sweden',
-    'NO' => 'Norway',          'FI' => 'Finland',        'BE' => 'Belgium',
-    'NL' => 'Netherlands',     'FR' => 'France',         'GB' => 'United Kingdom',
-    'UK' => 'United Kingdom',  'US' => 'United States',  'IT' => 'Italy',
-    'CZ' => 'Czech Republic',  'AT' => 'Austria',        'IE' => 'Ireland',
-    'CH' => 'Switzerland',     'ES' => 'Spain',          'PL' => 'Poland',
-    'AU' => 'Australia',       'JP' => 'Japan',          'CA' => 'Canada',
-    'NZ' => 'New Zealand',     'LV' => 'Latvia',         'LT' => 'Lithuania',
-    'EE' => 'Estonia',         'PT' => 'Portugal',       'RU' => 'Russia',
-    'HU' => 'Hungary',         'SK' => 'Slovakia',       'SI' => 'Slovenia',
-    'HR' => 'Croatia',         'RS' => 'Serbia',         'GR' => 'Greece',
-    'LU' => 'Luxembourg',      'MX' => 'Mexico',         'BR' => 'Brazil',
-    'AR' => 'Argentina',
-  );
-
+  # Use the shared country code map from util.pm (single source of truth)
   # Expand country codes in brews and locations
-  for my $code ( keys %codes ) {
-    my $name = $codes{$code};
-    db::execute($c, "UPDATE brews    SET Country = ? WHERE upper(Country) = ?", $name, $code);
+  for my $code ( keys %util::COUNTRY_CODES ) {
+    my $name = $util::COUNTRY_CODES{$code};
+    db::execute($c, "UPDATE brews     SET Country = ? WHERE upper(Country) = ?", $name, $code);
     db::execute($c, "UPDATE locations SET Country = ? WHERE upper(Country) = ?", $name, $code);
   }
 

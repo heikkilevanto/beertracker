@@ -552,11 +552,6 @@ sub postbrew {
     dedupbrews($c);
     return;
   }
-  # Expand country codes to full names before saving
-  for my $field ( 'Country', 'newbrewCountry' ) {
-    my $val = util::param($c, $field);
-    $c->{cgi}->param($field, util::expand_country($val)) if $val;
-  }
   if ( $id eq "new" ) {
     my $section = "newbrew"; # as when inserted from main list
     my $name = util::param($c, "newbrewName");
