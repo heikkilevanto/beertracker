@@ -168,6 +168,22 @@ function initDropdown(container) {
             else inp.removeAttribute("required");
           });
           newDiv.querySelector("input")?.focus();
+          // Propagate Country/Region typed in the new-producer sub-form up to the brew fields
+          if (hiddenInput.name.match(/ProducerLocation$/i)) {
+            const fieldPrefix   = hiddenInput.name.replace(/ProducerLocation$/i, '');
+            const newCountryInp = newDiv.querySelector("[name$='Country']");
+            const newRegionInp  = newDiv.querySelector("[name$='Region']");
+            const targetCountry = document.querySelector("[name='" + fieldPrefix + "Country']");
+            const targetRegion  = document.querySelector("[name='" + fieldPrefix + "Region']");
+            if (newCountryInp && targetCountry) {
+              const propagateCountry = () => { targetCountry.value = newCountryInp.value; };
+              newCountryInp.addEventListener('input', propagateCountry);
+              newCountryInp.addEventListener('blur',  propagateCountry); // catch expandCountry
+            }
+            if (newRegionInp && targetRegion) {
+              newRegionInp.addEventListener('input', () => { targetRegion.value = newRegionInp.value; });
+            }
+          }
         }
         return;
       }

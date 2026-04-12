@@ -168,7 +168,7 @@ sub clean_tags {
 
 # Map of ISO 2-letter country codes to full names
 our %COUNTRY_CODES = (
-  'DK' => 'Denmark',        'GB' => 'United Kingdom', 'ZA' => 'South Africa',
+  'DK' => 'Denmark',        'UK' => 'United Kingdom', 'ZA' => 'South Africa',
   'NO' => 'Norway',         'ES' => 'Spain',          'FR' => 'France',
   'BE' => 'Belgium',        'IT' => 'Italy',          'AR' => 'Argentina',
   'DE' => 'Germany',        'IE' => 'Ireland',        'AU' => 'Australia',
