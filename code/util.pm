@@ -166,6 +166,55 @@ sub clean_tags {
   return join(' ', @words);
 } # clean_tags
 
+# Map of ISO 2-letter country codes to full names
+our %COUNTRY_CODES = (
+  'DK' => 'Denmark',
+  'DE' => 'Germany',
+  'SE' => 'Sweden',
+  'NO' => 'Norway',
+  'FI' => 'Finland',
+  'BE' => 'Belgium',
+  'NL' => 'Netherlands',
+  'FR' => 'France',
+  'GB' => 'United Kingdom',
+  'UK' => 'United Kingdom',
+  'US' => 'United States',
+  'IT' => 'Italy',
+  'CZ' => 'Czech Republic',
+  'AT' => 'Austria',
+  'IE' => 'Ireland',
+  'CH' => 'Switzerland',
+  'ES' => 'Spain',
+  'PL' => 'Poland',
+  'AU' => 'Australia',
+  'JP' => 'Japan',
+  'CA' => 'Canada',
+  'NZ' => 'New Zealand',
+  'LV' => 'Latvia',
+  'LT' => 'Lithuania',
+  'EE' => 'Estonia',
+  'PT' => 'Portugal',
+  'RU' => 'Russia',
+  'HU' => 'Hungary',
+  'SK' => 'Slovakia',
+  'SI' => 'Slovenia',
+  'HR' => 'Croatia',
+  'RS' => 'Serbia',
+  'GR' => 'Greece',
+  'LU' => 'Luxembourg',
+  'MX' => 'Mexico',
+  'BR' => 'Brazil',
+  'AR' => 'Argentina',
+);
+
+# Expand a 2-letter country code to its full name.
+# Returns the full name if the code is recognized, otherwise returns input unchanged.
+sub expand_country {
+  my $val = shift // '';
+  my $upper = uc(trim($val));
+  return $COUNTRY_CODES{$upper} // $val;
+} # expand_country
+
 # Escape HTML special characters
 sub htmlesc {
   my $s = shift // '';

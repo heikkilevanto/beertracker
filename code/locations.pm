@@ -357,6 +357,11 @@ sub postlocation {
     return;
   }
 
+  # Expand country codes to full names before saving
+  for my $field ( 'Country', 'newlocCountry', 'newprodCountry' ) {
+    my $val = util::param($c, $field);
+    $c->{cgi}->param($field, util::expand_country($val)) if $val;
+  }
   if ( $id eq "new" ) {
     my $name = util::param($c, "newlocName");
     my $section = "newloc";

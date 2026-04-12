@@ -647,3 +647,39 @@ function replaceSelectWithCustom(selectEl) {
   initCustomSelect(wrapper);
 }
 
+// Map of ISO 2-letter country codes to full names, for client-side expansion
+const COUNTRY_CODES = {
+  'DK': 'Denmark', 'DE': 'Germany', 'SE': 'Sweden', 'NO': 'Norway',
+  'FI': 'Finland', 'BE': 'Belgium', 'NL': 'Netherlands', 'FR': 'France',
+  'GB': 'United Kingdom', 'UK': 'United Kingdom', 'US': 'United States',
+  'IT': 'Italy', 'CZ': 'Czech Republic', 'AT': 'Austria', 'IE': 'Ireland',
+  'CH': 'Switzerland', 'ES': 'Spain', 'PL': 'Poland', 'AU': 'Australia',
+  'JP': 'Japan', 'CA': 'Canada', 'NZ': 'New Zealand', 'LV': 'Latvia',
+  'LT': 'Lithuania', 'EE': 'Estonia', 'PT': 'Portugal', 'RU': 'Russia',
+  'HU': 'Hungary', 'SK': 'Slovakia', 'SI': 'Slovenia', 'HR': 'Croatia',
+  'RS': 'Serbia', 'GR': 'Greece', 'LU': 'Luxembourg', 'MX': 'Mexico',
+  'BR': 'Brazil', 'AR': 'Argentina',
+};
+
+// Expand a country code to a full name in an input field on blur
+function attachCountryExpand(input) {
+  input.addEventListener('blur', () => {
+    const code = input.value.trim().toUpperCase();
+    if (COUNTRY_CODES[code]) input.value = COUNTRY_CODES[code];
+  });
+}
+
+// Track which Country inputs already have the expand handler attached
+const _countryExpandSet = new WeakSet();
+
+// Attach country expand to all Country fields, now and on future DOM insertions
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll("input[name$='Country']").forEach(attachCountryExpand);
+});
+// Also handle dynamically added fields (e.g. the (new) form in dropdowns)
+document.addEventListener('focusin', (e) => {
+  if (e.target.matches && e.target.matches("input[name$='Country']") && !_countryExpandSet.has(e.target)) {
+    _countryExpandSet.add(e.target);
+    attachCountryExpand(e.target);
+  }
+});
