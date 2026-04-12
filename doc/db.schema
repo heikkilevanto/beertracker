@@ -52,7 +52,7 @@ create table brews (
     BrewStyle text, -- Style as defined by the producer "Hazy ipa"
     ProducerLocation integer,
     Alc decimal,  -- Often with 1 decimal
-    Country text, -- Usually a two-letter code
+    Country text, -- Full country name (e.g. "Denmark")
     Region text, -- Mostly for wines
     Flavor text, -- Hops, Grapes, spices, barrels, etc
     Year decimal,

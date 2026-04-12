@@ -166,6 +166,33 @@ sub clean_tags {
   return join(' ', @words);
 } # clean_tags
 
+# Map of ISO 2-letter country codes to full names
+our %COUNTRY_CODES = (
+  'DK' => 'Denmark',        'GB' => 'United Kingdom', 'ZA' => 'South Africa',
+  'NO' => 'Norway',         'ES' => 'Spain',          'FR' => 'France',
+  'BE' => 'Belgium',        'IT' => 'Italy',          'AR' => 'Argentina',
+  'DE' => 'Germany',        'IE' => 'Ireland',        'AU' => 'Australia',
+  'SE' => 'Sweden',         'US' => 'United States',  'CZ' => 'Czech Republic',
+  'EE' => 'Estonia',        'CL' => 'Chile',          'PL' => 'Poland',
+  'AT' => 'Austria',        'JP' => 'Japan',          'FI' => 'Finland',
+  'CA' => 'Canada',
+);
+
+# Expand a 2-letter country code to its full name.
+# Returns the full name if the code is recognized, otherwise returns input unchanged.
+sub expand_country {
+  my $val = shift // '';
+  my $upper = uc(trim($val));
+  return $COUNTRY_CODES{$upper} // $val;
+} # expand_country
+
+# Returns a <script> block defining expandCountry(inp) from %COUNTRY_CODES.
+# Intended to be emitted once per page alongside a Country input field.
+sub country_expand_js {
+  my $pairs = join(", ", map { "'$_':'$COUNTRY_CODES{$_}'" } sort keys %COUNTRY_CODES);
+  return qq{<script>var COUNTRY_CODES={$pairs};function expandCountry(inp){var c=inp.value.trim().toUpperCase();if(COUNTRY_CODES[c])inp.value=COUNTRY_CODES[c];}</script>\n};
+} # country_expand_js
+
 # Escape HTML special characters
 sub htmlesc {
   my $s = shift // '';

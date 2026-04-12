@@ -26,12 +26,13 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 17;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 18;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   # v3.3 released here 21-Mar-2026.  Earlier migrations should be deleted soon
   [16, 'add Tags to persons and locations', \&mig_016_add_tags_to_persons_and_locations],
   [17, 'add Country and Region to locations', \&mig_017_add_country_region_to_locations],
+  [18, 'expand country codes to full names', \&mig_018_expand_country_codes],
 );
 
 ################################################################################
@@ -271,5 +272,44 @@ sub mig_017_add_country_region_to_locations {
   });
 
 } # mig_017_add_country_region_to_locations
+
+################################################################################
+sub mig_018_expand_country_codes {
+  my $c = shift;
+
+  # Use the shared country code map from util.pm (single source of truth)
+  # Expand country codes in brews and locations
+  for my $code ( keys %util::COUNTRY_CODES ) {
+    my $name = $util::COUNTRY_CODES{$code};
+    db::execute($c, "UPDATE brews     SET Country = ? WHERE upper(Country) = ?", $name, $code);
+    db::execute($c, "UPDATE locations SET Country = ? WHERE upper(Country) = ?", $name, $code);
+  }
+
+  # Back-populate Country and Region from ProducerLocation for brews missing them
+  db::execute($c, q{
+    UPDATE brews
+    SET
+      Country = (
+        SELECT locations.Country FROM locations
+        WHERE locations.Id = brews.ProducerLocation
+          AND locations.Country IS NOT NULL AND locations.Country != ''
+      )
+    WHERE (brews.Country IS NULL OR brews.Country = '')
+      AND brews.ProducerLocation IS NOT NULL
+  });
+
+  db::execute($c, q{
+    UPDATE brews
+    SET
+      Region = (
+        SELECT locations.Region FROM locations
+        WHERE locations.Id = brews.ProducerLocation
+          AND locations.Region IS NOT NULL AND locations.Region != ''
+      )
+    WHERE (brews.Region IS NULL OR brews.Region = '')
+      AND brews.ProducerLocation IS NOT NULL
+  });
+
+} # mig_018_expand_country_codes
 
 1;

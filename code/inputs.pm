@@ -170,6 +170,13 @@ sub inputform {
         if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
           # (that is lowercase 'alc'). Pass it to glass.alc
           $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
+        } elsif ( $f =~ /^Country$/i ) {
+          # Emit country-expand JS once per page, then attach onblur
+          if (!$c->{country_js_emitted}) {
+            $form .= util::country_expand_js();
+            $c->{country_js_emitted} = 1;
+          }
+          $pass = "onblur='expandCountry(this)'";
         }
         my $required = "";
         if ( $f =~ /Name|BrewType|SubType|LocType/i && $f !~ /OfficialName|FullName/i) {

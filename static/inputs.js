@@ -646,4 +646,3 @@ function replaceSelectWithCustom(selectEl) {
   // Initialize the custom select behavior
   initCustomSelect(wrapper);
 }
-
