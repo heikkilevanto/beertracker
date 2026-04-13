@@ -35,6 +35,8 @@ sub dropdown {
   my $enablescan    = shift || "";   # "scan" to enable barcode scanning
   my $multi         = shift || "";   # "multi" to enable chip multi-select
   my $prechips      = shift || "";   # pre-rendered chip HTML for multi-select edit
+  my $simplenew     = shift || "";   # "simplenew" for a plain text new-value input
+  my $extraattr     = shift || "";   # Extra HTML attributes for the container div
 
   my $newdiv = "";
   my $actions = "";
@@ -48,17 +50,23 @@ sub dropdown {
     $newdiv  = "<div class='dropdown-new' id='newdiv-$inputname' hidden>\n";
     $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname, "", $skipnewfields);
     $newdiv .= "</div>";
+  } elsif ($simplenew eq "simplenew") {
+    $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>(new)</span>";
+    $newdiv  = "<div class='dropdown-new' id='newdiv-$inputname' data-simplenew='1' hidden>\n";
+    $newdiv .= "  <input type='text' autocapitalize='words' placeholder='New value...' style='margin:4px;'/>\n";
+    $newdiv .= "</div>";
   }
-  
+
   if ($actions) {
     $options = "<div class='dropdown-item' id='actions'>$actions</div>\n$options";
   }
 
-  my $multiattr = $multi eq 'multi' ? " data-multi='1'" : "";
+  my $multiattr    = $multi eq 'multi' ? " data-multi='1'" : "";
+  my $extraattrhtml = $extraattr ? " $extraattr" : "";
   my $chipsdiv  = $multi eq 'multi' ? "<div class='dropdown-chips'>$prechips</div>\n  " : "";
   my $s = <<"HTML";
 <!-- DROPDOWN START: input='$inputname' -->
-<div id="dropdown-$inputname" class="dropdown"$multiattr>
+<div id="dropdown-$inputname" class="dropdown"$multiattr$extraattrhtml>
   $chipsdiv<div class="dropdown-main">
     <input type="text"
            class="dropdown-filter"
@@ -165,18 +173,35 @@ sub inputform {
       } elsif ( $f =~ /^Tags$/i && $available_tags_ref ) {
         my $tag_val = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
         $form .= tagsinput($c, $tag_val, $available_tags_ref, $disabled);
+      } elsif ( $f =~ /^Country$/i ) {
+        my $cr = locations::distinct_countries_and_regions($c);
+        my $opts = "";
+        for my $country (@{$cr->{countries}}) {
+          my $esc    = util::htmlesc($country);
+          my $suffix = exists $util::COUNTRY_CODES{$country} ? " [$util::COUNTRY_CODES{$country}]" : "";
+          $opts .= "  <div class='dropdown-item' id='$esc'>$esc$suffix</div>\n";
+        }
+        my $curval = ($rec && defined($rec->{$f})) ? util::htmlesc($rec->{$f}) : "";
+        $form .= "<td>\n";
+        $form .= dropdown($c, $inpname, $curval, $curval, $opts, "", "", "", $disabled, "", "", "", "simplenew");
+      } elsif ( $f =~ /^Region$/i ) {
+        my $cr = locations::distinct_countries_and_regions($c);
+        my $opts = "";
+        for my $r (@{$cr->{regions}}) {
+          my $rc = util::htmlesc($r->{country});
+          my $rr = util::htmlesc($r->{region});
+          $opts .= "  <div class='dropdown-item' id='$rr' regioncountry='$rc'>$rr</div>\n";
+        }
+        my $curval = ($rec && defined($rec->{$f})) ? util::htmlesc($rec->{$f}) : "";
+        my $country_input = util::htmlesc($inputprefix . "Country");
+        $form .= "<td>\n";
+        $form .= dropdown($c, $inpname, $curval, $curval, $opts, "", "", "", $disabled, "", "", "", "simplenew",
+                          "data-country-input='$country_input'");
       } else {
         my $pass = "";
         if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
           # (that is lowercase 'alc'). Pass it to glass.alc
           $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
-        } elsif ( $f =~ /^Country$/i ) {
-          # Emit country-expand JS once per page, then attach onblur
-          if (!$c->{country_js_emitted}) {
-            $form .= util::country_expand_js();
-            $c->{country_js_emitted} = 1;
-          }
-          $pass = "onblur='expandCountry(this)'";
         }
         my $required = "";
         if ( $f =~ /Name|BrewType|SubType|LocType/i && $f !~ /OfficialName|FullName/i) {

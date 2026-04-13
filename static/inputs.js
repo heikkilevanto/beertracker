@@ -2,6 +2,17 @@
 
 // Dropdown with filtering and (new)
 
+// Set a dropdown's value (hidden input) and its visible filter display in one step.
+// Works for both plain text inputs and dropdown hidden inputs.
+// Dispatches an 'input' event on the hidden input so propagation listeners fire.
+function setDropdownValue(inp, val) {
+  if (!inp) return;
+  inp.value = val;
+  const filterDisp = inp.closest?.('.dropdown-main')?.querySelector('.dropdown-filter');
+  if (filterDisp) { filterDisp.value = val; filterDisp.oldvalue = val; }
+  inp.dispatchEvent(new Event('input'));
+}
+
 // Tags chip input widget (issue 624)
 function initTagsInput(container) {
   if (!container) return;
@@ -128,6 +139,19 @@ function initDropdown(container) {
   const isMulti       = container.getAttribute('data-multi') === '1';
   const chipsDiv      = container.querySelector('.dropdown-chips');
 
+  // Simplenew: on blur of the simple text input, copy value to hidden+filter and restore view
+  if (newDiv && newDiv.getAttribute('data-simplenew') === '1') {
+    const simpleInput = newDiv.querySelector('input[type=text]');
+    if (simpleInput) {
+      simpleInput.addEventListener('blur', () => {
+        const val = simpleInput.value.trim();
+        setDropdownValue(hiddenInput, val);
+        newDiv.hidden = true;
+        container.querySelector('.dropdown-main').hidden = false;
+      });
+    }
+  }
+
   // Delegated removal handler covers both pre-rendered and dynamically added chips
   if (chipsDiv) {
     chipsDiv.addEventListener('click', (e) => {
@@ -176,12 +200,12 @@ function initDropdown(container) {
             const targetCountry = document.querySelector("[name='" + fieldPrefix + "Country']");
             const targetRegion  = document.querySelector("[name='" + fieldPrefix + "Region']");
             if (newCountryInp && targetCountry) {
-              const propagateCountry = () => { targetCountry.value = newCountryInp.value; };
+              const propagateCountry = () => { setDropdownValue(targetCountry, newCountryInp.value); };
               newCountryInp.addEventListener('input', propagateCountry);
-              newCountryInp.addEventListener('blur',  propagateCountry); // catch expandCountry
+              newCountryInp.addEventListener('blur',  propagateCountry);
             }
             if (newRegionInp && targetRegion) {
-              newRegionInp.addEventListener('input', () => { targetRegion.value = newRegionInp.value; });
+              newRegionInp.addEventListener('input', () => { setDropdownValue(targetRegion, newRegionInp.value); });
             }
           }
         }
@@ -202,6 +226,7 @@ function initDropdown(container) {
       filterInput.value = item.textContent;
       filterInput.oldvalue = "";
       hiddenInput.value = item.id;
+      hiddenInput.dispatchEvent(new Event('input'));
       dropdownList.style.display = "none";
 
       // update alc if present
@@ -224,10 +249,10 @@ function initDropdown(container) {
         const fieldPrefix = hiddenInput.name.replace(/ProducerLocation$/i, '');
         const countryinp = document.querySelector("[name='" + fieldPrefix + "Country']");
         const selcountry = item.getAttribute("country");
-        if (countryinp && selcountry && !countryinp.value.trim()) countryinp.value = selcountry;
+        if (countryinp && selcountry && !countryinp.value.trim()) setDropdownValue(countryinp, selcountry);
         const regioninp = document.querySelector("[name='" + fieldPrefix + "Region']");
         const selregion = item.getAttribute("region");
-        if (regioninp && selregion && !regioninp.value.trim()) regioninp.value = selregion;
+        if (regioninp && selregion && !regioninp.value.trim()) setDropdownValue(regioninp, selregion);
       }
 
       // update subtype if Restaurant brewtype
@@ -476,6 +501,15 @@ function filterItems(filterInput, dropdownList) {
   const isDotFilter      = !isTagFilter && (filter === '.' || filter === '@');
   let searchTerm = filter;
 
+  // Compute country filter value for region dropdowns (data-country-input attribute)
+  const dropdownContainer = dropdownList.closest('.dropdown');
+  const countryInputName  = dropdownContainer ? dropdownContainer.getAttribute('data-country-input') : null;
+  let countryFilterVal = '';
+  if (countryInputName) {
+    const countryHidden = document.querySelector("input[type=hidden][name='" + countryInputName + "']");
+    countryFilterVal = (countryHidden ? countryHidden.value : '').trim().toLowerCase();
+  }
+
   // Manage tag-suggestion row and actions row visibility
   const tagRow     = getOrCreateTagRow(dropdownList);
   const actionsItem = dropdownList.querySelector('[id="actions"]');
@@ -512,6 +546,12 @@ function filterItems(filterInput, dropdownList) {
     const brewtype = item.getAttribute("brewtype");
     if (selbrewtype && brewtype && selbrewtype.value !== brewtype) {
       disp = 'none';
+    }
+
+    // Region filtering: hide items whose regioncountry doesn't match the selected country
+    if (countryFilterVal && disp === '') {
+      const rc = (item.getAttribute('regioncountry') || '').toLowerCase();
+      if (rc && rc !== countryFilterVal) disp = 'none';
     }
 
     if (isTagFilter) {

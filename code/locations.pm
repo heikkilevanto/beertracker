@@ -466,5 +466,48 @@ sub selectlocation {
 
 
 ################################################################################
+# Return distinct countries and regions from BREWS+LOCATIONS for dropdown use.
+# Returns hashref:
+#   { countries => [...sorted country name strings...],
+#     regions   => [...sorted {country, region} hashrefs (non-empty regions only)...] }
+# Result is cached in $c->{cache}{countries_regions}.
+################################################################################
+sub distinct_countries_and_regions {
+  my $c = shift;
+
+  my $cached = cache::get($c, 'countries_regions');
+  return $cached if defined $cached;
+
+  my $sql = "
+    SELECT DISTINCT Country, Region FROM BREWS
+      WHERE Country IS NOT NULL AND Country != ''
+    UNION
+    SELECT DISTINCT Country, Region FROM LOCATIONS
+      WHERE Country IS NOT NULL AND Country != ''
+    ORDER BY Country, Region
+  ";
+  my $sth = db::query($c, $sql);
+
+  my %seen_countries;
+  my @countries;
+  my @regions;
+
+  while (my ($country, $region) = $sth->fetchrow_array) {
+    unless ($seen_countries{$country}) {
+      push @countries, $country;
+      $seen_countries{$country} = 1;
+    }
+    if (defined $region && $region ne '') {
+      push @regions, { country => $country, region => $region };
+    }
+  }
+
+  my $result = { countries => \@countries, regions => \@regions };
+  cache::set($c, 'countries_regions', $result);
+  return $result;
+} # distinct_countries_and_regions
+
+
+################################################################################
 1; # Tell perl that the module loaded fine
 
