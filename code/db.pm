@@ -398,6 +398,7 @@ sub updaterecord {
   for my $f ( db::tablefields($c, $table)) {
     my $special = $1 if ( $f =~ s/^(-)// );
     my $val = util::param($c, $inputprefix.$f );
+    $val = util::normalize_country($c, $val) if $f =~ /Country$/i;
     if ( $special ) {
       print { $c->{log} } "updaterecord: Met a special field '$f' \n";
       if ( $val eq "new" ) {
@@ -446,6 +447,7 @@ sub insertrecord {
   my @values; # values to insert, in the same order
   for my $f ( db::tablefields($c, $table,undef,1)) {  # 1 indicates no -prefix
     my $val = util::param($c, $inputprefix.$f );
+    $val = util::normalize_country($c, $val) if $f =~ /Country$/i;
     print { $c->{log} } "insertrecord: '$inputprefix' '$f' got value '$val' \n";
     if ( $val eq '' ) {
       $val =  $defaults->{$f} || "";

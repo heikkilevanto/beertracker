@@ -182,6 +182,41 @@ our %COUNTRY_CODES = (
   'Finland'        => 'FI',           'Canada'         => 'CA',
 );
 
+# Reverse lookup: code/alias (uppercase) => canonical country name.
+# Built lazily on first call to normalize_country().
+my %code_to_country;
+
+# Normalize a country value: expands known ISO codes/aliases to full names.
+# Returns the canonical name if recognized, the value unchanged otherwise.
+# Logs a warning for unknown values that are not already known full names.
+sub normalize_country {
+  my $c   = shift;
+  my $val = trim(shift // '');
+  return '' unless $val;
+
+  # Build reverse lookup on first use
+  unless (%code_to_country) {
+    for my $name (keys %COUNTRY_CODES) {
+      for my $code (split /,\s*/, $COUNTRY_CODES{$name}) {
+        $code_to_country{uc(trim($code))} = $name;
+      }
+    }
+  }
+
+  # Already a known full country name (case-insensitive)
+  my $vl = lc($val);
+  for my $name (keys %COUNTRY_CODES) {
+    return $name if lc($name) eq $vl;
+  }
+
+  # Matches a known code or alias
+  return $code_to_country{uc($val)} if exists $code_to_country{uc($val)};
+
+  # Unknown — store as-is but warn
+  print { $c->{log} } "normalize_country: unknown country value '$val'\n";
+  return $val;
+} # normalize_country
+
 # Escape HTML special characters
 sub htmlesc {
   my $s = shift // '';
