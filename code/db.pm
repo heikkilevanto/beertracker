@@ -399,6 +399,7 @@ sub updaterecord {
     my $special = $1 if ( $f =~ s/^(-)// );
     my $val = util::param($c, $inputprefix.$f );
     $val = util::normalize_country($c, $val) if $f =~ /Country$/i;
+    $val = util::clean_tags($val)             if $f =~ /Tags$/i;
     if ( $special ) {
       print { $c->{log} } "updaterecord: Met a special field '$f' \n";
       if ( $val eq "new" ) {
@@ -448,6 +449,7 @@ sub insertrecord {
   for my $f ( db::tablefields($c, $table,undef,1)) {  # 1 indicates no -prefix
     my $val = util::param($c, $inputprefix.$f );
     $val = util::normalize_country($c, $val) if $f =~ /Country$/i;
+    $val = util::clean_tags($val)            if $f =~ /Tags$/i;
     print { $c->{log} } "insertrecord: '$inputprefix' '$f' got value '$val' \n";
     if ( $val eq '' ) {
       $val =  $defaults->{$f} || "";

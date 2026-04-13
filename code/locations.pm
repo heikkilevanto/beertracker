@@ -366,14 +366,11 @@ sub postlocation {
     }
     util::error ("A Location must have a name" )
       unless $name;
-    $c->{cgi}->param('Tags', util::clean_tags(util::param($c, 'Tags')));
-    $c->{cgi}->param('newlocTags', util::clean_tags(util::param($c, 'newlocTags')));
     $id = db::insertrecord($c, "LOCATIONS", $section);
   } else {
     my $name = util::param($c, "Name");
     util::error ("A Location must have a name" )
       unless $name;
-    $c->{cgi}->param('Tags', util::clean_tags(util::param($c, 'Tags')));
     $id = db::updaterecord($c, "LOCATIONS", $id,  "");
   }
   return $id;
