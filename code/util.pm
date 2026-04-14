@@ -10,6 +10,7 @@ use utf8;  # Source code and string literals are utf-8
 use POSIX qw(strftime localtime locale_h);
 use Carp qw(longmess);
 use JSON;
+use URI::Escape qw(uri_escape_utf8);
 
 
 ################################################################################
@@ -154,7 +155,7 @@ sub param {
   util::error("No context c ") unless $c;
   util::error("No cgi in c") unless $c->{cgi};
   my $val = $c->{cgi}->param($tag) // $def;
-  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%!#-]/_/g;
+  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%!#=_-]/_/g;
   return $val;
 }
 
@@ -475,8 +476,62 @@ sub showmenu {
 END
 }
 
-# Here used to be some commented-out helpers for making links to Google,
-# Untappd, and Google Maps. Check out tag v3.2 to see them if you need.
+
+################################################################################
+# External link helpers
+################################################################################
+
+# Return a small external link badge, or "" if $url is empty.
+# Opens in a new tab; text is wrapped in <span> per site conventions.
+sub extlink {
+  my $url  = shift // "";
+  my $text = shift // "";
+  return "" unless $url;
+  my $esc = htmlesc($url);
+  return "<a href='$esc' target='_blank'><span style='font-size: x-small;'>$text</span></a>";
+} # extlink
+
+# Return link badges for a brew: "Ut" for an untappd url, "www" for any other
+# url, or "uts" (untappd search fallback) when DetailsLink is empty.
+# $name is the brew name used for the fallback search query.
+# $prodsearch is the producer's SearchLink base URL (appended with brew name as fallback).
+sub brewlinks {
+  my $c          = shift;
+  my $link       = shift // "";
+  my $name       = shift // "";
+  my $prodsearch = shift // "";
+  if ($link =~ /untappd/i) {
+    return extlink($link, "Ut");
+  } elsif ($link) {
+    return extlink($link, "www");
+  } elsif ($prodsearch) {
+    my $sq = $prodsearch . uri_escape_utf8($name);
+    return extlink($sq, "search");
+  } else {
+    return "";
+  }
+} # brewlinks
+
+# Return link badges for a location.
+# Shows "www" if Website is set, "Ut" if UntappdLink is set (both may show),
+# falls back to an untappd venue search "uts" when neither is set.
+# If Website is exactly 'X', suppress all links (marks a location like 'home'
+# where external searches make no sense).
+sub locationlinks {
+  my $c       = shift;
+  my $website = shift // "";
+  my $utlink  = shift // "";
+  my $name    = shift // "";
+  return "" if ($website eq 'X');  # 'X' suppresses all links
+  my $s = "";
+  $s .= extlink($website, "www") if $website;
+  $s .= extlink($utlink,  "Ut")  if $utlink;
+  unless ($website || $utlink) {
+    my $q = uri_escape_utf8($name);
+    $s .= extlink("https://untappd.com/search?q=$q&type=venues&sort=", "uts");
+  }
+  return $s;
+} # locationlinks
 
 
 ################################################################################

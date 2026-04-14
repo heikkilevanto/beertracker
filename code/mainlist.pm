@@ -40,10 +40,13 @@ sub glassquery {
       brews.Id as brewid,
       brews.Name as brewname,
       brews.IsGeneric as generic,
+      brews.DetailsLink as brewlink,
       locations.name as producer,
       locations.Id as prodid,
+      locations.SearchLink as prodsearchlink,
       gloc.Name as locname,
       gloc.Website as locwebsite,
+      gloc.UntappdLink as locutlink,
       (select count(*) from comments where comments.glass = glasses.id) as comcount,
       (select count(*) from photos where photos.Glass = glasses.id) as photocount,
       br.rating_count,
@@ -188,6 +191,7 @@ sub locationhead {
   my $rec = shift;
   my $locname = $rec->{locname};
   my $locwebsite = $rec->{locwebsite} || '';
+  my $locutlink  = $rec->{locutlink}  || '';
   my ( $date, $wd ) = util::splitdate($rec->{effdate} );
   my $html = "";
   my $display = "@" . $locname;
@@ -195,8 +199,7 @@ sub locationhead {
   $html .= "<b><a href='$c->{url}?o=$c->{op}&date=$date'><span>$wd $date</span></a> " .
     "<a href='$c->{url}?o=Location&e=$rec->{loc}'><span>$display</span></a> </b>";
   $html .= " <span style='font-size: x-small;'>[$rec->{loc}]</span>\n";
-  $html .= "<a href='$locwebsite' target='_blank'><span style='font-size: x-small;'>www</span></a>"
-    if ( $locwebsite );
+  $html .= util::locationlinks($c, $locwebsite, $locutlink, $locname);
   $html .= "<br/>";
   $html .= "<br/>" unless ( $rec->{PersName} ); # not for person detail list
   return ( $html, $rec->{effdate}, $rec->{loc}, "@".$locname, "$wd $date", $date );
@@ -224,6 +227,7 @@ sub nameline {
     $html .= "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>$locationname</b></span></a> " ;
   }
   $html .= "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
+  $html .= " " . util::brewlinks($c, $rec->{brewlink}, $rec->{brewname}, $rec->{prodsearchlink}) if ($rec->{brewid});
   $html .= "</span>\n";
   $html .= "<br/>\n";
   return $html;

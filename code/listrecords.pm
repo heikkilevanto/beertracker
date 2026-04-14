@@ -301,6 +301,13 @@ sub listrecords {
         }
       } elsif ( $fn eq "IsGeneric" ) {
         $v = "Gen" if ($v);
+      } elsif ( $fn =~ /^(Website|UntappdLink|SearchLink|DetailsLink)$/i ) {
+        if ($v) {
+          my $label = ($fn =~ /Untappd/i) ? "Ut"     :
+                      ($fn =~ /Search/i)  ? "search" : "www";
+          $v = util::extlink($v, $label);
+          $onclick = "";
+        }
       }
       $tds .= "<td $styles[$i] $data $onclick>$v</td>\n";
     }

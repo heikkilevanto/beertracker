@@ -56,6 +56,7 @@ are still some inline scripts in the HTML for simplicity.
 - **SQL Style**: Use uppercase for keywords: SELECT, INSERT, UPDATE. Use placeholders (?) for parameters. Join tables explicitly. Use meaningful table aliases.
 - **Comments**: Use # for single-line comments. Use # TODO for future improvements. Document function purposes. Explain complex algorithms.
 - **Control Structures**: Use foreach for loops: foreach my $item (@list). Use if/elsif/else for conditionals. Use early returns to reduce nesting. Use next/last for loop control.
+- Avoid the ?: operator.
 - **Regular Expressions**: Use =~ for matching. Use capturing groups when needed. Prefer simple patterns over complex ones.
 - **String Handling**: Use double quotes for interpolation: "Hello $name". Use qq{} for multi-line strings. Handle UTF-8 encoding properly.
 - **Arrays and Hashes**: Use -> for hash access: $hash->{key}. Use @ for array operations. Use scalar() for counting: scalar(@array).

@@ -197,6 +197,19 @@ sub inputform {
         $form .= "<td>\n";
         $form .= dropdown($c, $inpname, $curval, $curval, $opts, "", "", "", $disabled, "", "", "", "simplenew",
                           "data-country-input='$country_input'");
+      } elsif ( $f =~ /^(Website|UntappdLink|SearchLink|DetailsLink)$/i ) {
+        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        my $esc    = util::htmlesc($curval);
+        # Always render an <input> so enableEditing() can enable it.
+        # Show a link-preview icon next to the field when there is a URL.
+        my $display = $curval ? "inline" : "none";
+        $form .= "<td>\n";
+        $form .= "<input name='$inpname' value='$esc' $clr $disabled " .
+                 "onchange=\"var a=document.getElementById('lnk-$inpname');" .
+                 " a.href=this.value; a.style.display=this.value?'':'none';\"/>\n";
+        $form .= "<a id='lnk-$inpname' href='$esc' target='_blank'" .
+                 " style='display:$display'><span>&#x1F517;</span></a>\n";
+        $form .= $separatortag;
       } else {
         my $pass = "";
         if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself

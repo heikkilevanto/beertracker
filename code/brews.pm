@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use URI::Escape qw(uri_escape_utf8);
 
 ################################################################################
 # List of brews
@@ -394,6 +395,25 @@ sub editbrew {
     print "</form>\n";
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
+      # Search line: producer (if SearchLink set), untappd, google
+      my $prodname = "";
+      my $search_html = "Search: ";
+      if ($p->{ProducerLocation}) {
+        my $prod = db::getrecord($c, "LOCATIONS", $p->{ProducerLocation});
+        if ($prod) {
+          $prodname = $prod->{Name} // "";
+          if ($prod->{SearchLink}) {
+            my $sq = $prod->{SearchLink} . uri_escape_utf8($p->{Name});
+            $search_html .= util::extlink($sq, "producer") . " ";
+          }
+        }
+      }
+      my $uq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // ""));
+      $search_html .= util::extlink("https://untappd.com/search?q=$uq", "untappd") . " ";
+      my $gq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // "") . " beer");
+      $search_html .= util::extlink("https://www.google.com/search?q=$gq", "google");
+      print "$search_html<br/>\n";
+      print "<hr/>\n";
       my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";
       print photos::thumbnails_html($c, 'Brew', $p->{Id});
       print photos::photo_form($c, brew => $p->{Id}, public_default => 1, return_url => $return_url);
