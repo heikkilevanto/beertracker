@@ -63,6 +63,11 @@ private per user.
 ### brews
 Catalogs beverages, shared among users, with details like type, style,
 producer location (as a location), alcohol content, and optional notes.
+Also has country and region, for such times that I don't want to create
+a whole new producer, but mention that the house wine was a Chianti, or
+when a producer is more like an importer who can have wines from various
+regions and countries. Therefore the Country and Region in brews is the
+one to be trusted, and not the one in locations.
 
 ### persons
 Tracks people you meet, with contact info, description, home/related location,
@@ -71,7 +76,8 @@ and possible related persons.
 ### locations
 Represents physical places such as bars, restaurants, breweries, or homes,
 including addresses, coordinates, contact info, and type. Also used for
-producers of beer and other brews.
+producers of beer and other brews. For such, there is Country and Region
+to act as defaults for similar fields in brews.
 
 ### tap_beers
 Track what beers various places have on tap now or in the past. Also what
