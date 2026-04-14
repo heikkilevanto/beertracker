@@ -26,13 +26,14 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 18;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 19;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
   # v3.3 released here 21-Mar-2026.  Earlier migrations should be deleted soon
   [16, 'add Tags to persons and locations', \&mig_016_add_tags_to_persons_and_locations],
   [17, 'add Country and Region to locations', \&mig_017_add_country_region_to_locations],
   [18, 'expand country codes to full names', \&mig_018_expand_country_codes],
+  [19, 'add link fields to locations and brews', \&mig_019_add_link_fields],
 );
 
 ################################################################################
@@ -311,5 +312,18 @@ sub mig_018_expand_country_codes {
   });
 
 } # mig_018_expand_country_codes
+
+################################################################################
+sub mig_019_add_link_fields {
+  # Issue #647: add external link fields
+  # SearchLink: URL to search for this location's brews on a beer site
+  #   (e.g. https://dryandbitter.com/search?q=NAME)
+  # UntappdLink: Untappd venue or producer page URL for this location
+  # DetailsLink: URL to a brew's page on Untappd or the brewery's site
+  my $c = shift;
+  db::execute($c, "ALTER TABLE locations ADD COLUMN SearchLink TEXT");
+  db::execute($c, "ALTER TABLE locations ADD COLUMN UntappdLink TEXT");
+  db::execute($c, "ALTER TABLE brews ADD COLUMN DetailsLink TEXT");
+} # mig_019_add_link_fields
 
 1;

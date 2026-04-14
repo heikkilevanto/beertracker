@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-04-11 23:18 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-04-14 12:39 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
@@ -60,7 +60,7 @@ create table brews (
     IsGeneric text,  -- House wine, mixed beer. "1" for generics, null for not
     DefPrice text, -- default price
     DefVol text,   -- default volume, matching the def price
-    Barcode text,  -- bar code on the bottle or box
+    Barcode text, DetailsLink text,  -- bar code on the bottle or box
 
     foreign key (ProducerLocation) references Locations(id)
 );
@@ -136,7 +136,7 @@ create table locations (
   Lat real,  -- Geo coordinate latitude
   Lon real   -- longitude
 
-, Tags text, Country text, Region text);
+, Tags text, Country text, Region text, SearchLink text, UntappdLink text);
 
 -- table "tap_beers"
 drop table if exists "tap_beers";
