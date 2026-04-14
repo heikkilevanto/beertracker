@@ -29,7 +29,7 @@ use POSIX qw(strftime);
 our $CODE_DB_VERSION = 19;  # Bump this when you add migrations
 
 our @MIGRATIONS = (
-  # v3.3 released here 21-Mar-2026.  Earlier migrations should be deleted soon
+  # v3.3 released 21-Mar-2026.  Earlier migrations can be found in git
   [16, 'add Tags to persons and locations', \&mig_016_add_tags_to_persons_and_locations],
   [17, 'add Country and Region to locations', \&mig_017_add_country_region_to_locations],
   [18, 'expand country codes to full names', \&mig_018_expand_country_codes],
@@ -146,26 +146,11 @@ sub _read_db_version {
 sub _backup_db {
   my $c = shift;
   my $dbfile = db::dbfile();
-  my $ts = strftime("%Y%m%dT%H%M%S", localtime);
-  my $backup = "$dbfile.bak.$ts";
+  my $backup = "$dbfile.bak";
   File::Copy::copy($dbfile, $backup)
     or print { $c->{log} } "migrate: WARNING: could not back up $dbfile to $backup: $!\n";
   print { $c->{log} } "migrate: backup created: $backup\n";
-  _prune_backups($c, $dbfile);
 } # _backup_db
-
-# Keep at most 3 backups; delete the oldest ones.
-sub _prune_backups {
-  my $c = shift;
-  my $dbfile = shift;
-  my $pattern = "$dbfile.bak.";
-  my @backups = sort glob("${pattern}*");
-  while ( scalar(@backups) > 3 ) {
-    my $old = shift @backups;
-    unlink $old
-      and print { $c->{log} } "migrate: removed old backup: $old\n";
-  }
-} # _prune_backups
 
 ################################################################################
 # Migration subs

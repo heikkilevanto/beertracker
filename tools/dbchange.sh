@@ -10,11 +10,7 @@ cd beerdata || exit 1
 sqlite3 beertracker.db ".dump" | grep "INSERT INTO" | grep -v "INSERT INTO sqlite_stat1" > data.dump
 
 rm -f beertracker.*.bak
-for F in beertracker.db*
-do
-  mv -f $F $F.bak
-done
-
+mv -f beertracker.db beertracker.db.bak
 
 ls -l ../doc/db.schema  data.dump
 

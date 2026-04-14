@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-04-14 12:39 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-04-14 13:00 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 

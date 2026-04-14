@@ -33,11 +33,6 @@ use URI::Escape qw(uri_escape_utf8);
 # Needs to be before the HTML head, as it forwards back to the page
 ################################################################################
 # Nice to see up to date data when developing
-# NOTE Had some problems with file permissions and the -wal and -shm files. Now I
-# delete those first, and copy over if they exist. Seems to work. But I leave
-# noted to STDERR so I can look in the log if I run into problems later.
-# NOTE - I have stopped using journaling at all, so the file permission problems
-# should be fixed
 sub copyproddata {
   my $c = shift;
   if (!$c->{devversion}) {
