@@ -1,27 +1,22 @@
 ---
 description: "Create a structured implementation plan document for a BeerTracker feature. Use when: planning a new feature, designing a change across multiple modules, or before starting any multi-step implementation."
-argument-hint: "<issue number> [optional short description]"
+argument-hint: "<issue number>"
 agent: "agent"
 ---
 
-You are creating a plan document for the BeerTracker codebase. The argument is an issue number and an optional description, e.g. `670` or `670 add rating field to brews`.
+You are creating a plan document for the BeerTracker codebase. The argument is an issue number, e.g. `670`.
 
 ## Step 1 — Understand the feature
 
-Parse the argument: the first token is the issue number, the rest (if present) is the description.
+Fetch the GitHub issue using `github-pull-request_issue_fetch` with repo `owner: heikkilevanto`, `name: beertracker` and the given issue number. If no argument is given, ask for the issue number. Read the issue title, body, **and all comments** thoroughly — this is the primary source of truth for what to build.
 
-Fetch the GitHub issue using `github-pull-request_issue_fetch` with repo `owner: heikkilevanto`, `name: beertracker` and the given issue number. Read the issue title, body, **and all comments** thoroughly — this is the primary source of truth for what to build. If no argument is given at all, ask the user for the issue number.
-
-Use the issue title as the feature description if none was provided in the argument. Use the issue body and comments to understand requirements, constraints, and any prior design decisions.
+Use the issue title as the feature description. Use the issue body and comments to understand requirements, constraints, and any prior design decisions.
 
 ## Step 2 — Explore the codebase
 
-Based on what you learned from the issue, investigate:
-- Relevant modules in `code/` that will need changes
-- The current DB schema in [doc/db.schema](../../doc/db.schema)
-- Existing patterns in similar modules (use the codebase freely)
-- The dispatch table in [code/index.fcgi](../../code/index.fcgi) for routing
-- Any existing plan files in `plans/` related to this topic
+Explore the codebase as needed based on the issue. 
+Only read [doc/db.schema](../../doc/db.schema) if the feature involves DB changes or you need to understand the schema.
+Check `plans/` for any related prior plans, but not `plans/done`.
 
 ## Step 3 — Draft the plan
 
@@ -29,9 +24,6 @@ Write a plan document with these sections (omit sections that don't apply):
 
 ```
 # Plan: <Feature name> (issue #<N>)
-
-## TL;DR
-One-paragraph summary of what is being built and why.
 
 ## Decisions
 Bullets for any design choices made upfront (DB column names, UI placement,

@@ -165,6 +165,38 @@ sub format_date_relative {
   }
 } # format_date_relative
 
+sub format_duration_relative {
+  my ($first_seen_ts) = @_;
+  return "" unless $first_seen_ts;
+  my $age = time() - $first_seen_ts;
+  if ($age < 3600) {
+    my $minutes = int($age / 60);
+    return $minutes <= 0 ? "less than 1m" : "${minutes}m";
+  } elsif ($age < 4 * 3600) {
+    my $hours = int($age / 3600);
+    my $mins = int(($age % 3600) / 60);
+    return "${hours}h${mins}m";
+  } elsif ($age < 48 * 3600) {
+    my $hours = int($age / 3600);
+    return "${hours}h";
+  } else {
+    my $days = int($age / 86400);
+    my $unit = $days == 1 ? "day" : "days";
+    return "$days $unit";
+  }
+} # format_duration_relative
+
+sub format_date_absolute {
+  my ($date_str, $time_str) = @_;
+  return "" unless $date_str;
+  my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+  my ($y, $m, $d) = split /-/, $date_str;
+  my $mon = $months[$m - 1];
+  my $result = "$d-$mon";
+  $result .= " $time_str" if $time_str;
+  return $result;
+} # format_date_absolute
+
 
 ################################################################################
 # Helper functions for beerboard 
@@ -365,6 +397,8 @@ sub prepare_beer_entry_data {
     first_seen_time => $e->{first_seen_time},
     first_seen_ts => $e->{first_seen_ts},
     first_seen_date_formatted => format_date_relative($e->{first_seen_date}, $e->{first_seen_time}),
+    first_seen_relative => format_duration_relative($e->{first_seen_ts}),
+    first_seen_absolute => format_date_absolute($e->{first_seen_date}, $e->{first_seen_time}),
     extlink_html => $extlink_html,
     dispmak_full => $dispmak_full
   };
@@ -472,8 +506,13 @@ sub render_beer_row {
   }
   print "</td></tr>\n";
   print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
-  if ($processed_data->{first_seen_date_formatted}) {
-    print " <span style='font-size: x-small;'>On since $processed_data->{first_seen_date_formatted}.</span>";
+  if ($processed_data->{first_seen_relative}) {
+    my $rel = $processed_data->{first_seen_relative};
+    my $abs = $processed_data->{first_seen_absolute};
+    print " <span style='font-size: x-small; cursor: pointer;'"
+        . " onclick=\"var s=this.nextElementSibling; s.style.display=(s.style.display==='none'?'inline':'none');\">"
+        . "On for $rel</span>"
+        . "<span style='font-size: x-small; display:none;'>, since $abs</span>";
   }
   if ( $processed_data->{average_rating} ) {
     print " " . comments::avgratings($c, $processed_data->{rating_count}, $processed_data->{average_rating}, $processed_data->{comment_count});
