@@ -140,6 +140,18 @@ sub inputform {
         } else {
           $form .= "<td>Producer</td>\n<td>\n";
         }
+      } elsif ( $f =~ /location/i && $inputprefix !~ /newperson/ ) {
+        if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
+          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Location&e=$rec->{$f}'><span>Loc [$rec->{$f}]</span></a></td>\n<td>\n";
+        } else {
+          $form .= "<td>Location</td>\n<td>\n";
+        }
+      } elsif ( $f =~ /person/i && $inputprefix !~ /newperson/ ) {
+        if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
+          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Person&e=$rec->{$f}'><span>Person [$rec->{$f}]</span></a></td>\n<td>\n";
+        } else {
+          $form .= "<td>Person</td>\n<td>\n";
+        }
       } else {
         $form .= "<td colspan=2>\n";
       }
