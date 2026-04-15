@@ -339,17 +339,9 @@ sub prepare_beer_entry_data {
   $beer =~ s/'//g; # So just drop them
   $sty =~ s/'//g;
 
-  # Compute external link (priority: DetailsLink > SearchLink > DDG)
-  my $extlink_html = "";
-  if ($e->{details_link}) {
-    $extlink_html = util::extlink($e->{details_link}, "www");
-  } elsif ($e->{maker_search_link}) {
-    my $label = $shortmak || "search";
-    $extlink_html = util::extlink($e->{maker_search_link}, $label);
-  } elsif ($mak || $beer) {
-    my $q = uri_escape_utf8("$mak $beer");
-    $extlink_html = util::extlink("https://duckduckgo.com/?q=$q", "search");
-  }
+  # Compute external link (priority: DetailsLink > SearchLink > DDG fallback)
+  my $ddg_query = ($mak || $beer) ? "$mak $beer" : "";
+  my $extlink_html = util::brewlinks($c, $e->{details_link} || "", $beer, $e->{maker_search_link} || "", $ddg_query);
 
   # Full maker name as a link for the expanded header
   my $dispmak_full = ($e->{maker_id})
