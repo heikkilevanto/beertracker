@@ -411,7 +411,7 @@ sub editbrew {
       my $uq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // ""));
       $search_html .= util::extlink("https://untappd.com/search?q=$uq", "untappd") . " ";
       my $gq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // "") . " beer");
-      $search_html .= util::extlink("https://duckduckgo.com/?q=$gq", "ddg");
+      $search_html .= util::extlink("https://duckduckgo.com/?q=$gq", "search");
       print "$search_html<br/>\n";
       print "<hr/>\n";
       my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";

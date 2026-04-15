@@ -299,7 +299,7 @@ sub editlocation {
       my $search_html = "Search: ";
       $search_html .= util::extlink("https://untappd.com/search?q=$nq&type=venues&sort=", "untappd") . " ";
       my $gq = uri_escape_utf8($p->{Name} // "");
-      $search_html .= util::extlink("https://duckduckgo.com/?q=$gq", "ddg");
+      $search_html .= util::extlink("https://duckduckgo.com/?q=$gq", "search");
       print "$search_html<br/>\n";
       print "<hr/>\n";
       my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";

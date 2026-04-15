@@ -348,7 +348,7 @@ sub prepare_beer_entry_data {
     $extlink_html = util::extlink($e->{maker_search_link}, $label);
   } elsif ($mak || $beer) {
     my $q = uri_escape_utf8("$mak $beer");
-    $extlink_html = util::extlink("https://duckduckgo.com/?q=$q", "ddg");
+    $extlink_html = util::extlink("https://duckduckgo.com/?q=$q", "search");
   }
 
   # Full maker name as a link for the expanded header
