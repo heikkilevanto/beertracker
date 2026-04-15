@@ -604,6 +604,10 @@ function enableEditing(form) {
   const barcodeLinks = form.querySelectorAll('.barcode-scan-link');
   barcodeLinks.forEach(link => link.hidden = false);
 
+  // Hide URL preview and record-link icons while editing
+  const linkPreviews = form.querySelectorAll('.field-link-preview');
+  linkPreviews.forEach(a => a.style.display = 'none');
+
   // Show tags-available sections and chip-remove links
   const tagsAvailableDivs = form.querySelectorAll('.tags-available');
   tagsAvailableDivs.forEach(div => div.hidden = false);

@@ -136,7 +136,7 @@ sub inputform {
         $form .= geo::geolabel($c, $inputprefix);
       } elsif ( $f =~ /producerlocation/i ) {
         if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
-          $form .= "<td><a href='$c->{url}?o=Location&e=$rec->{$f}'><span>Producer</span></a></td>\n<td>\n";
+          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Location&e=$rec->{$f}'><span>Producer</span></a></td>\n<td>\n";
         } else {
           $form .= "<td></td>\n<td>\n";
         }
@@ -210,11 +210,9 @@ sub inputform {
         # Show a link-preview icon next to the field when there is a URL.
         my $display = $curval ? "inline" : "none";
         $form .= "<td>\n";
-        $form .= "<input name='$inpname' value='$esc' $clr $disabled " .
-                 "onchange=\"var a=document.getElementById('lnk-$inpname');" .
-                 " a.href=this.value; a.style.display=this.value?'':'none';\"/>\n";
+        $form .= "<input name='$inpname' value='$esc' $clr $disabled/>\n";
         $form .= "<a id='lnk-$inpname' href='$esc' target='_blank'" .
-                 " style='display:$display'><span>&#x1F517;</span></a>\n";
+                 " class='field-link-preview' style='display:$display'><span>&#x1F517;</span></a>\n";
         $form .= $separatortag;
       } else {
         my $pass = "";
