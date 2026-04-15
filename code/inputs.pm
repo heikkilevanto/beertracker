@@ -134,6 +134,12 @@ sub inputform {
     if ( $special && $f ne "IsGeneric") {
       if ( $f =~ /Lat/ ) {
         $form .= geo::geolabel($c, $inputprefix);
+      } elsif ( $f =~ /producerlocation/i ) {
+        if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
+          $form .= "<td><a href='$c->{url}?o=Location&e=$rec->{$f}'><span>Producer</span></a></td>\n<td>\n";
+        } else {
+          $form .= "<td></td>\n<td>\n";
+        }
       } else {
         $form .= "<td colspan=2>\n";
       }
