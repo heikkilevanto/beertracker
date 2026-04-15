@@ -488,7 +488,7 @@ sub extlink {
   my $text = shift // "";
   return "" unless $url;
   my $esc = htmlesc($url);
-  return "<a href='$esc' target='_blank'><span style='font-size: x-small;'>($text)</span></a>";
+  return "<a href='$esc' target='_blank'><span style='font-size: x-small;'>&lt;$text&gt;</span></a>";
 } # extlink
 
 # Return link badges for a brew: "Ut" for an untappd url, "www" for any other

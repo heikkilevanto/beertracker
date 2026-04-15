@@ -234,6 +234,8 @@ sub load_beerlist_from_db {
       ct.Tap, ct.Brew, ct.BrewName AS beer, 
       pl.Name AS maker, pl.Id AS maker_id, 
       b.SubType AS type, b.Alc AS alc,
+      b.DetailsLink AS details_link,
+      pl.SearchLink AS maker_search_link,
       tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
       ur.rating_count, ur.average_rating, ur.comment_count,
       strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
@@ -291,7 +293,9 @@ sub load_beerlist_from_db {
       first_seen_ts => $row->{first_seen_ts},
       seen_count => $row->{seen_count},
       seen_min_date => $row->{seen_min_date},
-      seen_max_date => $row->{seen_max_date}
+      seen_max_date => $row->{seen_max_date},
+      details_link => $row->{details_link},
+      maker_search_link => $row->{maker_search_link}
     };
   }
   
@@ -316,6 +320,7 @@ sub prepare_beer_entry_data {
   $dispmak =~ s/^ +//;
   $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
   $dispmak =~ s/[ -].*$// ; # first word
+  my $shortmak = $dispmak;  # plain text before HTML wrapping
   if ( $beer =~ /$dispmak/ || !$mak) {
     $dispmak = ""; # Same word in the beer, don't repeat
   } else {
@@ -334,6 +339,23 @@ sub prepare_beer_entry_data {
   $beer =~ s/'//g; # So just drop them
   $sty =~ s/'//g;
 
+  # Compute external link (priority: DetailsLink > SearchLink > DDG)
+  my $extlink_html = "";
+  if ($e->{details_link}) {
+    $extlink_html = util::extlink($e->{details_link}, "www");
+  } elsif ($e->{maker_search_link}) {
+    my $label = $shortmak || "search";
+    $extlink_html = util::extlink($e->{maker_search_link}, $label);
+  } elsif ($mak || $beer) {
+    my $q = uri_escape_utf8("$mak $beer");
+    $extlink_html = util::extlink("https://duckduckgo.com/?q=$q", "ddg");
+  }
+
+  # Full maker name as a link for the expanded header
+  my $dispmak_full = ($e->{maker_id})
+    ? "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><span>$mak</span></a>"
+    : $mak;
+
   my $country = $e->{'country'} || "";
 
   return {
@@ -350,7 +372,9 @@ sub prepare_beer_entry_data {
     first_seen_date => $e->{first_seen_date},
     first_seen_time => $e->{first_seen_time},
     first_seen_ts => $e->{first_seen_ts},
-    first_seen_date_formatted => format_date_relative($e->{first_seen_date}, $e->{first_seen_time})
+    first_seen_date_formatted => format_date_relative($e->{first_seen_date}, $e->{first_seen_time}),
+    extlink_html => $extlink_html,
+    dispmak_full => $dispmak_full
   };
 }
 
@@ -441,7 +465,7 @@ sub render_beer_row {
   print "</td>\n";
   print "<td colspan=4 >";
   print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width:100px'>\n";
-  print "$processed_data->{mak}: $processed_data->{dispbeer} ";
+  print "$processed_data->{dispmak_full}: $processed_data->{dispbeer} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span>" if ($processed_data->{country});
   print "</span></td></tr>\n";
   print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $buttons_expanded &nbsp;\n";
@@ -451,6 +475,9 @@ sub render_beer_row {
   print "<input type='hidden' name='pr' value='0' />\n" ;  # at no cost
   print "<input type='submit' name='submit' value='Taster ' /> \n";
   print "</form>\n";
+  if ($processed_data->{extlink_html}) {
+    print " &nbsp; $processed_data->{extlink_html}";
+  }
   print "</td></tr>\n";
   print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
   if ($processed_data->{first_seen_date_formatted}) {
