@@ -363,7 +363,7 @@ is
 that location.
 * Link to the beer board of the location, if known to the system
 * Link to the bars web page, if known to the system
-* Link to a google search of the place name
+* Link to a DuckDuckGo search of the place name
 * Last time you visited, and how many visits the system knows about
 * The last beer you drank there: Brewery and name. These are links that filter
 the location list by that beer or brewery.

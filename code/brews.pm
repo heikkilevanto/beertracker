@@ -395,7 +395,7 @@ sub editbrew {
     print "</form>\n";
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
-      # Search line: producer (if SearchLink set), untappd, google
+      # Search line: producer (if SearchLink set), untappd, ddg
       my $prodname = "";
       my $search_html = "Search: ";
       if ($p->{ProducerLocation}) {
@@ -411,7 +411,7 @@ sub editbrew {
       my $uq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // ""));
       $search_html .= util::extlink("https://untappd.com/search?q=$uq", "untappd") . " ";
       my $gq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // "") . " beer");
-      $search_html .= util::extlink("https://www.google.com/search?q=$gq", "google");
+      $search_html .= util::extlink("https://duckduckgo.com/?q=$gq", "ddg");
       print "$search_html<br/>\n";
       print "<hr/>\n";
       my $return_url = "$c->{url}?o=$c->{op}&e=$p->{Id}";
