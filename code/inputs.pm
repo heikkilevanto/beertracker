@@ -136,9 +136,9 @@ sub inputform {
         $form .= geo::geolabel($c, $inputprefix);
       } elsif ( $f =~ /producerlocation/i ) {
         if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
-          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Location&e=$rec->{$f}'><span>Producer</span></a></td>\n<td>\n";
+          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Location&e=$rec->{$f}'><span>Prod [$rec->{$f}]</span></a></td>\n<td>\n";
         } else {
-          $form .= "<td></td>\n<td>\n";
+          $form .= "<td>Producer</td>\n<td>\n";
         }
       } else {
         $form .= "<td colspan=2>\n";
