@@ -371,9 +371,9 @@ sub prepare_beer_entry_data {
   $beer =~ s/'//g; # So just drop them
   $sty =~ s/'//g;
 
-  # Compute external link (priority: DetailsLink > SearchLink > DDG fallback)
+  # Compute external link (priority: DetailsLink > MakerSearchLink > DDG fallback)
   my $ddg_query = ($mak || $beer) ? "$mak $beer" : "";
-  my $extlink_html = util::brewlinks($c, $e->{details_link} || "", $beer, $e->{maker_search_link} || "", $ddg_query);
+  my $extlink_html = util::brewlinks($c, $e->{details_link}, $beer, $e->{maker_search_link}, $ddg_query);
 
   # Full maker name as a link for the expanded header
   my $dispmak_full = ($e->{maker_id})

@@ -492,14 +492,14 @@ sub extlink {
 } # extlink
 
 # Return link badges for a brew: "Ut" for an untappd url, "www" for any other
-# url, or "uts" (untappd search fallback) when DetailsLink is empty.
+# url, or "search" (untappd search fallback) when DetailsLink is empty.
 # $name is the brew name used for the fallback search query.
 # $prodsearch is the producer's SearchLink base URL (appended with brew name as fallback).
 # Optional $ddg_fallback: if set and no other link found, link to DuckDuckGo with this query.
 sub brewlinks {
   my $c            = shift;
   my $link         = shift // "";
-  my $name         = shift // "";
+  my $beername     = shift // "";
   my $prodsearch   = shift // "";
   my $ddg_fallback = shift // "";
   if ($link =~ /untappd/i) {
@@ -507,8 +507,8 @@ sub brewlinks {
   } elsif ($link) {
     return extlink($link, "www");
   } elsif ($prodsearch) {
-    my $sq = $prodsearch . uri_escape_utf8($name);
-    return extlink($sq, "search");
+    my $sq = $prodsearch . uri_escape_utf8($beername);
+    return extlink($sq, "prod");
   } elsif ($ddg_fallback) {
     my $q = uri_escape_utf8($ddg_fallback);
     return extlink("https://duckduckgo.com/?q=$q", "search");
