@@ -48,6 +48,6 @@ Keep the plan concrete and file-specific. Reference real module names (`code/bre
 ## Step 4 — Save the plan
 
 Derive a short slug from the feature description (lowercase, hyphens, max 4 words).
-Save the plan to `plans/<issue>-<slug>.md`.
+Save the plan to `plans/<issue>-<slug>.md`. Open it in the editor.
 
 Confirm the saved path to the user and note any open questions that need answers before implementation begins. Do NOT start implementing — the plan is the only output.

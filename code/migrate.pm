@@ -26,14 +26,16 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 19;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 20;  # Bump this when you add migrations
 
+# Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
   # v3.3 released 21-Mar-2026.  Earlier migrations can be found in git
   [16, 'add Tags to persons and locations', \&mig_016_add_tags_to_persons_and_locations],
   [17, 'add Country and Region to locations', \&mig_017_add_country_region_to_locations],
   [18, 'expand country codes to full names', \&mig_018_expand_country_codes],
   [19, 'add link fields to locations and brews', \&mig_019_add_link_fields],
+  [20, 'fix persons_list last-seen to use comment Ts as fallback', \&mig_020_fix_persons_last_seen],
 );
 
 ################################################################################
@@ -310,5 +312,37 @@ sub mig_019_add_link_fields {
   db::execute($c, "ALTER TABLE locations ADD COLUMN UntappdLink TEXT");
   db::execute($c, "ALTER TABLE brews ADD COLUMN DetailsLink TEXT");
 } # mig_019_add_link_fields
+
+################################################################################
+sub mig_020_fix_persons_last_seen {
+  # Issue #583: use COALESCE(glasses.Timestamp, comments.Ts) so that persons
+  # mentioned in standalone comments (no glass) still get a Last-seen date.
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS persons_list");
+  db::execute($c, q{
+    CREATE VIEW persons_list AS
+    SELECT
+      persons.Id,
+      persons.Name,
+      'trmob' AS trmob,
+      count(DISTINCT comments.Id) - 1 AS Com,
+      strftime('%Y-%m-%d %w ', max(COALESCE(glasses.Timestamp, comments.Ts)), '-06:00') ||
+        strftime('%H:%M', max(COALESCE(glasses.Timestamp, comments.Ts))) AS Last,
+      locations.Name AS Location,
+      'tr' AS tr,
+      'Clr' AS Clr,
+      persons.description,
+      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
+      persons.Tags
+    FROM persons
+    LEFT JOIN comment_persons cp ON cp.Person = persons.Id
+    LEFT JOIN comments ON comments.Id = cp.Comment
+    LEFT JOIN glasses ON glasses.Id = comments.Glass
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    GROUP BY persons.Id
+  });
+
+} # mig_020_fix_persons_last_seen
 
 1;

@@ -252,6 +252,7 @@ When about to release a new version, try to follow this checklist:
 - [ ] Make a small commit, or run tools/makeversion manually. Commit the version number. push --tags
 - [ ] Use GitHub to release a version
 - [ ] Make sure the milestone is marked as done
+After the release, remove old migrations from `migrate.pm`, and most old plans from `plans/done`.
 
 ## See also
 - The project lives on github at https://github.com/heikkilevanto/beertracker. 
