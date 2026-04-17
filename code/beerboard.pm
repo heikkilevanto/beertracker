@@ -268,6 +268,7 @@ sub load_beerlist_from_db {
       b.SubType AS type, b.Alc AS alc,
       b.DetailsLink AS details_link,
       pl.SearchLink AS maker_search_link,
+      pl.ShortName AS shortname,
       tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
       ur.rating_count, ur.average_rating, ur.comment_count,
       strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
@@ -327,7 +328,8 @@ sub load_beerlist_from_db {
       seen_min_date => $row->{seen_min_date},
       seen_max_date => $row->{seen_max_date},
       details_link => $row->{details_link},
-      maker_search_link => $row->{maker_search_link}
+      maker_search_link => $row->{maker_search_link},
+      shortname => $row->{shortname}
     };
   }
   
@@ -353,6 +355,9 @@ sub prepare_beer_entry_data {
   $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
   $dispmak =~ s/[ -].*$// ; # first word
   my $shortmak = $dispmak;  # plain text before HTML wrapping
+  if ($shortmak ne $mak && !$e->{shortname}) {
+    print { $c->{log} } "beerboard: no ShortName for '$mak' (id $e->{maker_id}) (would shorten to '$shortmak')\n";
+  }
   if ( $beer =~ /$dispmak/ || !$mak) {
     $dispmak = ""; # Same word in the beer, don't repeat
   } else {
@@ -552,6 +557,25 @@ sub trigger_background_update {
   </script>\n";
 }
 
+
+################################################################################
+# Compute a short plain-text display name for a producer/location.
+# Returns the shortened name, or undef if no shortening is needed.
+# Logic mirrors the inline shortening in prepare_beer_entry_data().
+# Will be moved to util.pm in a later phase.
+sub compute_short_location_name {
+  my $name = shift;
+  return undef unless $name;
+  my $short = $name;
+  $short =~ s/\b(the|brouwerij|brasserie|van|den|Bräu|Brauerei)\b//ig; # stop words
+  $short =~ s/.*(Schneider).*/$1/i;
+  $short =~ s/ &amp; /&amp;/;  # Dry & Bitter: remove spaces around &amp;
+  $short =~ s/ & /&/;           # Dry & Bitter: remove spaces around &
+  $short =~ s/^ +//;            # trim leading spaces
+  $short =~ s/[ -].*$//;        # keep only first word
+  return undef if $short eq $name;
+  return $short;
+} # compute_short_location_name
 
 ################################################################################
 # Tell Perl the module loaded fine

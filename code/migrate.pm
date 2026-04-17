@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 20;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 21;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
@@ -36,6 +36,7 @@ our @MIGRATIONS = (
   [18, 'expand country codes to full names', \&mig_018_expand_country_codes],
   [19, 'add link fields to locations and brews', \&mig_019_add_link_fields],
   [20, 'fix persons_list last-seen to use comment Ts as fallback', \&mig_020_fix_persons_last_seen],
+  [21, '637 add ShortName to locations and brews', \&mig_021_add_shortname],
 );
 
 ################################################################################
@@ -344,5 +345,15 @@ sub mig_020_fix_persons_last_seen {
   });
 
 } # mig_020_fix_persons_last_seen
+
+################################################################################
+sub mig_021_add_shortname {
+  # Issue #637: add ShortName column to locations and brews for short display names
+  # locations.ShortName: populated by scrapers, used on beer board
+  # brews.ShortName: reserved for future use, not yet used in code
+  my $c = shift;
+  db::execute($c, "ALTER TABLE locations ADD COLUMN ShortName TEXT");
+  db::execute($c, "ALTER TABLE brews ADD COLUMN ShortName TEXT");
+} # mig_021_add_shortname
 
 1;
