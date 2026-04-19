@@ -1,7 +1,6 @@
 # ratestats.pm
 # Simple procedural Perl module for producing a ratings histogram
 # Fits the BeerTracker style (required from index.fcgi and used as ratestats::FUNC)
-# Experimenting with Chart.js for the graph.
 
 package ratestats;
 use strict;
@@ -25,35 +24,8 @@ sub ratings_histogram {
     my $rows = histogram_data($c, $filter);
     my $html = '';
 
-    # Minimal responsive CSS
-    $html .= <<"CSSX";
-<style>
-.chart-container {
-  max-width: 600px;   /* maximum width */
-  max-height: 600px;  /* maximum height */
-  width: 100%;        /* scale down responsively */
-  height: auto;       /* keep aspect ratio */
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  background-color: $c->{bgcolor};
-}
-.chart-item {
-  flex: 1 1 45%;
-  min-height: 300px
-}
-\@media (max-width: 600px) {
-  .chart-item {
-    flex: 1 1 100%;
-  }
-}
-</style>
-CSSX
-
     $html .= histogram_form($c, $filter);
-    $html .= qq{<div class="chart-container">};
-    $html .= qq{<div class="chart-item">} . chart_chartjs($c, $rows) . qq{</div>};
-    $html .= qq{</div>};
+    $html .= chart_gnuplot($c, $rows);
 
     my $allrows = histogram_data($c, {});
     $html .= data_table($c, $filter, $rows, $allrows);
@@ -170,80 +142,51 @@ sub histogram_data {
 } # histogram_data
 
 ############################################################
-# Emit <canvas> and Chart.js instantiation script
+# Emit a gnuplot-generated horizontal bar chart PNG
+# Ratings 1-9 on Y axis, count on X axis
 ############################################################
-sub chart_chartjs {
-    my ($c, $rows, $opts) = @_;
-    my $canvas_id = $opts->{canvas_id} // 'histogramChart';
+sub chart_gnuplot {
+    my ($c, $rows) = @_;
 
-    my @labels;
-    for my $i (0..9) {
-      my $lbl = $comments::ratings[$i];
-      if ( $c->{mobile} ) {
-        $labels[$i] = " $i: '($i)'";
-      } else {
-        $labels[$i] = " $i: '$lbl ($i)'";
-      }
+    my $datafile = $c->{plotfile};
+    my $pngfile = $c->{plotfile};
+    $pngfile =~ s/\.plot$/-ratings.png/;
+    my $cmdfile = $c->{cmdfile};
+
+    # Write data file: rating_number count (ratings 1-9)
+    open my $fh, '>', $datafile
+        or util::error("Could not open $datafile: $!");
+    for my $i (1..9) {
+        my $cnt = $rows->[$i] || 0;
+        my $plotcnt = $cnt > 0 ? $cnt : 0.001;  # avoid degenerate zero-width box
+        print $fh "$i $plotcnt\n";
     }
-    my $labelstr = join(',', @labels);
-    my $html = '';
-    #$html .= qq{<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>\n} if $include_cdn;
-    $html .= qq{<script src="static/chart.umd.min.js"></script>\n} ;
-    $html .= qq{<canvas id="$canvas_id"></canvas>\n};
-    my $data_str = join(',', @$rows[1..9]);
-    $html .= qq"<script>
-        const ctx = document.getElementById('$canvas_id').getContext('2d');
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [1,2,3,4,5,6,7,8,9],
-                datasets: [{
-                    label: '',
-                    data: [$data_str],
-                    backgroundColor: 'rgba(75, 192, 192, 0.5)'
-                }]
-            },
-            options: {
-              indexAxis: 'y',
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                x: {
-                  beginAtZero: true,
-                  grid: { color: 'white' },
-                  ticks: { color: 'white' },
-                } ,
-                y: {
-                  type: 'linear',      // so we can set min/max numerically
-                  reverse: true,
-                  min: 1,
-                  max: 9,
-                  grid: { color: 'white' },
-                  ticks: {
-                    stepSize: 1,
-                    color: 'white',
-                    font: { size: 16 },
-                    autoSkip: false,
-                    callback: function(value) {
-                      const labels = { $labelstr };
-                      return labels[value] || value;
-                      }
+    close $fh;
 
-                  }
-                }
-              },
-               plugins: {
-                  legend: {
-                    labels: {
-                      filter: (legendItem) => legendItem.text !== ''
-                    }
-                  }
-                }
-            }
-        });
-    </script>";
-    return $html;
-} # chart_chartjs
+    my $bgcolor = $c->{bgcolor};
+    my $cmd = ""
+        . "set term png small size 400,300\n"
+        . "set out \"$pngfile\"\n"
+        . "set xrange [0:]\n"
+        . "set yrange [0.5:9.5]\n"
+        . "set ytics 1 textcolor \"white\"\n"
+        . "set xtics textcolor \"white\"\n"
+        . "set border linecolor \"white\"\n"
+        . "set grid xtics lc \"white\" lw 0.5\n"
+        . "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 "
+        . "behind fc \"$bgcolor\" fillstyle solid border\n"
+        . "unset key\n"
+        . "plot \"$datafile\" using (\$2/2):1:(\$2/2):(0.35) with boxxy fillstyle solid lc \"#4bc0c0\"\n";
+
+    open my $cfh, '>', $cmdfile
+        or util::error("Could not open $cmdfile: $!");
+    print $cfh $cmd;
+    close $cfh;
+
+    system("gnuplot $cmdfile");
+
+    return "<img src=\"$pngfile\" style='max-width:95vw' />\n";
+} # chart_gnuplot
 
 
 ############################################################

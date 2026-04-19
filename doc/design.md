@@ -152,7 +152,7 @@ To install all required modules on Debian/Ubuntu, run:
 sudo apt-get install libcgi-pm-perl libdbi-perl libjson-perl libwww-perl libtime-piece-perl liburi-perl libxml-libxml-perl
 ```
 
-The js code makes use of quagga.min.js, and chart.umd.min.js
+The js code makes use of quagga.min.js
 
 
 ## Scraper Interface
