@@ -233,7 +233,7 @@ sub inputform {
           $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
         }
         my $required = "";
-        if ( $f =~ /Name|BrewType|SubType|LocType/i && $f !~ /OfficialName|FullName/i) {
+        if ( $f =~ /\b(?:Name|BrewType|SubType|LocType|LocSubType)\b/i ) {
           if ( $inputprefix ) {
             $required = "data-required='1'";
           } else {
