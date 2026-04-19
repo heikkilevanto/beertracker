@@ -145,14 +145,14 @@ There are also a small number of javascript and css files under static
 
 ## External Modules and Dependencies
 
-BeerTracker requires the following Perl modules: CGI, Carp, Cwd, DBI, File::Copy, File::Path, JSON, LWP::UserAgent, Math::Trig, POSIX, Time::Piece, URI::Escape, URI::URL, XML::LibXML.
+BeerTracker requires the following Perl modules: CGI, Carp, Cwd, DBI, File::Copy, File::Path, JSON, LWP::UserAgent, Math::Trig, POSIX, Time::Piece, URI::Escape, URI::URL, XML::LibXML. 
 
 To install all required modules on Debian/Ubuntu, run:
 ```
 sudo apt-get install libcgi-pm-perl libdbi-perl libjson-perl libwww-perl libtime-piece-perl liburi-perl libxml-libxml-perl
 ```
 
-The js code makes use of quagga.min.js
+The js code makes use of quagga.min.js for scanning bar codes, and gnuplot for the various graphs.
 
 
 ## Scraper Interface
