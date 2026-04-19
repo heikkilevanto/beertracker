@@ -374,6 +374,8 @@ sub commentform {
   $s .= sibling_comments_html($c, $com, $glassid);
 
   # JS: show/hide rows based on comment type, and "show all" toggle
+  my $glass_is_empty = ($com->{glass_brewtype} && glasses::isemptyglass($com->{glass_brewtype})) ? 1 : 0;
+  $s .= "<script>var glassIsEmpty = $glass_is_empty;</script>\n";
   $s .= <<'JSEND';
 <script>
 (function () {
@@ -418,11 +420,13 @@ sub commentform {
     }
 
     // Entity rows: show primary unconditionally, others only if populated or showAll
+    // Also always show person row for empty glasses (Night/Meal/Restaurant)
     var primaryRowId = typeToRow[type];
     entityRows.forEach(function (rowId) {
       var row = document.getElementById(rowId);
       if (!row) return;
-      row.hidden = !(rowId === primaryRowId || showAll || hasValue(rowId));
+      var isPersonRow = rowId === 'row-person';
+      row.hidden = !(rowId === primaryRowId || showAll || hasValue(rowId) || (isPersonRow && glassIsEmpty));
     });
 
     // Extra rows revealed by showAll
@@ -645,7 +649,8 @@ sub editcomment {
         strftime('%H:%M',       COALESCE(g.Timestamp, c.Ts))           AS effhm,
         b.Name    AS brewname,  b.Id    AS brewid,
         ploc.Name AS prodname,
-        gloc.Name AS locname,   gloc.Id AS locid
+        gloc.Name AS locname,   gloc.Id AS locid,
+        g.BrewType AS glass_brewtype
       FROM comments c
       LEFT JOIN glasses   g    ON g.Id    = c.Glass
       LEFT JOIN brews     b    ON b.Id    = g.Brew
@@ -661,9 +666,9 @@ sub editcomment {
 
   print "<b>" . ( $ec ? "Edit comment $ec" : "New comment" ) . "</b><br/>\n";
 
-  my ($gloc, $gbrew, $gts);  # glass display data for commentform (set below if prefill_glass)
+  my ($gloc, $gbrew, $gts, $gbrewtype);  # glass display data for commentform (set below if prefill_glass)
 
-  # Context header
+  # Context header, shows wha this comment refers to
   if ($com && $com->{Glass}) {
     my ($date, $wd) = util::splitdate($com->{effdate});
     my $glass_url = "$c->{url}?o=Full&e=$com->{Glass}&date=$date&ndays=1";
@@ -682,9 +687,9 @@ sub editcomment {
   } elsif ($prefill_glass) {
     # New comment for a known glass — show context and fetch brew/location for prefill
     my ($gdate, $glocid, $gbrewid);
-        ($gdate, $gloc, $glocid, $gbrew, $gbrewid, $gts) = db::queryarray($c, q{
+        ($gdate, $gloc, $glocid, $gbrew, $gbrewid, $gts, $gbrewtype) = db::queryarray($c, q{
           SELECT strftime('%Y-%m-%d %w %H:%M', g.Timestamp, '-06:00'),
-            gloc.Name, g.Location, b.Name, g.Brew, g.Timestamp
+            gloc.Name, g.Location, b.Name, g.Brew, g.Timestamp, g.BrewType
           FROM glasses g
           LEFT JOIN locations gloc ON gloc.Id = g.Location
           LEFT JOIN brews b ON b.Id = g.Brew
@@ -721,6 +726,7 @@ sub editcomment {
     $com->{_glass_locname}  = $gloc if $gloc;
     $com->{_glass_brewname} = $gbrew if $gbrew;
     $com->{Ts}              = $gts  if $gts && !$com->{Ts};
+    $com->{glass_brewtype}  = $gbrewtype if $gbrewtype;
   }
 
   # Cancel: always back to the comments list
