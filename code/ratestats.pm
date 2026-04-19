@@ -224,7 +224,7 @@ sub data_table {
   $html .= "</tr>
      </thead> <tbody>";
   for my $i ( 1..9) {
-    my $lbl = $comments::ratings[$i];
+    no warnings 'once'; my $lbl = $comments::ratings[$i];
     $fcount += $filtered_rows->[$i] || 0;
     $fsum += ( $filtered_rows->[$i] || 0 ) * $i;
     $acount += $all_rows->[$i] || 0;
