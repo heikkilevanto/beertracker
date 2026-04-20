@@ -251,14 +251,12 @@ sub gettimestamp {
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute( $c->{username} );
     my $newstamp = $sth->fetchrow_array;
-    print { $c->{log} } "gettimestamp: 'L' is '$newstamp' \n";
-    ($d, $t) = split(" ",$newstamp);
+    util::error("No previous glass found for 'L' timestamp") unless $newstamp;
+    ($d, $t) = split(" ", $newstamp);
   }
   util::error("Bad date '$d' ") unless ( $d =~ /^\d\d-\d\d-\d\d|$/ );
   util::error("Bad time '$t' ") unless ( $t =~ /^\d\d:\d\d(:\d\d|)?$/ );
-  # TODO - Check hours not past 24. Check minutes and seconds not past 60. 
-$glass->{Timestamp} = "$d $t";
-
+  $glass->{Timestamp} = "$d $t";
   print { $c->{log} } "gettimestamp: '$glass->{Timestamp}' \n";
 } # gettimestamp
 
