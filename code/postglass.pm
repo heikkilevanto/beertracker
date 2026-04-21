@@ -247,6 +247,7 @@ sub gettimestamp {
   if ( $d =~ /^L/i || $t =~ /^L/i ) {
     my $sql = "select strftime('%Y-%m-%d %H:%M:%S', Timestamp, '+5 minutes') " .
       "from GLASSES where username = ?  ".
+      "and strftime('%Y-%m-%d %H:%M:%S', Timestamp) is not null " .   # happens on bat timestamps
       "order by Timestamp desc limit 1";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute( $c->{username} );
