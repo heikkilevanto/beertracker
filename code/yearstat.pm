@@ -35,12 +35,12 @@ sub yearbarsql {
     SELECT
       strftime('%Y', glasses.Timestamp, '-06:00') AS yr,
       locations.Name AS loc,
-      SUM(glasses.Price) AS total
+      SUM(ABS(glasses.Price)) AS total
     FROM glasses
     LEFT JOIN locations ON glasses.Location = locations.Id
     WHERE glasses.Username = ?
       AND glasses.Brew IS NOT NULL
-      AND glasses.Price > 0
+      AND glasses.Price IS NOT NULL
       AND strftime('%Y', glasses.Timestamp, '-06:00') IS NOT NULL
     GROUP BY yr, loc
     ORDER BY yr, total DESC";
@@ -230,7 +230,7 @@ sub yearsummary {
   my $sql = "
     select
       locations.Name as name,
-      sum(glasses.Price) as price,
+      sum(ABS(glasses.Price)) as price,
       sum(glasses.StDrinks) as drinks,
       count(distinct(strftime('%Y-%m-%d',glasses.timestamp, '-06:00'))) as visits
     from glasses

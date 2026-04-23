@@ -248,9 +248,9 @@ sub maininputform {
   my $alc = $rec->{Alc} || "";
   $alc .= "%" if ($alc);
   $html .= "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' data-empty=1 />\n";
-  my $pr = $rec->{Price} || "0";
-  $pr .= ".-" if ($pr);
-  $html .= "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' required />\n";
+  my $pr = $rec->{Price} || "";
+  $pr .= ".-" if ($pr && $pr > 0);
+  $html .= "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' />\n";
   $html .= "</td></tr>\n";
 
   # Buttons

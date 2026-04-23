@@ -492,6 +492,7 @@ sub selectbrew {
       $disp .= "</span>";
       $alc = $alc || "";
       $defprice = $defprice || "";
+      $defprice = " $defprice" if ($defprice =~ /^-\d/);  # Leading space = container price; JS will pre-fill with space so onfocus trim activates
       $defvol = $defvol || "";
       $barcode = $barcode || "";
       $seenat = $seenat || "";

@@ -144,7 +144,7 @@ sub dailystats {
     strftime('%Y-%m-%d %w', Glasses.TimeStamp, '-06:00' ) as date,
     floor(julianday( Glasses.TimeStamp, '-06:00', '12:00' )) as julian,
     sum(StDrinks) as drinks,
-    SUM(glasses.price) AS price,
+    SUM(ABS(glasses.price)) AS price,
     GROUP_CONCAT(DISTINCT locations.name) AS locations
     FROM glasses
     LEFT JOIN locations ON glasses.location = locations.id

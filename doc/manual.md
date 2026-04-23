@@ -120,14 +120,23 @@ Type **X** if you don't know.
 
 ### Price
 
-What you paid. This is the only required field - everything else can be guessed or left empty.
-
-Just type the number like `45` or `89`. The system adds the `.-` decoration automatically.
+What you paid. Just type the number like `45` or `89`. The system adds the `.-` decoration automatically.
 
 If you've ordered this same beer at this place before, the price might auto-fill. Otherwise you need to enter it. Type **X** for free drinks.
 
 For "empty" glasses, that is notes on restaurants, nights, etc, you should enter the total price,
 including all the drinks you had there. Or set it to zero or **X** if you can not be bothered.
+
+#### Bottle and box prices
+
+For wine or other drinks bought by the bottle or box, enter the price as a negative number, like `-150`. This marks it as a container purchase. The system will:
+
+- Record the bottle price on the first glass
+- Pre-fill the price field with ` -150.-` (with a leading space) for subsequent glasses of the same drink
+- If you just hit Record without touching the price field, the glass is recorded as free (already paid for)
+- If you click the price field, the leading space is removed — submitting then records a new bottle purchase at that price
+
+Stats treat bottle prices as positive spending, so `-150` counts as 150.- spent.
 
 ### Extra Fields
 

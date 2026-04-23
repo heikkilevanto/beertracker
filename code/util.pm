@@ -292,7 +292,7 @@ sub topstats {
    strftime ( '%w', timestamp, '-06:00' ) as wday,
    julianday(strftime('%Y-%m-%d', 'now', 'localtime', '-06:00')) -
       julianday(strftime('%Y-%m-%d', timestamp, '-06:00')) AS daydiff,
-   sum(price) as price,
+   sum(ABS(price)) as price,
    sum(stdrinks) as drinks
  from GLASSES
  where username = ?

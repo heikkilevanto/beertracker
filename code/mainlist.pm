@@ -545,8 +545,8 @@ sub oneday {
     }
     # Sum prices only for non-empty glasses, skipping nights, restaurants, and adjustments
     if ($rec->{price} && $rec->{brewid} && $rec->{brewtype} ne 'Adjustment') {
-      $dayprsum += $rec->{price};
-      $locprsum += $rec->{price} if ($rec->{price} && $rec->{price}=~/^-?[0-9.]/);
+      $dayprsum += abs($rec->{price});
+      $locprsum += abs($rec->{price}) if ($rec->{price}=~/^-?[0-9.]/);
     }
     # Track adjustment glass for current location
     if ($rec->{brewtype} eq 'Adjustment') {

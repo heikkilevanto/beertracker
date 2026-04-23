@@ -322,7 +322,19 @@ sub fixprice {
   my $c = shift;
   my $glass = shift;
 
+  # A leading space on the raw price param means the value was not user-edited.
+  # If the value is also negative (inherited DefPrice for a bottle/container),
+  # the user is drinking from an existing bottle - record the glass as free.
+  my $rawpr = util::param($c, "pr");
+  if ( $rawpr =~ /^ -\d/ ) {
+    $glass->{Price} = 0;
+    return;
+  }
+
   my $pr = $glass->{Price} || "";
+  if ( $pr =~ /^-\d/ ) { # Negative price: bottle/container purchase, store as-is
+    return;
+  }
   if  ( $pr =~ /^(\d+)[,.-]*$/ ){  # Already a good price, only digits
     $glass->{Price} = $1; # just the digits
     return
@@ -345,12 +357,13 @@ sub fixprice {
         $glass->{Price} = $row->{PriceL};
       }
     }
-    # If not found in tap, check latest glass for same brew, location, volume
+    # If not found in tap, check latest glass for same brew, location, volume.
+    # Skip negative prices: those are bottle purchases, not per-glass prices.
     if (!$glass->{Price}) {
       my $sql2 = "SELECT Price FROM glasses WHERE Username = ? AND Brew = ? AND Location = ? AND Volume = ? ORDER BY Timestamp DESC LIMIT 1";
       my $sth2 = db::query($c, $sql2, $c->{username}, $brewid, $locid, $vol);
       my $row2 = $sth2->fetchrow_hashref();
-      if ($row2 && $row2->{Price}) {
+      if ($row2 && $row2->{Price} && $row2->{Price} > 0) {
         $glass->{Price} = $row2->{Price};
       }
     }
