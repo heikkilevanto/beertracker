@@ -20,24 +20,8 @@ sub debugpage {
 
   print "<h2>Debug</h2>\n";
 
-  # Inline JS for collapsible sections and auto-scroll on expand
-  print qq{<script>
-function toggleDebug(id) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  if (el.style.display === 'none' || el.style.display === '') {
-    el.style.display = 'block';
-    // Scroll the last line into view so tail is visible
-    var last = el.querySelector('pre') || el;
-    if (last && last.scrollIntoView) last.scrollIntoView(false);
-  } else {
-    el.style.display = 'none';
-  }
-}
-</script>};
-
-  print "<b style='cursor:pointer' onclick=\"toggleDebug('mods')\">Loaded modules (click to expand)</b>\n";
-  print "<div id='mods' style='display:none'>\n";
+  print "<b style='cursor:pointer' onclick='toggleElement(this.nextElementSibling)'>Loaded modules (click to expand)</b>\n";
+  print "<div style='display:none'>\n";
   my $tot = 0;
   print "<table class=data>";
   print "<tr><td>Module</td><td>Lines</td><td>Modified</td></tr>\n";
@@ -65,8 +49,8 @@ function toggleDebug(id) {
   print "<hr style='margin:1em 0' />\n";
 
   # Log tail
-  print "<b style='cursor:pointer' onclick=\"toggleDebug('logtail')\">Log tail (click to expand)</b>\n";
-  print "<div id='logtail' style='display:none'>\n";
+  print "<b style='cursor:pointer' onclick='toggleElement(this.nextElementSibling)'>Log tail (click to expand)</b>\n";
+  print "<div style='display:none'>\n";
   my $logfile = $c->{datadir} . "debug.log";
   if ( ! -f $logfile ) {
     print "<p>No log file found.</p>\n";
