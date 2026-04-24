@@ -493,6 +493,7 @@ END_STYLE
   print jslink("listrecords");
   print jslink("beerboard");
   print jslink("glasses");
+  print jslink("comments");
   print jslink("quagga.min");
   print jslink("barcode");
   print "</head><body>\n";
