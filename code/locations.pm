@@ -292,6 +292,19 @@ sub editlocation {
     print "<input type='hidden' name='o' value='$c->{op}' />\n";
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "</form>\n";
+    print <<'JS';
+<script>
+(function() {
+  var nameInp  = document.querySelector("input[name='Name']");
+  var shortInp = document.querySelector("input[name='ShortName']");
+  if (!nameInp || !shortInp) return;
+  nameInp.addEventListener('input', function() {
+    var s = computeShortName(this.value);
+    if (s !== null) { shortInp.value = s; }
+  });
+})();
+</script>
+JS
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
       # Search line: untappd venue search and ddg

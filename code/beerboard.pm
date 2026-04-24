@@ -346,18 +346,7 @@ sub prepare_beer_entry_data {
   $sty = styles::shortbeerstyle($sty);
   print "<!-- sty='$origsty' -> '$sty'\n'$e->{'beer'}' -> '$beer'\n'$e->{'maker'}' -> '$mak' -->\n";
 
-  my $dispmak = $mak;
-  $dispmak =~ s/\b(the|brouwerij|brasserie|van|den|Bräu|Brauerei)\b//ig; #stop words
-  $dispmak =~ s/.*(Schneider).*/$1/i;
-  $dispmak =~ s/ &amp; /&amp;/;  # Special case for Dry & Bitter (' & ' -> '&')
-  $dispmak =~ s/ & /&/;  # Special case for Dry & Bitter (' & ' -> '&')
-  $dispmak =~ s/^ +//;
-  $dispmak =~ s/^([^ ]{1,4}) /$1&nbsp;/; #Combine initial short word "To Øl"
-  $dispmak =~ s/[ -].*$// ; # first word
-  my $shortmak = $dispmak;  # plain text before HTML wrapping
-  if ($shortmak ne $mak && !$e->{shortname}) {
-    print { $c->{log} } "beerboard: no ShortName for '$mak' (id $e->{maker_id}) (would shorten to '$shortmak')\n";
-  }
+  my $dispmak = $e->{shortname} || $mak;
   if ( $beer =~ /$dispmak/ || !$mak) {
     $dispmak = ""; # Same word in the beer, don't repeat
   } else {

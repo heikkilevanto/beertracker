@@ -393,6 +393,19 @@ sub editbrew {
     # Come back to here after updating
     print "<input type='hidden' name='o' value='$c->{op}' />\n";
     print "</form>\n";
+    print <<'JS';
+<script>
+(function() {
+  var nameInp  = document.querySelector("input[name='Name']");
+  var shortInp = document.querySelector("input[name='ShortName']");
+  if (!nameInp || !shortInp) return;
+  nameInp.addEventListener('input', function() {
+    var s = computeShortName(this.value);
+    if (s !== null) { shortInp.value = s; }
+  });
+})();
+</script>
+JS
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
       # Search line: producer (if SearchLink set), untappd, ddg

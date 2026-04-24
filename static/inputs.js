@@ -1,5 +1,21 @@
 // inputs.js
 
+// Compute a short name from a location/brew name.
+// Mirrors beerboard::compute_short_location_name in beerboard.pm.
+// Returns the shortened string, or null if no shortening applies.
+function computeShortName(name) {
+  if (!name) return null;
+  var short = name;
+  short = short.replace(/\b(the|brouwerij|brasserie|van|den|Bräu|Brauerei)\b/gi, '');
+  short = short.replace(/.*(Schneider).*/i, '$1');
+  short = short.replace(/ &amp; /g, '&amp;');
+  short = short.replace(/ & /g, '&');
+  short = short.replace(/^ +/, '');
+  short = short.replace(/[ -].*$/, '');
+  if (short === name) return null;
+  return short;
+}
+
 // Dropdown with filtering and (new)
 
 // Set a dropdown's value (hidden input) and its visible filter display in one step.
