@@ -267,6 +267,7 @@ sub load_beerlist_from_db {
       pl.Name AS maker, pl.Id AS maker_id, 
       b.SubType AS type, b.Alc AS alc,
       b.DetailsLink AS details_link,
+      b.ShortName AS brew_shortname,
       pl.SearchLink AS maker_search_link,
       pl.ShortName AS shortname,
       tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
@@ -328,6 +329,7 @@ sub load_beerlist_from_db {
       seen_min_date => $row->{seen_min_date},
       seen_max_date => $row->{seen_max_date},
       details_link => $row->{details_link},
+      brew_shortname => $row->{brew_shortname},
       maker_search_link => $row->{maker_search_link},
       shortname => $row->{shortname}
     };
@@ -360,6 +362,9 @@ sub prepare_beer_entry_data {
     $dispmak = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><i>$mak</i></a>" if ($e->{maker_id});
   }
   my $dispbeer = "<a href='$c->{url}?o=Brew&e=$e->{brew_id}'><b>$beer</b></a>" if ($e->{brew_id});
+  my $shortbeer = $e->{brew_shortname} || $beer;
+  my $dispbeer_short = "<a href='$c->{url}?o=Brew&e=$e->{brew_id}'><b>$shortbeer</b></a>" if ($e->{brew_id});
+  $dispbeer_short ||= $dispbeer;
 
   $mak =~ s/'//g; # Apostrophes break the input form below
   $beer =~ s/'//g; # So just drop them
@@ -383,6 +388,7 @@ sub prepare_beer_entry_data {
     origsty => $origsty,
     dispmak => $dispmak,
     dispbeer => $dispbeer,
+    dispbeer_short => $dispbeer_short,
     country => $country,
     rating_count => $e->{rating_count},
     average_rating => $e->{average_rating},
@@ -470,7 +476,7 @@ sub render_beer_row {
   print "<td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" style=\"cursor: pointer;\"><span $beerstyle>#$dispid</span></td>\n";
   print "<td>$buttons_compact</td>\n";
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
-  print "<td>$processed_data->{dispbeer} $processed_data->{dispmak} ";
+  print "<td>$processed_data->{dispbeer_short} $processed_data->{dispmak} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
   print styles::brewstyledisplay($c, "Beer", $processed_data->{sty});
   if ( $processed_data->{average_rating} ) {
@@ -546,25 +552,6 @@ sub trigger_background_update {
   </script>\n";
 }
 
-
-################################################################################
-# Compute a short plain-text display name for a producer/location.
-# Returns the shortened name, or undef if no shortening is needed.
-# Logic mirrors the inline shortening in prepare_beer_entry_data().
-# Will be moved to util.pm in a later phase.
-sub compute_short_location_name {
-  my $name = shift;
-  return undef unless $name;
-  my $short = $name;
-  $short =~ s/\b(the|brouwerij|brasserie|van|den|Bräu|Brauerei)\b//ig; # stop words
-  $short =~ s/.*(Schneider).*/$1/i;
-  $short =~ s/ &amp; /&amp;/;  # Dry & Bitter: remove spaces around &amp;
-  $short =~ s/ & /&/;           # Dry & Bitter: remove spaces around &
-  $short =~ s/^ +//;            # trim leading spaces
-  $short =~ s/[ -].*$//;        # keep only first word
-  return undef if $short eq $name;
-  return $short;
-} # compute_short_location_name
 
 ################################################################################
 # Tell Perl the module loaded fine

@@ -64,21 +64,6 @@ sub updateboard {
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
   my $loc_id = $loc_rec->{Id};
 
-  # Backfill ShortName for any current producers at this location that lack one
-  my $sn_sth = db::query($c,
-    "SELECT DISTINCT pl.Id, pl.Name FROM current_taps ct " .
-    "JOIN brews b ON ct.Brew = b.Id " .
-    "JOIN locations pl ON b.ProducerLocation = pl.Id " .
-    "WHERE ct.Location = ? AND (pl.ShortName IS NULL OR pl.ShortName = '')",
-    $loc_id);
-  while (my $row = $sn_sth->fetchrow_hashref) {
-    my $shortname = beerboard::compute_short_location_name($row->{Name});
-    if ($shortname) {
-      db::execute($c, "UPDATE LOCATIONS SET ShortName = ? WHERE Id = ?", $shortname, $row->{Id});
-      print { $c->{log} } "updateboard: Set ShortName='$shortname' for producer '$row->{Name}' (id $row->{Id})\n";
-    }
-  }
-
   # Fetch current board upfront: tap_num -> { Id, Brew, BrewName, Producer }
   my %current_board;
   my $cur_sth = db::query($c, "SELECT Tap, Brew, Id, BrewName, Producer FROM current_taps WHERE Location = ?", $loc_id);
@@ -109,24 +94,12 @@ sub updateboard {
     my $prod_id;
     if ($prod_rec) {
       $prod_id = $prod_rec->{Id};
-      if (!$prod_rec->{ShortName}) {
-        my $shortname = beerboard::compute_short_location_name($maker);
-        if ($shortname) {
-          db::execute($c, "UPDATE LOCATIONS SET ShortName = ? WHERE Id = ?", $shortname, $prod_id);
-          print { $c->{log} } "updateboard: Set ShortName='$shortname' for existing producer '$maker' (id $prod_id)\n";
-        }
-      }
     } else {
       # Insert new producer
       my $sql = "INSERT INTO LOCATIONS (Name, LocType, LocSubType) VALUES (?, 'Producer', 'Beer')";
       db::execute($c, $sql, $maker);
       $prod_id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
       print { $c->{log} } "updateboard: Inserted producer '$maker' (id $prod_id)\n";
-      my $shortname = beerboard::compute_short_location_name($maker);
-      if ($shortname) {
-        db::execute($c, "UPDATE LOCATIONS SET ShortName = ? WHERE Id = ?", $shortname, $prod_id);
-        print { $c->{log} } "updateboard: Set ShortName='$shortname' for new producer '$maker' (id $prod_id)\n";
-      }
     }
 
     # Ensure brew exists
