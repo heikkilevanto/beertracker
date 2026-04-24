@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-04-14 13:00 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-04-24 13:05 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
@@ -60,7 +60,9 @@ create table brews (
     IsGeneric text,  -- House wine, mixed beer. "1" for generics, null for not
     DefPrice text, -- default price
     DefVol text,   -- default volume, matching the def price
-    Barcode text, DetailsLink text,  -- bar code on the bottle or box
+    Barcode text, -- bar code on the bottle or box
+    DetailsLink text, -- Link to producers or untappd page about the brew
+    ShortName text,  -- Shortened name for tight displays
 
     foreign key (ProducerLocation) references Locations(id)
 );
@@ -101,7 +103,8 @@ create table persons (
     Description text, -- Any kind of comment
     Contact text,  -- Phone, email, or such
     Location integer,  -- Where the person belongs (bar, home, brewery)
-    RelatedPerson integer, Tags text, -- Persons partner, or such
+    RelatedPerson integer, -- Persons partner, or such
+    Tags text, -- Space separated list of tag names
 
     foreign key (Location) references Locations(id)
 );
@@ -112,6 +115,7 @@ create table comment_persons (
   Comment integer not null,
   Person  integer not null,
   primary key (Comment, Person),
+
   foreign key (Comment) references comments(Id) on delete cascade,
   foreign key (Person)  references persons(Id)
 );
@@ -134,9 +138,14 @@ create table locations (
   Contact text,   -- email, website, etc
   Address text,
   Lat real,  -- Geo coordinate latitude
-  Lon real   -- longitude
-
-, Tags text, Country text, Region text, SearchLink text, UntappdLink text);
+  Lon real,   -- longitude
+  Tags text,  -- space-separated tag words
+  Country text, -- a default for glasses
+  Region text, 
+  SearchLink text, -- Producer web page search
+  UntappdLink text, -- Link to untappd for the producer
+  ShortName text  -- Shortened name for tight displays
+  );
 
 -- table "tap_beers"
 drop table if exists "tap_beers";
@@ -473,29 +482,6 @@ create view comments_list as
     group by comments.Id
     order by Last desc;
 
--- view persons_list
-drop view if exists persons_list;
-create view persons_list as
-    select
-      persons.Id,
-      persons.Name,
-      'trmob' as trmob,
-      count(distinct comments.Id) - 1 as Com,
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) as Last,
-      locations.Name as Location,
-      'tr' as tr,
-      'Clr' as Clr,
-      persons.description,
-      (select Filename from photos where Person = persons.Id order by Ts desc limit 1) as Photo,
-      persons.Tags
-    from persons
-    left join comment_persons cp on cp.Person = persons.Id
-    left join comments on comments.Id = cp.Comment
-    left join glasses on glasses.Id = comments.Glass
-    left join locations on locations.Id = glasses.Location
-    group by persons.Id;
-
 -- view locations_list
 drop view if exists locations_list;
 create view locations_list as
@@ -516,6 +502,29 @@ create view locations_list as
     left join glasses on glasses.Location = locations.Id
     left join location_ratings r on r.id = glasses.Id
     group by locations.Id;
+
+-- view persons_list
+drop view if exists persons_list;
+create view persons_list as
+    select
+      persons.Id,
+      persons.Name,
+      'trmob' as trmob,
+      count(distinct comments.Id) - 1 as Com,
+      strftime('%Y-%m-%d %w ', max(coalesce(glasses.Timestamp, comments.Ts)), '-06:00') ||
+        strftime('%H:%M', max(coalesce(glasses.Timestamp, comments.Ts))) as Last,
+      locations.Name as Location,
+      'tr' as tr,
+      'Clr' as Clr,
+      persons.description,
+      (select Filename from photos where Person = persons.Id order by Ts desc limit 1) as Photo,
+      persons.Tags
+    from persons
+    left join comment_persons cp on cp.Person = persons.Id
+    left join comments on comments.Id = cp.Comment
+    left join glasses on glasses.Id = comments.Glass
+    left join locations on locations.Id = glasses.Location
+    group by persons.Id;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
