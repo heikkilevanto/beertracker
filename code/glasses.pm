@@ -70,62 +70,7 @@ sub selectbrewtype {
     unless ($opts);
   my $s = "<select name='selbrewtype' id='selbrewtype' onChange='selbrewchange(this);' style='max-width:100px; width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;'>\n" .
     $opts . "</select>\n";
-  my $script = <<'SCRIPT';
-    <script>
-      replaceSelectWithCustom(document.getElementById("selbrewtype"));
-
-      function selbrewchange(el) {
-        // Clear tap number — brew type changed
-        const tapInput = document.querySelector('[name=tap]');
-        if (tapInput) tapInput.value = '';
-        const selbrew = document.getElementById("selbrewtype");
-        const val = selbrew.value;
-        const selected = el.options[el.selectedIndex];
-        const isempty = selected.getAttribute("data-isempty");
-        const table = el.closest('table');
-        for ( const td of table.querySelectorAll("[data-empty]") ) {
-          const te = td.getAttribute("data-empty");
-          if ( te == 1 ) {
-            if ( isempty )
-              td.style.display = 'none';
-            else
-              td.style.display = '';
-          } else if ( te == 2 ) {
-              if ( isempty )
-                td.style.display = '';
-              else
-                td.style.display = 'none';
-            }
-          else if ( te ) {
-            if ( te == val )
-                td.style.display = '';
-              else
-                td.style.display = 'none';
-          }
-        }
-        // Prefill subtype from location when changing to Restaurant
-        if (val === "Restaurant") {
-          const locDropdown = document.getElementById("dropdown-Location");
-          if (locDropdown) {
-            const locHidden = locDropdown.querySelector("input[type=hidden]");
-            if (locHidden && locHidden.value) {
-              const locItems = locDropdown.querySelectorAll(".dropdown-item");
-              locItems.forEach(item => {
-                if (item.id === locHidden.value) {
-                  const locsubtype = item.getAttribute("locsubtype");
-                  const selbrewsubtype = document.getElementById("selbrewsubtype");
-                  if (selbrewsubtype && locsubtype) {
-                    selbrewsubtype.value = locsubtype;
-                  }
-                }
-              });
-            }
-          }
-        }
-      }
-    </script>
-SCRIPT
-  $s .= $script;
+  $s .= "<script>replaceSelectWithCustom(document.getElementById(\"selbrewtype\"));</script>\n";
   return $s;
 } # selectbrewtype
 
@@ -291,91 +236,7 @@ sub maininputform {
   $html .= "<hr/>";
 
   # Javascript trickery
-  my $script = <<'SCRIPTEND';
-
-    function clearinputs() {  // Clear all inputs, used by the 'clear' button
-      var inputs = document.getElementsByTagName('input');  // all regular input fields
-      for (var i = 0; i < inputs.length; i++ ) {
-        if ( inputs[i].type == "text" )
-          inputs[i].value = "";
-      }
-    }
-
-    function setdate() {  // Set date and time, if not already set by the user
-      const dis = document.getElementsByName("date");
-      const tis = document.getElementsByName("time");
-      const now = new Date();
-      for ( const di of dis ) {
-        if ( di.value && di.value.startsWith(" ") ) {
-          const year = now.getFullYear();
-          const month = String(now.getMonth() + 1).padStart(2, '0'); // Zero-padded month
-          const day = String(now.getDate()).padStart(2, '0'); // Zero-padded day
-          const dat = `${year}-${month}-${day}`;
-          di.value = " " + dat;
-        }
-      }
-      for ( const ti of tis ) {
-        if ( ti.value && ti.value.startsWith(" ") ) {
-          const hh = String(now.getHours()).padStart(2, '0');
-          const mm = String(now.getMinutes()).padStart(2, '0');
-          const tim = `${hh}:${mm}`;
-          ti.value = " " + tim;
-        }
-      }
-    }
-    setdate();
-
-    // If noteline is already shown (editing with note), set the labels
-    if (!document.getElementById("noteline").hidden) {
-      document.getElementById("leftcol").innerHTML = '<input type="checkbox" name="setdef" />Def';
-    }
-
-    function shownote() {
-      const noteline = document.getElementById("noteline");
-      noteline.hidden = false;
-      const toggle = document.getElementById("notetag");
-      toggle.hidden = true;
-      const leftcol = document.getElementById("leftcol");
-      leftcol.innerHTML = '<input type="checkbox" name="setdef" />Def';
-    }
-
-    // hide newBrewType, we use SelBrewType always
-    var nbt = document.getElementsByName("newbrewBrewType");
-    if ( nbt.length > 0 ) {
-      nbt[0].hidden = true;
-      var br = nbt[0].nextElementSibling;
-      br.hidden = true;
-    }
-
-    // Clear tap when brew or location changes
-    ['Brew', 'Location'].forEach(function(name) {
-      const hidden = document.getElementById(name);
-      if (hidden) {
-        hidden.addEventListener('input', function() {
-          const tapInput = document.querySelector('[name=tap]');
-          if (tapInput) tapInput.value = '';
-        });
-      }
-    });
-
-    function editrecord() {  // Switch form to edit mode for the current record in-place
-      const dateInput = document.getElementById('date');
-      const timeInput = document.getElementById('time');
-      const tapInput = document.querySelector('[name=tap]');
-      const noteInput = document.querySelector('[name=note]');
-      dateInput.value = dateInput.dataset.rawval;
-      timeInput.value = timeInput.dataset.rawval;
-      tapInput.value = tapInput.dataset.rawval;
-      noteInput.value = noteInput.dataset.note;
-      shownote();
-      document.getElementById('edit-e').disabled = false;
-      document.getElementById('new-buttons').style.display = 'none';
-      document.getElementById('edit-buttons').style.display = '';
-      document.getElementById('new-buttons-right').style.display = 'none';
-      document.getElementById('edit-buttons-right').style.display = '';
-    }
-SCRIPTEND
-  $html .= "<script defer>$script</script>\n";
+  $html .= "<script defer>initGlassForm();</script>\n";
   cache::set($c, $cache_key, $html);
   print $html;
 } # maininputform
