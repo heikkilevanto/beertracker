@@ -110,15 +110,12 @@ sub postglass {
 
   } # normal glass
 
-  # Update Tap from form if the user provided an explicit value.
-  # Leading space means "not user-edited" (main form convention); empty string
-  # (copy button) means the copied record had no tap.  In both cases leave
-  # $glass->{Tap} as-is — findrec already populated it from the latest glass.
+  # Set tap from form value. Strip leading-space "not user-edited" marker,
+  # keep only digits. Empty or cleared → undef (NULL in DB).
   my $formtap = util::param($c, "tap");
-  if ( $c->{edit} || ( $formtap !~ /^ / && $formtap ne '' ) ) {
-    $glass->{Tap} = $formtap;  # Editing, or an explicit tap value was passed
-  }
-  $glass->{Tap} =~ s/\D//g if $glass->{Tap};
+  $formtap =~ s/^\s+//;   # strip leading-space marker
+  $formtap =~ s/\D//g;    # keep only digits
+  $glass->{Tap} = $formtap || undef;
 
   # Ensure empty glasses never have a tap, even if a tap value was passed
   if ( glasses::isemptyglass($glass->{BrewType}) ) {

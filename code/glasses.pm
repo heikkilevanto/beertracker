@@ -75,6 +75,9 @@ sub selectbrewtype {
       replaceSelectWithCustom(document.getElementById("selbrewtype"));
 
       function selbrewchange(el) {
+        // Clear tap number — brew type changed
+        const tapInput = document.querySelector('[name=tap]');
+        if (tapInput) tapInput.value = '';
         const selbrew = document.getElementById("selbrewtype");
         const val = selbrew.value;
         const selected = el.options[el.selectedIndex];
@@ -343,6 +346,17 @@ sub maininputform {
       var br = nbt[0].nextElementSibling;
       br.hidden = true;
     }
+
+    // Clear tap when brew or location changes
+    ['Brew', 'Location'].forEach(function(name) {
+      const hidden = document.getElementById(name);
+      if (hidden) {
+        hidden.addEventListener('input', function() {
+          const tapInput = document.querySelector('[name=tap]');
+          if (tapInput) tapInput.value = '';
+        });
+      }
+    });
 
     function editrecord() {  // Switch form to edit mode for the current record in-place
       const dateInput = document.getElementById('date');
