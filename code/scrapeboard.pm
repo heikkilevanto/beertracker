@@ -18,6 +18,7 @@ $scrapers{"Taphouse"}  = ["taphouse.pl"];
 $scrapers{"Brus"}      = ["brus.pl"];
 $scrapers{"Ølsnedkeren"} = ["untappd.pl", "olsnedkeren/415314"];
 $scrapers{"Bootleggers"}  = ["untappd.pl", "bootleggers-craft-beer-bar-frb/10845482"];
+$scrapers{"Væskebalancen"}  = ["untappd.pl", "vaeskebalancen-blagardsgade-bar-and-bottleshop/11911453"];
 # Fermentoren is temporarily closed:
 #$scrapers{"Fermentoren"}  = ["untappd.pl", "fermentoren-cph/127076"];
 # Old per-venue untappd scrapers, superseded by untappd.pl:
