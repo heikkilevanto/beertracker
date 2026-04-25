@@ -357,6 +357,7 @@ sub editbrew {
     $p = db::getrecord($c, "BREWS", $duplicate_id);
     $p ||= {};
     $p->{Id} = "new";
+    $p->{Parent} = $duplicate_id;  # New brew inherits from the duplicated one
     $submit = "Insert";
     print "<b>Duplicating Brew $duplicate_id: $p->{Name}</b><br/>\n";
   } elsif ( $c->{edit} =~ /new/i ) {
@@ -433,6 +434,7 @@ JS
       print "&nbsp;<a href='$c->{url}?o=Comment&e=new&brew=$p->{Id}&commenttype=brew'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
       listbrewcomments($c, $p);
+      listbrewrelations($c, $p);
       listbrewtaps($c, $p);
       listbrewprices($c, $p);
       listbrewglasses($c, $p);
@@ -443,6 +445,69 @@ JS
   }
 } # editbrew
 
+
+################################################################################
+# listbrewrelations - Show parent/child relationships for a brew
+################################################################################
+sub listbrewrelations {
+  my $c = shift;
+  my $brew = shift;
+
+  my $parent = undef;
+  if ( $brew->{Parent} ) {
+    $parent = db::getrecord($c, "BREWS", $brew->{Parent});
+  }
+
+  my $sth = db::query($c, "SELECT * FROM BREWS WHERE Parent = ? ORDER BY Name", $brew->{Id});
+  my $children = $sth->fetchall_arrayref({});
+
+  return unless ($parent || @$children);
+
+  print "<!-- listbrewrelations -->\n";
+
+  if ($parent) {
+    print "Inherits from: <a href='$c->{url}?o=$c->{op}&e=$parent->{Id}'><span>[$parent->{Id}] $parent->{Name}</span></a><br/>\n";
+    brewfielddiff($c, $parent, $brew, "Parent", "This brew");
+  }
+
+  if (@$children) {
+    print "Variants of this brew:<br/>\n";
+    foreach my $child (@$children) {
+      print "<a href='$c->{url}?o=$c->{op}&e=$child->{Id}'><span>[$child->{Id}] $child->{Name}</span></a><br/>\n";
+      brewfielddiff($c, $brew, $child, "This brew", $child->{Name});
+    }
+  }
+
+  print "<hr/>\n";
+
+} # listbrewrelations
+
+################################################################################
+# brewfielddiff - Print a table of differing fields between two brew records
+################################################################################
+sub brewfielddiff {
+  my $c    = shift;
+  my $base = shift;  # hashref - the reference brew (left column)
+  my $comp = shift;  # hashref - the brew to compare (right column)
+  my $baselabel = shift || "Base";
+  my $complabel = shift || "This brew";
+
+  my @diffs;
+  foreach my $field ( db::tablefields($c, "BREWS", "Id|Parent", 1) ) {
+    my $bval = defined $base->{$field} ? $base->{$field} : "";
+    my $cval = defined $comp->{$field} ? $comp->{$field} : "";
+    next if ($bval eq $cval);
+    my $bdisp = $bval ne "" ? util::htmlesc($bval) : "&mdash;";
+    my $cdisp = $cval ne "" ? util::htmlesc($cval) : "&mdash;";
+    push @diffs, "<tr><td>$field</td><td>$bdisp</td><td>&rarr;</td><td>$cdisp</td></tr>\n";
+  }
+  if (@diffs) {
+    print "<table>\n";
+    print "<tr><th>Field</th><th>$baselabel</th><th></th><th>$complabel</th></tr>\n";
+    print @diffs;
+    print "</table>\n";
+  }
+} # brewfielddiff
 
 ################################################################################
 # Select a brew
@@ -559,6 +624,12 @@ sub dedupbrews {
       $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update photos") unless defined $rows;
       print { $c->{log} } "Updated $rows photos from $dup to $id\n";
+
+      $sql = "UPDATE BREWS set Parent = ? where Parent = ?  ";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
+      $rows = db::execute($c, $sql, $id, $dup);
+      util::error("Deduplicate brews: Failed to update child Parent pointers") unless defined $rows;
+      print { $c->{log} } "Updated $rows child Parent pointers from $dup to $id\n";
 
       $sql = "DELETE FROM Brews WHERE Id = ? ";
       $rows = db::execute($c, $sql, $dup);

@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-04-24 13:05 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-04-25 12:51 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
@@ -62,7 +62,8 @@ create table brews (
     DefVol text,   -- default volume, matching the def price
     Barcode text, -- bar code on the bottle or box
     DetailsLink text, -- Link to producers or untappd page about the brew
-    ShortName text,  -- Shortened name for tight displays
+    ShortName text, -- Shortened name for tight displays
+    Parent integer references brews(Id),  -- Where this was copied from
 
     foreign key (ProducerLocation) references Locations(id)
 );
@@ -575,6 +576,8 @@ create index idx_comment_persons_person  on comment_persons(Person);
 create index idx_comment_persons_comment on comment_persons(Comment);
 
 create index idx_comments_brew on comments(Brew);
+
+create index idx_brews_parent on brews(Parent);
 
 commit;
 

@@ -152,6 +152,12 @@ sub inputform {
         } else {
           $form .= "<td>Person</td>\n<td>\n";
         }
+      } elsif ( $f =~ /^Parent$/i ) {
+        if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
+          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Brew&e=$rec->{$f}'><span>Parent [$rec->{$f}]</span></a></td>\n<td>\n";
+        } else {
+          $form .= "<td>Parent</td>\n<td>\n";
+        }
       } else {
         $form .= "<td colspan=2>\n";
       }
@@ -181,6 +187,9 @@ sub inputform {
         my $checked = "";
         $checked = "checked" if ($rec && $rec->{$f});
         $form .= "<input type=checkbox name='$f' $checked value='1' $disabled/>";
+      } elsif ( $f =~ /^Parent$/i ) {
+        $form .= "<input name='$inpname' $val $disabled/>\n";
+        $form .= $separatortag;
       } else  {
         util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
       }

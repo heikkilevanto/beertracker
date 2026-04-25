@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 21;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 22;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
@@ -37,6 +37,7 @@ our @MIGRATIONS = (
   [19, 'add link fields to locations and brews', \&mig_019_add_link_fields],
   [20, 'fix persons_list last-seen to use comment Ts as fallback', \&mig_020_fix_persons_last_seen],
   [21, '637 add ShortName to locations and brews', \&mig_021_add_shortname],
+  [22, '551 add Parent to brews', \&mig_022_551_brew_parent],
 );
 
 ################################################################################
@@ -355,5 +356,13 @@ sub mig_021_add_shortname {
   db::execute($c, "ALTER TABLE locations ADD COLUMN ShortName TEXT");
   db::execute($c, "ALTER TABLE brews ADD COLUMN ShortName TEXT");
 } # mig_021_add_shortname
+
+sub mig_022_551_brew_parent {
+  # Issue #551: add Parent column to brews for brew inheritance
+  # Parent references brews(Id); null means no parent
+  my $c = shift;
+  db::execute($c, "ALTER TABLE brews ADD COLUMN Parent INTEGER REFERENCES brews(Id)");
+  db::execute($c, "CREATE INDEX idx_brews_parent ON brews(Parent)");
+} # mig_022_551_brew_parent
 
 1;
