@@ -56,21 +56,16 @@ sub selectbrewtype {
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $bt = $sth->fetchrow_array ) {
-    my $se = "";
-    $se = "selected" if ( $bt eq $selected );
-    my $em = "data-isempty=1";
-    $em = "" if ( ! isemptyglass($bt) );
-    $opts .= "<option value='$bt' $em $se>$bt</option>\n";
+    my $em = glasses::isemptyglass($bt) ? " data-isempty='1'" : "";
+    $opts .= "<div class='dropdown-item' id='$bt'$em>$bt</div>\n";
   }
   # If editing an Adjustment glass, add it to dropdown
   if ( $selected eq 'Adjustment' ) {
-    $opts .= "<option value='Adjustment' selected>Adjustment</option>\n";
+    $opts .= "<div class='dropdown-item' id='Adjustment'>Adjustment</div>\n";
   }
   util::error ("No brew types in the database. Insert some dummy glasses")
     unless ($opts);
-  my $s = "<select name='selbrewtype' id='selbrewtype' onChange='selbrewchange(this);' style='max-width:100px; width:100px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;'>\n" .
-    $opts . "</select>\n";
-  $s .= "<script>replaceSelectWithCustom(document.getElementById(\"selbrewtype\"));</script>\n";
+  my $s = inputs::dropdown($c, "selbrewtype", $selected, $selected, $opts);
   return $s;
 } # selectbrewtype
 

@@ -1,14 +1,18 @@
 // glasses.js - JavaScript for the glass input form
 
-function selbrewchange(el) {
-  // Clear tap number — brew type changed
-  const tapInput = document.querySelector('[name=tap]');
-  if (tapInput) tapInput.value = '';
-  const selbrew = document.getElementById("selbrewtype");
-  const val = selbrew.value;
-  const selected = el.options[el.selectedIndex];
-  const isempty = selected.getAttribute("data-isempty");
-  const table = el.closest('table');
+function selbrewchange(hiddenInput, clearTap) {
+  // Clear tap number — brew type changed (but not on initial page load)
+  if (clearTap) {
+    const tapInput = document.querySelector('[name=tap]');
+    if (tapInput) tapInput.value = '';
+  }
+  const val = hiddenInput.value;
+  // Find the matching dropdown-item div to read data-isempty
+  const dd = document.getElementById('dropdown-selbrewtype');
+  const item = dd ? dd.querySelector('.dropdown-item[id="' + val + '"]') : null;
+  const isempty = item ? item.getAttribute('data-isempty') : null;
+  const table = hiddenInput.closest('table');
+  if (!table) return;
   for ( const td of table.querySelectorAll("[data-empty]") ) {
     const te = td.getAttribute("data-empty");
     if ( te == 1 ) {
@@ -133,4 +137,13 @@ function initGlassForm() {
       });
     }
   });
+
+  // Wire selbrewchange to the hidden input's input event
+  const selbrewtypeHidden = document.getElementById('selbrewtype');
+  if (selbrewtypeHidden) {
+    selbrewtypeHidden.addEventListener('input', function() {
+      selbrewchange(selbrewtypeHidden, true);
+    });
+    selbrewchange(selbrewtypeHidden, false); // run once on load to set initial visibility
+  }
 }

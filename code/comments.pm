@@ -219,16 +219,11 @@ sub commentform {
   $ts_display =~ s/:\d+$//;  # remove seconds
 
   # Type row
+  my $ctopts = join("", map { "<div class='dropdown-item' id='$_'>$_</div>\n" } @ctypes);
   $s .= "<tr>\n";
   $s .= "  <td style='$lcol'>Type</td>\n";
   $s .= "  <td>\n";
-  $s .= "    <select name='commenttype' id='commenttype'>\n";
-  for my $ct (@ctypes) {
-    my $sel = ($curtype eq $ct) ? ' selected' : '';
-    $s .= "      <option value='$ct'$sel>$ct</option>\n";
-  }
-  $s .= "    </select>\n";
-  $s .= "    <script>replaceSelectWithCustom(document.getElementById('commenttype'));</script>\n";
+  $s .= inputs::dropdown($c, "commenttype", $curtype, $curtype, $ctopts);
   $s .= "  </td>\n";
   $s .= "</tr>\n";
 
@@ -317,19 +312,39 @@ sub commentform {
   $s .= "</tr>\n";
 
   # Rating row
+  my $r = $com->{Rating} || 0;
+  my $ratopts = "<div class='dropdown-item' id=''>Rating</div>\n";
+  for my $i (1 .. $#ratings) {  # Skip "Zero"
+    my $rclass = get_rating_class($i);
+    $ratopts .= "<div class='dropdown-item $rclass' id='$i'>$i: $ratings[$i]</div>\n";
+  }
+  my $rat_id   = $r || "";
+  my $rat_name = $r ? "$r: $ratings[$r]" : "Rating";
+  my $rat_class = $r ? get_rating_class($r) : "";
   $s .= "<tr>\n";
   $s .= "  <td style='$lcol'>Rating</td>\n";
   $s .= "  <td>\n";
-  $s .= "    <select name='rating' id='rating'>\n";
-  $s .= "    <option value=''>Rating</option>\n";
-  my $r = $com->{Rating} || 0;
-  for my $i (1 .. $#ratings) {  # Skip "Zero"
-    my $selected = ($r == $i) ? " selected" : "";
-    my $class = get_rating_class($i);
-    $s .= "    <option class='$class' value='$i'$selected>$i: $ratings[$i]</option>\n";
+  $s .= inputs::dropdown($c, "rating", $rat_id, $rat_name, $ratopts);
+  $s .= qq{  <script>
+(function(){
+  var dd = document.getElementById('dropdown-rating');
+  if (!dd) return;
+  var hidden = dd.querySelector('input[type=hidden]');
+  var filter = dd.querySelector('.dropdown-filter');
+  var ratingClasses = ['rating-rubbish','rating-bronze','rating-silver','rating-gold'];
+  function syncClass() {
+    ratingClasses.forEach(function(c){filter.classList.remove(c);});
+    if (!hidden.value) return;
+    var item = dd.querySelector('.dropdown-item[id="'+hidden.value+'"]');
+    if (item) {
+      var cls = Array.from(item.classList).find(function(c){return c.startsWith('rating-');});
+      if (cls) filter.classList.add(cls);
+    }
   }
-  $s .= "    </select>\n";
-  $s .= "    <script>replaceSelectWithCustom(document.getElementById('rating'));</script>\n";
+  hidden.addEventListener('input', syncClass);
+  syncClass();
+})();
+  </script>\n};
   $s .= "  </td>\n";
   $s .= "</tr>\n";
 

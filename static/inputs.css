@@ -64,55 +64,6 @@
 }
 
 
-/* Custom select wrapper */
-.custom-select {
-  position: relative;
-  width: 100%;
-  max-width: 300px;
-  cursor: pointer;
-}
-
-/* Displayed value */
-.custom-select-display {
-  padding: 4px 30px 4px 4px; /* extra right padding for arrow */
-  border: 1px solid #ccc;
-  background-color: var(--altbgcolor, white);
-  position: relative;
-}
-
-/* Arrow on the right */
-.custom-select-display::after {
-  content: "▼"; /* downward arrow */
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  pointer-events: none;
-  font-size: 0.8em;
-  color: white;
-}
-
-/* Options list */
-.custom-select-list {
-  position: absolute;
-  width: 100%;
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  background-color: var(--bgcolor, white);
-  z-index: 1000;
-  display: none;
-}
-
-/* Each selectable item */
-.custom-select-item {
-  padding: 3px;
-}
-
-.custom-select-item:hover {
-  background-color: var(--altbgcolor, #eee);
-}
-
 /* Multi-select chips */
 .dropdown-chips {
   display: flex;

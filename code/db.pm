@@ -218,31 +218,28 @@ sub queryarray {
   return @row;
 }
 
-# Run a simple query and returns a <select> tag with <options> inside it
-# from the query, and an optional initial line
-# The query should return one value as 'v'
-# as in "select distinct BrewType as v from Glasses where username = ? "
-sub queryselect {
+# Run a query and return an inputs::dropdown() widget.
+# Args: $c, $name, $selopt, $firstopt, $sql, @params
+sub querydropdown {
   my $c = shift;
-  my $name = shift || "";
-  my $selopt = shift || "";  # the option currently selected
-  my $firstopt = shift || ""; # The first option display string, like (all). The value is always ""
+  my $name      = shift || "";
+  my $selopt    = shift // "";   # id of currently selected item
+  my $firstopt  = shift || "";  # first option display label (value is "")
   my $sql = shift;
   my @params = @_;
-  my $sth = query($c,$sql, @params );
-  return "" unless ( $sth);
+  my $sth = query($c, $sql, @params);
+  return "" unless ($sth);
   my $opts = "";
-  $opts .= "<option value=''>$firstopt</option>\n" if ($firstopt);
-  while ( my $v = $sth->fetchrow_array )  {
-    my $sel = "";
-    $sel = "selected" if ( $v eq $selopt );
-    $opts .= "<option value='$v' $sel>$v</option>\n";
+  $opts .= "<div class='dropdown-item' id=''>$firstopt</div>\n" if ($firstopt);
+  my $selname = ($selopt eq "") ? $firstopt : $selopt;
+  while ( my $v = $sth->fetchrow_array ) {
+    $opts .= "<div class='dropdown-item' id='$v'>$v</div>\n";
+    $selname = $v if ($v eq $selopt);
   }
   $sth->finish;
-  return "<select name='$name' id='$name'>\n$opts</select>\n".
-    "<script>replaceSelectWithCustom(document.getElementById('$name')); </script>\n";
+  return inputs::dropdown($c, $name, $selopt, $selname, $opts);
+} # querydropdown
 
-}
 ################################################################################
 # Simple buffered read of records.
 ################################################################################

@@ -78,7 +78,7 @@ function initCommentForm() {
 
   var ctypeEl = document.getElementById('commenttype');
   if (ctypeEl) {
-    ctypeEl.addEventListener('change', updateCommentFields);
+    ctypeEl.addEventListener('input', updateCommentFields);
     updateCommentFields();
   }
 }

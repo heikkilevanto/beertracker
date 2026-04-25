@@ -50,24 +50,43 @@ sub exportform {
   my $c = shift;
 
   my ( $datefrom, $dateto, $mode, $schema, $action, $taps, $export_username ) = export_params($c);
+  $action ||= "display";  # default when no param yet
 
-  my $username_select = "";
+  my $username_row = "";
   if ( superuser::is_superuser($c) ) {
     my @users = db::queryrecordarray($c,
       "SELECT DISTINCT Username FROM Glasses ORDER BY Username");
-    my $opts = "";
-    for my $u (@users) {
-      my $sel = ($u eq $export_username) ? " selected" : "";
-      $opts .= "          <option value='$u'$sel>$u</option>\n";
-    }
-    $username_select = qq{    <tr>
-      <td>User</td>
-      <td>
-        <select name="export_username" id="export_username">
-$opts        </select>
-      </td>
-    </tr>};
+    my $uopts = join("", map { "<div class='dropdown-item' id='$_'>$_</div>\n" } @users);
+    $username_row = "<tr>\n  <td>User</td>\n  <td>\n" .
+      inputs::dropdown($c, "export_username", $export_username, $export_username, $uopts) .
+      "  </td>\n</tr>\n";
   }
+
+  my @mode_items   = (["partial", "Only referenced"],  ["full",        "All in related tables"]);
+  my @taps_items   = (["none",    "No tap data"],       ["brews",       "Taps for referenced brews"],
+                      ["range",   "All taps in date range"]);
+  my @schema_items = (["none",    "Data only"],         ["dropcreate",  "Drop + Create"]);
+  my @action_items = (["display", "Show on screen"],    ["tarball",     "Tarball (SQL only)"],
+                      ["tarball_photos", "Tarball (SQL + photos)"]);
+
+  my $mode_opts   = join("", map { "<div class='dropdown-item' id='$_->[0]'>$_->[1]</div>\n" } @mode_items);
+  my $taps_opts   = join("", map { "<div class='dropdown-item' id='$_->[0]'>$_->[1]</div>\n" } @taps_items);
+  my $schema_opts = join("", map { "<div class='dropdown-item' id='$_->[0]'>$_->[1]</div>\n" } @schema_items);
+  my $action_opts = join("", map { "<div class='dropdown-item' id='$_->[0]'>$_->[1]</div>\n" } @action_items);
+
+  my ($mode_name)   = map { $_->[1] } grep { $_->[0] eq $mode }   @mode_items;
+  my ($taps_name)   = map { $_->[1] } grep { $_->[0] eq $taps }   @taps_items;
+  my ($schema_name) = map { $_->[1] } grep { $_->[0] eq $schema } @schema_items;
+  my ($action_name) = map { $_->[1] } grep { $_->[0] eq $action } @action_items;
+  $mode_name   //= $mode_items[0][1];
+  $taps_name   //= $taps_items[0][1];
+  $schema_name //= $schema_items[0][1];
+  $action_name //= $action_items[0][1];
+
+  my $mode_dd   = inputs::dropdown($c, "mode",   $mode,   $mode_name,   $mode_opts);
+  my $taps_dd   = inputs::dropdown($c, "taps",   $taps,   $taps_name,   $taps_opts);
+  my $schema_dd = inputs::dropdown($c, "schema", $schema, $schema_name, $schema_opts);
+  my $action_dd = inputs::dropdown($c, "action", $action, $action_name, $action_opts);
 
   print qq{
   <form method="GET" style='padding-bottom: 200px;'>
@@ -82,44 +101,22 @@ $opts        </select>
       <td>To date</td>
       <td><input type="text" name="dateto" value='$dateto' placeholder="YYYY-MM-DD"></td>
     </tr>
-$username_select
+$username_row
     <tr>
       <td>Support records &nbsp;</td>
-      <td>
-        <select name="mode" id="mode">
-          <option value="partial">Only referenced</option>
-          <option value="full">All in related tables</option>
-        </select>
-      </td>
+      <td>$mode_dd</td>
     </tr>
     <tr>
       <td>Tap data &nbsp;</td>
-      <td>
-        <select name="taps" id="taps">
-          <option value="none">No tap data</option>
-          <option value="brews">Taps for referenced brews</option>
-          <option value="range">All taps in date range</option>
-        </select>
-      </td>
+      <td>$taps_dd</td>
     </tr>
     <tr>
       <td>Schema</td>
-      <td>
-        <select name="schema" id="schema">
-          <option value="none">Data only</option>
-          <option value="dropcreate">Drop + Create</option>
-        </select>
-      </td>
+      <td>$schema_dd</td>
     </tr>
     <tr>
       <td>Action</td>
-      <td>
-        <select name="action" id="action">
-          <option value="display">Show on screen</option>
-          <option value="tarball">Tarball (SQL only)</option>
-          <option value="tarball_photos">Tarball (SQL + photos)</option>
-        </select>
-      </td>
+      <td>$action_dd</td>
     </tr>
     <tr>
       <td style="text-align:center">
@@ -129,12 +126,6 @@ $username_select
     </tr>
   </table>
   </form>
-  <script>
-    replaceSelectWithCustom(document.getElementById("mode"));
-    replaceSelectWithCustom(document.getElementById("taps"));
-    replaceSelectWithCustom(document.getElementById("schema"));
-    replaceSelectWithCustom(document.getElementById("action"));
-  </script>
   };
 
   my @tarball_users;

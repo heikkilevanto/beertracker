@@ -49,13 +49,13 @@ sub histogram_form {
       from glasses
       where Username = ?
       order by v desc";
-    my $yearsel = db::queryselect( $c, "year", $year, "(all)", $sql, $c->{username});
+    my $yearsel = db::querydropdown( $c, "year", $year, "(all)", $sql, $c->{username});
 
     $sql = "select
       distinct BrewType as v
       from glasses where username = ?
       order by timestamp desc";
-    my $brewsel = db::queryselect( $c, "brew_type", $brew_type, "(all)", $sql, $c->{username});
+    my $brewsel = db::querydropdown( $c, "brew_type", $brew_type, "(all)", $sql, $c->{username});
 
     $sql = "select
       distinct LocType as v
@@ -63,7 +63,7 @@ sub histogram_form {
       where username = ?
       and Locations.Id = glasses.location
       order by timestamp desc";
-    my $locsel = db::queryselect( $c, "loc_type", $loc_type, "(all)", $sql, $c->{username});
+    my $locsel = db::querydropdown( $c, "loc_type", $loc_type, "(all)", $sql, $c->{username});
 
     return qq{
 <form method="GET">

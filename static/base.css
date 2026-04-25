@@ -89,14 +89,8 @@ a span, a b, a i { color: #ffffff; } /* Put one of the tags inside a link, and i
 .rating-silver { color: #F0F0F0; } /* Light gray, closer to white */
 .rating-gold { color: #FFFF00; } /* Bright yellow */
 
-/* For custom select items */
-.custom-select-item.rating-rubbish { color: #B22222; }
-.custom-select-item.rating-bronze { color: #DAA520; }
-.custom-select-item.rating-silver { color: #F0F0F0; }
-.custom-select-item.rating-gold { color: #FFFF00; }
-
-/* For custom select display */
-.custom-select-display.rating-rubbish { color: #B22222; }
-.custom-select-display.rating-bronze { color: #DAA520; }
-.custom-select-display.rating-silver { color: #F0F0F0; }
-.custom-select-display.rating-gold { color: #FFFF00; }
+/* For dropdown filter input */
+.dropdown-filter.rating-rubbish { color: #B22222; }
+.dropdown-filter.rating-bronze { color: #DAA520; }
+.dropdown-filter.rating-silver { color: #F0F0F0; }
+.dropdown-filter.rating-gold { color: #FFFF00; }
