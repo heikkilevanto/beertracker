@@ -276,7 +276,7 @@ function initDropdown(container) {
       const selbrewsubtype = document.getElementById("selbrewsubtype");
       const locsubtype = item.getAttribute("locsubtype");
       if (selbrewtype && selbrewsubtype && locsubtype && selbrewtype.value === "Restaurant") {
-        selbrewsubtype.value = locsubtype;
+        setDropdownValue(selbrewsubtype, locsubtype);
       }
 
       // show note if generic brew

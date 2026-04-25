@@ -33,6 +33,12 @@ function selbrewchange(hiddenInput, clearTap) {
           td.style.display = 'none';
     }
   }
+  // Clear subtype when brew type changes (but not on initial load)
+  if (clearTap) {
+    const subtypeHidden = document.getElementById('selbrewsubtype');
+    if (subtypeHidden) setDropdownValue(subtypeHidden, '');
+  }
+
   // Prefill subtype from location when changing to Restaurant
   if (val === "Restaurant") {
     const locDropdown = document.getElementById("dropdown-Location");
@@ -45,7 +51,7 @@ function selbrewchange(hiddenInput, clearTap) {
             const locsubtype = item.getAttribute("locsubtype");
             const selbrewsubtype = document.getElementById("selbrewsubtype");
             if (selbrewsubtype && locsubtype) {
-              selbrewsubtype.value = locsubtype;
+              setDropdownValue(selbrewsubtype, locsubtype);
             }
           }
         });

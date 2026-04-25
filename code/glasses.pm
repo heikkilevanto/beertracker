@@ -81,17 +81,16 @@ sub selectbrewsubtype {
     GROUP BY brewtype,SubType
     ORDER BY last_time DESC ';
   my $sth = db::query($c, $sql );
-  my $s = "";
+  my $opts = "";
   while ( my $bt = $sth->fetchrow_hashref ) {
     next unless ( $bt->{SubType} );
-    my $sel = "";
-    $sel = "selected" if ( $rec->{SubType} && $rec->{SubType} eq $bt->{SubType} );
-    my $em = "data-empty=\"$bt->{BrewType}\" ";
-    $s .= "<option value='$bt->{SubType}' $em $sel>$bt->{SubType}</option>\n";
+    my $sub   = util::htmlesc($bt->{SubType});
+    my $btype = util::htmlesc($bt->{BrewType});
+    $opts .= "<div class='dropdown-item' id='$sub' brewtype='$btype'>$sub</div>\n";
   }
-  $s = "<select name='selbrewsubtype' id='selbrewsubtype'>\n" .
-    $s . "</select>\n";
-  return $s;
+  my $subtype = $rec->{SubType} || "";
+  return inputs::dropdown($c, "selbrewsubtype", $subtype, $subtype, $opts,
+    "", "", "", "", "", "", "", "simplenew");
 } # selectbrewsubtype
 
 ################################################################################
