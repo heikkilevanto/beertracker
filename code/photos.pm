@@ -6,11 +6,8 @@ use strict;
 use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
-
 use POSIX qw(strftime);
-my $q = CGI->new;
-$q->charset( "UTF-8" );
-
+use File::Basename;
 
 # Default image sizes (width in pixels)
 my %imagesizes;
@@ -19,18 +16,8 @@ $imagesizes{"small"} = 40;  # For compact list display
 $imagesizes{"mob"} = 240;  # 320 is full width on my phone
 $imagesizes{"pc"} = 640;
 
-
-# TODO - Pass $c to all subs, etc
-#
-
 # TODO
-#- Make a routine to scale to any given width. Check if already there.
-#- Use that when displaying
 #- When clearing the cache, delete scaled images over a month old, but not .orig
-
-
-
-
 
 # Get image file name. Width can be in pixels, or special values like
 # "orig" for the original image, "" for the plain name to be saved in the record,
@@ -124,7 +111,6 @@ sub thumbnails_html {
   return "<div style='margin-left:1.2em; margin-top:6px; margin-bottom:6px'>$s</div>\n";
 } # thumbnails_html
 
-
 # Save the uploaded image in a file.
 # $prefix is the full filename base, e.g. "c-42" or "g-100-1700000000".
 sub savefile {
@@ -136,7 +122,7 @@ sub savefile {
   my $filename = imagefilename($c, $storename, "orig"); # file to save in
   print { $c->{log} } "Saving image '$dbname' into '$filename' \n";
 
-  util::error("FIle '$dbname' already exists, will not overwrite")
+  util::error("File '$dbname' already exists, will not overwrite")
     if ( -e $filename );
   my $filehandle = $c->{cgi}->upload('photo');
   if ( ! $filehandle ) {
@@ -148,7 +134,6 @@ sub savefile {
     util::error("Upload temp file '$tmpfilename' not readable");
   }
   # Ensure destination directory exists
-  use File::Basename;
   my $destdir = dirname($filename);
   unless ( -d $destdir ) {
     unless (mkdir $destdir) {
@@ -422,7 +407,7 @@ sub photo_attached_str {
 
   if ( $p->{Comment} ) {
     my $cid = $p->{Comment};
-        my $row = db::queryrecord($c, q{
+      my $row = db::queryrecord($c, q{
          SELECT c.Comment AS Txt,
           c.Glass   AS Gid,
           c.Rating  AS Rating,
