@@ -25,6 +25,8 @@ sub update_taps {
   if ($current_ref) {
     %current = %$current_ref;
   } else {
+    # TAPS_FALLBACK: fallback fetch - current_ref should always be passed; this branch may be dead code
+    print { $c->{log} } "taps: TAPS_FALLBACK fetching current taps for location $location_id (current_ref not provided)\n";
     my $cur_sth = db::query($c, "SELECT Tap, Brew, Id FROM current_taps WHERE Location = ?", $location_id);
     while (my $row = $cur_sth->fetchrow_hashref) {
       $current{$row->{Tap}} = $row;
@@ -82,11 +84,11 @@ sub update_taps {
   #print { $c->{log} } "taps: Updated LastSeen for active taps at location $location_id\n";
 
   # Add scrape marker (one per location, indicating last scrape time)
-  # TODO: Once duplicate markers are cleaned up, switch to option 3:
-  # only insert if none exists, update LastSeen otherwise.
-  db::execute($c, "DELETE FROM tap_beers WHERE Location = ? AND Tap IS NULL AND Brew IS NULL", $location_id);
-  my $marker_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, NULL, NULL, ?, ?)";
-  db::execute($c, $marker_sql, $location_id, $now, $now);
+  # Manual upsert: update LastSeen if marker exists, insert if not.
+  my $rows = db::execute($c, "UPDATE tap_beers SET LastSeen = ? WHERE Location = ? AND Tap IS NULL AND Brew IS NULL AND Gone IS NULL", $now, $location_id);
+  if ($rows == 0) {
+    db::execute($c, "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, NULL, NULL, ?, ?)", $location_id, $now, $now);
+  }
   #print { $c->{log} } "taps: Added scrape marker for location $location_id\n";
 } # update_taps
 
