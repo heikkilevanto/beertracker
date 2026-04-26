@@ -18,6 +18,7 @@ sub update_taps {
   my $current_ref = shift;  # Pre-fetched current board from scrapeboard.pm
 
   my $now = util::now();
+  my $taps_changed = 0;
   my %scraped_taps;
 
   # Use pre-fetched current taps if provided, otherwise fetch here
@@ -49,6 +50,7 @@ sub update_taps {
     }
 
     # Insert tap (new or changed)
+    $taps_changed++;
     my @sizes = sort { ($a->{vol} || 0) <=> ($b->{vol} || 0) } @{$tap->{sizePrice} || []};
     my ($sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
     if (@sizes >= 1) {
@@ -90,6 +92,8 @@ sub update_taps {
     db::execute($c, "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, NULL, NULL, ?, ?)", $location_id, $now, $now);
   }
   #print { $c->{log} } "taps: Added scrape marker for location $location_id\n";
+
+  return $taps_changed;
 } # update_taps
 
 ################################################################################

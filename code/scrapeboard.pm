@@ -35,7 +35,9 @@ sub updateboard {
 
   my $locparam = shift;
   $locparam = util::param($c,"loc") unless defined $locparam;
-  
+
+  $c->{scrape_status} = undef;
+
   if (!$scrapers{$locparam}) {
     print { $c->{log} } "updateboard: No scraper for '$locparam'\n";
     return;  # No error page
@@ -75,6 +77,7 @@ sub updateboard {
   }
 
   my $inserted_brews = 0;
+  my $inserted_producers = 0;
 
   foreach my $e (@$beerlist) {
     my $maker = $e->{maker} || "";
@@ -102,6 +105,7 @@ sub updateboard {
       my $sql = "INSERT INTO LOCATIONS (Name, LocType, LocSubType) VALUES (?, 'Producer', 'Beer')";
       db::execute($c, $sql, $maker);
       $prod_id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
+      $inserted_producers++;
       print { $c->{log} } "updateboard: Inserted producer '$maker' (id $prod_id)\n";
     }
 
@@ -131,7 +135,9 @@ sub updateboard {
   print { $c->{log} } "updateboard: $inserted_brews new brews inserted\n" if $inserted_brews;
 
   # Update taps
-  taps::update_taps($c, $loc_id, $beerlist, \%current_board);
+  my $taps_changed = taps::update_taps($c, $loc_id, $beerlist, \%current_board);
+
+  $c->{scrape_status} = "${inserted_brews} new brews, ${inserted_producers} new producers, ${taps_changed} taps changed";
 
   # Redirect back to showing the board, for this location (web context only)
   $c->{redirect_url} = "$c->{url}?o=Board&loc=" . uri_escape_utf8($locparam)

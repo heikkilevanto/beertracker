@@ -73,6 +73,9 @@ my $c = {
 
 db::open_db($c, "rw");
 
+my $starttime = localtime->strftime('%Y-%m-%d %H:%M:%S');
+print "scrapeall starting at $starttime\n";
+
 ################################################################################
 # Determine which locations to scrape
 ################################################################################
@@ -120,8 +123,10 @@ for my $loc (@locations) {
   }
 
   my $t1 = localtime;
-  print { $log } $t1->hms . " OK    $loc\n";
-  print           $t1->hms . " OK    $loc\n";
+  my $status = $c->{scrape_status} || "";
+  $status = " ($status)" if $status;
+  print { $log } $t1->hms . " OK    $loc$status\n";
+  print           $t1->hms . " OK    $loc$status\n";
   $total_ok++;
   $log->flush;
 
