@@ -33,7 +33,8 @@ $scrapers{"Warpigs"}  = ["untappd.pl", "warpigs/2600340"];
 sub updateboard {
   my $c = shift;
 
-  my $locparam = util::param($c,"loc");
+  my $locparam = shift;
+  $locparam = util::param($c,"loc") unless defined $locparam;
   
   if (!$scrapers{$locparam}) {
     print { $c->{log} } "updateboard: No scraper for '$locparam'\n";
@@ -42,7 +43,7 @@ sub updateboard {
 
   my ($scriptfile, $arg) = @{ $scrapers{$locparam} };
   my $script = $c->{scriptdir} . $scriptfile;
-  $arg //= '';
+  $arg = '' unless defined $arg;
   my $json = `timeout 5s perl $script $arg`;
   if ($!) {
     print { $c->{log} } "updateboard: Timeout running $script: $!\n";
@@ -132,8 +133,9 @@ sub updateboard {
   # Update taps
   taps::update_taps($c, $loc_id, $beerlist, \%current_board);
 
-  # Redirect back to showing the board, for this location
-  $c->{redirect_url} = "$c->{url}?o=Board&loc=" . uri_escape_utf8($locparam);
+  # Redirect back to showing the board, for this location (web context only)
+  $c->{redirect_url} = "$c->{url}?o=Board&loc=" . uri_escape_utf8($locparam)
+    if $c->{url};
 }
 
 # Helper to create a POST form for triggering an operation
