@@ -34,7 +34,7 @@ sub beerboard {
   my ($beerlist, $last_epoch) = load_beerlist_from_db($c, $locparam, $qrylim);
 
   if (!$beerlist || !@$beerlist) {
-    print "No beer data available for $locparam<br/>\n";
+    print "Trying to get the list for $locparam - reload to see it <br/>\n";
     trigger_background_update($c, $locparam);
     return;
   }
