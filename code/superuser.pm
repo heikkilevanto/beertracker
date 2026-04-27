@@ -1,7 +1,7 @@
 # Superuser functions for my beertracker
 
 # This module implements a few routines that should only be available for
-# the superuser, myself. These are
+# the superuser, myself. These are:
 #
 # - copyproddata:  Copies the production data into the dev setup, so I can test
 # with data that is up to date. Only available in the dev version.
@@ -246,7 +246,7 @@ sub gitcheckout {
   print "Go back to <a href='$c->{url}?o=GitStatus&p=$p&reload=1'><span>Git Status</span></a>\n";
   print "Or the <a href='$c->{url}?o=Graph&reload=1'><span>Main list</span></a>\n";
   cache::clear($c, "gitcheckout");  # Code changed; force fresh renders on next request
-  graph::clearcachefiles($c, "gitcheckout"); 
+  graph::clearcachefiles($c, "gitcheckout");
 
 } # gitcheckout
 
