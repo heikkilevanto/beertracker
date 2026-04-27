@@ -24,9 +24,11 @@ sub beerboard {
 
   my ($locparam, $foundrec) = get_location_param($c);
 
-  if (!$scrapeboard::scrapers{$locparam}) {
-    print "Sorry, no  beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
-    $locparam="Ølbaren"; # A good default
+  # Check that the location has a scraper configured; fall back to a default if not
+  my $loc_rec_check = db::findrecord($c, "LOCATIONS", "Name", $locparam, "collate nocase");
+  if (!$loc_rec_check || !$loc_rec_check->{Scraper}) {
+    print "Sorry, no beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
+    $locparam = "Ølbaren"; # A good default
   }
 
   render_location_selector($c, $locparam);
@@ -211,7 +213,7 @@ sub render_location_selector {
   print "Beer list \n";
   print "<select onchange=\"document.location='$url?o=Board&loc=' + 
        encodeURIComponent(this.value);\" style='display:inline-block; width:5.5em;'>\n";
-  for my $l ( sort(keys(%scrapeboard::scrapers)) ) {
+  for my $l ( scrapeboard::get_scraper_locations($c) ) {
     my $sel = "";
     $sel = "selected" if ( $l eq $locparam);
     print "<option value='$l' $sel>$l</option>\n";

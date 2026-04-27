@@ -10,21 +10,28 @@ use utf8;  # Source code and string literals are utf-8
 use JSON;
 use URI::Escape qw(uri_escape_utf8);
 
-# Beerlist scraping scripts
-# Each entry is ["script.pl", "arg"] where arg is passed to the script.
-our %scrapers;
-$scrapers{"Ølbaren"}   = ["oelbaren.pl"];
-$scrapers{"Taphouse"}  = ["taphouse.pl"];
-$scrapers{"Brus"}      = ["brus.pl"];
-$scrapers{"Ølsnedkeren"} = ["untappd.pl", "olsnedkeren/415314"];
-$scrapers{"Bootleggers"}  = ["untappd.pl", "bootleggers-craft-beer-bar-frb/10845482"];
-$scrapers{"Væskebalancen"}  = ["untappd.pl", "vaeskebalancen-blagardsgade-bar-and-bottleshop/11911453"];
-$scrapers{"Warpigs"}  = ["untappd.pl", "warpigs/2600340"];
-# Fermentoren is temporarily closed:
-#$scrapers{"Fermentoren"}  = ["untappd.pl", "fermentoren-cph/127076"];
-# Old per-venue untappd scrapers, superseded by untappd.pl:
-#$scrapers{"Fermentoren"} = "fermentoren.pl";
-#$scrapers{"Ølsnedkeren"} = "oelsnedkeren.pl";
+################################################################################
+# get_scraper_locations($c)
+# Returns a list of location names that have a scraper configured,
+# sorted by most recently used (via glasses) first.
+################################################################################
+
+sub get_scraper_locations {
+  my $c = shift;
+  my $sth = db::query($c, q{
+    SELECT l.Name
+    FROM locations l
+    LEFT JOIN glasses g ON g.Location = l.Id
+    WHERE l.Scraper IS NOT NULL
+    GROUP BY l.Id
+    ORDER BY MAX(g.Timestamp) DESC, l.Name
+  });
+  my @locs;
+  while (my $row = $sth->fetchrow_hashref) {
+    push @locs, $row->{Name};
+  }
+  return @locs;
+} # get_scraper_locations
 
 ################################################################################
 # Update board: scrape and ensure brews/producers exist in DB
@@ -38,12 +45,15 @@ sub updateboard {
 
   $c->{scrape_status} = undef;
 
-  if (!$scrapers{$locparam}) {
+  my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam, "collate nocase");
+  my $scraper_str = $loc_rec ? $loc_rec->{Scraper} : undef;
+
+  if (!$scraper_str) {
     print { $c->{log} } "updateboard: No scraper for '$locparam'\n";
     return;  # No error page
   }
 
-  my ($scriptfile, $arg) = @{ $scrapers{$locparam} };
+  my ($scriptfile, $arg) = split(' ', $scraper_str, 2);
   my $script = $c->{scriptdir} . $scriptfile;
   $arg = '' unless defined $arg;
   my $json = `timeout 5s perl $script $arg`;
@@ -65,8 +75,7 @@ sub updateboard {
 
   print { $c->{log} } "updateboard: Scraped " . scalar(@$beerlist) . " beers for $locparam\n";
 
-  # Get location ID
-  my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
+  # Get location ID (reuse $loc_rec fetched earlier for scraper lookup)
   my $loc_id = $loc_rec->{Id};
 
   # Fetch current board upfront: tap_num -> { Id, Brew, BrewName, Producer }

@@ -1,8 +1,8 @@
 # Beertracker database schema
-# Schema dumped at 2026-04-25 12:51 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-04-27 12:37 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
-# Most changes must be done by adding a migration to migrate.pm, then they will be applied 
+# Most changes must be done by adding a migration to migrate.pm, then they will be applied
 # automatically to both dev and production systems.
 # A few difficult changes can be done manually here, but that requires running tools/dbchange
 # in both dev and production, and needs to be coordinated with related code releases.
@@ -28,7 +28,7 @@ create table glasses (
     Brew integer,
     Price decimal,
     Volume decimal,
-    Alc decimal, 
+    Alc decimal,
     StDrinks decimal, -- Calculated from volume and alc
     Note text, -- note for this one glass, like what mixed beer
     Tap integer, -- Which tap number the brew came from
@@ -72,10 +72,10 @@ create table brews (
 drop table if exists comments;
 create table comments (
 
-    -- Comments are mostly private, they have a username to indicate the owner. 
+    -- Comments are mostly private, they have a username to indicate the owner.
     -- If null, the comment is public.
     -- The CommentType tells what type of item the comment refers to, and
-    -- the Glass, Location, or Brew refer to the actual item. 
+    -- the Glass, Location, or Brew refer to the actual item.
     -- Comments can also refer to a number of persons, via the comment_persons table
 
     Id integer primary key,
@@ -83,10 +83,10 @@ create table comments (
     Comment text, -- Any kind of comment
     Rating integer,  -- 1 (worst) to 9 (best)
     CommentType text, -- brew, location, person, night, meal, glass
-    Ts datetime, 
-    Location integer, 
-    Username text, 
-    Brew integer references brews(Id), 
+    Ts datetime,
+    Location integer,
+    Username text,
+    Brew integer references brews(Id),
 
     foreign key (Glass) references Glasses(id) on delete set null
 );
@@ -142,10 +142,11 @@ create table locations (
   Lon real,   -- longitude
   Tags text,  -- space-separated tag words
   Country text, -- a default for glasses
-  Region text, 
+  Region text,
   SearchLink text, -- Producer web page search
   UntappdLink text, -- Link to untappd for the producer
-  ShortName text  -- Shortened name for tight displays
+  ShortName text,  -- Shortened name for tight displays
+  Scraper text  -- Scraper script and args, "untappd.pl foobar/999999"
   );
 
 -- table "tap_beers"
@@ -156,14 +157,14 @@ create table if not exists "tap_beers" (
   -- Used for collecting historical data of the beers, and maybe later for some statistics
 
 	"Id"	integer,
-	"Location"	integer not null,   
+	"Location"	integer not null,
 	"Tap"	integer,
 	"Brew"	integer,
 	"FirstSeen"	datetime not null default current_timestamp, -- When it came on
 	"LastSeen"	datetime not null default current_timestamp, -- Last seen at this tap
 	"Gone"	datetime,  -- When the beer was no longer on the (same) tap
-  "SizeS" decimal, "PriceS" decimal, 
-  "SizeM" decimal, "PriceM" decimal, 
+  "SizeS" decimal, "PriceS" decimal,
+  "SizeM" decimal, "PriceM" decimal,
   "SizeL" decimal, "PriceL" decimal,
 
 	primary key("Id"),
@@ -194,12 +195,12 @@ create table photos (
 drop table if exists globals;
 create table globals (
 
-  -- Used for keeping a few global settings. 
+  -- Used for keeping a few global settings.
   -- For now, only the database version, so we can see if we need to run
-  -- a migration. 
+  -- a migration.
   -- More uses will come later.
 
-  k text primary key, 
+  k text primary key,
   v text
 );
 
@@ -258,7 +259,7 @@ create view glassrec as
 -- view LatestPrices
 drop view if exists LatestPrices;
 create view LatestPrices as
-select 
+select
   g.Username,
   g.Location,
   l.Name as LocationName,
@@ -302,14 +303,14 @@ order by tb.Location, tb.Tap;
 
 -- view brew_taps
 drop view if exists brew_taps;
-create view brew_taps as 
-select 
-  tap_beers.*, 
-  locations.Name as LocationName, 
-  round(julianday(coalesce(Gone, 'now')) - julianday(FirstSeen)) as Days, 
-  strftime('%Y-%m-%d', FirstSeen) as Since, 
-  strftime('%Y-%m-%d', Gone) as GoneFormatted 
-from tap_beers 
+create view brew_taps as
+select
+  tap_beers.*,
+  locations.Name as LocationName,
+  round(julianday(coalesce(Gone, 'now')) - julianday(FirstSeen)) as Days,
+  strftime('%Y-%m-%d', FirstSeen) as Since,
+  strftime('%Y-%m-%d', Gone) as GoneFormatted
+from tap_beers
 join locations on tap_beers.Location = locations.Id;
 
 -- view loc_ratings
@@ -578,6 +579,8 @@ create index idx_comment_persons_comment on comment_persons(Comment);
 create index idx_comments_brew on comments(Brew);
 
 create index idx_brews_parent on brews(Parent);
+
+create index idx_locations_scraper on locations(Scraper);
 
 commit;
 

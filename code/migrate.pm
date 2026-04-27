@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 22;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 23;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
@@ -38,6 +38,7 @@ our @MIGRATIONS = (
   [20, 'fix persons_list last-seen to use comment Ts as fallback', \&mig_020_fix_persons_last_seen],
   [21, '637 add ShortName to locations and brews', \&mig_021_add_shortname],
   [22, '551 add Parent to brews', \&mig_022_551_brew_parent],
+  [23, '662 add Scraper field to locations', \&mig_023_662_location_scraper],
 );
 
 ################################################################################
@@ -364,5 +365,32 @@ sub mig_022_551_brew_parent {
   db::execute($c, "ALTER TABLE brews ADD COLUMN Parent INTEGER REFERENCES brews(Id)");
   db::execute($c, "CREATE INDEX idx_brews_parent ON brews(Parent)");
 } # mig_022_551_brew_parent
+
+sub mig_023_662_location_scraper {
+  # Issue #662: add Scraper field to locations
+  # Format: "script.pl [optional arg]" - space-separated script name and argument
+  # Index for efficient lookup of all scrapeable locations
+  my $c = shift;
+
+  db::execute($c, "ALTER TABLE locations ADD COLUMN Scraper TEXT");
+  db::execute($c, "CREATE INDEX idx_locations_scraper ON locations(Scraper)");
+
+  # Populate from the former hard-coded list in scrapeboard.pm
+  my %scrapers = (
+    "Ølbaren"         => "oelbaren.pl",
+    "Taphouse"        => "taphouse.pl",
+    "Brus"            => "brus.pl",
+    "Ølsnedkeren"     => "untappd.pl olsnedkeren/415314",
+    "Bootleggers"     => "untappd.pl bootleggers-craft-beer-bar-frb/10845482",
+    "Væskebalancen"   => "untappd.pl vaeskebalancen-blagardsgade-bar-and-bottleshop/11911453",
+    "Warpigs"         => "untappd.pl warpigs/2600340",
+  );
+
+  foreach my $name (keys %scrapers) {
+    db::execute($c,
+      "UPDATE locations SET Scraper = ? WHERE Name = ? COLLATE NOCASE",
+      $scrapers{$name}, $name);
+  }
+} # mig_023_662_location_scraper
 
 1;
