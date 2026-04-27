@@ -273,6 +273,7 @@ sub load_beerlist_from_db {
       pl.SearchLink AS maker_search_link,
       pl.ShortName AS shortname,
       tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
+      b.DefPrice, b.DefVol,
       ur.rating_count, ur.average_rating, ur.comment_count,
       strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
       strftime('%H:%M', tb.FirstSeen) as first_seen_time, 
@@ -311,6 +312,19 @@ sub load_beerlist_from_db {
     if ($row->{SizeL}) {
       push @$sizePrice, { vol => $row->{SizeL}, price => $row->{PriceL} };
     }
+    # Fallback when no sizes were scraped
+    my $sizes_are_default = 0;
+    if (!scalar(@$sizePrice)) {
+      if ($row->{DefVol}) {
+        $sizes_are_default = 1;
+        push @$sizePrice, { vol => 'S', price => undef };
+        push @$sizePrice, { vol => $row->{DefVol}, price => $row->{DefPrice} };
+      } else {
+        $sizes_are_default = 1;
+        push @$sizePrice, { vol => 'S', price => undef };
+        push @$sizePrice, { vol => 'L', price => undef };
+      }
+    }
     
     push @$beerlist, {
       id => $row->{Tap},
@@ -321,6 +335,7 @@ sub load_beerlist_from_db {
       alc => $row->{alc} || "",
       brew_id => $row->{Brew},
       sizePrice => $sizePrice,
+      sizes_are_default => $sizes_are_default,
       rating_count => $row->{rating_count},
       average_rating => $row->{average_rating},
       comment_count => $row->{comment_count},
