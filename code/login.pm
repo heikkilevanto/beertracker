@@ -213,7 +213,7 @@ sub send_401 {
   my $q = shift;
   print $q->header(
     -status           => "401 Unauthorized",
-    -WWW_Authenticate => qq{Basic realm="$REALM", charset="UTF-8"},
+    -WWW_Authenticate => qq{Basic realm="$REALM"},
     -type             => "text/plain",
   );
   print "Authentication required.\n";
