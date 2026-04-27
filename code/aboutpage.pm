@@ -46,7 +46,7 @@ sub about {
   print "plus $v->{commits} commits " if ( $v->{commits} );
   print "<br>\n";
   print "commit $v->{commit} from $v->{date} ";
-  print "on '$v->{branch}' " if ( $v->{branch} ne "master" );
+  print "on '$v->{branch}' " if ( $v->{branch} && $v->{branch} ne "master" );
   print "<br/><br/>\n";
   if ( $c->{devversion} ) {
     print "The production version is ";
@@ -59,7 +59,7 @@ sub about {
   print "plus $v->{commits} commits " if ( $v->{commits} );
   print "<br>\n";
   print "commit $v->{commit} from $v->{date} ";
-  print "on '$v->{branch}' " if ( $v->{branch} ne "master" );
+  print "on '$v->{branch}' " if ( $v->{branch} && $v->{branch} ne "master" );
   print "<hr/>\n";
 
   print "Beertracker on GitHub: <ul>";
