@@ -13,7 +13,6 @@ use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
 
-# TODO - Should probably html-escale values from the db
 # TODO - This is basically one too-long function.
 
 ################################################################################
@@ -92,7 +91,7 @@ sub listrecords {
   my $op = $c->{op};
 
   my $s = "";
-  $s .= "<!-- listrecords: $sql -->\n"; 
+  $s .= "<!-- listrecords: $sql -->\n";
   $s .= "<style>
     .top-border td { border-top: 2px solid white; }
     </style>\n";
@@ -106,7 +105,7 @@ sub listrecords {
   my @styles;  # One for each column
 
   # Table headers
-  $s .=  "<!-- listrecords: table headers -->\n"; 
+  $s .=  "<!-- listrecords: table headers -->\n";
 
   $s .= "<thead>";
 
@@ -180,7 +179,7 @@ sub listrecords {
     } elsif ( $f  ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
       $on = "" if ($f=~/Chk/);
-      $s .= "<input type=text data-col=$i $sty $on placeholder='$f'/>";
+      $s .= "<input type=text data-col='$i' $sty $on placeholder='$f'/>";
       # Tried also with box-sizing: border-box; display: block;. Still extends the cell
     } else {
       $s .= "&nbsp;"
@@ -189,11 +188,10 @@ sub listrecords {
   }
   $s .= "</tr>\n";
   $s .= "</thead><tbody>\n";
-  $s .=  "<!-- listrecords: table headers done, now the body -->\n"; 
+  $s .=  "<!-- listrecords: table headers done, now the body -->\n";
 
   my $cutoff = util::datestr("%F", -7);  # a week ago, display full date
 
-  my $first = 1;
   my $rowcount = 0;
   my $hashidden = 0;  # Flag to track if we have hidden rows
   while ( my @rec = $list_sth->fetchrow_array ) {
@@ -207,17 +205,16 @@ sub listrecords {
     my $id = $rec[0]; # Id has to be first if using the Check pseudofield
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i] || "";
+      $v = util::htmlesc($v);
       my $fn = $fields[$i];
       my $linebreak = linebreak($c,$fn);
       if ( $linebreak ) {
         $linebreak =~ s/<tr>/<tr$hidden>/ if $hidden;  # Apply hidden to linebreak TRs
         $tds .= $linebreak;
-        $first = 0;
         next;
       }
-      my $sty = "style='max-width:200px'"; # default
       my $onclick = "onclick='fieldclick(this,$i);'";
-      my $data = "data-col=$i";
+      my $data = "data-col='$i'";
       if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><span><b>$v</b></span></a>";
         $onclick = "";
@@ -316,10 +313,10 @@ sub listrecords {
     $s .= "$tds</tr>\n";
   }
   $s .= "</tbody></table>\n";
-  $s .= "<!-- listrecords: table body done -->\n"; 
+  $s .= "<!-- listrecords: table body done -->\n";
 
   if ($hashidden) {
-    $s .= "<!-- listrecords: more link -->\n"; 
+    $s .= "<!-- listrecords: more link -->\n";
     $s .= "<div style='text-align: left; margin-top: 10px;'>";
     $s .= "<a href='javascript:void(0);' onclick='showMoreRecords(this);'><span>More...</span></a>";
     $s .= "</div>\n";
@@ -327,7 +324,7 @@ sub listrecords {
   if ($geotable) {
     $s .= "<script>geotabledist();</script>\n";
   }
-  $s .= "<!-- listrecords: all done for $sql -->\n"; 
+  $s .= "<!-- listrecords: all done for $sql -->\n";
 
   $list_sth->finish;
 
