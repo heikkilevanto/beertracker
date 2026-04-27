@@ -22,34 +22,34 @@ sub brewcolor {
 
   # TODO - Add prefixes for beers
   # TODO - Check against actual brew styles in the db
-    my @drinkcolors = (   # color, pattern. First match counts, so order matters
-      "003000", "restaurant|night|meal", # regular bg color, no highlight
-      "808080", "adjustment", # gray for payment adjustments
-      "eac4a6", "wine[, ]+white",
-      "801414", "wine[, ]+red",
-      "4f1717", "wine[, ]+port",
-      "aa7e7e", "wine",
-      "f2f21f", "Pils|Lager|Keller|Bock|Helles|IPL",
-      "e5bc27", "Classic|dunkel|shcwarz|vienna",
-      "adaa9d", "smoke|rauch|sc?h?lenkerla",
-      "350f07", "stout|port",  # imp comes later
-      "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuze|berliner",
-      "8cf2ed", "booze|spirit|sc?h?nap+s|whisky",
-      "e07e1d", "cider",
-      "eaeac7", "weiss|wit|wheat|weizen",
-      "66592c", "Black IPA|BIPA",
-      "9ec91e", "NEIPA|New England",
-      "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
-      "d8d80f", "Pale Ale|PA",
-      "b7930e", "Old|Brown|Red|Dark|Ale|Belgian||Tripel|Dubbel|IDA",   # Any kind of ales (after Pale Ale)
-      "350f07", "Imp",
-      "dbb83b", "misc|mix|random",
-      "9400d3", ".",   # # dark-violet, aggressive pink to show we don't have a color
-      );
+  my @drinkcolors = (   # color, pattern. First match counts, so order matters
+    "003000", "restaurant|night|meal", # regular bg color, no highlight
+    "808080", "adjustment", # gray for payment adjustments
+    "eac4a6", "wine[, ]+white",
+    "801414", "wine[, ]+red",
+    "4f1717", "wine[, ]+port",
+    "aa7e7e", "wine",
+    "f2f21f", "Pils|Lager|Keller|Bock|Helles|IPL",
+    "e5bc27", "Classic|dunkel|schwarz|vienna",
+    "adaa9d", "smoke|rauch|sc?h?lenkerla",
+    "350f07", "stout|port",  # imp comes later
+    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuze|berliner",
+    "8cf2ed", "booze|spirit|sc?h?nap+s|whisky",
+    "e07e1d", "cider",
+    "eaeac7", "weiss|wit|wheat|weizen",
+    "66592c", "Black IPA|BIPA",
+    "9ec91e", "NEIPA|New England",
+    "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
+    "d8d80f", "Pale Ale|PA",
+    "b7930e", "Old|Brown|Red|Dark|Ale|Belgian|Tripel|Dubbel|IDA",   # Any kind of ales (after Pale Ale)
+    "350f07", "Imp",
+    "dbb83b", "misc|mix|random",
+    "9400d3", ".",   # # dark-violet, aggressive pink to show we don't have a color
+    );
 
-      # Use configured background color as the default first color
-      $drinkcolors[0] = $c->{bgcolor};
-      $drinkcolors[0] =~ s/^#?([0-9a-f]+).*/$1/i;  # Strip off any leading '#' 
+  # Use configured background color as the default first color
+  $drinkcolors[0] = $c->{bgcolor};
+  $drinkcolors[0] =~ s/^#?([0-9a-f]+).*/$1/i;  # Strip off any leading '#'
 
   my $type;
   if ( $brew =~ /^\[?(\w+)(,(.+))?\]?$/i ) {
@@ -140,7 +140,7 @@ sub shortbeerstyle {
   return "Strng" if ( $sty =~ /Strong/i);
   return "Belg"  if ( $sty =~ /Belg/i);
   return "BW"    if ( $sty =~ /Barley.*Wine/i);
-  return "Sour"  if ( $sty =~ /Lambic|Gueuze|Sour|Kriek|Frmaboise/i);
+  return "Sour"  if ( $sty =~ /Lambic|Gueuze|Sour|Kriek|Framboise/i);
   $sty =~ s/^ *([^ ]{1,5}).*/$1/; # First word, only five chars, in case we didn't get it above
   return $sty;
 } # shortbeerstyle
