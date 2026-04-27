@@ -12,17 +12,14 @@ use utf8;  # Source code and string literals are utf-8
 ################################################################################
 sub listpersons {
   my $c = shift; # context
-
   if ( $c->{edit} ) {
     editperson($c);
     return;
   }
   print "&nbsp;Persons <a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
-
   my $sort = $c->{sort} || "Last-";
   print listrecords::listrecords($c, "PERSONS_LIST", $sort);
   return;
-
 } # listpersons
 
 ################################################################################

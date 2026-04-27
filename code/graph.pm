@@ -33,14 +33,14 @@ sub clearcachefiles {
     if ( $pf =~ /\/$c->{username}.*png/ ||   # All png files for this user
          -M $pf > 7 ) {  # And any file older than a week
       unlink ($pf)
-        or error ("Could not unlink $pf $!");
+        or util::error ("Could not unlink $pf $!");
       }
   }
   # Create a zero-sized file called username.last
   my $lastfile = $datadir . $c->{username} . '.last';
   open my $fh, '>', $lastfile or util::error("Could not create $lastfile: $!");
   close $fh;
-  cache::clear($c, $reason);  
+  cache::clear($c, $reason);
 } # clearcachefiles
 
 ################################################################################
@@ -54,7 +54,7 @@ sub addsums {
   my $day = shift;
   push( @{ $g->{last7} }, $v);
   $g->{sum7} += $v;
-  if ( scalar(@{ $g->{last7} } > 7 ) ) {
+  if ( scalar(@{ $g->{last7} } ) > 7 ) {
     $g->{sum7} -= shift( @{$g->{last7} } );
   }
   push( @{ $g->{last30} }, $v);
@@ -225,7 +225,7 @@ sub makedatafile {
 
 
 
-# Helper to do the acual plotting
+# Helper to do the actual plotting
 sub plotgraph {
   my $g = shift;
   my $c = $g->{c};
@@ -340,10 +340,10 @@ sub graphlinks {
   onelink($g, "&gt;&gt;", ($start+$range)->ymd, ($end+$range)->ymd ); # >>
   onelink($g, "w", ($t-14*$oneday)->ymd, ($t+2*$oneday)->ymd ); # extra future
   onelink($g, "m"); # default values
-  onelink($g, "3m", $t->add_months(-3)->ymd );
-  onelink($g, "6m", $t->add_months(-6)->ymd );
-  onelink($g, "Y", $t->add_years(-1)->ymd );
-  onelink($g, "2y", $t->add_years(-2)->ymd );
+  onelink($g, "3m", ($t - 3*$onemonth)->ymd );
+  onelink($g, "6m", ($t - 6*$onemonth)->ymd );
+  onelink($g, "Y",  ($t - $oneyear)->ymd );
+  onelink($g, "2y", ($t - 2*$oneyear)->ymd );
   onelink($g, "all", "2016-01-01",$t->ymd );  # Earlest known data in the system
 }
 
@@ -370,7 +370,7 @@ sub graph {
     makedatafile($g);
     plotgraph($g);
   }
-  # Finally, prine the HTML to display the graph
+  # Finally, print the HTML to display the graph
   my $sz = "style='max-width:95vw;max-height:120vh'";
   print "<img src=\"$g->{pngfile}\" $sz/><br/>\n";
   # TODO: Clickable image?

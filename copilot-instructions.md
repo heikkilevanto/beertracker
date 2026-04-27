@@ -47,7 +47,7 @@ They should be named like '557-photo.md' where 557 is the issue number. Once don
 ## Code Style Details
 - **General Principles**: Write clean, readable, maintainable code. Use meaningful variable and function names. Include comments for complex logic. Follow Perl best practices.
 - **Dialog**: Always state first what you are about to do, before doing it.
-- **Language Features**: use strict; use warnings; use feature 'unicode_strings'; use utf8; use open ':encoding(UTF-8)'; binmode STDOUT, ":utf8".
+- **Language Features**: use strict; use warnings; use feature 'unicode_strings'; use utf8. use open ':encoding(UTF-8)'; binmode STDOUT, ":utf8" where needed.
 - **Code Structure**: Functions start with "sub function_name {". Use "my $c = shift;" for context object. Return values explicitly. Use early returns for error conditions. Functions end with "} # function_name".
 - **Variables and Naming**: Use lowercase: $variablename. Descriptive names: $beerlist, $locationid. Context object is $c. Database handle is $c->{dbh}. CGI object is $c->{cgi}.
 - **HTML Generation**: Use print qq{<html>...}; for HTML output. Escape special characters. Use CSS classes and inline styles. Generate forms with method="POST" for data modification.
