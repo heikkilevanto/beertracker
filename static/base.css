@@ -90,7 +90,9 @@ a span, a b, a i { color: #ffffff; } /* Put one of the tags inside a link, and i
 .rating-gold { color: #FFFF00; } /* Bright yellow */
 
 /* Utility classes */
-.no-print { display: none !important; }
+@media print {
+    .no-print { display: none !important; }
+}
 
 /* For dropdown filter input */
 .dropdown-filter.rating-rubbish { color: #B22222; }
