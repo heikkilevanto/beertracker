@@ -50,7 +50,7 @@ sub open_db {
   }
 
   #$c->{dbh}->trace(1);  # Way too much SQL logging in error.log, could be useful some day
-  
+
   $c->{dbh}->{HandleError} = sub {
     my ($msg, $dbh) = @_;
     dberror($c, $msg);
@@ -312,24 +312,6 @@ sub findrecord {
   my $sql = "select * from $table where $field = ? $collate";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($val);
-  my $rec = $sth->fetchrow_hashref;
-  $sth->finish;
-  return $rec;
-} # getrecord
-
-
-############ Get given fields from (first) record that matches the where clause
-# Or undef if not found
-sub getfieldswhere {
-  my $c = shift;
-  my $table = shift;
-  my $fields = shift;
-  my $where = shift;
-  my $order = shift || "";
-  my $sql = "select $fields from $table $where $order";
-  print { $c->{log} } "getfieldswhere: $sql \n";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute();
   my $rec = $sth->fetchrow_hashref;
   $sth->finish;
   return $rec;

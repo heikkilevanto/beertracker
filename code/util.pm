@@ -48,15 +48,6 @@ sub number {
   return $v;
 }
 
-# Sanitize prices to whole ints
-sub price {
-  my $v = shift || "";
-  $v = number($v);
-  $v =~ s/[^0-9-]//g; # Remove also decimal points etc
-  return $v;
-}
-
-
 # helper to make a unit displayed in smaller font
 sub unit {
   my $v = shift;
@@ -79,13 +70,13 @@ sub loglist {
 sub namesimilarity {
   my $name1 = shift || "";
   my $name2 = shift || "";
-  
+
   return 0 if lc($name1) eq lc($name2);  # Exact match (case-insensitive)
   return 999 unless $name1 && $name2;  # Large number for missing names
-  
+
   # Calculate Levenshtein distance (loaded in index.fcgi)
   my $dist = Text::LevenshteinXS::distance($name1, $name2);
-  
+
   return $dist;
 } # namesimilarity
 
