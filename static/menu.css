@@ -69,19 +69,7 @@
   font-weight: bold;
 }
 
-#menu .menu-close {
-  display: block;
-  margin-bottom: 1em;
-  background: transparent;
-  border: none;
-  color: inherit;
-  font-size: 1.5em;
-  cursor: pointer;
-}
 
-#menu .menu-close:hover {
-  color: var(--menu-current);
-}
 
 /* Links */
 #menu ul {

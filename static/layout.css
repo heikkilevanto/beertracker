@@ -26,6 +26,7 @@ table.data td {
 .num { text-align: right !important; }
 
 /* Utility classes */
+.top-border { border-top: 2px solid white; }
 
 
 /* Media queries */

@@ -89,6 +89,9 @@ a span, a b, a i { color: #ffffff; } /* Put one of the tags inside a link, and i
 .rating-silver { color: #F0F0F0; } /* Light gray, closer to white */
 .rating-gold { color: #FFFF00; } /* Bright yellow */
 
+/* Utility classes */
+.no-print { display: none !important; }
+
 /* For dropdown filter input */
 .dropdown-filter.rating-rubbish { color: #B22222; }
 .dropdown-filter.rating-bronze { color: #DAA520; }

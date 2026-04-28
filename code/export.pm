@@ -413,7 +413,7 @@ sub show_export {
     $sql =~ s/&/&amp;/g;
     $sql =~ s/</&lt;/g;
     $sql =~ s/>/&gt;/g;
-    print qq{<pre class='export-block'>$sql</pre>\n};
+    print qq{<pre>$sql</pre>\n};
   }
 
   print qq{<p><a href='$c->{url}?o=Export'><span>[Back to export form]</span></a></p>\n};
