@@ -36,7 +36,7 @@ sub brewcolor {
     "e5bc27", "Classic|dunkel|schwarz|vienna",
     "adaa9d", "smoke|rauch|sc?h?lenkerla",
     "350f07", "stout|port",  # imp comes later
-    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|berl|farm|gose|oude|farm",
+    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|farm|gose|oude|farm",
     "8cf2ed", "booze|spirit|sc?h?nap+s|whisky|coctail",
     "e07e1d", "cider",
     "eaeac7", "weiss|wit|wheat|weizen",
