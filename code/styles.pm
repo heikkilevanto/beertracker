@@ -13,6 +13,8 @@ use utf8;  # Source code and string literals are utf-8
 # Brew colors
 ################################################################################
 
+my %warned;
+
 # Returns the background color for the brew
 # Takes a style string as the argument. That way it can also
 # be used for the few non-brew items that need special color, like restaurants
@@ -30,22 +32,23 @@ sub brewcolor {
     "801414", "wine[, ]+red",
     "4f1717", "wine[, ]+port",
     "aa7e7e", "wine",
-    "f2f21f", "Pils|Lager|Keller|Bock|Helles|IPL",
+    "f2f21f", "Pils|Lager|Keller|Bock|Helle|IPL|Altbi",
     "e5bc27", "Classic|dunkel|schwarz|vienna",
     "adaa9d", "smoke|rauch|sc?h?lenkerla",
     "350f07", "stout|port",  # imp comes later
-    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuze|berl",
-    "8cf2ed", "booze|spirit|sc?h?nap+s|whisky",
+    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|berl|farm|gose|oude|farm",
+    "8cf2ed", "booze|spirit|sc?h?nap+s|whisky|coctail",
     "e07e1d", "cider",
     "eaeac7", "weiss|wit|wheat|weizen",
     "66592c", "Black IPA|BIPA",
-    "9ec91e", "NEIPA|New England",
+    "9ec91e", "NEIPA|NEPA|New England",
     "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
     "d8d80f", "Pale Ale|PA",
-    "b7930e", "Old|Brown|Red|Dark|Ale|Belgian|Trip|Dubbel|IDA|Vienn",   # Any kind of ales (after Pale Ale)
+    "b7930e", "Old|Brown|Red|Dark|Ale|Belg|Trip|Dubbe|Quad|IDA|Vienn" .
+              "|Beer|Blond|juleb|cream|Irish|bw",
+                # Any kind of ales (after Pale Ale)
     "350f07", "Imp",
     "dbb83b", "misc|mix|random",
-    "9400d3", ".",   # # dark-violet, aggressive pink to show we don't have a color
     );
 
   # Use configured background color as the default first color
@@ -62,13 +65,14 @@ sub brewcolor {
   for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
     my $pat = $drinkcolors[$i+1];
     if ( $type =~ /$pat/i ) {
-      if ( $drinkcolors[$i+1] eq "." ) {
-        print { $c->{log} } "Can not get color for '$brew': '$type' \n";
-      }
       return $drinkcolors[$i] ;
     }
   }
-  util::error ("Can not get color for '$brew': '$type'");
+  if ( ! $warned{$type} ) {  # Not already warned about this type
+    print { $c->{log} } "OOPS! Can not get color for '$brew' (from '$type') \n";
+    $warned{$type} = 1;
+  }
+  return  "9400d3"; # dark-violet, aggressive pink to show we don't have a color
 }
 
 # Returns a HTML style definition for the brew or style string
