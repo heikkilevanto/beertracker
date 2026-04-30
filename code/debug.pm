@@ -49,37 +49,30 @@ sub debugpage {
   print "<hr style='margin:1em 0' />\n";
 
   # Log tail
-  print "<b style='cursor:pointer' onclick='toggleElement(this.nextElementSibling)'>Log tail (click to expand)</b>\n";
+  my $nlines = util::param($c, "nlines") || 200;
+  $nlines = int($nlines);
+  $nlines = 200 unless $nlines > 0;
+  print "<b style='cursor:pointer' onclick='toggleElement(this.nextElementSibling)'>Log tail ($nlines lines, click to expand)</b>\n";
   print "<div style='display:none'>\n";
   my $logfile = $c->{datadir} . "debug.log";
   if ( ! -f $logfile ) {
     print "<p>No log file found.</p>\n";
   } else {
-    # Read only the tail of the file to avoid slurping a very large log
-    my $max_bytes = 200_000; # read up to ~200k from EOF
-    my @tail;
-    if ( open my $fh, '<:raw', $logfile ) {
-      binmode $fh, ':utf8';
-      my $size = -s $fh;
-      my $pos = $size > $max_bytes ? $size - $max_bytes : 0;
-      seek $fh, $pos, 0;
-      # If we started in the middle of a line, discard the partial first line
-      my $first = <$fh> if $pos;
-      while ( my $line = <$fh> ) { push @tail, $line }
-      close $fh;
-      # Keep only the last 200 lines
-      @tail = @tail > 200 ? @tail[-200..-1] : @tail;
-      print "<pre style='font-size:0.8em;'>";
-      for my $line (@tail) {
-        $line =~ s/&/&amp;/g;
-        $line =~ s/</&lt;/g;
-        $line =~ s/>/&gt;/g;
-        print $line;
-      }
-      print "</pre>\n";
+    my $output = `tail -n $nlines \Q$logfile\E`;
+    if ( $? == 0 ) {
+      $output =~ s/&/&amp;/g;
+      $output =~ s/</&lt;/g;
+      $output =~ s/>/&gt;/g;
+      print "<pre style='font-size:0.8em;'>$output</pre>\n";
     } else {
-      print "<p>Cannot open log file: $!</p>\n";
+      print "<p>Could not read log file.</p>\n";
     }
+    my $baseurl = "$c->{url}?o=Debug";
+    print "<p>";
+    foreach my $n (200, 1000, 5000) {
+      print "<a href='$baseurl&amp;nlines=$n'><span>$n lines</span></a> ";
+    }
+    print "</p>\n";
     print "</div>\n";
   }
 
