@@ -63,7 +63,7 @@ sub yearbarsql {
 
   # Pick top N locations by grand total
   my @sorted = sort { $grandtotal{$b} <=> $grandtotal{$a} } keys %grandtotal;
-  my @toplocs = @sorted[0 .. ($n - 1 < $#sorted ? $n - 1 : $#sorted)];
+  my @toplocs = @sorted[0 .. $n - 1 ];
 
   # Build color map
   my %colors;
@@ -159,7 +159,7 @@ sub yearbar {
   my $pngfile = $c->{datadir} . $c->{username} . ".yearbars-$n.png";
 
   my $res = yearbarsql($c, $n);
-  return {} unless $res;  # no price data
+  return $res unless $res;  # no price data
 
   if (-r $pngfile) {
     print { $c->{log} } "yearbar: reusing cached $pngfile\n";
@@ -234,7 +234,7 @@ sub yearsummary {
       sum(glasses.StDrinks) as drinks,
       count(distinct(strftime('%Y-%m-%d',glasses.timestamp, '-06:00'))) as visits
     from glasses
-    left join locations on glasses.Location = LOCATIONS.Id
+    left join locations on glasses.Location = locations.Id
     where strftime('%Y', glasses.Timestamp, '-06:00') = ?
     and glasses.Username = ?
     and glasses.Brew is not null
@@ -247,7 +247,7 @@ sub yearsummary {
     $sql .= "order by price desc, name COLLATE NOCASE";
   }
   print { $c->{log} } "u='$c->{username}' y=" . join( '-', @years ) . " $sql \n";
-  my $sth = db::query($c, $sql);
+  my $sth = db::query($c, $sql,  $c->{username});
 
   my $nlines = util::param( $c, "maxl" ) || 10;
   if ($sortdr) {
