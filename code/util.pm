@@ -283,7 +283,9 @@ sub topstats {
    strftime ( '%w', timestamp, '-06:00' ) as wday,
    julianday(strftime('%Y-%m-%d', 'now', 'localtime', '-06:00')) -
       julianday(strftime('%Y-%m-%d', timestamp, '-06:00')) AS daydiff,
-   sum(ABS(price)) as price,
+   sum(CASE WHEN Brew = (SELECT id FROM brews WHERE name = 'Payment Adjustment' LIMIT 1)
+            THEN price
+            ELSE ABS(price) END) as price,
    sum(stdrinks) as drinks
  from GLASSES
  where username = ?
