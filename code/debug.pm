@@ -52,7 +52,7 @@ sub debugpage {
   my $nlines = util::param($c, "nlines") || 200;
   $nlines = int($nlines);
   $nlines = 200 unless $nlines > 0;
-  print "<b style='cursor:pointer' onclick='toggleElement(this.nextElementSibling)'>Log tail ($nlines lines, click to expand)</b>\n";
+  print "<b style='cursor:pointer' onclick='toggleElement(this.nextElementSibling); setTimeout(function(){ this.nextElementSibling.scrollIntoView(false); }.bind(this), 0)'>Log tail ($nlines lines, click to expand)</b>\n";
   print "<div style='display:none'>\n";
   my $logfile = $c->{datadir} . "debug.log";
   if ( ! -f $logfile ) {
