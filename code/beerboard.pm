@@ -96,7 +96,7 @@ sub beerboard {
       my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $alc);
       my $buttons_expanded = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 1, $alc);
 
-      my $beerstyle = styles::beercolorstyle($c, $processed_data->{sty}, "Board:$e->{'id'}", "[$e->{'type'}] $e->{'maker'} : $e->{'beer'}" );
+      my $beerstyle = styles::brewtextstyle($c, $processed_data->{origsty}, "Board:$e->{'id'} '$e->{'beer'}' $e->{'maker'} sty=$processed_data->{origsty}");
 
       my $dispid = $id;
 
@@ -495,7 +495,7 @@ sub render_beer_row {
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
   print "<td>$processed_data->{dispbeer_short} $processed_data->{dispmak} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
-  print styles::brewstyledisplay($c, "Beer", $processed_data->{sty});
+  print styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
   if ( $processed_data->{average_rating} ) {
     print " " . comments::avgratings($c, $processed_data->{rating_count}, $processed_data->{average_rating}, $processed_data->{comment_count});
   }

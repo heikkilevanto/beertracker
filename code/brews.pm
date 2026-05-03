@@ -559,7 +559,7 @@ sub selectbrew {
       $disp .= "<b>$na</b>" if ($na);
       $disp .= " <span style='font-size: xx-small;'>";
       $disp .= " " . util::unit($alc, "%") if $alc;
-      my $style_html = styles::brewstyledisplay($c, $bt, $su);
+      my $style_html = styles::brewstyledisplay($c, $bt, $su, "brew:$id '$na' $bt/" . ($su // ""));
       # Remove main type if there's a subtype (e.g., [Wine,Red] -> [Red])
       if ($su) {
         $style_html =~ s/\[$bt,([^\]]+)\]/[$1]/;

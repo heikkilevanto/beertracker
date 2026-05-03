@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use Carp qw(longmess);
 
 ################################################################################
 # Brew colors
@@ -22,6 +23,7 @@ my %warned;
 sub brewcolor {
   my $c = shift;
   my $brew = shift;  # A string with the brew (or location) type
+  my $line = shift || "";  # Optional caller context for log messages
 
   # TODO - Add prefixes for beers
   # TODO - Check against actual brew styles in the db
@@ -36,16 +38,16 @@ sub brewcolor {
     "e5bc27", "Classic|dunkel|schwarz|vienna",
     "adaa9d", "smoke|rauch|sc?h?lenkerla",
     "350f07", "stout|port",  # imp comes later
-    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|farm|gose|oude|farm",
+    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|farm|gose|oude|farm|Sais|wild",
     "8cf2ed", "booze|spirit|sc?h?nap+s|whisky|coctail",
     "e07e1d", "cider",
-    "eaeac7", "weiss|wit|wheat|weizen",
+    "eaeac7", "weiss|wit|wheat|weizen|white",
     "66592c", "Black IPA|BIPA",
     "9ec91e", "NEIPA|NEPA|New England",
     "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
     "d8d80f", "Pale Ale|PA",
     "b7930e", "Old|Brown|Red|Dark|Ale|Belg|Trip|Dubbe|Quad|IDA|Vienn" .
-              "|Beer|Blond|juleb|cream|Irish|bw",
+              "|Beer|Blond|juleb|cream|Irish|bw|cask|mixed",
                 # Any kind of ales (after Pale Ale)
     "350f07", "Imp",
     "dbb83b", "misc|mix|random",
@@ -55,13 +57,9 @@ sub brewcolor {
   $drinkcolors[0] = $c->{bgcolor};
   $drinkcolors[0] =~ s/^#?([0-9a-f]+).*/$1/i;  # Strip off any leading '#'
 
-  my $type;
-  if ( $brew =~ /^\[?(\w+)(,(.+))?\]?$/i ) {
-    $type = "$1";
-    $type .= ",$3" if ( $3 );
-  } else {
-    $type = $brew;  # Fallback to the full string for matching
-  }
+  # Strip surrounding brackets only; match against the full string
+  (my $type = $brew) =~ s/^\[|\]$//g;
+
   for ( my $i = 0; $i < scalar(@drinkcolors); $i+=2) {
     my $pat = $drinkcolors[$i+1];
     if ( $type =~ /$pat/i ) {
@@ -69,7 +67,10 @@ sub brewcolor {
     }
   }
   if ( ! $warned{$type} ) {  # Not already warned about this type
-    print { $c->{log} } "OOPS! Can not get color for '$brew' (from '$type') \n";
+    my $logline = $line ? " at $line" : "";
+    my $trace = $line ? "" : longmess("  trace");
+    $trace =~ s/\n/\n  /g if $trace;  # Indent trace lines for readability
+    print { $c->{log} } "OOPS! Can not get color for '$brew'$logline$trace\n";
     $warned{$type} = 1;
   }
   return  "9400d3"; # dark-violet, aggressive pink to show we don't have a color
@@ -80,7 +81,8 @@ sub brewcolor {
 sub brewtextstyle {
   my $c = shift;
   my $brew = shift;
-  my $bkg = brewcolor($c, $brew);
+  my $line = shift || "";  # Optional caller context for log messages
+  my $bkg = brewcolor($c, $brew, $line);
   my $lum = ( hex($1) + hex($2) + hex($3) ) /3  if ($bkg =~ /^(..)(..)(..)/i );
   my $fg = $c->{bgcolor};
   if ($lum < 64) {  # If a fairly dark color
@@ -94,6 +96,7 @@ sub brewstyledisplay {
   my $c = shift;
   my $brewtype = shift;
   my $subtype = shift;
+  my $line = shift || "";  # Optional caller context for log messages
   my $style_str;
   if ($brewtype eq 'Beer') {
     $style_str = $subtype || 'Beer';
@@ -101,7 +104,7 @@ sub brewstyledisplay {
     $style_str = $brewtype;
     $style_str .= ",$subtype" if $subtype;
   }
-  my $dispstyle = brewtextstyle($c, $style_str);
+  my $dispstyle = brewtextstyle($c, $style_str, $line);
   return "<span $dispstyle>[$style_str]</span>";
 }
 
@@ -153,18 +156,40 @@ sub shortbeerstyle {
   return $sty;
 } # shortbeerstyle
 
-sub beercolorstyle {
-  my $c = shift;
-  my $rec = shift;  # Can also be style as text, see below
-  my $line = shift; # for error logging
-  my $type = "";
-  if (ref($rec)) {
-    $type = "$rec->{type},$rec->{subtype}: $rec->{style} $rec->{maker}";  # something we can match
-    $line = $rec->{rawline};
+# Returns a hash of display values for a brew or location record (hashref).
+# Accepts a brew/GLASSES row (BrewType + SubType) or a location row (LocType + LocSubType).
+# Keys: color, textstyle, shortname, display
+sub brewinfo {
+  my $c   = shift;
+  my $rec = shift;   # hashref
+  my $line = shift || "";  # Optional caller context for log messages
+
+  my ($type, $subtype);
+  if ( defined $rec->{BrewType} ) {
+    $type    = $rec->{BrewType} || "";
+    $subtype = $rec->{SubType}  || "";
+  } elsif ( defined $rec->{LocType} ) {
+    $type    = $rec->{LocType}    || "";
+    $subtype = $rec->{LocSubType} || "";
   } else {
-    $type = $rec;
+    $type    = "";
+    $subtype = "";
   }
-  return brewtextstyle($c, $type);
-} # beercolorstyle
+
+  my $type_str = $type;
+  $type_str .= ",$subtype" if $subtype;
+
+  my $color     = brewcolor($c, $type_str, $line);
+  my $textstyle = brewtextstyle($c, $type_str, $line);
+  my $shortname = shortbeerstyle($subtype || $type);
+  my $display   = brewstyledisplay($c, $type, $subtype, $line);
+
+  return {
+    color     => $color,
+    textstyle => $textstyle,
+    shortname => $shortname,
+    display   => $display,
+  };
+} # brewinfo
 
 1; # Return true for require

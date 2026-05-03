@@ -232,7 +232,7 @@ sub listrecords {
         $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
         if ($v) {
           my ($brewtype, $subtype) = split(/,\s*/, $v, 2);  # Split on comma
-          $v = styles::brewstyledisplay($c, $brewtype, $subtype);
+          $v = styles::brewstyledisplay($c, $brewtype, $subtype, "$c->{op}:$rec[0] $brewtype/" . ($subtype // ""));
         }
       } elsif ( $fn eq "Alc" ) {
         $v = util::unit($v,"%") if ($v);

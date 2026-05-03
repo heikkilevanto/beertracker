@@ -106,16 +106,14 @@ sub oneday {
   my $loc = "";
   for (my $i= scalar(@drinks)-1; $i >= 0; $i--){
     my $r = $drinks[$i];
-    my $style = $r->{BrewType};
-    $style .= ",$r->{SubType}" if ($r->{SubType});
-    #print "i=$i top=$top r=$r->{Id} $r->{EffDate} $r->{Location} sty='$style' <br/>";
+    #print "i=$i top=$top r=$r->{Id} $r->{EffDate} $r->{Location} sty='$r->{BrewType},$r->{SubType}' <br/>";
     if ( $loc && $r->{Location} ne $loc ) {
       my $y = $top +.2 ;
       #print "$r->{Id} $r->{Location} top=$top y=$y<br/>";
       $drinksline .= "$y 0xffffff "; # White separator for locaton changes
       $cnt--;
     }
-    my $color = styles::brewcolor($c,$style);
+    my $color = styles::brewinfo($c, $r, "graph:$r->{Id} $r->{BrewType}/$r->{SubType}")->{color};
     my $y = $top;
     if ( $r->{StDrinks} < 0.2 ) {
       $y = $top + 0.2; # Show at least something visible

@@ -219,7 +219,7 @@ sub nameline {
   $html .= "<span style='white-space: nowrap;'>\n";
   $html .= "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
         "<span>$time</span></a> \n";
-  $html .= styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}) . " \n";
+  $html .= styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}, "glass:$rec->{id} '" . ($rec->{brewname} // "") . "' $rec->{brewtype}/" . ($rec->{subtype} // "")) . " \n";
   $html .= "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
   if ( $rec->{brewname} ) {
     $html .= "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;
