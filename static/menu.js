@@ -50,10 +50,6 @@ function initMenu(menuData, containerId, toggleButtonId) {
         if (currentLabel && item.url.toLowerCase() === currentLabel.toLowerCase()) {
           a.classList.add("current");
         }
-        if (item.children && item.children.some(c => c.url === currentLabel)) {
-          childList.style.display = "block";
-          span.classList.add("open-parent");
-        }
         a.onclick = function() {
           document.body.innerHTML =
             "<p>Loading " + item.label + "</p>";
@@ -80,6 +76,7 @@ function initMenu(menuData, containerId, toggleButtonId) {
 
   // clone it for the drawer top bar
   const closeBtn = mainToggle.cloneNode(true);
+  closeBtn.removeAttribute('id');
 
 
   // override click to close the drawer
@@ -116,11 +113,9 @@ function initMenu(menuData, containerId, toggleButtonId) {
 
   // Open drawer
   const toggleBtn = document.getElementById(toggleButtonId);
-  if (toggleButtonId) {
-    if (toggleBtn) {
-      toggleBtn.addEventListener("click", () => {
-        container.classList.toggle("open");
-      });
-    }
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      container.classList.toggle("open");
+    });
   }
 }

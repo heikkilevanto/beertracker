@@ -10,6 +10,17 @@
   let activeScanner = null;
   let targetInput = null;
   let scannerOverlay = null;
+  let resultProcessed = false;
+
+  // Inject scan-line CSS once at module load
+  const scanStyle = document.createElement('style');
+  scanStyle.textContent = `
+    @keyframes scan {
+      0%, 100% { top: 20%; }
+      50% { top: 80%; }
+    }
+  `;
+  document.head.appendChild(scanStyle);
 
   // Initialize barcode scanning for an input field
   // Adds a camera icon button next to the input that opens the scanner
@@ -45,6 +56,7 @@
     }
 
     targetInput = input;
+    resultProcessed = false;
     createScannerOverlay();
     
     // Try to use native Barcode Detection API first, fallback to QuaggaJS
@@ -182,16 +194,6 @@
     `;
     cancelBtn.addEventListener('click', stopScanning);
 
-    // Add CSS animation
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes scan {
-        0%, 100% { top: 20%; }
-        50% { top: 80%; }
-      }
-    `;
-    document.head.appendChild(style);
-
     videoContainer.appendChild(video);
     videoContainer.appendChild(scanLine);
     manualInput.appendChild(manualField);
@@ -305,6 +307,8 @@
   // Process the scanned barcode
   function processBarcodeResult(code) {
     if (!code || !targetInput) return;
+    if (resultProcessed) return;
+    resultProcessed = true;
 
     // Clean up the code (remove non-digit characters for numeric barcodes)
     const cleanCode = code.trim();

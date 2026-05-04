@@ -92,9 +92,7 @@ function geodist(prefix) {
 // They should have attributes lat and lon.
 
 function geotablecells(pos) {
-    //pos.coords.latitude.toFixed(6);
-    //loninp.value = pos.coords.longitude.toFixed(6);
-  const tds = document.querySelectorAll('[lat]');
+    const tds = document.querySelectorAll('[lat]');
   for (const td of tds) {
     const lat = td.getAttribute("lat");
     const lon = td.getAttribute("lon");
