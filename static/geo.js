@@ -1,4 +1,5 @@
 // geo.js - Various geolocation things mostly for geo.pm
+'use strict';
 
 function geoclear(prefix) {
   const latinp = document.getElementById(prefix+"Lat");
