@@ -2,16 +2,15 @@
 // These manage filtering and sorting of lists created by listrecords
 
 let filterTimeout;
-let filterGeneration = 0;
 
 function changefilter (inputElement) {
   clearTimeout(filterTimeout); // Cancel previous timeout
   filterTimeout = setTimeout(() => {
-    dochangefilter(inputElement, ++filterGeneration);
+    dochangefilter(inputElement);
   }, 150); // Adjust delay as needed}
 }
 
-function dochangefilter (inputElement, gen) {
+function dochangefilter (inputElement) {
   // Find the table from the input's ancestor
   const table = inputElement.closest('table');
   if (!table) return; // should not happen
@@ -25,7 +24,7 @@ function dochangefilter (inputElement, gen) {
     let filterinp = filterinputs[i];
     if ( filterinp ) {
       const col = filterinp.getAttribute("data-col");
-      filterinp.value = filterinp.value.replace(/[▲▼]/,"");
+      filterinp.value = filterinp.value.replace(/[▲▼]+/g,"");
       filters[col] = new RegExp(filterinp.value, 'i')
     }
   }
@@ -58,7 +57,7 @@ function dochangefilter (inputElement, gen) {
         if ( col ) {
           if ( filters[col] ) {
             const re = filters[col];
-            if ( !re.test( cols[c].textContent, 'i' ) ) {
+            if ( !re.test( cols[c].textContent ) ) {
               disp = "none";
               break;
             }
@@ -116,8 +115,7 @@ function dochangefilter (inputElement, gen) {
 function fieldclick(el,index) {
   var filtertext = el.textContent;
   filtertext = filtertext.replace( /\[|\]/g , ""); // Remove brackets [Beer,IPA]
-  filtertext = filtertext.replace( /^.*(20[0-9-]+) .*\$/ , "\$1"); // Just the date
-    // Note the double escapes, since this is still a perl string
+  filtertext = filtertext.replace( /^.*(20[0-9-]+) .*/ , "$1"); // Just the date
 
   // Get the filters
   const table = el.closest('table');
@@ -125,7 +123,7 @@ function fieldclick(el,index) {
   const filterinp = table.querySelector('input[data-col="'+col+'"]');
   if ( filterinp ) {
     filterinp.value = filtertext;
-    dochangefilter(el,++filterGeneration);
+    dochangefilter(el);
   }
 }
 
@@ -139,7 +137,7 @@ function clearfilters(el) {
       filterinp.value = '';
     }
   }
-  dochangefilter(el,++filterGeneration);
+  dochangefilter(el);
 }
 
 /////////////////////
@@ -248,13 +246,13 @@ function doSortTable(el, col, ascending) {
 
   // Clear arrows
   for (let th of table.querySelectorAll('thead input ') ) {
-    th.value = th.value.replace(/[▲▼]/,"").trim();
+    th.value = th.value.replace(/[▲▼]+/g, "").trim();
   }
 
   el.value = ascending ? " ▲" : " ▼" ;
 
   table.dataset.sortCol = col;
-  table.dataset.sortDir = ascending ? "desc" : "asc";
+  table.dataset.sortDir = ascending ? "asc" : "desc";
 
   console.timeEnd("sort") ;
 }
@@ -268,13 +266,12 @@ function extractSortKey(recordRows, columnIndex) {
         const match = text.match(/20[0-9][0-9]-[0-9 :-]+/);
         if ( match ) { text = match[0]; }
         text = text.replace( /^\[/, "");
-        text = text.replace( /\]\$/, "");
+        text = text.replace( /\]$/, "");
         if ( isNaN(text) || ! text) {
           text = text.toLowerCase().trim();
         } else {
           text = parseFloat(text);
         }
-        //console.log("sortkey for col " + columnIndex + " of '" + cell.textContent + "' is '" + text + "' m=" + match);
         return text;
       }
   }

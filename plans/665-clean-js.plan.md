@@ -96,9 +96,39 @@ Source of issues: `plans/665-js-findings.md`
 ## Order of work
 
 1. `listrecords.js` — most impactful bugs (regex never-fire, stale sort labels)
+   - Type in a filter box; verify rows hide/show correctly.
+   - Click on a date cell; verify filter is set to just the year.
+   - Sort the same column twice; confirm arrows flip ▲/▼ and no residue like "▲▲".
+   - Click "Clear filters"; verify all rows reappear.
+   - Test on a paginated list (e.g. Brews); confirm "More..." still works after filtering.
+
 2. `beerboard.js` — quick selector fix
+   - Expand a beer, then click Expand All; no rows should disappear.
+   - Collapse All should restore compact rows.
+   - Toggle individual beers after expand/collapse; works as before.
+
 3. `glasses.js` — single-line safety fix
+   - Edit a glass that has a note; note field should populate correctly.
+   - Edit a glass with no note; note field should be empty (not the text "undefined").
+
 4. `geo.js` — dead code + strict
+   - Use "Here" and "Distance" buttons on geo pages; values should appear.
+   - Geo-distance table (e.g. Locations list) should calculate and display distances.
+   - Check browser console for no strict-mode errors in geo.js.
+
 5. `menu.js` — structural dead code + id duplicate
+   - Open/close the side menu via hamburger and × buttons.
+   - Navigate to a leaf page (no children) and to a section page; menu should build without errors.
+   - Inspect drawer close button; should have no `id` attribute.
+   - Escape / click-outside should close the drawer.
+
 6. `barcode.js` — style injection + double-scan guard
+   - Open and close the scanner multiple times; inspect `<head>` for duplicate `@keyframes scan` styles (should be exactly one or none after closing, never growing).
+   - Scan a barcode; should fire input event once and close overlay once.
+   - Type a barcode manually and press Enter; should work.
+
 7. `inputs.js` — polling→event and logic dedup (most involved)
+   - Scan a barcode from a dropdown (e.g. Brew); with exactly one match it should select the brew, fill alc/pr/vol **and** Country/Region where applicable, set locsubtype for Restaurants, and reveal the note field if generic.
+   - Scan a barcode that matches multiple brews; dropdown should filter to matches.
+   - Normal click-selection of a dropdown item should still behave identically.
+   - Tag filtering (`#ipa`) and "All of #tag" links should still work.
