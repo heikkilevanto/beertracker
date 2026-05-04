@@ -388,11 +388,11 @@ sub adjustment_form {
   my $current_adjustment_price = shift || 0;
   my $last_glass_time = shift || "23:59";  # Default to end of day if no glasses
   my ($date) = split(' ', $effdate);
-  
+
   # Generate unique ID for this form instance (to handle multiple sessions at same location)
   $form_counter++;
   my $form_id = "adj_${locationid}_${form_counter}";
-  
+
   # Get adjustment brew ID
   my $sql = "SELECT Id FROM brews WHERE BrewType='Adjustment' LIMIT 1";
   my $sth = $c->{dbh}->prepare($sql);
@@ -400,7 +400,7 @@ sub adjustment_form {
   my ($adjustment_brew_id) = $sth->fetchrow_array();
   $sth->finish();
   return unless $adjustment_brew_id;  # No adjustment brew configured
-  
+
   my $html = "";
   if ($current_adjustment) {
     # Adjustment exists - show delete button with amount
@@ -476,7 +476,8 @@ sub adjustment_form {
       const expected = $locprsum;
       const diff = actual - expected;
       document.getElementById('pr_$form_id').value = diff;
-      document.getElementById('note_$form_id').value = 'Expected: ' + expected + '.-, Paid: ' + actual + '.-, Diff: ' + diff + '.-';
+      const pct = expected > 0 ? Math.round((diff / expected) * 100) : 0;
+      document.getElementById('note_$form_id').value = 'Expected: ' + expected + '.-, Paid: ' + actual + '.-, Diff: ' + diff + '.- =' + pct + '%' ;
       document.getElementById('subtype_$form_id').value = diff >= 0 ? 'Up' : 'Dn';
       return true;
     }
