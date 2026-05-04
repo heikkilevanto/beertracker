@@ -20,9 +20,6 @@ Source of issues: `plans/665-js-findings.md`
 **4. Fix sort-arrow clearing to remove all arrow characters.**
 - `th.value.replace(/[▲▼]/,"")` → `th.value.replace(/[▲▼]+/g, "")`.
 
-**5. Fix `sortDir` storing the inverted value.**
-- When `ascending=true` write `"asc"`, when false write `"desc"`.
-
 **6. Remove commented-out `console.log` in `extractSortKey`.**
 
 ---
@@ -83,10 +80,6 @@ Source of issues: `plans/665-js-findings.md`
 ## geo.js  (findings 15–17)
 
 **15. Remove commented-out dead code lines in `geotablecells`.**
-
-**16. Use numeric values for `lat1`/`lon1` in `geodist`.**
-- Change `pos.coords.latitude.toFixed(7)` → `pos.coords.latitude` (keep as number).
-- Same for longitude. Only format to string when displaying.
 
 **17. Add `'use strict';` at the top of `geo.js`.**
 
