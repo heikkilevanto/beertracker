@@ -8,14 +8,14 @@ function toggleBeer(id) {
     compact.style.display = 'none';
     expanded.forEach(function(row) { row.style.display = 'table-row'; });
   }
-  var allExpandeds = document.querySelectorAll('[class^="expanded_"]');
+  var allExpandeds = document.querySelectorAll('[class*="expanded_"]');
   var anyVisible = Array.from(allExpandeds).some(row => row.style.display === 'table-row');
   document.getElementById('expand-all').style.display = anyVisible ? 'block' : 'none';
 }
 
 function expandAll() {
   var compacts = document.querySelectorAll('[id^="compact_"]');
-  var expandeds = document.querySelectorAll('[class^="expanded_"]');
+  var expandeds = document.querySelectorAll('[class*="expanded_"]');
   compacts.forEach(function(row) { row.style.display = 'none'; });
   expandeds.forEach(function(row) { row.style.display = 'table-row'; });
   document.getElementById('expand-all').style.display = 'block';
@@ -24,7 +24,7 @@ function expandAll() {
 
 function collapseAll() {
   var compacts = document.querySelectorAll('[id^="compact_"]');
-  var expandeds = document.querySelectorAll('[class^="expanded_"]');
+  var expandeds = document.querySelectorAll('[class*="expanded_"]');
   compacts.forEach(function(row) { row.style.display = 'table-row'; });
   expandeds.forEach(function(row) { row.style.display = 'none'; });
   document.getElementById('expand-all').style.display = 'none';

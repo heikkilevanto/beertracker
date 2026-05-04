@@ -108,7 +108,7 @@ function editrecord() {  // Switch form to edit mode for the current record in-p
   dateInput.value = dateInput.dataset.rawval;
   timeInput.value = timeInput.dataset.rawval;
   tapInput.value = tapInput.dataset.rawval;
-  noteInput.value = noteInput.dataset.note;
+  noteInput.value = noteInput.dataset.note ?? '';
   shownote();
   document.getElementById('edit-e').disabled = false;
   document.getElementById('new-buttons').style.display = 'none';
