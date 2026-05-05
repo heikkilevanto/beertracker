@@ -329,7 +329,8 @@ sub fixprice {
   }
 
   my $pr = $glass->{Price} || "";
-  if ( $pr =~ /^-\d/ ) { # Negative price: bottle/container purchase, store as-is
+  if ( $pr =~ /^-\d/ ) { # Negative price: bottle/container purchase, store as 0 for drinking
+    $glass->{Price} = 0;
     return;
   }
   if  ( $pr =~ /^(\d+)[,.-]*$/ ){  # Already a good price, only digits
