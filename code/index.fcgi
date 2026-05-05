@@ -288,6 +288,7 @@ if ( $q->request_method eq "POST" ) {
       foreach my $param ($c->{cgi}->param) { # Debug dump params while developing
         my @values = $c->{cgi}->multi_param($param);
         foreach my $value (@values) {
+          next if $value eq '';
           $debugparams .= "p: $param = '$value'\n";
           print { $c->{log} } "   p: $param = '$value'\n";
         }
