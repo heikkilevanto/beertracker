@@ -155,6 +155,9 @@ function initDropdown(container) {
   const isMulti       = container.getAttribute('data-multi') === '1';
   const chipsDiv      = container.querySelector('.dropdown-chips');
 
+  // Store original maxHeight to restore later
+  const originalMaxHeight = dropdownList.style.maxHeight || '';
+
   // Simplenew: on blur of the simple text input, copy value to hidden+filter and restore view
   if (newDiv && newDiv.getAttribute('data-simplenew') === '1') {
     const simpleInput = newDiv.querySelector('input[type=text]');
@@ -249,12 +252,31 @@ function initDropdown(container) {
     filterInput.oldvalue = filterInput.value;
     filterInput.value = "";
     filterItems(filterInput, dropdownList);
+    // Scroll so first real item is at top, hiding actions row above
+    const actionsItem = dropdownList.querySelector('#actions');
+    if (actionsItem) {
+      // Only force shorter height if dropdown wouldn't normally scroll
+      const defaultMaxHeight = 300; // matches CSS
+      if (dropdownList.scrollHeight <= defaultMaxHeight) {
+        const itemHeight = actionsItem.nextElementSibling?.offsetHeight || 25;
+        dropdownList.style.maxHeight = (actionsItem.offsetHeight + itemHeight * 3) + 'px';
+      }
+      dropdownList.scrollTop = actionsItem.offsetHeight;
+    }
   });
 
   // Blur
   filterInput.addEventListener("blur", () => {
     if (filterInput.oldvalue) filterInput.value = filterInput.oldvalue;
-    setTimeout(() => dropdownList.style.display = "none", 200);
+    setTimeout(() => {
+      dropdownList.style.display = "none";
+      // Restore original maxHeight
+      if (originalMaxHeight) {
+        dropdownList.style.maxHeight = originalMaxHeight;
+      } else {
+        dropdownList.style.maxHeight = '';
+      }
+    }, 200);
   });
 
   // Typing

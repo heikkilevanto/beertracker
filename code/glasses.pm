@@ -65,8 +65,9 @@ sub selectbrewtype {
   }
   util::error ("No brew types in the database. Insert some dummy glasses")
     unless ($opts);
-  my $s = inputs::dropdown($c, "selbrewtype", $selected, $selected, $opts);
-  return $s;
+  my $s = inputs::dropdown($c, "selbrewtype", $selected, $selected, $opts,
+    "", "", "", "", "", "", "", "simplenew");
+   return $s;
 } # selectbrewtype
 
 ################################################################################
