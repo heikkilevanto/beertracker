@@ -334,8 +334,13 @@ sub buttonline {
     $html .= "<input type='hidden' name='date' id='date' value=' ' />\n";
     $html .= "<input type='hidden' name='time' id='time' value=' ' />\n";
     # For copy buttons, pass the original price only if volume matches, else leave empty to trigger guessing
-    # Set price to 0 if the source glass has a negative price (bottle purchase)
-    my $copy_price = ($rec->{vol} && $volx == $rec->{vol} && defined $rec->{price}) ? ($rec->{price} < 0 ? 0 : $rec->{price}) : '';
+    # Set price to 0 if the source glass has a negative price (bottle purchase), for all copy buttons
+    my $copy_price = '';
+    if ( defined $rec->{price} && $rec->{price} < 0 ) {
+      $copy_price = 0;  # Negative price means bottle purchase, copy as zero price
+    } elsif ( $rec->{vol} && $volx == $rec->{vol} && defined $rec->{price} ) {
+      $copy_price = $rec->{price};  # Same volume, copy the price
+    }
     my $tap_val = $rec->{tap} // '';
     my $orig_vol_val = $rec->{vol} // '';
     $html .= "<input type='hidden' name='pr' value='$copy_price' />\n";
