@@ -1,6 +1,12 @@
 // geo.js - Various geolocation things mostly for geo.pm
 'use strict';
 
+// Store last known position to avoid redundant recalculations
+let lastKnownPosition = null;
+let lastPositionTime = 0;
+const MOVEMENT_THRESHOLD_KM = 0.05; // 50 meters
+const CHECK_INTERVAL_MS = 30000; // 30 second debounce
+
 function geoclear(prefix) {
   const latinp = document.getElementById(prefix+"Lat");
   const loninp = document.getElementById(prefix+"Lon");
@@ -117,6 +123,8 @@ function geotabledist() {
   }
   navigator.geolocation.getCurrentPosition(
   function(pos) {
+    lastKnownPosition = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+    lastPositionTime = Date.now();
     geotablecells(pos);
   },
    function(err) {
@@ -125,3 +133,37 @@ function geotabledist() {
   );
 
 }
+
+// Check if user has moved significantly, and if so recalculate distances
+function checkAndUpdateLocation() {
+  if (!navigator.geolocation) return;
+
+  const now = Date.now();
+  if (now - lastPositionTime < CHECK_INTERVAL_MS) return;
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      const newLat = pos.coords.latitude;
+      const newLon = pos.coords.longitude;
+
+      if (lastKnownPosition) {
+        const dist = haversineKm(lastKnownPosition.lat, lastKnownPosition.lon, newLat, newLon);
+        if (dist < MOVEMENT_THRESHOLD_KM) return; // Not moved enough
+      }
+
+      lastKnownPosition = { lat: newLat, lon: newLon };
+      lastPositionTime = now;
+      geotablecells(pos);
+    },
+    function(err) {
+      console.log("Geo Error: " + err.message);
+    }
+  );
+}
+
+// Listen for page becoming visible again (user switched back to tab)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    checkAndUpdateLocation();
+  }
+});
