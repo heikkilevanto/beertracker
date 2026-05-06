@@ -656,21 +656,52 @@ function enableEditing(form) {
 // Helper to find the location with smallest distance, and to select that
 function selectNearest(dropdownId) {
   const root = document.querySelector(dropdownId);
-  if ( ! root ) {
-    console.log ("Did not find ", dropdownId);
+  if (!root) {
+    console.log("Did not find ", dropdownId);
     return;
   }
-  const items = root.querySelectorAll('.dropdown-item span');
-  let best = null, min = Infinity;
-
-  items.forEach(span => {
-    const val = parseFloat(span.textContent.replace('>', ''));
-    if (val < min) { min = val; best = span.parentElement; }
-  });
-
-  if (best) {
-    root.querySelector('.dropdown-filter').value = best.textContent.trim();
-    root.querySelector('input[type=hidden]').value = best.id;
+  if (!navigator.geolocation) {
+    console.log("Geolocation is not supported by your browser.");
+    return;
   }
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      const items = root.querySelectorAll('.dropdown-item');
+      let best = null, min = Infinity;
+
+      items.forEach(item => {
+        if (item.id === 'actions' || item.id === 'tag-row') return;
+
+        const span = item.querySelector('span[lat]');
+        if (!span) return;
+
+        const lat = parseFloat(span.getAttribute('lat'));
+        const lon = parseFloat(span.getAttribute('lon'));
+        if (isNaN(lat) || isNaN(lon)) return;
+
+        const dist = haversineKm(pos.coords.latitude, pos.coords.longitude, lat, lon);
+        if (dist < min) {
+          min = dist;
+          best = item;
+        }
+      });
+
+      if (best) {
+        const filterInput = root.querySelector('.dropdown-filter');
+        const hiddenInput = root.querySelector('input[type=hidden]');
+        if (filterInput) filterInput.value = best.textContent.trim();
+        if (hiddenInput) {
+          hiddenInput.value = best.id;
+          hiddenInput.dispatchEvent(new Event('input'));
+        }
+      } else {
+        console.log("No locations with valid coordinates found.");
+      }
+    },
+    function(err) {
+      console.log("Geo Error: " + err.message);
+    }
+  );
 }
 
