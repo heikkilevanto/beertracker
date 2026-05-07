@@ -19,14 +19,14 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;
 use open ':encoding(UTF-8)';
-use Cwd qw(cwd);
+use Cwd qw(cwd abs_path);
+use File::Basename qw(dirname);
 use Time::Piece;
 use Getopt::Long;
 
-# Fix working directory (same as index.fcgi)
-if ( cwd() =~ /\/scripts$/ || cwd() =~ /\/code$/ ) {
-  chdir("..") or die "Cannot chdir to ..: $!\n";
-}
+my $scriptdir = dirname(abs_path(__FILE__));
+my $projectroot = dirname($scriptdir);
+chdir($projectroot) or die "Cannot chdir to $projectroot: $!\n";
 
 # Load only the modules we need
 require "./code/db.pm";
@@ -49,8 +49,8 @@ GetOptions(
 ################################################################################
 # Build minimal $c context
 ################################################################################
-my $datadir   = "./beerdata/";
-my $scriptdir = "./scripts/";
+my $datadir = "$projectroot/beerdata/";
+$scriptdir = "$projectroot/scripts/";
 
 my $logfile = $datadir . "scrapeall.log";
 open( my $log, ">", $logfile )
@@ -83,7 +83,7 @@ my @locations;
 if ($loc_arg) {
   @locations = ($loc_arg);
 } else {
-  @locations = sort keys %scrapeboard::scrapers;
+  @locations = scrapeboard::get_scraper_locations($c);
 }
 
 ################################################################################
@@ -98,13 +98,6 @@ my $total_skip = 0;
 
 for my $loc (@locations) {
   my $t0 = localtime;
-
-  if ( !$scrapeboard::scrapers{$loc} ) {
-    print { $log } $t0->hms . " SKIP $loc (no scraper defined)\n";
-    print           $t0->hms . " SKIP $loc (no scraper defined)\n";
-    $total_skip++;
-    next;
-  }
 
   eval {
     $c->{dbh}->do("BEGIN TRANSACTION");
@@ -131,8 +124,10 @@ for my $loc (@locations) {
   $log->flush;
 
   # Sleep between untappd scrapers to avoid rate-limiting
-  my ($script) = @{ $scrapeboard::scrapers{$loc} };
-  if ( $script eq "untappd.pl" && $loc ne $locations[-1] ) {
+  my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $loc, "collate nocase");
+  my $scraper_str = $loc_rec && $loc_rec->{Scraper} ? $loc_rec->{Scraper} : "";
+  my ($script) = split /\s+/, $scraper_str;
+  if ( $script && $script eq "untappd.pl" && $loc ne $locations[-1] ) {
     sleep($delay);
   }
 }
