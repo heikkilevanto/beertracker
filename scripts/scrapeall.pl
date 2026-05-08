@@ -109,7 +109,7 @@ for my $loc (@locations) {
     eval { $c->{dbh}->do("ROLLBACK") };
     my $t1 = localtime;
     print { $log } $t1->hms . " ERROR $loc: $err\n";
-    print           $t1->hms . " ERROR $loc: $err\n";
+    print          $t1->hms . " ERROR $loc: $err\n";
     $total_err++;
     $log->flush;
     next;
@@ -119,7 +119,7 @@ for my $loc (@locations) {
   my $status = $c->{scrape_status} || "";
   $status = " ($status)" if $status;
   print { $log } $t1->hms . " OK    $loc$status\n";
-  print           $t1->hms . " OK    $loc$status\n";
+  print          $t1->hms . " OK    $loc$status\n";
   $total_ok++;
   $log->flush;
 
@@ -134,7 +134,7 @@ for my $loc (@locations) {
 
 my $done = localtime;
 print { $log } $done->hms . " $total_ok sites scraped, $total_err errors, $total_skip skipped\n";
-print           $done->hms . " $total_ok sites scraped, $total_err errors, $total_skip skipped\n";
+print          $done->hms . " $total_ok sites scraped, $total_err errors, $total_skip skipped\n";
 
 $c->{dbh}->disconnect;
 close $log;
