@@ -44,9 +44,9 @@ sub update_taps {
       next;  # Brew unchanged - LastSeen updated below
     }
 
-    # Close old tap if brew has changed
+    # Close ALL old taps with this number (handles duplicates from old scrapes)
     if ($cur) {
-      db::execute($c, "UPDATE tap_beers SET Gone = ? WHERE Id = ?", $now, $cur->{Id});
+      db::execute($c, "UPDATE tap_beers SET Gone = ? WHERE Location = ? AND Tap = ? AND Gone IS NULL", $now, $location_id, $tap_num);
     }
 
     # Insert tap (new or changed)

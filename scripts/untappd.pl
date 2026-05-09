@@ -42,11 +42,12 @@ foreach my $section ($dom->findnodes('//div[@class="menu-section"]')) {
 die "Could not find tap section on $base_url\n" unless $tap_section;
 
 my @taps;
+my %used_tap_numbers;
 foreach my $item ($tap_section->findnodes('.//li[@class="menu-item"]')) {
     print STDERR "=== item ===\n" . $item->toString() . "\n" if $debug;
 
     # Beer name, tap number, and Untappd URL — all from h5 > a
-    my ($link) = $item->findnodes('.//h5/a');
+    my $link = ($item->findnodes('.//h5/a'))[0];
     next unless $link;
     my $href = $link->getAttribute('href') || '';
     my $untappdurl = ($href =~ m{^https?://}) ? $href : "https://untappd.com$href";
@@ -56,6 +57,12 @@ foreach my $item ($tap_section->findnodes('.//li[@class="menu-item"]')) {
     my ($tap_num, $beer) = $link_text =~ /^(\d+)\.\s*(.+)$/;
     next unless defined $beer;
     $beer =~ s/\s+$//;
+    if (!defined $tap_num || $used_tap_numbers{$tap_num}) {
+      my $newnum = 101;
+      $newnum++ while $used_tap_numbers{$newnum};
+      $tap_num = $newnum;
+    }
+    $used_tap_numbers{$tap_num} = 1;
     print STDERR "Tap $tap_num: '$beer'  url=$untappdurl\n" if $debug;
 
     # Style from h5 > em
