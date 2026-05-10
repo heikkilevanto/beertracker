@@ -158,7 +158,7 @@ create table if not exists "tap_beers" (
 
 	"Id"	integer,
 	"Location"	integer not null,
-	"Tap"	integer,
+	"Tap"	real,
 	"Brew"	integer,
 	"FirstSeen"	datetime not null default current_timestamp, -- When it came on
 	"LastSeen"	datetime not null default current_timestamp, -- Last seen at this tap

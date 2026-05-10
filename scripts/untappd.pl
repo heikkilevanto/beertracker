@@ -54,15 +54,35 @@ foreach my $item ($tap_section->findnodes('.//li[@class="menu-item"]')) {
     my $link_text = $link->textContent;
     $link_text =~ s/^\s+|\s+$//g;  # trim
     $link_text =~ s/\s+/ /g;       # collapse internal whitespace
-    my ($tap_num, $beer) = $link_text =~ /^(\d+)\.\s*(.+)$/;
+    my ($raw_tap_num, $beer) = $link_text =~ /^(\d+)\.\s*(.+)$/;
     next unless defined $beer;
     $beer =~ s/\s+$//;
-    if (!defined $tap_num || $used_tap_numbers{$tap_num}) {
-      my $newnum = 101;
-      $newnum++ while $used_tap_numbers{$newnum};
-      $tap_num = $newnum;
+
+    my $tap_num;
+    if (!defined $raw_tap_num) {
+      # No tap number in the data - assign sequential decimals starting at 0
+      my $seq = 0;
+      $seq += 0.1 while $used_tap_numbers{sprintf("%.1f", $seq)};
+      $tap_num = sprintf("%.1f", $seq);
+      $used_tap_numbers{$tap_num} = 1;
+      print STDERR "No tap number in data, assigned $tap_num\n" if $debug;
+    } else {
+      # Format as X.0 first, then check for duplicates
+      my $formatted = sprintf("%.1f", $raw_tap_num);
+      if ($used_tap_numbers{$formatted}) {
+        # Duplicate - add suffix
+        my $suffix = 0.1;
+        my $suffixed = sprintf("%.1f", $raw_tap_num + $suffix);
+        $suffixed = sprintf("%.1f", $raw_tap_num + $suffix) while $used_tap_numbers{$suffixed};
+        $tap_num = $suffixed;
+        $used_tap_numbers{$tap_num} = 1;
+        print STDERR "Duplicate tap number, assigned $tap_num\n" if $debug;
+      } else {
+        # First occurrence
+        $tap_num = $formatted;
+        $used_tap_numbers{$tap_num} = 1;
+      }
     }
-    $used_tap_numbers{$tap_num} = 1;
     print STDERR "Tap $tap_num: '$beer'  url=$untappdurl\n" if $debug;
 
     # Style from h5 > em

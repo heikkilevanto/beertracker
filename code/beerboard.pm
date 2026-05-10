@@ -87,7 +87,7 @@ sub beerboard {
         next unless ( "$sty $mak $beer" =~ /PA/i );
       }
 
-      if ( $id != $previd +1 ) {
+      if ( $id - $previd > 1 ) {
         print "<tr><td align=center>. . .</td></tr>\n";
       }
 

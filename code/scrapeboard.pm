@@ -143,6 +143,22 @@ sub updateboard {
 
   print { $c->{log} } "updateboard: $inserted_brews new brews inserted\n" if $inserted_brews;
 
+  # Log if any tap numbers were renumbered (have fractional part)
+  my @renumbered;
+  my %seen_tap;
+  foreach my $e (@$beerlist) {
+    my $tap = $e->{id} // 0;
+    my $intpart = int($tap);
+    my $frac = $tap - $intpart;
+    if ($frac > 0 && !$seen_tap{$intpart}) {
+      push @renumbered, $tap;
+      $seen_tap{$intpart} = 1;
+    }
+  }
+  if (@renumbered) {
+    print { $c->{log} } "updateboard: Duplicate or missing tap numbers renumbered: " . join(", ", sort { $a <=> $b } @renumbered) . "\n";
+  }
+
   # Update taps
   my $taps_changed = taps::update_taps($c, $loc_id, $beerlist, \%current_board);
 
