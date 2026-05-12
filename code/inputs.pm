@@ -47,8 +47,11 @@ sub dropdown {
   }
   if ($tablename) {
     $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>(new)</span>";
+    my $tags_for_form = "";
+    my @fields = db::tablefields($c, $tablename, "", 1);
+    $tags_for_form = db::all_tags($c, $tablename) if (grep { $_ eq "Tags" } @fields);
     $newdiv  = "<div class='dropdown-new' id='newdiv-$inputname' hidden>\n";
-    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname, "", $skipnewfields);
+    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname, "", $skipnewfields, $tags_for_form);
     $newdiv .= "</div>";
   } elsif ($simplenew eq "simplenew") {
     $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>(new)</span>";
@@ -199,7 +202,7 @@ sub inputform {
         $form .= barcodeInput($c, $inpname, $rec->{$f}, $disabled );
       } elsif ( $f =~ /^Tags$/i && $available_tags_ref ) {
         my $tag_val = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
-        $form .= tagsinput($c, $tag_val, $available_tags_ref, $disabled);
+        $form .= tagsinput($c, $tag_val, $available_tags_ref, $disabled, $inpname);
       } elsif ( $f =~ /^Country$/i ) {
         my $cr = locations::distinct_countries_and_regions($c);
         my $opts = "";
@@ -274,6 +277,7 @@ sub tagsinput {
   my $current   = shift // "";
   my $available = shift;   # arrayref
   my $disabled  = shift || "";
+  my $fieldname = shift || "Tags";
 
   my @current_tags   = grep { $_ } split /\s+/, $current;
   my $remove_hidden  = $disabled ? " hidden" : "";
@@ -314,14 +318,14 @@ sub tagsinput {
   }
 
   my $s = "<td>\n";
-  $s .= "<div class='tags-input' id='tags-input-Tags'>\n";
+  $s .= "<div class='tags-input' id='tags-input-$fieldname'>\n";
   $s .= "  <div class='tags-current'>$chips</div>\n";
   if ($available) {
     $s .= "  <div class='tags-available'$avail_hidden>$avail_html</div>\n";
   }
-  $s .= "  <input type='hidden' name='Tags' id='Tags' value='" . util::htmlesc($current) . "'/>\n";
+  $s .= "  <input type='hidden' name='$fieldname' id='$fieldname' value='" . util::htmlesc($current) . "'/>\n";
   $s .= "</div>\n";
-  $s .= "<script>initTagsInput(document.getElementById('tags-input-Tags'));</script>\n";
+  $s .= "<script>initTagsInput(document.getElementById('tags-input-$fieldname'), '$fieldname');</script>\n";
   # No closing </td> — parent (inputform) adds it
   return $s;
 } # tagsinput

@@ -30,11 +30,11 @@ function setDropdownValue(inp, val) {
 }
 
 // Tags chip input widget (issue 624)
-function initTagsInput(container) {
+function initTagsInput(container, fieldname) {
   if (!container) return;
   const currentDiv  = container.querySelector('.tags-current');
   const availableDiv = container.querySelector('.tags-available');
-  const hiddenInput = container.querySelector('input[type=hidden][name=Tags]');
+  const hiddenInput = container.querySelector("input[type=hidden][name=" + fieldname + "]");
   const newBtn      = container.querySelector('.tag-new-btn');
   const newField    = container.querySelector('.tags-new-field');
   const newInput    = container.querySelector('.tags-new-input');

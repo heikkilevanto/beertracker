@@ -711,9 +711,10 @@ sub postcomment {
     my $newfull = util::param($c,"newpersonFullName") || undef;
     my $newdesc = util::param($c,"newpersonDescription") || undef;
     my $newcont = util::param($c,"newpersonContact") || undef;
+    my $newtags = util::clean_tags(util::param($c,"newpersonTags")) || undef;
     util::error("A Person must have a name") unless $newname;
-    db::execute($c, "INSERT INTO persons (Name, FullName, Description, Contact) VALUES (?, ?, ?, ?)",
-      $newname, $newfull, $newdesc, $newcont);
+    db::execute($c, "INSERT INTO persons (Name, FullName, Description, Contact, Tags) VALUES (?, ?, ?, ?, ?)",
+      $newname, $newfull, $newdesc, $newcont, $newtags);
     my $newid = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef);
     print { $c->{log} } "Inserted person '$newid' for comment '$comment_id' \n";
     push @person_ids, $newid;  # treat the new person as a chip
