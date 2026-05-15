@@ -8,6 +8,10 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
 use POSIX qw(strftime localtime locale_h);
+use File::Basename;
+use Cwd qw(abs_path cwd);
+
+my $STARTUP_DIR = abs_path(cwd());
 
 
 
@@ -41,11 +45,48 @@ sub debugpage {
           $tot += $lines;
       }
   }
-  print "<tr><td>= Total</td><td class='num'>$tot</td><td>&nbsp;</td></tr>\n";
+  my $perltot = $tot;
+  print "<tr><td>= Total</td><td class='num'>$perltot</td><td>&nbsp;</td></tr>\n";
+  print "<tr><td colspan='3'><b>JS files</b></td></tr>\n";
+  $tot = 0;
+  for my $ext (qw(js)) {
+    for my $file (sort glob("$STARTUP_DIR/static/*.$ext")) {
+      my $basename = basename($file);
+      my $lines = 0;
+      if (open my $fh, '<', $file) {
+        $lines++ while <$fh>;
+        close $fh;
+      }
+      my @st = stat($file);
+      my $mtime = strftime "%Y-%m-%d %H:%M", localtime $st[9];
+      print "<tr><td>$basename</td><td class='num'>$lines</td><td>$mtime</td></tr>\n";
+      $tot += $lines;
+    }
+  }
+  my $jstot = $tot;
+  print "<tr><td>= Total</td><td class='num'>$jstot</td><td>&nbsp;</td></tr>\n";
+  print "<tr><td colspan='3'><b>CSS files</b></td></tr>\n";
+  $tot = 0;
+  for my $ext (qw(css)) {
+    for my $file (sort glob("$STARTUP_DIR/static/*.$ext")) {
+      my $basename = basename($file);
+      my $lines = 0;
+      if (open my $fh, '<', $file) {
+        $lines++ while <$fh>;
+        close $fh;
+      }
+      my @st = stat($file);
+      my $mtime = strftime "%Y-%m-%d %H:%M", localtime $st[9];
+      print "<tr><td>$basename</td><td class='num'>$lines</td><td>$mtime</td></tr>\n";
+      $tot += $lines;
+    }
+  }
+  my $csstot = $tot;
+  print "<tr><td>= Total</td><td class='num'>$csstot</td><td>&nbsp;</td></tr>\n";
+  my $grandtotal = $perltot + $jstot + $csstot;
+  print "<tr><td>= Grand total</td><td class='num'>$grandtotal</td><td>&nbsp;</td></tr>\n";
   print "</table>\n";
   print "</div>\n";
-
-  # visible separator between sections, shown even when sections are collapsed
   print "<hr style='margin:1em 0' />\n";
 
   # Log tail
