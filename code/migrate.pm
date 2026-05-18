@@ -18,7 +18,7 @@ use POSIX qw(strftime);
 #
 # Remember to add comments in create table/view statements about what is the
 # purpose of the table/view, and to each column that is not immediately obvious.
- 
+
 
 ################################################################################
 # Migration registry
@@ -30,15 +30,10 @@ our $CODE_DB_VERSION = 23;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
-  # v3.3 released 21-Mar-2026.  Earlier migrations can be found in git
-  [16, 'add Tags to persons and locations', \&mig_016_add_tags_to_persons_and_locations],
-  [17, 'add Country and Region to locations', \&mig_017_add_country_region_to_locations],
-  [18, 'expand country codes to full names', \&mig_018_expand_country_codes],
-  [19, 'add link fields to locations and brews', \&mig_019_add_link_fields],
-  [20, 'fix persons_list last-seen to use comment Ts as fallback', \&mig_020_fix_persons_last_seen],
-  [21, '637 add ShortName to locations and brews', \&mig_021_add_shortname],
-  [22, '551 add Parent to brews', \&mig_022_551_brew_parent],
-  [23, '662 add Scraper field to locations', \&mig_023_662_location_scraper],
+  # Keep this here, it is needed when starting from an empty database
+  [1, 'create globals table', \&mig_001_create_globals_table],
+
+  # v3.4 released 18-May-2026.  Earlier migrations can be found in git
 );
 
 ################################################################################
@@ -98,7 +93,7 @@ sub migrate_form {
 ################################################################################
 # run_migrations($c)
 # POST handler (called inside the shared BEGIN TRANSACTION / COMMIT block).
-# That also handles clearing the memory cache. 
+# That also handles clearing the memory cache.
 # Runs each pending migration in order; updates globals.db_version after each.
 ################################################################################
 sub run_migrations {
@@ -111,7 +106,6 @@ sub run_migrations {
 
   if ( !@pending ) {
     print { $c->{log} } "migrate: nothing to do (db_version=$db_version)\n";
-    return;
   }
 
   foreach my $m (@pending) {
@@ -124,6 +118,9 @@ sub run_migrations {
       "INSERT OR REPLACE INTO globals(k,v) VALUES('db_version',?)", $id);
     print { $c->{log} } "migrate: migration $id done, db_version=$id\n";
   }
+  # Make sure we have the current db_version
+  # Needed when starting with an empty database, and no real migrations done.
+  db::execute($c, "INSERT OR REPLACE INTO globals(k,v) VALUES('db_version', '$CODE_DB_VERSION')");
 
   $c->{migrating} = 0;
   # Success — the caller (index.fcgi) will COMMIT.
@@ -161,236 +158,13 @@ sub _backup_db {
 # Migration subs
 ################################################################################
 
-################################################################################
-sub mig_016_add_tags_to_persons_and_locations {
+sub mig_001_create_globals_table {
   my $c = shift;
-
-  db::execute($c, "ALTER TABLE persons ADD COLUMN Tags TEXT");
-  db::execute($c, "ALTER TABLE locations ADD COLUMN Tags TEXT");
-
-  db::execute($c, "DROP VIEW IF EXISTS persons_list");
-  db::execute($c, q{
-    CREATE VIEW persons_list AS
-    SELECT
-      persons.Id,
-      persons.Name,
-      'trmob' AS trmob,
-      count(DISTINCT comments.Id) - 1 AS Com,
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
-      locations.Name AS Location,
-      'tr' AS tr,
-      'Clr' AS Clr,
-      persons.description,
-      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
-      persons.Tags
-    FROM persons
-    LEFT JOIN comment_persons cp ON cp.Person = persons.Id
-    LEFT JOIN comments ON comments.Id = cp.Comment
-    LEFT JOIN glasses ON glasses.Id = comments.Glass
-    LEFT JOIN locations ON locations.Id = glasses.Location
-    GROUP BY persons.Id
-  });
-
-  db::execute($c, "DROP VIEW IF EXISTS locations_list");
-  db::execute($c, q{
-    CREATE VIEW locations_list AS
-    SELECT
-      locations.Id,
-      locations.Name,
-      locations.LocType || ', ' || locations.LocSubType AS Type,
-      '' AS trmob,
-      locations.lat || ' ' || locations.lon AS Geo,
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
-      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS Stats,
-      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
-      locations.Tags
-    FROM locations
-    LEFT JOIN glasses ON glasses.Location = locations.Id
-    LEFT JOIN location_ratings r ON r.id = glasses.Id
-    GROUP BY locations.Id
-  });
-
-} # mig_016_add_tags_to_persons_and_locations
+  db::execute($c, "CREATE TABLE IF NOT EXISTS globals (k TEXT PRIMARY KEY, v TEXT)");
+  db::execute($c, "INSERT OR REPLACE INTO globals(k,v) VALUES('db_version','0')");
+} # mig_001_create_globals_table
 
 ################################################################################
-sub mig_017_add_country_region_to_locations {
-  my $c = shift;
 
-  db::execute($c, "ALTER TABLE locations ADD COLUMN Country TEXT");
-  db::execute($c, "ALTER TABLE locations ADD COLUMN Region TEXT");
-
-  db::execute($c, "DROP VIEW IF EXISTS locations_list");
-  db::execute($c, q{
-    CREATE VIEW locations_list AS
-    SELECT
-      locations.Id,
-      locations.Name,
-      locations.LocType || ', ' || locations.LocSubType AS Type,
-      '' AS trmob,
-      locations.lat || ' ' || locations.lon AS Geo,
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
-      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS Stats,
-      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
-      locations.Tags,
-      locations.Country,
-      locations.Region
-    FROM locations
-    LEFT JOIN glasses ON glasses.Location = locations.Id
-    LEFT JOIN location_ratings r ON r.id = glasses.Id
-    GROUP BY locations.Id
-  });
-
-  # Back-populate Country and Region from existing brews (most frequent non-empty value)
-  db::execute($c, q{
-    UPDATE locations
-    SET
-      Country = (
-        SELECT Country FROM brews
-        WHERE brews.ProducerLocation = locations.Id
-          AND brews.Country IS NOT NULL AND brews.Country != ''
-        GROUP BY Country ORDER BY COUNT(*) DESC LIMIT 1
-      ),
-      Region = (
-        SELECT Region FROM brews
-        WHERE brews.ProducerLocation = locations.Id
-          AND brews.Region IS NOT NULL AND brews.Region != ''
-        GROUP BY Region ORDER BY COUNT(*) DESC LIMIT 1
-      )
-    WHERE locations.LocType = 'Producer'
-  });
-
-} # mig_017_add_country_region_to_locations
-
-################################################################################
-sub mig_018_expand_country_codes {
-  my $c = shift;
-
-  # Use the shared country code map from util.pm (single source of truth)
-  # Expand country codes in brews and locations
-  for my $code ( keys %util::COUNTRY_CODES ) {
-    my $name = $util::COUNTRY_CODES{$code};
-    db::execute($c, "UPDATE brews     SET Country = ? WHERE upper(Country) = ?", $name, $code);
-    db::execute($c, "UPDATE locations SET Country = ? WHERE upper(Country) = ?", $name, $code);
-  }
-
-  # Back-populate Country and Region from ProducerLocation for brews missing them
-  db::execute($c, q{
-    UPDATE brews
-    SET
-      Country = (
-        SELECT locations.Country FROM locations
-        WHERE locations.Id = brews.ProducerLocation
-          AND locations.Country IS NOT NULL AND locations.Country != ''
-      )
-    WHERE (brews.Country IS NULL OR brews.Country = '')
-      AND brews.ProducerLocation IS NOT NULL
-  });
-
-  db::execute($c, q{
-    UPDATE brews
-    SET
-      Region = (
-        SELECT locations.Region FROM locations
-        WHERE locations.Id = brews.ProducerLocation
-          AND locations.Region IS NOT NULL AND locations.Region != ''
-      )
-    WHERE (brews.Region IS NULL OR brews.Region = '')
-      AND brews.ProducerLocation IS NOT NULL
-  });
-
-} # mig_018_expand_country_codes
-
-################################################################################
-sub mig_019_add_link_fields {
-  # Issue #647: add external link fields
-  # SearchLink: URL to search for this location's brews on a beer site
-  #   (e.g. https://dryandbitter.com/search?q=NAME)
-  # UntappdLink: Untappd venue or producer page URL for this location
-  # DetailsLink: URL to a brew's page on Untappd or the brewery's site
-  my $c = shift;
-  db::execute($c, "ALTER TABLE locations ADD COLUMN SearchLink TEXT");
-  db::execute($c, "ALTER TABLE locations ADD COLUMN UntappdLink TEXT");
-  db::execute($c, "ALTER TABLE brews ADD COLUMN DetailsLink TEXT");
-} # mig_019_add_link_fields
-
-################################################################################
-sub mig_020_fix_persons_last_seen {
-  # Issue #583: use COALESCE(glasses.Timestamp, comments.Ts) so that persons
-  # mentioned in standalone comments (no glass) still get a Last-seen date.
-  my $c = shift;
-
-  db::execute($c, "DROP VIEW IF EXISTS persons_list");
-  db::execute($c, q{
-    CREATE VIEW persons_list AS
-    SELECT
-      persons.Id,
-      persons.Name,
-      'trmob' AS trmob,
-      count(DISTINCT comments.Id) - 1 AS Com,
-      strftime('%Y-%m-%d %w ', max(COALESCE(glasses.Timestamp, comments.Ts)), '-06:00') ||
-        strftime('%H:%M', max(COALESCE(glasses.Timestamp, comments.Ts))) AS Last,
-      locations.Name AS Location,
-      'tr' AS tr,
-      'Clr' AS Clr,
-      persons.description,
-      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
-      persons.Tags
-    FROM persons
-    LEFT JOIN comment_persons cp ON cp.Person = persons.Id
-    LEFT JOIN comments ON comments.Id = cp.Comment
-    LEFT JOIN glasses ON glasses.Id = comments.Glass
-    LEFT JOIN locations ON locations.Id = glasses.Location
-    GROUP BY persons.Id
-  });
-
-} # mig_020_fix_persons_last_seen
-
-################################################################################
-sub mig_021_add_shortname {
-  # Issue #637: add ShortName column to locations and brews for short display names
-  # locations.ShortName: populated by scrapers, used on beer board
-  # brews.ShortName: reserved for future use, not yet used in code
-  my $c = shift;
-  db::execute($c, "ALTER TABLE locations ADD COLUMN ShortName TEXT");
-  db::execute($c, "ALTER TABLE brews ADD COLUMN ShortName TEXT");
-} # mig_021_add_shortname
-
-sub mig_022_551_brew_parent {
-  # Issue #551: add Parent column to brews for brew inheritance
-  # Parent references brews(Id); null means no parent
-  my $c = shift;
-  db::execute($c, "ALTER TABLE brews ADD COLUMN Parent INTEGER REFERENCES brews(Id)");
-  db::execute($c, "CREATE INDEX idx_brews_parent ON brews(Parent)");
-} # mig_022_551_brew_parent
-
-sub mig_023_662_location_scraper {
-  # Issue #662: add Scraper field to locations
-  # Format: "script.pl [optional arg]" - space-separated script name and argument
-  # Index for efficient lookup of all scrapeable locations
-  my $c = shift;
-
-  db::execute($c, "ALTER TABLE locations ADD COLUMN Scraper TEXT");
-  db::execute($c, "CREATE INDEX idx_locations_scraper ON locations(Scraper)");
-
-  # Populate from the former hard-coded list in scrapeboard.pm
-  my %scrapers = (
-    "Ølbaren"         => "oelbaren.pl",
-    "Taphouse"        => "taphouse.pl",
-    "Brus"            => "brus.pl",
-    "Ølsnedkeren"     => "untappd.pl olsnedkeren/415314",
-    "Bootleggers"     => "untappd.pl bootleggers-craft-beer-bar-frb/10845482",
-    "Væskebalancen"   => "untappd.pl vaeskebalancen-blagardsgade-bar-and-bottleshop/11911453",
-    "Warpigs"         => "untappd.pl warpigs/2600340",
-  );
-
-  foreach my $name (keys %scrapers) {
-    db::execute($c,
-      "UPDATE locations SET Scraper = ? WHERE Name = ? COLLATE NOCASE",
-      $scrapers{$name}, $name);
-  }
-} # mig_023_662_location_scraper
-
+# Tell the module loaded succesfully
 1;

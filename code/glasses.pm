@@ -30,7 +30,7 @@ my @empty_types = qw(Night Meal Restaurant );
   # Night first, as it is most likely to be used on main list day summary line.
 
 sub isemptyglass {
-  my $type = shift;
+  my $type = shift // "";
   return grep { $type eq $_ } @empty_types;
 }
 
@@ -63,8 +63,6 @@ sub selectbrewtype {
   if ( $selected eq 'Adjustment' ) {
     $opts .= "<div class='dropdown-item' id='Adjustment'>Adjustment</div>\n";
   }
-  util::error ("No brew types in the database. Insert some dummy glasses")
-    unless ($opts);
   my $s = inputs::dropdown($c, "selbrewtype", $selected, $selected, $opts,
     "", "", "", "", "", "", "", "simplenew");
    return $s;
@@ -110,6 +108,7 @@ sub maininputform {
     return;
   }
   my $rec = findrec($c); # Get defaults, or the record we are editing
+  $rec->{Id} = "" unless ( $rec->{Id} );
 
   # Formatting magic
   my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";

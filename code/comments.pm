@@ -145,7 +145,7 @@ sub listallcomments {
 ################################################################################
 sub listcomments {
   my $c = shift; # context
-  my $glassid = shift;
+  my $glassid = shift || "";
   my $brew     = shift || "";
   my $location = shift || "";
   my $brewtype = shift || "";
