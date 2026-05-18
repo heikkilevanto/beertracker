@@ -606,8 +606,8 @@ sub editcomment {
     print " \@$com->{locname}" if $com->{locname};
     print "</span></a><br/>\n";  # newline after time and location
     if ($com->{brewname}) {
-      my $sep = $com->{prodname} ? "$com->{prodname}: " : "";
-      print "<a href='$c->{url}?o=Brew&e=$com->{brewid}'><span>$sep$com->{brewname}</span></a><br/>\n";
+      my $sep = $com->{prodname} ? "<b>$com->{prodname}</b>: " : "";
+      print "<a href='$c->{url}?o=Brew&e=$com->{brewid}'><span>${sep}<b>$com->{brewname}</b></span></a><br/>\n";
     }
   } elsif ($com && $com->{Location}) {
     my ($locname) = $c->{dbh}->selectrow_array(
@@ -631,9 +631,9 @@ sub editcomment {
       print " \@$gloc" if $gloc;
       print "</span></a><br/>\n";  # newline after time and location
       if ($gbrew && $gbrewid) {
-        print "<a href='$c->{url}?o=Brew&e=$gbrewid'><span>$gbrew</span></a><br/>\n";
+        print "<a href='$c->{url}?o=Brew&e=$gbrewid'><span><b>$gbrew</b></span></a><br/>\n";
       } elsif ($gbrew) {
-        print "$gbrew<br/>\n";
+        print "<b>$gbrew</b><br/>\n";
       }
       # Prefill brew/location from the glass unless already specified in GET params
       $prefill_loc  ||= $glocid  if $glocid;
