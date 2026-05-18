@@ -37,7 +37,7 @@ sub brewcolor {
     "f2f21f", "Pils|Lager|Keller|Bock|Helle|IPL|Altbi",
     "e5bc27", "Classic|dunkel|schwarz|vienna",
     "adaa9d", "smoke|rauch|sc?h?lenkerla",
-    "350f07", "stout|port",  # imp comes later
+    "350f07", "stout|port|black",  # imp comes later
     "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|farm|gose|oude|farm|Sais|wild",
     "8cf2ed", "booze|spirit|sc?h?nap+s|whisky|coctail",
     "e07e1d", "cider",
@@ -45,9 +45,9 @@ sub brewcolor {
     "66592c", "Black IPA|BIPA",
     "9ec91e", "NEIPA|NEPA|New England",
     "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
-    "d8d80f", "Pale Ale|PA",
-    "b7930e", "Old|Brown|Red|Dark|Ale|Belg|Trip|Dubbe|Quad|IDA|Vienn" .
-              "|Beer|Blond|juleb|cream|Irish|bw|cask|mixed",
+    "d8d80f", "Pale|PA",
+    "b7930e", "Old|Brown|Bruin|Red|Dark|Ale|Light|Belg|Trip|Dubbe|Quad|IDA|Vienn" .
+              "|Beer|Blond|juleb|cream|Irish|bw|cask|mixed|Bitter|English",
                 # Any kind of ales (after Pale Ale)
     "350f07", "Imp",
     "dbb83b", "misc|mix|random",
