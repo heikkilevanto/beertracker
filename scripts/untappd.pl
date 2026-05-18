@@ -46,42 +46,38 @@ my %used_tap_numbers;
 foreach my $item ($tap_section->findnodes('.//li[@class="menu-item"]')) {
     print STDERR "=== item ===\n" . $item->toString() . "\n" if $debug;
 
-    # Beer name, tap number, and Untappd URL — all from h5 > a
+    # Beer name, tap number, and Untappd URL -- all from h5 > a
     my $link = ($item->findnodes('.//h5/a'))[0];
     next unless $link;
     my $href = $link->getAttribute('href') || '';
     my $untappdurl = ($href =~ m{^https?://}) ? $href : "https://untappd.com$href";
     my $link_text = $link->textContent;
-    $link_text =~ s/^\s+|\s+$//g;  # trim
-    $link_text =~ s/\s+/ /g;       # collapse internal whitespace
+    $link_text =~ s/^\s+|\s+$//g;
+    $link_text =~ s/\s+/ /g;
     my ($raw_tap_num, $beer) = $link_text =~ /^(\d+)\.\s*(.+)$/;
     next unless defined $beer;
     $beer =~ s/\s+$//;
 
     my $tap_num;
     if (!defined $raw_tap_num) {
-      # No tap number in the data - assign sequential decimals starting at 0
-      my $seq = 0;
-      $seq += 0.1 while $used_tap_numbers{sprintf("%.1f", $seq)};
-      $tap_num = sprintf("%.1f", $seq);
-      $used_tap_numbers{$tap_num} = 1;
-      print STDERR "No tap number in data, assigned $tap_num\n" if $debug;
-    } else {
-      # Format as X.0 first, then check for duplicates
-      my $formatted = sprintf("%.1f", $raw_tap_num);
-      if ($used_tap_numbers{$formatted}) {
-        # Duplicate - add suffix
-        my $suffix = 0.1;
-        my $suffixed = sprintf("%.1f", $raw_tap_num + $suffix);
-        $suffixed = sprintf("%.1f", $raw_tap_num + $suffix) while $used_tap_numbers{$suffixed};
-        $tap_num = $suffixed;
+        my $seq = 0;
+        $seq += 0.1 while $used_tap_numbers{sprintf("%.1f", $seq)};
+        $tap_num = sprintf("%.1f", $seq);
         $used_tap_numbers{$tap_num} = 1;
-        print STDERR "Duplicate tap number, assigned $tap_num\n" if $debug;
-      } else {
-        # First occurrence
-        $tap_num = $formatted;
-        $used_tap_numbers{$tap_num} = 1;
-      }
+        print STDERR "No tap number in data, assigned $tap_num\n" if $debug;
+    }    else {
+        my $formatted = sprintf("%.1f", $raw_tap_num);
+        if ($used_tap_numbers{$formatted}) {
+            my $suffix = 0.1;
+            my $suffixed = sprintf("%.1f", $raw_tap_num + $suffix);
+            $suffixed = sprintf("%.1f", $raw_tap_num + $suffix) while $used_tap_numbers{$suffixed};
+            $tap_num = $suffixed;
+            $used_tap_numbers{$tap_num} = 1;
+            print STDERR "Duplicate tap num, assigned $tap_num\n" if $debug;
+        } else {
+            $tap_num = $formatted;
+            $used_tap_numbers{$tap_num} = 1;
+        }
     }
     print STDERR "Tap $tap_num: '$beer'  url=$untappdurl\n" if $debug;
 
@@ -91,7 +87,7 @@ foreach my $item ($tap_section->findnodes('.//li[@class="menu-item"]')) {
     $style =~ s/^\s+|\s+$//g;
     print STDERR "Style: '$style'\n" if $debug;
 
-    # ABV and maker from h6 > span (text "4.8% ABV • N/A IBU • Maker •")
+    # ABV and maker from h6 > span
     my ($span) = $item->findnodes('.//h6/span');
     my $abv   = 0;
     my $maker = '';
@@ -106,6 +102,23 @@ foreach my $item ($tap_section->findnodes('.//li[@class="menu-item"]')) {
     }
     print STDERR "ABV: $abv  Maker: '$maker'\n" if $debug;
 
+    # Prices from beer-prices section
+    my @sizePrices;
+    my $prices_div = ($item->findnodes('.//div[@class="beer-prices"]'))[0];
+    if ($prices_div) {
+        foreach my $p ($prices_div->findnodes('.//p')) {
+            my ($size_el) = $p->findnodes('.//span[@class="size"]');
+            my ($price_el) = $p->findnodes('.//span[@class="price"]');
+            next unless $size_el && $price_el;
+            my $size_text = $size_el->textContent;
+            next if $size_text =~ /can/i;
+            my ($vol) = $size_text =~ /(\d+)/;
+            my ($price) = $price_el->textContent =~ /([\d.]+)/;
+            next unless defined $vol && defined $price;
+            push @sizePrices, { vol => 0.0 + $vol, price => 0.0 + $price };
+        }
+    }
+
     push @taps, {
         id         => 0 + $tap_num,
         maker      => $maker,
@@ -113,7 +126,7 @@ foreach my $item ($tap_section->findnodes('.//li[@class="menu-item"]')) {
         type       => $style,
         alc        => 1.0 * $abv,
         untappdurl => $untappdurl,
-        sizePrice  => [],
+        sizePrice  => scalar(@sizePrices) ? \@sizePrices : [],
     };
 } # foreach item
 
