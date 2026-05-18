@@ -71,7 +71,20 @@ sub update_taps {
     db::execute($c, $insert_sql, $location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
     my $action = $cur ? "Closed and opened" : "Opened";
     print { $c->{log} } "taps: $action tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
-  }
+
+    # If brew has no DefPrice, set it from the largest size
+    if (@sizes) {
+      my ($has_defprice) = db::queryarray($c,
+        "SELECT DefPrice FROM BREWS WHERE Id = ?", $tap->{brew_id});
+if (!$has_defprice) {
+        my $largest = $sizes[-1];
+        db::execute($c, "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?",
+          $largest->{price}, $largest->{vol}, $tap->{brew_id});
+        print { $c->{log} } "taps: Set brew $tap->{brew_id} DefPrice=$largest->{price} DefVol=$largest->{vol}\n";
+      }
+    }
+
+  } # foreach tap
 
   # Close taps that were not in the scraped list
   foreach my $tap_num (keys %current) {

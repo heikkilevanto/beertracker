@@ -97,11 +97,50 @@ sub updateboard {
 
     next unless $maker && $beer;  # Skip incomplete entries
 
-    # Check if this tap is unchanged - reuse brew_id without any DB lookups
+# Check if this tap is unchanged - reuse brew_id without any DB lookups
     my $cur = $current_board{$tap_num};
     if ($cur && ($cur->{BrewName} // '') eq $beer && ($cur->{Producer} // '') eq $maker) {
       $e->{brew_id} = $cur->{Brew};
-      next;
+
+      # If DB has no prices but scraper does, update prices directly
+      my @sizes = sort { ($a->{vol} || 0) <=> ($b->{vol} || 0) } @{$e->{sizePrice} || []};
+      if (@sizes) {
+        my ($db_has_prices) = db::queryarray($c,
+          "SELECT MAX(COALESCE(PriceS, PriceM, PriceL)) FROM tap_beers WHERE Id = ?",
+          $cur->{Id});
+        unless ($db_has_prices) {
+          my ($sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
+          if (@sizes >= 1) {
+            $sizeS = $sizes[0]->{vol};
+            $priceS = $sizes[0]->{price};
+          }
+          if (@sizes == 2) {
+            $sizeL = $sizes[1]->{vol};
+            $priceL = $sizes[1]->{price};
+          } elsif (@sizes >= 3) {
+            $sizeM = $sizes[1]->{vol};
+            $priceM = $sizes[1]->{price};
+            $sizeL = $sizes[2]->{vol};
+            $priceL = $sizes[2]->{price};
+          }
+          db::execute($c,
+            "UPDATE tap_beers SET SizeS=?, PriceS=?, SizeM=?, PriceM=?, SizeL=?, PriceL=? WHERE Id=?",
+            $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL, $cur->{Id});
+          print { $c->{log} } "updateboard: Added prices to tap $tap_num ($beer) at location $locparam\n";
+
+          # Also update brew's DefPrice/DefVol if not already set
+          my ($has_defprice) = db::queryarray($c,
+            "SELECT DefPrice FROM BREWS WHERE Id = ?", $cur->{Brew});
+          if (!$has_defprice) {
+            my $largest = $sizes[-1];
+            db::execute($c, "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?",
+              $largest->{price}, $largest->{vol}, $cur->{Brew});
+            print { $c->{log} } "updateboard: Set brew $cur->{Brew} DefPrice=$largest->{price} DefVol=$largest->{vol}\n";
+          }
+        }
+      }
+
+next;
     }
 
     # Tap is new or changed - ensure producer exists
