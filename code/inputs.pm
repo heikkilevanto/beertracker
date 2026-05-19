@@ -238,6 +238,14 @@ sub inputform {
         $form .= "<a id='lnk-$inpname' href='$esc' target='_blank'" .
                  " class='field-link-preview' style='display:$display'><span>&#x1F517;</span></a>\n";
         $form .= $separatortag;
+      } elsif ( $f =~ /^BrewType$/i && $table eq "BREWS" ) {
+        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        $form .= "<td>\n";
+        $form .= brews::selectbrewtype_dropdown($c, $curval, $disabled);
+      } elsif ( $f =~ /^SubType$/i && $table eq "BREWS" ) {
+        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        $form .= "<td>\n";
+        $form .= brews::selectbrewsubtype_dropdown($c, $curval, $disabled);
       } else {
         my $pass = "";
         if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself

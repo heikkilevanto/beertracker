@@ -343,6 +343,43 @@ sub brewdeduplist {
 } # brewdeduplist
 
 ################################################################################
+# Dropdown for selecting/adding BrewType
+################################################################################
+sub selectbrewtype_dropdown {
+  my $c = shift;
+  my $selected = shift || "";
+  my $disabled = shift || "";
+  my $sql = "select distinct BrewType from brews where BrewType is not null and BrewType != '' order by BrewType";
+  my $sth = db::query($c, $sql);
+  my $opts = "";
+  while ( my $bt = $sth->fetchrow_array ) {
+    $opts .= "<div class='dropdown-item' id='$bt'>$bt</div>\n";
+  }
+  return inputs::dropdown($c, "BrewType", $selected, $selected, $opts,
+    "", "", "", $disabled, "", "", "", "simplenew");
+} # selectbrewtype_dropdown
+
+################################################################################
+# Dropdown for selecting/adding SubType, with brewtype data attribute for cascading
+################################################################################
+sub selectbrewsubtype_dropdown {
+  my $c = shift;
+  my $selected = shift || "";
+  my $disabled = shift || "";
+  my $sql = "select distinct BrewType, SubType from brews where SubType is not null and SubType != '' order by BrewType, SubType";
+  my $sth = db::query($c, $sql);
+  my $opts = "";
+  while ( my $st = $sth->fetchrow_hashref ) {
+    next unless $st->{SubType};
+    my $sub   = util::htmlesc($st->{SubType});
+    my $btype = util::htmlesc($st->{BrewType});
+    $opts .= "<div class='dropdown-item' id='$sub' brewtype='$btype'>$sub</div>\n";
+  }
+  return inputs::dropdown($c, "SubType", $selected, $selected, $opts,
+    "", "", "", $disabled, "", "", "", "simplenew");
+} # selectbrewsubtype_dropdown
+
+################################################################################
 # Editbrew - Show a form for editing a brew record
 ################################################################################
 
@@ -377,11 +414,12 @@ sub editbrew {
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
 
-    print inputs::inputform($c, "BREWS", $p );
+    print inputs::inputform($c, "BREWS", $p);
+    
     
     if ( $p->{Id} ne "new" ) {
       # Editing existing record: show Edit button, hide submit
-      print "<button type='button' class='edit-enable-btn' onclick='enableEditing(this.form)'>Edit</button>\n";
+      print "<button type='button' class='edit-enable-btn' onclick=\"enableEditing(this.form); var d=document.getElementById('dropdown-BrewType'); if(d)d.classList.remove('open'); var n=document.querySelector('input[name=\\'Name\\']'); if(n)n.focus();\">Edit</button>\n";
       print "<button type='button' onclick=\"window.location.href='$c->{url}?o=$c->{op}&e=new&duplicate=$p->{Id}'\">Duplicate</button>\n";
       print "<input type='submit' name='submit' value='$submit Brew' class='edit-submit-btn' hidden />\n";
     } else {
@@ -407,7 +445,53 @@ sub editbrew {
 })();
 </script>
 JS
-    print "<hr/>\n";
+    # Cascading brewtype -> brewsubtype
+    print <<'JS';
+<script>
+(function() {
+  var brewTypeInput = document.getElementById('BrewType');
+  var subTypeDropdown = document.getElementById('dropdown-SubType');
+  if (!brewTypeInput || !subTypeDropdown) return;
+  var subTypeList = subTypeDropdown.querySelector('.dropdown-list');
+  var subTypeFilter = subTypeDropdown.querySelector('.dropdown-filter');
+  if (!subTypeList) return;
+  // Add a selbrewtype hidden input so filterItems() uses it for brewtype filtering
+  var selbrewtype = document.createElement('input');
+  selbrewtype.type = 'hidden';
+  selbrewtype.id = 'selbrewtype';
+  subTypeDropdown.parentNode.appendChild(selbrewtype);
+  function filterSubTypes() {
+    var bt = brewTypeInput.value;
+    selbrewtype.value = bt;
+    var items = subTypeList.querySelectorAll('.dropdown-item');
+    var hasMatch = false;
+    var i;
+    for (i = 0; i < items.length; i++) {
+      if (items[i].id === 'actions') continue;
+      var bta = items[i].getAttribute('brewtype');
+      if (bta && bta === bt) { hasMatch = true; break; }
+    }
+    for (i = 0; i < items.length; i++) {
+      if (items[i].id === 'actions') continue;
+      var bta = items[i].getAttribute('brewtype');
+      if (!bt || !bta || bta === bt || !hasMatch) {
+        items[i].style.display = '';
+      } else {
+        items[i].style.display = 'none';
+      }
+    }
+  }
+  brewTypeInput.addEventListener('input', filterSubTypes);
+  // Re-apply after filterItems() runs on subtype filter keystroke
+  if (subTypeFilter) {
+    subTypeFilter.addEventListener('input', function() {
+      setTimeout(filterSubTypes, 0);
+    });
+  }
+  filterSubTypes();
+})();
+</script>
+JS
     if ( $p->{Id} ne "new" ) {
       # Search line: producer (if SearchLink set), untappd, ddg
       my $prodname = "";
