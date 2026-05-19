@@ -305,6 +305,25 @@ sub editlocation {
 })();
 </script>
 JS
+    # Auto-fill scraper from untappd link
+    print <<'JS';
+<script>
+(function() {
+  var untappdInput = document.querySelector("input[name='UntappdLink']");
+  var scraperInput = document.querySelector("input[name='Scraper']");
+  if (!untappdInput || !scraperInput) return;
+  untappdInput.addEventListener('input', function() {
+    var curScraper = scraperInput.value.trim();
+    if (curScraper && !curScraper.match(/^untappd\.pl/i)) return;
+    var url = this.value.trim();
+    var m = url.match(/untappd\.com\/v\/(.+)/i);
+    if (m) {
+      scraperInput.value = 'untappd.pl ' + m[1];
+    }
+  });
+})();
+</script>
+JS
     print "<hr/>\n";
     if ( $p->{Id} ne "new" ) {
       # Search line: untappd venue search and ddg
