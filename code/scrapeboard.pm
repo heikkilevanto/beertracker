@@ -78,9 +78,17 @@ sub updateboard {
   # Get location ID (reuse $loc_rec fetched earlier for scraper lookup)
   my $loc_id = $loc_rec->{Id};
 
-  # Fetch current board upfront: tap_num -> { Id, Brew, BrewName, Producer }
+  # Fetch current board upfront: tap_num -> { Id, Brew, BrewName, Producer, prices, DefPrice }
   my %current_board;
-  my $cur_sth = db::query($c, "SELECT Tap, Brew, Id, BrewName, Producer FROM current_taps WHERE Location = ?", $loc_id);
+  my $cur_sth = db::query($c, "
+    SELECT ct.Tap, ct.Brew, ct.Id, ct.BrewName, ct.Producer,
+           tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
+           b.DefPrice
+    FROM current_taps ct
+    JOIN tap_beers tb ON tb.Id = ct.Id
+    JOIN brews b ON b.Id = ct.Brew
+    WHERE ct.Location = ?
+  ", $loc_id);
   while (my $row = $cur_sth->fetchrow_hashref) {
     $current_board{$row->{Tap}} = $row;
   }
@@ -97,7 +105,7 @@ sub updateboard {
 
     next unless $maker && $beer;  # Skip incomplete entries
 
-# Check if this tap is unchanged - reuse brew_id without any DB lookups
+    # Check if this tap is unchanged - reuse brew_id without any DB lookups
     my $cur = $current_board{$tap_num};
     if ($cur && ($cur->{BrewName} // '') eq $beer && ($cur->{Producer} // '') eq $maker) {
       $e->{brew_id} = $cur->{Brew};
@@ -105,9 +113,7 @@ sub updateboard {
       # If DB has no prices but scraper does, update prices directly
       my @sizes = sort { ($a->{vol} || 0) <=> ($b->{vol} || 0) } @{$e->{sizePrice} || []};
       if (@sizes) {
-        my ($db_has_prices) = db::queryarray($c,
-          "SELECT MAX(COALESCE(PriceS, PriceM, PriceL)) FROM tap_beers WHERE Id = ?",
-          $cur->{Id});
+        my $db_has_prices = $cur->{PriceS} || $cur->{PriceM} || $cur->{PriceL};
         unless ($db_has_prices) {
           my ($sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
           if (@sizes >= 1) {
@@ -129,9 +135,7 @@ sub updateboard {
           print { $c->{log} } "updateboard: Added prices to tap $tap_num ($beer) at location $locparam\n";
 
           # Also update brew's DefPrice/DefVol if not already set
-          my ($has_defprice) = db::queryarray($c,
-            "SELECT DefPrice FROM BREWS WHERE Id = ?", $cur->{Brew});
-          if (!$has_defprice) {
+          if (!$cur->{DefPrice}) {
             my $largest = $sizes[-1];
             db::execute($c, "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?",
               $largest->{price}, $largest->{vol}, $cur->{Brew});
@@ -140,7 +144,7 @@ sub updateboard {
         }
       }
 
-next;
+      next;
     }
 
     # Tap is new or changed - ensure producer exists
