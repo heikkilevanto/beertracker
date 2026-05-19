@@ -34,11 +34,11 @@ sub brewcolor {
     "801414", "wine[, ]+red",
     "4f1717", "wine[, ]+port",
     "aa7e7e", "wine",
-    "f2f21f", "Pils|Lager|Keller|Bock|Helle|IPL|Altbi",
+    "f2f21f", "Pils|Lager|Keller|Bock|Helle|IPL|Altbi|Kölsch",
     "e5bc27", "Classic|dunkel|schwarz|vienna",
     "adaa9d", "smoke|rauch|sc?h?lenkerla",
     "350f07", "stout|port|black",  # imp comes later
-    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|farm|gose|oude|farm|Sais|wild",
+    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|farm|gose|oud|farm|Sais|wild",
     "8cf2ed", "booze|spirit|sc?h?nap+s|whisky|coctail",
     "e07e1d", "cider",
     "eaeac7", "weiss|wit|wheat|weizen|white",
@@ -47,8 +47,10 @@ sub brewcolor {
     "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
     "d8d80f", "Pale|PA",
     "b7930e", "Old|Brown|Bruin|Red|Dark|Ale|Light|Belg|Trip|Dubbe|Quad|IDA|Vienn" .
-              "|Beer|Blond|juleb|cream|Irish|bw|cask|mixed|Bitter|English",
+              "|Beer|Blond|juleb|cream|Irish|bw|cask|mixed|Bitter|English|Amber" .
+              "|ESB|Ginger|Table" ,
                 # Any kind of ales (after Pale Ale)
+    "00ff00", "Non", # non-alcoholic beers
     "350f07", "Imp",
     "dbb83b", "misc|mix|random",
     );
