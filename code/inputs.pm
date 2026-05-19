@@ -43,10 +43,10 @@ sub dropdown {
   
   # Build combined actions line if scan or new enabled
   if ($enablescan eq "scan") {
-    $actions .= "<span class='action-link' data-action='scan' style='cursor: pointer;'>(scan)</span>";
+    $actions .= "<span class='action-link' data-action='scan' style='cursor: pointer;'>scan</span>";
   }
   if ($tablename) {
-    $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>(new)</span>";
+    $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>new</span>";
     my $tags_for_form = "";
     my @fields = db::tablefields($c, $tablename, "", 1);
     $tags_for_form = db::all_tags($c, $tablename) if (grep { $_ eq "Tags" } @fields);
@@ -54,14 +54,14 @@ sub dropdown {
     $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname, "", $skipnewfields, $tags_for_form);
     $newdiv .= "</div>";
   } elsif ($simplenew eq "simplenew") {
-    $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>(new)</span>";
+    $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>new</span>";
     $newdiv  = "<div class='dropdown-new' id='newdiv-$inputname' data-simplenew='1' hidden>\n";
     $newdiv .= "  <input type='text' autocapitalize='words' placeholder='New value...' style='margin:4px;'/>\n";
     $newdiv .= "</div>";
   }
   # Add clear option if there are any actions
   if ($actions) {
-    $actions .= "<span class='action-link' data-action='clr' style='cursor: pointer;'>(clr)</span>";
+    $actions .= "<span class='action-link' data-action='clr' style='cursor: pointer;'>clr</span>";
   }
 
   if ($actions) {
