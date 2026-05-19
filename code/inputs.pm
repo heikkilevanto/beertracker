@@ -250,6 +250,14 @@ sub inputform {
         my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
         $form .= "<td>\n";
         $form .= brews::selectbrewsubtype_dropdown($c, $curval, $disabled);
+      } elsif ( $f =~ /^LocType$/i && $table eq "LOCATIONS" ) {
+        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        $form .= "<td>\n";
+        $form .= locations::selectloctype_dropdown($c, $curval, $disabled);
+      } elsif ( $f =~ /^LocSubType$/i && $table eq "LOCATIONS" ) {
+        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        $form .= "<td>\n";
+        $form .= locations::selectlocsubtype_dropdown($c, $curval, $disabled);
       } else {
         my $pass = "";
         if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself

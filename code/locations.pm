@@ -252,6 +252,43 @@ sub locationdeduplist {
 } # locationdeduplist
 
 ################################################################################
+# Dropdown for selecting/adding LocType
+################################################################################
+sub selectloctype_dropdown {
+  my $c = shift;
+  my $selected = shift || "";
+  my $disabled = shift || "";
+  my $sql = "select distinct LocType from locations where LocType is not null and LocType != '' order by LocType";
+  my $sth = db::query($c, $sql);
+  my $opts = "";
+  while ( my $lt = $sth->fetchrow_array ) {
+    $opts .= "<div class='dropdown-item' id='$lt'>$lt</div>\n";
+  }
+  return inputs::dropdown($c, "LocType", $selected, $selected, $opts,
+    "", "", "", $disabled, "", "", "", "simplenew");
+} # selectloctype_dropdown
+
+################################################################################
+# Dropdown for selecting/adding LocSubType, with loctype data attribute for cascading
+################################################################################
+sub selectlocsubtype_dropdown {
+  my $c = shift;
+  my $selected = shift || "";
+  my $disabled = shift || "";
+  my $sql = "select distinct LocType, LocSubType from locations where LocSubType is not null and LocSubType != '' order by LocType, LocSubType";
+  my $sth = db::query($c, $sql);
+  my $opts = "";
+  while ( my $st = $sth->fetchrow_hashref ) {
+    next unless $st->{LocSubType};
+    my $sub   = util::htmlesc($st->{LocSubType});
+    my $ltype = util::htmlesc($st->{LocType});
+    $opts .= "<div class='dropdown-item' id='$sub' loctype='$ltype'>$sub</div>\n";
+  }
+  return inputs::dropdown($c, "LocSubType", $selected, $selected, $opts,
+    "", "", "", $disabled, "", "", "", "simplenew");
+} # selectlocsubtype_dropdown
+
+################################################################################
 # Editlocation - Show a form for editing a location record
 ################################################################################
 
@@ -321,6 +358,51 @@ JS
       scraperInput.value = 'untappd.pl ' + m[1];
     }
   });
+})();
+</script>
+JS
+    # Cascading loctype -> locsubtype
+    print <<'JS';
+<script>
+(function() {
+  var loctypeInput = document.getElementById('LocType');
+  var locsubtypeDropdown = document.getElementById('dropdown-LocSubType');
+  if (!loctypeInput || !locsubtypeDropdown) return;
+  var locsubtypeList = locsubtypeDropdown.querySelector('.dropdown-list');
+  var locsubtypeFilter = locsubtypeDropdown.querySelector('.dropdown-filter');
+  if (!locsubtypeList) return;
+  var selloctype = document.createElement('input');
+  selloctype.type = 'hidden';
+  selloctype.id = 'selloctype';
+  locsubtypeDropdown.parentNode.appendChild(selloctype);
+  function filterLocSubTypes() {
+    var lt = loctypeInput.value;
+    selloctype.value = lt;
+    var items = locsubtypeList.querySelectorAll('.dropdown-item');
+    var hasMatch = false;
+    var i;
+    for (i = 0; i < items.length; i++) {
+      if (items[i].id === 'actions') continue;
+      var lta = items[i].getAttribute('loctype');
+      if (lta && lta === lt) { hasMatch = true; break; }
+    }
+    for (i = 0; i < items.length; i++) {
+      if (items[i].id === 'actions') continue;
+      var lta = items[i].getAttribute('loctype');
+      if (!lt || !lta || lta === lt || !hasMatch) {
+        items[i].style.display = '';
+      } else {
+        items[i].style.display = 'none';
+      }
+    }
+  }
+  loctypeInput.addEventListener('input', filterLocSubTypes);
+  if (locsubtypeFilter) {
+    locsubtypeFilter.addEventListener('input', function() {
+      setTimeout(filterLocSubTypes, 0);
+    });
+  }
+  filterLocSubTypes();
 })();
 </script>
 JS

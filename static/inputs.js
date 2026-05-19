@@ -579,6 +579,11 @@ function filterItems(filterInput, dropdownList) {
     if (selbrewtype && brewtype && selbrewtype.value !== brewtype) {
       disp = 'none';
     }
+    const selloctype = document.getElementById("selloctype");
+    const loctype = item.getAttribute("loctype");
+    if (disp === '' && selloctype && loctype && selloctype.value !== loctype) {
+      disp = 'none';
+    }
 
     // Region filtering: hide items whose regioncountry doesn't match the selected country
     if (countryFilterVal && disp === '') {
