@@ -229,6 +229,11 @@ function initDropdown(container) {
           }
         }
         return;
+      } else if (action === 'clr') {
+        setDropdownValue(hiddenInput, '');
+        container.classList.remove('open');
+        filterInput.blur();
+        return;
       }
     }
 

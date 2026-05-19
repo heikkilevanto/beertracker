@@ -59,6 +59,10 @@ sub dropdown {
     $newdiv .= "  <input type='text' autocapitalize='words' placeholder='New value...' style='margin:4px;'/>\n";
     $newdiv .= "</div>";
   }
+  # Add clear option if there are any actions
+  if ($actions) {
+    $actions .= "<span class='action-link' data-action='clr' style='cursor: pointer;'>(clr)</span>";
+  }
 
   if ($actions) {
     $options = "<div class='dropdown-item' id='actions'>$actions</div>\n$options";
