@@ -445,7 +445,6 @@ sub editbrew {
 })();
 </script>
 JS
-    # Cascading brewtype -> brewsubtype
     print <<'JS';
 <script>
 (function() {
@@ -489,6 +488,57 @@ JS
     });
   }
   filterSubTypes();
+})();
+</script>
+JS
+    print <<'JS';
+<script>
+(function() {
+  var prodDropdown = document.getElementById('dropdown-ProducerLocation');
+  var countryDropdown = document.getElementById('dropdown-Country');
+  var regionDropdown = document.getElementById('dropdown-Region');
+  if (!prodDropdown || !countryDropdown || !regionDropdown) return;
+
+  function getProdData() {
+    var prodHidden = prodDropdown.querySelector('input[type=hidden]');
+    if (!prodHidden || !prodHidden.value) return null;
+    var item = prodDropdown.querySelector('.dropdown-item[id="' + prodHidden.value + '"]');
+    if (!item) return null;
+    return { country: item.getAttribute('country'), region: item.getAttribute('region') };
+  }
+
+  function copyFromProducer() {
+    var data = getProdData();
+    if (!data) return;
+    var countryHidden = countryDropdown.querySelector('input[type=hidden]');
+    var regionHidden = regionDropdown.querySelector('input[type=hidden]');
+    if (countryHidden && data.country) setDropdownValue(countryHidden, data.country);
+    if (regionHidden && data.region) setDropdownValue(regionHidden, data.region);
+  }
+
+  // On producer change: fill only if country or region is empty
+  var prodHidden = prodDropdown.querySelector('input[type=hidden]');
+  if (prodHidden) {
+    prodHidden.addEventListener('input', function() {
+      var c = countryDropdown.querySelector('input[type=hidden]');
+      var r = regionDropdown.querySelector('input[type=hidden]');
+      if (!c || !r || !c.value.trim() || !r.value.trim()) copyFromProducer();
+    });
+  }
+
+  // On Country/Region label click: always copy
+  var form = document.querySelector('form');
+  if (form) {
+    var cells = form.querySelectorAll('td');
+    for (var i = 0; i < cells.length; i++) {
+      var text = cells[i].textContent.trim();
+      if (text === 'Country' || text === 'Region') {
+        cells[i].style.cursor = 'pointer';
+        cells[i].title = 'Fill from producer';
+        cells[i].addEventListener('click', copyFromProducer);
+      }
+    }
+  }
 })();
 </script>
 JS
