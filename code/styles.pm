@@ -34,20 +34,22 @@ sub brewcolor {
     "801414", "wine[, ]+red",
     "4f1717", "wine[, ]+port",
     "aa7e7e", "wine",
-    "f2f21f", "Pils|Lager|Keller|Bock|Helle|IPL|Altbi|Kölsch",
-    "e5bc27", "Classic|dunkel|schwarz|vienna",
+    "f2f21f", "Pils|Lager|Keller|Bock|Helle|IPL|Altbi|Kölsch|alt",
+    "e5bc27", "vienna",
+    "7A5C33", "Dark|dunkel|schwarz|juleb|Classic",
     "adaa9d", "smoke|rauch|sc?h?lenkerla",
-    "350f07", "stout|port|black",  # imp comes later
-    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|farm|gose|oud|farm|Sais|wild",
+    "350f07", "stout|port|porter|black",  # imp comes later
+    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|farm|gose|oud|farm|Sais|Saison|wild",
     "8cf2ed", "booze|spirit|sc?h?nap+s|whisky|coctail",
     "e07e1d", "cider",
     "eaeac7", "weiss|wit|wheat|weizen|white",
     "66592c", "Black IPA|BIPA",
     "9ec91e", "NEIPA|NEPA|New England",
+    "b3cc29", "DIPA",
     "c9d613", "IPA|NE|WC",  # pretty late, NE matches pilsNEr
     "d8d80f", "Pale|PA",
-    "b7930e", "Old|Brown|Bruin|Red|Dark|Ale|Light|Belg|Trip|Dubbe|Quad|IDA|Vienn" .
-              "|Beer|Blond|juleb|cream|Irish|bw|cask|mixed|Bitter|English|Amber" .
+    "8B5E14", "Old|Brown|Bruin|Red|Ale|Light|Belg|Trip|Dubbe|Quad|IDA|Vienn" .
+              "|Beer|Blond|cream|Irish|bw|cask|mixed|Bitter|English|Amber" .
               "|ESB|Ginger|Table" ,
                 # Any kind of ales (after Pale Ale)
     "00ff00", "Non", # non-alcoholic beers
@@ -119,14 +121,14 @@ sub shortbeerstyle {
   $sty =~ s/\s+/ /g;  # multiple spaces etc
   if ( $sty =~ /( PA |Pale Ale)/i ) {
     return "APA"   if ( $sty =~ /America|US/i );
-    return "BelPA" if ( $sty =~ /Belg/i );
+    return "Belgian" if ( $sty =~ /Belg/i );
     return "NEPA"  if ( $sty =~ /Hazy|Haze|New England|NE/i);
     return "PA";
   }
   if ( $sty =~ /(IPA|India)/i ) {
     return "SIPA"  if ( $sty =~ /Session/i);
     return "BIPA"  if ( $sty =~ /Black/i);
-    return "DNE"   if ( $sty =~ /(Double|Triple).*(New England|NE)/i);
+    return "DIPA"  if ( $sty =~ /(Double|Triple).*(New England|NE|Hazy)/i);
     return "DIPA"  if ( $sty =~ /Double|Dipa|Triple/i);
     return "WIPA"  if ( $sty =~ /Wheat/i);
     return "NEIPA" if ( $sty =~ /New England|NE|Hazy/i);
@@ -135,27 +137,21 @@ sub shortbeerstyle {
     return "AIPA"  if ( $sty =~ /America|US/i);
     return "IPA";
   }
-  return "Dunk"  if ( $sty =~ /.*Dunkel.*/i);
-  return "Bock"  if ( $sty =~ /Bock/i);
-  return "Smoke" if ( $sty =~ /(Smoke|Rauch)/i);
-  return "Lager" if ( $sty =~ /Lager|Keller|Pils|Zwickl/i);
-  return "Berl"  if ( $sty =~ /Berliner/i);
-  return "Weiss" if ( $sty =~ /Hefe|Weizen|Hvede|Wit/i);
-  return "Stout" if ( $sty =~ /Stout|Porter|Imperial/i);
-  return "Farm"  if ( $sty =~ /Farm/i);
-  return "Sais"  if ( $sty =~ /Saison/i);
-  return "Dubl"  if ( $sty =~ /(Double|Dubbel)/i);
-  return "Trip"  if ( $sty =~ /(Triple|Tripel|Tripple)/i);
-  return "Quad"  if ( $sty =~ /(Quadruple|Quadrupel)/i);
-  return "Trap"  if ( $sty =~ /Trappist/i);
-  return "Blond" if ( $sty =~ /Blond/i);
-  return "Brown" if ( $sty =~ /Brown/i);
-  return "Strng" if ( $sty =~ /Strong/i);
-  return "Belg"  if ( $sty =~ /Belg/i);
+  return "Dunkel" if ( $sty =~ /Dark|Dunkel|Schwarz/i);
+  return "Bock"   if ( $sty =~ /Bock/i);
+  return "Smoke"  if ( $sty =~ /(Smoke|Rauch)/i);
+  return "Lager"  if ( $sty =~ /Lager|Keller|Pils|Zwickl/i);
+  return "Berl"     if ( $sty =~ /Berliner/i);
+  return "Wheat"    if ( $sty =~ /Hefe|Weizen|Hvede|Wit/i);
+  return "Stout"    if ( $sty =~ /Stout|Porter|Imperial/i);
+  return "Farm"     if ( $sty =~ /Farm/i);
+  return "Saison"   if ( $sty =~ /Saison/i);
+  return "Brown"   if ( $sty =~ /Brown/i);
+  return "Strong"  if ( $sty =~ /Strong/i);
+  return "Belgian" if ( $sty =~ /Bruin|Dubbel|Dubl|Tripel|Triple|Tripple|Quadrupel|Trappist|Blond|Double|Belg/i);
   return "BW"    if ( $sty =~ /Barley.*Wine/i);
   return "Sour"  if ( $sty =~ /Lambic|Gueuze|Sour|Kriek|Framboise/i);
-  $sty =~ s/^ *([^ ]{1,5}).*/$1/; # First word, only five chars, in case we didn't get it above
-  return $sty;
+  return "Misc";
 } # shortbeerstyle
 
 # Returns a hash of display values for a brew or location record (hashref).

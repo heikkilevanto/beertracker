@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 23;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 24;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
@@ -34,6 +34,7 @@ our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
 
   # v3.4 released 18-May-2026.  Earlier migrations can be found in git
+  [24, '688 brew subtype cleanup', \&mig_002_688_brew_subtype_cleanup],
 );
 
 ################################################################################
@@ -163,6 +164,47 @@ sub mig_001_create_globals_table {
   db::execute($c, "CREATE TABLE IF NOT EXISTS globals (k TEXT PRIMARY KEY, v TEXT)");
   db::execute($c, "INSERT OR REPLACE INTO globals(k,v) VALUES('db_version','0')");
 } # mig_001_create_globals_table
+
+################################################################################
+# Migration 24: Brew subtype cleanup (issue #688)
+# Normalize case, merge variant names into canonical subtypes
+################################################################################
+sub mig_002_688_brew_subtype_cleanup {
+  my $c = shift;
+
+  # Case normalization
+  db::execute($c, "UPDATE brews SET SubType='IPA'     WHERE SubType IN ('ipa','Ipa')");
+  db::execute($c, "UPDATE brews SET SubType='AIPA'    WHERE SubType='aipa'");
+  db::execute($c, "UPDATE brews SET SubType='DIPA'    WHERE SubType='dipa'");
+  db::execute($c, "UPDATE brews SET SubType='NEIPA'   WHERE SubType IN ('neipa','ne','Ne')");
+  db::execute($c, "UPDATE brews SET SubType='NEPA'    WHERE SubType='nepa'");
+  db::execute($c, "UPDATE brews SET SubType='SIPA'    WHERE SubType='sipa'");
+  db::execute($c, "UPDATE brews SET SubType='APA'     WHERE SubType='apa'");
+  db::execute($c, "UPDATE brews SET SubType='PA'      WHERE SubType='pa'");
+  db::execute($c, "UPDATE brews SET SubType='Misc'    WHERE SubType='misc'");
+  db::execute($c, "UPDATE brews SET SubType='Whisky'  WHERE SubType='whisky'");
+  db::execute($c, "UPDATE brews SET SubType='Rum'     WHERE SubType='rom'");
+  db::execute($c, "UPDATE brews SET SubType='Gin'     WHERE SubType='gin'");
+  db::execute($c, "UPDATE brews SET SubType='Cocktail' WHERE SubType IN ('coctail','Coctail')");
+  db::execute($c, "UPDATE brews SET SubType='Geuze'   WHERE SubType IN ('geuez','gueuze')");
+
+  # Style merges
+  db::execute($c, "UPDATE brews SET SubType='DIPA'    WHERE SubType IN ('DNE','Triple Neipa')");
+  db::execute($c, "UPDATE brews SET SubType='Saison'  WHERE SubType='Sais'");
+  db::execute($c, "UPDATE brews SET SubType='Sour'    WHERE SubType IN ('Geuze','Geuez','Gueuze','Oude','Sour - Fruited','Lambic Style - Fruit','Lambic Style - Unblended','Lambi')");
+  db::execute($c, "UPDATE brews SET SubType='Stout'   WHERE SubType IN ('Imp Stout','Imperial Stout','Baltic Porter','Porter - Imperial / Double Baltic','Imp')");
+  db::execute($c, "UPDATE brews SET SubType='Lager'   WHERE SubType IN ('Pils','Pilsener','Pilsner','Pilsner - Czech / Bohemian','Kellerbier / Zwickelbier','Kölsch','Lager - Mexican','Light')");
+  db::execute($c, "UPDATE brews SET SubType='IPA'     WHERE SubType='IPA - International'");
+  db::execute($c, "UPDATE brews SET SubType='AIPA'    WHERE SubType='American IPA'");
+  db::execute($c, "UPDATE brews SET SubType='Brown'   WHERE SubType IN ('Brown Ale','Dark Ale')");
+  db::execute($c, "UPDATE brews SET SubType='Belgian' WHERE SubType IN ('Belg','Bruin','Dubbel','Dubl','Tripel','Triple','Tripple','Quadrupel','Trappist','Blond')");
+  db::execute($c, "UPDATE brews SET SubType='Vienna'  WHERE SubType='Vienn'");
+  db::execute($c, "UPDATE brews SET SubType='Wheat'   WHERE SubType IN ('German Hefeweizen','Wheat Beer - Witbier')");
+  db::execute($c, "UPDATE brews SET SubType='Cider'   WHERE SubType IN ('Cider - Other Fruit','Apple Natural','FR','GB')");
+  db::execute($c, "UPDATE brews SET SubType='Ale'     WHERE SubType='Scotch ale'");
+  db::execute($c, "UPDATE brews SET SubType='Ale'     WHERE SubType IN ('ESB','Cream','English','Irish')");
+  db::execute($c, "UPDATE brews SET SubType='Dunkel'  WHERE SubType IN ('Dark','Juleb','Classic','Dunk')");
+} # mig_002_688_brew_subtype_cleanup
 
 ################################################################################
 

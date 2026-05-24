@@ -397,11 +397,6 @@ JS
     }
   }
   loctypeInput.addEventListener('input', filterLocSubTypes);
-  if (locsubtypeFilter) {
-    locsubtypeFilter.addEventListener('input', function() {
-      setTimeout(filterLocSubTypes, 0);
-    });
-  }
   filterLocSubTypes();
 })();
 </script>

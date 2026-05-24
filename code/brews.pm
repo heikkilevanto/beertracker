@@ -481,12 +481,6 @@ JS
     }
   }
   brewTypeInput.addEventListener('input', filterSubTypes);
-  // Re-apply after filterItems() runs on subtype filter keystroke
-  if (subTypeFilter) {
-    subTypeFilter.addEventListener('input', function() {
-      setTimeout(filterSubTypes, 0);
-    });
-  }
   filterSubTypes();
 })();
 </script>
