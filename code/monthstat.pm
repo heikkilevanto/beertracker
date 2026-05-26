@@ -317,8 +317,7 @@ sub monthstat {
   my $firstm_str = sprintf( "%02d", $firstm );
   my $lastm_str  = sprintf( "%02d", $lastm );
   my $xrange_end = ( $lastm == 1 ) ? "\"2001-01\"" : "";
-  my $y2_cmd = $money_mode ? ""
-    : "set link y2 via y*7 inverse y/7\nset y2tics 7 $white\nset format y2 '%.0s%c'\nset mytics 2\n";
+  my $y2_cmd = "set link y2 via y inverse y\nset y2tics $white\nset format y2 '%.0s%c'\n";
   my $ytics_cmd = "set ytics " . ($money_mode ? "$white" : "1 $white") . "\n"
     . "set format y '%.0s%c'\n";
   my $arrow_cmd = $money_mode ? ""
@@ -336,6 +335,7 @@ sub monthstat {
     . "set mxtics 1 \n"
     . $ytics_cmd
     . $y2_cmd
+    . "set mytics 2 \n"
     . "set grid xtics ytics\n"
     . "set xdata time \n"
     . "set timefmt \"%Y-%m\" \n"
