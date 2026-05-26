@@ -16,6 +16,7 @@ sub monthstat {
   my $firsty = "";
   my %monthdrinks;
   my %monthprices;
+  my $money_mode = ($c->{sort} =~ /^m/);
   my $lastmonthday;    # last day of the last month
 
   # Optional date range filters from gstart and gend parameters (month-based)
@@ -135,7 +136,7 @@ sub monthstat {
     my $mdrinks = 0;
     my $mprice  = 0;
     my $mcount  = 0;
-    my $prevdd  = "NaN";
+    my $prevplotval = "NaN";
 
     foreach $y ( reverse( $firsty .. $lasty ) ) {
       my $calm = sprintf( "%d-%02d", $y, $m );
@@ -183,18 +184,22 @@ sub monthstat {
         $plotline .= "NaN  ";
       }
       $dd = "NaN" unless ($d);      # unknown value
+      my $plotval = $money_mode ? ($monthprices{$calm} || "NaN") : $dd;
+      if ($money_mode && $monthprices{$calm} && $calm eq $lastym) {
+        $plotval = int($plotval / $dayofmonth * 30);
+      }
       if ( $plotyear == 2001 ) {    # After current month
         if ( $m == 1 ) {
-          $plotline .= "$dd $prevdd  ";
+          $plotline .= "$plotval $prevplotval  ";
         }
         else {
-          $plotline .= "$dd NaN  ";
+          $plotline .= "$plotval NaN  ";
         }
       }
       else {
-        $plotline .= "NaN $dd  ";
+        $plotline .= "NaN $plotval  ";
       }
-      $prevdd = $dd;
+      $prevplotval = $plotval;
     }
     if ($mcount) {
       $mdrinks = sprintf( "%3.1f", $mdrinks / $mcount );
@@ -217,13 +222,24 @@ sub monthstat {
   # Projections for the visible last month (respect filters)
   my $cur      = $lastm;              # month number of last visible month
   my $curmonth = $lastym;             # YYYY-MM of last visible month
-  my $d        = ( $monthdrinks{$curmonth} || 0 );
-  my $min      = ($d > 0) ? ($d / 30) : "NaN";  # if no data, keep as NaN
-  my $avg      = ($d > 0 && $dayofmonth) ? ($d / $dayofmonth) : "NaN";
-  my $max      = ($avg ne "NaN" && $min ne "NaN") ? (2 * $avg - $min) : "NaN";
-  if ( $max ne "NaN" ) {
-    $max = "NaN" if ( $max > 10 );
-    $max = 0  if ( $max < 0 );
+  my $d;
+  my $min;
+  my $avg;
+  my $max;
+  if ($money_mode) {
+    $d   = ( $monthprices{$curmonth} || 0 );
+    $min = "NaN";
+    $avg = ($d > 0 && $dayofmonth) ? int($d / $dayofmonth * 30) : "NaN";
+    $max = "NaN";
+  } else {
+    $d   = ( $monthdrinks{$curmonth} || 0 );
+    $min = ($d > 0) ? ($d / 30) : "NaN";
+    $avg = ($d > 0 && $dayofmonth) ? ($d / $dayofmonth) : "NaN";
+    $max = ($avg ne "NaN" && $min ne "NaN") ? (2 * $avg - $min) : "NaN";
+    if ( $max ne "NaN" ) {
+      $max = "NaN" if ( $max > 10 );
+      $max = 0  if ( $max < 0 );
+    }
   }
   my $min_s = ( $min eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $min );
   my $avg_s = ( $avg eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $avg );
@@ -301,16 +317,25 @@ sub monthstat {
   my $firstm_str = sprintf( "%02d", $firstm );
   my $lastm_str  = sprintf( "%02d", $lastm );
   my $xrange_end = ( $lastm == 1 ) ? "\"2001-01\"" : "";
+  my $y2_cmd = $money_mode ? ""
+    : "set link y2 via y*7 inverse y/7\nset y2tics 7 $white\nset format y2 '%.0s%c'\nset mytics 2\n";
+  my $ytics_cmd = "set ytics " . ($money_mode ? "$white" : "1 $white") . "\n"
+    . "set format y '%.0s%c'\n";
+  my $arrow_cmd = $money_mode ? ""
+    : "set arrow from \"2000-$firstm_str\", 1 to \"2001-$lastm_str\", 1 nohead linewidth 0.1 linecolor \"green\" \n"
+    . "set arrow from \"2000-$firstm_str\", 4 to \"2001-$lastm_str\", 4 nohead linewidth 0.1 linecolor \"yellow\" \n"
+    . "set arrow from \"2000-$firstm_str\", 7 to \"2001-$lastm_str\", 7 nohead linewidth 0.1 linecolor \"orange\" \n"
+    . "set arrow from \"2000-$firstm_str\", 10 to \"2001-$lastm_str\", 10 nohead linewidth 0.1 linecolor \"red\" \n"
+    . "set arrow from \"2000-$firstm_str\", 13 to \"2001-$lastm_str\", 13 nohead linewidth 0.1 linecolor \"#f409c9\" \n"
+    . "set arrow from \"2001-01\", 0 to \"2001-01\", 10 nohead linewidth 0.1 linecolor \"white\" \n";
   my $cmd    = ""
     . "set term png small size $imgsz \n"
     . "set out \"$pngfile\" \n"
     . "set yrange [0:] \n"
     . "set xtics $white\n"
     . "set mxtics 1 \n"
-    . "set ytics 1 $white\n"
-    . "set mytics 2 \n"
-    . "set link y2 via y*7 inverse y/7\n"
-    . "set y2tics 7 $white\n"
+    . $ytics_cmd
+    . $y2_cmd
     . "set grid xtics ytics\n"
     . "set xdata time \n"
     . "set timefmt \"%Y-%m\" \n"
@@ -322,12 +347,7 @@ sub monthstat {
     . "behind fc \"$c->{bgcolor}\" fillstyle solid border \n"
     .    # green bkg
     "set border linecolor \"white\" \n"
-    . "set arrow from \"2000-$firstm_str\", 1 to \"2001-$lastm_str\", 1 nohead linewidth 0.1 linecolor \"green\" \n"
-    . "set arrow from \"2000-$firstm_str\", 4 to \"2001-$lastm_str\", 4 nohead linewidth 0.1 linecolor \"yellow\" \n"
-    . "set arrow from \"2000-$firstm_str\", 7 to \"2001-$lastm_str\", 7 nohead linewidth 0.1 linecolor \"orange\" \n"
-    . "set arrow from \"2000-$firstm_str\", 10 to \"2001-$lastm_str\", 10 nohead linewidth 0.1 linecolor \"red\" \n"
-    . "set arrow from \"2000-$firstm_str\", 13 to \"2001-$lastm_str\", 13 nohead linewidth 0.1 linecolor \"#f409c9\" \n"
-    . "set arrow from \"2001-01\", 0 to \"2001-01\", 10 nohead linewidth 0.1 linecolor \"white\" \n"
+    . $arrow_cmd
     . "plot ";
   my $lw = 2;
   my $yy = $firsty;
@@ -356,6 +376,15 @@ sub monthstat {
 
   my $sz = "style='max-width:95vw;max-height:120vh'";
   print "<img src=\"$pngfile\" $sz /><br/>\n";
+  # Toggle between drinks and money graph
+  my $filter_qs = "";
+  $filter_qs .= "&gstart=$gstart" if $c->{cgi}->param("gstart");
+  $filter_qs .= "&gend=$gend" if $c->{cgi}->param("gend");
+  if ($money_mode) {
+    print "<a href='$c->{url}?o=Months$filter_qs'><span>Show drinks</span></a><br/>\n";
+  } else {
+    print "<a href='$c->{url}?o=Months&s=money$filter_qs'><span>Show money spent</span></a><br/>\n";
+  }
   print $t;    # The table we built above
 }    # Monthly stats
 
