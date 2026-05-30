@@ -136,9 +136,9 @@ sub maininputform {
            "placeholder='YYYY-MM-DD' $sz8 /> &nbsp;\n";
            # Could not make alternative pattern work, so I use a sequence of L/Y
            # and a valid date. Note also the leading space
-  $html .= "<input name='time' id='time' value='$time' data-rawval='$rawtime' " .
-           "pattern=' ?(0[0-9]|1[0-9]|2[0-3])(:?[0-5][0-9])?(:?[0-5][0-9])?' ".
-           "placeholder='HH:MM' $sz8/> &nbsp;\n";
+   $html .= "<input name='time' id='time' value='$time' data-rawval='$rawtime' " .
+            "pattern='(?: ?(?:0[0-9]|1[0-9]|2[0-3])(?::?[0-5][0-9])?(?::?[0-5][0-9])?|-[0-9]+(?::[0-5][0-9])?)' ".
+            "placeholder='HH:MM' $sz8/> &nbsp;\n";
   my $onclick = "onclick='selectNearest(\"#dropdown-Location\")'";
   $html .= "<tr><td $onclick>Location</td>\n";
   $html .= "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname", "non") .

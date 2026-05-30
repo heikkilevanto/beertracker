@@ -218,6 +218,15 @@ sub gettimestamp {
     $d = util::trim($d);
     $t = util::trim($t);
   }
+  # Handle negative time offset (e.g., "-30" = 30 min ago, "-1:30" = 1h30m ago)
+  if ( $t =~ /^-(\d+)(?::([0-5]\d))?$/ ) {
+    my $minutes = $1;
+    $minutes = $minutes * 60 + $2 if defined $2;
+    $minutes = 0 if $minutes > 360;  # Cap at 6 hours, fall back to current time
+    my $newtime = time() - $minutes * 60;
+    $t = strftime("%H:%M:%S", localtime($newtime));
+    $d = strftime("%Y-%m-%d", localtime($newtime));
+  }
   # Normalize time
   if ( $t =~ /^(\d?)(\d)(\d\d)(\d\d)?$/ ) {  # 2358 235859 123
     $t = ($1 ||"0") . "$2:$3";  #23:59 01:23
