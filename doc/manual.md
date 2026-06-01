@@ -64,7 +64,7 @@ The time field defaults to now. You can type time in several formats:
 - `15` - Just the hour (becomes 15:00)
 - **L** - 5 minutes after your last entry
 - `-30` - 30 minutes ago (also adjusts the date if it crosses midnight)
-- `-1:30` - 1 hour 30 minutes ago
+- `-1:30` or `-90` - 1 hour 30 minutes ago
 - `-360` is the maximum offset (6 hours); anything larger falls back to current time
 
 The system adds seconds automatically to make each entry unique. Those are usually not displayed.

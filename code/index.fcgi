@@ -115,7 +115,7 @@ if ( $devversion ) {
 # Background color. Normally a dark green (matching the "racing green" at Øb),
 # but with experimental versions of the script, a dark blue, to indicate that
 # I am not running the real thing.  RrGgBb
-my $bgcolor =    "#021802";  
+my $bgcolor =    "#021802";
 my $altbgcolor = "#063611";
 if ( $devversion ) {
   $bgcolor = "#002038" ;
@@ -188,13 +188,13 @@ while (my $q = CGI::Fast->new) {
         die "exec $0 failed: $!";
       };
   }
-  
+
   $request_count++;
   my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
   my $plotfile = "";
   my $cmdfile = "";
   my $photodir = "";
-# Build a minimal context so login.pm can use the CGI object. 
+# Build a minimal context so login.pm can use the CGI object.
 # authenticate() sets $c_auth->{username}; sends 401 and returns empty username on failure.
 my $c_auth = { cgi => $q };
 login::authenticate($c_auth);
@@ -251,7 +251,8 @@ login::prepare_cookie($c);  # Build fresh auth cookie; htmlhead() will send it.
 # Dev sudo: set $sudo_as to browse/post as another user without affecting the auth cookie.
 # Requires editing this file to enable — intentional, so it needs machine access.
 my $sudo_as = "";  # e.g. "dennis"
-# $sudo_as = "dennis"; # Uncomment to debug as dennis.
+#$sudo_as = "dennis"; # Uncomment to debug as dennis.
+
 if ( $devversion && $sudo_as ) {
   $c->{username} = $sudo_as;
   warn "sudo: acting as '$sudo_as'\n";
@@ -379,7 +380,7 @@ if ( $c->{op} =~ /Board/i ) {
 } elsif ( $c->{op} =~ /Photo/i ) {
   photos::listphotos($c);
 } elsif ( $c->{op} =~ /Comment/i ) {
-  if ( $c->{edit} ) { # TODO - check this inside comments.pm 
+  if ( $c->{edit} ) { # TODO - check this inside comments.pm
     comments::editcomment($c);
   } else {
     comments::listallcomments($c);
