@@ -46,6 +46,7 @@ sub monthstat {
     distinct strftime ('%Y-%m', timestamp,'-06:00') as calmon,
   	sum(ABS(price)) as pr,
   	sum(stdrinks) as drinks,
+  	min( strftime ('%d', timestamp,'-06:00')) as first,
  	  max( strftime ('%d', timestamp,'-06:00')) as last
   from glasses
   $where_clause
@@ -54,14 +55,22 @@ sub monthstat {
   };
 
   my $sum_sth = db::query($c, $sumsql, @sql_params);
-  while ( my ( $calmon, $pr, $drinks, $last ) = $sum_sth->fetchrow_array ) {
+  my %monthfirstday;
+  while ( my ( $calmon, $pr, $drinks, $first, $last ) = $sum_sth->fetchrow_array ) {
     $monthdrinks{$calmon} = $drinks;
-    $monthprices{$calmon} = $pr;   
+    $monthprices{$calmon} = $pr;
+    $monthfirstday{$calmon} = $first;
     $lastmonthday         = $last;     # Remember the last day
     if ( !$firsty ) {
       $firsty = $1 if ( $calmon =~ /^(\d\d\d\d)/ );
     }
   }
+
+  # Determine user's overall first month for partial-month divisor
+  my ($firstym) = $c->{dbh}->selectrow_array(
+    "select min(strftime('%Y-%m', Timestamp, '-06:00')) from glasses"
+    . " where Username = ? and Brew is not null",
+    undef, $c->{username});
 
   if ( !$firsty ) {
     util::error("No data found");
@@ -143,23 +152,31 @@ sub monthstat {
       my $d    = "";
       my $dd;
       if ( $monthdrinks{$calm} ) {
+        my $div = 30;
+        if ( $calm eq $firstym ) {
+          my $fd = $monthfirstday{$calm};
+          if ( $calm eq $lastym ) {
+            $div = $dayofmonth - $fd + 1;
+          } else {
+            $div = 30 - $fd + 1;
+          }
+        } elsif ( $calm eq $lastym ) {
+          $div = $dayofmonth;
+        }
         $ydrinks[$y] += $monthdrinks{$calm};
         $yprice[$y]  += $monthprices{$calm};
-        $ydays[$y]   += 30;
+        $ydays[$y]   += $div;
         $d  = ( $monthdrinks{$calm} || 0 );
-        $dd = sprintf( "%3.1f", $d / 30 );    # scale to dr/day, approx
-        if ( $calm eq $lastym ) {             # current month
-          $dd = sprintf( "%3.1f", $d / $dayofmonth );    # scale to dr/day
+        $dd = sprintf( "%3.1f", $d / $div );
+        if ( $calm eq $lastym ) {
           $d  = "~" . util::unit( $dd, "/d" );
-          $ydays[$y] += $dayofmonth - 30;
         }
         else {
-          $dd = sprintf( "%3.1f", $d / 30 );    # scale to dr/day, approx
           if ( $dd < 10 ) {
-            $d = util::unit( $dd, "/d" );       #  "9.3/d"
+            $d = util::unit( $dd, "/d" );
           }
           else {
-            $d = $dd;                           # but "10.3", no room for the /d
+            $d = $dd;
           }
         }
         $mdrinks += $dd;
@@ -174,7 +191,8 @@ sub monthstat {
         $t .= "$d<br/>$dw<br/>$p";
         if ( $calm eq $lastym && $monthprices{$calm} ) {
           $p = "";
-          $p = int( $monthprices{$calm} / $dayofmonth * 30 );
+          my $price_div = ($calm eq $firstym) ? ($dayofmonth - $monthfirstday{$calm} + 1) : $dayofmonth;
+          $p = int( $monthprices{$calm} / $price_div * 30 );
           $t .= "<br/>~$p";
         }
         $mprice += $p;
@@ -186,7 +204,8 @@ sub monthstat {
       $dd = "NaN" unless ($d);      # unknown value
       my $plotval = $money_mode ? ($monthprices{$calm} || "NaN") : $dd;
       if ($money_mode && $monthprices{$calm} && $calm eq $lastym) {
-        $plotval = int($plotval / $dayofmonth * 30);
+        my $price_div = ($calm eq $firstym) ? ($dayofmonth - $monthfirstday{$calm} + 1) : $dayofmonth;
+        $plotval = int($plotval / $price_div * 30);
       }
       if ( $plotyear == 2001 ) {    # After current month
         if ( $m == 1 ) {

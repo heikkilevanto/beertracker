@@ -220,6 +220,22 @@ sub yearsummary {
     @years = @$years_ref;
   }
 
+  # Determine user's overall first year for partial-year divisor
+  my $firstyear = undef;
+  my $firstday  = 1;
+  ($firstyear) = $c->{dbh}->selectrow_array(
+    "select min(strftime('%Y', Timestamp, '-06:00')) from glasses"
+    . " where Username = ? and Brew is not null",
+    undef, $c->{username});
+  if ($firstyear) {
+    ($firstday) = $c->{dbh}->selectrow_array(
+      "select min(cast(strftime('%j', Timestamp, '-06:00') as integer))"
+      . " from glasses where Username = ? and Brew is not null"
+      . " and strftime('%Y', Timestamp, '-06:00') = ?",
+      undef, $c->{username}, $firstyear);
+    $firstday = 1 unless $firstday && $firstday > 0;
+  }
+
   # Show stacked bar graph when viewing all years
   my %dotcolors;
   if ( !$c->{qry} ) {
@@ -291,9 +307,21 @@ sub yearsummary {
     print "<tr>";
     print yearline( $ypr, $ydr, $yv, "=TOTAL for $y $sofar" );
     my $days = 365;
+    my $is_sofar = $sofar;
     if ($sofar) {    # Project to the whole year
       $sofar = "";
       $days  = util::datestr("%j");
+    }
+    # For the user's first year, adjust divisor to count from
+    # their first entry, not from Jan 1
+    if ($firstyear && $y eq $firstyear && $firstday > 1) {
+      if ($y eq util::datestr("%Y")) {
+        $days = util::datestr("%j") - $firstday + 1;
+      } else {
+        $days = 365 - $firstday + 1;
+      }
+    }
+    if ($is_sofar) {
       my $pp = 365 * $ypr / $days;
       my $pd = 365 * $ydr / $days;
       my $pv = 365 * $yv / $days;
