@@ -179,7 +179,8 @@ sub listcomments {
   my $s = "";
 
   my $sql = "select COMMENTS.*,
-    group_concat(cp_persons.Name, ', ') as PeopleNames
+    group_concat(cp_persons.Name, ', ') as PeopleNames,
+    group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData
     from comments
     left join comment_persons cp on cp.Comment = comments.Id
     left join persons cp_persons on cp_persons.Id = cp.Person
@@ -462,6 +463,7 @@ sub sibling_comments_html {
     $s .= _sibling_section($c, $com, "Other comments on $ctx:", "bty",
       q{SELECT c.*,
           group_concat(p.Name, ', ') as PeopleNames,
+          group_concat(p.Name || '|' || cp.Person, ', ') as PeopleData,
           strftime('%Y-%m-%d', g.Timestamp, '-06:00') AS effdate,
           strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
           gl.Id AS loc, gl.Name AS locname,
@@ -493,6 +495,7 @@ sub sibling_comments_html {
     $s .= _sibling_section($c, $com, $label, "dlty",
       q{SELECT c.*,
           group_concat(p.Name, ', ') as PeopleNames,
+          group_concat(p.Name || '|' || cp.Person, ', ') as PeopleData,
           strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
           strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
           COALESCE(comloc.Id, glassloc.Id) AS loc,
@@ -522,6 +525,7 @@ sub sibling_comments_html {
       $s .= _sibling_section($c, $com, "Comments on $pname:", "dltby",
         q{SELECT c.*,
             group_concat(p2.Name, ', ') as PeopleNames,
+            group_concat(p2.Name || '|' || cp2.Person, ', ') as PeopleData,
             strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
             strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
             COALESCE(comloc.Id, glassloc.Id) AS loc,
@@ -548,8 +552,9 @@ sub sibling_comments_html {
     my ($locname) = db::queryarray($c,
       "SELECT Name FROM locations WHERE Id = ?", $loc_id);
     $s .= _sibling_section($c, $com, "Comments at " . ($locname || "this location") . ":", "dtby",
-      q{SELECT c.*,
+        q{SELECT c.*,
           group_concat(p.Name, ', ') as PeopleNames,
+          group_concat(p.Name || '|' || cp.Person, ', ') as PeopleData,
           strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
           strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
           COALESCE(comloc.Id, glassloc.Id) AS loc,

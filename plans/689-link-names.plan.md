@@ -46,19 +46,31 @@ if ($people_data) {
 ## Database views
 The `comments_list` view in `doc/db.schema:455` has `group_concat(persons.Name, ', ') as PersonName`. This is used by `listrecords.pm:241-242` for the `o=Comments` listing page. It's a view (no parameters, can't filter by user), so it would need a separate approach if linked names are wanted there. Not needed for Phase 1.
 
-## Later phases (not in scope of this plan)
+## Data note
+Multi-person comments are common in the database: 85 comments have 1 person,
+32 have 2, 18 have 3, up to 17 persons on one comment. The `|`-separated
+`PeopleData` approach is needed everywhere, not just as a safety measure.
 
-All of these use `commentline()` or their own rendering, and would just need a SQL
-`PeopleData` field added:
+## Remaining steps (each independently testable)
 
-- `locations.pm:65` — `listlocationcomments()` → `commentline()`
-- `persons.pm:36` — `showpersondetails()` → `commentline()`
-- `comments.pm:448,479,508,536` — `sibling_comments_html()` → `commentline()`
-  (note: sibling section 3 aliases `comment_persons` as `cp2`)
-- `comments.pm:166` — `listcomments()` → `commentline()`
-- `brews.pm:45-46,118-120` — `listbrewcomments()` has separate rendering,
-  already attempts links but multi-person case (`$pid` is `"123,456"`) is broken
-- `photos.pm:414,450-452` — thumbnail comment display, separate rendering
+Steps 1-4 are the same trivial change: add `group_concat(... || '|' || ..., ', ') as PeopleData`
+to the existing SQL. No rendering changes needed — `commentline()` already handles it.
+
+**Step 1: `locations.pm:65`** — `listlocationcomments()` → `commentline()`
+**Step 2: `persons.pm:36`** — `showpersondetails()` → `commentline()`
+**Step 3: `comments.pm:166`** — `listcomments()` → `commentline()`
+**Step 4: `comments.pm:448,479,508,536`** — `sibling_comments_html()` → `commentline()`
+  (note: sibling section 3 aliases `comment_persons` as `cp2`, persons as `p2`)
+
+**Step 5: `brews.pm:45-46,118-120`** — separate rendering, already attempts links
+  but multi-person case (`$pid` is `"123,456"`) is broken. Needs to split and link
+  each person individually.
+
+**Step 6: `photos.pm:414,450-452`** — separate rendering. Add `PersIds` to SQL,
+  link names in output.
+
+**Step 7 (maybe): `comments_list` view** — `listrecords.pm:241-242` uses
+  `$v .= ":"` on `PersonName`. Could skip or handle differently.
 
 ## Cleanup after all phases
 Once every SQL query that feeds `commentline()` has been updated to provide `PeopleData`,

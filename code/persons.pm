@@ -34,6 +34,7 @@ sub showpersondetails {
   select
     comments.*,
     group_concat(cp_persons.Name, ', ') as PeopleNames,
+    group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData,
     strftime('%Y-%m-%d %w', g.timestamp, '-06:00') as effdate,
     strftime('%H:%M', g.timestamp, '-06:00') as time,
     g.Location as loc,

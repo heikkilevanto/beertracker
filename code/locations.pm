@@ -63,6 +63,7 @@ sub listlocationcomments {
       strftime('%Y-%m-%d', COALESCE(GLASSES.Timestamp, COMMENTS.Ts), '-06:00') as Date,
       strftime('%H:%M',    COALESCE(GLASSES.Timestamp, COMMENTS.Ts))            as Time,
       group_concat(cp_persons.Name, ', ') as PeopleNames,
+      group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData,
       GLASSES.Id as Gid,
       GLASSES.BrewType,
       GLASSES.SubType
