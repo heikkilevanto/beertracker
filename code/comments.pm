@@ -52,8 +52,24 @@ sub commentline {
           "<span style='font-size: xx-small'>[$cr->{Id}]</span></a>\n"
         if ( $cr->{Id} );
   $s .= "<b>($cr->{Rating})</b> \n" if ( $cr->{Rating} );
-  my $people = $cr->{PeopleNames} || $cr->{PersName} || "";
-  $s .= "<b>$people:</b>\n" if $people;
+  my $people_data = $cr->{PeopleData} || "";
+  if ($people_data) {
+    my @items = split(/, /, $people_data);
+    for (my $i = 0; $i < @items; $i++) {
+      my ($name, $pid) = split(/\|/, $items[$i]);
+      if ($pid) {
+        $s .= "<a href='$c->{url}?o=Person&e=$pid'>" .
+              "<span style='font-weight:bold;'>" . util::htmlesc($name) . "</span></a>";
+      } else {
+        $s .= "<span style='font-weight:bold;'>" . util::htmlesc($name) . "</span>";
+      }
+      $s .= ", " if $i < $#items;
+    }
+    $s .= ":\n";
+  } else {
+    my $people = $cr->{PeopleNames} || $cr->{PersName} || "";
+    $s .= "<b>$people:</b>\n" if $people;
+  }
   my $ctype = $cr->{CommentType} || '';
   # Type badge: shown when no flags or when 'y' flag present
   if ($ctype && $ctype ne 'brew') {

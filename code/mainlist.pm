@@ -275,6 +275,7 @@ sub commentlines {
   if ( $rec->{comcount} ) {
     my $sql = "select COMMENTS.*,
       group_concat(cp_persons.Name, ', ') as PeopleNames,
+      group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData,
       (select count(*) from photos where photos.Comment = comments.Id) as photocount
       from comments
       left join comment_persons cp on cp.Comment = comments.Id
