@@ -412,6 +412,7 @@ sub photo_attached_str {
           c.Glass   AS Gid,
           c.Rating  AS Rating,
           group_concat(p.Name, ', ') AS PersName,
+          group_concat(p.Name || '|' || cp.Person, ', ') AS PersData,
           l.Name    AS Loc,
           b.Name    AS Brew,
           pl.Name   AS Producer,
@@ -447,7 +448,20 @@ sub photo_attached_str {
         if ( defined $row->{Rating} && $row->{Rating} ne '' ) {
           $txt .= "(" . "<b>" . $row->{Rating} . "</b>" . ") ";
         }
-        if ( $row->{PersName} ) {
+        if ( $row->{PersData} ) {
+          my @items = split(/, /, $row->{PersData});
+          for (my $i = 0; $i < @items; $i++) {
+            my ($name, $pid) = split(/\|/, $items[$i]);
+            if ($pid) {
+              $txt .= "<a href='$c->{url}?o=Person&e=$pid'>" .
+                      "<span style='font-weight:bold;'>" . util::htmlesc($name) . "</span></a>";
+            } else {
+              $txt .= "<span style='font-weight:bold;'>" . util::htmlesc($name) . "</span>";
+            }
+            $txt .= ", " if $i < $#items;
+          }
+          $txt .= ": ";
+        } elsif ( $row->{PersName} ) {
           $txt .= "<b>" . util::htmlesc($row->{PersName}) . "</b>: ";
         }
         if ( $row->{Txt} ) {

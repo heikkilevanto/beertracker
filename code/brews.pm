@@ -42,8 +42,7 @@ sub listbrewcomments {
       strftime('%H:%M', COALESCE(COMMENTS.Ts, GLASSES.Timestamp)) as Time,
       COMMENTS.Rating as Rating,
       COMMENTS.Comment,
-      group_concat(PERSONS.Id, ',') as Pid,
-      group_concat(PERSONS.Name, ', ') as Person,
+      group_concat(PERSONS.Name || '|' || PERSONS.Id, ', ') as Person,
       GLASSES.Id as Gid,
       GLASSES.Brew as Brew,
       GLASSES.Volume,
@@ -82,7 +81,6 @@ sub listbrewcomments {
     my $volume = defined $com->{Volume} ? $com->{Volume} : undef;
     my $price = defined $com->{Price} ? $com->{Price} : undef;
     my $person = defined $com->{Person} ? $com->{Person} : undef;
-    my $pid = defined $com->{Pid} ? $com->{Pid} : "";
 
     print "<tr><td $sty>\n";
     print "<a href='$c->{url}?o=Comment&e=$cid'><span>";
@@ -116,7 +114,18 @@ sub listbrewcomments {
 
     print "<td $sty>\n";
     if ( $person ) {
-      print "<a href='$c->{url}?o=Person&e=$pid'><span style='font-weight: bold;'>$person</span></a>\n";
+      my @items = split(/, /, $person);
+      for (my $i = 0; $i < @items; $i++) {
+        my ($name, $pid) = split(/\|/, $items[$i]);
+        if ($pid) {
+          print "<a href='$c->{url}?o=Person&e=$pid'>" .
+                "<span style='font-weight: bold;'>" . util::htmlesc($name) . "</span></a>";
+        } else {
+          print "<span style='font-weight: bold;'>" . util::htmlesc($name) . "</span>";
+        }
+        print ", " if $i < $#items;
+      }
+      print "\n";
     }
     print "</td>\n";
     # TODO - Photo thumbnail in its own TD
