@@ -274,7 +274,6 @@ sub commentlines {
   my $html = "";
   if ( $rec->{comcount} ) {
     my $sql = "select COMMENTS.*,
-      group_concat(cp_persons.Name, ', ') as PeopleNames,
       group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData,
       (select count(*) from photos where photos.Comment = comments.Id) as photocount
       from comments
@@ -287,8 +286,6 @@ sub commentlines {
     $sth->execute($rec->{id});
     $html .= "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
-      # Prefer PeopleNames (from comment_persons) over legacy PersName
-      $com->{PersName} = $com->{PeopleNames} if $com->{PeopleNames};
       $html .= "<li>". comments::commentline($c, $com). "</li>\n  ";
     }
     $html .= "</ul>\n";

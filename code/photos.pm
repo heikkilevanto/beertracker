@@ -411,7 +411,6 @@ sub photo_attached_str {
          SELECT c.Comment AS Txt,
           c.Glass   AS Gid,
           c.Rating  AS Rating,
-          group_concat(p.Name, ', ') AS PersName,
           group_concat(p.Name || '|' || cp.Person, ', ') AS PersData,
           l.Name    AS Loc,
           b.Name    AS Brew,
@@ -429,7 +428,7 @@ sub photo_attached_str {
         }, $cid);
     if ($row) {
       # only emit a comment line when there's something useful to show
-      if ( defined $row->{Rating} || $row->{PersName} || $row->{Txt} ) {
+      if ( defined $row->{Rating} || $row->{PersData} || $row->{Txt} ) {
         # make the comment id itself a link to the glass full view
         my $clink;
         if (defined $row->{Gid} && $row->{Gid} ne '') {
@@ -461,8 +460,6 @@ sub photo_attached_str {
             $txt .= ", " if $i < $#items;
           }
           $txt .= ": ";
-        } elsif ( $row->{PersName} ) {
-          $txt .= "<b>" . util::htmlesc($row->{PersName}) . "</b>: ";
         }
         if ( $row->{Txt} ) {
           $txt .= util::htmlesc($row->{Txt});

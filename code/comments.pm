@@ -66,9 +66,6 @@ sub commentline {
       $s .= ", " if $i < $#items;
     }
     $s .= ":\n";
-  } else {
-    my $people = $cr->{PeopleNames} || $cr->{PersName} || "";
-    $s .= "<b>$people:</b>\n" if $people;
   }
   my $ctype = $cr->{CommentType} || '';
   # Type badge: shown when no flags or when 'y' flag present
@@ -179,7 +176,6 @@ sub listcomments {
   my $s = "";
 
   my $sql = "select COMMENTS.*,
-    group_concat(cp_persons.Name, ', ') as PeopleNames,
     group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData
     from comments
     left join comment_persons cp on cp.Comment = comments.Id
@@ -462,7 +458,6 @@ sub sibling_comments_html {
     $ctx .= " \@$locname" if $locname;
     $s .= _sibling_section($c, $com, "Other comments on $ctx:", "bty",
       q{SELECT c.*,
-          group_concat(p.Name, ', ') as PeopleNames,
           group_concat(p.Name || '|' || cp.Person, ', ') as PeopleData,
           strftime('%Y-%m-%d', g.Timestamp, '-06:00') AS effdate,
           strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
@@ -493,8 +488,7 @@ sub sibling_comments_html {
     my $label = "Comments on " . ($brewname || "brew $brew_id") . ":";
     $label .= " " . avgratings($c, $cnt, $avg, undef) if $avg;
     $s .= _sibling_section($c, $com, $label, "dlty",
-      q{SELECT c.*,
-          group_concat(p.Name, ', ') as PeopleNames,
+        q{SELECT c.*,
           group_concat(p.Name || '|' || cp.Person, ', ') as PeopleData,
           strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
           strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
@@ -524,7 +518,6 @@ sub sibling_comments_html {
     while (my ($pid, $pname) = $psth->fetchrow_array) {
       $s .= _sibling_section($c, $com, "Comments on $pname:", "dltby",
         q{SELECT c.*,
-            group_concat(p2.Name, ', ') as PeopleNames,
             group_concat(p2.Name || '|' || cp2.Person, ', ') as PeopleData,
             strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
             strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
@@ -552,8 +545,7 @@ sub sibling_comments_html {
     my ($locname) = db::queryarray($c,
       "SELECT Name FROM locations WHERE Id = ?", $loc_id);
     $s .= _sibling_section($c, $com, "Comments at " . ($locname || "this location") . ":", "dtby",
-        q{SELECT c.*,
-          group_concat(p.Name, ', ') as PeopleNames,
+      q{SELECT c.*,
           group_concat(p.Name || '|' || cp.Person, ', ') as PeopleData,
           strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
           strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,

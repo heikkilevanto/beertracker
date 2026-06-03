@@ -62,7 +62,6 @@ sub listlocationcomments {
       COMMENTS.Ts,
       strftime('%Y-%m-%d', COALESCE(GLASSES.Timestamp, COMMENTS.Ts), '-06:00') as Date,
       strftime('%H:%M',    COALESCE(GLASSES.Timestamp, COMMENTS.Ts))            as Time,
-      group_concat(cp_persons.Name, ', ') as PeopleNames,
       group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData,
       GLASSES.Id as Gid,
       GLASSES.BrewType,
@@ -122,7 +121,7 @@ sub listlocationcomments {
     }
     print comments::commentline($c,$com);
     print "<br/>";
-    $perscount++ if ( $com->{PeopleNames} );
+    $perscount++ if ( $com->{PeopleData} );
     $comcount++ if ($com->{Comment});
     if ( $com->{Rating} ) {
       $ratesum += $com->{Rating};
