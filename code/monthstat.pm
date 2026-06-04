@@ -92,6 +92,11 @@ sub monthstat {
   my $lastym     = "$lasty-$lastm";
   # Use actual last day from data when filtering to past months to avoid inflating averages
   my $dayofmonth = ($gend && $lastmonthday) ? $lastmonthday : util::datestr("%d");
+  # Don't count today unless there are beers recorded for it
+  if (!$gend && $lastmonthday && $lastmonthday < $dayofmonth) {
+    $dayofmonth--;
+    $dayofmonth = 1 if $dayofmonth < 1;
+  }
 
   open F, ">$c->{plotfile}"
     or util::error("Could not open $c->{plotfile} for writing");

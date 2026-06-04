@@ -236,6 +236,18 @@ sub yearsummary {
     $firstday = 1 unless $firstday && $firstday > 0;
   }
 
+  # Determine max day-of-year with data for the current year
+  # (to avoid counting today when projecting if no beers recorded yet)
+  my $lastday = 0;
+  if ($sofar) {
+    ($lastday) = $c->{dbh}->selectrow_array(
+      "select max(cast(strftime('%j', Timestamp, '-06:00') as integer))"
+      . " from glasses where Username = ? and Brew is not null"
+      . " and strftime('%Y', Timestamp, '-06:00') = ?",
+      undef, $c->{username}, util::datestr("%Y"));
+    $lastday = 0 unless $lastday && $lastday > 0;
+  }
+
   # Show stacked bar graph when viewing all years
   my %dotcolors;
   if ( !$c->{qry} ) {
@@ -320,6 +332,15 @@ sub yearsummary {
       } else {
         $days = 365 - $firstday + 1;
       }
+    }
+    # Don't count today unless there are beers recorded for it
+    if ($is_sofar && $lastday > 0 && $lastday < util::datestr("%j")) {
+      if ($firstyear && $y eq $firstyear && $firstday > 1) {
+        $days = $lastday - $firstday + 1;
+      } else {
+        $days = $lastday;
+      }
+      $days = 1 if $days < 1;
     }
     if ($is_sofar) {
       my $pp = 365 * $ypr / $days;
