@@ -41,6 +41,7 @@ They should be named like '557-photo.md' where 557 is the issue number. Once don
 - **UTF-8**: All source and data is UTF-8; set `binmode STDOUT, ":utf8"` in index.fcgi
 - **No Frameworks**: Pure Perl, no ORM or web framework; procedural style with modules.
 - The system lives in the local time zone. Since beer drinking often spans midnight, we offset the date by 6 hours to group late-night drinking into the previous day. This is handled in SQL queries with `datetime(Timestamp, '-6 hours')`.
+- Time stamps are always as ISO strings.
 - After editing any code (and checking it with perl -c), touch **code/VERSION.pm** to trigger a reload. Do not change the version number, that is done at commit time. Do the touch in a separate call, so I can allow that without confirmation.
 - All links should have the text inside a <span> element. For example: `<a href='...?o=Comment&e=123'><span>[123]</span></a>`. This is to make the link style apply only to the underline.
 
@@ -51,7 +52,7 @@ They should be named like '557-photo.md' where 557 is the issue number. Once don
 - **Code Structure**: Functions start with "sub function_name {". Use "my $c = shift;" for context object. Return values explicitly. Use early returns for error conditions. Functions end with "} # function_name".
 - **Variables and Naming**: Use lowercase: $variablename. Descriptive names: $beerlist, $locationid. Context object is $c. Database handle is $c->{dbh}. CGI object is $c->{cgi}.
 - **HTML Generation**: Use print qq{<html>...}; for HTML output. Escape special characters. Use CSS classes and inline styles. Generate forms with method="POST" for data modification.
-- **JavaScript Integration**: Use <script> tags for client-side logic. Inline JavaScript for simple interactions. Use event handlers like onclick. JavaScript should be in separate files under static/, but there
+- **JavaScript Integration**: Use <script> tags for client-side logic. Inline JavaScript for simple interactions. Use event handlers like onclick. JavaScript should be in separate files under `static/`, but there
 are still some inline scripts in the HTML for simplicity.
 - **SQL Style**: Use uppercase for keywords: SELECT, INSERT, UPDATE. Use placeholders (?) for parameters. Join tables explicitly. Use meaningful table aliases.
 - **Comments**: Use # for single-line comments. Use # TODO for future improvements. Document function purposes. Explain complex algorithms.

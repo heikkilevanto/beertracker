@@ -1,5 +1,5 @@
 # Part of my beertracker
-# Routines for scraping beer lists and updating brews and producers 
+# Routines for scraping beer lists and updating brews and producers
 
 
 package scrapeboard;
@@ -11,21 +11,29 @@ use JSON;
 use URI::Escape qw(uri_escape_utf8);
 
 ################################################################################
-# get_scraper_locations($c)
+# get_scraper_locations($c, $days)
 # Returns a list of location names that have a scraper configured,
 # sorted by most recently used (via glasses) first.
+# If $days is set, only locations with glasses within that many days are returned.
 ################################################################################
 
 sub get_scraper_locations {
   my $c = shift;
-  my $sth = db::query($c, q{
+  my $days = shift;
+  my $sql = q{
     SELECT l.Name
     FROM locations l
     LEFT JOIN glasses g ON g.Location = l.Id
     WHERE l.Scraper IS NOT NULL
     GROUP BY l.Id
-    ORDER BY MAX(g.Timestamp) DESC, l.Name
-  });
+  };
+  my @params;
+  if (defined $days) {
+    $sql .= " HAVING MAX(g.Timestamp) > datetime('now', ?)";
+    push @params, "-$days days";
+  }
+  $sql .= " ORDER BY MAX(g.Timestamp) DESC, l.Name";
+  my $sth = db::query($c, $sql, @params);
   my @locs;
   while (my $row = $sth->fetchrow_hashref) {
     push @locs, $row->{Name};

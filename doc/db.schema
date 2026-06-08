@@ -21,7 +21,7 @@ create table glasses (
 
     Id integer primary key,
     Username text not null, -- identifies whom the glass record belongs to
-    Timestamp datetime not null, -- In local time from the browser
+    Timestamp datetime not null, -- In local time from the browser, as an ISO string
     BrewType text not null, -- Copied from brews.BrewType, except for 'empty' glasses
     SubType text not null, -- likewise
     Location integer,

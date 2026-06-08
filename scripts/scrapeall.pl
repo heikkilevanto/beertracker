@@ -83,7 +83,7 @@ my @locations;
 if ($loc_arg) {
   @locations = ($loc_arg);
 } else {
-  @locations = scrapeboard::get_scraper_locations($c);
+  @locations = scrapeboard::get_scraper_locations($c, 45);
 }
 
 ################################################################################
@@ -92,9 +92,10 @@ if ($loc_arg) {
 my $now = localtime;
 print { $log } "\n" . $now->ymd . " " . $now->hms . " scrapeall start (delay=${delay}s)\n";
 
-my $total_ok   = 0;
-my $total_err  = 0;
-my $total_skip = 0;
+my $total_ok         = 0;
+my $total_err        = 0;
+my $total_skip       = 0;
+my $total_unchanged  = 0;
 
 for my $loc (@locations) {
   my $t0 = localtime;
@@ -117,6 +118,8 @@ for my $loc (@locations) {
 
   my $t1 = localtime;
   my $status = $c->{scrape_status} || "";
+  my $unchanged = $status =~ /^0 new brews, 0 new producers, 0 taps changed/;
+  $total_unchanged++ if $unchanged;
   $status = " ($status)" if $status;
   print { $log } $t1->hms . " OK    $loc$status\n";
   print          $t1->hms . " OK    $loc$status\n";
@@ -133,8 +136,8 @@ for my $loc (@locations) {
 }
 
 my $done = localtime;
-print { $log } $done->hms . " $total_ok sites scraped, $total_err errors, $total_skip skipped\n";
-print          $done->hms . " $total_ok sites scraped, $total_err errors, $total_skip skipped\n";
+print { $log } $done->hms . " $total_ok sites scraped, $total_err errors, $total_skip skipped, ${total_unchanged} unchanged\n";
+print          $done->hms . " $total_ok sites scraped, $total_err errors, $total_skip skipped, ${total_unchanged} unchanged\n";
 
 $c->{dbh}->disconnect;
 close $log;
