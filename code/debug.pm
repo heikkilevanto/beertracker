@@ -27,12 +27,14 @@ sub debugpage {
   print "<b style='cursor:pointer' onclick='toggleElement(this.nextElementSibling)'>Loaded modules (click to expand)</b>\n";
   print "<div style='display:none'>\n";
   my $tot = 0;
+  my $perlcount = 0;
   print "<table class=data>";
   print "<tr><td>Module</td><td>Lines</td><td>Modified</td></tr>\n";
   for my $mod ("./code/index.fcgi", sort keys %INC) {
       my $file = $INC{$mod} || $mod;
-      (my $short = $mod) =~ s/\.pm$//;
+      my $short = $mod;
       if ($file =~ m{\./code/}) {
+          $perlcount++;
           my $lines = 0;
           if (open my $fh, '<', $file) {
               $lines++ while <$fh>;
@@ -46,11 +48,13 @@ sub debugpage {
       }
   }
   my $perltot = $tot;
-  print "<tr><td>= Total</td><td class='num'>$perltot</td><td>&nbsp;</td></tr>\n";
+  print "<tr><td>= Total</td><td class='num'>$perltot</td><td>= $perlcount files</td></tr>\n";
   print "<tr><td colspan='3'><b>JS files</b></td></tr>\n";
   $tot = 0;
+  my $jscount = 0;
   for my $ext (qw(js)) {
     for my $file (sort glob("$STARTUP_DIR/static/*.$ext")) {
+      $jscount++;
       my $basename = basename($file);
       my $lines = 0;
       if (open my $fh, '<', $file) {
@@ -64,11 +68,13 @@ sub debugpage {
     }
   }
   my $jstot = $tot;
-  print "<tr><td>= Total</td><td class='num'>$jstot</td><td>&nbsp;</td></tr>\n";
+  print "<tr><td>= Total</td><td class='num'>$jstot</td><td>= $jscount files</td></tr>\n";
   print "<tr><td colspan='3'><b>CSS files</b></td></tr>\n";
   $tot = 0;
+  my $csscount = 0;
   for my $ext (qw(css)) {
     for my $file (sort glob("$STARTUP_DIR/static/*.$ext")) {
+      $csscount++;
       my $basename = basename($file);
       my $lines = 0;
       if (open my $fh, '<', $file) {
@@ -82,9 +88,10 @@ sub debugpage {
     }
   }
   my $csstot = $tot;
-  print "<tr><td>= Total</td><td class='num'>$csstot</td><td>&nbsp;</td></tr>\n";
+  print "<tr><td>= Total</td><td class='num'>$csstot</td><td>= $csscount files</td></tr>\n";
   my $grandtotal = $perltot + $jstot + $csstot;
-  print "<tr><td>= Grand total</td><td class='num'>$grandtotal</td><td>&nbsp;</td></tr>\n";
+  my $totalcount = $perlcount + $jscount + $csscount;
+  print "<tr><td>= Grand total</td><td class='num'>$grandtotal</td><td>= $totalcount files</td></tr>\n";
   print "</table>\n";
   print "</div>\n";
   print "<hr style='margin:1em 0' />\n";
