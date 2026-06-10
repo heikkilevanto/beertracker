@@ -174,11 +174,22 @@ sub maininputform {
   if ( !$c->{edit} ) {
     $tap = " $tap";
   }
-  $html .= "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' data-rawval='$rawtap' size='2' $clr/></td><td>\n";
-  $html .= "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' $sz20/>\n";
-  $html .= "</td></tr>\n";
+   $html .= "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' data-rawval='$rawtap' size='2' $clr/></td><td>\n";
+   $html .= "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' $sz20/>\n";
+   $html .= "</td></tr>\n";
 
-  # (note toggle),  Vol, Alc, and Price
+   my $hidedgeo = "hidden";
+   if ( $c->{edit} ) {
+     $hidedgeo = "";
+   }
+   $html .= "<tr id='georow' $hidedgeo><td>\n";
+   $html .= "<label><input type='checkbox' name='updateGeo' id='updateGeo' /> Upd Geo</label>\n";
+   $html .= "</td><td>\n";
+   $html .= "<input name='geoLat' id='geoLat' placeholder='Lat' size='7' $clr />\n";
+   $html .= "<input name='geoLon' id='geoLon' placeholder='Lon' size='7' $clr />\n";
+   $html .= "</td></tr>\n";
+
+   # (note toggle),  Vol, Alc, and Price
   $html .= "<tr>";
   my $notetxt = "(more)";
   $notetxt = "" if ( !$hidenote);

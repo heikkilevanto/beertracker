@@ -201,6 +201,7 @@ function initDropdown(container) {
         filterInput.value = '(new)';
         filterInput.oldvalue = "";
         hiddenInput.value = 'new';
+        hiddenInput.dispatchEvent(new Event('input'));
         dropdownList.style.display = "none";
         container.querySelector(".dropdown-main").hidden = true;
         if (newDiv) {
@@ -661,6 +662,19 @@ function enableEditing(form) {
   // Focus first enabled input
   const firstInput = form.querySelector('input:not([type=hidden]):not([disabled])');
   if (firstInput) firstInput.focus();
+
+  // Prefill lat/lon from GPS if empty
+  var latInput = form.querySelector('input[name="Lat"]');
+  var lonInput = form.querySelector('input[name="Lon"]');
+  if (latInput && lonInput && !latInput.value && !lonInput.value && navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        latInput.value = pos.coords.latitude.toFixed(6);
+        lonInput.value = pos.coords.longitude.toFixed(6);
+      },
+      function(err) { console.log("Geo Error: " + err.message); }
+    );
+  }
 }
 
 // Helper to find the location with smallest distance, and to select that

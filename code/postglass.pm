@@ -199,6 +199,16 @@ sub postglass {
     brews::update_brew_defaults($c, $brewid, $glass->{Price}, $glass->{Volume});
   }
 
+  # Update location geo if requested
+  if ( util::param($c, "updateGeo") ) {
+    my $geo_lat = util::param($c, "geoLat");
+    my $geo_lon = util::param($c, "geoLon");
+    if ( $geo_lat && $geo_lon && $locid ) {
+      db::execute($c, "UPDATE LOCATIONS SET Lat = ?, Lon = ? WHERE Id = ?",
+        $geo_lat, $geo_lon, $locid);
+    }
+  }
+
   graph::clearcachefiles($c,"postglass");  
 } # postglass
 

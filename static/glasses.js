@@ -94,10 +94,52 @@ function setdate() {  // Set date and time, if not already set by the user
 function shownote() {
   const noteline = document.getElementById("noteline");
   noteline.hidden = false;
+  const georow = document.getElementById("georow");
+  if (georow) georow.hidden = false;
   const toggle = document.getElementById("notetag");
   toggle.hidden = true;
   const leftcol = document.getElementById("leftcol");
   leftcol.innerHTML = '<input type="checkbox" name="setdef" />Def';
+}
+
+function updateGeoFromLocation() {
+  const locId = document.getElementById('Location').value;
+  const latInput = document.getElementById('geoLat');
+  const lonInput = document.getElementById('geoLon');
+  const updateCheck = document.getElementById('updateGeo');
+  if (!latInput || !lonInput || !updateCheck) return;
+  if (!locId || !navigator.geolocation) return;
+
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      var lat = pos.coords.latitude.toFixed(6);
+      var lon = pos.coords.longitude.toFixed(6);
+      latInput.value = lat;
+      lonInput.value = lon;
+
+      // Also fill new-location lat/lon if those fields exist
+      var newlocLat = document.getElementById('newlocLat');
+      var newlocLon = document.getElementById('newlocLon');
+      if (newlocLat) newlocLat.value = lat;
+      if (newlocLon) newlocLon.value = lon;
+
+      var hasCoords = false;
+      if (locId !== 'new') {
+        var dropdown = document.getElementById('dropdown-Location');
+        if (dropdown) {
+          var item = dropdown.querySelector('.dropdown-item[id="' + locId + '"]');
+          if (item) {
+            var span = item.querySelector('span[lat]');
+            hasCoords = span && span.getAttribute('lat') && span.getAttribute('lon');
+          }
+        }
+      }
+      updateCheck.checked = !hasCoords;
+      latInput.disabled = hasCoords;
+      lonInput.disabled = hasCoords;
+    },
+    function(err) { console.log("Geo Error: " + err.message); }
+  );
 }
 
 function editrecord() {  // Switch form to edit mode for the current record in-place
@@ -120,9 +162,11 @@ function editrecord() {  // Switch form to edit mode for the current record in-p
 function initGlassForm() {
   setdate();
 
-  // If noteline is already shown (editing with note), set the labels
+  // If noteline is already shown (editing with note), set the labels and show georow
   if (!document.getElementById("noteline").hidden) {
     document.getElementById("leftcol").innerHTML = '<input type="checkbox" name="setdef" />Def';
+    var georow = document.getElementById("georow");
+    if (georow) georow.hidden = false;
   }
 
   // hide newBrewType, we use SelBrewType always
@@ -144,6 +188,12 @@ function initGlassForm() {
     }
   });
 
+  // Update geo fields when location changes
+  const locHidden = document.getElementById('Location');
+  if (locHidden) {
+    locHidden.addEventListener('input', updateGeoFromLocation);
+  }
+
   // Wire selbrewchange to the hidden input's input event
   const selbrewtypeHidden = document.getElementById('selbrewtype');
   if (selbrewtypeHidden) {
@@ -152,4 +202,23 @@ function initGlassForm() {
     });
     selbrewchange(selbrewtypeHidden, false); // run once on load to set initial visibility
   }
+
+  // Disable lat/lon inputs when checkbox is unchecked, enable when checked
+  function syncGeoDisabled() {
+    var cb = document.getElementById('updateGeo');
+    var lat = document.getElementById('geoLat');
+    var lon = document.getElementById('geoLon');
+    if (!cb || !lat || !lon) return;
+    lat.disabled = !cb.checked;
+    lon.disabled = !cb.checked;
+  }
+  var updateCb = document.getElementById('updateGeo');
+  if (updateCb) {
+    updateCb.addEventListener('change', syncGeoDisabled);
+    syncGeoDisabled(); // initial state before GPS responds
+  }
+
+  // Autofill geo from GPS on page load if a location is already selected
+  // (syncGeoDisabled is called again inside the GPS callback after checkbox is set)
+  updateGeoFromLocation();
 }
