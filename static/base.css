@@ -67,7 +67,7 @@ select option {
 }
 
 input:disabled {
-  color: #888888;
+  color: #aaaaaa;
   border: 1px solid #555555;
 }
 
