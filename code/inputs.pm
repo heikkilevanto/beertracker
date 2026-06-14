@@ -258,11 +258,11 @@ sub inputform {
       } elsif ( $f =~ /^LocType$/i && $table eq "LOCATIONS" ) {
         my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
         $form .= "<td>\n";
-        $form .= locations::selectloctype_dropdown($c, $curval, $disabled);
+        $form .= locations::selectloctype_dropdown($c, $curval, $disabled, $inputprefix);
       } elsif ( $f =~ /^LocSubType$/i && $table eq "LOCATIONS" ) {
         my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
         $form .= "<td>\n";
-        $form .= locations::selectlocsubtype_dropdown($c, $curval, $disabled);
+        $form .= locations::selectlocsubtype_dropdown($c, $curval, $disabled, $inputprefix);
       } else {
         my $pass = "";
         if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself

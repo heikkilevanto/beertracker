@@ -258,13 +258,15 @@ sub selectloctype_dropdown {
   my $c = shift;
   my $selected = shift || "";
   my $disabled = shift || "";
+  my $inputprefix = shift || "";
+  my $inputname = $inputprefix . "LocType";
   my $sql = "select distinct LocType from locations where LocType is not null and LocType != '' order by LocType";
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $lt = $sth->fetchrow_array ) {
     $opts .= "<div class='dropdown-item' id='$lt'>$lt</div>\n";
   }
-  return inputs::dropdown($c, "LocType", $selected, $selected, $opts,
+  return inputs::dropdown($c, $inputname, $selected, $selected, $opts,
     { disabled => $disabled, simplenew => 1 });
 } # selectloctype_dropdown
 
@@ -275,6 +277,8 @@ sub selectlocsubtype_dropdown {
   my $c = shift;
   my $selected = shift || "";
   my $disabled = shift || "";
+  my $inputprefix = shift || "";
+  my $inputname = $inputprefix . "LocSubType";
   my $sql = "select distinct LocType, LocSubType from locations where LocSubType is not null and LocSubType != '' order by LocType, LocSubType";
   my $sth = db::query($c, $sql);
   my $opts = "";
@@ -284,7 +288,7 @@ sub selectlocsubtype_dropdown {
     my $ltype = util::htmlesc($st->{LocType});
     $opts .= "<div class='dropdown-item' id='$sub' loctype='$ltype'>$sub</div>\n";
   }
-  return inputs::dropdown($c, "LocSubType", $selected, $selected, $opts,
+  return inputs::dropdown($c, $inputname, $selected, $selected, $opts,
     { disabled => $disabled, simplenew => 1 });
 } # selectlocsubtype_dropdown
 
