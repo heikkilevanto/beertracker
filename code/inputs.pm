@@ -21,6 +21,9 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 # Omit the "new" line if you don't want it
 # Returns a string ready to be printed in a form
 
+# TODO - Refactor all the optional parameters into something more
+# simple. Maybe a string with flag names.
+
 
 sub dropdown {
   my $c             = shift;
@@ -37,10 +40,11 @@ sub dropdown {
   my $prechips      = shift || "";   # pre-rendered chip HTML for multi-select edit
   my $simplenew     = shift || "";   # "simplenew" for a plain text new-value input
   my $extraattr     = shift || "";   # Extra HTML attributes for the container div
+  my $newdefaults   = shift || {};   # Default field values for the new-record form
 
   my $newdiv = "";
   my $actions = "";
-  
+
   # Build combined actions line if scan or new enabled
   if ($enablescan eq "scan") {
     $actions .= "<span class='action-link' data-action='scan' style='cursor: pointer;'>scan</span>";
@@ -51,7 +55,7 @@ sub dropdown {
     my @fields = db::tablefields($c, $tablename, "", 1);
     $tags_for_form = db::all_tags($c, $tablename) if (grep { $_ eq "Tags" } @fields);
     $newdiv  = "<div class='dropdown-new' id='newdiv-$inputname' hidden>\n";
-    $newdiv .= inputform($c, $tablename, {}, $newfieldprefix, $inputname, "", $skipnewfields, $tags_for_form);
+    $newdiv .= inputform($c, $tablename, $newdefaults, $newfieldprefix, $inputname, "", $skipnewfields, $tags_for_form);
     $newdiv .= "</div>";
   } elsif ($simplenew eq "simplenew") {
     $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>new</span>";

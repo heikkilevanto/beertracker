@@ -94,6 +94,7 @@ sub listrecords {
   $s .= "<!-- listrecords: $sql -->\n";
   $s .= "<style>
     .top-border td { border-top: 2px solid white; }
+    .null-value { color: #999; font-style: italic; }
     </style>\n";
   my $geotable = "";
   if ( $extraparams && (($extraparams->{lat} // '') eq '?') && (($extraparams->{lon} // '') eq '?') ) {
@@ -204,7 +205,9 @@ sub listrecords {
     my $tds = "";
     my $id = $rec[0]; # Id has to be first if using the Check pseudofield
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
-      my $v = $rec[$i] || "";
+      my $v = $rec[$i];
+      my $was_null_field = !defined $v;
+      $v //= "";
       $v = util::htmlesc($v);
       my $fn = $fields[$i];
       my $linebreak = linebreak($c,$fn);
@@ -305,6 +308,9 @@ sub listrecords {
           $v = util::extlink($v, $label);
           $onclick = "";
         }
+      }
+      if ( $was_null_field && $fn =~ /^(Type|Sub|LocType|LocSubType|BrewType)$/i && !$v ) {
+        $v = "<span class='null-value'>NULL</span>";
       }
       $tds .= "<td $styles[$i] $data $onclick>$v</td>\n";
     }

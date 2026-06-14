@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 24;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 25;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
@@ -35,6 +35,9 @@ our @MIGRATIONS = (
 
   # v3.4 released 18-May-2026.  Earlier migrations can be found in git
   [24, '688 brew subtype cleanup', \&mig_002_688_brew_subtype_cleanup],
+
+  # v3.5 — added 14-Jun-2026
+  [25, '714 fix locations_list view join', \&mig_003_714_fix_locations_list],
 );
 
 ################################################################################
@@ -205,6 +208,37 @@ sub mig_002_688_brew_subtype_cleanup {
   db::execute($c, "UPDATE brews SET SubType='Ale'     WHERE SubType IN ('ESB','Cream','English','Irish')");
   db::execute($c, "UPDATE brews SET SubType='Dunkel'  WHERE SubType IN ('Dark','Juleb','Classic','Dunk')");
 } # mig_002_688_brew_subtype_cleanup
+
+################################################################################
+# Migration 25: Fix locations_list view join (issue #714)
+# The old view had  "left join location_ratings r on r.id = glasses.Id"
+# which compared a location id to a glass id, so ratings never matched.
+################################################################################
+sub mig_003_714_fix_locations_list {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS locations_list");
+  db::execute($c, q{
+    CREATE VIEW locations_list AS
+    SELECT
+      locations.Id,
+      locations.Name,
+      locations.LocType || ', ' || locations.LocSubType AS Type,
+      '' AS trmob,
+      locations.lat || ' ' || locations.lon AS Geo,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS Stats,
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
+      locations.Tags,
+      locations.Country,
+      locations.Region
+    FROM locations
+    LEFT JOIN glasses ON glasses.Location = locations.Id
+    LEFT JOIN location_ratings r ON r.id = locations.Id
+    GROUP BY locations.Id
+  });
+} # mig_003_714_fix_locations_list
 
 ################################################################################
 

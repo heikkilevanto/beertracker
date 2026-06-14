@@ -502,7 +502,7 @@ create view locations_list as
       locations.Region
     from locations
     left join glasses on glasses.Location = locations.Id
-    left join location_ratings r on r.id = glasses.Id
+    left join location_ratings r on r.id = locations.Id
     group by locations.Id;
 
 -- view persons_list

@@ -521,7 +521,8 @@ sub selectlocation {
     $newfield = "newprod";
     $skip .= "|LocType|LocSubType";
   } elsif ( $prods eq "non" ) {
-    $where = "where LOCATIONS.LocType <>  \"Producer\" ";
+    # NOTE: Must handle NULL LocType — NULL <> 'Producer' is NULL (falsy).
+    $where = "where (LOCATIONS.LocType IS NULL OR LOCATIONS.LocType <> \"Producer\") ";
   }
   # The opts list is the expensive part. Cache per user and location filter type.
   my $cache_key = "selectlocation_opts:$c->{username}:$prods";
@@ -550,8 +551,10 @@ sub selectlocation {
     while ( my ($id, $name, $type, $subtype, $lat, $lon, $tags, $country, $region) = $list_sth->fetchrow_array ) {
       if ($type) {
         $type = "[$type]";
-      } else {
+      } elsif ( defined $type ) {
         $type = "";
+      } else {
+        $type = "[NULL]";
       }
       my $dist = "";
       if ($lat && $lon) {
@@ -573,7 +576,12 @@ sub selectlocation {
     $current //= "";
   }
 
-  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield, $skip, $disabled );
+  my $defaults = {};
+  if ( $prods ne "prod" ) {
+    # Default LocType/LocSubType for inline new-location form (issue #714)
+    $defaults = { LocType => "Bar", LocSubType => "Beer" };
+  }
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield, $skip, $disabled, "", "", "", "", "", $defaults );
   $s .= "<script>geotabledist();</script>\n";
   return $s;
 
