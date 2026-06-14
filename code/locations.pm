@@ -265,7 +265,7 @@ sub selectloctype_dropdown {
     $opts .= "<div class='dropdown-item' id='$lt'>$lt</div>\n";
   }
   return inputs::dropdown($c, "LocType", $selected, $selected, $opts,
-    "", "", "", $disabled, "", "", "", "simplenew");
+    { disabled => $disabled, simplenew => 1 });
 } # selectloctype_dropdown
 
 ################################################################################
@@ -285,7 +285,7 @@ sub selectlocsubtype_dropdown {
     $opts .= "<div class='dropdown-item' id='$sub' loctype='$ltype'>$sub</div>\n";
   }
   return inputs::dropdown($c, "LocSubType", $selected, $selected, $opts,
-    "", "", "", $disabled, "", "", "", "simplenew");
+    { disabled => $disabled, simplenew => 1 });
 } # selectlocsubtype_dropdown
 
 ################################################################################
@@ -581,7 +581,7 @@ sub selectlocation {
     # Default LocType/LocSubType for inline new-location form (issue #714)
     $defaults = { LocType => "Bar", LocSubType => "Beer" };
   }
-  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "LOCATIONS", $newfield, $skip, $disabled, "", "", "", "", "", $defaults );
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, { table => "LOCATIONS", newfield => $newfield, skip => $skip, disabled => $disabled, defaults => $defaults } );
   $s .= "<script>geotabledist();</script>\n";
   return $s;
 

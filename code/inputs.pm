@@ -19,28 +19,29 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 #    "<div class='dropdown-item' id='6'>Ølbaren</div>\n" .
 #    ... );
 # Omit the "new" line if you don't want it
+# Optional args in hashref $opt (6th param):
+#   table, newfield, skip, disabled, scan, multi, prechips, simplenew, extraattr, defaults
 # Returns a string ready to be printed in a form
-
-# TODO - Refactor all the optional parameters into something more
-# simple. Maybe a string with flag names.
 
 
 sub dropdown {
   my $c             = shift;
-  my $inputname     = shift;   # Name of the input field, e.g. 'loc'
-  my $selectedid    = shift;   # Id of initially selected item
-  my $selectedname  = shift;   # Name of initially selected item
-  my $options       = shift;   # List of DIVs to select from
-  my $tablename     = shift;   # Table for new record form
-  my $newfieldprefix= shift;   # Prefix for new input fields
-  my $skipnewfields = shift || "";
-  my $disabled      = shift || "";   # "disabled" or ""
-  my $enablescan    = shift || "";   # "scan" to enable barcode scanning
-  my $multi         = shift || "";   # "multi" to enable chip multi-select
-  my $prechips      = shift || "";   # pre-rendered chip HTML for multi-select edit
-  my $simplenew     = shift || "";   # "simplenew" for a plain text new-value input
-  my $extraattr     = shift || "";   # Extra HTML attributes for the container div
-  my $newdefaults   = shift || {};   # Default field values for the new-record form
+  my $inputname     = shift;
+  my $selectedid    = shift;
+  my $selectedname  = shift;
+  my $options       = shift;
+  my $opt           = shift || {};
+
+  my $tablename      = $opt->{table}      || "";
+  my $newfieldprefix = $opt->{newfield}   || "";
+  my $skipnewfields  = $opt->{skip}       || "";
+  my $disabled       = $opt->{disabled}   ? "disabled" : "";
+  my $enablescan     = $opt->{scan}       ? "scan"     : "";
+  my $multi          = $opt->{multi}      ? "multi"    : "";
+  my $prechips       = $opt->{prechips}   || "";
+  my $simplenew      = $opt->{simplenew}  ? "simplenew": "";
+  my $extraattr      = $opt->{extraattr}  || "";
+  my $newdefaults    = $opt->{defaults}   || {};
 
   my $newdiv = "";
   my $actions = "";
@@ -221,7 +222,7 @@ sub inputform {
         }
         my $curval = ($rec && defined($rec->{$f})) ? util::htmlesc($rec->{$f}) : "";
         $form .= "<td>\n";
-        $form .= dropdown($c, $inpname, $curval, $curval, $opts, "", "", "", $disabled, "", "", "", "simplenew");
+        $form .= dropdown($c, $inpname, $curval, $curval, $opts, { disabled => $disabled, simplenew => 1 });
       } elsif ( $f =~ /^Region$/i ) {
         my $cr = locations::distinct_countries_and_regions($c);
         my $opts = "";
@@ -233,8 +234,8 @@ sub inputform {
         my $curval = ($rec && defined($rec->{$f})) ? util::htmlesc($rec->{$f}) : "";
         my $country_input = util::htmlesc($inputprefix . "Country");
         $form .= "<td>\n";
-        $form .= dropdown($c, $inpname, $curval, $curval, $opts, "", "", "", $disabled, "", "", "", "simplenew",
-                          "data-country-input='$country_input'");
+        $form .= dropdown($c, $inpname, $curval, $curval, $opts,
+                          { disabled => $disabled, simplenew => 1, extraattr => "data-country-input='$country_input'" });
       } elsif ( $f =~ /^(Website|UntappdLink|SearchLink|DetailsLink)$/i ) {
         my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
         my $esc    = util::htmlesc($curval);

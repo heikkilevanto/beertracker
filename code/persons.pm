@@ -174,8 +174,8 @@ sub selectperson {
       $current = $name;
     }
   }
-  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, "PERSONS",
-   "newperson", "Id|Username", $disabled, "", $multi, $prechips );
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts,
+   { table => "PERSONS", newfield => "newperson", skip => "Id|Username", disabled => $disabled, multi => $multi, prechips => $prechips } );
   return $s;
 } # selectperson
 
