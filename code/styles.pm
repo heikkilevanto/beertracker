@@ -28,7 +28,7 @@ sub brewcolor {
   # TODO - Add prefixes for beers
   # TODO - Check against actual brew styles in the db
   my @drinkcolors = (   # color, pattern. First match counts, so order matters
-    "003000", "restaurant|bar|night|meal|producer|home|hall|church", # regular bg color, no highlight
+    "003000", "restaurant|bar|night|meal|producer|home|hall|church|null", # regular bg color, no highlight
     "808080", "adjustment", # gray for payment adjustments
     "eac4a6", "wine[, ]+white",
     "801414", "wine[, ]+red",

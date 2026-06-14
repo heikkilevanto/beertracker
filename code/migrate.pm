@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 25;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 26;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
@@ -38,6 +38,9 @@ our @MIGRATIONS = (
 
   # v3.5 — added 14-Jun-2026
   [25, '714 fix locations_list view join', \&mig_003_714_fix_locations_list],
+
+  # v3.6 — added 14-Jun-2026
+  [26, '715 locations_list null-safe Type column', \&mig_004_715_locations_list_null_safe],
 );
 
 ################################################################################
@@ -239,6 +242,37 @@ sub mig_003_714_fix_locations_list {
     GROUP BY locations.Id
   });
 } # mig_003_714_fix_locations_list
+
+################################################################################
+# Migration 26: Make locations_list Type column NULL-safe (issue #715)
+# SQLite || returns NULL if any operand is NULL, so a location with LocType='Bar'
+# and NULL LocSubType showed as NULL instead of "Bar, NULL".
+################################################################################
+sub mig_004_715_locations_list_null_safe {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS locations_list");
+  db::execute($c, q{
+    CREATE VIEW locations_list AS
+    SELECT
+      locations.Id,
+      locations.Name,
+      COALESCE(locations.LocType, 'NULL') || ', ' || COALESCE(locations.LocSubType, 'NULL') AS Type,
+      '' AS trmob,
+      locations.lat || ' ' || locations.lon AS Geo,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS Stats,
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS Photo,
+      locations.Tags,
+      locations.Country,
+      locations.Region
+    FROM locations
+    LEFT JOIN glasses ON glasses.Location = locations.Id
+    LEFT JOIN location_ratings r ON r.id = locations.Id
+    GROUP BY locations.Id
+  });
+} # mig_004_715_locations_list_null_safe
 
 ################################################################################
 
