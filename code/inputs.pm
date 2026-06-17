@@ -14,9 +14,9 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 # Drop-down selection with filtering
 ################################################################################
 # example:
-#  dropdown( "location", $current_location_id, $current_location_name,
+#  dropdown($c, "location", $current_location_id, $current_location_name,
 #    "<div class='dropdown-item' id='new'>(new)</div>\n" .
-#    "<div class='dropdown-item' id='6'>Ølbaren</div>\n" .
+#    "<div class='dropdown-item' id='4'>Ølbaren</div>\n" .
 #    ... );
 # Omit the "new" line if you don't want it
 # Optional args in hashref $opt (6th param):
