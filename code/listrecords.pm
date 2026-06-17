@@ -69,6 +69,20 @@ sub listrecords {
   }
 
   my @fields = db::tablefields($c, $table, "", 1);
+  my @extra_attr = ("") x scalar(@fields);
+  my %px_override;
+  for (my $i = 0; $i < scalar(@fields); $i++) {
+      if ($fields[$i] =~ /^(.+)_R(\d+)$/) {
+          $fields[$i] = $1;
+          $extra_attr[$i] = "rowspan='$2'";
+      } elsif ($fields[$i] =~ /^(.+)_C(\d+)$/) {
+          $fields[$i] = $1;
+          $extra_attr[$i] = "colspan='$2'";
+      } elsif ($fields[$i] =~ /^(.+)_(\d+px)$/) {
+          $fields[$i] = $1;
+          $px_override{$i} = $2;
+      }
+  }
   my $order = "";
   for my $f ( @fields ) {
     $order = "Order by $f" if ( $sort =~ /$f(-?)/ );
@@ -129,7 +143,7 @@ sub listrecords {
       $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Stats)$/ ) {
       $sty = "style='max-width:100px; text-align:center'";
-    } elsif ( $f =~ /^(Last)$/ ) {
+    } elsif ( $f =~ /^(Last|Ts)$/ ) {
       $sty = "style='max-width:100px; text-align:center'" if ($c->{mobile});
     } elsif ( $f =~ /^(Type)$/ ) {
       my $w = "100px";
@@ -140,7 +154,7 @@ sub listrecords {
     } elsif ( $f =~ /^(Com|Count)$/ ) {
       $sty = "style='text-align:right; max-width:50px'";
     } elsif ( $f =~ /^Photo$/ ) {
-      $sty = "style='text-align:center; max-width:50px; padding:1px'";
+      $sty = "style='width:96px; text-align:center; padding:1px'";
     } elsif ( $f =~ /^Photos$/ ) {
       $sty = "style='text-align:left; max-width:250px; padding:1px'";
     } elsif ( $f =~ /Rate|Rating|Clr/) {
@@ -174,7 +188,7 @@ sub listrecords {
     $f =~ s/^-//;
     $f =~ s/'//g;
 
-    $s .= "<td $sty >";
+    $s .= "<td $sty $extra_attr[$i]>";
     if ( $f =~ /Clr/i ) { # Clear filters button
       $s .= "<span $sty onclick='clearfilters(this);' >Clr</span>";
     } elsif ( $f  ) {
@@ -186,6 +200,9 @@ sub listrecords {
       $s .= "&nbsp;"
     }
     $s .= "</td>\n";
+  }
+  foreach my $i (keys %px_override) {
+      $styles[$i] = "style='max-width:$px_override{$i}; min-width:0'";
   }
   $s .= "</tr>\n";
   $s .= "</thead><tbody>\n";
@@ -293,7 +310,16 @@ sub listrecords {
       } elsif ( $fn eq "Comment" ) {
         $v = "$v";
       } elsif ( $fn eq "Photo" ) {
-        $v = photos::imagetag($c, $v, $c->{mobile} ? "small" : "thumb");
+        my $id_idx;
+        for (my $j = 0; $j < scalar(@fields); $j++) {
+            if ($fields[$j] eq 'Id') {
+                $id_idx = $j;
+                last;
+            }
+        }
+        my $editurl = "$c->{url}?o=Photos&e=$rec[$id_idx]";
+        $v = photos::imagetag($c, $v, $c->{mobile} ? "small" : "thumb", $editurl);
+        $onclick = "";
       } elsif ( $fn eq "Photos" ) {
         if ($v) {
           my @fns = split(/\|/, $v);
@@ -312,7 +338,7 @@ sub listrecords {
       if ( $was_null_field && $fn =~ /^(Type|Sub|LocType|LocSubType|BrewType)$/i && !$v ) {
         $v = "<span class='null-value'>NULL</span>";
       }
-      $tds .= "<td $styles[$i] $data $onclick>$v</td>\n";
+      $tds .= "<td $styles[$i] $extra_attr[$i] $data $onclick>$v</td>\n";
     }
 
     $s .= "<tr data-first=1 class='top-border'$hidden>\n"; # in-between TRs don't have data_first

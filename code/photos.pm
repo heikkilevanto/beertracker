@@ -318,56 +318,16 @@ sub listphotos {
 
   print "<b>Photos for $c->{username}</b><br/>\n";
 
-  my $sql = q{
-    SELECT p.*
-      FROM photos p
-     WHERE ( p.Glass   IN (SELECT Id FROM glasses WHERE Username = ?)
-          OR p.Comment IN (SELECT c.Id FROM comments c
-                             JOIN glasses g ON g.Id = c.Glass
-                            WHERE g.Username = ?)
-          OR lower(p.Uploader) = lower(?) )
-       AND ( lower(p.Uploader) = lower(?) OR p.Public = 1 )
-     ORDER BY p.Ts DESC
+  my $where = q{
+    ( xGlass   IN (SELECT Id FROM glasses WHERE Username = ?)
+   OR xComment IN (SELECT c.Id FROM comments c
+                     JOIN glasses g ON g.Id = c.Glass
+                    WHERE g.Username = ?)
+   OR lower(xUploader) = lower(?) )
+   AND ( lower(xUploader) = lower(?) OR xPublic = 1 )
   };
-  my $sth = db::query($c, $sql, $c->{username}, $c->{username}, $c->{username}, $c->{username});
-
-  my $count    = 0;
-  my $cur_date = '';
-  my $in_table = 0;
-  while (my $p = $sth->fetchrow_hashref) {
-    my $editurl = "$c->{url}?o=Photos&e=$p->{Id}";
-    my $thumb = imagetag($c, $p->{Filename}, 'thumb', $editurl);
-    next unless $thumb;  # skip if file missing
-
-    my ($date) = split(' ', $p->{Ts});
-    $date //= 'Unknown date';
-
-    if ($date ne $cur_date) {
-      print "</table>\n" if $in_table;
-      print "<b>$date</b><br/>\n";
-      print "<table style='border-collapse:collapse; margin-bottom:12px'>\n";
-      $cur_date = $date;
-      $in_table = 1;
-    }
-
-    my $attached = photo_attached_str($c, $p);
-    my $cap = $p->{Caption}
-      ? "<b>" . util::htmlesc($p->{Caption}) . "</b><br/>\n"
-      : '';
-    my $meta = "";
-    $meta .= $cap;
-    $meta .= "$attached<br/>\n" if $attached;
-    $meta .= "<small>$p->{Ts} &mdash; $p->{Uploader}</small>\n";
-
-    print qq{<tr valign='top'>
-  <td style='padding:2px 8px 6px 0'>$thumb</td>
-  <td style='padding:2px 0 6px 0'><small>$meta</small></td>
-</tr>
-};
-    $count++;
-  }
-  print "</table>\n" if $in_table;
-  print "<p>$count photo" . ($count == 1 ? '' : 's') . ".</p>\n";
+  print listrecords::listrecords($c, "PHOTOS_LIST", "Ts-", $where,
+      [$c->{username}, $c->{username}, $c->{username}, $c->{username}]);
 } # listphotos
 
 ################################################################################

@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 26;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 27;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
@@ -41,6 +41,9 @@ our @MIGRATIONS = (
 
   # v3.6 — added 14-Jun-2026
   [26, '715 locations_list null-safe Type column', \&mig_004_715_locations_list_null_safe],
+
+  # v3.7 — added 17-Jun-2026
+  [27, '695 create photos_list view', \&mig_005_photos_list_view],
 );
 
 ################################################################################
@@ -273,6 +276,68 @@ sub mig_004_715_locations_list_null_safe {
     GROUP BY locations.Id
   });
 } # mig_004_715_locations_list_null_safe
+
+################################################################################
+# Migration 27: Create photos_list view (issue #695)
+# 2-column layout: Photo on left, text fields stacked on right.
+# Id + Clr pseudo-field on the first line. _R8 suffix for rowspan=8.
+# x-prefixed columns are hidden fields used for WHERE filtering.
+################################################################################
+sub mig_005_photos_list_view {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS photos_list");
+  db::execute($c, q{
+    CREATE VIEW photos_list AS
+    SELECT
+      p.Filename AS Photo_R8,
+      p.Id,
+      '' AS Clr,
+      '' AS TR1,
+      p.Caption,
+      '' AS TR2,
+      CASE WHEN p.Person IS NOT NULL THEN p2.Name END AS Person,
+      '' AS TR3,
+      CASE WHEN p.Brew IS NOT NULL THEN b.Name END AS Brew,
+      '' AS TR4,
+      CASE WHEN p.Location IS NOT NULL THEN l.Name END AS Location,
+      '' AS TR5,
+      CASE WHEN p.Glass IS NOT NULL THEN
+        TRIM(
+          CASE WHEN pl_g.Name IS NOT NULL THEN pl_g.Name || ':' ELSE '' END ||
+          CASE WHEN b_g.Name IS NOT NULL THEN ' ' || b_g.Name ELSE '' END ||
+          CASE WHEN b_g.Name IS NULL AND g_g.BrewType IS NOT NULL
+               THEN ' [' || g_g.BrewType || ']' ELSE '' END ||
+          CASE WHEN l_g.Name IS NOT NULL THEN ' @ ' || l_g.Name ELSE '' END
+        )
+      END AS Glass,
+      '' AS TR6,
+      CASE WHEN p.Comment IS NOT NULL THEN
+        TRIM(
+          CASE WHEN c.Rating IS NOT NULL THEN '(' || c.Rating || ') ' ELSE '' END ||
+          COALESCE(c.Comment, '')
+        )
+      END AS Comment,
+      '' AS TR7,
+      p.Ts,
+      p.Glass AS xGlass,
+      p.Comment AS xComment,
+      p.Location AS xLocation,
+      p.Person AS xPerson,
+      p.Brew AS xBrew,
+      p.Uploader AS xUploader,
+      p.Public AS xPublic
+    FROM photos p
+    LEFT JOIN persons p2     ON p2.Id = p.Person
+    LEFT JOIN brews b        ON b.Id = p.Brew
+    LEFT JOIN locations l    ON l.Id = p.Location
+    LEFT JOIN glasses g_g    ON g_g.Id = p.Glass
+    LEFT JOIN brews b_g      ON b_g.Id = g_g.Brew
+    LEFT JOIN locations l_g  ON l_g.Id = g_g.Location
+    LEFT JOIN locations pl_g ON pl_g.Id = b_g.ProducerLocation
+    LEFT JOIN comments c     ON c.Id = p.Comment
+  });
+} # mig_005_photos_list_view
 
 ################################################################################
 
