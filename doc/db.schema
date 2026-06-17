@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-06-17 15:05 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-06-17 15:28 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
@@ -533,16 +533,15 @@ drop view if exists photos_list;
 create view photos_list as
 select
   p.Filename as Photo_R8,
-  p.Id,
-  '' as Clr,
+  p.Id as IdClr,
   '' as TR1,
-  p.Caption,
+  p.Caption as Caption_A,
   '' as TR2,
-  case when p.Person is not null then p2.Name end as Person,
+  case when p.Person is not null then p2.Name end as Person_A,
   '' as TR3,
-  case when p.Brew is not null then b.Name end as Brew,
+  case when p.Brew is not null then b.Name end as Brew_A,
   '' as TR4,
-  case when p.Location is not null then l.Name end as Location,
+  case when p.Location is not null then l.Name end as Location_A,
   '' as TR5,
   case when p.Glass is not null then
     trim(
@@ -552,16 +551,16 @@ select
            then ' [' || g_g.BrewType || ']' else '' end ||
       case when l_g.Name is not null then ' @ ' || l_g.Name else '' end
     )
-  end as Glass,
+  end as Glass_A,
   '' as TR6,
   case when p.Comment is not null then
     trim(
       case when c.Rating is not null then '(' || c.Rating || ') ' else '' end ||
       coalesce(c.Comment, '')
     )
-  end as Comment,
+  end as Comment_A,
   '' as TR7,
-  p.Ts,
+  p.Ts as Ts_A,
   p.Glass as xGlass,
   p.Comment as xComment,
   p.Location as xLocation,

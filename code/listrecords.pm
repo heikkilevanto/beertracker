@@ -69,8 +69,10 @@ sub listrecords {
   }
 
   my @fields = db::tablefields($c, $table, "", 1);
+  my @orig_fields = @fields;  # Preserve for SQL ORDER BY (before suffix stripping)
   my @extra_attr = ("") x scalar(@fields);
   my %px_override;
+  my %auto_override;
   for (my $i = 0; $i < scalar(@fields); $i++) {
       if ($fields[$i] =~ /^(.+)_R(\d+)$/) {
           $fields[$i] = $1;
@@ -81,15 +83,17 @@ sub listrecords {
       } elsif ($fields[$i] =~ /^(.+)_(\d+px)$/) {
           $fields[$i] = $1;
           $px_override{$i} = $2;
+      } elsif ($fields[$i] =~ /^(.+)_A$/) {
+          $fields[$i] = $1;
+          $auto_override{$i} = 1;
       }
   }
   my $order = "";
-  for my $f ( @fields ) {
-    $order = "Order by $f" if ( $sort =~ /$f(-?)/ );
-    $order .= " DESC" if ($1);
-    # Note, no user-provided data goes into $order, only field names and DESC
-    # (It is possible to give a bad sort parameter, but it won't match a field,
-    # so we never use it here!)
+  for (my $i = 0; $i < scalar(@fields); $i++) {
+      my $f = $fields[$i];
+      if ( $sort =~ /$f(-?)/ ) {
+          $order = "Order by $orig_fields[$i]" . ($1 ? " DESC" : "");
+      }
   }
 
   $where = "where $where" if ($where);
@@ -139,6 +143,8 @@ sub listrecords {
     $sty = "style='max-width:90px; min-width:0'" if ( $c->{mobile} );
     if ( $f =~ /^X/i ) {
       $sty = "style='display:none'";
+    } elsif ( $f eq "IdClr" ) {
+      $sty = "style='max-width:100px; text-align:left'";
     } elsif ( $f =~ /Id|Alc/ ) {
       $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Stats)$/ ) {
@@ -185,11 +191,19 @@ sub listrecords {
     }
     #print { $c->{log} } "i=$i f='$f' s='$sty' \n";
     $styles[$i] = $sty;
+    if ( $auto_override{$i} ) {
+        $styles[$i] = "";
+        $sty = "";
+    }
     $f =~ s/^-//;
     $f =~ s/'//g;
 
     $s .= "<td $sty $extra_attr[$i]>";
-    if ( $f =~ /Clr/i ) { # Clear filters button
+    if ( $f eq "IdClr" ) {
+      my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
+      $s .= "<input type=text data-col='$i' $sty $on placeholder='Id'/>";
+      $s .= "<span style='cursor:pointer; font-weight:bold' onclick='clearfilters(this);'> Clr</span>";
+    } elsif ( $f =~ /Clr/i ) { # Clear filters button
       $s .= "<span $sty onclick='clearfilters(this);' >Clr</span>";
     } elsif ( $f  ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
@@ -203,6 +217,9 @@ sub listrecords {
   }
   foreach my $i (keys %px_override) {
       $styles[$i] = "style='max-width:$px_override{$i}; min-width:0'";
+  }
+  foreach my $i (keys %auto_override) {
+      $styles[$i] = "";
   }
   $s .= "</tr>\n";
   $s .= "</thead><tbody>\n";
@@ -237,6 +254,15 @@ sub listrecords {
       my $data = "data-col='$i'";
       if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><span><b>$v</b></span></a>";
+        $onclick = "";
+      } elsif ( $fn eq "IdClr" ) {
+        if ($v) {
+          if ($c->{op} =~ /Comment/i) {
+            $v = "<a href='$url?o=Comment&e=$v'><span>[$v]</span></a>";
+          } else {
+            $v = "[$v]";
+          }
+        }
         $onclick = "";
       } elsif ( $fn =~ /Clr/ ) {
         $v="&nbsp;";
@@ -312,7 +338,7 @@ sub listrecords {
       } elsif ( $fn eq "Photo" ) {
         my $id_idx;
         for (my $j = 0; $j < scalar(@fields); $j++) {
-            if ($fields[$j] eq 'Id') {
+            if ($fields[$j] eq 'Id' || $fields[$j] eq 'IdClr') {
                 $id_idx = $j;
                 last;
             }

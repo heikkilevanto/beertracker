@@ -291,16 +291,15 @@ sub mig_005_photos_list_view {
     CREATE VIEW photos_list AS
     SELECT
       p.Filename AS Photo_R8,
-      p.Id,
-      '' AS Clr,
+      p.Id AS IdClr,
       '' AS TR1,
-      p.Caption,
+      p.Caption AS Caption_A,
       '' AS TR2,
-      CASE WHEN p.Person IS NOT NULL THEN p2.Name END AS Person,
+      CASE WHEN p.Person IS NOT NULL THEN p2.Name END AS Person_A,
       '' AS TR3,
-      CASE WHEN p.Brew IS NOT NULL THEN b.Name END AS Brew,
+      CASE WHEN p.Brew IS NOT NULL THEN b.Name END AS Brew_A,
       '' AS TR4,
-      CASE WHEN p.Location IS NOT NULL THEN l.Name END AS Location,
+      CASE WHEN p.Location IS NOT NULL THEN l.Name END AS Location_A,
       '' AS TR5,
       CASE WHEN p.Glass IS NOT NULL THEN
         TRIM(
@@ -310,16 +309,16 @@ sub mig_005_photos_list_view {
                THEN ' [' || g_g.BrewType || ']' ELSE '' END ||
           CASE WHEN l_g.Name IS NOT NULL THEN ' @ ' || l_g.Name ELSE '' END
         )
-      END AS Glass,
+      END AS Glass_A,
       '' AS TR6,
       CASE WHEN p.Comment IS NOT NULL THEN
         TRIM(
           CASE WHEN c.Rating IS NOT NULL THEN '(' || c.Rating || ') ' ELSE '' END ||
           COALESCE(c.Comment, '')
         )
-      END AS Comment,
+      END AS Comment_A,
       '' AS TR7,
-      p.Ts,
+      p.Ts AS Ts_A,
       p.Glass AS xGlass,
       p.Comment AS xComment,
       p.Location AS xLocation,
