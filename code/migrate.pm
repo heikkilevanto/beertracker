@@ -297,14 +297,20 @@ sub mig_005_photos_list_view {
       '' AS TR2,
       CASE WHEN p.Person IS NOT NULL THEN p2.Name END AS Person_A,
       '' AS TR3,
-      CASE WHEN p.Brew IS NOT NULL THEN b.Name END AS Brew_A,
+      CASE WHEN p.Brew IS NOT NULL THEN
+        'B[' || p.Brew || ']: ' ||
+        CASE WHEN pl_b.Name IS NOT NULL THEN char(0xAB) || pl_b.Name || char(0xBB) || ': ' ELSE '' END ||
+        char(0xAB) || b.Name || char(0xBB) ||
+        CASE WHEN b.Details IS NOT NULL THEN ' - ' || b.Details ELSE '' END
+      END AS Brew_A,
       '' AS TR4,
       CASE WHEN p.Location IS NOT NULL THEN l.Name END AS Location_A,
       '' AS TR5,
       CASE WHEN p.Glass IS NOT NULL THEN
         TRIM(
           CASE WHEN pl_g.Name IS NOT NULL THEN pl_g.Name || ':' ELSE '' END ||
-          CASE WHEN b_g.Name IS NOT NULL THEN ' ' || b_g.Name ELSE '' END ||
+          CASE WHEN b_g.Name IS NOT NULL THEN ' ' || char(0xAB) || b_g.Name || char(0xBB) ELSE '' END ||
+          CASE WHEN b_g.Details IS NOT NULL THEN ' (' || b_g.Details || ')' ELSE '' END ||
           CASE WHEN b_g.Name IS NULL AND g_g.BrewType IS NOT NULL
                THEN ' [' || g_g.BrewType || ']' ELSE '' END ||
           CASE WHEN l_g.Name IS NOT NULL THEN ' @ ' || l_g.Name ELSE '' END
@@ -314,7 +320,11 @@ sub mig_005_photos_list_view {
       CASE WHEN p.Comment IS NOT NULL THEN
         TRIM(
           CASE WHEN c.Rating IS NOT NULL THEN '(' || c.Rating || ') ' ELSE '' END ||
-          COALESCE(c.Comment, '')
+          COALESCE(c.Comment, '') ||
+          (SELECT ' — ' || group_concat(char(0xAB) || p3.Name || char(0xBB), ', ')
+           FROM comment_persons cp2
+           JOIN persons p3 ON p3.Id = cp2.Person
+           WHERE cp2.Comment = c.Id)
         )
       END AS Comment_A,
       '' AS TR7,
@@ -329,6 +339,7 @@ sub mig_005_photos_list_view {
     FROM photos p
     LEFT JOIN persons p2     ON p2.Id = p.Person
     LEFT JOIN brews b        ON b.Id = p.Brew
+    LEFT JOIN locations pl_b ON pl_b.Id = b.ProducerLocation
     LEFT JOIN locations l    ON l.Id = p.Location
     LEFT JOIN glasses g_g    ON g_g.Id = p.Glass
     LEFT JOIN brews b_g      ON b_g.Id = g_g.Brew

@@ -529,6 +529,8 @@ create view locations_list as
     group by locations.Id;
 
 -- view photos_list
+-- Brew and Glass fields use «...» markers around brew name for filtering.
+-- Comment field uses «...» markers around person names for per-person filtering.
 drop view if exists photos_list;
 create view photos_list as
 select
@@ -539,14 +541,20 @@ select
   '' as TR2,
   case when p.Person is not null then p2.Name end as Person_A,
   '' as TR3,
-  case when p.Brew is not null then b.Name end as Brew_A,
+  case when p.Brew is not null then
+    'B[' || p.Brew || ']: ' ||
+    case when pl_b.Name is not null then char(0xab) || pl_b.Name || char(0xbb) || ': ' else '' end ||
+    char(0xab) || b.Name || char(0xbb) ||
+    case when b.Details is not null then ' - ' || b.Details else '' end
+  end as Brew_A,
   '' as TR4,
   case when p.Location is not null then l.Name end as Location_A,
   '' as TR5,
   case when p.Glass is not null then
     trim(
       case when pl_g.Name is not null then pl_g.Name || ':' else '' end ||
-      case when b_g.Name is not null then ' ' || b_g.Name else '' end ||
+      case when b_g.Name is not null then ' ' || char(0xab) || b_g.Name || char(0xbb) else '' end ||
+      case when b_g.Details is not null then ' (' || b_g.Details || ')' else '' end ||
       case when b_g.Name is null and g_g.BrewType is not null
            then ' [' || g_g.BrewType || ']' else '' end ||
       case when l_g.Name is not null then ' @ ' || l_g.Name else '' end
@@ -556,7 +564,11 @@ select
   case when p.Comment is not null then
     trim(
       case when c.Rating is not null then '(' || c.Rating || ') ' else '' end ||
-      coalesce(c.Comment, '')
+      coalesce(c.Comment, '') ||
+      (select ' — ' || group_concat(char(0xab) || p3.Name || char(0xbb), ', ')
+       from comment_persons cp2
+       join persons p3 on p3.Id = cp2.Person
+       where cp2.Comment = c.Id)
     )
   end as Comment_A,
   '' as TR7,
@@ -569,14 +581,15 @@ select
   p.Uploader as xUploader,
   p.Public as xPublic
 from photos p
-left join persons p2     on p2.Id = p.Person
-left join brews b        on b.Id = p.Brew
-left join locations l    on l.Id = p.Location
-left join glasses g_g    on g_g.Id = p.Glass
-left join brews b_g      on b_g.Id = g_g.Brew
-left join locations l_g  on l_g.Id = g_g.Location
-left join locations pl_g on pl_g.Id = b_g.ProducerLocation
-left join comments c     on c.Id = p.Comment;
+left join persons p2        on p2.Id = p.Person
+left join brews b           on b.Id = p.Brew
+left join locations pl_b    on pl_b.Id = b.ProducerLocation
+left join locations l       on l.Id = p.Location
+left join glasses g_g       on g_g.Id = p.Glass
+left join brews b_g         on b_g.Id = g_g.Brew
+left join locations l_g     on l_g.Id = g_g.Location
+left join locations pl_g    on pl_g.Id = b_g.ProducerLocation
+left join comments c        on c.Id = p.Comment;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 

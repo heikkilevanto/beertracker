@@ -242,7 +242,28 @@ sub listrecords {
       my $v = $rec[$i];
       my $was_null_field = !defined $v;
       $v //= "";
-      $v = util::htmlesc($v);
+
+      # Parse «filter» markers (U+00AB / U+00BB) for display-vs-filter separation.
+      my @segments;
+      my $first_filter;
+      my $tail = "";
+      while ($v =~ /(.*?)\x{ab}(.*?)\x{bb}/sgp) {
+        push @segments, { type => 'text',   value => $1 } if length $1;
+        push @segments, { type => 'filter', value => $2 };
+        $first_filter //= $2;
+        $tail = ${^POSTMATCH};
+      }
+      if (@segments) {
+        push @segments, { type => 'text', value => $tail } if length $tail;
+      } else {
+        push @segments, { type => 'text', value => $v };
+      }
+
+      $v = join('', map {
+        my $ev = util::htmlesc($_->{value});
+        $_->{type} eq 'filter' ? "<span data-filter='$ev'>$ev</span>" : $ev
+      } @segments);
+
       my $fn = $fields[$i];
       my $linebreak = linebreak($c,$fn);
       if ( $linebreak ) {
@@ -250,8 +271,12 @@ sub listrecords {
         $tds .= $linebreak;
         next;
       }
-      my $onclick = "onclick='fieldclick(this,$i);'";
+      my $onclick = "onclick='fieldclick(event,this,$i);'";
       my $data = "data-col='$i'";
+      if (defined $first_filter) {
+        my $ef = util::htmlesc($first_filter);
+        $data .= qq{ data-filter="$ef"};
+      }
       if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><span><b>$v</b></span></a>";
         $onclick = "";

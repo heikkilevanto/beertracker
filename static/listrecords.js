@@ -57,7 +57,7 @@ function dochangefilter (inputElement) {
         if ( col ) {
           if ( filters[col] ) {
             const re = filters[col];
-            if ( !re.test( cols[c].textContent ) ) {
+            if ( !re.test( cols[c].dataset.filter || cols[c].textContent ) ) {
               disp = "none";
               break;
             }
@@ -112,8 +112,12 @@ function dochangefilter (inputElement) {
 }
 
 // Clicking on a data field sets the filter
-function fieldclick(el,index) {
-  var filtertext = el.textContent;
+function fieldclick(event,el,index) {
+  var target = event.target.closest('[data-filter]');
+  var filtertext = target ? target.dataset.filter
+               : el.dataset.filter
+               ? el.dataset.filter
+               : el.textContent;
   filtertext = filtertext.replace( /\[|\]/g , ""); // Remove brackets [Beer,IPA]
   filtertext = filtertext.replace( /^.*(20[0-9-]+) .*/ , "$1"); // Just the date
 
