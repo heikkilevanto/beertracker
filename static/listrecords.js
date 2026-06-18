@@ -57,7 +57,7 @@ function dochangefilter (inputElement) {
         if ( col ) {
           if ( filters[col] ) {
             const re = filters[col];
-            if ( !re.test( cols[c].dataset.filter || cols[c].textContent ) ) {
+            if ( !re.test( cols[c].textContent ) ) {
               disp = "none";
               break;
             }

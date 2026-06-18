@@ -295,31 +295,31 @@ sub mig_005_photos_list_view {
       '' AS TR1,
       p.Caption AS Caption_A,
       '' AS TR2,
-      CASE WHEN p.Person IS NOT NULL THEN p2.Name END AS Person_A,
+      CASE WHEN p.Person IS NOT NULL THEN 'P[' || p.Person || ']: ' || char(0xAB) || p2.Name || char(0xBB) END AS Person_A,
       '' AS TR3,
       CASE WHEN p.Brew IS NOT NULL THEN
         'B[' || p.Brew || ']: ' ||
         CASE WHEN pl_b.Name IS NOT NULL THEN char(0xAB) || pl_b.Name || char(0xBB) || ': ' ELSE '' END ||
         char(0xAB) || b.Name || char(0xBB) ||
-        CASE WHEN b.Details IS NOT NULL THEN ' - ' || b.Details ELSE '' END
+        CASE WHEN b.Details IS NOT NULL THEN ' - ' || char(0xAB) || b.Details || char(0xBB) ELSE '' END
       END AS Brew_A,
       '' AS TR4,
-      CASE WHEN p.Location IS NOT NULL THEN l.Name END AS Location_A,
+      CASE WHEN p.Location IS NOT NULL THEN 'L[' || p.Location || ']: ' || char(0xAB) || l.Name || char(0xBB) END AS Location_A,
       '' AS TR5,
       CASE WHEN p.Glass IS NOT NULL THEN
-        TRIM(
-          CASE WHEN pl_g.Name IS NOT NULL THEN pl_g.Name || ':' ELSE '' END ||
+        'G[' || p.Glass || ']: ' || TRIM(
+          CASE WHEN pl_g.Name IS NOT NULL THEN char(0xAB) || pl_g.Name || char(0xBB) || ':' ELSE '' END ||
           CASE WHEN b_g.Name IS NOT NULL THEN ' ' || char(0xAB) || b_g.Name || char(0xBB) ELSE '' END ||
-          CASE WHEN b_g.Details IS NOT NULL THEN ' (' || b_g.Details || ')' ELSE '' END ||
+          CASE WHEN b_g.Details IS NOT NULL THEN ' (' || char(0xAB) || b_g.Details || char(0xBB) || ')' ELSE '' END ||
           CASE WHEN b_g.Name IS NULL AND g_g.BrewType IS NOT NULL
-               THEN ' [' || g_g.BrewType || ']' ELSE '' END ||
-          CASE WHEN l_g.Name IS NOT NULL THEN ' @ ' || l_g.Name ELSE '' END
+               THEN ' [' || char(0xAB) || g_g.BrewType || char(0xBB) || ']' ELSE '' END ||
+          CASE WHEN l_g.Name IS NOT NULL THEN ' @ ' || char(0xAB) || l_g.Name || char(0xBB) ELSE '' END
         )
       END AS Glass_A,
       '' AS TR6,
       CASE WHEN p.Comment IS NOT NULL THEN
-        TRIM(
-          CASE WHEN c.Rating IS NOT NULL THEN '(' || c.Rating || ') ' ELSE '' END ||
+        'C[' || p.Comment || ']: ' || TRIM(
+          CASE WHEN c.Rating IS NOT NULL THEN '(' || char(0xAB) || c.Rating || char(0xBB) || ') ' ELSE '' END ||
           COALESCE(c.Comment, '') ||
           (SELECT ' — ' || group_concat(char(0xAB) || p3.Name || char(0xBB), ', ')
            FROM comment_persons cp2
@@ -328,7 +328,7 @@ sub mig_005_photos_list_view {
         )
       END AS Comment_A,
       '' AS TR7,
-      p.Ts AS Ts_A,
+      SUBSTR(p.Ts, 1, 16) AS Ts_A,
       p.Glass AS xGlass,
       p.Comment AS xComment,
       p.Location AS xLocation,
