@@ -369,12 +369,12 @@ sub listrecords {
             }
         }
         my $editurl = "$c->{url}?o=Photos&e=$rec[$id_idx]";
-        $v = photos::imagetag($c, $v, $c->{mobile} ? "small" : "thumb", $editurl);
+        $v = photos::imagetag($c, $v, "thumb", $editurl);
         $onclick = "";
       } elsif ( $fn eq "Photos" ) {
         if ($v) {
           my @fns = split(/\|/, $v);
-          $v = join('', map { photos::imagetag($c, $_, $c->{mobile} ? "small" : "thumb") } @fns);
+          $v = join('', map { photos::imagetag($c, $_, "thumb") } @fns);
         }
       } elsif ( $fn eq "IsGeneric" ) {
         $v = "Gen" if ($v);
