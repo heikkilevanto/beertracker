@@ -275,7 +275,9 @@ sub top_rated_glasses {
         SELECT ranked.Id, ranked.Brew, ranked.Timestamp, ranked.Location,
                ranked.GlassName, ranked.glass_avg, ranked.BrewType,
                ranked.SubType,
-               br.average_rating, br.rating_count, br.comment_count,
+               COALESCE(br.average_rating, lr.average_rating) AS average_rating,
+               COALESCE(br.rating_count, lr.rating_count) AS rating_count,
+               COALESCE(br.comment_count, lr.comment_count) AS comment_count,
                l.Name AS LocName
         FROM (
           SELECT g.Id, g.Brew, g.Timestamp, g.Location,
@@ -283,7 +285,11 @@ sub top_rated_glasses {
                  g.BrewType, g.SubType,
                  AVG(c.Rating) AS glass_avg,
                  ROW_NUMBER() OVER (
-                   PARTITION BY CASE WHEN g.Brew IS NULL THEN -g.Id ELSE g.Brew END
+                   PARTITION BY CASE
+                     WHEN g.Brew IS NOT NULL THEN g.Brew
+                     WHEN g.Location IS NOT NULL THEN -g.Location
+                     ELSE -g.Id
+                   END
                    ORDER BY AVG(c.Rating) $inner_sort, g.Timestamp DESC
                  ) AS rn
           FROM glasses g
@@ -318,12 +324,22 @@ sub top_rated_glasses {
         ) ranked
         LEFT JOIN locations l ON l.Id = ranked.Location
         LEFT JOIN brew_ratings br ON br.brew = ranked.Brew AND br.Username = ?
+        LEFT JOIN (
+          SELECT g2.Location,
+                 AVG(c2.Rating) AS average_rating,
+                 COUNT(c2.Rating) AS rating_count,
+                 COUNT(c2.Comment) AS comment_count
+          FROM glasses g2
+          JOIN comments c2 ON c2.Glass = g2.Id AND c2.Rating IS NOT NULL
+          WHERE g2.Username = ? AND g2.Brew IS NULL AND g2.Location IS NOT NULL
+          GROUP BY g2.Location
+        ) lr ON lr.Location = ranked.Location AND ranked.Brew IS NULL
         WHERE ranked.rn = 1
-        ORDER BY ranked.glass_avg $sort_dir, COALESCE(br.average_rating, 0) $sort_dir, ranked.Timestamp DESC
+        ORDER BY ranked.glass_avg $sort_dir, average_rating $sort_dir, ranked.Timestamp DESC
         LIMIT ?
     };
 
-    push @bind, $c->{username}, $maxl;
+    push @bind, $c->{username}, $c->{username}, $maxl;
 
     my $sth = db::query($c, $sql, @bind);
     my $rows = $sth->fetchall_arrayref({});
