@@ -41,17 +41,13 @@ sub listlocations {
 ################################################################################
 # List comments for the given location
 ################################################################################
-sub listlocationcomments {
-  my $c = shift;
-  my $loc = shift;
-  print "<!-- listlocationcomments -->\n";
+################################################################################
+# Helper: render a section of location comments
+# Groups by glass, shows commentline, rating summary
+################################################################################
+sub _location_comment_section {
+  my ($c, $loc, $title, $collapsed, $big_brew, $where_extra, @params) = @_;
 
-  # Two paths:
-  # 1. Glass-routed: empty glasses at this location (no brew, any BrewType)
-  # 2. Direct: comments.Location = this location, no glass
-  # Visibility: glass-routed uses glasses.Username; direct uses comments.Username
-  # (NULL = public, visible to all)
-  # See loc_ratings view for ratings of the location vs the brews there
   my $sql = "
     SELECT
       COMMENTS.Id,
@@ -65,39 +61,34 @@ sub listlocationcomments {
       group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData,
       GLASSES.Id as Gid,
       GLASSES.BrewType,
-      GLASSES.SubType
+      GLASSES.SubType,
+      GLASSES.Brew,
+      BREWS.Name as BrewName
     FROM COMMENTS
     LEFT JOIN GLASSES ON GLASSES.Id = COMMENTS.Glass
+    LEFT JOIN BREWS ON BREWS.Id = GLASSES.Brew
     LEFT JOIN comment_persons cp ON cp.Comment = COMMENTS.Id
     LEFT JOIN persons cp_persons ON cp_persons.Id = cp.Person
-    WHERE (
-      (COMMENTS.Glass IS NOT NULL
-       AND GLASSES.Location = ?
-       AND (GLASSES.Brew IS NULL OR GLASSES.Brew = '')
-       AND GLASSES.Username = ?)
-      OR
-      (COMMENTS.Location = ?
-       AND COMMENTS.Glass IS NULL
-       AND (COMMENTS.Username IS NULL OR COMMENTS.Username = ?))
-    )
+    WHERE $where_extra
     GROUP BY COMMENTS.Id
     ORDER BY COALESCE(GLASSES.Timestamp, COMMENTS.Ts) DESC
   ";
 
-  my $sth = db::query($c, $sql, $loc->{Id}, $c->{username}, $loc->{Id}, $c->{username});
-    print "<div onclick='toggleElement(this.nextElementSibling);'>" .
-      "<b>Comments for $loc->{Name}</b> [$loc->{Id}]" .
-      "</div>\n";
-  print "<div style='overflow-x: auto;'>";
+  my $sth = db::query($c, $sql, @params);
+
+  my $show = $collapsed ? "display:none" : "";
+  print "<div onclick='toggleElement(this.nextElementSibling);'>" .
+        "<b>$title</b>" .
+        "</div>\n";
+  print "<div style='overflow-x: auto; $show'>";
 
   my $ratesum = 0;
   my $ratecount = 0;
   my $comcount = 0;
-  my $perscount = 0;
   my $count = 0;
   my $lastgroup = "";
   while ( my $com = $sth->fetchrow_hashref ) {
-    my $groupkey = $com->{Gid} // "c-$com->{Id}"; # per-glass or per direct comment
+    my $groupkey = $com->{Gid} // "c-$com->{Id}";
     if ( $lastgroup ne $groupkey ) {
       $count++;
       if ( $count == 8 ) {
@@ -105,23 +96,31 @@ sub listlocationcomments {
         print "<div style='display:none'>";
       }
       print "<p>\n";
-      if ( $com->{Gid} ) {  # glass-routed: show glass link + type
-        print "<a href='$c->{url}?o=Comment&e=$com->{Id}'><b>";
-        print "$com->{Date}</b></a>\n";
+      if ( $com->{Gid} ) {
+        print "<a href='$c->{url}?o=Comment&e=$com->{Id}'><b>$com->{Date}</b></a>\n";
         my $tim = $com->{Time};
         $tim = "($tim)" if ($tim lt "06:00");
         print "$tim\n";
         print "<span style='font-size: xx-small'>[$com->{Glass}]</span>\n";
-        print "[$com->{BrewType}/$com->{SubType}]\n";
-      } else {  # direct location comment
+        if ( $com->{BrewName} ) {
+          if ( $big_brew ) {
+            print "<b>$com->{BrewName}</b> ";
+            print styles::brewstyledisplay($c, $com->{BrewType}, $com->{SubType}, "location:$loc->{Id} glass:$com->{Gid}");
+          } else {
+            print "<span style='font-size:xx-small; color:#bbb'>$com->{BrewName}</span> ";
+            print "[$com->{BrewType}/$com->{SubType}]\n";
+          }
+        } else {
+          print "[$com->{BrewType}/$com->{SubType}]\n";
+        }
+      } else {
         print "<b>$com->{Date}</b> $com->{Time}\n";
       }
       $lastgroup = $groupkey;
       print "<br/>";
     }
-    print comments::commentline($c,$com);
+    print comments::commentline($c, $com);
     print "<br/>";
-    $perscount++ if ( $com->{PeopleData} );
     $comcount++ if ($com->{Comment});
     if ( $com->{Rating} ) {
       $ratesum += $com->{Rating};
@@ -147,6 +146,41 @@ sub listlocationcomments {
   }
   print "</div>";
   $sth->finish;
+} # _location_comment_section
+
+################################################################################
+# List location comments, split into three sections:
+# 1. Comments about the location itself (direct, no glass)
+# 2. Comments at the location without a brew (glass-routed, empty glass)
+# 3. Comments at the location with a brew (glass-routed, has brew)
+################################################################################
+sub listlocationcomments {
+  my $c = shift;
+  my $loc = shift;
+  print "<!-- listlocationcomments -->\n";
+
+  _location_comment_section($c, $loc,
+    "Comments about $loc->{Name} [$loc->{Id}]",
+    0, 0,
+    "(COMMENTS.Location = ? AND COMMENTS.Glass IS NULL AND (COMMENTS.Username = ? OR COMMENTS.Username IS NULL))",
+    $loc->{Id}, $c->{username});
+
+  print "<hr/>\n";
+
+  _location_comment_section($c, $loc,
+    "Comments on nights etc at $loc->{Name} [$loc->{Id}]",
+    1, 0,
+    "(COMMENTS.Glass IS NOT NULL AND GLASSES.Location = ? AND (GLASSES.Brew IS NULL OR GLASSES.Brew = '') AND GLASSES.Username = ?)",
+    $loc->{Id}, $c->{username});
+
+  print "<hr/>\n";
+
+  _location_comment_section($c, $loc,
+    "Comments on brews at $loc->{Name} [$loc->{Id}]",
+    1, 1,
+    "(COMMENTS.Glass IS NOT NULL AND GLASSES.Location = ? AND GLASSES.Brew IS NOT NULL AND GLASSES.Brew != '' AND GLASSES.Username = ?)",
+    $loc->{Id}, $c->{username});
+
   print "<!-- listlocationcomments end -->\n";
   print "<hr/>\n";
 } # listlocationcomments
