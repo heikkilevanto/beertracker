@@ -8,6 +8,7 @@ use warnings;
 
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use URI::Escape qw(uri_escape_utf8);
 
 ############################################################
 # Main entry point: Display histogram graphs and filter form
@@ -29,7 +30,7 @@ sub ratings_histogram {
 
     my $allrows = histogram_data($c, {});
     $html .= data_table($c, $filter, $rows, $allrows);
-
+    $html .= top_rated_glasses($c, $filter);
 
     print $html;
 } # ratings_histogram
@@ -223,13 +224,14 @@ sub data_table {
   }
   $html .= "</tr>
      </thead> <tbody>";
-  for my $i ( 1..9) {
+   for my $i ( reverse 1..9) {
     no warnings 'once'; my $lbl = $comments::ratings[$i];
     $fcount += $filtered_rows->[$i] || 0;
     $fsum += ( $filtered_rows->[$i] || 0 ) * $i;
     $acount += $all_rows->[$i] || 0;
     $asum += ( $all_rows->[$i] || 0 ) * $i;
-    $html .= "<tr><td align=right>($i)</td><td>$lbl</td>";
+    my $rclass = comments::get_rating_class($i);
+    $html .= "<tr><td align=right><b class='$rclass'>($i)</b></td><td><span class='$rclass'>$lbl</span></td>";
     my $ar = $all_rows->[$i] || "";
     $html .= "<td align=right>$ar</td>";
     my $fr = $filtered_rows->[$i] || "";
@@ -253,6 +255,165 @@ sub data_table {
   return $html;
 
 } # data_table
+
+
+############################################################
+# Top rated glasses table: per brew (or night/location/etc), show the
+# best-rated glass.  Also handles "bottom" mode (worst-rated first).
+############################################################
+sub top_rated_glasses {
+    my ($c, $filter) = @_;
+
+    my $maxl   = util::param($c, "maxl")   || 20;
+    my $bottom = util::param($c, "bottom") || 0;
+
+    my $sort_dir    = $bottom ? "ASC" : "DESC";
+    my $inner_sort  = $bottom ? "ASC" : "DESC";
+    my $heading     = $bottom ? "Bottom Rated Glasses" : "Top Rated Glasses";
+
+    my $sql = qq{
+        SELECT ranked.Id, ranked.Brew, ranked.Timestamp, ranked.Location,
+               ranked.GlassName, ranked.glass_avg, ranked.BrewType,
+               ranked.SubType,
+               br.average_rating, br.rating_count, br.comment_count,
+               l.Name AS LocName
+        FROM (
+          SELECT g.Id, g.Brew, g.Timestamp, g.Location,
+                 COALESCE(b.Name, g.BrewType) AS GlassName,
+                 g.BrewType, g.SubType,
+                 AVG(c.Rating) AS glass_avg,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY CASE WHEN g.Brew IS NULL THEN -g.Id ELSE g.Brew END
+                   ORDER BY AVG(c.Rating) $inner_sort, g.Timestamp DESC
+                 ) AS rn
+          FROM glasses g
+          JOIN comments c ON c.Glass = g.Id AND c.Rating IS NOT NULL
+          LEFT JOIN brews b ON b.Id = g.Brew
+          LEFT JOIN locations loc ON g.Location = loc.Id
+          WHERE g.Username = ?
+    };
+
+    my @where;
+    my @bind = ($c->{username});
+
+    if (defined $filter->{year} && length $filter->{year}) {
+      push @where, "strftime('%Y', g.Timestamp) = ?";
+      push @bind, $filter->{year};
+    }
+
+    if (defined $filter->{brew_type} && length $filter->{brew_type}) {
+      push @where, "g.BrewType = ?";
+      push @bind, $filter->{brew_type};
+    }
+
+    if (defined $filter->{loc_type} && length $filter->{loc_type}) {
+      push @where, "loc.LocType = ?";
+      push @bind, $filter->{loc_type};
+    }
+
+    $sql .= " AND " . join(" AND ", @where) if @where;
+
+    $sql .= qq{
+          GROUP BY g.Id
+        ) ranked
+        LEFT JOIN locations l ON l.Id = ranked.Location
+        LEFT JOIN brew_ratings br ON br.brew = ranked.Brew AND br.Username = ?
+        WHERE ranked.rn = 1
+        ORDER BY ranked.glass_avg $sort_dir, COALESCE(br.average_rating, 0) $sort_dir, ranked.Timestamp DESC
+        LIMIT ?
+    };
+
+    push @bind, $c->{username}, $maxl;
+
+    my $sth = db::query($c, $sql, @bind);
+    my $rows = $sth->fetchall_arrayref({});
+    return "" unless @$rows;
+
+    my $filter_params = "";
+    $filter_params .= "&year=" . uri_escape_utf8($filter->{year}) if $filter->{year};
+    $filter_params .= "&brew_type=" . uri_escape_utf8($filter->{brew_type}) if $filter->{brew_type};
+    $filter_params .= "&loc_type=" . uri_escape_utf8($filter->{loc_type}) if $filter->{loc_type};
+
+    my $html = "";
+    $html .= "<hr>\n";
+    $html .= "<b>$heading</b>\n";
+
+    $html .= '<table border="1" cellpadding="5" cellspacing="0" class="data">
+  <thead>
+    <tr>
+      <th>Rating</th>
+      <th>Brew</th>
+      <th>Location</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>' . "\n";
+
+    for my $row (@$rows) {
+      my $glass_avg = $row->{glass_avg} || 0;
+      my $class = comments::get_rating_class($glass_avg);
+      my $date = substr($row->{Timestamp} // "", 0, 10);
+      $date =~ s/-/-&shy;/; # invisible break after first dash for mobile
+
+      $html .= "<tr>";
+
+      # Combined rating: glass number + brew avg (if multiple ratings)
+      my $rating_disp = "<b class='$class'>" . sprintf("%.0f", $glass_avg) . "</b>";
+      if ($row->{rating_count} && $row->{rating_count} > 1) {
+        $rating_disp .= " " . comments::avgratings($c, $row->{rating_count},
+          $row->{average_rating}, $row->{comment_count});
+      }
+      $html .= "<td align=center>$rating_disp</td>";
+
+      # Brew name (or BrewType for non-brew items like Night) + brew type badge
+      my $styledisp = styles::brewstyledisplay($c, $row->{BrewType}, $row->{SubType},
+        "glass:$row->{Id} $row->{GlassName} $row->{BrewType}/" . ($row->{SubType} // ""));
+      # If the glass name matches the brew type (e.g. "Restaurant [Restaurant,Modern]"),
+      # strip the duplicate brew type from the badge
+      if (defined $row->{GlassName} && defined $row->{BrewType} && $row->{GlassName} eq $row->{BrewType}) {
+        my $needle = "[$row->{BrewType},";
+        my $pos = index($styledisp, $needle);
+        substr($styledisp, $pos, length($needle)) = '[' if $pos >= 0;
+      }
+      if ($row->{Brew}) {
+        $html .= "<td><a href='$c->{url}?o=Brew&e=$row->{Brew}'>" .
+                 "<span>" . util::htmlesc($row->{GlassName}) . "</span></a> $styledisp</td>";
+      } else {
+        $html .= "<td>" . util::htmlesc($row->{GlassName}) . " $styledisp</td>";
+      }
+
+      # Location
+      if ($row->{Location}) {
+        $html .= "<td><a href='$c->{url}?o=Location&e=$row->{Location}'>" .
+                 "<span>" . util::htmlesc($row->{LocName}) . "</span></a></td>";
+      } else {
+        $html .= "<td></td>";
+      }
+
+      # Date (link to glass)
+      $html .= "<td><a href='$c->{url}?o=Full&e=$row->{Id}'>" .
+               "<span>$date</span></a></td>";
+
+      $html .= "</tr>\n";
+    }
+
+    $html .= "</tbody>\n</table>\n";
+
+    # Links for maxl and top/bottom toggle
+    $html .= "<br><span style='font-size:x-small'>Show: ";
+    for my $n (10, 20, 50, 100, 200) {
+      my $url = "$c->{url}?o=$c->{op}&maxl=$n$filter_params";
+      $url .= "&bottom=1" if $bottom;
+      my $label = $n == $maxl ? "<b>$n</b>" : $n;
+      $html .= "<a href='$url'><span>$label</span></a>\n";
+    }
+    my $toggle_url = "$c->{url}?o=$c->{op}&maxl=$maxl$filter_params";
+    $toggle_url .= "&bottom=1" unless $bottom;
+    $html .= "| <a href='$toggle_url'><span>" . ($bottom ? "top" : "bottom") . "</span></a>\n";
+    $html .= "</span><br>&nbsp;<br>\n";
+
+    return $html;
+} # top_rated_glasses
 
 
 ############################################################
