@@ -53,16 +53,16 @@ function dochangefilter (inputElement) {
     do {
       const cols = row.querySelectorAll('td');
       for (let c = 0; c < cols.length; c++) {
-        const col = cols[c].getAttribute('data-col');
-        if ( col ) {
-          if ( filters[col] ) {
-            const re = filters[col];
-            if ( !re.test( cols[c].textContent ) ) {
-              disp = "none";
-              break;
-            }
+        const colEls = cols[c].querySelectorAll('[data-col]');
+        if (!colEls.length) continue;
+        for (let ce = 0; ce < colEls.length; ce++) {
+          const col = colEls[ce].getAttribute('data-col');
+          if ( col && filters[col] && !filters[col].test(colEls[ce].textContent) ) {
+            disp = "none";
+            break;
           }
         }
+        if (disp === "none") break;
       }
       row = row.nextElementSibling;
     } while ( row && ! row.hasAttribute("data-first") );
@@ -123,7 +123,7 @@ function fieldclick(event,el,index) {
 
   // Get the filters
   const table = el.closest('table');
-  const col = el.getAttribute("data-col");
+  const col = target && target.dataset.col ? target.dataset.col : el.getAttribute("data-col");
   const filterinp = table.querySelector('input[data-col="'+col+'"]');
   if ( filterinp ) {
     filterinp.value = filtertext;

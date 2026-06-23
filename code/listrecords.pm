@@ -59,7 +59,7 @@ sub listrecords {
     $extraparams_str = join("\x1f", map { "$_=" . ($extraparams->{$_} // "") } sort keys %$extraparams);
   }
   my $mobile = $c->{mobile} ? 1 : 0;
-  my $cache_key = join("\x1e", "listrecords", $c->{username}, $c->{op},
+  my $cache_key = join("\x1e", "listrecords_v2", $c->{username}, $c->{op},
                        $table, $sort, $where, $params_str, $extraparams_str,
                        $maxrecords, $mobile);
   my $cached = cache::get($c, $cache_key);
@@ -95,11 +95,30 @@ sub listrecords {
               $suf->{width_px} = $1;
               $px_override{$i} = $1;
               $changed = 1;
-          } elsif ($field =~ s/_A$//) {
-              $suf->{auto_width} = 1;
-              $auto_override{$i} = 1;
-              $changed = 1;
-          }
+           } elsif ($field =~ s/_A$//) {
+               $suf->{auto_width} = 1;
+               $auto_override{$i} = 1;
+               $changed = 1;
+           } elsif ($field =~ s/_filter$//) {
+               $suf->{filter} = 1;
+               $changed = 1;
+           } elsif ($field =~ s/_link:([A-Z][a-zA-Z]+)$//) {
+               $suf->{link} = $1;
+               $changed = 1;
+           } elsif ($field =~ s/_cont(?::(.+))?$//) {
+               my $val = $1;
+               if (!defined $val) {
+                   $suf->{cont} = 1;
+               } elsif ($val eq 'br') {
+                   $suf->{cont} = 'br';
+               } elsif ($val =~ s/^sep://) {
+                   $suf->{cont} = 'sep';
+                   $suf->{cont_sep} = $val;
+               } else {
+                   $suf->{cont} = 1;
+               }
+               $changed = 1;
+           }
       } while ($changed);
       $fields[$i] = $field;
       $suffix_info[$i] = $suf;
@@ -147,10 +166,16 @@ sub listrecords {
   # Filter inputs also work as column headers, and sort buttons on dbl-click
   $s .= "<tr class='top-border'>\n";
   my $chkfield = "";
+  my $hdr_cont_active = 0;
+  my $hdr_cont_sep = "";
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
     my $break = linebreak($c,$f);
     if ( $break ) {
+      if ($hdr_cont_active) {
+        $s .= "</td>\n";
+        $hdr_cont_active = 0;
+      }
       $s .= $break;
       $styles[$i] = "";
       next;
@@ -214,21 +239,36 @@ sub listrecords {
     $f =~ s/^-//;
     $f =~ s/'//g;
 
-    $s .= "<td $sty $extra_attr[$i]>";
+    my $hdr_input;
     if ( $f eq "IdClr" ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
-      $s .= "<input type=text data-col='$i' $sty $on placeholder='Id'/>";
-      $s .= "<span style='cursor:pointer; font-weight:bold' onclick='clearfilters(this);'> Clr</span>";
+      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Id'/>";
+      $hdr_input .= "<span style='cursor:pointer; font-weight:bold' onclick='clearfilters(this);'> Clr</span>";
     } elsif ( $f =~ /Clr/i ) { # Clear filters button
-      $s .= "<span $sty onclick='clearfilters(this);' >Clr</span>";
+      $hdr_input = "<span $sty onclick='clearfilters(this);' >Clr</span>";
     } elsif ( $f  ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
       $on = "" if ($f=~/Chk/);
-      $s .= "<input type=text data-col='$i' $sty $on placeholder='$f'/>";
+      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='$f'/>";
       # Tried also with box-sizing: border-box; display: block;. Still extends the cell
     } else {
-      $s .= "&nbsp;"
+      $hdr_input = "&nbsp;"
     }
+    if ($hdr_cont_active) {
+        $s .= $hdr_cont_sep . $hdr_input;
+    } else {
+        $s .= "<td $sty $extra_attr[$i]>$hdr_input";
+    }
+    if ($suffix_info[$i]{cont}) {
+        $hdr_cont_active = 1;
+        $hdr_cont_sep = $suffix_info[$i]{cont} eq 'br' ? "<br/>\n" :
+                        ($suffix_info[$i]{cont} eq 'sep' ? ($suffix_info[$i]{cont_sep} // "") : "");
+    } else {
+        $s .= "</td>\n";
+        $hdr_cont_active = 0;
+    }
+  }
+  if ($hdr_cont_active) {
     $s .= "</td>\n";
   }
   foreach my $i (keys %px_override) {
@@ -254,10 +294,17 @@ sub listrecords {
     }
     my $tds = "";
     my $id = $rec[0]; # Id has to be first if using the Check pseudofield
+    my $cont_active = 0;
+    my $cont_sep = "";
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i];
       my $was_null_field = !defined $v;
       $v //= "";
+
+      # _filter suffix: wrap non-null values in «» markers for filtering
+      if ( $suffix_info[$i]{filter} && $v ne "" ) {
+        $v = "\x{ab}$v\x{bb}";
+      }
 
       # Parse «filter» markers (U+00AB / U+00BB) for display-vs-filter separation.
       my @segments;
@@ -283,19 +330,30 @@ sub listrecords {
       my $fn = $fields[$i];
       my $linebreak = linebreak($c,$fn);
       if ( $linebreak ) {
+        if ($cont_active) {
+          $tds .= "</td>\n";
+          $cont_active = 0;
+        }
         $linebreak =~ s/<tr>/<tr$hidden>/ if $hidden;  # Apply hidden to linebreak TRs
         $tds .= $linebreak;
         next;
       }
       $fn = $suffix_info[$i]{as_name} if $suffix_info[$i]{as_name};
-      my $onclick = "onclick='fieldclick(event,this,$i);'";
-      my $data = "data-col='$i'";
+      my $onclick = "onclick='fieldclick(event,this,$i)'";
+      my $data_attrs = "data-col='$i'";
       if (defined $first_filter) {
         my $ef = util::htmlesc($first_filter);
-        $data .= qq{ data-filter="$ef"};
+        $data_attrs .= qq{ data-filter="$ef"};
       }
       if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><span><b>$v</b></span></a>";
+        $onclick = "";
+      } elsif ( $suffix_info[$i]{link} ) {
+        if ($v) {
+          my $entity = $suffix_info[$i]{link};
+          my $prefix = substr($entity, 0, 1);
+          $v = "<a href='$url?o=$entity&e=$v'><span>${prefix}[$v]</span></a>: ";
+        }
         $onclick = "";
       } elsif ( $fn eq "IdClr" ) {
         if ($v) {
@@ -367,7 +425,7 @@ sub listrecords {
         if ( $v && $extraparams && $extraparams->{lat} && $extraparams->{lon} ) {
           my ( $lat, $lon ) = split(' ', $v);
           if (  $extraparams->{lat} eq '?' ) {  # Need to recalc in js
-            $data .= " lat=$lat lon=$lon";
+            $data_attrs .= " lat=$lat lon=$lon";
             $v = '?';
           } else {
             $v = geo::geodist( $extraparams->{lat}, $extraparams->{lon}, $lat, $lon );
@@ -406,7 +464,23 @@ sub listrecords {
       if ( $was_null_field && $fn =~ /^(Type|Sub|LocType|LocSubType|BrewType)$/i && !$v ) {
         $v = "<span class='null-value'>NULL</span>";
       }
-      $tds .= "<td $styles[$i] $extra_attr[$i] $data $onclick>$v</td>\n";
+      my $cell = "<span ${data_attrs}" . ($onclick ? " $onclick" : "") . ">$v</span>\n";
+      if ($cont_active) {
+        $tds .= $cont_sep . $cell;
+      } else {
+        $tds .= "<td $styles[$i] $extra_attr[$i]>$cell";
+      }
+      if ($suffix_info[$i]{cont}) {
+        $cont_active = 1;
+        $cont_sep = $suffix_info[$i]{cont} eq 'br' ? "<br/>\n" :
+                    ($suffix_info[$i]{cont} eq 'sep' ? ($suffix_info[$i]{cont_sep} // "") : "");
+      } else {
+        $tds .= "</td>\n";
+        $cont_active = 0;
+      }
+    }
+    if ($cont_active) {
+      $tds .= "</td>\n";
     }
 
     $s .= "<tr data-first=1 class='top-border'$hidden>\n"; # in-between TRs don't have data_first

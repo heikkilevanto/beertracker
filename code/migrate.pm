@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 27;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 28;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
@@ -44,6 +44,9 @@ our @MIGRATIONS = (
 
   # v3.7 — added 17-Jun-2026
   [27, '695 create photos_list view', \&mig_005_photos_list_view],
+
+  # v3.8 — added 23-Jun-2026
+  [28, '699 photos_list use _cont for Person fields', \&mig_006_photos_list_cont],
 );
 
 ################################################################################
@@ -348,6 +351,77 @@ sub mig_005_photos_list_view {
     LEFT JOIN comments c     ON c.Id = p.Comment
   });
 } # mig_005_photos_list_view
+
+################################################################################
+# Migration 28: photos_list uses _cont for Person fields (issue #699)
+# Split Person_A into PersonPref + PersonName with _cont so the two
+# columns render as one cell (same visual layout) but can have separate
+# suffixes applied (e.g. _id:person on the ID column later).
+################################################################################
+sub mig_006_photos_list_cont {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS photos_list");
+  db::execute($c, q{
+    CREATE VIEW photos_list AS
+    SELECT
+      p.Filename AS Photo_R8,
+      p.Id AS IdClr,
+      '' AS TR1,
+      p.Caption AS Caption_A,
+      '' AS TR2,
+      p.Person AS "PersonId_A_cont_link:Person",
+      p2.Name AS "PersonName_A_filter",
+      '' AS TR3,
+      p.Brew AS "BrewId_A_cont_link:Brew",
+      CASE WHEN pl_b.Name IS NOT NULL THEN pl_b.Name || ': ' ELSE '' END ||
+        b.Name ||
+        CASE WHEN b.Details IS NOT NULL THEN ' - ' || b.Details ELSE '' END
+      AS "BrewText_A_filter",
+      '' AS TR4,
+      p.Location AS "LocationId_A_cont_link:Location",
+      l.Name AS "LocationName_A_filter",
+      '' AS TR5,
+      p.Glass AS "GlassId_A_cont_link:Glass",
+      NULLIF(TRIM(
+        CASE WHEN pl_g.Name IS NOT NULL THEN pl_g.Name || ':' ELSE '' END ||
+        CASE WHEN b_g.Name IS NOT NULL THEN ' ' || b_g.Name ELSE '' END ||
+        CASE WHEN b_g.Details IS NOT NULL THEN ' (' || b_g.Details || ')' ELSE '' END ||
+        CASE WHEN b_g.Name IS NULL AND g_g.BrewType IS NOT NULL
+             THEN ' [' || g_g.BrewType || ']' ELSE '' END ||
+        CASE WHEN l_g.Name IS NOT NULL THEN ' @ ' || l_g.Name ELSE '' END
+      ), '') AS "GlassText_A_filter",
+      '' AS TR6,
+      p.Comment AS "CommentId_A_cont_link:Comment",
+      NULLIF(TRIM(
+        CASE WHEN c.Rating IS NOT NULL THEN '(' || char(0xAB) || c.Rating || char(0xBB) || ') ' ELSE '' END ||
+        COALESCE(c.Comment, '') ||
+        (SELECT ' — ' || group_concat(char(0xAB) || p3.Name || char(0xBB), ', ')
+         FROM comment_persons cp2
+         JOIN persons p3 ON p3.Id = cp2.Person
+         WHERE cp2.Comment = c.Id)
+      ), '') AS "CommentText_A",
+      '' AS TR7,
+      SUBSTR(p.Ts, 1, 16) AS Ts_A,
+      p.Glass AS xGlass,
+      p.Comment AS xComment,
+      p.Location AS xLocation,
+      p.Person AS xPerson,
+      p.Brew AS xBrew,
+      p.Uploader AS xUploader,
+      p.Public AS xPublic
+    FROM photos p
+    LEFT JOIN persons p2     ON p2.Id = p.Person
+    LEFT JOIN brews b        ON b.Id = p.Brew
+    LEFT JOIN locations pl_b ON pl_b.Id = b.ProducerLocation
+    LEFT JOIN locations l    ON l.Id = p.Location
+    LEFT JOIN glasses g_g    ON g_g.Id = p.Glass
+    LEFT JOIN brews b_g      ON b_g.Id = g_g.Brew
+    LEFT JOIN locations l_g  ON l_g.Id = g_g.Location
+    LEFT JOIN locations pl_g ON pl_g.Id = b_g.ProducerLocation
+    LEFT JOIN comments c     ON c.Id = p.Comment
+  });
+} # mig_006_photos_list_cont
 
 ################################################################################
 
