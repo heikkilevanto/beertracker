@@ -73,20 +73,36 @@ sub listrecords {
   my @extra_attr = ("") x scalar(@fields);
   my %px_override;
   my %auto_override;
+  my @suffix_info;  # array of hashrefs, one per column
   for (my $i = 0; $i < scalar(@fields); $i++) {
-      if ($fields[$i] =~ /^(.+)_R(\d+)$/) {
-          $fields[$i] = $1;
-          $extra_attr[$i] = "rowspan='$2'";
-      } elsif ($fields[$i] =~ /^(.+)_C(\d+)$/) {
-          $fields[$i] = $1;
-          $extra_attr[$i] = "colspan='$2'";
-      } elsif ($fields[$i] =~ /^(.+)_(\d+px)$/) {
-          $fields[$i] = $1;
-          $px_override{$i} = $2;
-      } elsif ($fields[$i] =~ /^(.+)_A$/) {
-          $fields[$i] = $1;
-          $auto_override{$i} = 1;
-      }
+      my $suf = {};
+      my $field = $fields[$i];
+      my $changed;
+      do {
+          $changed = 0;
+          if ($field =~ s/_R(\d+)$//) {
+              $suf->{rowspan} = $1;
+              $extra_attr[$i] = "rowspan='$1'";
+              $changed = 1;
+          } elsif ($field =~ s/_C(\d+)$//) {
+              $suf->{colspan} = $1;
+              $extra_attr[$i] = "colspan='$1'";
+              $changed = 1;
+          } elsif ($field =~ s/_as:([^_]+)$//) {
+              $suf->{as_name} = $1;
+              $changed = 1;
+          } elsif ($field =~ s/_(\d+px)$//) {
+              $suf->{width_px} = $1;
+              $px_override{$i} = $1;
+              $changed = 1;
+          } elsif ($field =~ s/_A$//) {
+              $suf->{auto_width} = 1;
+              $auto_override{$i} = 1;
+              $changed = 1;
+          }
+      } while ($changed);
+      $fields[$i] = $field;
+      $suffix_info[$i] = $suf;
   }
   my $order = "";
   for (my $i = 0; $i < scalar(@fields); $i++) {
@@ -271,6 +287,7 @@ sub listrecords {
         $tds .= $linebreak;
         next;
       }
+      $fn = $suffix_info[$i]{as_name} if $suffix_info[$i]{as_name};
       my $onclick = "onclick='fieldclick(event,this,$i);'";
       my $data = "data-col='$i'";
       if (defined $first_filter) {
