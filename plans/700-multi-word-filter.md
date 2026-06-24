@@ -26,7 +26,8 @@ denote multi-word terms (spaces stored as `_`).
 
 Use the character allowlist from `util::param()` (line 149 of util.pm):
 ```
-a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:()[]?%!#=_-```
+a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:()[]?%!#=_-
+```
 (plus whitespace). Characters outside this set are stripped from tokens.
 Filter matching also uses this allowlist: any non-allowed character in the
 filter input is stripped when building match tokens.
@@ -172,6 +173,24 @@ All 8 views currently used with listrecords (from `caller` analysis):
 6. **General `tr`/`trmob` columns**: All views use `TR`/`TRMOB` prefix for
    linebreaks. Could be `_break` / `_break:mob` suffix. Out of scope.
 
+   
+   Suggested order (easiest → biggest impact):
+
+    LOCATIONS_LIST — simplest conversion. Already has a migration in migrate.pm. Just needs _link:Location on Id, _as:LocName on Name, _contline for Geo/Stats, split Type into LocType+LocSubType.
+
+    PERSONS_LIST — also simple. Id→_link:Person, Name→_as:Name or plain, _contline for Com/Last/Location/Description.
+
+    BREWS_LIST — most frequently used. Big payoff. Split Type into BrewType+SubType, use _link:Brew on Id, _as:LocName on Producer/Location, Stats split with _as:, _contline for layout, move Clr to row 1.
+
+    COMMENTS_LIST — medium complexity. Multiple tr breaks, combined entity fields. Split into _link:Comment, _link:Glass, _link:Brew, _as:LocName on locs, _as:Rate on rating, _contline groups.
+
+    LOCATIONS_DEDUP_LIST — niche dedup page. Simple but low-use. _link:Location on Id, Geo as-is.
+
+    BREWS_DEDUP_LIST — same pattern as BREWS_LIST but simpler (no photo). _link:Brew on Id, Chk checkbox.
+
+    producer_brews_list — very simple, used inside a location detail page. Just Alc, Sub, Stats, Last. Quick win.
+
+   
 ### Summary
 
 - **Nothing breaks** — the change is purely additive (word spans added,

@@ -241,7 +241,7 @@ sub listrecords {
     $styles[$i] = $sty;
     if ( $auto_override{$i} ) {
         $styles[$i] = "";
-        $sty = "";
+        $sty = " size='" . (length($f) + 2) . "'";
     }
     $f =~ s/^-//;
     $f =~ s/'//g;
@@ -480,7 +480,12 @@ sub listrecords {
         $v = _word_spans($v, $i);
       }
       my $cell_events = $suffix_info[$i]{nofilter} ? "" : " ondblclick='fieldclick_cell(event,this,$i)'";
-      my $cell = "<span ${data_attrs}${cell_events}>$v</span>\n";
+      my $cell;
+      if (length $v) {
+          $cell = "<span ${data_attrs}${cell_events}>$v</span>\n";
+      } else {
+          $cell = "<span ${data_attrs}></span>\n";
+      }
       if ($cont_active) {
         $tds .= $cont_sep . $cell;
       } else {
