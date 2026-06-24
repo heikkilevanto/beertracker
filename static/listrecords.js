@@ -11,21 +11,23 @@ function changefilter (inputElement) {
 }
 
 function dochangefilter (inputElement) {
-  // Find the table from the input's ancestor
   const table = inputElement.closest('table');
-  if (!table) return; // should not happen
+  if (!table) return;
   console.time("filter") ;
 
   const filterinputs = table.querySelectorAll('thead input');
 
-  // Get the filters
+  // Build per-column arrays of cleaned filter tokens (space-separated AND logic)
+  const ALLOWLIST = /[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß -]/g;
   let filters = [];
   for ( let i=0; i<filterinputs.length; i++) {
     let filterinp = filterinputs[i];
     if ( filterinp ) {
       const col = filterinp.getAttribute("data-col");
       filterinp.value = filterinp.value.replace(/[▲▼]+/g,"");
-      filters[col] = new RegExp(filterinp.value, 'i')
+      const tokens = filterinp.value.split(/\s+/).filter(function(t) { return t.length > 0; });
+      const cleaned = tokens.map(function(t) { return t.replace(ALLOWLIST, ''); });
+      filters[col] = cleaned.filter(function(t) { return t.length > 0; });
     }
   }
   
@@ -45,10 +47,8 @@ function dochangefilter (inputElement) {
   const firstrows = table.querySelectorAll('tbody tr[data-first]');
   let visibleCount = 0;
   
-  // Process all rows - don't abort mid-loop to avoid inconsistent table state
-  // If user types quickly, the newer filter will run after this one completes
   for (let r = 0; r < firstrows.length; r++) {
-    var disp = ""; // default to showing the row
+    var disp = "";
     let row = firstrows[r];
     do {
       const cols = row.querySelectorAll('td');
@@ -57,9 +57,16 @@ function dochangefilter (inputElement) {
         if (!colEls.length) continue;
         for (let ce = 0; ce < colEls.length; ce++) {
           const col = colEls[ce].getAttribute('data-col');
-          if ( col && filters[col] && !filters[col].test(colEls[ce].textContent) ) {
-            disp = "none";
-            break;
+          if ( col && filters[col] && filters[col].length > 0 ) {
+            const text = colEls[ce].textContent;
+            const matchAll = filters[col].every(function(token) {
+              const normText = text.toLowerCase().replace(ALLOWLIST, '');
+              return normText.indexOf(token.toLowerCase()) !== -1;
+            });
+            if ( !matchAll ) {
+              disp = "none";
+              break;
+            }
           }
         }
         if (disp === "none") break;
@@ -67,14 +74,12 @@ function dochangefilter (inputElement) {
       row = row.nextElementSibling;
     } while ( row && ! row.hasAttribute("data-first") );
     
-    // Apply display setting
     let ro = firstrows[r];
     do {
       ro.style.display = disp;
       ro = ro.nextElementSibling;
     } while ( ro && ! ro.hasAttribute("data-first") );
     
-    // Count visible records
     if (disp === "") {
       visibleCount++;
     }
@@ -87,7 +92,6 @@ function dochangefilter (inputElement) {
       if (firstrows[r].style.display !== "none") {
         recordCount++;
         if (recordCount > maxRecords) {
-          // Hide this record and continuation rows
           let currentRow = firstrows[r];
           do {
             currentRow.setAttribute('hidden', '');
@@ -96,14 +100,12 @@ function dochangefilter (inputElement) {
         }
       }
     }
-    // Show "More..." link if we have hidden records
     if (moreLink && visibleCount > maxRecords) {
       moreLink.style.display = '';
     } else if (moreLink) {
       moreLink.style.display = 'none';
     }
   } else if (moreLink) {
-    // List was expanded, keep "More..." hidden
     moreLink.style.display = 'none';
   }
 
@@ -118,15 +120,44 @@ function fieldclick(event,el,index) {
                : el.dataset.filter
                ? el.dataset.filter
                : el.textContent;
-  filtertext = filtertext.replace( /\[|\]/g , ""); // Remove brackets [Beer,IPA]
-  filtertext = filtertext.replace( /^.*(20[0-9-]+) .*/ , "$1"); // Just the date
+  filtertext = filtertext.replace( /\[|\]/g , "");
 
-  // Get the filters
   const table = el.closest('table');
   const col = target && target.dataset.col ? target.dataset.col : el.getAttribute("data-col");
   const filterinp = table.querySelector('input[data-col="'+col+'"]');
   if ( filterinp ) {
     filterinp.value = filtertext;
+    dochangefilter(el);
+  }
+}
+
+function fieldclick_word(event, el, col) {
+  var token = el.textContent;
+  token = token.replace(/[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß -]/g, '');
+  if ( !token ) return;
+
+  const table = el.closest('table');
+  const filterinp = table.querySelector('input[data-col="' + col + '"]');
+  if ( filterinp ) {
+    if ( filterinp.value ) {
+      filterinp.value += ' ' + token;
+    } else {
+      filterinp.value = token;
+    }
+    dochangefilter(el);
+  }
+}
+
+function fieldclick_cell(event, el, col) {
+  var text = el.textContent;
+  text = text.replace(/\s+/g, ' ').trim();
+  text = text.replace(/[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß -]/g, '');
+  if ( !text ) return;
+
+  const table = el.closest('table');
+  const filterinp = table.querySelector('input[data-col="' + col + '"]');
+  if ( filterinp ) {
+    filterinp.value = text;
     dochangefilter(el);
   }
 }

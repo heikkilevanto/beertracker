@@ -77,6 +77,7 @@ sub listrecords {
   for (my $i = 0; $i < scalar(@fields); $i++) {
       my $suf = {};
       my $field = $fields[$i];
+      my $orig_field = $field;
       my $changed;
       do {
           $changed = 0;
@@ -102,8 +103,16 @@ sub listrecords {
            } elsif ($field =~ s/_filter$//) {
                $suf->{filter} = 1;
                $changed = 1;
+           } elsif ($field =~ s/_nofilter$//) {
+               $suf->{nofilter} = 1;
+               $changed = 1;
+           } elsif ($field =~ s/_noheader$//) {
+               $suf->{noheader} = 1;
+               $changed = 1;
            } elsif ($field =~ s/_link:([A-Z][a-zA-Z]+)$//) {
                $suf->{link} = $1;
+               $suf->{nofilter} = 1;
+               $suf->{noheader} = 1;
                $changed = 1;
            } elsif ($field =~ s/_cont(?::(.+))?$//) {
                my $val = $1;
@@ -118,6 +127,8 @@ sub listrecords {
                    $suf->{cont} = 1;
                }
                $changed = 1;
+           } elsif ($field =~ /_([a-z][a-zA-Z0-9]*)$/) {
+               print { $c->{log} } "WARNING: listrecords: Unrecognized suffix '_$1' in column '$orig_field' (table: $table)\n";
            }
       } while ($changed);
       $fields[$i] = $field;
@@ -168,6 +179,7 @@ sub listrecords {
   my $chkfield = "";
   my $hdr_cont_active = 0;
   my $hdr_cont_sep = "";
+  my @hidden_filters;
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
     my $break = linebreak($c,$f);
@@ -239,8 +251,22 @@ sub listrecords {
     $f =~ s/^-//;
     $f =~ s/'//g;
 
+    if ( $suffix_info[$i]{noheader} ) {
+        if ($hdr_cont_active) {
+            $s .= "</td>\n";
+            $hdr_cont_active = 0;
+        }
+        if ( !$suffix_info[$i]{nofilter} ) {
+            my $non = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
+            push @hidden_filters, "<input type=text style='display:none' data-col='$i' $non/>\n";
+        }
+        next;
+    }
+
     my $hdr_input;
-    if ( $f eq "IdClr" ) {
+    if ( $suffix_info[$i]{nofilter} ) {
+        $hdr_input = $f;
+    } elsif ( $f eq "IdClr" ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
       $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Id'/>";
       $hdr_input .= "<span style='cursor:pointer; font-weight:bold' onclick='clearfilters(this);'> Clr</span>";
@@ -278,6 +304,7 @@ sub listrecords {
       $styles[$i] = "";
   }
   $s .= "</tr>\n";
+  $s .= join('', @hidden_filters);
   $s .= "</thead><tbody>\n";
   $s .=  "<!-- listrecords: table headers done, now the body -->\n";
 
@@ -301,32 +328,6 @@ sub listrecords {
       my $was_null_field = !defined $v;
       $v //= "";
 
-      # _filter suffix: wrap non-null values in «» markers for filtering
-      if ( $suffix_info[$i]{filter} && $v ne "" ) {
-        $v = "\x{ab}$v\x{bb}";
-      }
-
-      # Parse «filter» markers (U+00AB / U+00BB) for display-vs-filter separation.
-      my @segments;
-      my $first_filter;
-      my $tail = "";
-      while ($v =~ /(.*?)\x{ab}(.*?)\x{bb}/sgp) {
-        push @segments, { type => 'text',   value => $1 } if length $1;
-        push @segments, { type => 'filter', value => $2 };
-        $first_filter //= $2;
-        $tail = ${^POSTMATCH};
-      }
-      if (@segments) {
-        push @segments, { type => 'text', value => $tail } if length $tail;
-      } else {
-        push @segments, { type => 'text', value => $v };
-      }
-
-      $v = join('', map {
-        my $ev = util::htmlesc($_->{value});
-        $_->{type} eq 'filter' ? "<span data-filter='$ev'>$ev</span>" : $ev
-      } @segments);
-
       my $fn = $fields[$i];
       my $linebreak = linebreak($c,$fn);
       if ( $linebreak ) {
@@ -339,22 +340,18 @@ sub listrecords {
         next;
       }
       $fn = $suffix_info[$i]{as_name} if $suffix_info[$i]{as_name};
-      my $onclick = "onclick='fieldclick(event,this,$i)'";
       my $data_attrs = "data-col='$i'";
-      if (defined $first_filter) {
-        my $ef = util::htmlesc($first_filter);
-        $data_attrs .= qq{ data-filter="$ef"};
-      }
+      my $word_split = 1;
       if ( $fn eq "Name" ) {
         $v = "<a href='$url?o=$op&e=$rec[0]'><span><b>$v</b></span></a>";
-        $onclick = "";
+        $word_split = 0;
       } elsif ( $suffix_info[$i]{link} ) {
         if ($v) {
           my $entity = $suffix_info[$i]{link};
           my $prefix = substr($entity, 0, 1);
           $v = "<a href='$url?o=$entity&e=$v'><span>${prefix}[$v]</span></a>: ";
         }
-        $onclick = "";
+        $word_split = 0;
       } elsif ( $fn eq "IdClr" ) {
         if ($v) {
           if ($c->{op} =~ /Comment/i) {
@@ -363,9 +360,9 @@ sub listrecords {
             $v = "[$v]";
           }
         }
-        $onclick = "";
       } elsif ( $fn =~ /Clr/ ) {
         $v="&nbsp;";
+        $word_split = 0;
       } elsif ( $fn =~ /Sub|Id/ ) {
         if ($v) {
           if ($c->{op} =~ /Comment/i) {
@@ -393,7 +390,7 @@ sub listrecords {
         $v = "($v)" if ($v);
       } elsif ( $fn eq "Chk" ) {
         $v = "<input type=checkbox name=Chk$id />";
-        $onclick = "";
+        $word_split = 0;
       } elsif ( $fn eq "Last" ) {
         my ($date, $wd, $time) = util::splitdate($v);
         my $disp = "$date $time $wd"; # wday last, for alignment
@@ -445,7 +442,7 @@ sub listrecords {
         }
         my $editurl = "$c->{url}?o=Photos&e=$rec[$id_idx]";
         $v = photos::imagetag($c, $v, "thumb", $editurl);
-        $onclick = "";
+        $word_split = 0;
       } elsif ( $fn eq "Photos" ) {
         if ($v) {
           my @fns = split(/\|/, $v);
@@ -458,13 +455,23 @@ sub listrecords {
           my $label = ($fn =~ /Untappd/i) ? "Ut"     :
                       ($fn =~ /Search/i)  ? "search" : "www";
           $v = util::extlink($v, $label);
-          $onclick = "";
+          $word_split = 0;
         }
       }
       if ( $was_null_field && $fn =~ /^(Type|Sub|LocType|LocSubType|BrewType)$/i && !$v ) {
         $v = "<span class='null-value'>NULL</span>";
       }
-      my $cell = "<span ${data_attrs}" . ($onclick ? " $onclick" : "") . ">$v</span>\n";
+      if ( $suffix_info[$i]{nofilter} ) {
+        if ( $v !~ /</ ) {
+            $v = util::htmlesc($v);
+        }
+        $word_split = 0;
+      }
+      if ( $word_split && $v !~ /</ ) {
+        $v = _word_spans($v, $i);
+      }
+      my $cell_events = $suffix_info[$i]{nofilter} ? "" : " ondblclick='fieldclick_cell(event,this,$i)'";
+      my $cell = "<span ${data_attrs}${cell_events}>$v</span>\n";
       if ($cont_active) {
         $tds .= $cont_sep . $cell;
       } else {
@@ -504,6 +511,47 @@ sub listrecords {
 
   cache::set($c, $cache_key, $s);
   return $s;
+}
+
+################################################################################
+# Word-level filter tokenisation for list cell values.
+# Parses «…» markers into single tokens (spaces preserved), splits remaining
+# text by whitespace into individual words. Each word is rendered as a
+# clickable <span>, preserving original special characters in the display.
+# The JS fieldclick_word handler strips non-allowed characters on click.
+sub _word_spans {
+    my $v = shift;
+    my $col_idx = shift;
+    return $v if $v eq '';
+
+    my @segments;
+    while ($v =~ /(.*?)\x{ab}(.*?)\x{bb}/sg) {
+        my ($before, $quoted) = ($1, $2);
+
+        if (length $before) {
+            foreach my $word (split /\s+/, $before) {
+                push @segments, $word if length $word;
+            }
+        }
+
+        push @segments, $quoted if length $quoted;
+    }
+
+    my $after = pos($v) ? substr($v, pos($v)) : $v;
+    if (length $after) {
+        foreach my $word (split /\s+/, $after) {
+            push @segments, $word if length $word;
+        }
+    }
+
+    return util::htmlesc($v) unless @segments;
+
+    my @spans;
+    foreach my $seg (@segments) {
+        push @spans, "<span onclick='fieldclick_word(event,this,$col_idx)'>" . util::htmlesc($seg) . "</span>";
+    }
+
+    return join(" ", @spans);
 }
 
 ################################################################################
