@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 28;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 29;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 our @MIGRATIONS = (
@@ -47,6 +47,9 @@ our @MIGRATIONS = (
 
   # v3.8 — added 23-Jun-2026
   [28, '699 photos_list use _cont for Person fields', \&mig_006_photos_list_cont],
+
+  # v3.9 — added 24-Jun-2026
+  [29, '700 simplify photos_list view', \&mig_007_photos_list_simplify],
 );
 
 ################################################################################
@@ -422,6 +425,83 @@ sub mig_006_photos_list_cont {
     LEFT JOIN comments c     ON c.Id = p.Comment
   });
 } # mig_006_photos_list_cont
+
+################################################################################
+# Migration 29: Simplify photos_list view (issue #700)
+# - Move Ts to row 1 after IdClr
+# - Use _contline on first data field of each row (instead of separate _cont/empty columns)
+# - Split combined columns (BrewText, GlassText, CommentText) into atomic fields
+# - Remove SQL string concatenation — use _link:Entity suffix for links
+# - Use _as:LocName for location names (-> @Name)
+# - Keep comment persons as separate column
+# - Rely on word-click from listrecords for plain-text fields
+################################################################################
+sub mig_007_photos_list_simplify {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS photos_list");
+  db::execute($c, q{
+    CREATE VIEW photos_list AS
+    SELECT
+      p.Filename AS Photo_R8,
+      p.Id AS "IdClr_A_contline",
+      SUBSTR(p.Ts, 1, 16) AS Ts_A,
+
+      '' AS TR1,
+      p.Caption AS Caption_A,
+
+      '' AS TR2,
+      p.Person AS "PersonId_A_contline_link:Person",
+      p2.Name AS "PersonName_A_filter",
+
+      '' AS TR3,
+      p.Brew AS "BrewId_A_contline_link:Brew",
+      pl_b.Name AS "BrewProducer_A_filter",
+      b.Name AS "BrewName_A_filter",
+      b.Details AS "BrewDetails_A_filter",
+
+      '' AS TR4,
+      p.Location AS "LocationId_A_contline_link:Location",
+      l.Name AS "LocationName_A_filter_as:LocName",
+
+      '' AS TR5,
+      p.Glass AS "GlassId_A_contline_link:Glass",
+      pl_g.Name AS "GlassProducer_A_filter",
+      b_g.Name AS "GlassBrewName_A_filter",
+      b_g.Details AS "GlassDetails_A_filter",
+      g_g.BrewType AS "GlassBrewType_A_filter",
+      l_g.Name AS "GlassLocName_A_filter_as:LocName",
+
+      '' AS TR6,
+      p.Comment AS "CommentId_A_contline_link:Comment",
+      c.Rating AS "CommentRating_A_filter",
+      c.Comment AS "CommentText_A",
+      (SELECT group_concat(p3.Name, ', ')
+       FROM comment_persons cp2
+       JOIN persons p3 ON p3.Id = cp2.Person
+       WHERE cp2.Comment = c.Id) AS "CommentPersons_A_filter",
+
+      '' AS TR7,
+      p.Glass AS xGlass,
+      p.Comment AS xComment,
+      p.Location AS xLocation,
+      p.Person AS xPerson,
+      p.Brew AS xBrew,
+      p.Uploader AS xUploader,
+      p.Public AS xPublic
+
+    FROM photos p
+    LEFT JOIN persons p2     ON p2.Id = p.Person
+    LEFT JOIN brews b        ON b.Id = p.Brew
+    LEFT JOIN locations pl_b ON pl_b.Id = b.ProducerLocation
+    LEFT JOIN locations l    ON l.Id = p.Location
+    LEFT JOIN glasses g_g    ON g_g.Id = p.Glass
+    LEFT JOIN brews b_g      ON b_g.Id = g_g.Brew
+    LEFT JOIN locations l_g  ON l_g.Id = g_g.Location
+    LEFT JOIN locations pl_g ON pl_g.Id = b_g.ProducerLocation
+    LEFT JOIN comments c     ON c.Id = p.Comment
+  });
+} # mig_007_photos_list_simplify
 
 ################################################################################
 

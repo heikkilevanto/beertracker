@@ -114,19 +114,12 @@ sub listrecords {
                $suf->{nofilter} = 1;
                $suf->{noheader} = 1;
                $changed = 1;
-           } elsif ($field =~ s/_cont(?::(.+))?$//) {
-               my $val = $1;
-               if (!defined $val) {
-                   $suf->{cont} = 1;
-               } elsif ($val eq 'br') {
-                   $suf->{cont} = 'br';
-               } elsif ($val =~ s/^sep://) {
-                   $suf->{cont} = 'sep';
-                   $suf->{cont_sep} = $val;
-               } else {
-                   $suf->{cont} = 1;
-               }
-               $changed = 1;
+            } elsif ($field =~ s/_contline$//) {
+                $suf->{contline} = 1;
+                $changed = 1;
+            } elsif ($field =~ s/_cont$//) {
+                $suf->{cont} = 1;
+                $changed = 1;
            } elsif ($field =~ /_([a-z][a-zA-Z0-9]*)$/) {
                print { $c->{log} } "WARNING: listrecords: Unrecognized suffix '_$1' in column '$orig_field' (table: $table)\n";
            }
@@ -179,6 +172,7 @@ sub listrecords {
   my $chkfield = "";
   my $hdr_cont_active = 0;
   my $hdr_cont_sep = "";
+  my $hdr_contline_rest = 0;
   my @hidden_filters;
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
@@ -188,6 +182,7 @@ sub listrecords {
         $s .= "</td>\n";
         $hdr_cont_active = 0;
       }
+      $hdr_contline_rest = 0;
       $s .= $break;
       $styles[$i] = "";
       next;
@@ -251,6 +246,13 @@ sub listrecords {
     $f =~ s/^-//;
     $f =~ s/'//g;
 
+    if ( $suffix_info[$i]{contline} ) {
+        if ($hdr_cont_active) {
+            $s .= "</td>\n";
+            $hdr_cont_active = 0;
+        }
+        $hdr_contline_rest = 1;
+    }
     if ( $suffix_info[$i]{noheader} ) {
         if ($hdr_cont_active) {
             $s .= "</td>\n";
@@ -285,10 +287,8 @@ sub listrecords {
     } else {
         $s .= "<td $sty $extra_attr[$i]>$hdr_input";
     }
-    if ($suffix_info[$i]{cont}) {
+    if ($suffix_info[$i]{cont} || $hdr_contline_rest) {
         $hdr_cont_active = 1;
-        $hdr_cont_sep = $suffix_info[$i]{cont} eq 'br' ? "<br/>\n" :
-                        ($suffix_info[$i]{cont} eq 'sep' ? ($suffix_info[$i]{cont_sep} // "") : "");
     } else {
         $s .= "</td>\n";
         $hdr_cont_active = 0;
@@ -323,6 +323,7 @@ sub listrecords {
     my $id = $rec[0]; # Id has to be first if using the Check pseudofield
     my $cont_active = 0;
     my $cont_sep = "";
+    my $contline_rest = 0;
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i];
       my $was_null_field = !defined $v;
@@ -335,9 +336,17 @@ sub listrecords {
           $tds .= "</td>\n";
           $cont_active = 0;
         }
+        $contline_rest = 0;
         $linebreak =~ s/<tr>/<tr$hidden>/ if $hidden;  # Apply hidden to linebreak TRs
         $tds .= $linebreak;
         next;
+      }
+      if ( $suffix_info[$i]{contline} ) {
+        if ($cont_active) {
+          $tds .= "</td>\n";
+          $cont_active = 0;
+        }
+        $contline_rest = 1;
       }
       $fn = $suffix_info[$i]{as_name} if $suffix_info[$i]{as_name};
       my $data_attrs = "data-col='$i'";
@@ -477,10 +486,8 @@ sub listrecords {
       } else {
         $tds .= "<td $styles[$i] $extra_attr[$i]>$cell";
       }
-      if ($suffix_info[$i]{cont}) {
+      if ($suffix_info[$i]{cont} || $contline_rest) {
         $cont_active = 1;
-        $cont_sep = $suffix_info[$i]{cont} eq 'br' ? "<br/>\n" :
-                    ($suffix_info[$i]{cont} eq 'sep' ? ($suffix_info[$i]{cont_sep} // "") : "");
       } else {
         $tds .= "</td>\n";
         $cont_active = 0;
