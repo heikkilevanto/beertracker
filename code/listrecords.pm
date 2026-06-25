@@ -109,11 +109,10 @@ sub listrecords {
            } elsif ($field =~ s/_noheader$//) {
                $suf->{noheader} = 1;
                $changed = 1;
-           } elsif ($field =~ s/_link:([A-Z][a-zA-Z]+)$//) {
-               $suf->{link} = $1;
-               $suf->{nofilter} = 1;
-               $suf->{noheader} = 1;
-               $changed = 1;
+            } elsif ($field =~ s/_link:([A-Z][a-zA-Z]+)$//) {
+                $suf->{link} = $1;
+                $suf->{nofilter} = 1;
+                $changed = 1;
             } elsif ($field =~ s/_contline$//) {
                 $suf->{contline} = 1;
                 $changed = 1;
@@ -390,6 +389,11 @@ sub listrecords {
         $v = util::unit($v,"%") if ($v);
       } elsif ( $fn eq "LocName" ) {
         $v = "@" . $v  if ($v);
+      } elsif ( $fn eq "CountryRegion" ) {
+        my ($country, $region) = split(/\|/, $v, 2);
+        $v = util::locdesc($c, $country, $region);
+        $v .= "&nbsp;&nbsp;" if $v;
+        $word_split = 0;
       } elsif ( $fn eq "PersonName" ) {
         $v .= ":" if ($v);
       } elsif ( $fn eq "Stats" ) {  # Combined ratings averages

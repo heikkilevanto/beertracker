@@ -1,8 +1,8 @@
 # Beertracker database schema
-# Schema dumped at 2026-06-18 15:33 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-06-25 23:06 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
-# Most changes must be done by adding a migration to migrate.pm, then they will be applied
+# Most changes must be done by adding a migration to migrate.pm, then they will be applied 
 # automatically to both dev and production systems.
 # A few difficult changes can be done manually here, but that requires running tools/dbchange
 # in both dev and production, and needs to be coordinated with related code releases.
@@ -156,20 +156,20 @@ create table if not exists "tap_beers" (
   -- Keeps track of what beer I have seen on what tap number at the various locations
   -- Used for collecting historical data of the beers, and maybe later for some statistics
 
-  "Id"	integer,
-  "Location"	integer not null,
-  "Tap"	real,
-  "Brew"	integer,
-  "FirstSeen"	datetime not null default current_timestamp, -- When it came on
-  "LastSeen"	datetime not null default current_timestamp, -- Last seen at this tap
-  "Gone"	datetime,  -- When the beer was no longer on the (same) tap
+	"Id"	integer,
+	"Location"	integer not null,
+	"Tap"	real,
+	"Brew"	integer,
+	"FirstSeen"	datetime not null default current_timestamp, -- When it came on
+	"LastSeen"	datetime not null default current_timestamp, -- Last seen at this tap
+	"Gone"	datetime,  -- When the beer was no longer on the (same) tap
   "SizeS" decimal, "PriceS" decimal,
   "SizeM" decimal, "PriceM" decimal,
   "SizeL" decimal, "PriceL" decimal,
 
-  primary key("Id"),
-  foreign key("Brew") references "Brews"("id"),
-  foreign key("Location") references "Locations"("id")
+	primary key("Id"),
+	foreign key("Brew") references "Brews"("id"),
+	foreign key("Location") references "Locations"("id")
 );
 
 -- table photos
@@ -507,70 +507,49 @@ create view persons_list as
     left join locations on locations.Id = glasses.Location
     group by persons.Id;
 
--- view locations_list
-drop view if exists locations_list;
-create view locations_list as
-    select
-      locations.Id,
-      locations.Name,
-      coalesce(locations.LocType, 'null') || ', ' || coalesce(locations.LocSubType, 'null') as Type,
-      '' as trmob,
-      locations.lat || ' ' || locations.lon as Geo,
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) as Last,
-      r.rating_count || ';' || r.rating_average || ';' || r.comment_count as Stats,
-      (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as Photo,
-      locations.Tags,
-      locations.Country,
-      locations.Region
-    from locations
-    left join glasses on glasses.Location = locations.Id
-    left join location_ratings r on r.id = locations.Id
-    group by locations.Id;
-
 -- view photos_list
 drop view if exists photos_list;
 create view photos_list as
     select
       p.Filename as Photo_R8,
-      p.Id as IdClr,
+      p.Id as "IdClr_A_contline",
+      substr(p.Ts, 1, 16) as Ts_A,
+
       '' as TR1,
       p.Caption as Caption_A,
+
       '' as TR2,
-      case when p.Person is not null then 'P[' || p.Person || ']: ' || char(0xAB) || p2.Name || char(0xBB) end as Person_A,
+      p.Person as "PersonId_A_contline_link:Person",
+      p2.Name as "PersonName_A_filter",
+
       '' as TR3,
-      case when p.Brew is not null then
-        'B[' || p.Brew || ']: ' ||
-        case when pl_b.Name is not null then char(0xAB) || pl_b.Name || char(0xBB) || ': ' else '' end ||
-        char(0xAB) || b.Name || char(0xBB) ||
-        case when b.Details is not null then ' - ' || char(0xAB) || b.Details || char(0xBB) else '' end
-      end as Brew_A,
+      p.Brew as "BrewId_A_contline_link:Brew",
+      pl_b.Name as "BrewProducer_A_filter",
+      b.Name as "BrewName_A_filter",
+      b.Details as "BrewDetails_A_filter",
+
       '' as TR4,
-      case when p.Location is not null then 'L[' || p.Location || ']: ' || char(0xAB) || l.Name || char(0xBB) end as Location_A,
+      p.Location as "LocationId_A_contline_link:Location",
+      l.Name as "LocationName_A_filter_as:LocName",
+
       '' as TR5,
-      case when p.Glass is not null then
-        'G[' || p.Glass || ']: ' || trim(
-          case when pl_g.Name is not null then char(0xAB) || pl_g.Name || char(0xBB) || ':' else '' end ||
-          case when b_g.Name is not null then ' ' || char(0xAB) || b_g.Name || char(0xBB) else '' end ||
-          case when b_g.Details is not null then ' (' || char(0xAB) || b_g.Details || char(0xBB) || ')' else '' end ||
-          case when b_g.Name is null and g_g.BrewType is not null
-               then ' [' || char(0xAB) || g_g.BrewType || char(0xBB) || ']' else '' end ||
-          case when l_g.Name is not null then ' @ ' || char(0xAB) || l_g.Name || char(0xBB) else '' end
-        )
-      end as Glass_A,
+      p.Glass as "GlassId_A_contline_link:Glass",
+      pl_g.Name as "GlassProducer_A_filter",
+      b_g.Name as "GlassBrewName_A_filter",
+      b_g.Details as "GlassDetails_A_filter",
+      g_g.BrewType as "GlassBrewType_A_filter",
+      l_g.Name as "GlassLocName_A_filter_as:LocName",
+
       '' as TR6,
-      case when p.Comment is not null then
-        'C[' || p.Comment || ']: ' || trim(
-          case when c.Rating is not null then '(' || char(0xAB) || c.Rating || char(0xBB) || ') ' else '' end ||
-          coalesce(c.Comment, '') ||
-          (select ' — ' || group_concat(char(0xAB) || p3.Name || char(0xBB), ', ')
-           from comment_persons cp2
-           join persons p3 on p3.Id = cp2.Person
-           where cp2.Comment = c.Id)
-        )
-      end as Comment_A,
+      p.Comment as "CommentId_A_contline_link:Comment",
+      c.Rating as "CommentRating_A_filter",
+      c.Comment as "CommentText_A",
+      (select group_concat(p3.Name, ', ')
+       from comment_persons cp2
+       join persons p3 on p3.Id = cp2.Person
+       where cp2.Comment = c.Id) as "CommentPersons_A_filter",
+
       '' as TR7,
-      substr(p.Ts, 1, 16) as Ts_A,
       p.Glass as xGlass,
       p.Comment as xComment,
       p.Location as xLocation,
@@ -578,6 +557,7 @@ create view photos_list as
       p.Brew as xBrew,
       p.Uploader as xUploader,
       p.Public as xPublic
+
     from photos p
     left join persons p2     on p2.Id = p.Person
     left join brews b        on b.Id = p.Brew
@@ -588,6 +568,35 @@ create view photos_list as
     left join locations l_g  on l_g.Id = g_g.Location
     left join locations pl_g on pl_g.Id = b_g.ProducerLocation
     left join comments c     on c.Id = p.Comment;
+
+-- view locations_list
+drop view if exists locations_list;
+create view locations_list as
+select
+  locations.Id as "Id_link:Location",
+  locations.Name as "Name_A_as:LocName_cont",
+  case
+    when locations.LocType is not null and locations.LocType != '' and
+         locations.LocSubType is not null and locations.LocSubType != ''
+    then '[' || locations.LocType || ', ' || locations.LocSubType || ']'
+    when locations.LocType is not null and locations.LocType != ''
+    then '[' || locations.LocType || ']'
+    when locations.LocSubType is not null and locations.LocSubType != ''
+    then '[' || locations.LocSubType || ']'
+    else ''
+  end as "LocType_A",
+  (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as "Photo_R2",
+  '' as TR1,
+  r.rating_count || ';' || r.rating_average || ';' || r.comment_count as "Ratings_C2_contline_as:Stats",
+  locations.lat || ' ' || locations.lon as "Geo_cont",
+  coalesce(locations.Country,'') || '|' || coalesce(locations.Region,'') as "CountryRegion_A_cont",
+  strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+    strftime('%H:%M', max(glasses.Timestamp)) as "Last_cont",
+  locations.Tags as xTags
+from locations
+left join glasses on glasses.Location = locations.Id
+left join location_ratings r on r.id = locations.Id
+group by locations.Id;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 

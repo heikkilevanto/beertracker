@@ -26,30 +26,27 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 29;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 30;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
+# Note - the function names must reflect the DB version number!
+
 our @MIGRATIONS = (
   # Keep this here, it is needed when starting from an empty database
   [1, 'create globals table', \&mig_001_create_globals_table],
 
   # v3.4 released 18-May-2026.  Earlier migrations can be found in git
-  [24, '688 brew subtype cleanup', \&mig_002_688_brew_subtype_cleanup],
+  [24, '688 brew subtype cleanup', \&mig_024_688_brew_subtype_cleanup],
 
-  # v3.5 — added 14-Jun-2026
-  [25, '714 fix locations_list view join', \&mig_003_714_fix_locations_list],
+  # Unreleased (dev only)
+  [25, '714 fix locations_list view join', \&mig_025_714_fix_locations_list],
+  [26, '715 locations_list null-safe Type column', \&mig_026_715_locations_list_null_safe],
+  [27, '695 create photos_list view', \&mig_027_photos_list_view],
+  [28, '699 photos_list use _cont for Person fields', \&mig_028_photos_list_cont],
+  [29, '700 simplify photos_list view', \&mig_029_photos_list_simplify],
 
-  # v3.6 — added 14-Jun-2026
-  [26, '715 locations_list null-safe Type column', \&mig_004_715_locations_list_null_safe],
-
-  # v3.7 — added 17-Jun-2026
-  [27, '695 create photos_list view', \&mig_005_photos_list_view],
-
-  # v3.8 — added 23-Jun-2026
-  [28, '699 photos_list use _cont for Person fields', \&mig_006_photos_list_cont],
-
-  # v3.9 — added 24-Jun-2026
-  [29, '700 simplify photos_list view', \&mig_007_photos_list_simplify],
+  # Unreleased (dev only)
+  [30, '703 locations_list use suffixes', \&mig_030_locations_list_suffixes],
 );
 
 ################################################################################
@@ -184,7 +181,7 @@ sub mig_001_create_globals_table {
 # Migration 24: Brew subtype cleanup (issue #688)
 # Normalize case, merge variant names into canonical subtypes
 ################################################################################
-sub mig_002_688_brew_subtype_cleanup {
+sub mig_024_688_brew_subtype_cleanup {
   my $c = shift;
 
   # Case normalization
@@ -219,14 +216,14 @@ sub mig_002_688_brew_subtype_cleanup {
   db::execute($c, "UPDATE brews SET SubType='Ale'     WHERE SubType='Scotch ale'");
   db::execute($c, "UPDATE brews SET SubType='Ale'     WHERE SubType IN ('ESB','Cream','English','Irish')");
   db::execute($c, "UPDATE brews SET SubType='Dunkel'  WHERE SubType IN ('Dark','Juleb','Classic','Dunk')");
-} # mig_002_688_brew_subtype_cleanup
+} # mig_024_688_brew_subtype_cleanup
 
 ################################################################################
 # Migration 25: Fix locations_list view join (issue #714)
 # The old view had  "left join location_ratings r on r.id = glasses.Id"
 # which compared a location id to a glass id, so ratings never matched.
 ################################################################################
-sub mig_003_714_fix_locations_list {
+sub mig_025_714_fix_locations_list {
   my $c = shift;
 
   db::execute($c, "DROP VIEW IF EXISTS locations_list");
@@ -250,14 +247,14 @@ sub mig_003_714_fix_locations_list {
     LEFT JOIN location_ratings r ON r.id = locations.Id
     GROUP BY locations.Id
   });
-} # mig_003_714_fix_locations_list
+} # mig_025_714_fix_locations_list
 
 ################################################################################
 # Migration 26: Make locations_list Type column NULL-safe (issue #715)
 # SQLite || returns NULL if any operand is NULL, so a location with LocType='Bar'
 # and NULL LocSubType showed as NULL instead of "Bar, NULL".
 ################################################################################
-sub mig_004_715_locations_list_null_safe {
+sub mig_026_715_locations_list_null_safe {
   my $c = shift;
 
   db::execute($c, "DROP VIEW IF EXISTS locations_list");
@@ -281,7 +278,7 @@ sub mig_004_715_locations_list_null_safe {
     LEFT JOIN location_ratings r ON r.id = locations.Id
     GROUP BY locations.Id
   });
-} # mig_004_715_locations_list_null_safe
+} # mig_026_715_locations_list_null_safe
 
 ################################################################################
 # Migration 27: Create photos_list view (issue #695)
@@ -289,7 +286,7 @@ sub mig_004_715_locations_list_null_safe {
 # Id + Clr pseudo-field on the first line. _R8 suffix for rowspan=8.
 # x-prefixed columns are hidden fields used for WHERE filtering.
 ################################################################################
-sub mig_005_photos_list_view {
+sub mig_027_photos_list_view {
   my $c = shift;
 
   db::execute($c, "DROP VIEW IF EXISTS photos_list");
@@ -353,7 +350,7 @@ sub mig_005_photos_list_view {
     LEFT JOIN locations pl_g ON pl_g.Id = b_g.ProducerLocation
     LEFT JOIN comments c     ON c.Id = p.Comment
   });
-} # mig_005_photos_list_view
+} # mig_027_photos_list_view
 
 ################################################################################
 # Migration 28: photos_list uses _cont for Person fields (issue #699)
@@ -361,7 +358,7 @@ sub mig_005_photos_list_view {
 # columns render as one cell (same visual layout) but can have separate
 # suffixes applied (e.g. _id:person on the ID column later).
 ################################################################################
-sub mig_006_photos_list_cont {
+sub mig_028_photos_list_cont {
   my $c = shift;
 
   db::execute($c, "DROP VIEW IF EXISTS photos_list");
@@ -424,7 +421,7 @@ sub mig_006_photos_list_cont {
     LEFT JOIN locations pl_g ON pl_g.Id = b_g.ProducerLocation
     LEFT JOIN comments c     ON c.Id = p.Comment
   });
-} # mig_006_photos_list_cont
+} # mig_028_photos_list_cont
 
 ################################################################################
 # Migration 29: Simplify photos_list view (issue #700)
@@ -436,7 +433,7 @@ sub mig_006_photos_list_cont {
 # - Keep comment persons as separate column
 # - Rely on word-click from listrecords for plain-text fields
 ################################################################################
-sub mig_007_photos_list_simplify {
+sub mig_029_photos_list_simplify {
   my $c = shift;
 
   db::execute($c, "DROP VIEW IF EXISTS photos_list");
@@ -501,7 +498,46 @@ sub mig_007_photos_list_simplify {
     LEFT JOIN locations pl_g ON pl_g.Id = b_g.ProducerLocation
     LEFT JOIN comments c     ON c.Id = p.Comment
   });
-} # mig_007_photos_list_simplify
+} # mig_029_photos_list_simplify
+
+################################################################################
+# Migration 30: locations_list uses suffixes (issue #703)
+# Two-line layout with photo spanning both rows, combined LocType+LocSubType,
+# country/region helper via CountryRegion field.
+################################################################################
+sub mig_030_locations_list_suffixes {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS locations_list");
+  db::execute($c, q{
+    CREATE VIEW locations_list AS
+    SELECT
+      locations.Id AS "Id_link:Location",
+      locations.Name AS "Name_A_as:LocName_cont",
+      CASE
+        WHEN locations.LocType IS NOT NULL AND locations.LocType != '' AND
+             locations.LocSubType IS NOT NULL AND locations.LocSubType != ''
+        THEN '[' || locations.LocType || ', ' || locations.LocSubType || ']'
+        WHEN locations.LocType IS NOT NULL AND locations.LocType != ''
+        THEN '[' || locations.LocType || ']'
+        WHEN locations.LocSubType IS NOT NULL AND locations.LocSubType != ''
+        THEN '[' || locations.LocSubType || ']'
+        ELSE ''
+      END AS "LocType_A",
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R2",
+      '' AS TR1,
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS "Ratings_C2_contline_as:Stats",
+      locations.lat || ' ' || locations.lon AS "Geo_cont",
+      COALESCE(locations.Country,'') || '|' || COALESCE(locations.Region,'') AS "CountryRegion_A_cont",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
+      locations.Tags AS xTags
+    FROM locations
+    LEFT JOIN glasses ON glasses.Location = locations.Id
+    LEFT JOIN location_ratings r ON r.id = locations.Id
+    GROUP BY locations.Id
+  });
+} # mig_030_locations_list_suffixes
 
 ################################################################################
 

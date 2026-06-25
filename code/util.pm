@@ -536,5 +536,26 @@ sub locationlinks {
 
 
 ################################################################################
+# Compact country/region display for lists.
+# Uses %COUNTRY_CODES to abbreviate known countries when paired with a region.
+# Denmark: show region only (or "DK" if no region).
+sub locdesc {
+  my $c      = shift;
+  my $country = shift // '';
+  my $region  = shift // '';
+  my $r       = $region ? trim($region) : '';
+
+  return $r if $country eq 'Denmark' && $r;
+  return 'DK' if $country eq 'Denmark';
+  if ($r) {
+    my $code = exists $COUNTRY_CODES{$country}
+               ? (split /,\s*/, $COUNTRY_CODES{$country})[0]
+               : $country;
+    return "$code, $r";
+  }
+  return $country;
+} # locdesc
+
+################################################################################
 # Report module loaded ok
 1;
