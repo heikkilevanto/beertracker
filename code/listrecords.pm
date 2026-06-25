@@ -150,6 +150,7 @@ sub listrecords {
   my $s = "";
   $s .= "<!-- listrecords: $sql -->\n";
   $s .= "<style>
+    table[data-maxrecords] { border-collapse: separate; border-spacing: 0; }
     .top-border td { border-top: 2px solid white; }
     .null-value { color: #999; font-style: italic; }
     </style>\n";
@@ -305,7 +306,7 @@ sub listrecords {
   }
   $s .= "</tr>\n";
   $s .= join('', @hidden_filters);
-  $s .= "</thead><tbody>\n";
+  $s .= "</thead>\n";
   $s .=  "<!-- listrecords: table headers done, now the body -->\n";
 
   my $cutoff = util::datestr("%F", -7);  # a week ago, display full date
@@ -337,7 +338,6 @@ sub listrecords {
           $cont_active = 0;
         }
         $contline_rest = 0;
-        $linebreak =~ s/<tr>/<tr$hidden>/ if $hidden;  # Apply hidden to linebreak TRs
         $tds .= $linebreak;
         next;
       }
@@ -502,10 +502,15 @@ sub listrecords {
       $tds .= "</td>\n";
     }
 
-    $s .= "<tr data-first=1 class='top-border'$hidden>\n"; # in-between TRs don't have data_first
+    $s .= "<tbody$hidden>\n";
+    $s .= "<tr data-first=1 class='top-border'>\n";
     $s .= "$tds</tr>\n";
+    $s .= "</tbody>\n";
   }
-  $s .= "</tbody></table>\n";
+  if ($rowcount == 0) {
+    $s .= "<tbody></tbody>\n";
+  }
+  $s .= "</table>\n";
   $s .= "<!-- listrecords: table body done -->\n";
 
   if ($hashidden) {

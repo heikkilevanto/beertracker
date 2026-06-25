@@ -38,11 +38,16 @@ function dochangefilter (inputElement) {
                       moreLink.querySelector('a[onclick*="showMoreRecords"]') &&
                       moreLink.style.display === 'none';
   
-  // Temporarily clear all hidden attributes to process all rows
-  const hiddenRows = table.querySelectorAll('tr[hidden]');
-  hiddenRows.forEach(row => {
-    row.removeAttribute('hidden');
-  });
+  // Detach table from DOM — all subsequent mutations have zero reflow cost
+  const tableParent = table.parentNode;
+  const tableSibling = table.nextSibling;
+  tableParent.removeChild(table);
+
+  // Clear all hidden attributes to process all records
+  const hiddenTbodies = table.querySelectorAll('tbody[hidden]');
+  for (const tbody of hiddenTbodies) {
+    tbody.removeAttribute('hidden');
+  }
   
   const firstrows = table.querySelectorAll('tbody tr[data-first]');
   let visibleCount = 0;
@@ -74,11 +79,7 @@ function dochangefilter (inputElement) {
       row = row.nextElementSibling;
     } while ( row && ! row.hasAttribute("data-first") );
     
-    let ro = firstrows[r];
-    do {
-      ro.style.display = disp;
-      ro = ro.nextElementSibling;
-    } while ( ro && ! ro.hasAttribute("data-first") );
+    firstrows[r].closest('tbody').style.display = disp;
     
     if (disp === "") {
       visibleCount++;
@@ -88,29 +89,34 @@ function dochangefilter (inputElement) {
   // If list wasn't expanded and we have maxRecords limit, hide beyond top N
   if (!wasExpanded && maxRecords > 0) {
     let recordCount = 0;
-    for (let r = 0; r < firstrows.length; r++) {
-      if (firstrows[r].style.display !== "none") {
+    const tbodies = table.tBodies;
+    for (let t = 0; t < tbodies.length; t++) {
+      if (tbodies[t].style.display !== "none") {
         recordCount++;
         if (recordCount > maxRecords) {
-          let currentRow = firstrows[r];
-          do {
-            currentRow.setAttribute('hidden', '');
-            currentRow = currentRow.nextElementSibling;
-          } while (currentRow && currentRow.dataset.first !== "1");
+          tbodies[t].setAttribute('hidden', '');
         }
       }
     }
-    if (moreLink && visibleCount > maxRecords) {
+  }
+
+  // Reattach table — triggers exactly one reflow
+  if (tableSibling) {
+    tableParent.insertBefore(table, tableSibling);
+  } else {
+    tableParent.appendChild(table);
+  }
+
+  // Show/hide the "More..." link
+  if (moreLink) {
+    if (!wasExpanded && maxRecords > 0 && visibleCount > maxRecords) {
       moreLink.style.display = '';
-    } else if (moreLink) {
+    } else {
       moreLink.style.display = 'none';
     }
-  } else if (moreLink) {
-    moreLink.style.display = 'none';
   }
 
   console.timeEnd("filter") ;
-
 }
 
 // Clicking on a data field sets the filter
@@ -193,7 +199,7 @@ function sortTable(el, col) {
 
 function doSortTable(el, col, ascending) {
   const table = el.closest('table');
-  const tbody = table.tBodies[0];
+  const tbodies = Array.from(table.tBodies);
   const columnIndex = col;
 
   console.time("sort") ;
@@ -205,40 +211,25 @@ function doSortTable(el, col, ascending) {
                       moreLink.querySelector('a[onclick*="showMoreRecords"]') &&
                       moreLink.style.display === 'none';
   
-  // Temporarily unhide all rows for sorting
-  const hiddenRows = table.querySelectorAll('tr[hidden]');
-  hiddenRows.forEach(row => {
-    row.removeAttribute('hidden');
-  });
+  // Detach table from DOM — all subsequent DOM mutations have zero reflow cost
+  const tableParent = table.parentNode;
+  const tableSibling = table.nextSibling;
+  tableParent.removeChild(table);
 
-  // Detach tbody
-  const parent = tbody.parentNode;
-  parent.removeChild(tbody);
-
-  // Group rows into records
-  const rows = Array.from(tbody.rows);
-  const records = [];
-  let currentRecord = [];
-
-  for (const row of rows) {
-      if (row.dataset.first === "1") {
-          if (currentRecord.length) records.push(currentRecord);
-          currentRecord = [row];
-      } else {
-          currentRecord.push(row);
-      }
+  // Unhide all tbodies
+  const hiddenTbodies = table.querySelectorAll('tbody[hidden]');
+  for (const tbody of hiddenTbodies) {
+    tbody.removeAttribute('hidden');
   }
-  if (currentRecord.length) records.push(currentRecord);
 
   // Precompute sort keys
-  const sortableRecords = records.map(record => {
-    const key = extractSortKey(record, columnIndex);
-    return { key, record };
+  const sortableTbodies = tbodies.map(tbody => {
+    const key = extractSortKey(tbody.rows, columnIndex);
+    return { key, tbody };
   });
 
-
-  // Sort the cached records
-  sortableRecords.sort((a, b) => {
+  // Sort
+  sortableTbodies.sort((a, b) => {
       if (a.key === "" ) return 1;
       if (b.key === "" ) return -1;
       if (a.key < b.key) return ascending ? -1 : 1;
@@ -246,38 +237,40 @@ function doSortTable(el, col, ascending) {
       return 0;
   });
 
-  // Rebuild tbody
-  tbody.innerHTML = "";
-  for (const { record } of sortableRecords) {
-      for (const row of record) {
-          tbody.appendChild(row);
-      }
+  // Reorder tbodies in sorted order (table is detached, zero reflow cost)
+  const fragment = document.createDocumentFragment();
+  for (const { tbody } of sortableTbodies) {
+    fragment.appendChild(tbody);
   }
+  table.appendChild(fragment);
 
-  // Reattach tbody
-  parent.appendChild(tbody);
-
-  // Re-hide rows beyond maxRecords only if list wasn't already expanded
+  // Re-hide tbodies beyond maxRecords only if list wasn't already expanded
   if (!wasExpanded && maxRecords > 0) {
-    const allRecords = tbody.querySelectorAll('tr[data-first="1"]');
     let recordCount = 0;
-    allRecords.forEach(row => {
+    for (const tbody of table.tBodies) {
       recordCount++;
       if (recordCount > maxRecords) {
-        // Hide this record and any continuation rows
-        let currentRow = row;
-        do {
-          currentRow.setAttribute('hidden', '');
-          currentRow = currentRow.nextElementSibling;
-        } while (currentRow && currentRow.dataset.first !== "1");
+        tbody.setAttribute('hidden', '');
       }
-    });
-    // Show the "More..." link again
-    if (moreLink) {
-      moreLink.style.display = '';
     }
   }
   // If was expanded, keep it expanded (moreLink stays hidden)
+
+  // Reattach table — triggers exactly one reflow
+  if (tableSibling) {
+    tableParent.insertBefore(table, tableSibling);
+  } else {
+    tableParent.appendChild(table);
+  }
+
+  // Show/hide the "More..." link
+  if (moreLink) {
+    if (!wasExpanded && maxRecords > 0) {
+      moreLink.style.display = '';
+    } else {
+      moreLink.style.display = 'none';
+    }
+  }
 
   // Clear arrows
   for (let th of table.querySelectorAll('thead input ') ) {
@@ -326,17 +319,27 @@ function toggleElement(element) {
 
 // Show more records by removing the hidden attribute from all hidden TR elements
 function showMoreRecords(link) {
-  // Find the table before this link
   const moreDiv = link.parentElement;
   const table = moreDiv.previousElementSibling;
   
   if (table && table.tagName === 'TABLE') {
-    const hiddenRows = table.querySelectorAll('tr[hidden]');
-    hiddenRows.forEach(row => {
-      row.removeAttribute('hidden');
-    });
-    
-    // Remove the "More..." link after revealing all rows
+    // Detach table from DOM — mutations have zero reflow cost
+    const tableParent = table.parentNode;
+    const tableSibling = table.nextSibling;
+    tableParent.removeChild(table);
+
+    const hiddenTbodies = table.querySelectorAll('tbody[hidden]');
+    for (const tbody of hiddenTbodies) {
+      tbody.removeAttribute('hidden');
+    }
+
+    // Reattach table — triggers one reflow
+    if (tableSibling) {
+      tableParent.insertBefore(table, tableSibling);
+    } else {
+      tableParent.appendChild(table);
+    }
+
     moreDiv.style.display = 'none';
   }
 }
