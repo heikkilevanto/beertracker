@@ -32,6 +32,7 @@ They should be named like '557-photo.md' where 557 is the issue number. Once don
 - **Context Hash**: Pass `$c` hash containing globals (username, dbh, url, etc.) to all functions.
 - **Parameter Handling**: Use `util::param($c, "key")` for CGI params; handles GET/POST uniformly.
 - **Database Access**: Direct SQL with DBI; `db::open_db($c, "rw")` for POST requests, "ro" for GET requests. Foreign keys enforced. db.pm has helpers for common queries. Use those when possible, to get consistent logging and error handling.
+- **Memory caching**: Cache.pm implements a simple cache so we don't need to create pages every time we show them. It gets cleared when ever we reload the fcgi script, either manually, touching the version.pm, or after each POST record, so there should not be any risk of stale cache.
 - **Error Handling**: `util::error()` for fatal errors; database errors logged to STDERR and shown in HTML. In dev mode we should aim to log all SQL statements, but not in production.
 - **Rollback** Index.fcgi catches errors, and rolls back transactions. 
 - **Filtering**: Use `q` param for grep-style filtering (e.g., `?q=IPA`); 
