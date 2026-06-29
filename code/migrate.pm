@@ -513,6 +513,7 @@ sub mig_030_locations_list_suffixes {
     CREATE VIEW locations_list AS
     SELECT
       locations.Id AS "Id_link:Location",
+      '' AS "Clr_cont",
       locations.Name AS "Name_A_as:LocName_cont",
       CASE
         WHEN locations.LocType IS NOT NULL AND locations.LocType != '' AND
@@ -523,12 +524,12 @@ sub mig_030_locations_list_suffixes {
         WHEN locations.LocSubType IS NOT NULL AND locations.LocSubType != ''
         THEN '[' || locations.LocSubType || ']'
         ELSE ''
-      END AS "LocType_A",
-      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R2",
+      END AS "LocType_A_cont",
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS "Ratings_as:Stats",
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R2_noheader_nofilter",
       '' AS TR1,
-      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS "Ratings_C2_contline_as:Stats",
-      locations.lat || ' ' || locations.lon AS "Geo_cont",
-      COALESCE(locations.Country,'') || '|' || COALESCE(locations.Region,'') AS "CountryRegion_A_cont",
+      locations.lat || ' ' || locations.lon AS "Geo",
+      COALESCE(locations.Country,'') || ';' || COALESCE(locations.Region,'') AS "CountryRegion_A_contline",
       strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
         strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
       locations.Tags AS xTags

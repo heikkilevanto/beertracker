@@ -390,7 +390,7 @@ sub listrecords {
       } elsif ( $fn eq "LocName" ) {
         $v = "@" . $v  if ($v);
       } elsif ( $fn eq "CountryRegion" ) {
-        my ($country, $region) = split(/\|/, $v, 2);
+        my ($country, $region) = split(/;/, $v, 2);
         $v = util::locdesc($c, $country, $region);
         $v .= "&nbsp;&nbsp;" if $v;
         $word_split = 0;
