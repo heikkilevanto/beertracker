@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 30;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 31;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -47,6 +47,9 @@ our @MIGRATIONS = (
 
   # Unreleased (dev only)
   [30, '703 locations_list use suffixes', \&mig_030_locations_list_suffixes],
+
+  # Unreleased (dev only)
+  [31, 'persons_list use suffixes', \&mig_031_persons_list_suffixes],
 );
 
 ################################################################################
@@ -539,6 +542,38 @@ sub mig_030_locations_list_suffixes {
     GROUP BY locations.Id
   });
 } # mig_030_locations_list_suffixes
+
+################################################################################
+# Migration 31: persons_list 3-line layout with suffixes
+# 3-line format: Id + Name_C2 + Photo_R3 | Com + Description + Last | Clr + Tags + Location
+################################################################################
+sub mig_031_persons_list_suffixes {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS persons_list");
+  db::execute($c, q{
+    CREATE VIEW persons_list AS
+    SELECT
+      persons.Id AS "Id_link:Person",
+      persons.Name AS "Name_A_as:Person_C2",
+      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R3_noheader_nofilter",
+      '' AS TR1,
+      count(distinct comments.Id) - 1 AS Com,
+      persons.description AS "Description_A",
+      strftime('%Y-%m-%d %w ', max(coalesce(glasses.Timestamp, comments.Ts)), '-06:00') ||
+        strftime('%H:%M', max(coalesce(glasses.Timestamp, comments.Ts))) AS "Last_A",
+      '' AS TR2,
+      'Clr' AS Clr,
+      persons.Tags AS "Tags_A",
+      locations.Name AS "Location_A"
+    FROM persons
+    LEFT JOIN comment_persons cp ON cp.Person = persons.Id
+    LEFT JOIN comments ON comments.Id = cp.Comment
+    LEFT JOIN glasses ON glasses.Id = comments.Glass
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    GROUP BY persons.Id
+  });
+} # mig_031_persons_list_suffixes
 
 ################################################################################
 

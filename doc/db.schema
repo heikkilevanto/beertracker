@@ -488,18 +488,18 @@ create view comments_list as
 drop view if exists persons_list;
 create view persons_list as
     select
-      persons.Id,
-      persons.Name,
-      'trmob' as trmob,
+      persons.Id as "Id_link:Person",
+      persons.Name as "Name_A_as:Person_C2",
+      (select Filename from photos where Person = persons.Id order by Ts desc limit 1) as "Photo_R3_noheader_nofilter",
+      '' as TR1,
       count(distinct comments.Id) - 1 as Com,
+      persons.description as "Description_A",
       strftime('%Y-%m-%d %w ', max(coalesce(glasses.Timestamp, comments.Ts)), '-06:00') ||
-        strftime('%H:%M', max(coalesce(glasses.Timestamp, comments.Ts))) as Last,
-      locations.Name as Location,
-      'tr' as tr,
+        strftime('%H:%M', max(coalesce(glasses.Timestamp, comments.Ts))) as "Last_A",
+      '' as TR2,
       'Clr' as Clr,
-      persons.description,
-      (select Filename from photos where Person = persons.Id order by Ts desc limit 1) as Photo,
-      persons.Tags
+      persons.Tags as "Tags_A",
+      locations.Name as "Location_A"
     from persons
     left join comment_persons cp on cp.Person = persons.Id
     left join comments on comments.Id = cp.Comment
