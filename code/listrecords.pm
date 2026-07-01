@@ -411,6 +411,7 @@ sub listrecords {
           $disp = "$time $wd";
           $disp = "$date" if ( $date lt $cutoff );
         }
+        $data_attrs .= " data-sort-key='$date $time'";
         $v = "<a href='$c->{url}?o=Full&date=$date'><span>$disp</span></a>";
       } elsif ( $fn eq "Sim" ) { # Name similarity
         if ( $v && $extraparams && $extraparams->{refname} ) {
