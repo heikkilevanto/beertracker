@@ -411,15 +411,26 @@ sub listrecords {
       } elsif ( $fn eq "Chk" ) {
         $v = "<input type=checkbox name=Chk$id />";
         $word_split = 0;
+      } elsif ( $fn eq "Ts" ) {
+        if ($v) {
+          my ($date, $time) = split(' ', $v);
+          if ($date && $time) {
+            my ($y, $m, $d) = split('-', $date);
+            my $epoch = POSIX::mktime(0, 0, 0, $d, $m-1, $y-1900);
+            my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" );
+            my $wd = $weekdays[(localtime($epoch))[6]];
+            my $disp = "$time $wd";
+            $disp = "$date" if ( $date lt $cutoff );
+            $data_attrs .= " data-sort-key='$date $time' title='$date $time $wd'";
+            $v = $disp;
+          }
+        }
       } elsif ( $fn eq "Last" ) {
         my ($date, $wd, $time) = util::splitdate($v);
-        my $disp = "$date $time $wd"; # wday last, for alignment
-        if ( $c->{mobile} ) {
-          $disp = "$time $wd";
-          $disp = "$date" if ( $date lt $cutoff );
-        }
-        $data_attrs .= " data-sort-key='$date $time'";
-        $v = "<a href='$c->{url}?o=Full&date=$date'><span>$disp</span></a>";
+        my $disp = "$time $wd";
+        $disp = "$date" if ( $date lt $cutoff );
+        $data_attrs .= " data-sort-key='$date $time' title='$date $time $wd'";
+        $v = $disp;
       } elsif ( $fn eq "Sim" ) { # Name similarity
         if ( $v && $extraparams && $extraparams->{refname} ) {
           # Find the Name field in this row
