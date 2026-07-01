@@ -527,7 +527,7 @@ sub listrecords {
 
   if ($hashidden) {
     $s .= "<!-- listrecords: more link -->\n";
-    $s .= "<div style='text-align: left; margin-top: 10px;'>";
+    $s .= "<div style='text-align: left; margin-top: 10px; margin-bottom: 20px;'>";
     $s .= "<a href='javascript:void(0);' onclick='showMoreRecords(this);'><span>More...</span></a>";
     $s .= "</div>\n";
   }
