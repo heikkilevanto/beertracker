@@ -386,7 +386,10 @@ sub listrecords {
           $v = styles::brewstyledisplay($c, $brewtype, $subtype, "$c->{op}:$rec[0] $brewtype/" . ($subtype // ""));
         }
       } elsif ( $fn eq "Alc" ) {
-        $v = util::unit($v,"%") if ($v);
+        if ($v) {
+          $data_attrs .= " data-sort-key='$v'";
+          $v = util::unit($v,"%");
+        }
       } elsif ( $fn eq "LocName" ) {
         $v = "@" . $v  if ($v);
       } elsif ( $fn eq "CountryRegion" ) {
@@ -398,9 +401,13 @@ sub listrecords {
         $v .= ":" if ($v);
       } elsif ( $fn eq "Stats" ) {  # Combined ratings averages
         my ( $cnt, $avg, $com ) = split (";", $v);
+        $data_attrs .= " data-sort-key='$avg'" if ($avg);
         $v = comments::avgratings($c, $cnt, $avg, $com);
       } elsif ( $fn eq "Rate" ) {
-        $v = "($v)" if ($v);
+        if ($v) {
+          $data_attrs .= " data-sort-key='$v'";
+          $v = "($v)";
+        }
       } elsif ( $fn eq "Chk" ) {
         $v = "<input type=checkbox name=Chk$id />";
         $word_split = 0;

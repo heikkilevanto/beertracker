@@ -290,7 +290,14 @@ function extractSortKey(recordRows, columnIndex) {
       const sel = "[data-col='" + columnIndex +"']";
       const cell = row.querySelector(sel);
       if (cell) {
-        if (cell.dataset.sortKey) return cell.dataset.sortKey;
+        if (cell.dataset.sortKey) {
+          let key = cell.dataset.sortKey;
+          if (isNaN(key) || !key) {
+            return key.toLowerCase().trim();
+          } else {
+            return parseFloat(key);
+          }
+        }
         let text = cell.textContent;
         const match = text.match(/20[0-9][0-9]-[0-9 :-]+/);
         if ( match ) { text = match[0]; }
