@@ -191,14 +191,14 @@ sub listrecords {
     $sty = "style='max-width:90px; min-width:0'" if ( $c->{mobile} );
     if ( $f =~ /^X/i ) {
       $sty = "style='display:none'";
-    } elsif ( $f eq "IdClr" ) {
-      $sty = "style='max-width:100px; text-align:left'";
+    } elsif ( $f eq "Id" ) {
+      $sty = "style='max-width:40px; text-align:center'";
     } elsif ( $f =~ /Id|Alc/ ) {
       $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Stats)$/ ) {
       $sty = "style='max-width:100px; text-align:center'";
     } elsif ( $f =~ /^(Last|Ts)$/ ) {
-      $sty = "style='max-width:100px; text-align:center'" if ($c->{mobile});
+      $sty = "style='max-width:100px'";
     } elsif ( $f =~ /^(Type)$/ ) {
       my $w = "100px";
       $w = "200px" unless $c->{mobile};
@@ -242,6 +242,7 @@ sub listrecords {
     if ( $auto_override{$i} ) {
         $styles[$i] = "";
         $sty = " size='" . (length($f) + 2) . "'";
+        $sty .= " style='max-width:70px'" if ( $c->{mobile} );
     }
     $f =~ s/^-//;
     $f =~ s/'//g;
@@ -268,10 +269,13 @@ sub listrecords {
     my $hdr_input;
     if ( $suffix_info[$i]{nofilter} ) {
         $hdr_input = $f;
-    } elsif ( $f eq "IdClr" ) {
+    } elsif ( $f eq "Id" ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
       $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Id'/>";
-      $hdr_input .= "<span style='cursor:pointer; font-weight:bold' onclick='clearfilters(this);'> Clr</span>";
+    } elsif ( $f eq "Name" ) {
+      my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
+      $hdr_input = "<span style='cursor:pointer; font-weight:bold' onclick='clearfilters(this);'>Clr</span> ";
+      $hdr_input .= "<input type=text data-col='$i' $sty $on placeholder='Name'/>";
     } elsif ( $f =~ /Clr/i ) { # Clear filters button
       $hdr_input = "<span $sty onclick='clearfilters(this);' >Clr</span>";
     } elsif ( $f  ) {
@@ -351,7 +355,8 @@ sub listrecords {
       my $data_attrs = "data-col='$i'";
       my $word_split = 1;
       if ( $fn eq "Name" ) {
-        $v = "<a href='$url?o=$op&e=$rec[0]'><span><b>$v</b></span></a>";
+        $v = _word_spans($v, $i);
+        $v = "<b>$v</b>";
         $word_split = 0;
       } elsif ( $suffix_info[$i]{link} ) {
         if ($v) {
@@ -383,12 +388,24 @@ sub listrecords {
         $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
         if ($v) {
           my ($brewtype, $subtype) = split(/,\s*/, $v, 2);  # Split on comma
-          $v = styles::brewstyledisplay($c, $brewtype, $subtype, "$c->{op}:$rec[0] $brewtype/" . ($subtype // ""));
+          my $style_str;
+          if ($brewtype eq 'Beer') {
+            $style_str = $subtype || 'Beer';
+          } else {
+            $style_str = $brewtype;
+            $style_str .= ",$subtype" if $subtype;
+          }
+          my $dispstyle = styles::brewtextstyle($c, $style_str, "$c->{op}:$rec[0] $brewtype/" . ($subtype // ""));
+          (my $filter_str = $style_str) =~ s/,/ /g;
+          $v = _word_spans($filter_str, $i);
+          $v = "<span $dispstyle>$v</span>";
+          $word_split = 0;
         }
       } elsif ( $fn eq "Alc" ) {
         if ($v) {
           $data_attrs .= " data-sort-key='$v'";
-          $v = util::unit($v,"%");
+          my $display = util::unit($v,"%");
+          $v = "<span data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'>$display</span>";
         }
       } elsif ( $fn eq "LocName" ) {
         $v = "@" . $v  if ($v);
@@ -403,6 +420,12 @@ sub listrecords {
         my ( $cnt, $avg, $com ) = split (";", $v);
         $data_attrs .= " data-sort-key='$avg'" if ($avg);
         $v = comments::avgratings($c, $cnt, $avg, $com);
+        if ($v) {
+          if ($avg) {
+            my $favg = sprintf("%.1f", $avg);
+            $v = "<span data-col='$i' data-filter='$favg' onclick='fieldclick(event,this)'>$v</span>";
+          }
+        }
       } elsif ( $fn eq "Rate" ) {
         if ($v) {
           $data_attrs .= " data-sort-key='$v'";

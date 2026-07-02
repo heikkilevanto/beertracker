@@ -370,28 +370,29 @@ create view brew_ratings as
     group by g.Username, g.brew;
 
 -- view brews_list
+-- 3-column grid: Id Name+Type | Alc Producer+Stats | Photo_R3 spans 3 rows; Count Last+Location | xUsername
+-- Photo_R3 is the only visible cell in the last column, rowspan 3
 drop view if exists brews_list;
 create view brews_list as
     with users as (
       select distinct Username from glasses
     )
     select
-      brews.Id,
-      brews.Name,
-      ploc.Name as Producer,
-      brews.IsGeneric,
-      'tr' as tr,
-      brews.Alc as Alc,
-      brews.BrewType || ', ' || brews.Subtype as Type,
-      r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
-      count(glasses.Id) as Count,
-      'tr' as tr,
-      'Clr' as Clr,
+      brews.Id AS "Id_A",
+      brews.Name AS "Name_A_cont",
+      brews.BrewType || ', ' || brews.SubType AS "Type_A",
+      (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_R3_noheader_nofilter",
+      '' AS TR1,
+      brews.Alc AS "Alc",
+      ploc.Name AS "Producer_A_cont",
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as:Stats",
+      '' AS TR2,
+      count(glasses.Id) AS "Count",
       strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) as Last,
-      locations.Name as Location,
-      (select Filename from photos where Brew = brews.Id order by Ts desc limit 1) as Photo,
-      users.Username as xUsername
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
+      locations.Name AS "Location_A_as:LocName",
+      users.Username AS xUsername
     from brews
     cross join users
     left join locations ploc on ploc.Id = brews.ProducerLocation
