@@ -143,6 +143,38 @@ Other utilities:
 
 There are also a small number of javascript and css files under static
 
+### listrecords — generic list renderer
+
+`code/listrecords.pm` is the shared engine for tabular list pages. Each entity
+(brews, locations, persons, photos, comments) defines a SQL view named
+`${ENTITY}_LIST` that encapsulates all joins, aggregations, and computed
+columns. The Perl module calls `listrecords::listrecords()` with the view name,
+sort key, optional WHERE clause, and bind params — it handles the HTML
+rendering, caching, filtering, and pagination.
+
+Column display semantics are driven by suffix tags on the view's column names:
+
+- `_link:Entity` — renders value as a link to `?o=Entity&e=value`
+- `_cont` — merges the next column into this table cell
+- `_contline` — all following columns inherit `_cont` until a `TR`/`TRMOB`
+- `_A` — auto-width column
+- `_R<N>` — rowspan (for photo thumbnails)
+- `_C<N>` — colspan
+- `_as:DisplayName` — override the column header
+- `_filter` — clicking puts the whole field value into the filter
+- `_nofilter` — no filter input in the header
+- `_noheader` — no header cell
+- `'' as TR<N>` — row break (`TRMOB<N>` only on mobile)
+
+Per-word token filtering is the default: cell values are split into clickable
+`<span>` tokens. Each record gets its own `<tbody>` for show/hide and sorting.
+Rendered HTML is cached per user and cleared after any POST or FCGI restart.
+The `q` URL parameter is used for server-side grep-style filtering on the main
+list (`mainlist.pm`), but entity lists rely on client-side JS filtering via the
+column inputs.
+
+See also `plans/lists.md` for the full set of conventions.
+
 ## External Modules and Dependencies
 
 BeerTracker requires the following Perl modules: CGI, Carp, Cwd, DBI, File::Copy, File::Path, JSON, LWP::UserAgent, Math::Trig, POSIX, Time::Piece, URI::Escape, URI::URL, XML::LibXML. 
