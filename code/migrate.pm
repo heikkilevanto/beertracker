@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 32;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 33;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -51,6 +51,7 @@ our @MIGRATIONS = (
   # Unreleased (dev only)
   [31, 'persons_list use suffixes', \&mig_031_persons_list_suffixes],
   [32, 'brews_list use suffixes', \&mig_032_brews_list_suffixes],
+  [33, 'comments_list use suffixes', \&mig_033_comments_list_suffixes],
 );
 
 ################################################################################
@@ -616,6 +617,60 @@ sub mig_032_brews_list_suffixes {
     group by brews.Id, users.Username
   });
 } # mig_032_brews_list_suffixes
+
+################################################################################
+# Migration 33: comments_list use suffixes (issue #???)
+# 4-row, 3-column + photo layout:
+#   Row1 = [Id_link:Comment + CommentType] [Last     ] [Photo_R4]
+#   Row2 = [BrewId_link:Brew + Prod + BrewName] [LocName] |
+#   Row3 = [Rate] [Comment                               ] |
+#   Row4 = [Clr ] [PersonName                            ] |
+# Photo on far right, rowspan 4. Prod rendered in italic, BrewName in bold
+# (handled by listrecords.pm). Uses _link, _A, _cont, _noheader.
+################################################################################
+sub mig_033_comments_list_suffixes {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, q{
+    CREATE VIEW comments_list AS
+    SELECT
+      comments.Id AS "Id_A_link:Comment",
+      comments.CommentType AS "CommentType_A_cont",
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS "Last_A",
+      (SELECT Filename FROM photos WHERE Comment = comments.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_R4_noheader_nofilter",
+
+      '' AS TR1,
+      comments.Brew AS "BrewId_A_link:Brew",
+      COALESCE(ploc_comment.Name, ploc_glass.Name) AS "Prod_A_cont",
+      COALESCE(brew_comment.Name, brew_glass.Name) AS "BrewName_A_cont",
+      COALESCE(loc_comment.Name, loc_glass.Name) AS "LocName_A",
+
+      '' AS TR2,
+      comments.Rating AS "Rate_A",
+      comments.Comment AS "Comment_A",
+
+      '' AS TR3,
+      'Clr' AS Clr,
+      group_concat(persons.Name, ', ') AS "PersonName_A",
+
+      COALESCE(glasses.Username, comments.Username) AS xUsername
+
+    FROM comments
+    LEFT JOIN glasses       ON glasses.Id       = comments.Glass
+    LEFT JOIN brews brew_glass   ON brew_glass.Id   = glasses.Brew
+    LEFT JOIN brews brew_comment ON brew_comment.Id = comments.Brew
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons            ON persons.Id  = cp.Person
+    LEFT JOIN locations loc_glass   ON loc_glass.Id   = glasses.Location
+    LEFT JOIN locations loc_comment ON loc_comment.Id = comments.Location
+    LEFT JOIN locations ploc_glass   ON ploc_glass.Id   = brew_glass.ProducerLocation
+    LEFT JOIN locations ploc_comment ON ploc_comment.Id = brew_comment.ProducerLocation
+    GROUP BY comments.Id
+  });
+} # mig_033_comments_list_suffixes
 
 ################################################################################
 

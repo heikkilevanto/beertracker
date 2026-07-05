@@ -146,10 +146,15 @@ sub avgratings {
 sub listallcomments {
   my $c = shift; # context
 
+  if ( $c->{edit} ) {
+    editcomment($c);
+    return;
+  }
+
   print "<b>Comments by $c->{username}</b> ";
   print "&nbsp;<a href='$c->{url}?o=Comment&e=new&returnto=comments'><span>(New)</span></a>";
   print "<br/>\n";
-  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", "Xusername=?", $c->{username} );
+  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", "xUsername=?", $c->{username} );
   return;
 } # listallcomments
 

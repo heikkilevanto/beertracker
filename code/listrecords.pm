@@ -152,6 +152,7 @@ sub listrecords {
     table[data-maxrecords] { border-collapse: separate; border-spacing: 0; }
     .top-border td { border-top: 2px solid white; }
     .null-value { color: #999; font-style: italic; }
+    .filtering-active { filter: brightness(1.3); }
     </style>\n";
   my $geotable = "";
   if ( $extraparams && (($extraparams->{lat} // '') eq '?') && (($extraparams->{lon} // '') eq '?') ) {
@@ -274,10 +275,9 @@ sub listrecords {
       $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Id'/>";
     } elsif ( $f eq "Name" ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
-      $hdr_input = "<span style='cursor:pointer; font-weight:bold' onclick='clearfilters(this);'>Clr</span> ";
-      $hdr_input .= "<input type=text data-col='$i' $sty $on placeholder='Name'/>";
+      $hdr_input = "<span style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:x-small' onclick='clearfilters(this);'>Clr</span> ";      $hdr_input .= "<input type=text data-col='$i' $sty $on placeholder='Name'/>";
     } elsif ( $f =~ /Clr/i ) { # Clear filters button
-      $hdr_input = "<span $sty onclick='clearfilters(this);' >Clr</span>";
+      $hdr_input = "<span style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:x-small' onclick='clearfilters(this);'>Clr</span>";
     } elsif ( $f  ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
       $on = "" if ($f=~/Chk/);
@@ -374,7 +374,7 @@ sub listrecords {
           }
         }
       } elsif ( $fn =~ /Clr/ ) {
-        $v="&nbsp;";
+        $v="";
         $word_split = 0;
       } elsif ( $fn =~ /Sub|Id/ ) {
         if ($v) {
@@ -416,6 +416,18 @@ sub listrecords {
         $word_split = 0;
       } elsif ( $fn eq "PersonName" ) {
         $v .= ":" if ($v);
+      } elsif ( $fn eq "Prod" ) {
+        if ($v) {
+          $v = _word_spans($v, $i);
+          $v = "<i>$v</i>:";
+        }
+        $word_split = 0;
+      } elsif ( $fn eq "BrewName" ) {
+        if ($v) {
+          $v = _word_spans($v, $i);
+          $v = "<b>$v</b>";
+        }
+        $word_split = 0;
       } elsif ( $fn eq "Stats" ) {  # Combined ratings averages
         my ( $cnt, $avg, $com ) = split (";", $v);
         $data_attrs .= " data-sort-key='$avg'" if ($avg);
@@ -530,7 +542,7 @@ sub listrecords {
       if (length $v) {
           $cell = "<span ${data_attrs}${cell_events}>$v</span>\n";
       } else {
-          $cell = "<span ${data_attrs}></span>\n";
+          $cell = "";
       }
       if ($cont_active) {
         $tds .= $cont_sep . $cell;

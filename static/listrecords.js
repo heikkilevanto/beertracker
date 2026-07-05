@@ -55,14 +55,19 @@ function dochangefilter (inputElement) {
   for (let r = 0; r < firstrows.length; r++) {
     var disp = "";
     let row = firstrows[r];
+    let seenFilterCol = {};
+    
     do {
       const cols = row.querySelectorAll('td');
       for (let c = 0; c < cols.length; c++) {
         const colEls = cols[c].querySelectorAll('[data-col]');
-        if (!colEls.length) continue;
+        if (!colEls.length) {
+          continue;
+        }
         for (let ce = 0; ce < colEls.length; ce++) {
           const col = colEls[ce].getAttribute('data-col');
           if ( col && filters[col] && filters[col].length > 0 ) {
+            seenFilterCol[col] = true;
             const text = colEls[ce].textContent;
             const matchAll = filters[col].every(function(token) {
               const normText = text.toLowerCase().replace(ALLOWLIST, '');
@@ -76,8 +81,21 @@ function dochangefilter (inputElement) {
         }
         if (disp === "none") break;
       }
+      if (disp === "none") break;
       row = row.nextElementSibling;
     } while ( row && ! row.hasAttribute("data-first") );
+    
+    // Active filter for a column that never appeared in any row → empty value, can't match
+    if (disp === "") {
+      for (let col = 0; col < filters.length; col++) {
+        if ( filters[col] && filters[col].length > 0 ) {
+          if ( !seenFilterCol[col] ) {
+            disp = "none";
+            break;
+          }
+        }
+      }
+    }
     
     firstrows[r].closest('tbody').style.display = disp;
     
@@ -169,8 +187,10 @@ function fieldclick_cell(event, el, col) {
 }
 
 function clearfilters(el) {
-  // Get the filters
   const table = el.closest('table');
+  // Visual feedback: show the button as clicked
+  el.classList.add('filtering-active');
+  // Clear all filter inputs
   const filters = table.querySelectorAll('thead td input[data-col]');
   for ( let i=0; i<filters.length; i++) {
     const filterinp = filters[i];
@@ -178,7 +198,13 @@ function clearfilters(el) {
       filterinp.value = '';
     }
   }
-  dochangefilter(el);
+  // Defer via double rAF so the browser paints the active state before filtering
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      dochangefilter(el);
+      el.classList.remove('filtering-active');
+    });
+  });
 }
 
 /////////////////////
