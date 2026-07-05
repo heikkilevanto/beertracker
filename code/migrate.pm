@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 33;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 34;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -52,6 +52,7 @@ our @MIGRATIONS = (
   [31, 'persons_list use suffixes', \&mig_031_persons_list_suffixes],
   [32, 'brews_list use suffixes', \&mig_032_brews_list_suffixes],
   [33, 'comments_list use suffixes', \&mig_033_comments_list_suffixes],
+  [34, 'brews_list Id links to Brew', \&mig_034_brews_list_id_link],
 );
 
 ################################################################################
@@ -671,6 +672,46 @@ sub mig_033_comments_list_suffixes {
     GROUP BY comments.Id
   });
 } # mig_033_comments_list_suffixes
+
+################################################################################
+# Migration 34: brews_list Id links to Brew
+# Change Id_A to Id_A_link:Brew so the Id cell is a clickable link
+# to the Brew edit page.
+################################################################################
+sub mig_034_brews_list_id_link {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS brews_list");
+  db::execute($c, q{
+    CREATE VIEW brews_list AS
+    with users as (
+      select distinct Username from glasses
+    )
+    select
+      brews.Id AS "Id_A_link:Brew",
+      brews.Name AS "Name_A_cont",
+      brews.BrewType || ', ' || brews.SubType AS "Type_A",
+      (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_R3_noheader_nofilter",
+      '' AS TR1,
+      brews.Alc AS "Alc",
+      ploc.Name AS "Producer_A_cont",
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as:Stats",
+      '' AS TR2,
+      count(glasses.Id) AS "Count",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
+      locations.Name AS "Location_A_as:LocName",
+      users.Username AS xUsername
+    from brews
+    cross join users
+    left join locations ploc on ploc.Id = brews.ProducerLocation
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+    left join locations on locations.Id = glasses.Location
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.Id, users.Username
+  });
+} # mig_034_brews_list_id_link
 
 ################################################################################
 

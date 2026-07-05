@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-07-05 13:05 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-07-05 15:02 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
@@ -419,51 +419,6 @@ create view producer_brews_list as
     left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
     group by brews.id, users.Username;
 
--- view comments_list
--- 4-row, 3-column + photo layout:
---   Row1 = [Id_link:Comment + CommentType] [Last     ] [Photo_R4]
---   Row2 = [BrewId_link:Brew + Prod + BrewName] [LocName] |
---   Row3 = [Rate] [Comment                               ] |
---   Row4 = [Clr ] [PersonName                            ] |
--- Photo on far right, rowspan 4. Prod rendered in italic, BrewName in bold
--- (handled by listrecords.pm). Uses _link, _A, _cont, _noheader.
-drop view if exists comments_list;
-create view comments_list as
-    select
-      comments.Id as "Id_A_link:Comment",
-      comments.CommentType as "CommentType_A_cont",
-      strftime('%Y-%m-%d %w ', coalesce(glasses.Timestamp, comments.Ts), '-06:00') ||
-        strftime('%H:%M', coalesce(glasses.Timestamp, comments.Ts)) as "Last_A",
-      (select Filename from photos where Comment = comments.Id order by Ts desc limit 1)
-        as "Photo_R4_noheader_nofilter",
-
-      '' as TR1,
-      comments.Brew as "BrewId_A_link:Brew",
-      coalesce(ploc_comment.Name, ploc_glass.Name) as "Prod_A_cont",
-      coalesce(brew_comment.Name, brew_glass.Name) as "BrewName_A_cont",
-      coalesce(loc_comment.Name, loc_glass.Name) as "LocName_A",
-
-      '' as TR2,
-      comments.Rating as "Rate_A",
-      comments.Comment as "Comment_A",
-
-      '' as TR3,
-      'Clr' as Clr,
-      group_concat(persons.Name, ', ') as "PersonName_A",
-
-      coalesce(glasses.Username, comments.Username) as xUsername
-    from comments
-    left join glasses       on glasses.Id       = comments.Glass
-    left join brews brew_glass   on brew_glass.Id   = glasses.Brew
-    left join brews brew_comment on brew_comment.Id = comments.Brew
-    left join comment_persons cp on cp.Comment = comments.Id
-    left join persons            on persons.Id  = cp.Person
-    left join locations loc_glass   on loc_glass.Id   = glasses.Location
-    left join locations loc_comment on loc_comment.Id = comments.Location
-    left join locations ploc_glass   on ploc_glass.Id   = brew_glass.ProducerLocation
-    left join locations ploc_comment on ploc_comment.Id = brew_comment.ProducerLocation
-    group by comments.Id;
-
 -- view photos_list
 drop view if exists photos_list;
 create view photos_list as
@@ -579,35 +534,13 @@ create view persons_list as
     left join locations on locations.Id = glasses.Location
     group by persons.Id;
 
+-- view comments_list
+drop view if exists comments_list;
+create view comments_list as select comments.Id as "Id_A_link:Comment", comments.CommentType as "CommentType_A_cont", strftime('%Y-%m-%d %w ', coalesce(glasses.Timestamp, comments.Ts), '-06:00') || strftime('%H:%M', coalesce(glasses.Timestamp, comments.Ts)) as "Last_A", (select Filename from photos where Comment = comments.Id order by Ts desc limit 1) as "Photo_R4_noheader_nofilter", '' as TR1, comments.Brew as "BrewId_A_link:Brew", coalesce(ploc_comment.Name, ploc_glass.Name) as "Prod_A_cont", coalesce(brew_comment.Name, brew_glass.Name) as "BrewName_A_cont", coalesce(loc_comment.Name, loc_glass.Name) as "LocName_A", '' as TR2, comments.Rating as "Rate_A", comments.Comment as "Comment_A", '' as TR3, 'Clr' as Clr, group_concat(persons.Name, ', ') as "PersonName_A", coalesce(glasses.Username, comments.Username) as xUsername from comments left join glasses on glasses.Id = comments.Glass left join brews brew_glass on brew_glass.Id = glasses.Brew left join brews brew_comment on brew_comment.Id = comments.Brew left join comment_persons cp on cp.Comment = comments.Id left join persons on persons.Id = cp.Person left join locations loc_glass on loc_glass.Id = glasses.Location left join locations loc_comment on loc_comment.Id = comments.Location left join locations ploc_glass on ploc_glass.Id = brew_glass.ProducerLocation left join locations ploc_comment on ploc_comment.Id = brew_comment.ProducerLocation group by comments.Id;
+
 -- view brews_list
 drop view if exists brews_list;
-create view brews_list as
-    with users as (
-      select distinct Username from glasses
-    )
-    select
-      brews.Id as "Id_A",
-      brews.Name as "Name_A_cont",
-      brews.BrewType || ', ' || brews.SubType as "Type_A",
-      (select Filename from photos where Brew = brews.Id order by Ts desc limit 1)
-        as "Photo_R3_noheader_nofilter",
-      '' as TR1,
-      brews.Alc as "Alc",
-      ploc.Name as "Producer_A_cont",
-      r.rating_count || ';' || r.average_rating || ';' || r.comment_count as "Stats_as:Stats",
-      '' as TR2,
-      count(glasses.Id) as "Count",
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) as "Last_cont",
-      locations.Name as "Location_A_as:LocName",
-      users.Username as xUsername
-    from brews
-    cross join users
-    left join locations ploc on ploc.Id = brews.ProducerLocation
-    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
-    left join locations on locations.Id = glasses.Location
-    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
-    group by brews.Id, users.Username;
+create view brews_list as with users as (select distinct Username from glasses) select brews.Id as "Id_A_link:Brew", brews.Name as "Name_A_cont", brews.BrewType || ', ' || brews.SubType as "Type_A", (select Filename from photos where Brew = brews.Id order by Ts desc limit 1) as "Photo_R3_noheader_nofilter", '' as TR1, brews.Alc as "Alc", ploc.Name as "Producer_A_cont", r.rating_count || ';' || r.average_rating || ';' || r.comment_count as "Stats_as:Stats", '' as TR2, count(glasses.Id) as "Count", strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') || strftime('%H:%M', max(glasses.Timestamp)) as "Last_cont", locations.Name as "Location_A_as:LocName", users.Username as xUsername from brews cross join users left join locations ploc on ploc.Id = brews.ProducerLocation left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username left join locations on locations.Id = glasses.Location left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username group by brews.Id, users.Username;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
