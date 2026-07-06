@@ -110,9 +110,10 @@ sub listrecords {
                $suf->{noheader} = 1;
                $changed = 1;
             } elsif ($field =~ s/_link:([A-Z][a-zA-Z]+)$//) {
-                $suf->{link} = $1;
-                $suf->{nofilter} = 1;
-                $changed = 1;
+                 $suf->{link} = $1;
+                 $suf->{nofilter} = 1;
+                 $suf->{noheader} = 1;
+                 $changed = 1;
             } elsif ($field =~ s/_contline$//) {
                 $suf->{contline} = 1;
                 $changed = 1;
