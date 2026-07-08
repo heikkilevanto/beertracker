@@ -279,7 +279,9 @@ sub listrecords {
             my $non = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
             push @hidden_filters, "<input type=text style='display:none' data-col='$i' $non/>\n";
         }
-        $s .= "<td $styles[$i] $extra_attr[$i]></td>\n";
+        unless ($hdr_contline_rest) {
+            $s .= "<td $styles[$i] $extra_attr[$i]></td>\n";
+        }
         next;
     }
 
