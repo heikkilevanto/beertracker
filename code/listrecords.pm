@@ -36,6 +36,19 @@ sub linebreak {
 
 
 ################################################################################
+# Helper: add colspan='2' to the last <td> in $tds, if it doesn't already
+# have a colspan attribute. Used when skipping an empty photo column.
+sub _colspan_last_td {
+  my $tds_ref = shift;
+  my $lt = rindex($$tds_ref, "<td");
+  return if $lt < 0;
+  my $gt = index($$tds_ref, ">", $lt);
+  return if $gt <= $lt;
+  return if substr($$tds_ref, $lt, $gt - $lt) =~ /colspan/i;
+  substr($$tds_ref, $gt, 0) = " colspan='2'";
+}
+
+################################################################################
 # listrecords itself
 ################################################################################
 
@@ -330,6 +343,7 @@ sub listrecords {
     my $cont_active = 0;
     my $cont_sep = "";
     my $contline_rest = 0;
+    my $photo_skipped = 0;
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i];
       my $was_null_field = !defined $v;
@@ -343,6 +357,9 @@ sub listrecords {
           $cont_active = 0;
         }
         $contline_rest = 0;
+        if ($photo_skipped) {
+          _colspan_last_td(\$tds);
+        }
         $tds .= $linebreak;
         next;
       }
@@ -509,10 +526,28 @@ sub listrecords {
         my $editurl = "$c->{url}?o=Photos&e=$rec[$id_idx]";
         $v = photos::imagetag($c, $v, "thumb", $editurl);
         $word_split = 0;
+        if (!$v) {
+          if ($cont_active) {
+            $tds .= "</td>\n";
+            $cont_active = 0;
+          }
+          _colspan_last_td(\$tds);
+          $photo_skipped = 1;
+          next;
+        }
       } elsif ( $fn eq "Photos" ) {
         if ($v) {
           my @fns = split(/\|/, $v);
           $v = join('', map { photos::imagetag($c, $_, "thumb") } @fns);
+        }
+        if (!$v) {
+          if ($cont_active) {
+            $tds .= "</td>\n";
+            $cont_active = 0;
+          }
+          _colspan_last_td(\$tds);
+          $photo_skipped = 1;
+          next;
         }
       } elsif ( $fn eq "IsGeneric" ) {
         $v = "Gen" if ($v);
@@ -557,6 +592,9 @@ sub listrecords {
     }
     if ($cont_active) {
       $tds .= "</td>\n";
+    }
+    if ($photo_skipped) {
+      _colspan_last_td(\$tds);
     }
 
     $s .= "<tbody$hidden>\n";
