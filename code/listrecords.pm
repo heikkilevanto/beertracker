@@ -265,6 +265,7 @@ sub listrecords {
             my $non = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
             push @hidden_filters, "<input type=text style='display:none' data-col='$i' $non/>\n";
         }
+        $s .= "<td $styles[$i] $extra_attr[$i]></td>\n";
         next;
     }
 
@@ -276,7 +277,7 @@ sub listrecords {
       $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Id'/>";
     } elsif ( $f eq "Name" ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
-      $hdr_input = "<span style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:x-small' onclick='clearfilters(this);'>Clr</span> ";      $hdr_input .= "<input type=text data-col='$i' $sty $on placeholder='Name'/>";
+      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Name'/>";
     } elsif ( $f =~ /Clr/i ) { # Clear filters button
       $hdr_input = "<span style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:x-small' onclick='clearfilters(this);'>Clr</span>";
     } elsif ( $f  ) {
@@ -368,12 +369,9 @@ sub listrecords {
         $word_split = 0;
       } elsif ( $fn eq "IdClr" ) {
         if ($v) {
-          if ($c->{op} =~ /Comment/i) {
-            $v = "<a href='$url?o=Comment&e=$v'><span>[$v]</span></a>";
-          } else {
-            $v = "[$v]";
-          }
+          $v = "<a href='$url?o=Brew&e=$v'><span>B[$v]</span></a>: ";
         }
+        $word_split = 0;
       } elsif ( $fn =~ /Clr/ ) {
         $v="";
         $word_split = 0;

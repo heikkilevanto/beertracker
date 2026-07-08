@@ -688,7 +688,7 @@ sub mig_034_brews_list_id_link {
       select distinct Username from glasses
     )
     select
-      brews.Id AS "Id_A_link:Brew",
+      brews.Id AS "IdClr_A",
       brews.Name AS "Name_A_cont",
       brews.BrewType || ', ' || brews.SubType AS "Type_A",
       (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
