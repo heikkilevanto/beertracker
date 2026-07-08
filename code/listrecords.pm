@@ -279,7 +279,17 @@ sub listrecords {
             my $non = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
             push @hidden_filters, "<input type=text style='display:none' data-col='$i' $non/>\n";
         }
-        unless ($hdr_contline_rest) {
+        if ($hdr_contline_rest) {
+            # contline chain active — skip empty td (for multi-row header layouts)
+        } elsif ( $f =~ /^Photos?$/ ) {
+            my $lt = rindex($s, "<td");
+            if ($lt >= 0) {
+                my $gt = index($s, ">", $lt);
+                if ($gt > $lt && substr($s, $lt, $gt - $lt) !~ /colspan/i) {
+                    substr($s, $gt, 0) = " colspan='2'";
+                }
+            }
+        } else {
             $s .= "<td $styles[$i] $extra_attr[$i]></td>\n";
         }
         next;
