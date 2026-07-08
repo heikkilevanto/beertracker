@@ -41,11 +41,12 @@ sub linebreak {
 sub _colspan_last_td {
   my $tds_ref = shift;
   my $lt = rindex($$tds_ref, "<td");
-  return if $lt < 0;
+  return 0 if $lt < 0;
   my $gt = index($$tds_ref, ">", $lt);
-  return if $gt <= $lt;
-  return if substr($$tds_ref, $lt, $gt - $lt) =~ /colspan/i;
+  return 0 if $gt <= $lt;
+  return 0 if substr($$tds_ref, $lt, $gt - $lt) =~ /colspan/i;
   substr($$tds_ref, $gt, 0) = " colspan='2'";
+  return 1;
 }
 
 ################################################################################
@@ -531,9 +532,12 @@ sub listrecords {
             $tds .= "</td>\n";
             $cont_active = 0;
           }
-          _colspan_last_td(\$tds);
-          $photo_skipped = 1;
-          next;
+          if (_colspan_last_td(\$tds)) {
+            $photo_skipped = 1;
+            next;
+          }
+          # Photo is first column (no previous td to expand).
+          # Fall through to render an empty td to maintain the column grid.
         }
       } elsif ( $fn eq "Photos" ) {
         if ($v) {
@@ -545,9 +549,12 @@ sub listrecords {
             $tds .= "</td>\n";
             $cont_active = 0;
           }
-          _colspan_last_td(\$tds);
-          $photo_skipped = 1;
-          next;
+          if (_colspan_last_td(\$tds)) {
+            $photo_skipped = 1;
+            next;
+          }
+          # Photo is first column (no previous td to expand).
+          # Fall through to render an empty td to maintain the column grid.
         }
       } elsif ( $fn eq "IsGeneric" ) {
         $v = "Gen" if ($v);
