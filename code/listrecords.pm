@@ -61,6 +61,7 @@ sub listrecords {
   my $params = shift || undef ;  # params for the sql
   my $extraparams = shift || undef;  # params for special fields, like lat/long to measure from
   my $maxrecords = shift || 20;  # show this many records initially, rest hidden
+  my $browsersortcol = shift || undef;  # column name to auto-sort by in the browser
 
   # Build cache key from all inputs that affect the rendered HTML.
   my $params_str = "";
@@ -75,7 +76,7 @@ sub listrecords {
   my $mobile = $c->{mobile} ? 1 : 0;
   my $cache_key = join("\x1e", "listrecords_v2", $c->{username}, $c->{op},
                        $table, $sort, $where, $params_str, $extraparams_str,
-                       $maxrecords, $mobile);
+                       $maxrecords, $mobile, $browsersortcol // "");
   my $cached = cache::get($c, $cache_key);
   if ( defined $cached ) {
     print { $c->{log} } "listrecords: cache hit for $table\n";
@@ -173,7 +174,11 @@ sub listrecords {
   if ( $extraparams && (($extraparams->{lat} // '') eq '?') && (($extraparams->{lon} // '') eq '?') ) {
     $geotable = "id='geotable'";
   }
-  my $tableattrs = "$geotable data-maxrecords='$maxrecords'";
+  my $tableid = "";
+  if ( $browsersortcol ) {
+    $tableid = " id='autosort-table'";
+  }
+  my $tableattrs = "$geotable$tableid data-maxrecords='$maxrecords'";
 
   $s .= "<table $tableattrs>\n";
   my @styles;  # One for each column
@@ -639,6 +644,18 @@ sub listrecords {
   }
   if ($geotable) {
     $s .= "<script>geotabledist();</script>\n";
+  }
+  if ( $browsersortcol ) {
+    my $sort_idx;
+    for (my $i = 0; $i < scalar(@fields); $i++) {
+      if ( $fields[$i] eq $browsersortcol ) {
+        $sort_idx = $i;
+        last;
+      }
+    }
+    if ( defined $sort_idx ) {
+      $s .= "<script>autoSortTable('autosort-table', $sort_idx, true);</script>\n";
+    }
   }
   $s .= "<!-- listrecords: all done for $sql -->\n";
 

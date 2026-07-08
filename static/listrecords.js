@@ -377,3 +377,11 @@ function showMoreRecords(link) {
     moreDiv.style.display = 'none';
   }
 }
+
+// Auto-sort a table by a given column index on page load
+function autoSortTable(tableId, col, ascending) {
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const input = table.querySelector('thead input[data-col="' + col + '"]');
+  if (input) doSortTable(input, col, ascending);
+}

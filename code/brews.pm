@@ -344,7 +344,7 @@ sub brewdeduplist {
   my $sort = $c->{sort} || "Last-";
   my $extra = {};
   $extra->{refname} = $brew->{Name};
-  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id} AND xUsername = ?", $c->{username}, $extra);
+  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id} AND xUsername = ?", $c->{username}, $extra, undef, "Sim");
   print "</form>\n";
   print "</div>\n";
   print "<!-- brewdeduplist end -->\n";
