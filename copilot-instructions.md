@@ -21,7 +21,7 @@ Data flows from browser forms to index.fcgi, which calls module post*() function
 
 ## Development Workflow
 - **Dev Environment**: Work in `beertracker-dev` directory (blue background indicates dev mode).
-- **Database Changes**: Implement schema changes via `code/migrate.pm` migrations. Remind the user to run `tools/dbdump.sh` to update `doc/db.schema` and commit both. Some changes (alter table) require manual steps; document those in commit message. Changes to views and indexes, and adding columns work well with dbchange.sh. Do not ever use sqlite to change the schema, nor edit doc/db.schema directly.
+- **Database Changes**: Implement schema changes via `code/migrate.pm` migrations. Remind the user to run `tools/dbdump.sh` to update `doc/db.schema`. Some changes (alter table) require manual steps; document those in commit message. Changes to views and indexes, and adding columns work well with dbchange.sh. Do not ever use sqlite to change the schema, nor edit doc/db.schema directly.
 - **Versioning**: Git pre-commit hook runs `tools/makeversion.sh` to update `code/VERSION.pm` with commit count.
 - **Testing**: No automated tests; manually test CGI under Apache. Use `superuser::copyproddata()` to sync production data to dev.
 - **Deployment**: Git pull code to production, should migrate the database on first run if schema changed. / Apache config in `etc/apache-config.example.txt` is mostly stable; avoid changes there if possible. It is actually used as the real Apache config in production. The dev version runs from the same config, so changes there should be tested carefully.
@@ -68,7 +68,7 @@ are still some inline scripts in the HTML for simplicity.
 - **CGI Parameters**: Use util::param($c, "name") for getting parameters. Validate and sanitize input. Handle missing parameters gracefully.
 - **Logging**: Use STDERR for server-side logging. Include timestamps when relevant. Log important operations and errors.
 - **Testing**: Test syntax with perl -c. Test functionality manually. Check database integrity after changes.
-- **Version Control**: Commit logical units of work. Include descriptive commit messages. Keep history clean and meaningful.
+- **Version Control**: Do NOT commit without explicit instructions from me. I try to keep commits logical. Include descriptive commit messages, with references to issue numbers where possible. Keep history clean and meaningful.
 
 ## Common Tasks
 - **Add New Operation**: Add dispatch in index.fcgi (POST in eval block, GET in main if-elsif chain), create module in `code/`.
