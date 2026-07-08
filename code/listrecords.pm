@@ -399,8 +399,10 @@ sub listrecords {
         $word_split = 0;
       } elsif ( $fn eq "IdClr" ) {
         if ($v) {
-          my $op = ($c->{op} =~ /Photo/i) ? "Photos" : "Brew";
-          my $pfx = ($c->{op} =~ /Photo/i) ? "P" : "B";
+          my $op = "Brew";
+          my $pfx = "B";
+          if ($c->{op} =~ /Photo/i) { $op = "Photos"; $pfx = "P"; }
+          elsif ($c->{op} =~ /Location/i) { $op = "Location"; $pfx = "L"; }
           $v = "<a href='$url?o=$op&e=$v'><span>${pfx}[$v]</span></a>: ";
         }
         $word_split = 0;

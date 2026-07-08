@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 34;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 35;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -53,6 +53,7 @@ our @MIGRATIONS = (
   [32, 'brews_list use suffixes', \&mig_032_brews_list_suffixes],
   [33, 'comments_list use suffixes', \&mig_033_comments_list_suffixes],
   [34, 'brews_list Id links to Brew', \&mig_034_brews_list_id_link],
+  [35, '705 locations_list use IdClr and auto-width', \&mig_035_locations_list_idclr],
 );
 
 ################################################################################
@@ -712,6 +713,44 @@ sub mig_034_brews_list_id_link {
     group by brews.Id, users.Username
   });
 } # mig_034_brews_list_id_link
+
+################################################################################
+# Migration 35: locations_list use IdClr and auto-width (issue #705)
+# Replace Id_link + Clr_cont with IdClr in column 1, keep Name+Type auto-width.
+################################################################################
+sub mig_035_locations_list_idclr {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS locations_list");
+  db::execute($c, q{
+    CREATE VIEW locations_list AS
+    SELECT
+      locations.Id AS "IdClr",
+      locations.Name AS "Name_A_as:LocName_cont",
+      CASE
+        WHEN locations.LocType IS NOT NULL AND locations.LocType != '' AND
+             locations.LocSubType IS NOT NULL AND locations.LocSubType != ''
+        THEN '[' || locations.LocType || ', ' || locations.LocSubType || ']'
+        WHEN locations.LocType IS NOT NULL AND locations.LocType != ''
+        THEN '[' || locations.LocType || ']'
+        WHEN locations.LocSubType IS NOT NULL AND locations.LocSubType != ''
+        THEN '[' || locations.LocSubType || ']'
+        ELSE ''
+      END AS "LocType_A_cont",
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS "Ratings_as:Stats",
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R2_noheader_nofilter",
+      '' AS TR1,
+      locations.lat || ' ' || locations.lon AS "Geo",
+      COALESCE(locations.Country,'') || ';' || COALESCE(locations.Region,'') AS "CountryRegion_A_contline",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
+      locations.Tags AS xTags
+    FROM locations
+    LEFT JOIN glasses ON glasses.Location = locations.Id
+    LEFT JOIN location_ratings r ON r.id = locations.Id
+    GROUP BY locations.Id
+  });
+} # mig_035_locations_list_idclr
 
 ################################################################################
 

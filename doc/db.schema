@@ -423,8 +423,7 @@ create view producer_brews_list as
 drop view if exists locations_list;
 create view locations_list as
     select
-      locations.Id as "Id_link:Location",
-      '' as "Clr_cont",
+      locations.Id as "IdClr",
       locations.Name as "Name_A_as:LocName_cont",
       case
         when locations.LocType is not null and locations.LocType != '' and
