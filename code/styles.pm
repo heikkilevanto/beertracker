@@ -71,10 +71,10 @@ sub brewcolor {
     }
   }
   if ( ! $warned{$type} ) {  # Not already warned about this type
-    my $logline = $line ? " at $line" : "";
+    my $logline = $line;
     my $trace = $line ? "" : longmess("  trace");
     $trace =~ s/\n/\n  /g if $trace;  # Indent trace lines for readability
-    print { $c->{log} } "OOPS! Can not get color for '$brew'$logline$trace\n";
+    print { $c->{log} } "OOPS! Can not get color for '$brew' $logline $trace\n";
     $warned{$type} = 1;
   }
   return  "9400d3"; # dark-violet, aggressive pink to show we don't have a color
