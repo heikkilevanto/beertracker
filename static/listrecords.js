@@ -7,7 +7,7 @@ function changefilter (inputElement) {
   clearTimeout(filterTimeout); // Cancel previous timeout
   filterTimeout = setTimeout(() => {
     dochangefilter(inputElement);
-  }, 150); // Adjust delay as needed}
+  }, 300); // Adjust delay as needed}
 }
 
 function dochangefilter (inputElement) {
