@@ -301,7 +301,7 @@ sub selectloctype_dropdown {
     $opts .= "<div class='dropdown-item' id='$lt'>$lt</div>\n";
   }
   return inputs::dropdown($c, $inputname, $selected, $selected, $opts,
-    { disabled => $disabled, simplenew => 1 });
+    { disabled => $disabled, simplenew => 1, required => 1 });
 } # selectloctype_dropdown
 
 ################################################################################
@@ -323,7 +323,7 @@ sub selectlocsubtype_dropdown {
     $opts .= "<div class='dropdown-item' id='$sub' loctype='$ltype'>$sub</div>\n";
   }
   return inputs::dropdown($c, $inputname, $selected, $selected, $opts,
-    { disabled => $disabled, simplenew => 1 });
+    { disabled => $disabled, simplenew => 1, required => 1 });
 } # selectlocsubtype_dropdown
 
 ################################################################################

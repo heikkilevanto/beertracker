@@ -365,7 +365,7 @@ sub selectbrewtype_dropdown {
     $opts .= "<div class='dropdown-item' id='$bt'>$bt</div>\n";
   }
   return inputs::dropdown($c, "BrewType", $selected, $selected, $opts,
-    { disabled => $disabled, simplenew => 1 });
+    { disabled => $disabled, simplenew => 1, required => 1 });
 } # selectbrewtype_dropdown
 
 ################################################################################
@@ -385,7 +385,7 @@ sub selectbrewsubtype_dropdown {
     $opts .= "<div class='dropdown-item' id='$sub' brewtype='$btype'>$sub</div>\n";
   }
   return inputs::dropdown($c, "SubType", $selected, $selected, $opts,
-    { disabled => $disabled, simplenew => 1 });
+    { disabled => $disabled, simplenew => 1, required => 1 });
 } # selectbrewsubtype_dropdown
 
 ################################################################################

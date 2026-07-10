@@ -20,7 +20,7 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 #    ... );
 # Omit the "new" line if you don't want it
 # Optional args in hashref $opt (6th param):
-#   table, newfield, skip, disabled, scan, multi, prechips, simplenew, extraattr, defaults
+#   table, newfield, skip, disabled, scan, multi, prechips, simplenew, extraattr, defaults, required
 # Returns a string ready to be printed in a form
 
 
@@ -42,6 +42,7 @@ sub dropdown {
   my $simplenew      = $opt->{simplenew}  ? "simplenew": "";
   my $extraattr      = $opt->{extraattr}  || "";
   my $newdefaults    = $opt->{defaults}   || {};
+  my $required       = $opt->{required};
 
   my $newdiv = "";
   my $actions = "";
@@ -64,9 +65,16 @@ sub dropdown {
     $newdiv .= "  <input type='text' autocapitalize='words' placeholder='New value...' style='margin:4px;'/>\n";
     $newdiv .= "</div>";
   }
-  # Add clear option if there are any actions
+  # Auto-select first option if required and nothing selected
+  if ($required && !$selectedid) {
+    if ($options =~ m|<div class='dropdown-item' id='([^']+)'>([^<]*)</div>|) {
+      $selectedid   = $1;
+      $selectedname = $2;
+    }
+  }
+  # Add clear option if there are any actions (skip if required)
   if ($actions) {
-    $actions .= "<span class='action-link' data-action='clr' style='cursor: pointer;'>clr</span>";
+    $actions .= "<span class='action-link' data-action='clr' style='cursor: pointer;'>clr</span>" unless $required;
   }
 
   if ($actions) {
