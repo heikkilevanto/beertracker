@@ -29,7 +29,7 @@ use it for real in January 2016, and have been using the system ever since.
 - v3.1 Aug'25: Rating stats, photos, geo coordinates, generic brews, refactoring
 - v3.2 Jan'26: Tracking beer taps, prices, AI-assisted refactoring
 - v3.3 Mar'26: Fast cgi, caching, db migration tool, barcodes, multi-persons
-- v3.4  soon   Tags, country/region, scraper for untappd, more links, bottle/box
+- v3.4 May'26: Tags, country/region, scraper for untappd, more links, bottle/box
 
 ## Architecture
 
@@ -177,14 +177,30 @@ See also `plans/lists.md` for the full set of conventions.
 
 ## External Modules and Dependencies
 
-BeerTracker requires the following Perl modules: CGI, Carp, Cwd, DBI, File::Copy, File::Path, JSON, LWP::UserAgent, Math::Trig, POSIX, Time::Piece, URI::Escape, URI::URL, XML::LibXML. 
+BeerTracker requires the following Perl modules: 
+- `CGI`
+- `Carp`
+- `Cwd`
+- `DBI`
+- `File::Copy`, `File::Path`
+- `JSON`
+- `LWP::UserAgent`
+- `Math::Trig`
+- `POSIX`
+- `Time::Piece`
+- `URI::Escape`, `URI::URL`
+- `XML::LibXML`
+
+The code calls external programs
+- `gnuplot` for various graphs
+- `git` for git operations (superuser only)
 
 To install all required modules on Debian/Ubuntu, run:
 ```
-sudo apt-get install libcgi-pm-perl libdbi-perl libjson-perl libwww-perl libtime-piece-perl liburi-perl libxml-libxml-perl
+sudo apt-get install libcgi-pm-perl libdbi-perl libjson-perl libwww-perl libtime-piece-perl liburi-perl libxml-libxml-perl git gnuplot
 ```
 
-The js code makes use of quagga.min.js for scanning bar codes, and gnuplot for the various graphs.
+The js code makes use of quagga.min.js for scanning bar codes.
 
 
 ## Scraper Interface
@@ -231,7 +247,8 @@ Beertracker lives as a FastCGI script under Apache (mod_fcgid). There is a confi
 etc.
 
 The site is protected by regular htpassword, so you need to create those the
-usual way.
+usual way. It also uses a login cookie, so as to keep the session alive for
+longer.
 
 ## Development Environment
 I normally develop under beertracker-dev, and when happy with it, commit and

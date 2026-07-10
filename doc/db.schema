@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-07-06 21:36 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-07-10 12:40 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
@@ -419,34 +419,67 @@ create view producer_brews_list as
     left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
     group by brews.id, users.Username;
 
--- view locations_list
-drop view if exists locations_list;
-create view locations_list as
+-- view photos_list
+drop view if exists photos_list;
+create view photos_list as
     select
-      locations.Id as "IdClr",
-      locations.Name as "Name_A_as:LocName_cont",
-      case
-        when locations.LocType is not null and locations.LocType != '' and
-             locations.LocSubType is not null and locations.LocSubType != ''
-        then '[' || locations.LocType || ', ' || locations.LocSubType || ']'
-        when locations.LocType is not null and locations.LocType != ''
-        then '[' || locations.LocType || ']'
-        when locations.LocSubType is not null and locations.LocSubType != ''
-        then '[' || locations.LocSubType || ']'
-        else ''
-      end as "LocType_A_cont",
-      r.rating_count || ';' || r.rating_average || ';' || r.comment_count as "Ratings_as:Stats",
-      (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as "Photo_R2_noheader_nofilter",
+      p.Filename as Photo_R8,
+      p.Id as "IdClr_A_contline",
+      substr(p.Ts, 1, 16) as Ts_A,
+
       '' as TR1,
-      locations.lat || ' ' || locations.lon as "Geo",
-      coalesce(locations.Country,'') || ';' || coalesce(locations.Region,'') as "CountryRegion_A_contline",
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) as "Last_cont",
-      locations.Tags as xTags
-    from locations
-    left join glasses on glasses.Location = locations.Id
-    left join location_ratings r on r.id = locations.Id
-    group by locations.Id;
+      p.Caption as Caption_A,
+
+      '' as TR2,
+      p.Person as "PersonId_A_contline_link:Person",
+      p2.Name as "PersonName_A_filter",
+
+      '' as TR3,
+      p.Brew as "BrewId_A_contline_link:Brew",
+      pl_b.Name as "BrewProducer_A_filter",
+      b.Name as "BrewName_A_filter",
+      b.Details as "BrewDetails_A_filter",
+
+      '' as TR4,
+      p.Location as "LocationId_A_contline_link:Location",
+      l.Name as "LocationName_A_filter_as:LocName",
+
+      '' as TR5,
+      p.Glass as "GlassId_A_contline_link:Glass",
+      pl_g.Name as "GlassProducer_A_filter",
+      b_g.Name as "GlassBrewName_A_filter",
+      b_g.Details as "GlassDetails_A_filter",
+      g_g.BrewType as "GlassBrewType_A_filter",
+      l_g.Name as "GlassLocName_A_filter_as:LocName",
+
+      '' as TR6,
+      p.Comment as "CommentId_A_contline_link:Comment",
+      c.Rating as "CommentRating_A_filter",
+      c.Comment as "CommentText_A",
+      (select group_concat(p3.Name, ', ')
+       from comment_persons cp2
+       join persons p3 on p3.Id = cp2.Person
+       where cp2.Comment = c.Id) as "CommentPersons_A_filter",
+
+      '' as TR7,
+      p.Glass as xGlass,
+      p.Comment as xComment,
+      p.Location as xLocation,
+      p.Person as xPerson,
+      p.Brew as xBrew,
+      p.Uploader as xUploader,
+      p.Public as xPublic
+
+    from photos p
+    left join persons p2     on p2.Id = p.Person
+    left join brews b        on b.Id = p.Brew
+    left join locations pl_b on pl_b.Id = b.ProducerLocation
+    left join locations l    on l.Id = p.Location
+    left join glasses g_g    on g_g.Id = p.Glass
+    left join brews b_g      on b_g.Id = g_g.Brew
+    left join locations l_g  on l_g.Id = g_g.Location
+    left join locations pl_g on pl_g.Id = b_g.ProducerLocation
+    left join comments c     on c.Id = p.Comment;
 
 -- view persons_list
 drop view if exists persons_list;
@@ -540,67 +573,34 @@ create view brews_list as
     left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
     group by brews.Id, users.Username;
 
--- view photos_list
-drop view if exists photos_list;
-create view photos_list as
+-- view locations_list
+drop view if exists locations_list;
+create view locations_list as
     select
-      p.Filename as Photo_R8,
-      p.Id as "IdClr_A_contline",
-      substr(p.Ts, 1, 16) as Ts_A,
-
+      locations.Id as "IdClr",
+      locations.Name as "Name_A_as:LocName_cont",
+      case
+        when locations.LocType is not null and locations.LocType != '' and
+             locations.LocSubType is not null and locations.LocSubType != ''
+        then '[' || locations.LocType || ', ' || locations.LocSubType || ']'
+        when locations.LocType is not null and locations.LocType != ''
+        then '[' || locations.LocType || ']'
+        when locations.LocSubType is not null and locations.LocSubType != ''
+        then '[' || locations.LocSubType || ']'
+        else ''
+      end as "LocType_A_cont",
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count as "Ratings_as:Stats",
+      (select Filename from photos where Location = locations.Id order by Ts desc limit 1) as "Photo_R2_noheader_nofilter",
       '' as TR1,
-      p.Caption as Caption_A,
-
-      '' as TR2,
-      p.Person as "PersonId_A_contline_link:Person",
-      p2.Name as "PersonName_A_filter",
-
-      '' as TR3,
-      p.Brew as "BrewId_A_contline_link:Brew",
-      pl_b.Name as "BrewProducer_A_filter",
-      b.Name as "BrewName_A_filter",
-      b.Details as "BrewDetails_A_filter",
-
-      '' as TR4,
-      p.Location as "LocationId_A_contline_link:Location",
-      l.Name as "LocationName_A_filter_as:LocName",
-
-      '' as TR5,
-      p.Glass as "GlassId_A_contline_link:Glass",
-      pl_g.Name as "GlassProducer_A_filter",
-      b_g.Name as "GlassBrewName_A_filter",
-      b_g.Details as "GlassDetails_A_filter",
-      g_g.BrewType as "GlassBrewType_A_filter",
-      l_g.Name as "GlassLocName_A_filter_as:LocName",
-
-      '' as TR6,
-      p.Comment as "CommentId_A_contline_link:Comment",
-      c.Rating as "CommentRating_A_filter",
-      c.Comment as "CommentText_A",
-      (select group_concat(p3.Name, ', ')
-       from comment_persons cp2
-       join persons p3 on p3.Id = cp2.Person
-       where cp2.Comment = c.Id) as "CommentPersons_A_filter",
-
-      '' as TR7,
-      p.Glass as xGlass,
-      p.Comment as xComment,
-      p.Location as xLocation,
-      p.Person as xPerson,
-      p.Brew as xBrew,
-      p.Uploader as xUploader,
-      p.Public as xPublic
-
-    from photos p
-    left join persons p2     on p2.Id = p.Person
-    left join brews b        on b.Id = p.Brew
-    left join locations pl_b on pl_b.Id = b.ProducerLocation
-    left join locations l    on l.Id = p.Location
-    left join glasses g_g    on g_g.Id = p.Glass
-    left join brews b_g      on b_g.Id = g_g.Brew
-    left join locations l_g  on l_g.Id = g_g.Location
-    left join locations pl_g on pl_g.Id = b_g.ProducerLocation
-    left join comments c     on c.Id = p.Comment;
+      locations.lat || ' ' || locations.lon as "Geo",
+      coalesce(locations.Country,'') || ';' || coalesce(locations.Region,'') as "CountryRegion_A_contline",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) as "Last_cont",
+      locations.Tags as xTags
+    from locations
+    left join glasses on glasses.Location = locations.Id
+    left join location_ratings r on r.id = locations.Id
+    group by locations.Id;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
