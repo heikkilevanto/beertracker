@@ -230,6 +230,17 @@ function initGlassForm() {
   if (selbrewtypeHidden) {
     selbrewtypeHidden.addEventListener('input', function() {
       selbrewchange(selbrewtypeHidden, true);
+      // Re-filter the brew dropdown to show only matching brew types
+      const brewDropdown = document.getElementById('dropdown-Brew');
+      if (brewDropdown) {
+        // Sync any scoped brewtype value inside the brew dropdown (from the
+        // newbrew sub-form's SubType cascade) so filterItems uses the right type.
+        const scoped = brewDropdown.querySelector('[data-brewtype-scope]');
+        if (scoped) scoped.value = selbrewtypeHidden.value;
+        const brewFilter = brewDropdown.querySelector('.dropdown-filter');
+        const brewList = brewDropdown.querySelector('.dropdown-list');
+        if (brewFilter && brewList) filterItems(brewFilter, brewList);
+      }
     });
     selbrewchange(selbrewtypeHidden, false); // run once on load to set initial visibility
   }
