@@ -194,6 +194,37 @@ function initGlassForm() {
     locHidden.addEventListener('input', updateGeoFromLocation);
   }
 
+  // Propagate current selbrewtype to the newbrew sub-form's BrewType dropdown
+  const brewHidden = document.getElementById('Brew');
+  if (brewHidden) {
+    brewHidden.addEventListener('input', function() {
+      if (this.value === 'new') {
+        const src = document.getElementById('selbrewtype');
+        const tgt = document.getElementById('BrewType');
+        if (src && tgt && src.value) setDropdownValue(tgt, src.value);
+      }
+    });
+  }
+
+  // Cascading for BrewType/SubType in the newbrew sub-form
+  (function() {
+    var bt = document.getElementById('BrewType');
+    var st = document.getElementById('dropdown-SubType');
+    if (!bt || !st) return;
+    var localBt = document.createElement('input');
+    localBt.type = 'hidden';
+    localBt.setAttribute('data-brewtype-scope', '1');
+    st.appendChild(localBt);
+    function syncSubType() {
+      localBt.value = bt.value;
+      var flt = st.querySelector('.dropdown-filter');
+      var lst = st.querySelector('.dropdown-list');
+      if (flt && lst) filterItems(flt, lst);
+    }
+    bt.addEventListener('input', syncSubType);
+    syncSubType();
+  })();
+
   // Wire selbrewchange to the hidden input's input event
   const selbrewtypeHidden = document.getElementById('selbrewtype');
   if (selbrewtypeHidden) {

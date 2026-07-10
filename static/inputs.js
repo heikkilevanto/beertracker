@@ -527,7 +527,9 @@ function renderTagRow(tagRow, tagSearch, dropdownList, filterInput) {
 } // renderTagRow
 
 function filterItems(filterInput, dropdownList) {
-  const selbrewtype = document.getElementById("selbrewtype");
+  const dd = dropdownList.closest('.dropdown');
+  const scoped = dd ? dd.querySelector('[data-brewtype-scope]') : null;
+  const selbrewtype = scoped || document.getElementById("selbrewtype");
   const filter = filterInput.value.toLowerCase();
   const isTagFilter      = filter.startsWith('#');
   const isLocationFilter = !isTagFilter && filter.startsWith('@');

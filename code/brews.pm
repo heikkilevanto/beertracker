@@ -724,7 +724,9 @@ sub selectbrew {
     $current //= "";
   }
 
-  my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, { table => "BREWS", newfield => "newbrew", scan => 1 } );
+  my $defaults = {};
+  $defaults->{BrewType} = $brewtype if $brewtype;
+  my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, { table => "BREWS", newfield => "newbrew", scan => 1, defaults => $defaults } );
 
   return $s;
 } # selectbrew
