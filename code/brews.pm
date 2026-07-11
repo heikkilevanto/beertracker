@@ -20,11 +20,8 @@ sub listbrews {
     editbrew($c);
     return;
   }
-  print "<b>Brews</b> ";
-  print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>";
-  print "<br/>\n";
   print listrecords::listrecords($c, "BREWS_LIST", "Last-",
-    "xUsername = ?", $c->{username} ); # for getting user-specific ratings and counts
+    { where => "xUsername = ?", params => $c->{username}, title => "Brews" });
   return;
 } # listbrews
 
@@ -344,7 +341,10 @@ sub brewdeduplist {
   my $sort = $c->{sort} || "Last-";
   my $extra = {};
   $extra->{refname} = $brew->{Name};
-  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort, "Id <> $brew->{Id} AND xUsername = ?", $c->{username}, $extra, undef, "Sim");
+  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort,
+      { where => "Id <> $brew->{Id} AND xUsername = ?",
+        params => $c->{username}, extraparams => $extra,
+        browsersortcol => "Sim", title => "Similar brews" });
   print "</form>\n";
   print "</div>\n";
   print "<!-- brewdeduplist end -->\n";

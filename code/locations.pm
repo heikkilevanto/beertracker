@@ -27,14 +27,12 @@ sub listlocations {
     editlocation($c);
     return;
   }
-  print "<b>Locations</b>";
-  print "&nbsp;<a href=\"$c->{url}?o=$c->{op}&e=new\"><span>(New)</span></a>\n";
   my $sort = $c->{sort} || "Last-";
-  # print util::listrecords($c, "LOCATIONS_LIST", $sort, "Type NOT LIKE  'Producer%'" );
   my $extraparams = {};
   $extraparams->{lat} = '?';
   $extraparams->{lon} = '?';
-  print listrecords::listrecords($c, "LOCATIONS_LIST", $sort, "", "", $extraparams);
+  print listrecords::listrecords($c, "LOCATIONS_LIST", $sort,
+      { extraparams => $extraparams, title => "Locations" });
   return;
 } # listlocations
 
@@ -244,11 +242,12 @@ sub producerbrews {
   my $p = shift;
   my $countsql = "select count(distinct xId) as cnt from producer_brews_list where xProducer = ? and xUsername = ?";
   my $nbrews = db::queryrecord($c, $countsql, $p->{Name}, $c->{username});
-  print "<b>$nbrews->{cnt} Brews by $p->{Name} </b><br/>\n";
   my $oldop = $c->{op};
   $c->{op} = "Brew";  # Make name links to point to brews, not locations
   print listrecords::listrecords($c, "producer_brews_list", "Last-",
-    "xProducer = ? AND xUsername = ?", [$p->{Name}, $c->{username}]);
+      { where => "xProducer = ? AND xUsername = ?",
+        params => [$p->{Name}, $c->{username}],
+        title => "Brews by $p->{Name}" });
   $c->{op} = $oldop;
   print "<hr>\n";
 } # producerbrews
@@ -277,7 +276,9 @@ sub locationdeduplist {
   $extra->{lat} = $loc->{Lat};
   $extra->{lon} = $loc->{Lon};
   $extra->{refname} = $loc->{Name};
-  print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort, "Id <> $loc->{Id}", undef, $extra, undef, "Sim" );
+  print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort,
+      { where => "Id <> $loc->{Id}", extraparams => $extra,
+        browsersortcol => "Sim", title => "Similar locations" });
   print "</form>\n";
   print "</div>\n";
   print "<!-- locationdeduplist end -->\n";

@@ -1,5 +1,5 @@
 // listrecords helpers
-// These manage filtering and sorting of lists created by listrecords
+// These manage filtering, sorting, and pagination of lists created by listrecords
 
 let filterTimeout;
 
@@ -30,33 +30,22 @@ function dochangefilter (inputElement) {
       filters[col] = cleaned.filter(function(t) { return t.length > 0; });
     }
   }
-  
-  // Check if user has already expanded the list ("More..." link is hidden)
-  const maxRecords = parseInt(table.dataset.maxrecords) || 0;
-  const moreLink = table.nextElementSibling;
-  const wasExpanded = moreLink && moreLink.tagName === 'DIV' && 
-                      moreLink.querySelector('a[onclick*="showMoreRecords"]') &&
-                      moreLink.style.display === 'none';
-  
-  // Detach table from DOM — all subsequent mutations have zero reflow cost
-  const tableParent = table.parentNode;
-  const tableSibling = table.nextSibling;
-  tableParent.removeChild(table);
 
-  // Clear all hidden attributes to process all records
-  const hiddenTbodies = table.querySelectorAll('tbody[hidden]');
-  for (const tbody of hiddenTbodies) {
-    tbody.removeAttribute('hidden');
-  }
-  
+  // Detach table from DOM — all subsequent mutations have zero reflow cost
+  const wrapper = table.closest('[data-lr-wrapper]');
+  if (!wrapper) return;
+  const tableParent = wrapper.parentNode;
+  const tableSibling = wrapper.nextSibling;
+  tableParent.removeChild(wrapper);
+
   const firstrows = table.querySelectorAll('tbody tr[data-first]');
   let visibleCount = 0;
-  
+
   for (let r = 0; r < firstrows.length; r++) {
     var disp = "";
     let row = firstrows[r];
     let seenFilterCol = {};
-    
+
     do {
       const cols = row.querySelectorAll('td');
       for (let c = 0; c < cols.length; c++) {
@@ -84,7 +73,7 @@ function dochangefilter (inputElement) {
       if (disp === "none") break;
       row = row.nextElementSibling;
     } while ( row && ! row.hasAttribute("data-first") );
-    
+
     // Active filter for a column that never appeared in any row → empty value, can't match
     if (disp === "") {
       for (let col = 0; col < filters.length; col++) {
@@ -96,42 +85,25 @@ function dochangefilter (inputElement) {
         }
       }
     }
-    
-    firstrows[r].closest('tbody').style.display = disp;
-    
+
+    const tbody = firstrows[r].closest('tbody');
+    tbody.style.display = disp;
+    tbody.dataset.lrFs = disp === '' ? '1' : '0';
+
     if (disp === "") {
       visibleCount++;
     }
   }
-  
-  // If list wasn't expanded and we have maxRecords limit, hide beyond top N
-  if (!wasExpanded && maxRecords > 0) {
-    let recordCount = 0;
-    const tbodies = table.tBodies;
-    for (let t = 0; t < tbodies.length; t++) {
-      if (tbodies[t].style.display !== "none") {
-        recordCount++;
-        if (recordCount > maxRecords) {
-          tbodies[t].setAttribute('hidden', '');
-        }
-      }
-    }
-  }
 
-  // Reattach table — triggers exactly one reflow
+  // Always paginate (all tables have pagination now)
+  table.dataset.currentPage = 1;
+  lr_paginate(table);
+
+  // Reattach wrapper — triggers exactly one reflow
   if (tableSibling) {
-    tableParent.insertBefore(table, tableSibling);
+    tableParent.insertBefore(wrapper, tableSibling);
   } else {
-    tableParent.appendChild(table);
-  }
-
-  // Show/hide the "More..." link
-  if (moreLink) {
-    if (!wasExpanded && maxRecords > 0 && visibleCount > maxRecords) {
-      moreLink.style.display = '';
-    } else {
-      moreLink.style.display = 'none';
-    }
+    tableParent.appendChild(wrapper);
   }
 
   console.timeEnd("filter") ;
@@ -186,25 +158,12 @@ function fieldclick_cell(event, el, col) {
   }
 }
 
-function clearfilters(el) {
-  const table = el.closest('table');
-  // Visual feedback: show the button as clicked
-  el.classList.add('filtering-active');
-  // Clear all filter inputs
-  const filters = table.querySelectorAll('thead td input[data-col]');
-  for ( let i=0; i<filters.length; i++) {
-    const filterinp = filters[i];
-    if ( filterinp ) {
-      filterinp.value = '';
-    }
-  }
-  // Defer via double rAF so the browser paints the active state before filtering
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      dochangefilter(el);
-      el.classList.remove('filtering-active');
-    });
-  });
+function lr_clearfilters(el) {
+  const wrapper = el.closest('[data-lr-wrapper]');
+  const table = wrapper.querySelector('table');
+  table.querySelectorAll('thead td input[data-col]').forEach(inp => { inp.value = ''; });
+  const first = table.querySelector('thead input[data-col]');
+  if (first) dochangefilter(first);
 }
 
 /////////////////////
@@ -230,23 +189,12 @@ function doSortTable(el, col, ascending) {
 
   console.time("sort") ;
 
-  // Check if user has already expanded the list ("More..." link is hidden)
-  const maxRecords = parseInt(table.dataset.maxrecords) || 0;
-  const moreLink = table.nextElementSibling;
-  const wasExpanded = moreLink && moreLink.tagName === 'DIV' && 
-                      moreLink.querySelector('a[onclick*="showMoreRecords"]') &&
-                      moreLink.style.display === 'none';
-  
-  // Detach table from DOM — all subsequent DOM mutations have zero reflow cost
-  const tableParent = table.parentNode;
-  const tableSibling = table.nextSibling;
-  tableParent.removeChild(table);
-
-  // Unhide all tbodies
-  const hiddenTbodies = table.querySelectorAll('tbody[hidden]');
-  for (const tbody of hiddenTbodies) {
-    tbody.removeAttribute('hidden');
-  }
+  // Detach wrapper from DOM — all subsequent DOM mutations have zero reflow cost
+  const wrapper = table.closest('[data-lr-wrapper]');
+  if (!wrapper) return;
+  const wrapperParent = wrapper.parentNode;
+  const wrapperSibling = wrapper.nextSibling;
+  wrapperParent.removeChild(wrapper);
 
   // Precompute sort keys
   const sortableTbodies = tbodies.map(tbody => {
@@ -270,32 +218,15 @@ function doSortTable(el, col, ascending) {
   }
   table.appendChild(fragment);
 
-  // Re-hide tbodies beyond maxRecords only if list wasn't already expanded
-  if (!wasExpanded && maxRecords > 0) {
-    let recordCount = 0;
-    for (const tbody of table.tBodies) {
-      recordCount++;
-      if (recordCount > maxRecords) {
-        tbody.setAttribute('hidden', '');
-      }
-    }
-  }
-  // If was expanded, keep it expanded (moreLink stays hidden)
+  // Reset to page 1 and re-paginate
+  table.dataset.currentPage = 1;
+  lr_paginate(table);
 
-  // Reattach table — triggers exactly one reflow
-  if (tableSibling) {
-    tableParent.insertBefore(table, tableSibling);
+  // Reattach wrapper — triggers exactly one reflow
+  if (wrapperSibling) {
+    wrapperParent.insertBefore(wrapper, wrapperSibling);
   } else {
-    tableParent.appendChild(table);
-  }
-
-  // Show/hide the "More..." link
-  if (moreLink) {
-    if (!wasExpanded && maxRecords > 0) {
-      moreLink.style.display = '';
-    } else {
-      moreLink.style.display = 'none';
-    }
+    wrapperParent.appendChild(wrapper);
   }
 
   // Clear arrows
@@ -340,6 +271,101 @@ function extractSortKey(recordRows, columnIndex) {
   return ""; // fallback key
 }
 
+/////////////////////
+// Pagination
+
+function lr_paginate(table) {
+  const pageSize = parseInt(table.dataset.pageSize);
+  const currPage = parseInt(table.dataset.currentPage);
+
+  // Reset all tbodies to their filter state (discard previous pagination)
+  for (let i = 0; i < table.tBodies.length; i++) {
+    const tbody = table.tBodies[i];
+    tbody.style.display = (tbody.dataset.lrFs || '1') === '1' ? '' : 'none';
+  }
+
+  // Count filter-visible rows
+  const visibleTbodies = Array.from(table.tBodies).filter(t => (t.dataset.lrFs || '1') === '1');
+  const totalVisible = visibleTbodies.length;
+  const totalPages = pageSize > 0 ? Math.ceil(totalVisible / pageSize) : 1;
+
+  // Apply pagination
+  if (pageSize === 0) {
+    visibleTbodies.forEach(t => t.style.display = '');
+  } else {
+    visibleTbodies.forEach(t => t.style.display = 'none');
+    const start = (currPage - 1) * pageSize;
+    const end = Math.min(start + pageSize, totalVisible);
+    for (let i = start; i < end; i++) visibleTbodies[i].style.display = '';
+  }
+
+  lr_updateInfo(table, currPage, totalVisible, totalPages);
+}
+
+function lr_updateInfo(table, currPage, totalVisible, totalPages) {
+  const wrapper = table.closest('[data-lr-wrapper]');
+  if (!wrapper) return;
+  const pageSize = parseInt(table.dataset.pageSize);
+
+  // Update count on first line
+  const countSpan = wrapper.querySelector('.lr-count');
+  if (countSpan) {
+    const grandTotal = table.tBodies.length;
+    countSpan.textContent = totalVisible < grandTotal ? totalVisible + '/' + grandTotal + ' ' : grandTotal + ' ';
+  }
+
+  const prev = wrapper.querySelector('.lr-prev');
+  const next = wrapper.querySelector('.lr-next');
+  if (prev) prev.style.display = totalPages <= 1 || currPage <= 1 ? 'none' : '';
+  if (next) next.style.display = totalPages <= 1 || currPage >= totalPages ? 'none' : '';
+
+  const pageSelect = wrapper.querySelector('.lr-page-select');
+  if (pageSelect) {
+    if (totalPages <= 1) {
+      pageSelect.style.display = 'none';
+    } else {
+      pageSelect.style.display = '';
+      pageSelect.innerHTML = '';
+      for (let i = 1; i <= totalPages; i++) {
+        const opt = document.createElement('option');
+        const start = (i - 1) * pageSize + 1;
+        const end = Math.min(i * pageSize, totalVisible);
+        opt.value = start;
+        opt.textContent = start + '-' + end;
+        if (i === currPage) opt.selected = true;
+        pageSelect.appendChild(opt);
+      }
+    }
+  }
+}
+
+function lr_page(el, delta) {
+  const wrapper = el.closest('[data-lr-wrapper]');
+  const table = wrapper.querySelector('table');
+  let page = parseInt(table.dataset.currentPage) + delta;
+  if (page < 1) page = 1;
+  table.dataset.currentPage = page;
+  lr_paginate(table);
+  return false;
+}
+
+function lr_gopage(select) {
+  const wrapper = select.closest('[data-lr-wrapper]');
+  const table = wrapper.querySelector('table');
+  const pageSize = parseInt(table.dataset.pageSize);
+  const startRec = parseInt(select.value);
+  table.dataset.currentPage = Math.floor((startRec - 1) / pageSize) + 1;
+  lr_paginate(table);
+}
+
+function lr_changesize(select) {
+  const wrapper = select.closest('[data-lr-wrapper]');
+  const table = wrapper.querySelector('table');
+  table.dataset.pageSize = parseInt(select.value);
+  table.dataset.currentPage = 1;
+  lr_paginate(table);
+}
+
 // Toggle visibility of an element, used in brews.pm and locations.pm
 //  print "<div onclick='toggleElement(this.nextElementSibling);'>";
 //  print "Comments and ratings ... \n";
@@ -348,33 +374,6 @@ function extractSortKey(recordRows, columnIndex) {
 function toggleElement(element) {
   if (element) {
     element.style.display = (element.style.display === 'none') ? 'block' : 'none';
-  }
-}
-
-// Show more records by removing the hidden attribute from all hidden TR elements
-function showMoreRecords(link) {
-  const moreDiv = link.parentElement;
-  const table = moreDiv.previousElementSibling;
-  
-  if (table && table.tagName === 'TABLE') {
-    // Detach table from DOM — mutations have zero reflow cost
-    const tableParent = table.parentNode;
-    const tableSibling = table.nextSibling;
-    tableParent.removeChild(table);
-
-    const hiddenTbodies = table.querySelectorAll('tbody[hidden]');
-    for (const tbody of hiddenTbodies) {
-      tbody.removeAttribute('hidden');
-    }
-
-    // Reattach table — triggers one reflow
-    if (tableSibling) {
-      tableParent.insertBefore(table, tableSibling);
-    } else {
-      tableParent.appendChild(table);
-    }
-
-    moreDiv.style.display = 'none';
   }
 }
 
