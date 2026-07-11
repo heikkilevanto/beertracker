@@ -316,8 +316,6 @@ sub listphotos {
     return;
   }
 
-  print "<b>Photos for $c->{username}</b><br/>\n";
-
   my $where = q{
     ( xGlass   IN (SELECT Id FROM glasses WHERE Username = ?)
    OR xComment IN (SELECT c.Id FROM comments c
@@ -326,8 +324,10 @@ sub listphotos {
    OR lower(xUploader) = lower(?) )
    AND ( lower(xUploader) = lower(?) OR xPublic = 1 )
   };
-  print listrecords::listrecords($c, "PHOTOS_LIST", "Ts-", $where,
-      [$c->{username}, $c->{username}, $c->{username}, $c->{username}]);
+  print listrecords::listrecords($c, "PHOTOS_LIST", "Ts-",
+      { where => $where, params => [$c->{username}, $c->{username},
+         $c->{username}, $c->{username}],
+        title => "Photos for $c->{username}" });
 } # listphotos
 
 ################################################################################

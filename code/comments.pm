@@ -151,10 +151,9 @@ sub listallcomments {
     return;
   }
 
-  print "<b>Comments by $c->{username}</b> ";
-  print "&nbsp;<a href='$c->{url}?o=Comment&e=new&returnto=comments'><span>(New)</span></a>";
-  print "<br/>\n";
-  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", "xUsername=?", $c->{username} );
+  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-",
+      { where => "xUsername=?", params => $c->{username},
+        title => "Comments by $c->{username}" });
   return;
 } # listallcomments
 

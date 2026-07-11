@@ -57,11 +57,13 @@ sub listrecords {
   my $c = shift;
   my $table = shift;
   my $sort = shift;
-  my $where = shift || "";
-  my $params = shift || undef ;  # params for the sql
-  my $extraparams = shift || undef;  # params for special fields, like lat/long to measure from
-  my $maxrecords = shift || 20;  # show this many records initially, rest hidden
-  my $browsersortcol = shift || undef;  # column name to auto-sort by in the browser
+  my $opt = shift || {};
+  my $where          = $opt->{where}          || "";
+  my $params         = $opt->{params};
+  my $extraparams    = $opt->{extraparams};
+  my $maxrecords     = $opt->{maxrecords}     || ($c->{mobile} ? 20 : 100);
+  my $browsersortcol = $opt->{browsersortcol};
+  my $title          = $opt->{title}          || "";
 
   # Build cache key from all inputs that affect the rendered HTML.
   my $params_str = "";
@@ -74,7 +76,7 @@ sub listrecords {
     $extraparams_str = join("\x1f", map { "$_=" . ($extraparams->{$_} // "") } sort keys %$extraparams);
   }
   my $mobile = $c->{mobile} ? 1 : 0;
-  my $cache_key = join("\x1e", "listrecords_v2", $c->{username}, $c->{op},
+  my $cache_key = join("\x1e", "listrecords_v3", $c->{username}, $c->{op},
                        $table, $sort, $where, $params_str, $extraparams_str,
                        $maxrecords, $mobile, $browsersortcol // "");
   my $cached = cache::get($c, $cache_key);
@@ -165,11 +167,45 @@ sub listrecords {
   my $s = "";
   $s .= "<!-- listrecords: $sql -->\n";
   $s .= "<style>
-    table[data-maxrecords] { border-collapse: separate; border-spacing: 0; }
+    table[data-page-size] { border-collapse: separate; border-spacing: 0; }
     .top-border td { border-top: 2px solid white; }
     .null-value { color: #999; font-style: italic; }
     .filtering-active { filter: brightness(1.3); }
     </style>\n";
+
+  # Header bar — always rendered, two lines
+  $s .= "<div class='lr-wrapper' data-lr-wrapper>\n";
+  $s .= "<div class='lr-bar' style='display:flex; flex-direction:column; gap:2px;'>\n";
+  $s .= "  <div style='display:flex; align-items:center; gap:4px;'>\n";
+  $s .= "    <span class='lr-count'>0</span>&nbsp;<b>$title</b>\n";
+  if ( $title !~ /^Photos/i ) {
+    $s .= "    <a href=\"$url?o=$op&e=new\"\n";
+    $s .= "       style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'><span>New</span></a>\n";
+  }
+  $s .= "    <span class='lr-clr' onclick='lr_clearfilters(this)'\n";
+  $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small'>Clr</span>\n";
+  $s .= "  </div>\n";
+  $s .= "  <div style='display:flex; align-items:center; flex-wrap:wrap; gap:8px;'>\n";
+  $s .= "    Showing <select class='lr-size-select' onchange='lr_changesize(this)'>\n";
+  my $found = 0;
+  foreach my $so (20, 50, 100, 200) {
+    my $sel = $so == $maxrecords ? " selected" : "";
+    $s .= "      <option value='$so'$sel>$so</option>\n";
+    $found = 1 if $so == $maxrecords;
+  }
+  if (!$found) {
+    $s .= "      <option value='$maxrecords' selected>$maxrecords</option>\n";
+  }
+  $s .= "      <option value='0'>All</option>\n";
+  $s .= "    </select>\n";
+  $s .= "    <a href='#' class='lr-prev' onclick='return lr_page(this,-1)'><span>Prev</span></a>\n";
+  $s .= "    <select class='lr-page-select' onchange='lr_gopage(this)'>\n";
+  $s .= "      <option value='1'>1-100</option>\n";
+  $s .= "    </select>\n";
+  $s .= "    <a href='#' class='lr-next' onclick='return lr_page(this,1)'><span>Next</span></a>\n";
+  $s .= "  </div>\n";
+  $s .= "</div>\n";
+
   my $geotable = "";
   if ( $extraparams && (($extraparams->{lat} // '') eq '?') && (($extraparams->{lon} // '') eq '?') ) {
     $geotable = "id='geotable'";
@@ -178,7 +214,7 @@ sub listrecords {
   if ( $browsersortcol ) {
     $tableid = " id='autosort-table'";
   }
-  my $tableattrs = "$geotable$tableid data-maxrecords='$maxrecords'";
+  my $tableattrs = "$geotable$tableid data-page-size='$maxrecords' data-current-page='1'";
 
   $s .= "<table $tableattrs>\n";
   my @styles;  # One for each column
@@ -208,11 +244,17 @@ sub listrecords {
       $styles[$i] = "";
       next;
     }
+    if ( $f eq "Clr" ) {
+      my $styp = "style='text-align:center;max-width:30px'";
+      $styles[$i] = $styp;
+      $s .= "<td $styp $extra_attr[$i]>&nbsp;</td>\n";
+      next;
+    }
     my $sty = "style='max-width:200px; min-width:0'"; # default
     $sty = "style='max-width:90px; min-width:0'" if ( $c->{mobile} );
     if ( $f =~ /^X/i ) {
       $sty = "style='display:none'";
-    } elsif ( $f eq "Id" ) {
+    } elsif ( $f eq "Id" || $f eq "IdClr" ) {
       $sty = "style='max-width:40px; text-align:center'";
     } elsif ( $f =~ /Id|Alc/ ) {
       $sty = "style='max-width:55px; text-align:center'";
@@ -232,7 +274,7 @@ sub listrecords {
       $sty = "style='width:96px; text-align:center; padding:1px'";
     } elsif ( $f =~ /^Photos$/ ) {
       $sty = "style='text-align:left; max-width:250px; padding:1px'";
-    } elsif ( $f =~ /Rate|Rating|Clr/) {
+    } elsif ( $f =~ /Rate|Rating/ ) {
       $sty = "style='text-align:center; font-weight:bold; max-width:50px'";
     } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
       $sty = "style='text-align:center;max-width:50px'";
@@ -258,7 +300,6 @@ sub listrecords {
     } elsif ( $f =~ /^None/i ) {
       $f = "";
     }
-    #print { $c->{log} } "i=$i f='$f' s='$sty' \n";
     $styles[$i] = $sty;
     if ( $auto_override{$i} ) {
         $styles[$i] = "";
@@ -303,19 +344,16 @@ sub listrecords {
     my $hdr_input;
     if ( $suffix_info[$i]{nofilter} ) {
         $hdr_input = $f;
-    } elsif ( $f eq "Id" ) {
+    } elsif ( $f eq "Id" || $f eq "IdClr" ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
       $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Id'/>";
     } elsif ( $f eq "Name" ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
       $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Name'/>";
-    } elsif ( $f =~ /Clr/i ) { # Clear filters button
-      $hdr_input = "<span style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:x-small' onclick='clearfilters(this);'>Clr</span>";
     } elsif ( $f  ) {
       my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
       $on = "" if ($f=~/Chk/);
       $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='$f'/>";
-      # Tried also with box-sizing: border-box; display: block;. Still extends the cell
     } else {
       $hdr_input = "&nbsp;"
     }
@@ -348,14 +386,8 @@ sub listrecords {
   my $cutoff = util::datestr("%F", -7);  # a week ago, display full date
 
   my $rowcount = 0;
-  my $hashidden = 0;  # Flag to track if we have hidden rows
   while ( my @rec = $list_sth->fetchrow_array ) {
     $rowcount++;
-    my $hidden = "";
-    if ( $rowcount > $maxrecords ) {
-      $hidden = " hidden";
-      $hashidden = 1;
-    }
     my $tds = "";
     my $id = $rec[0]; # Id has to be first if using the Check pseudofield
     my $cont_active = 0;
@@ -368,6 +400,10 @@ sub listrecords {
       $v //= "";
 
       my $fn = $fields[$i];
+      if ( $fn eq "Clr" ) {
+        $tds .= "<td $styles[$i] $extra_attr[$i]>&nbsp;</td>\n";
+        next;
+      }
       my $linebreak = linebreak($c,$fn);
       if ( $linebreak ) {
         if ($cont_active) {
@@ -404,15 +440,12 @@ sub listrecords {
         $word_split = 0;
       } elsif ( $fn eq "IdClr" ) {
         if ($v) {
-          my $op = "Brew";
+          my $op2 = "Brew";
           my $pfx = "B";
-          if ($c->{op} =~ /Photo/i) { $op = "Photos"; $pfx = "P"; }
-          elsif ($c->{op} =~ /Location/i) { $op = "Location"; $pfx = "L"; }
-          $v = "<a href='$url?o=$op&e=$v'><span>${pfx}[$v]</span></a>: ";
+          if ($c->{op} =~ /Photo/i) { $op2 = "Photos"; $pfx = "P"; }
+          elsif ($c->{op} =~ /Location/i) { $op2 = "Location"; $pfx = "L"; }
+          $v = "<a href='$url?o=$op2&e=$v'><span>${pfx}[$v]</span></a>: ";
         }
-        $word_split = 0;
-      } elsif ( $fn =~ /Clr/ ) {
-        $v="";
         $word_split = 0;
       } elsif ( $fn =~ /Sub|Id/ ) {
         if ($v) {
@@ -506,7 +539,6 @@ sub listrecords {
         $v = $disp;
       } elsif ( $fn eq "Sim" ) { # Name similarity
         if ( $v && $extraparams && $extraparams->{refname} ) {
-          # Find the Name field in this row
           my $name_idx;
           for (my $j = 0; $j < scalar(@fields); $j++) {
             if ($fields[$j] eq 'Name') {
@@ -557,8 +589,6 @@ sub listrecords {
             $photo_skipped = 1;
             next;
           }
-          # Photo is first column (no previous td to expand).
-          # Fall through to render an empty td to maintain the column grid.
         }
       } elsif ( $fn eq "Photos" ) {
         if ($v) {
@@ -574,8 +604,6 @@ sub listrecords {
             $photo_skipped = 1;
             next;
           }
-          # Photo is first column (no previous td to expand).
-          # Fall through to render an empty td to maintain the column grid.
         }
       } elsif ( $fn eq "IsGeneric" ) {
         $v = "Gen" if ($v);
@@ -625,23 +653,18 @@ sub listrecords {
       _colspan_last_td(\$tds);
     }
 
-    $s .= "<tbody$hidden>\n";
+    $s .= "<tbody data-lr-fs='1'>\n";
     $s .= "<tr data-first=1 class='top-border'>\n";
     $s .= "$tds</tr>\n";
     $s .= "</tbody>\n";
   }
   if ($rowcount == 0) {
-    $s .= "<tbody></tbody>\n";
+    $s .= "<tbody data-lr-fs='1'></tbody>\n";
   }
   $s .= "</table>\n";
+  $s .= "</div>\n";
   $s .= "<!-- listrecords: table body done -->\n";
 
-  if ($hashidden) {
-    $s .= "<!-- listrecords: more link -->\n";
-    $s .= "<div style='text-align: left; margin-top: 10px; margin-bottom: 20px;'>";
-    $s .= "<a href='javascript:void(0);' onclick='showMoreRecords(this);'><span>More...</span></a>";
-    $s .= "</div>\n";
-  }
   if ($geotable) {
     $s .= "<script>geotabledist();</script>\n";
   }
@@ -657,6 +680,7 @@ sub listrecords {
       $s .= "<script>autoSortTable('autosort-table', $sort_idx, true);</script>\n";
     }
   }
+  $s .= "<script>Array.from(document.querySelectorAll('[data-lr-wrapper] table')).forEach(function(t){lr_paginate(t);});<\/script>\n";
   $s .= "<!-- listrecords: all done for $sql -->\n";
 
   $list_sth->finish;
