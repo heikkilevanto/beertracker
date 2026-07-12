@@ -61,7 +61,7 @@ sub listrecords {
   my $where          = $opt->{where}          || "";
   my $params         = $opt->{params};
   my $extraparams    = $opt->{extraparams};
-  my $maxrecords     = $opt->{maxrecords}     || ($c->{mobile} ? 20 : 100);
+  my $maxrecords     = $opt->{maxrecords}     || 20;
   my $browsersortcol = $opt->{browsersortcol};
   my $title          = $opt->{title}          || "";
 
@@ -188,7 +188,7 @@ sub listrecords {
   $s .= "  <div style='display:flex; align-items:center; flex-wrap:wrap; gap:8px;'>\n";
   $s .= "    Showing <select class='lr-size-select' onchange='lr_changesize(this)'>\n";
   my $found = 0;
-  foreach my $so (20, 50, 100, 200) {
+  foreach my $so (10, 20, 50, 100, 200) {
     my $sel = $so == $maxrecords ? " selected" : "";
     $s .= "      <option value='$so'$sel>$so</option>\n";
     $found = 1 if $so == $maxrecords;
@@ -226,13 +226,12 @@ sub listrecords {
 
   # Filter inputs also work as column headers, and sort buttons on dbl-click
   $s .= "<tr class='top-border'>\n";
-  my $chkfield = "";
   my $hdr_cont_active = 0;
-  my $hdr_cont_sep = "";
   my $hdr_contline_rest = 0;
   my @hidden_filters;
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
+    my $filter_events = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
     my $break = linebreak($c,$f);
     if ( $break ) {
       if ($hdr_cont_active) {
@@ -278,7 +277,6 @@ sub listrecords {
       $sty = "style='text-align:center; font-weight:bold; max-width:50px'";
     } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
       $sty = "style='text-align:center;max-width:50px'";
-      $chkfield = $i; # Remember where it is
     } elsif ( $f =~ /LocName|PersonName/ ) {
       $sty = "style='font-weight: bold; max-width:200px;' ";
     } elsif ( $f =~ /isGeneric/i ) {
@@ -322,19 +320,12 @@ sub listrecords {
             $hdr_cont_active = 0;
         }
         if ( !$suffix_info[$i]{nofilter} ) {
-            my $non = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
-            push @hidden_filters, "<input type=text style='display:none' data-col='$i' $non/>\n";
+            push @hidden_filters, "<input type=text style='display:none' data-col='$i' $filter_events/>\n";
         }
         if ($hdr_contline_rest) {
             # contline chain active — skip empty td (for multi-row header layouts)
         } elsif ( $f =~ /^Photos?$/ ) {
-            my $lt = rindex($s, "<td");
-            if ($lt >= 0) {
-                my $gt = index($s, ">", $lt);
-                if ($gt > $lt && substr($s, $lt, $gt - $lt) !~ /colspan/i) {
-                    substr($s, $gt, 0) = " colspan='2'";
-                }
-            }
+            _colspan_last_td(\$s);
         } else {
             $s .= "<td $styles[$i] $extra_attr[$i]></td>\n";
         }
@@ -345,20 +336,17 @@ sub listrecords {
     if ( $suffix_info[$i]{nofilter} ) {
         $hdr_input = $f;
     } elsif ( $f eq "Id" || $f eq "IdClr" ) {
-      my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
-      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Id'/>";
+      $hdr_input = "<input type=text data-col='$i' $sty $filter_events placeholder='Id'/>";
     } elsif ( $f eq "Name" ) {
-      my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
-      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='Name'/>";
+      $hdr_input = "<input type=text data-col='$i' $sty $filter_events placeholder='Name'/>";
     } elsif ( $f  ) {
-      my $on = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
-      $on = "" if ($f=~/Chk/);
+      my $on = $f=~/Chk/ ? "" : $filter_events;
       $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='$f'/>";
     } else {
       $hdr_input = "&nbsp;"
     }
     if ($hdr_cont_active) {
-        $s .= $hdr_cont_sep . $hdr_input;
+        $s .= $hdr_input;
     } else {
         $s .= "<td $sty $extra_attr[$i]>$hdr_input";
     }
@@ -391,7 +379,6 @@ sub listrecords {
     my $tds = "";
     my $id = $rec[0]; # Id has to be first if using the Check pseudofield
     my $cont_active = 0;
-    my $cont_sep = "";
     my $contline_rest = 0;
     my $photo_skipped = 0;
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
@@ -635,7 +622,7 @@ sub listrecords {
           $cell = "";
       }
       if ($cont_active) {
-        $tds .= $cont_sep . $cell;
+        $tds .= $cell;
       } else {
         $tds .= "<td $styles[$i] $extra_attr[$i]>$cell";
       }
