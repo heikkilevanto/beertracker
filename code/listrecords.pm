@@ -421,8 +421,14 @@ sub listrecords {
       } elsif ( $suffix_info[$i]{link} ) {
         if ($v) {
           my $entity = $suffix_info[$i]{link};
-          my $prefix = substr($entity, 0, 1);
-          $v = "<a href='$url?o=$entity&e=$v'><span>${prefix}[$v]</span></a>: ";
+          if ( $entity eq $c->{op} ) {
+            $v = "<a href='$url?o=$entity&e=$v'"
+               . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+               . "><span>$v</span></a>";
+          } else {
+            my $prefix = substr($entity, 0, 1);
+            $v = "<a href='$url?o=$entity&e=$v'><span>${prefix}[$v]</span></a>: ";
+          }
         }
         $word_split = 0;
       } elsif ( $fn eq "IdClr" ) {
