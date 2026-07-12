@@ -653,7 +653,8 @@ sub listrecords {
       _colspan_last_td(\$tds);
     }
 
-    $s .= "<tbody data-lr-fs='1'>\n";
+    my $hidden_style = ($maxrecords > 0 && $rowcount > $maxrecords) ? " style='display:none'" : "";
+    $s .= "<tbody data-lr-fs='1'$hidden_style>\n";
     $s .= "<tr data-first=1 class='top-border'>\n";
     $s .= "$tds</tr>\n";
     $s .= "</tbody>\n";
@@ -680,7 +681,7 @@ sub listrecords {
       $s .= "<script>autoSortTable('autosort-table', $sort_idx, true);</script>\n";
     }
   }
-  $s .= "<script>Array.from(document.querySelectorAll('[data-lr-wrapper] table')).forEach(function(t){lr_paginate(t);});<\/script>\n";
+  $s .= "<script>document.querySelectorAll('[data-lr-wrapper]').forEach(function(w){var p=w.parentNode,s=w.nextSibling;p.removeChild(w);Array.from(w.querySelectorAll('table')).forEach(function(t){lr_paginate(t);});p.insertBefore(w,s);});<\/script>\n";
   $s .= "<!-- listrecords: all done for $sql -->\n";
 
   $list_sth->finish;

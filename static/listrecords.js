@@ -278,25 +278,26 @@ function lr_paginate(table) {
   const pageSize = parseInt(table.dataset.pageSize);
   const currPage = parseInt(table.dataset.currentPage);
 
-  // Reset all tbodies to their filter state (discard previous pagination)
-  for (let i = 0; i < table.tBodies.length; i++) {
-    const tbody = table.tBodies[i];
-    tbody.style.display = (tbody.dataset.lrFs || '1') === '1' ? '' : 'none';
-  }
-
-  // Count filter-visible rows
-  const visibleTbodies = Array.from(table.tBodies).filter(t => (t.dataset.lrFs || '1') === '1');
+  const allTbodies = Array.from(table.tBodies);
+  const visibleTbodies = allTbodies.filter(t => (t.dataset.lrFs || '1') === '1');
   const totalVisible = visibleTbodies.length;
   const totalPages = pageSize > 0 ? Math.ceil(totalVisible / pageSize) : 1;
 
-  // Apply pagination
+  // Compute which filter-visible tbodies belong on this page
+  const visibleSet = new Set();
   if (pageSize === 0) {
-    visibleTbodies.forEach(t => t.style.display = '');
+    visibleTbodies.forEach(t => visibleSet.add(t));
   } else {
-    visibleTbodies.forEach(t => t.style.display = 'none');
     const start = (currPage - 1) * pageSize;
     const end = Math.min(start + pageSize, totalVisible);
-    for (let i = start; i < end; i++) visibleTbodies[i].style.display = '';
+    for (let i = start; i < end; i++) visibleSet.add(visibleTbodies[i]);
+  }
+
+  // Single pass: set display based on filter + pagination
+  for (let i = 0; i < allTbodies.length; i++) {
+    const tbody = allTbodies[i];
+    const filteredIn = (tbody.dataset.lrFs || '1') === '1';
+    tbody.style.display = (filteredIn && visibleSet.has(tbody)) ? '' : 'none';
   }
 
   lr_updateInfo(table, currPage, totalVisible, totalPages);
