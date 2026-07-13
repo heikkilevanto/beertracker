@@ -42,8 +42,15 @@ sub _colspan_last_td {
   my $tds_ref = shift;
   my $lt = rindex($$tds_ref, "<td");
   return 0 if $lt < 0;
-  my $gt = index($$tds_ref, ">", $lt);
-  return 0 if $gt <= $lt;
+  my $gt;
+  while ($lt >= 0) {
+    $gt = index($$tds_ref, ">", $lt);
+    return 0 if $gt <= $lt;
+    my $tag = substr($$tds_ref, $lt, $gt - $lt);
+    last if $tag !~ /display\s*:\s*none/i;
+    $lt = $lt > 0 ? rindex($$tds_ref, "<td", $lt - 1) : -1;
+  }
+  return 0 if $lt < 0;
   return 0 if substr($$tds_ref, $lt, $gt - $lt) =~ /colspan/i;
   substr($$tds_ref, $gt, 0) = " colspan='2'";
   return 1;
@@ -228,6 +235,7 @@ sub listrecords {
   $s .= "<tr class='top-border'>\n";
   my $hdr_cont_active = 0;
   my $hdr_contline_rest = 0;
+  my $hdr_photo_rs_rem = 0;
   my @hidden_filters;
   for ( my $i=0; $i < scalar( @fields ); $i++ ) {
     my $f = $fields[$i];
@@ -239,6 +247,12 @@ sub listrecords {
         $hdr_cont_active = 0;
       }
       $hdr_contline_rest = 0;
+      if ($hdr_photo_rs_rem > 1) {
+        _colspan_last_td(\$s);
+      }
+      if ($hdr_photo_rs_rem) {
+        $hdr_photo_rs_rem--;
+      }
       $s .= $break;
       $styles[$i] = "";
       next;
@@ -326,6 +340,7 @@ sub listrecords {
             # contline chain active — skip empty td (for multi-row header layouts)
         } elsif ( $f =~ /^Photos?$/ ) {
             _colspan_last_td(\$s);
+            $hdr_photo_rs_rem = $suffix_info[$i]{rowspan} || 0;
         } else {
             $s .= "<td $styles[$i] $extra_attr[$i]></td>\n";
         }
@@ -365,6 +380,9 @@ sub listrecords {
   }
   foreach my $i (keys %auto_override) {
       $styles[$i] = "";
+  }
+  if ($hdr_photo_rs_rem > 0) {
+    _colspan_last_td(\$s);
   }
   $s .= "</tr>\n";
   $s .= join('', @hidden_filters);
