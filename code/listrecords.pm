@@ -455,7 +455,13 @@ sub listrecords {
           my $pfx = "B";
           if ($c->{op} =~ /Photo/i) { $op2 = "Photos"; $pfx = "P"; }
           elsif ($c->{op} =~ /Location/i) { $op2 = "Location"; $pfx = "L"; }
-          $v = "<a href='$url?o=$op2&e=$v'><span>${pfx}[$v]</span></a>: ";
+          if ( $op2 eq $c->{op} ) {
+            $v = "<a href='$url?o=$op2&e=$v'"
+               . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+               . "><span>$v</span></a>";
+          } else {
+            $v = "<a href='$url?o=$op2&e=$v'><span>${pfx}[$v]</span></a>: ";
+          }
         }
         $word_split = 0;
       } elsif ( $fn =~ /Sub|Id/ ) {
