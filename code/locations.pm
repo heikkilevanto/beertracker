@@ -289,7 +289,7 @@ sub locationdeduplist {
   $extra->{lon} = $loc->{Lon};
   $extra->{refname} = $loc->{Name};
   print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort,
-      { where => "Id <> $loc->{Id}", extraparams => $extra,
+      { where => "Id_A <> $loc->{Id}", extraparams => $extra,
         browsersortcol => "Sim", title => "Similar locations" });
   print "</form>\n";
   print "</div>\n";

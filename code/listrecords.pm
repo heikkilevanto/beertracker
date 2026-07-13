@@ -464,13 +464,24 @@ sub listrecords {
           }
         }
         $word_split = 0;
-      } elsif ( $fn =~ /Sub|Id/ ) {
+      } elsif ( $fn eq "Id" ) {
         if ($v) {
-          if ($c->{op} =~ /Comment/i) {
-            $v = "<a href='$url?o=Comment&e=$v'><span>[$v]</span></a>";
+          my $op2 = "Brew";
+          my $pfx = "B";
+          if ($c->{op} =~ /Photo/i) { $op2 = "Photos"; $pfx = "P"; }
+          elsif ($c->{op} =~ /Location/i) { $op2 = "Location"; $pfx = "L"; }
+          if ( $op2 eq $c->{op} ) {
+            $v = "<a href='$url?o=$op2&e=$v'"
+               . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+               . "><span>$v</span></a>";
           } else {
-            $v = "[$v]";
+            $v = "<a href='$url?o=$op2&e=$v'><span>${pfx}[$v]</span></a>: ";
           }
+        }
+        $word_split = 0;
+      } elsif ( $fn eq "Sub" ) {
+        if ($v) {
+          $v = "[$v]";
         }
       } elsif ( $fn eq "Type" ) {
         $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
@@ -575,12 +586,16 @@ sub listrecords {
       } elsif ( $fn eq "Geo" ) { # Geo dist
         if ( $v && $extraparams && $extraparams->{lat} && $extraparams->{lon} ) {
           my ( $lat, $lon ) = split(' ', $v);
-          if (  $extraparams->{lat} eq '?' ) {  # Need to recalc in js
+          if ( $extraparams->{lat} eq '?' ) {
             $data_attrs .= " lat=$lat lon=$lon";
             $v = '?';
           } else {
             $v = geo::geodist( $extraparams->{lat}, $extraparams->{lon}, $lat, $lon );
           }
+        } elsif ( $v ) {
+          # no reference lat/lon, show raw coordinates
+          my ( $lat, $lon ) = split(' ', $v);
+          $v = "$lat, $lon" if $lat;
         } else {
           $v = "";
         }

@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 36;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 37;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -55,6 +55,7 @@ our @MIGRATIONS = (
   [34, 'brews_list Id links to Brew', \&mig_034_brews_list_id_link],
   [35, '705 locations_list use IdClr and auto-width', \&mig_035_locations_list_idclr],
   [36, 'producer_brews_list fix Last column format', \&mig_036_producer_brews_list_last],
+  [37, 'producer_brews_list two-line format', \&mig_037_producer_brews_list_two_line],
 );
 
 ################################################################################
@@ -785,6 +786,62 @@ sub mig_036_producer_brews_list_last {
     group by brews.id, users.Username
   });
 } # mig_036_producer_brews_list_last
+
+################################################################################
+# Migration 37: producer_brews_list and locations_dedup_list two-line format
+# producer_brews_list:
+#   Row 1: IdClr_A, Name_A_C2_cont
+#   Row 2: Alc, Type_A_cont + Stats_A, Last
+# locations_dedup_list:
+#   Row 1: Id_link:Location, Name, Sim, Geo_as:Dist
+#   Row 2: Chk, Type, Last_C2
+################################################################################
+sub mig_037_producer_brews_list_two_line {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS producer_brews_list");
+  db::execute($c, q{
+    CREATE VIEW producer_brews_list AS
+    with users as (
+      select distinct Username from glasses
+    )
+    select
+      brews.Id AS "IdClr_A",
+      brews.Name AS "Name_A_C2_cont",
+      '' AS TR1,
+      brews.Alc AS "Alc",
+      brews.BrewType || ', ' || brews.SubType AS "Type_A_cont",
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_A",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
+      ploc.Name as xProducer,
+      users.Username as xUsername
+    from brews
+    cross join users
+    left join locations ploc on ploc.id = brews.ProducerLocation
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.id, users.Username
+  });
+
+  db::execute($c, "DROP VIEW IF EXISTS locations_dedup_list");
+  db::execute($c, q{
+    CREATE VIEW locations_dedup_list AS
+    select
+      locations.Id AS "Id_A",
+      locations.Name,
+      '?' as Sim,
+      locations.lat || ' ' || locations.lon AS Geo,
+      '' AS TR1,
+      'Chk' as Chk,
+      locations.LocType || ', ' || locations.LocSubType as Type,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) as "Last_C2"
+    from locations
+    left join glasses on glasses.Location = locations.Id
+    group by locations.Id
+  });
+} # mig_037_producer_brews_list_two_line
 
 ################################################################################
 
