@@ -74,6 +74,9 @@ sub _location_comment_section {
 
   my $sth = db::query($c, $sql, @params);
 
+  my $com = $sth->fetchrow_hashref;
+  if (!$com) { $sth->finish; return 0; }
+
   my $show = $collapsed ? "display:none" : "";
   print "<div onclick='toggleElement(this.nextElementSibling);'>" .
         "<b>$title</b>" .
@@ -85,7 +88,7 @@ sub _location_comment_section {
   my $comcount = 0;
   my $count = 0;
   my $lastgroup = "";
-  while ( my $com = $sth->fetchrow_hashref ) {
+  while ( $com ) {
     my $groupkey = $com->{Gid} // "c-$com->{Id}";
     if ( $lastgroup ne $groupkey ) {
       $count++;
@@ -124,6 +127,7 @@ sub _location_comment_section {
       $ratesum += $com->{Rating};
       $ratecount++;
     }
+    $com = $sth->fetchrow_hashref;
   }
   if ( $count >= 8 ) {
     print "</div>\n";
@@ -143,44 +147,50 @@ sub _location_comment_section {
     }
   }
   print "</div>";
-  $sth->finish;
+  return 1;
 } # _location_comment_section
 
 ################################################################################
-# List location comments, split into three sections:
+# List location comments, split into sections:
 # 1. Comments about the location itself (direct, no glass)
 # 2. Comments at the location without a brew (glass-routed, empty glass)
 # 3. Comments at the location with a brew (glass-routed, has brew)
+# 4. Comments on brews produced by this location (via BREWS.ProducerLocation)
 ################################################################################
 sub listlocationcomments {
   my $c = shift;
   my $loc = shift;
   print "<!-- listlocationcomments -->\n";
 
-  _location_comment_section($c, $loc,
+  my $rendered = 0;
+  $rendered += _location_comment_section($c, $loc,
     "Comments about $loc->{Name} [$loc->{Id}]",
     0, 0,
     "(COMMENTS.Location = ? AND COMMENTS.Glass IS NULL AND (COMMENTS.Username = ? OR COMMENTS.Username IS NULL))",
     $loc->{Id}, $c->{username});
 
-  print "<hr/>\n";
-
-  _location_comment_section($c, $loc,
+  my $r = _location_comment_section($c, $loc,
     "Comments on nights etc at $loc->{Name} [$loc->{Id}]",
     1, 0,
     "(COMMENTS.Glass IS NOT NULL AND GLASSES.Location = ? AND (GLASSES.Brew IS NULL OR GLASSES.Brew = '') AND GLASSES.Username = ?)",
     $loc->{Id}, $c->{username});
+  if ($r) { print "<hr/>\n"; }
+  $rendered += $r;
 
-  print "<hr/>\n";
-
-  _location_comment_section($c, $loc,
+  $r = _location_comment_section($c, $loc,
     "Comments on brews at $loc->{Name} [$loc->{Id}]",
     1, 1,
     "(COMMENTS.Glass IS NOT NULL AND GLASSES.Location = ? AND GLASSES.Brew IS NOT NULL AND GLASSES.Brew != '' AND GLASSES.Username = ?)",
     $loc->{Id}, $c->{username});
+  if ($r) { print "<hr/>\n"; }
+  $rendered += $r;
 
-  print "<!-- listlocationcomments end -->\n";
-  print "<hr/>\n";
+  if ($rendered) {
+    print "<!-- listlocationcomments end -->\n";
+    print "<hr/>\n";
+  } else {
+    print "<!-- listlocationcomments end (empty) -->\n";
+  }
 } # listlocationcomments
 
 ################################################################################
@@ -219,6 +229,8 @@ sub locationvisits {
     $totalvisits += $visit->{daycount};
   }
   $table_html .= "<br/>\n";
+  $sth->finish;
+  return if $totalvisits == 0;
 
   print "<div onclick='toggleElement(this.nextElementSibling);'>";
   print "<b>$totalvisits visits to $locrec->{Name}</b> [$locrec->{Id}]";
@@ -240,7 +252,7 @@ sub locationvisits {
 sub producerbrews {
   my $c = shift;
   my $p = shift;
-  my $countsql = "select count(distinct xId) as cnt from producer_brews_list where xProducer = ? and xUsername = ?";
+  my $countsql = "select count(*) as cnt from producer_brews_list where xProducer = ? and xUsername = ?";
   my $nbrews = db::queryrecord($c, $countsql, $p->{Name}, $c->{username});
   my $oldop = $c->{op};
   $c->{op} = "Brew";  # Make name links to point to brews, not locations
@@ -458,6 +470,14 @@ JS
       listlocationcomments($c,$p);
       locationvisits($c, $p );
       if ( $p->{LocType} =~ /Producer/ ) {
+        if ( _location_comment_section($c, $p,
+          "Comments on brews by $p->{Name} [$p->{Id}]",
+          1, 1,
+          "(GLASSES.Brew IN (SELECT Id FROM BREWS WHERE ProducerLocation = ?) AND GLASSES.Username = ?)",
+          $p->{Id}, $c->{username}) )
+        {
+          print "<hr/>\n";
+        }
         producerbrews($c, $p);
       }
       locationdeduplist($c,$p);

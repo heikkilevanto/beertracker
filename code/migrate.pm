@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 35;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 36;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -54,6 +54,7 @@ our @MIGRATIONS = (
   [33, 'comments_list use suffixes', \&mig_033_comments_list_suffixes],
   [34, 'brews_list Id links to Brew', \&mig_034_brews_list_id_link],
   [35, '705 locations_list use IdClr and auto-width', \&mig_035_locations_list_idclr],
+  [36, 'producer_brews_list fix Last column format', \&mig_036_producer_brews_list_last],
 );
 
 ################################################################################
@@ -751,6 +752,39 @@ sub mig_035_locations_list_idclr {
     GROUP BY locations.Id
   });
 } # mig_035_locations_list_idclr
+
+################################################################################
+# Migration 36: producer_brews_list fix Last column format
+# The Last column must include weekday and time (same format as brews_list)
+# so that listrecords.pm can render recent entries properly.
+################################################################################
+sub mig_036_producer_brews_list_last {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS producer_brews_list");
+  db::execute($c, q{
+    CREATE VIEW producer_brews_list AS
+    with users as (
+      select distinct Username from glasses
+    )
+    select
+      brews.Id AS "IdClr_A_cont",
+      brews.Name,
+      ploc.Name as xProducer,
+      brews.Alc as Alc,
+      brews.BrewType || ', ' || brews.SubType AS "Type_A",
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
+      users.Username as xUsername
+    from brews
+    cross join users
+    left join locations ploc on ploc.id = brews.ProducerLocation
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.id, users.Username
+  });
+} # mig_036_producer_brews_list_last
 
 ################################################################################
 
