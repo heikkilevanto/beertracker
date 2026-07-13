@@ -342,7 +342,7 @@ sub brewdeduplist {
   my $extra = {};
   $extra->{refname} = $brew->{Name};
   print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort,
-      { where => "Id <> $brew->{Id} AND xUsername = ?",
+      { where => qq{"Id_A_link:Brew" <> $brew->{Id} AND xUsername = ?},
         params => $c->{username}, extraparams => $extra,
         browsersortcol => "Sim", title => "Similar brews" });
   print "</form>\n";

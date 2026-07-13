@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 37;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 38;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -56,6 +56,7 @@ our @MIGRATIONS = (
   [35, '705 locations_list use IdClr and auto-width', \&mig_035_locations_list_idclr],
   [36, 'producer_brews_list fix Last column format', \&mig_036_producer_brews_list_last],
   [37, 'producer_brews_list two-line format', \&mig_037_producer_brews_list_two_line],
+  [38, 'brews_dedup_list two-line format', \&mig_038_brews_dedup_list_two_line],
 );
 
 ################################################################################
@@ -842,6 +843,45 @@ sub mig_037_producer_brews_list_two_line {
     group by locations.Id
   });
 } # mig_037_producer_brews_list_two_line
+
+################################################################################
+# Migration 38: brews_dedup_list two-line format
+#   Row 1: Id_A_link:Brew, Name, Sim, Stats, Alc, Type_A
+#   Row 2: Chk, Producer, Count, Last, Location_C2
+################################################################################
+sub mig_038_brews_dedup_list_two_line {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS brews_dedup_list");
+  db::execute($c, q{
+    CREATE VIEW brews_dedup_list AS
+    with users as (
+      select distinct Username from glasses
+    )
+    select
+        brews.Id AS "Id_A_link:Brew",
+        brews.Name,
+        '?' as Sim,
+        r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
+        brews.Alc as Alc,
+        brews.BrewType || ', ' || brews.Subtype AS "Type_A",
+        '' AS TR1,
+        'Chk' as Chk,
+        ploc.Name as Producer,
+        count(glasses.Id) as Count,
+        strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+          strftime('%H:%M', max(glasses.Timestamp)) as Last,
+        locations.Name AS "Location_C2",
+        users.Username as xUsername
+    from brews
+    cross join users
+    left join locations ploc on ploc.id = brews.ProducerLocation
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+    left join locations on locations.id = glasses.Location
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.id, users.Username
+  });
+} # mig_038_brews_dedup_list_two_line
 
 ################################################################################
 
