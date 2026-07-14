@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 41;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 42;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -60,6 +60,7 @@ our @MIGRATIONS = (
   [39, 'comments_list swap Last/CommentType, remove Clr value', \&mig_039_comments_list_swap_last],
   [40, 'brews_list add location Id links before producer and location, swap Location/Last', \&mig_040_brews_list_add_idcols],
   [41, 'brews_list fix Id columns to use ploc.Id/locations.Id, always button links', \&mig_041_brews_list_fix_idcols],
+  [42, 'persons_list replace Clr with Spc_A_noheader, add location Id link', \&mig_042_persons_list_spc_loclink],
 );
 
 ################################################################################
@@ -1035,6 +1036,40 @@ sub mig_041_brews_list_fix_idcols {
     group by brews.Id, users.Username
   });
 } # mig_041_brews_list_fix_idcols
+
+################################################################################
+# Migration 42: persons_list replace Clr with Spc, add location Id link
+# Replaces the literal 'Clr' value with an invisible auto-width column,
+# and adds a location Id link before the location name (via _cont).
+################################################################################
+sub mig_042_persons_list_spc_loclink {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS persons_list");
+  db::execute($c, q{
+    CREATE VIEW persons_list AS
+    SELECT
+      persons.Id AS "Id_link:Person",
+      persons.Name AS "Name_A_as:Person_C2",
+      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R3_noheader_nofilter",
+      '' AS TR1,
+      count(distinct comments.Id) - 1 AS Com,
+      persons.description AS "Description_A",
+      strftime('%Y-%m-%d %w ', max(coalesce(glasses.Timestamp, comments.Ts)), '-06:00') ||
+        strftime('%H:%M', max(coalesce(glasses.Timestamp, comments.Ts))) AS "Last_A",
+      '' AS TR2,
+      '' AS "Spc_A_noheader",
+      persons.Tags AS "Tags_A",
+      locations.Id AS "LocId_A_link:Location_cont",
+      locations.Name AS "Location_A"
+    FROM persons
+    LEFT JOIN comment_persons cp ON cp.Person = persons.Id
+    LEFT JOIN comments ON comments.Id = cp.Comment
+    LEFT JOIN glasses ON glasses.Id = comments.Glass
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    GROUP BY persons.Id
+  });
+} # mig_042_persons_list_spc_loclink
 
 ################################################################################
 

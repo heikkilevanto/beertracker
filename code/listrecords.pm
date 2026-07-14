@@ -590,10 +590,9 @@ sub listrecords {
             $tds .= "</td>\n";
             $cont_active = 0;
           }
-          if (_colspan_last_td(\$tds)) {
-            $photo_skipped = 1;
-            next;
-          }
+          _colspan_last_td(\$tds);  # Best-effort: may fail if last td already has colspan
+          $photo_skipped = 1;
+          next;
         }
       } elsif ( $fn eq "Photos" ) {
         if ($v) {
