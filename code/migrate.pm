@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 42;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 43;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -61,6 +61,7 @@ our @MIGRATIONS = (
   [40, 'brews_list add location Id links before producer and location, swap Location/Last', \&mig_040_brews_list_add_idcols],
   [41, 'brews_list fix Id columns to use ploc.Id/locations.Id, always button links', \&mig_041_brews_list_fix_idcols],
   [42, 'persons_list replace Clr with Spc_A_noheader, add location Id link', \&mig_042_persons_list_spc_loclink],
+  [43, 'locations_list render Id as button-like link', \&mig_043_locations_list_id_link],
 );
 
 ################################################################################
@@ -1070,6 +1071,45 @@ sub mig_042_persons_list_spc_loclink {
     GROUP BY persons.Id
   });
 } # mig_042_persons_list_spc_loclink
+
+################################################################################
+# Migration 43: locations_list render Id as button-like link
+# Changes IdClr to Id_link:Location so the id renders as a clickable button
+# (using the same style as _link:Entity in listrecords.pm).
+################################################################################
+sub mig_043_locations_list_id_link {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS locations_list");
+  db::execute($c, q{
+    CREATE VIEW locations_list AS
+    SELECT
+      locations.Id AS "Id_link:Location",
+      locations.Name AS "Name_A_as:LocName_cont",
+      CASE
+        WHEN locations.LocType IS NOT NULL AND locations.LocType != '' AND
+             locations.LocSubType IS NOT NULL AND locations.LocSubType != ''
+        THEN '[' || locations.LocType || ', ' || locations.LocSubType || ']'
+        WHEN locations.LocType IS NOT NULL AND locations.LocType != ''
+        THEN '[' || locations.LocType || ']'
+        WHEN locations.LocSubType IS NOT NULL AND locations.LocSubType != ''
+        THEN '[' || locations.LocSubType || ']'
+        ELSE ''
+      END AS "LocType_A_cont",
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS "Ratings_as:Stats",
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R2_noheader_nofilter",
+      '' AS TR1,
+      locations.lat || ' ' || locations.lon AS "Geo",
+      COALESCE(locations.Country,'') || ';' || COALESCE(locations.Region,'') AS "CountryRegion_A_contline",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
+      locations.Tags AS xTags
+    FROM locations
+    LEFT JOIN glasses ON glasses.Location = locations.Id
+    LEFT JOIN location_ratings r ON r.id = locations.Id
+    GROUP BY locations.Id
+  });
+} # mig_043_locations_list_id_link
 
 ################################################################################
 
