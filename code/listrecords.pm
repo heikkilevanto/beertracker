@@ -71,6 +71,8 @@ sub listrecords {
   my $maxrecords     = $opt->{maxrecords}     || 20;
   my $browsersortcol = $opt->{browsersortcol};
   my $title          = $opt->{title}          || "";
+  my $initial_filter = $opt->{initial_filter} || {};
+  my $no_new_link    = $opt->{no_new_link}    || 0;
 
   # Build cache key from all inputs that affect the rendered HTML.
   my $params_str = "";
@@ -185,7 +187,7 @@ sub listrecords {
   $s .= "<div class='lr-bar' style='display:flex; flex-direction:column; gap:2px;'>\n";
   $s .= "  <div style='display:flex; align-items:center; gap:4px;'>\n";
   $s .= "    <span class='lr-count'>0</span>&nbsp;<b>$title</b>\n";
-  if ( $title !~ /^Photos/i ) {
+  if ( $title !~ /^Photos/i && !$no_new_link ) {
     $s .= "    <a href=\"$url?o=$op&e=new\"\n";
     $s .= "       style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'><span>New</span></a>\n";
   }
@@ -221,7 +223,8 @@ sub listrecords {
   if ( $browsersortcol ) {
     $tableid = " id='autosort-table'";
   }
-  my $tableattrs = "$geotable$tableid data-page-size='$maxrecords' data-current-page='1'";
+  my $autofilter_attr = ($initial_filter && scalar(keys %$initial_filter)) ? " data-autofilter" : "";
+  my $tableattrs = "$geotable$tableid$autofilter_attr data-page-size='$maxrecords' data-current-page='1'";
 
   $s .= "<table $tableattrs>\n";
   my @styles;  # One for each column
@@ -345,16 +348,20 @@ sub listrecords {
         next;
     }
 
+    my $val_attr = "";
+    if ($initial_filter && exists $initial_filter->{$f}) {
+        $val_attr = " value='" . util::htmlesc($initial_filter->{$f}) . "'";
+    }
     my $hdr_input;
     if ( $suffix_info[$i]{nofilter} ) {
         $hdr_input = $f;
     } elsif ( $f eq "Id" || $f eq "IdClr" ) {
-      $hdr_input = "<input type=text data-col='$i' $sty $filter_events placeholder='Id'/>";
+      $hdr_input = "<input type=text data-col='$i' $sty $filter_events placeholder='Id'$val_attr/>";
     } elsif ( $f eq "Name" ) {
-      $hdr_input = "<input type=text data-col='$i' $sty $filter_events placeholder='Name'/>";
+      $hdr_input = "<input type=text data-col='$i' $sty $filter_events placeholder='Name'$val_attr/>";
     } elsif ( $f  ) {
       my $on = $f=~/Chk/ ? "" : $filter_events;
-      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='$f'/>";
+      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='$f'$val_attr/>";
     } else {
       $hdr_input = "&nbsp;"
     }
@@ -686,6 +693,15 @@ sub listrecords {
     }
   }
   $s .= "<script>document.querySelectorAll('[data-lr-wrapper]').forEach(function(w){var p=w.parentNode,s=w.nextSibling;p.removeChild(w);Array.from(w.querySelectorAll('table')).forEach(function(t){lr_paginate(t);});p.insertBefore(w,s);});<\/script>\n";
+  if ($initial_filter) {
+    for my $i (0..$#fields) {
+      if (exists $initial_filter->{$fields[$i]}) {
+        my $v = util::htmlesc($initial_filter->{$fields[$i]});
+        $s .= "<script>autoFilterTable($i, '$v');<\/script>\n";
+        last;
+      }
+    }
+  }
   $s .= "<!-- listrecords: all done for $sql -->\n";
 
   $list_sth->finish;

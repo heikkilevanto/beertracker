@@ -22,55 +22,6 @@ sub listpersons {
   return;
 } # listpersons
 
-################################################################################
-# Person details
-################################################################################
-# Show when and where we have seen that person, and comments
-sub showpersondetails {
-  my $c = shift;
-  my $pers = shift;
-
-  my $pers_seen_sql = "
-  select
-    comments.*,
-    group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData,
-    strftime('%Y-%m-%d %w', g.timestamp, '-06:00') as effdate,
-    strftime('%H:%M', g.timestamp, '-06:00') as time,
-    g.Location as loc,
-    l.Name as locname,
-    l.Website as locwebsite,
-    g.brewtype as brewtype,
-    g.subtype as subtype,
-    g.id as id
-  from comments
-  left join comment_persons cp on cp.Comment = comments.Id
-  left join persons cp_persons on cp_persons.Id = cp.Person
-  left join glasses g on g.id = comments.glass
-  left join locations l on l.id = g.location
-  where comments.Glass in (
-    select c2.Glass from comments c2
-    join comment_persons cp2 on cp2.Comment = c2.Id
-    join glasses g2 on g2.Id = c2.Glass
-    where cp2.Person = ?
-      and g2.username = ?
-      and c2.Glass IS NOT NULL)
-  and (comments.Username IS NULL OR comments.Username = ?)
-  group by comments.Id
-  order by COALESCE(g.Timestamp, comments.Ts) desc, comments.id desc
-  ";
-  my $sth = db::query($c, $pers_seen_sql, $pers->{Id}, $c->{username}, $c->{username} );
-  my $curgl = "";
-  while ( my $rec = $sth->fetchrow_hashref) {
-    if ( $curgl ne $rec->{Glass} ) {
-      $curgl = $rec->{Glass};
-      mainlist::locationhead($c,$rec);
-      mainlist::nameline($c,$rec);
-    }
-    print comments::commentline($c, $rec, "dlty"), "<br/>\n";
-  }
-
-} # showpersondetails
-
 
 ################################################################################
 # Editperson - Show a form for editing a person record
@@ -118,7 +69,14 @@ sub editperson {
     print "<hr/>\n";
   }
 
-  showpersondetails($c,$p);
+  my $name = $p->{Name};
+  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+      where => "EXISTS (SELECT 1 FROM comment_persons cp WHERE cp.Comment = \"Id_A_link:Comment\" AND cp.Person = ?) AND xUsername = ?",
+      params => [$p->{Id}, $c->{username}],
+      title => "Comments mentioning $name",
+      initial_filter => { CommentType => "person" },
+      no_new_link => 1,
+  });
 } # editperson
 
 

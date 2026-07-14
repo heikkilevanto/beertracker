@@ -385,3 +385,18 @@ function autoSortTable(tableId, col, ascending) {
   const input = table.querySelector('thead input[data-col="' + col + '"]');
   if (input) doSortTable(input, col, ascending);
 }
+
+// Auto-filter a table by a given column on page load
+function autoFilterTable(col, token) {
+  const table = document.querySelector('[data-autofilter]');
+  if (!table) return;
+  const input = table.querySelector('thead input[data-col="' + col + '"]');
+  if (!input) return;
+  input.value = token;
+  dochangefilter(input);
+  var vis = Array.from(table.tBodies).filter(function(t){return t.style.display !== 'none';});
+  if (vis.length === 0) {
+    input.value = '';
+    dochangefilter(input);
+  }
+}
