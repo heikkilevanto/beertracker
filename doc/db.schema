@@ -549,6 +549,10 @@ create view comments_list as
     group by comments.Id;
 
 -- view brews_list
+-- Layout (3 rows, 3+photo cols):
+--   Row1 = [Id_link:Brew ] [Name Type      ] [Photo_R3 (rspan 3)]
+--   Row2 = [Alc          ] [PlocId_link Prod Stats]
+--   Row3 = [Count        ] [LocId_link LocName Last ]
 drop view if exists brews_list;
 create view brews_list as
     with users as (
@@ -562,13 +566,15 @@ create view brews_list as
         as "Photo_R3_noheader_nofilter",
       '' as TR1,
       brews.Alc as "Alc",
+      ploc.Id as "PlocId_A_link:Location_cont",
       ploc.Name as "Producer_A_cont",
       r.rating_count || ';' || r.average_rating || ';' || r.comment_count as "Stats_as:Stats",
       '' as TR2,
       count(glasses.Id) as "Count",
+      locations.Id as "LocId_A_link:Location_cont",
+      locations.Name as "Location_A_as:LocName_cont",
       strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) as "Last_cont",
-      locations.Name as "Location_A_as:LocName",
+        strftime('%H:%M', max(glasses.Timestamp)) as "Last",
       users.Username as xUsername
     from brews
     cross join users

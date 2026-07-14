@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 39;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 41;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -58,6 +58,8 @@ our @MIGRATIONS = (
   [37, 'producer_brews_list two-line format', \&mig_037_producer_brews_list_two_line],
   [38, 'brews_dedup_list two-line format', \&mig_038_brews_dedup_list_two_line],
   [39, 'comments_list swap Last/CommentType, remove Clr value', \&mig_039_comments_list_swap_last],
+  [40, 'brews_list add location Id links before producer and location, swap Location/Last', \&mig_040_brews_list_add_idcols],
+  [41, 'brews_list fix Id columns to use ploc.Id/locations.Id, always button links', \&mig_041_brews_list_fix_idcols],
 );
 
 ################################################################################
@@ -933,6 +935,106 @@ sub mig_039_comments_list_swap_last {
     GROUP BY comments.Id
   });
 } # mig_039_comments_list_swap_last
+
+################################################################################
+# Migration 40: brews_list add location Id links before producer and location,
+# swap Location/Last on row 3 so Id link is next to Location
+# Layout (3 rows, 3+photo cols):
+#   Row1 = [Id_link:Brew ] [Name Type      ] [Photo_R3 (rspan 3)]
+#   Row2 = [Alc          ] [PlocId_link Prod Stats]
+#   Row3 = [Count        ] [LocId_link LocName Last ]
+################################################################################
+sub mig_040_brews_list_add_idcols {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS brews_list");
+  db::execute($c, q{
+    CREATE VIEW brews_list AS
+    with users as (
+      select distinct Username from glasses
+    )
+    select
+      brews.Id AS "Id_A_link:Brew",
+      brews.Name AS "Name_A_cont",
+      brews.BrewType || ', ' || brews.SubType AS "Type_A",
+      (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_R3_noheader_nofilter",
+
+      '' AS TR1,
+      brews.Alc AS "Alc",
+      ploc.Id AS "Id_A_link:Location_cont",
+      ploc.Name AS "Producer_A_cont",
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as:Stats",
+
+      '' AS TR2,
+      count(glasses.Id) AS "Count",
+      locations.Id AS "Id_A_link:Location_cont",
+      locations.Name AS "Location_A_as:LocName_cont",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
+
+      users.Username AS xUsername
+    from brews
+    cross join users
+    left join locations ploc on ploc.Id = brews.ProducerLocation
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+    left join locations on locations.Id = glasses.Location
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.Id, users.Username
+  });
+} # mig_040_brews_list_add_idcols
+
+################################################################################
+# Migration 41: brews_list fix Id columns to use ploc.Id/locations.Id,
+# always button links
+# Migration 40 was initially deployed with wrong Id columns (brews.Id instead of
+# ploc.Id/locations.Id). This migration corrects the view and the _link handler
+# now always renders as a button.
+# Layout (3 rows, 3+photo cols):
+#   Row1 = [Id_link:Brew ] [Name Type      ] [Photo_R3 (rspan 3)]
+#   Row2 = [Alc          ] [PlocId_link Prod Stats]
+#   Row3 = [Count        ] [LocId_link LocName Last ]
+# Uses distinct aliases (PlocId_ / LocId_) to avoid duplicate column names.
+################################################################################
+sub mig_041_brews_list_fix_idcols {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS brews_list");
+  db::execute($c, q{
+    CREATE VIEW brews_list AS
+    with users as (
+      select distinct Username from glasses
+    )
+    select
+      brews.Id AS "Id_A_link:Brew",
+      brews.Name AS "Name_A_cont",
+      brews.BrewType || ', ' || brews.SubType AS "Type_A",
+      (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_R3_noheader_nofilter",
+
+      '' AS TR1,
+      brews.Alc AS "Alc",
+      ploc.Id AS "PlocId_A_link:Location_cont",
+      ploc.Name AS "Producer_A_cont",
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as:Stats",
+
+      '' AS TR2,
+      count(glasses.Id) AS "Count",
+      locations.Id AS "LocId_A_link:Location_cont",
+      locations.Name AS "Location_A_as:LocName_cont",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
+
+      users.Username AS xUsername
+    from brews
+    cross join users
+    left join locations ploc on ploc.Id = brews.ProducerLocation
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+    left join locations on locations.Id = glasses.Location
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.Id, users.Username
+  });
+} # mig_041_brews_list_fix_idcols
 
 ################################################################################
 
