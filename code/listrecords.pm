@@ -335,6 +335,10 @@ sub listrecords {
         } elsif ( $f =~ /^Photos?$/ ) {
             _colspan_last_td(\$s);
             $hdr_photo_rs_rem = $suffix_info[$i]{rowspan} || 0;
+        } elsif ( $suffix_info[$i]{cont} ) {
+            # noheader + cont: start empty td but keep open for next column
+            $s .= "<td $styles[$i] $extra_attr[$i]>\n";
+            $hdr_cont_active = 1;
         } else {
             $s .= "<td $styles[$i] $extra_attr[$i]></td>\n";
         }
@@ -429,14 +433,9 @@ sub listrecords {
       } elsif ( $suffix_info[$i]{link} ) {
         if ($v) {
           my $entity = $suffix_info[$i]{link};
-          if ( $entity eq $c->{op} ) {
-            $v = "<a href='$url?o=$entity&e=$v'"
-               . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
-               . "><span>$v</span></a>";
-          } else {
-            my $prefix = substr($entity, 0, 1);
-            $v = "<a href='$url?o=$entity&e=$v'><span>${prefix}[$v]</span></a>: ";
-          }
+          $v = "<a href='$url?o=$entity&e=$v'"
+             . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+             . "><span>$v</span></a>";
         }
         $word_split = 0;
       } elsif ( $fn eq "Id" ) {
