@@ -629,6 +629,17 @@ sub listrecords {
       if ( $was_null_field && $fn =~ /^(Type|Sub|LocType|LocSubType|BrewType)$/i && !$v ) {
         $v = "<span class='null-value'>NULL</span>";
       }
+      if ( $suffix_info[$i]{filter} ) {
+          $word_split = 0;
+          if ($v ne '' && $v !~ /</) {
+              my $escaped = util::htmlesc($v);
+              if ($v !~ /"/) {
+                  $v = "<span data-col='$i' data-filter='&quot;$escaped&quot;' onclick='fieldclick(event,this)'>$escaped</span>";
+              } else {
+                  $v = "<span data-col='$i' data-filter='$escaped' onclick='fieldclick(event,this)'>$escaped</span>";
+              }
+          }
+      }
       if ( $suffix_info[$i]{nofilter} ) {
         if ( $v !~ /</ ) {
             $v = util::htmlesc($v);

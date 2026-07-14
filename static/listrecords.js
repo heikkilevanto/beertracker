@@ -3,6 +3,23 @@
 
 let filterTimeout;
 
+// Tokenize filter input respecting "..." quoting.  Returns array of strings.
+// Quoted segments become single tokens (with quotes removed).
+// Unquoted segments are split by whitespace.
+function _tokenizeFilterInput(value) {
+  const tokens = [];
+  const re = /"([^"]*)"|(\S+)/g;
+  let m;
+  while ((m = re.exec(value)) !== null) {
+    if (m[1] !== undefined) {
+      tokens.push(m[1]); // quoted content as one token
+    } else {
+      tokens.push(m[2]); // unquoted token
+    }
+  }
+  return tokens;
+}
+
 function changefilter (inputElement) {
   clearTimeout(filterTimeout); // Cancel previous timeout
   filterTimeout = setTimeout(() => {
@@ -17,7 +34,7 @@ function dochangefilter (inputElement) {
 
   const filterinputs = table.querySelectorAll('thead input');
 
-  // Build per-column arrays of cleaned filter tokens (space-separated AND logic)
+  // Build per-column arrays of filter tokens with mode (contains/not_contains/exact)
   const ALLOWLIST = /[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß -]/g;
   let filters = [];
   for ( let i=0; i<filterinputs.length; i++) {
@@ -25,9 +42,24 @@ function dochangefilter (inputElement) {
     if ( filterinp ) {
       const col = filterinp.getAttribute("data-col");
       filterinp.value = filterinp.value.replace(/[▲▼]+/g,"");
-      const tokens = filterinp.value.split(/\s+/).filter(function(t) { return t.length > 0; });
-      const cleaned = tokens.map(function(t) { return t.replace(ALLOWLIST, ''); });
-      filters[col] = cleaned.filter(function(t) { return t.length > 0; });
+      const rawTokens = _tokenizeFilterInput(filterinp.value);
+      const parsed = [];
+      for (let t = 0; t < rawTokens.length; t++) {
+        let term = rawTokens[t];
+        let mode = 'contains';
+        if (term.startsWith('-') && term.length > 1) {
+          mode = 'not_contains';
+          term = term.substring(1);
+        } else if (term.startsWith('=') && term.length > 1) {
+          mode = 'exact';
+          term = term.substring(1);
+        }
+        term = term.replace(ALLOWLIST, '').trim();
+        if (term.length > 0) {
+          parsed.push({ mode: mode, term: term.toLowerCase() });
+        }
+      }
+      filters[col] = parsed;
     }
   }
 
@@ -58,9 +90,15 @@ function dochangefilter (inputElement) {
           if ( col && filters[col] && filters[col].length > 0 ) {
             seenFilterCol[col] = true;
             const text = colEls[ce].textContent;
-            const matchAll = filters[col].every(function(token) {
-              const normText = text.toLowerCase().replace(ALLOWLIST, '');
-              return normText.indexOf(token.toLowerCase()) !== -1;
+            const normText = text.toLowerCase().replace(ALLOWLIST, '');
+            const matchAll = filters[col].every(function(f) {
+              if (f.mode === 'not_contains') {
+                return normText.indexOf(f.term) === -1;
+              } else if (f.mode === 'exact') {
+                return normText === f.term;
+              } else {
+                return normText.indexOf(f.term) !== -1;
+              }
             });
             if ( !matchAll ) {
               disp = "none";
