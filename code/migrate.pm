@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 38;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 39;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -57,6 +57,7 @@ our @MIGRATIONS = (
   [36, 'producer_brews_list fix Last column format', \&mig_036_producer_brews_list_last],
   [37, 'producer_brews_list two-line format', \&mig_037_producer_brews_list_two_line],
   [38, 'brews_dedup_list two-line format', \&mig_038_brews_dedup_list_two_line],
+  [39, 'comments_list swap Last/CommentType, remove Clr value', \&mig_039_comments_list_swap_last],
 );
 
 ################################################################################
@@ -882,6 +883,56 @@ sub mig_038_brews_dedup_list_two_line {
     group by brews.id, users.Username
   });
 } # mig_038_brews_dedup_list_two_line
+
+################################################################################
+# Migration 39: comments_list swap Last/CommentType, remove Clr value
+# Swaps the order of Last and CommentType columns so "Last CommentType" reads
+# left-to-right as "time then type". Replaces 'Clr' literal with an empty
+# placeholder to preserve table layout.
+################################################################################
+sub mig_039_comments_list_swap_last {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, q{
+    CREATE VIEW comments_list AS
+    SELECT
+      comments.Id AS "Id_A_link:Comment",
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS "Last_A_cont",
+      comments.CommentType AS "CommentType_A",
+      (SELECT Filename FROM photos WHERE Comment = comments.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_R4_noheader_nofilter",
+
+      '' AS TR1,
+      comments.Brew AS "BrewId_A_link:Brew",
+      COALESCE(ploc_comment.Name, ploc_glass.Name) AS "Prod_A_cont",
+      COALESCE(brew_comment.Name, brew_glass.Name) AS "BrewName_A_cont",
+      COALESCE(loc_comment.Name, loc_glass.Name) AS "LocName_A",
+
+      '' AS TR2,
+      comments.Rating AS "Rate_A",
+      comments.Comment AS "Comment_A",
+
+      '' AS TR3,
+      '' AS "Clr_noheader_nofilter",
+      group_concat(persons.Name, ', ') AS "PersonName_A",
+
+      COALESCE(glasses.Username, comments.Username) AS xUsername
+
+    FROM comments
+    LEFT JOIN glasses       ON glasses.Id       = comments.Glass
+    LEFT JOIN brews brew_glass   ON brew_glass.Id   = glasses.Brew
+    LEFT JOIN brews brew_comment ON brew_comment.Id = comments.Brew
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons            ON persons.Id  = cp.Person
+    LEFT JOIN locations loc_glass   ON loc_glass.Id   = glasses.Location
+    LEFT JOIN locations loc_comment ON loc_comment.Id = comments.Location
+    LEFT JOIN locations ploc_glass   ON ploc_glass.Id   = brew_glass.ProducerLocation
+    LEFT JOIN locations ploc_comment ON ploc_comment.Id = brew_comment.ProducerLocation
+    GROUP BY comments.Id
+  });
+} # mig_039_comments_list_swap_last
 
 ################################################################################
 

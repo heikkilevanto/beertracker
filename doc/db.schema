@@ -505,13 +505,18 @@ create view persons_list as
     group by persons.Id;
 
 -- view comments_list
+-- Layout (4 rows, 3+photo cols):
+--   Row1 = [Id_link:Comment Last CommentType] [Photo_R4 (rspan 4)]
+--   Row2 = [BrewId_link:Brew + Prod + BrewName] [LocName]
+--   Row3 = [Rate] [Comment]
+--   Row4 = [empty] [PersonName]
 drop view if exists comments_list;
 create view comments_list as
     select
       comments.Id as "Id_A_link:Comment",
-      comments.CommentType as "CommentType_A_cont",
       strftime('%Y-%m-%d %w ', coalesce(glasses.Timestamp, comments.Ts), '-06:00') ||
-        strftime('%H:%M', coalesce(glasses.Timestamp, comments.Ts)) as "Last_A",
+        strftime('%H:%M', coalesce(glasses.Timestamp, comments.Ts)) as "Last_A_cont",
+      comments.CommentType as "CommentType_A",
       (select Filename from photos where Comment = comments.Id order by Ts desc limit 1)
         as "Photo_R4_noheader_nofilter",
 
@@ -526,7 +531,7 @@ create view comments_list as
       comments.Comment as "Comment_A",
 
       '' as TR3,
-      'Clr' as Clr,
+      '' as "Clr_noheader_nofilter",
       group_concat(persons.Name, ', ') as "PersonName_A",
 
       coalesce(glasses.Username, comments.Username) as xUsername

@@ -257,12 +257,6 @@ sub listrecords {
       $styles[$i] = "";
       next;
     }
-    if ( $f eq "Clr" ) {
-      my $styp = "style='text-align:center;max-width:30px'";
-      $styles[$i] = $styp;
-      $s .= "<td $styp $extra_attr[$i]>&nbsp;</td>\n";
-      next;
-    }
     my $sty = "style='max-width:200px; min-width:0'"; # default
     $sty = "style='max-width:90px; min-width:0'" if ( $c->{mobile} );
     if ( $f =~ /^X/i ) {
@@ -405,10 +399,6 @@ sub listrecords {
       $v //= "";
 
       my $fn = $fields[$i];
-      if ( $fn eq "Clr" ) {
-        $tds .= "<td $styles[$i] $extra_attr[$i]>&nbsp;</td>\n";
-        next;
-      }
       my $linebreak = linebreak($c,$fn);
       if ( $linebreak ) {
         if ($cont_active) {
@@ -446,21 +436,6 @@ sub listrecords {
           } else {
             my $prefix = substr($entity, 0, 1);
             $v = "<a href='$url?o=$entity&e=$v'><span>${prefix}[$v]</span></a>: ";
-          }
-        }
-        $word_split = 0;
-      } elsif ( $fn eq "IdClr" ) {
-        if ($v) {
-          my $op2 = "Brew";
-          my $pfx = "B";
-          if ($c->{op} =~ /Photo/i) { $op2 = "Photos"; $pfx = "P"; }
-          elsif ($c->{op} =~ /Location/i) { $op2 = "Location"; $pfx = "L"; }
-          if ( $op2 eq $c->{op} ) {
-            $v = "<a href='$url?o=$op2&e=$v'"
-               . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
-               . "><span>$v</span></a>";
-          } else {
-            $v = "<a href='$url?o=$op2&e=$v'><span>${pfx}[$v]</span></a>: ";
           }
         }
         $word_split = 0;
@@ -514,7 +489,6 @@ sub listrecords {
         $v .= "&nbsp;&nbsp;" if $v;
         $word_split = 0;
       } elsif ( $fn eq "PersonName" ) {
-        $v .= ":" if ($v);
       } elsif ( $fn eq "Prod" ) {
         if ($v) {
           $v = _word_spans($v, $i);
