@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 44;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 45;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -63,6 +63,7 @@ our @MIGRATIONS = (
   [42, 'persons_list replace Clr with Spc_A_noheader, add location Id link', \&mig_042_persons_list_spc_loclink],
   [43, 'locations_list render Id as button-like link', \&mig_043_locations_list_id_link],
   [44, 'comments_list include person IDs in PersonName_A', \&mig_044_comments_list_person_ids],
+  [45, 'photos_list make Id a link button, render IdClr as Id', \&mig_045_photos_list_id_link],
 );
 
 ################################################################################
@@ -1160,6 +1161,77 @@ sub mig_044_comments_list_person_ids {
     GROUP BY comments.Id
   });
 } # mig_044_comments_list_person_ids
+
+################################################################################
+# Migration 45: photos_list — rename IdClr to Id so it renders as a link button
+# Keeps _A_contline suffixes for layout and auto-width.
+################################################################################
+sub mig_045_photos_list_id_link {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS photos_list");
+  db::execute($c, q{
+    CREATE VIEW photos_list AS
+    SELECT
+      p.Filename AS Photo_R8,
+      p.Id AS "Id_A_contline",
+      SUBSTR(p.Ts, 1, 16) AS Ts_A,
+
+      '' AS TR1,
+      p.Caption AS Caption_A,
+
+      '' AS TR2,
+      p.Person AS "PersonId_A_contline_link:Person",
+      p2.Name AS "PersonName_A_filter",
+
+      '' AS TR3,
+      p.Brew AS "BrewId_A_contline_link:Brew",
+      pl_b.Name AS "BrewProducer_A_filter",
+      b.Name AS "BrewName_A_filter",
+      b.Details AS "BrewDetails_A_filter",
+
+      '' AS TR4,
+      p.Location AS "LocationId_A_contline_link:Location",
+      l.Name AS "LocationName_A_filter_as:LocName",
+
+      '' AS TR5,
+      p.Glass AS "GlassId_A_contline_link:Glass",
+      pl_g.Name AS "GlassProducer_A_filter",
+      b_g.Name AS "GlassBrewName_A_filter",
+      b_g.Details AS "GlassDetails_A_filter",
+      g_g.BrewType AS "GlassBrewType_A_filter",
+      l_g.Name AS "GlassLocName_A_filter_as:LocName",
+
+      '' AS TR6,
+      p.Comment AS "CommentId_A_contline_link:Comment",
+      c.Rating AS "CommentRating_A_filter",
+      c.Comment AS "CommentText_A",
+      (SELECT group_concat(p3.Name, ', ')
+       FROM comment_persons cp2
+       JOIN persons p3 ON p3.Id = cp2.Person
+       WHERE cp2.Comment = c.Id) AS "CommentPersons_A_filter",
+
+      '' AS TR7,
+      p.Glass AS xGlass,
+      p.Comment AS xComment,
+      p.Location AS xLocation,
+      p.Person AS xPerson,
+      p.Brew AS xBrew,
+      p.Uploader AS xUploader,
+      p.Public AS xPublic
+
+    FROM photos p
+    LEFT JOIN persons p2     ON p2.Id = p.Person
+    LEFT JOIN brews b        ON b.Id = p.Brew
+    LEFT JOIN locations pl_b ON pl_b.Id = b.ProducerLocation
+    LEFT JOIN locations l    ON l.Id = p.Location
+    LEFT JOIN glasses g_g    ON g_g.Id = p.Glass
+    LEFT JOIN brews b_g      ON b_g.Id = g_g.Brew
+    LEFT JOIN locations l_g  ON l_g.Id = g_g.Location
+    LEFT JOIN locations pl_g ON pl_g.Id = b_g.ProducerLocation
+    LEFT JOIN comments c     ON c.Id = p.Comment
+  });
+} # mig_045_photos_list_id_link
 
 ################################################################################
 

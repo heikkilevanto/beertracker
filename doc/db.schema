@@ -359,7 +359,7 @@ drop view if exists photos_list;
 create view photos_list as
     select
       p.Filename as Photo_R8,
-      p.Id as "IdClr_A_contline",
+      p.Id as "Id_A_contline",
       substr(p.Ts, 1, 16) as Ts_A,
 
       '' as TR1,
