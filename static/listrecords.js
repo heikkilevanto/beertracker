@@ -55,7 +55,7 @@ function dochangefilter (inputElement) {
           term = term.substring(1);
         }
         term = term.normalize('NFC').replace(ALLOWLIST, '').trim();
-        if (term.length > 0) {
+        if (term.length > 0 && term !== '-') {
           parsed.push({ mode: mode, term: term.toLowerCase() });
         }
       }
