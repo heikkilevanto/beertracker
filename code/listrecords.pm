@@ -478,7 +478,8 @@ sub listrecords {
           my $dispstyle = styles::brewtextstyle($c, $style_str, "$c->{op}:$rec[0] $brewtype/" . ($subtype // ""));
           (my $filter_str = $style_str) =~ s/,/ /g;
           $v = _word_spans($filter_str, $i);
-          $v = "<span $dispstyle>$v</span>";
+          my $hidden = ($brewtype eq 'Beer' && $subtype) ? "<span style='display:none'>Beer </span>" : "";
+          $v = $hidden . "<span $dispstyle>$v</span>";
           $word_split = 0;
         }
       } elsif ( $fn eq "Alc" ) {
