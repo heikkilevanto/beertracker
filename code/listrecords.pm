@@ -440,9 +440,10 @@ sub listrecords {
       } elsif ( $suffix_info[$i]{link} ) {
         if ($v) {
           my $entity = $suffix_info[$i]{link};
+          my $pfx = uc(substr($entity, 0, 1));
           $v = "<a href='$url?o=$entity&e=$v'"
              . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
-             . "><span>$v</span></a>";
+             . "><span>${pfx}:$v</span></a>";
         }
         $word_split = 0;
       } elsif ( $fn eq "Id" ) {
@@ -505,7 +506,7 @@ sub listrecords {
             if ($pid) {
               push @out, "<a href='$url?o=Person&e=$pid'"
                 . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
-                . "><span>$pid</span></a>"
+                . "><span>P:$pid</span></a>"
                 . " <span data-filter='\"" . $escname . "\"' onclick='fieldclick(event,this,$i)'>"
                 . $escname . "</span>";
             } else {
