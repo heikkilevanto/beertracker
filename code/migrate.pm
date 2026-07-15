@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 45;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 46;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -64,6 +64,7 @@ our @MIGRATIONS = (
   [43, 'locations_list render Id as button-like link', \&mig_043_locations_list_id_link],
   [44, 'comments_list include person IDs in PersonName_A', \&mig_044_comments_list_person_ids],
   [45, 'photos_list make Id a link button, render IdClr as Id', \&mig_045_photos_list_id_link],
+  [46, 'comments_list reorder TR1 — BrewName before Prod, add producer/location ID links', \&mig_046_comments_list_reorder_tr1],
 );
 
 ################################################################################
@@ -1232,6 +1233,60 @@ sub mig_045_photos_list_id_link {
     LEFT JOIN comments c     ON c.Id = p.Comment
   });
 } # mig_045_photos_list_id_link
+
+################################################################################
+# Migration 46: comments_list reorder — location after comment type on row 0,
+# BrewName before Prod on TR1, add producer/location ID links.
+# Row 0: Id [Last CommentType [L:loc] LocName] [Photo]
+# TR1:   [B:brew] BrewName [L:prod] ProdName
+# Also removes the @ prefix from LocName globally.
+# Also removes the trailing colon from Prod handler globally.
+################################################################################
+sub mig_046_comments_list_reorder_tr1 {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, q{
+    CREATE VIEW comments_list AS
+    SELECT
+      comments.Id AS "Id_A_link:Comment",
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS "Last_A_contline",
+      comments.CommentType AS "CommentType_A",
+      COALESCE(loc_comment.Id, loc_glass.Id) AS "LocId_A_link:Location",
+      COALESCE(loc_comment.Name, loc_glass.Name) AS "LocName_A",
+      (SELECT Filename FROM photos WHERE Comment = comments.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_noheader_nofilter",
+
+      '' AS TR1,
+      comments.Brew AS "BrewId_A_link:Brew",
+      COALESCE(brew_comment.Name, brew_glass.Name) AS "BrewName_A_contline",
+      COALESCE(ploc_comment.Id, ploc_glass.Id) AS "ProdLocId_A_link:Location",
+      COALESCE(ploc_comment.Name, ploc_glass.Name) AS "Prod_A",
+
+      '' AS TR2,
+      comments.Rating AS "Rate_A",
+      comments.Comment AS "Comment_A",
+
+      '' AS TR3,
+      '' AS "Clr_noheader_nofilter",
+      group_concat(persons.Name || '|' || persons.Id, '; ') AS "PersonName_A",
+
+      COALESCE(glasses.Username, comments.Username) AS xUsername
+
+    FROM comments
+    LEFT JOIN glasses       ON glasses.Id       = comments.Glass
+    LEFT JOIN brews brew_glass   ON brew_glass.Id   = glasses.Brew
+    LEFT JOIN brews brew_comment ON brew_comment.Id = comments.Brew
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons            ON persons.Id  = cp.Person
+    LEFT JOIN locations loc_glass   ON loc_glass.Id   = glasses.Location
+    LEFT JOIN locations loc_comment ON loc_comment.Id = comments.Location
+    LEFT JOIN locations ploc_glass   ON ploc_glass.Id   = brew_glass.ProducerLocation
+    LEFT JOIN locations ploc_comment ON ploc_comment.Id = brew_comment.ProducerLocation
+    GROUP BY comments.Id
+  });
+} # mig_046_comments_list_reorder_tr1
 
 ################################################################################
 

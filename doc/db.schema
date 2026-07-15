@@ -492,16 +492,18 @@ create view comments_list as
     select
       comments.Id as "Id_A_link:Comment",
       strftime('%Y-%m-%d %w ', coalesce(glasses.Timestamp, comments.Ts), '-06:00') ||
-        strftime('%H:%M', coalesce(glasses.Timestamp, comments.Ts)) as "Last_A_cont",
+        strftime('%H:%M', coalesce(glasses.Timestamp, comments.Ts)) as "Last_A_contline",
       comments.CommentType as "CommentType_A",
+      coalesce(loc_comment.Id, loc_glass.Id) as "LocId_A_link:Location",
+      coalesce(loc_comment.Name, loc_glass.Name) as "LocName_A",
       (select Filename from photos where Comment = comments.Id order by Ts desc limit 1)
-        as "Photo_R4_noheader_nofilter",
+        as "Photo_noheader_nofilter",
 
       '' as TR1,
       comments.Brew as "BrewId_A_link:Brew",
-      coalesce(ploc_comment.Name, ploc_glass.Name) as "Prod_A_cont",
-      coalesce(brew_comment.Name, brew_glass.Name) as "BrewName_A_cont",
-      coalesce(loc_comment.Name, loc_glass.Name) as "LocName_A",
+      coalesce(brew_comment.Name, brew_glass.Name) as "BrewName_A_contline",
+      coalesce(ploc_comment.Id, ploc_glass.Id) as "ProdLocId_A_link:Location",
+      coalesce(ploc_comment.Name, ploc_glass.Name) as "Prod_A",
 
       '' as TR2,
       comments.Rating as "Rate_A",
@@ -509,7 +511,7 @@ create view comments_list as
 
       '' as TR3,
       '' as "Clr_noheader_nofilter",
-      group_concat(persons.Name, ', ') as "PersonName_A",
+      group_concat(persons.Name || '|' || persons.Id, '; ') as "PersonName_A",
 
       coalesce(glasses.Username, comments.Username) as xUsername
 

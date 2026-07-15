@@ -176,10 +176,12 @@ sub listrecords {
   my $s = "";
   $s .= "<!-- listrecords: $sql -->\n";
   $s .= "<style>
+    .lr-wrapper { overflow-x: auto; }
     table[data-page-size] { border-collapse: separate; border-spacing: 0; }
     .top-border td { border-top: 2px solid white; }
     .null-value { color: #999; font-style: italic; }
     .filtering-active { filter: brightness(1.3); }
+    tbody[data-lr-fs] > tr[data-first] > td { white-space: nowrap; }
     </style>\n";
 
   # Header bar — always rendered, two lines
@@ -327,8 +329,12 @@ sub listrecords {
     }
     if ( $suffix_info[$i]{noheader} ) {
         if ($hdr_cont_active) {
-            $s .= "</td>\n";
-            $hdr_cont_active = 0;
+            if ($hdr_contline_rest) {
+                # contline chain active — keep cell open for next column
+            } else {
+                $s .= "</td>\n";
+                $hdr_cont_active = 0;
+            }
         }
         if ( !$suffix_info[$i]{nofilter} ) {
             push @hidden_filters, "<input type=text style='display:none' data-col='$i' $filter_events/>\n";
@@ -490,7 +496,7 @@ sub listrecords {
           $v = "<span data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'>$display</span>";
         }
       } elsif ( $fn eq "LocName" ) {
-        $v = "@" . $v  if ($v);
+        # bare location name — no @ prefix, link prefix handles identification
       } elsif ( $fn eq "CountryRegion" ) {
         my ($country, $region) = split(/;/, $v, 2);
         $v = util::locdesc($c, $country, $region);
@@ -520,7 +526,7 @@ sub listrecords {
       } elsif ( $fn eq "Prod" ) {
         if ($v) {
           $v = _word_spans($v, $i);
-          $v = "<i>$v</i>:";
+          $v = "<i>$v</i>";
         }
         $word_split = 0;
       } elsif ( $fn eq "BrewName" ) {
