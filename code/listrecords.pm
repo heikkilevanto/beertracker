@@ -495,6 +495,26 @@ sub listrecords {
         $v .= "&nbsp;&nbsp;" if $v;
         $word_split = 0;
       } elsif ( $fn eq "PersonName" ) {
+        if ($v) {
+          my @persons = split(/; /, $v);
+          my @out;
+          foreach my $entry (@persons) {
+            my ($name, $pid) = split(/\|/, $entry, 2);
+            my $escname = util::htmlesc($name);
+            if ($pid) {
+              push @out, "<a href='$url?o=Person&e=$pid'"
+                . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+                . "><span>$pid</span></a>"
+                . " <span data-filter='\"" . $escname . "\"' onclick='fieldclick(event,this,$i)'>"
+                . $escname . "</span>";
+            } else {
+              push @out, "<span data-filter='\"" . $escname . "\"' onclick='fieldclick(event,this,$i)'>"
+                . $escname . "</span>";
+            }
+          }
+          $v = join("; ", @out);
+        }
+        $word_split = 0;
       } elsif ( $fn eq "Prod" ) {
         if ($v) {
           $v = _word_spans($v, $i);

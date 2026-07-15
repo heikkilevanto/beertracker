@@ -54,7 +54,7 @@ function dochangefilter (inputElement) {
           mode = 'exact';
           term = term.substring(1);
         }
-        term = term.replace(ALLOWLIST, '').trim();
+        term = term.normalize('NFC').replace(ALLOWLIST, '').trim();
         if (term.length > 0) {
           parsed.push({ mode: mode, term: term.toLowerCase() });
         }
@@ -90,7 +90,7 @@ function dochangefilter (inputElement) {
           if ( col && filters[col] && filters[col].length > 0 ) {
             seenFilterCol[col] = true;
             const text = colEls[ce].textContent;
-            const normText = text.toLowerCase().replace(ALLOWLIST, '');
+            const normText = text.normalize('NFC').toLowerCase().replace(ALLOWLIST, '');
             const matchAll = filters[col].every(function(f) {
               if (f.mode === 'not_contains') {
                 return normText.indexOf(f.term) === -1;
@@ -157,7 +157,8 @@ function fieldclick(event,el,index) {
   filtertext = filtertext.replace( /\[|\]/g , "");
 
   const table = el.closest('table');
-  const col = target && target.dataset.col ? target.dataset.col : el.getAttribute("data-col");
+  var col = target && target.dataset.col ? target.dataset.col : el.getAttribute("data-col");
+  if ( col === null && index !== undefined ) col = index;
   const filterinp = table.querySelector('input[data-col="'+col+'"]');
   if ( filterinp ) {
     filterinp.value = filtertext;

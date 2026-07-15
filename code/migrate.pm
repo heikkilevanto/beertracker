@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 43;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 44;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -62,6 +62,7 @@ our @MIGRATIONS = (
   [41, 'brews_list fix Id columns to use ploc.Id/locations.Id, always button links', \&mig_041_brews_list_fix_idcols],
   [42, 'persons_list replace Clr with Spc_A_noheader, add location Id link', \&mig_042_persons_list_spc_loclink],
   [43, 'locations_list render Id as button-like link', \&mig_043_locations_list_id_link],
+  [44, 'comments_list include person IDs in PersonName_A', \&mig_044_comments_list_person_ids],
 );
 
 ################################################################################
@@ -1110,6 +1111,55 @@ sub mig_043_locations_list_id_link {
     GROUP BY locations.Id
   });
 } # mig_043_locations_list_id_link
+
+################################################################################
+# Migration 44: Include person Ids in comments_list PersonName_A column so
+# listrecords can render them as button-style links next to each name.
+# Format: "Name1|123; Name2|456"
+################################################################################
+sub mig_044_comments_list_person_ids {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, q{
+    CREATE VIEW comments_list AS
+    SELECT
+      comments.Id AS "Id_A_link:Comment",
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS "Last_A_cont",
+      comments.CommentType AS "CommentType_A",
+      (SELECT Filename FROM photos WHERE Comment = comments.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_R4_noheader_nofilter",
+
+      '' AS TR1,
+      comments.Brew AS "BrewId_A_link:Brew",
+      COALESCE(ploc_comment.Name, ploc_glass.Name) AS "Prod_A_cont",
+      COALESCE(brew_comment.Name, brew_glass.Name) AS "BrewName_A_cont",
+      COALESCE(loc_comment.Name, loc_glass.Name) AS "LocName_A",
+
+      '' AS TR2,
+      comments.Rating AS "Rate_A",
+      comments.Comment AS "Comment_A",
+
+      '' AS TR3,
+      '' AS "Clr_noheader_nofilter",
+      group_concat(persons.Name || '|' || persons.Id, '; ') AS "PersonName_A",
+
+      COALESCE(glasses.Username, comments.Username) AS xUsername
+
+    FROM comments
+    LEFT JOIN glasses       ON glasses.Id       = comments.Glass
+    LEFT JOIN brews brew_glass   ON brew_glass.Id   = glasses.Brew
+    LEFT JOIN brews brew_comment ON brew_comment.Id = comments.Brew
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons            ON persons.Id  = cp.Person
+    LEFT JOIN locations loc_glass   ON loc_glass.Id   = glasses.Location
+    LEFT JOIN locations loc_comment ON loc_comment.Id = comments.Location
+    LEFT JOIN locations ploc_glass   ON ploc_glass.Id   = brew_glass.ProducerLocation
+    LEFT JOIN locations ploc_comment ON ploc_comment.Id = brew_comment.ProducerLocation
+    GROUP BY comments.Id
+  });
+} # mig_044_comments_list_person_ids
 
 ################################################################################
 
