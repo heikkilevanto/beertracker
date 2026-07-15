@@ -145,6 +145,11 @@ function dochangefilter (inputElement) {
   }
 
   console.timeEnd("filter") ;
+
+  if (inputElement.tagName === 'INPUT') {
+    inputElement.focus();
+    inputElement.selectionStart = inputElement.selectionEnd = inputElement.value.length;
+  }
 }
 
 // Clicking on a data field sets the filter
@@ -162,7 +167,7 @@ function fieldclick(event,el,index) {
   const filterinp = table.querySelector('input[data-col="'+col+'"]');
   if ( filterinp ) {
     filterinp.value = filtertext;
-    dochangefilter(el);
+    dochangefilter(filterinp);
   }
 }
 
@@ -179,7 +184,7 @@ function fieldclick_word(event, el, col) {
     } else {
       filterinp.value = token;
     }
-    dochangefilter(el);
+    dochangefilter(filterinp);
   }
 }
 
@@ -193,7 +198,7 @@ function fieldclick_cell(event, el, col) {
   const filterinp = table.querySelector('input[data-col="' + col + '"]');
   if ( filterinp ) {
     filterinp.value = text;
-    dochangefilter(el);
+    dochangefilter(filterinp);
   }
 }
 
