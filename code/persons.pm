@@ -51,7 +51,7 @@ sub editperson {
   if ( $c->{edit} =~ /^new/i ) {
     print "<br/><input type='submit' name='submit' value='Insert Person' />\n";
   } else {
-    print "<br/><button type='button' class='edit-enable-btn' onclick='enableEditing(this.form)'>Edit</button>\n";
+    print "<br/><button type='button' class='edit-enable-btn' onclick='enableEditing(this.form)'>Edit</button>&nbsp;<a href='$c->{url}?o=$c->{op}'><span>Cancel</span></a>\n";
     print "<input type='submit' name='submit' value='Update Person' class='edit-submit-btn' hidden />\n";
     print "<br/><br/><input type='submit' name='submit' value='Create a Copy' class='edit-submit-btn' hidden />\n";
     print "<input type='submit' name='submit' value='Delete Person' class='edit-submit-btn' hidden />\n";
