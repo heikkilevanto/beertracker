@@ -228,7 +228,7 @@ sub listrecords {
   my $autofilter_attr = ($initial_filter && scalar(keys %$initial_filter)) ? " data-autofilter" : "";
   my $tableattrs = "$geotable$tableid$autofilter_attr data-page-size='$maxrecords' data-current-page='1'";
 
-  $s .= "<table $tableattrs>\n";
+  $s .= "<table class='listrecords' $tableattrs>\n";
   my @styles;  # One for each column
 
   # Table headers

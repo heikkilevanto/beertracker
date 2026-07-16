@@ -25,6 +25,9 @@ table.data td {
 }
 .num { text-align: right !important; }
 
+/* Listrecords tables */
+table.listrecords { max-width: 750px; }
+
 /* Utility classes */
 .top-border { border-top: 2px solid white; }
 
