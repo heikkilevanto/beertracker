@@ -402,8 +402,82 @@ sub commentform {
     $s .= "<a href='$another_url'><span>(Add another comment)</span></a><br/>\n";
   }
 
-  # Other comments on the same item
-  $s .= sibling_comments_html($c, $com, $glassid);
+  # Other comments on the same item (via listrecords)
+  my $context_brew = $com->{Brew};
+  my $context_loc  = $com->{Location};
+  if ($glassid && !$context_brew && !$context_loc) {
+    ($context_brew, $context_loc) = db::queryarray($c,
+        "SELECT Brew, Location FROM glasses WHERE Id = ?", $glassid);
+  }
+  my $sibling_html = "";
+  if ($context_brew) {
+    my ($cnt) = db::queryarray($c, q{SELECT COUNT(*) FROM COMMENTS_LIST WHERE
+        EXISTS (SELECT 1 FROM comments c2 LEFT JOIN glasses g2 ON g2.Id = c2.Glass
+                WHERE c2.Id = "Id_A_link:Comment" AND (c2.Brew = ? OR g2.Brew = ?))
+        AND xUsername = ? AND "Id_A_link:Comment" != ?},
+        $context_brew, $context_brew, $c->{username}, $com->{Id});
+    if ($cnt && $cnt > 0) {
+      $sibling_html = listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+          where => q{EXISTS (SELECT 1 FROM comments c2
+                     LEFT JOIN glasses g2 ON g2.Id = c2.Glass
+                     WHERE c2.Id = "Id_A_link:Comment"
+                       AND (c2.Brew = ? OR g2.Brew = ?))
+                     AND xUsername = ? AND "Id_A_link:Comment" != ?},
+          params => [$context_brew, $context_brew, $c->{username}, $com->{Id}],
+          title => "Other comments on this brew",
+          initial_filter => { CommentType => "brew" },
+          show_rating_summary => 1,
+          compact_on_small => 1,
+          no_new_link => 1,
+          maxrecords => 10,
+      });
+    }
+  } elsif ($context_loc) {
+    my ($cnt) = db::queryarray($c, q{SELECT COUNT(*) FROM COMMENTS_LIST WHERE
+        CAST("LocId_A_link:Location" AS INTEGER) = ? AND xUsername = ? AND "Id_A_link:Comment" != ?},
+        $context_loc, $c->{username}, $com->{Id});
+    if ($cnt && $cnt > 0) {
+      $sibling_html = listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+          where => q{CAST("LocId_A_link:Location" AS INTEGER) = ? AND xUsername = ?
+                     AND "Id_A_link:Comment" != ?},
+          params => [$context_loc, $c->{username}, $com->{Id}],
+          title => "Other comments at this location",
+          initial_filter => { CommentType => "location" },
+          show_rating_summary => 1,
+          compact_on_small => 1,
+          no_new_link => 1,
+          maxrecords => 10,
+      });
+    }
+  } elsif ($com->{Id} && $com->{CommentType} eq 'person') {
+    my ($pid) = db::queryarray($c,
+        "SELECT Person FROM comment_persons WHERE Comment = ?", $com->{Id});
+    if ($pid) {
+      my ($cnt) = db::queryarray($c, q{SELECT COUNT(*) FROM COMMENTS_LIST WHERE
+          EXISTS (SELECT 1 FROM comment_persons cp
+                  WHERE cp.Comment = "Id_A_link:Comment" AND cp.Person = ?)
+          AND xUsername = ? AND "Id_A_link:Comment" != ?},
+          $pid, $c->{username}, $com->{Id});
+      if ($cnt && $cnt > 0) {
+        $sibling_html = listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+            where => q{EXISTS (SELECT 1 FROM comment_persons cp
+                       WHERE cp.Comment = "Id_A_link:Comment" AND cp.Person = ?)
+                       AND xUsername = ? AND "Id_A_link:Comment" != ?},
+            params => [$pid, $c->{username}, $com->{Id}],
+            title => "Other comments mentioning this person",
+            initial_filter => { CommentType => "person" },
+            show_rating_summary => 1,
+            compact_on_small => 1,
+            no_new_link => 1,
+            maxrecords => 10,
+        });
+      }
+    }
+  }
+  if ($sibling_html) {
+    $s .= "<hr style='border-color:#444; margin:0.5em 0'>\n";
+    $s .= $sibling_html;
+  }
 
   # JS: show/hide rows based on comment type, and "show all" toggle
   my $glass_is_empty = ($com->{glass_brewtype} && glasses::isemptyglass($com->{glass_brewtype})) ? 1 : 0;
@@ -412,165 +486,7 @@ sub commentform {
   return $s;
 } # commentform
 
-################################################################################
-# Render one group of sibling comments (private helper)
-################################################################################
-sub _sibling_section {
-  my ($c, $com, $label, $flags, $sql, @params) = @_;
-  my $sth = db::query($c, $sql, @params);
-  my @rows;
-  while (my $cr = $sth->fetchrow_hashref) {
-    next if $com->{Id} && $cr->{Id} == $com->{Id};  # exclude current comment
-    push @rows, commentline($c, $cr, $flags);
-  }
-  return "" unless @rows;
-  my $s = "<hr style='border-color:#444; margin:0.5em 0'>\n";
-  $s .= "<b>$label</b>\n";
-  $s .= "<ul style='margin:0; padding-left:1.2em;'>\n";
-  $s .= "<li>$_</li>\n" for @rows;
-  $s .= "</ul>\n";
-  return $s;
-} # _sibling_section
 
-################################################################################
-# Other comments on the same items (glass / brew / persons / location)
-# Shows all four sections in order, skipping any that have no data
-################################################################################
-sub sibling_comments_html {
-  my $c       = shift;
-  my $com     = shift;
-  my $glassid = shift;
-
-  my $s = "";
-
-  # Determine associated brew and location (from glass if available)
-  my ($glass_brew_id, $glass_loc_id);
-  if ($glassid) {
-    ($glass_brew_id, $glass_loc_id) = db::queryarray($c,
-      "SELECT Brew, Location FROM glasses WHERE Id = ?", $glassid);
-  }
-  my $brew_id = $com->{Brew} || $glass_brew_id;
-  my $loc_id  = $com->{Location} || $glass_loc_id;
-
-  # 1. Glass section (usually none)
-  if ($glassid) {
-    my ($locname, $effdate) = db::queryarray($c,
-      "SELECT l.Name, strftime('%Y-%m-%d', g.Timestamp, '-06:00')
-       FROM glasses g LEFT JOIN locations l ON l.Id = g.Location
-       WHERE g.Id = ?", $glassid);
-    my $ctx = $effdate || "this session";
-    $ctx .= " \@$locname" if $locname;
-    $s .= _sibling_section($c, $com, "Other comments on $ctx:", "bty",
-      q{SELECT c.*,
-          group_concat(p.Name || '|' || cp.Person, ', ') as PeopleData,
-          strftime('%Y-%m-%d', g.Timestamp, '-06:00') AS effdate,
-          strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
-          gl.Id AS loc, gl.Name AS locname,
-          br.Name AS brewname
-        FROM comments c
-        LEFT JOIN glasses g ON g.Id = c.Glass
-        LEFT JOIN locations gl ON gl.Id = g.Location
-        LEFT JOIN brews br ON br.Id = c.Brew
-        LEFT JOIN comment_persons cp ON cp.Comment = c.Id
-        LEFT JOIN persons p ON p.Id = cp.Person
-        WHERE c.Glass = ?
-        GROUP BY c.Id ORDER BY COALESCE(g.Timestamp, c.Ts) DESC, c.Id DESC},
-      $glassid);
-  }
-
-  # 2. Brew section (with rating summary)
-  if ($brew_id) {
-    my ($brewname, $cnt, $avg) = db::queryarray($c,
-      q{SELECT b.Name, COUNT(c.Rating), AVG(c.Rating)
-        FROM brews b
-        LEFT JOIN comments c ON c.Brew = b.Id AND c.CommentType = 'brew'
-          AND (c.Glass IN (SELECT Id FROM glasses WHERE Username = ?)
-               OR (c.Glass IS NULL AND c.Username = ?))
-        WHERE b.Id = ?
-        GROUP BY b.Id},
-      $c->{username}, $c->{username}, $brew_id);
-    my $label = "Comments on " . ($brewname || "brew $brew_id") . ":";
-    $label .= " " . avgratings($c, $cnt, $avg, undef) if $avg;
-    $s .= _sibling_section($c, $com, $label, "dlty",
-        q{SELECT c.*,
-          group_concat(p.Name || '|' || cp.Person, ', ') as PeopleData,
-          strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
-          strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
-          COALESCE(comloc.Id, glassloc.Id) AS loc,
-          COALESCE(comloc.Name, glassloc.Name) AS locname,
-          br.Name AS brewname
-        FROM comments c
-        LEFT JOIN glasses g ON g.Id = c.Glass
-        LEFT JOIN locations glassloc ON glassloc.Id = g.Location
-        LEFT JOIN locations comloc ON comloc.Id = c.Location
-        LEFT JOIN brews br ON br.Id = c.Brew
-        LEFT JOIN comment_persons cp ON cp.Comment = c.Id
-        LEFT JOIN persons p ON p.Id = cp.Person
-        WHERE c.Brew = ? AND c.CommentType = 'brew'
-          AND (g.Username = ? OR (c.Glass IS NULL AND c.Username = ?))
-        GROUP BY c.Id ORDER BY COALESCE(g.Timestamp, c.Ts) DESC, c.Id DESC},
-      $brew_id, $c->{username}, $c->{username});
-  }
-
-  # 3. Person sections (one per person, all of them)
-  if ($com->{Id}) {
-    my $psth = db::query($c,
-      q{SELECT p.Id, p.Name FROM comment_persons cp
-        JOIN persons p ON p.Id = cp.Person
-        WHERE cp.Comment = ? ORDER BY p.Name},
-      $com->{Id});
-    while (my ($pid, $pname) = $psth->fetchrow_array) {
-      $s .= _sibling_section($c, $com, "Comments on $pname:", "dltby",
-        q{SELECT c.*,
-            group_concat(p2.Name || '|' || cp2.Person, ', ') as PeopleData,
-            strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
-            strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
-            COALESCE(comloc.Id, glassloc.Id) AS loc,
-            COALESCE(comloc.Name, glassloc.Name) AS locname,
-            br.Name AS brewname
-          FROM comments c
-          LEFT JOIN glasses g ON g.Id = c.Glass
-          LEFT JOIN locations glassloc ON glassloc.Id = g.Location
-          LEFT JOIN locations comloc ON comloc.Id = c.Location
-          LEFT JOIN brews br ON br.Id = c.Brew
-          LEFT JOIN comment_persons cp2 ON cp2.Comment = c.Id
-          LEFT JOIN persons p2 ON p2.Id = cp2.Person
-          WHERE EXISTS (SELECT 1 FROM comment_persons cp3
-                        WHERE cp3.Comment = c.Id AND cp3.Person = ?)
-            AND c.CommentType = 'person'
-            AND (g.Username = ? OR (c.Glass IS NULL AND c.Username = ?))
-          GROUP BY c.Id ORDER BY COALESCE(g.Timestamp, c.Ts) DESC, c.Id DESC},
-        $pid, $c->{username}, $c->{username});
-    }
-  }
-
-  # 4. Location section (may have a lot of comments)
-  if ($loc_id) {
-    my ($locname) = db::queryarray($c,
-      "SELECT Name FROM locations WHERE Id = ?", $loc_id);
-    $s .= _sibling_section($c, $com, "Comments at " . ($locname || "this location") . ":", "dtby",
-      q{SELECT c.*,
-          group_concat(p.Name || '|' || cp.Person, ', ') as PeopleData,
-          strftime('%Y-%m-%d', COALESCE(g.Timestamp, c.Ts), '-06:00') AS effdate,
-          strftime('%H:%M', COALESCE(g.Timestamp, c.Ts)) AS time,
-          COALESCE(comloc.Id, glassloc.Id) AS loc,
-          COALESCE(comloc.Name, glassloc.Name) AS locname,
-          br.Name AS brewname
-        FROM comments c
-        LEFT JOIN glasses g ON g.Id = c.Glass
-        LEFT JOIN locations glassloc ON glassloc.Id = g.Location
-        LEFT JOIN locations comloc ON comloc.Id = c.Location
-        LEFT JOIN brews br ON br.Id = c.Brew
-        LEFT JOIN comment_persons cp ON cp.Comment = c.Id
-        LEFT JOIN persons p ON p.Id = cp.Person
-        WHERE c.Location = ? AND c.CommentType = 'location'
-          AND (g.Username = ? OR (c.Glass IS NULL AND c.Username = ?))
-        GROUP BY c.Id ORDER BY COALESCE(g.Timestamp, c.Ts) DESC, c.Id DESC},
-      $loc_id, $c->{username}, $c->{username});
-  }
-
-  return $s;
-} # sibling_comments_html
 
 ################################################################################
 # Standalone comment edit/create page  (o=Comment&e=<id> or with prefill params)

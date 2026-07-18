@@ -43,155 +43,6 @@ sub listlocations {
 # Helper: render a section of location comments
 # Groups by glass, shows commentline, rating summary
 ################################################################################
-sub _location_comment_section {
-  my ($c, $loc, $title, $collapsed, $big_brew, $where_extra, @params) = @_;
-
-  my $sql = "
-    SELECT
-      COMMENTS.Id,
-      COMMENTS.Glass,
-      COMMENTS.Comment,
-      COMMENTS.Rating,
-      COMMENTS.CommentType,
-      COMMENTS.Ts,
-      strftime('%Y-%m-%d', COALESCE(GLASSES.Timestamp, COMMENTS.Ts), '-06:00') as Date,
-      strftime('%H:%M',    COALESCE(GLASSES.Timestamp, COMMENTS.Ts))            as Time,
-      group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData,
-      GLASSES.Id as Gid,
-      GLASSES.BrewType,
-      GLASSES.SubType,
-      GLASSES.Brew,
-      BREWS.Name as BrewName
-    FROM COMMENTS
-    LEFT JOIN GLASSES ON GLASSES.Id = COMMENTS.Glass
-    LEFT JOIN BREWS ON BREWS.Id = GLASSES.Brew
-    LEFT JOIN comment_persons cp ON cp.Comment = COMMENTS.Id
-    LEFT JOIN persons cp_persons ON cp_persons.Id = cp.Person
-    WHERE $where_extra
-    GROUP BY COMMENTS.Id
-    ORDER BY COALESCE(GLASSES.Timestamp, COMMENTS.Ts) DESC
-  ";
-
-  my $sth = db::query($c, $sql, @params);
-
-  my $com = $sth->fetchrow_hashref;
-  if (!$com) { $sth->finish; return 0; }
-
-  my $show = $collapsed ? "display:none" : "";
-  print "<div onclick='toggleElement(this.nextElementSibling);'>" .
-        "<b>$title</b>" .
-        "</div>\n";
-  print "<div style='overflow-x: auto; $show'>";
-
-  my $ratesum = 0;
-  my $ratecount = 0;
-  my $comcount = 0;
-  my $count = 0;
-  my $lastgroup = "";
-  while ( $com ) {
-    my $groupkey = $com->{Gid} // "c-$com->{Id}";
-    if ( $lastgroup ne $groupkey ) {
-      $count++;
-      if ( $count == 8 ) {
-        print "<div onclick='this.style=\"display:none\"; toggleElement(this.nextElementSibling)'>More...</div>";
-        print "<div style='display:none'>";
-      }
-      print "<p>\n";
-      if ( $com->{Gid} ) {
-        print "<a href='$c->{url}?o=Comment&e=$com->{Id}'><b>$com->{Date}</b></a>\n";
-        my $tim = $com->{Time};
-        $tim = "($tim)" if ($tim lt "06:00");
-        print "$tim\n";
-        print "<span style='font-size: xx-small'>[$com->{Glass}]</span>\n";
-        if ( $com->{BrewName} ) {
-          if ( $big_brew ) {
-            print "<b>$com->{BrewName}</b> ";
-            print styles::brewstyledisplay($c, $com->{BrewType}, $com->{SubType}, "location:$loc->{Id} glass:$com->{Gid}");
-          } else {
-            print "<span style='font-size:xx-small; color:#bbb'>$com->{BrewName}</span> ";
-            print "[$com->{BrewType}/$com->{SubType}]\n";
-          }
-        } else {
-          print "[$com->{BrewType}/$com->{SubType}]\n";
-        }
-      } else {
-        print "<b>$com->{Date}</b> $com->{Time}\n";
-      }
-      $lastgroup = $groupkey;
-      print "<br/>";
-    }
-    print comments::commentline($c, $com);
-    print "<br/>";
-    $comcount++ if ($com->{Comment});
-    if ( $com->{Rating} ) {
-      $ratesum += $com->{Rating};
-      $ratecount++;
-    }
-    $com = $sth->fetchrow_hashref;
-  }
-  if ( $count >= 8 ) {
-    print "</div>\n";
-  }
-  print "</div>\n";
-  print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
-  if ( $comcount == 0 ) {
-    print "(No Comments)";
-  } else {
-    if ( $ratecount == 1) {
-      print "One rating: <b>" . comments::ratingline($ratesum) . "</b> ";
-    } elsif ( $ratecount > 0 ) {
-      my $avg = sprintf( "%3.1f", $ratesum / $ratecount);
-      print "$ratecount Ratings averaging <b>" . comments::ratingline($avg) . "</b>. ";
-    } else {
-      print "Comments: $comcount. ";
-    }
-  }
-  print "</div>";
-  return 1;
-} # _location_comment_section
-
-################################################################################
-# List location comments, split into sections:
-# 1. Comments about the location itself (direct, no glass)
-# 2. Comments at the location without a brew (glass-routed, empty glass)
-# 3. Comments at the location with a brew (glass-routed, has brew)
-# 4. Comments on brews produced by this location (via BREWS.ProducerLocation)
-################################################################################
-sub listlocationcomments {
-  my $c = shift;
-  my $loc = shift;
-  print "<!-- listlocationcomments -->\n";
-
-  my $rendered = 0;
-  $rendered += _location_comment_section($c, $loc,
-    "Comments about $loc->{Name} [$loc->{Id}]",
-    0, 0,
-    "(COMMENTS.Location = ? AND COMMENTS.Glass IS NULL AND (COMMENTS.Username = ? OR COMMENTS.Username IS NULL))",
-    $loc->{Id}, $c->{username});
-
-  my $r = _location_comment_section($c, $loc,
-    "Comments on nights etc at $loc->{Name} [$loc->{Id}]",
-    1, 0,
-    "(COMMENTS.Glass IS NOT NULL AND GLASSES.Location = ? AND (GLASSES.Brew IS NULL OR GLASSES.Brew = '') AND GLASSES.Username = ?)",
-    $loc->{Id}, $c->{username});
-  if ($r) { print "<hr/>\n"; }
-  $rendered += $r;
-
-  $r = _location_comment_section($c, $loc,
-    "Comments on brews at $loc->{Name} [$loc->{Id}]",
-    1, 1,
-    "(COMMENTS.Glass IS NOT NULL AND GLASSES.Location = ? AND GLASSES.Brew IS NOT NULL AND GLASSES.Brew != '' AND GLASSES.Username = ?)",
-    $loc->{Id}, $c->{username});
-  if ($r) { print "<hr/>\n"; }
-  $rendered += $r;
-
-  if ($rendered) {
-    print "<!-- listlocationcomments end -->\n";
-    print "<hr/>\n";
-  } else {
-    print "<!-- listlocationcomments end (empty) -->\n";
-  }
-} # listlocationcomments
 
 ################################################################################
 # List location visits
@@ -467,17 +318,34 @@ JS
       print photos::photo_form($c, location => $p->{Id}, public_default => 1, return_url => $return_url);
       print "&nbsp;<a href='$c->{url}?o=Comment&e=new&location=$p->{Id}&commenttype=location' onclick='event.stopPropagation()'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
-      listlocationcomments($c,$p);
+      print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+          where => q{CAST("LocId_A_link:Location" AS INTEGER) = ? AND xUsername = ?},
+          params => [$p->{Id}, $c->{username}],
+          title => "Comments",
+          initial_filter => { CommentType => "location" },
+          show_rating_summary => 1,
+          compact_on_small => 1,
+          no_new_link => 1,
+          maxrecords => 10,
+      });
+      print "<hr/>\n";
       locationvisits($c, $p );
       if ( $p->{LocType} =~ /Producer/ ) {
-        if ( _location_comment_section($c, $p,
-          "Comments on brews by $p->{Name} [$p->{Id}]",
-          1, 1,
-          "(GLASSES.Brew IN (SELECT Id FROM BREWS WHERE ProducerLocation = ?) AND GLASSES.Username = ?)",
-          $p->{Id}, $c->{username}) )
-        {
-          print "<hr/>\n";
-        }
+        print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+            where => q{EXISTS (SELECT 1 FROM comments c2
+                       LEFT JOIN glasses g2 ON g2.Id = c2.Glass
+                       WHERE c2.Id = "Id_A_link:Comment"
+                         AND (c2.Brew IN (SELECT Id FROM brews WHERE ProducerLocation = ?)
+                           OR g2.Brew IN (SELECT Id FROM brews WHERE ProducerLocation = ?)))
+                       AND xUsername = ?},
+            params => [$p->{Id}, $p->{Id}, $c->{username}],
+            title => "Producer comments",
+            show_rating_summary => 1,
+            compact_on_small => 1,
+            no_new_link => 1,
+            maxrecords => 10,
+        });
+        print "<hr/>\n";
         producerbrews($c, $p);
       }
       locationdeduplist($c,$p);

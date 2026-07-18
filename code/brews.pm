@@ -28,127 +28,6 @@ sub listbrews {
 ################################################################################
 # List all comments for the given brew
 ################################################################################
-sub listbrewcomments {
-  my $c = shift; # context
-  my $brew = shift;
-  print "<!-- listbrewcomments -->\n";
-  my $sql = "
-    SELECT
-      COMMENTS.Id as Cid,
-      strftime('%Y-%m-%d', COALESCE(COMMENTS.Ts, GLASSES.Timestamp), '-06:00') as Date,
-      strftime('%H:%M', COALESCE(COMMENTS.Ts, GLASSES.Timestamp)) as Time,
-      COMMENTS.Rating as Rating,
-      COMMENTS.Comment,
-      group_concat(PERSONS.Name || '|' || PERSONS.Id, ', ') as Person,
-      GLASSES.Id as Gid,
-      GLASSES.Brew as Brew,
-      GLASSES.Volume,
-      GLASSES.Price,
-      COALESCE(COMLOC.Name, GLASSLOC.Name) as Loc,
-      COALESCE(COMLOC.Id, GLASSLOC.Id) as Lid
-      FROM COMMENTS
-      LEFT JOIN GLASSES ON GLASSES.Id = COMMENTS.Glass
-      LEFT JOIN comment_persons cp ON cp.Comment = COMMENTS.Id
-      LEFT JOIN PERSONS on PERSONS.id = cp.Person
-      LEFT JOIN LOCATIONS COMLOC on COMLOC.Id = COMMENTS.Location
-      LEFT JOIN LOCATIONS GLASSLOC on GLASSLOC.Id = GLASSES.Location
-      WHERE (COMMENTS.Brew = ? OR GLASSES.Brew = ?)
-        AND (COMMENTS.Username = ? OR COMMENTS.Username IS NULL)
-      GROUP BY COMMENTS.Id
-      ORDER BY COALESCE(COMMENTS.Ts, GLASSES.Timestamp) DESC ";
-  #print { $c->{log} } "listbrewcomments: id='$brew->{Id}': $sql \n";
-  my $sth = db::query($c, $sql, $brew->{Id}, $brew->{Id}, $c->{username});
-  print "<div onclick='toggleElement(this.nextElementSibling);'>";
-  print "Comments and ratings for <b>$brew->{Name}</b> <br/>\n";
-  print "</div>\n";
-  print "<div style='overflow-x: auto;'>";
-  print "<table >\n";
-  my $ratesum = 0;
-  my $ratecount = 0;
-  my $comcount = 0;
-  my $sty = "style='border-bottom: 1px solid white; vertical-align: top;' ";
-  while ( my $com = $sth->fetchrow_hashref ) {
-    my $cid = defined $com->{Cid} ? $com->{Cid} : "";
-    my $date = defined $com->{Date} ? $com->{Date} : "";
-    my $tim = defined $com->{Time} ? $com->{Time} : "";
-    my $rating = defined $com->{Rating} ? $com->{Rating} : undef;
-    my $comment = defined $com->{Comment} ? $com->{Comment} : undef;
-    my $lid = defined $com->{Lid} ? $com->{Lid} : undef;
-    my $loc = defined $com->{Loc} ? $com->{Loc} : "";
-    my $volume = defined $com->{Volume} ? $com->{Volume} : undef;
-    my $price = defined $com->{Price} ? $com->{Price} : undef;
-    my $person = defined $com->{Person} ? $com->{Person} : undef;
-
-    print "<tr><td $sty>\n";
-    print "<a href='$c->{url}?o=Comment&e=$cid'><span>";
-    print "$date</span></a><br/> \n";
-    if ( defined $tim && $tim ne '' && $tim lt "06:00" ) { $tim = "($tim)"; }
-    print "$tim\n";
-    print "<a href='$c->{url}?o=Comment&e=$cid'>" .
-          "<span style='font-size: xx-small'>[$cid]</span></a>";
-    print "</td>\n";
-
-    print "<td style='border-bottom: 1px solid white'>\n";
-    if ( defined $rating ) {
-      print "<b>($rating)</b>\n";
-      $ratesum += $rating;
-      $ratecount++;
-    }
-    print "</td>\n";
-
-    print "<td style='border-bottom: 1px solid white; vertical-align: top; white-space:normal'>\n";
-    if ( $lid ) {
-      print "<a href='$c->{url}?o=Location&e=$lid' ><span><b>$loc</b></span></a> &nbsp;";
-    } else {
-      print "<b>$loc</b> &nbsp;" if $loc;
-    }
-    print util::unit($volume,"c")   if ( $volume ) ;
-    print util::unit($price,",-")   if ( $price ) ;
-    print "<br/>";
-    print "<i>$comment</i>" if $comment;
-    $comcount++ if ($comment);
-    print "</td>\n";
-
-    print "<td $sty>\n";
-    if ( $person ) {
-      my @items = split(/, /, $person);
-      for (my $i = 0; $i < @items; $i++) {
-        my ($name, $pid) = split(/\|/, $items[$i]);
-        if ($pid) {
-          print "<a href='$c->{url}?o=Person&e=$pid'>" .
-                "<span style='font-weight: bold;'>" . util::htmlesc($name) . "</span></a>";
-        } else {
-          print "<span style='font-weight: bold;'>" . util::htmlesc($name) . "</span>";
-        }
-        print ", " if $i < $#items;
-      }
-      print "\n";
-    }
-    print "</td>\n";
-    # TODO - Photo thumbnail in its own TD
-    print "</tr>\n";
-  }
-  print "</table></div>\n";
-  print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
-  if ( $comcount == 0 ) {
-    print "(No Comments by $c->{username})";
-  } else {
-    if ( $ratecount == 1) {
-      print "One rating: <b>" . comments::ratingline($ratesum) . "</b> ";
-    } elsif ( $ratecount > 0 ) {
-      my $avg = sprintf( "%3.1f", $ratesum / $ratecount);
-      print "$ratecount Ratings averaging <b>" . comments::ratingline($avg) . "</b>. ";
-    } else {
-      print "Comments: $comcount. ";
-    }
-  }
-  print "</div>";
-  $sth->finish;
-  print "<!-- listbrewcomments end -->\n";
-  print "<hr/>\n";
-
-} # listbrewcomments
-
 
 ################################################################################
 # List latest prices at various locations
@@ -570,7 +449,24 @@ JS
       print photos::photo_form($c, brew => $p->{Id}, public_default => 1, return_url => $return_url);
       print "&nbsp;<a href='$c->{url}?o=Comment&e=new&brew=$p->{Id}&commenttype=brew'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
-      listbrewcomments($c, $p);
+      print "<div onclick='toggleElement(this.nextElementSibling);'>";
+      print "Comments and ratings for <b>$p->{Name}</b><br/>\n";
+      print "</div>\n";
+      print "<div style='overflow-x: auto;'>\n";
+      print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+          where => q{EXISTS (SELECT 1 FROM comments c2
+                     LEFT JOIN glasses g2 ON g2.Id = c2.Glass
+                     WHERE c2.Id = "Id_A_link:Comment"
+                       AND (c2.Brew = ? OR g2.Brew = ?))
+                     AND xUsername = ?},
+          params => [$p->{Id}, $p->{Id}, $c->{username}],
+          title => "Comments",
+          show_rating_summary => 1,
+          compact_on_small => 1,
+          no_new_link => 1,
+      });
+      print "</div>\n";
+      print "<hr/>\n";
       listbrewrelations($c, $p);
       listbrewtaps($c, $p);
       listbrewprices($c, $p);

@@ -129,6 +129,8 @@ function dochangefilter (inputElement) {
 
   console.timeEnd("filter") ;
 
+  lr_update_summary(table);
+
   if (inputElement.tagName === 'INPUT') {
     inputElement.focus();
     inputElement.selectionStart = inputElement.selectionEnd = inputElement.value.length;
@@ -188,6 +190,7 @@ function fieldclick_cell(event, el, col) {
 function lr_clearfilters(el) {
   const wrapper = el.closest('[data-lr-wrapper]');
   const table = wrapper.querySelector('table');
+  wrapper.classList.remove('lr-compact');
   table.querySelectorAll('thead td input[data-col]').forEach(inp => { inp.value = ''; });
   const first = table.querySelector('thead input[data-col]');
   if (first) dochangefilter(first);
@@ -328,6 +331,7 @@ function lr_paginate(table) {
   }
 
   lr_updateInfo(table, currPage, totalVisible, totalPages);
+  lr_update_summary(table);
 }
 
 function lr_updateInfo(table, currPage, totalVisible, totalPages) {
@@ -403,6 +407,51 @@ function toggleElement(element) {
   if (element) {
     element.style.display = (element.style.display === 'none') ? 'block' : 'none';
   }
+}
+
+// Update rating summary for tables with data-col-rate attribute
+function lr_update_summary(table) {
+  const rateCol = table.dataset.colRate;
+  const commentCol = table.dataset.colComment;
+  if (rateCol === undefined && commentCol === undefined) return;
+
+  const wrapper = table.closest('[data-lr-wrapper]');
+  if (!wrapper) return;
+  const summaryDiv = wrapper.querySelector('.lr-summary');
+  if (!summaryDiv) return;
+
+  let rateSum = 0, rateCount = 0, commentCount = 0;
+  const tbodies = table.tBodies;
+  for (let r = 0; r < tbodies.length; r++) {
+    const tbody = tbodies[r];
+    if ((tbody.dataset.lrFs || '1') !== '1') continue;
+    const firstRow = tbody.querySelector('tr[data-first]');
+    if (!firstRow) continue;
+    if (rateCol !== undefined) {
+      const rateSpan = firstRow.querySelector('span[data-col="' + rateCol + '"]');
+      if (rateSpan && rateSpan.dataset.sortKey) {
+        const v = parseFloat(rateSpan.dataset.sortKey);
+        if (!isNaN(v)) { rateSum += v; rateCount++; }
+      }
+    }
+    if (commentCol !== undefined) {
+      const commentSpan = firstRow.querySelector('span[data-col="' + commentCol + '"]');
+      if (commentSpan && commentSpan.textContent.trim()) {
+        commentCount++;
+      }
+    }
+  }
+
+  let html = '';
+  if (rateCount === 1) {
+    html += 'One rating: <b>(' + rateSum + ')</b>. ';
+  } else if (rateCount > 0) {
+    const avg = (rateSum / rateCount).toFixed(1);
+    html += rateCount + ' Ratings averaging <b>(' + avg + ')</b>. ';
+  } else if (commentCount > 0) {
+    html += 'Comments: ' + commentCount + '. ';
+  }
+  summaryDiv.innerHTML = html;
 }
 
 // Auto-sort a table by a given column index on page load

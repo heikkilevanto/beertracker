@@ -73,6 +73,8 @@ sub listrecords {
   my $title          = $opt->{title}          || "";
   my $initial_filter = $opt->{initial_filter} || {};
   my $no_new_link    = $opt->{no_new_link}    || 0;
+  my $show_rating_summary = $opt->{show_rating_summary} || 0;
+  my $compact_on_small   = $opt->{compact_on_small}   || 0;
 
   # Build cache key from all inputs that affect the rendered HTML.
   my $params_str = "";
@@ -87,7 +89,8 @@ sub listrecords {
   my $mobile = $c->{mobile} ? 1 : 0;
   my $cache_key = join("\x1e", "listrecords_v3", $c->{username}, $c->{op},
                        $table, $sort, $where, $params_str, $extraparams_str,
-                       $maxrecords, $mobile, $browsersortcol // "");
+                       $maxrecords, $mobile, $browsersortcol // "",
+                       $show_rating_summary, $compact_on_small);
   my $cached = cache::get($c, $cache_key);
   if ( defined $cached ) {
     print { $c->{log} } "listrecords: cache hit for $table\n";
@@ -153,6 +156,15 @@ sub listrecords {
       $fields[$i] = $field;
       $suffix_info[$i] = $suf;
   }
+  my ($rate_col, $comment_col) = (-1, -1);
+  if ($show_rating_summary) {
+    for (my $i = 0; $i < scalar(@fields); $i++) {
+      my $fn = $suffix_info[$i]{as_name} || $fields[$i];
+      $rate_col    = $i if $fn eq "Rate";
+      $comment_col = $i if $fn eq "Comment";
+    }
+  }
+
   my $order = "";
   for (my $i = 0; $i < scalar(@fields); $i++) {
       my $f = $fields[$i];
@@ -182,6 +194,8 @@ sub listrecords {
     .null-value { color: #999; font-style: italic; }
     .filtering-active { filter: brightness(1.3); }
     tbody[data-lr-fs] > tr[data-first] > td { white-space: nowrap; }
+    .lr-compact thead > tr { display: none; }
+    .lr-compact .lr-page-nav-div { display: none !important; }
     </style>\n";
 
   # Header bar — always rendered, two lines
@@ -196,7 +210,7 @@ sub listrecords {
   $s .= "    <span class='lr-clr' onclick='lr_clearfilters(this)'\n";
   $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small'>Clr</span>\n";
   $s .= "  </div>\n";
-  $s .= "  <div style='display:flex; align-items:center; flex-wrap:wrap; gap:8px;'>\n";
+  $s .= "  <div class='lr-page-nav-div' style='display:flex; align-items:center; flex-wrap:wrap; gap:8px;'>\n";
   $s .= "    Showing <select class='lr-size-select' onchange='lr_changesize(this)'>\n";
   my $found = 0;
   foreach my $so (10, 20, 50, 100, 200) {
@@ -226,7 +240,12 @@ sub listrecords {
     $tableid = " id='autosort-table'";
   }
   my $autofilter_attr = ($initial_filter && scalar(keys %$initial_filter)) ? " data-autofilter" : "";
-  my $tableattrs = "$geotable$tableid$autofilter_attr data-page-size='$maxrecords' data-current-page='1'";
+  my $summary_attrs = "";
+  if ($show_rating_summary && $rate_col >= 0) {
+    $summary_attrs .= " data-col-rate='$rate_col'";
+    $summary_attrs .= " data-col-comment='$comment_col'" if $comment_col >= 0;
+  }
+  my $tableattrs = "$geotable$tableid$autofilter_attr$summary_attrs data-page-size='$maxrecords' data-current-page='1'";
 
   $s .= "<table class='listrecords' $tableattrs>\n";
   my @styles;  # One for each column
@@ -235,9 +254,8 @@ sub listrecords {
   $s .=  "<!-- listrecords: table headers -->\n";
 
   $s .= "<thead>";
-
   # Filter inputs also work as column headers, and sort buttons on dbl-click
-  $s .= "<tr class='top-border'>\n";
+  $s .= "<tr class='top-border lr-filter-row'>\n";
   my $hdr_cont_active = 0;
   my $hdr_contline_rest = 0;
   my $hdr_photo_rs_rem = 0;
@@ -402,6 +420,8 @@ sub listrecords {
 
   my $cutoff = util::datestr("%F", -7);  # a week ago, display full date
 
+  my ($ratesum, $ratecount, $comcount) = (0, 0, 0);
+
   my $rowcount = 0;
   while ( my @rec = $list_sth->fetchrow_array ) {
     $rowcount++;
@@ -412,6 +432,15 @@ sub listrecords {
     my $photo_skipped = 0;
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i];
+      if ($show_rating_summary) {
+        if ($rate_col >= 0 && $i == $rate_col && defined $v) {
+          $ratesum += $v;
+          $ratecount++;
+        }
+        if ($comment_col >= 0 && $i == $comment_col && defined $v && $v ne '') {
+          $comcount++;
+        }
+      }
       my $was_null_field = !defined $v;
       $v //= "";
 
@@ -714,6 +743,21 @@ sub listrecords {
   }
   $s .= "</table>\n";
   $s .= "</div>\n";
+  if ($show_rating_summary && $rowcount > 0) {
+    $s .= "<div class='lr-summary'>";
+    if ($ratecount == 1) {
+      $s .= "One rating: <b>" . comments::ratingline($ratesum) . "</b>. ";
+    } elsif ($ratecount > 0) {
+      my $avg = sprintf("%3.1f", $ratesum / $ratecount);
+      $s .= "$ratecount Ratings averaging <b>" . comments::ratingline($avg) . "</b>. ";
+    } elsif ($comcount > 0) {
+      $s .= "Comments: $comcount. ";
+    }
+    $s .= "</div>\n";
+  }
+  if ($compact_on_small && $rowcount > 0 && $rowcount <= 5) {
+    $s .= "<script>(function(w){w.classList.add('lr-compact');})(document.querySelector('[data-lr-wrapper]'));<\/script>\n";
+  }
   $s .= "<!-- listrecords: table body done -->\n";
 
   if ($geotable) {
