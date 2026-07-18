@@ -590,16 +590,17 @@ function filterItems(filterInput, dropdownList) {
         if (!rawTags) disp = 'none';
       } else {
         const tagList = rawTags ? rawTags.split(/\s+/).filter(t => t) : [];
+        const searchKeys = searchKey.split(',').map(s => s.trim()).filter(s => s);
         if (isExact) {
-          if (!tagList.some(t => t.toLowerCase() === searchKey)) disp = 'none';
+          if (!searchKeys.some(sk => tagList.some(t => t.toLowerCase() === sk))) disp = 'none';
         } else {
-          if (!tagList.some(t => t.toLowerCase().startsWith(searchKey))) disp = 'none';
+          if (!searchKeys.some(sk => tagList.some(t => t.toLowerCase().startsWith(sk)))) disp = 'none';
         }
       }
     // Filter by location (seenat) if starts with @, otherwise by display text with tokenized matching
     } else if (isLocationFilter) {
       const seenat = (item.getAttribute("seenat") || "").toLowerCase();
-      if (!seenat.includes(searchTerm)) {
+      if (!_matchAlternatives(seenat, searchTerm, 'contains')) {
         disp = 'none';
       }
     } else {
@@ -615,13 +616,7 @@ function filterItems(filterInput, dropdownList) {
           mode = 'exact';
           term = term.substring(1);
         }
-        if (mode === 'not_contains') {
-          return itemText.indexOf(term) === -1;
-        } else if (mode === 'exact') {
-          return itemText === term;
-        } else {
-          return itemText.indexOf(term) !== -1;
-        }
+        return _matchAlternatives(itemText, term, mode);
       });
       if (!matchAll) {
         disp = 'none';
