@@ -491,6 +491,7 @@ END_STYLE
   # JS files
   print jslink("menu");
   print jslink("geo");
+  print jslink("filter-utils");
   print jslink("inputs");
   print jslink("listrecords");
   print jslink("beerboard");

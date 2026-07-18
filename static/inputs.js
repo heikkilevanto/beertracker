@@ -533,7 +533,6 @@ function filterItems(filterInput, dropdownList) {
   const filter = filterInput.value.toLowerCase();
   const isTagFilter      = filter.startsWith('#');
   const isLocationFilter = !isTagFilter && filter.startsWith('@');
-  const isDotFilter      = !isTagFilter && (filter === '.' || filter === '@');
   let searchTerm = filter;
 
   // Compute country filter value for region dropdowns (data-country-input attribute)
@@ -557,19 +556,7 @@ function filterItems(filterInput, dropdownList) {
     // actionsItem visibility is handled by the normal text-match pass below
   }
 
-  // If user types just a dot or @, use the current selected location
-  if (isDotFilter) {
-    const locationInput = document.querySelector('input[name="Location"][type="hidden"]');
-    if (locationInput && locationInput.value) {
-      // Get the location name from the visible input
-      const locationFilter = locationInput.closest('.dropdown').querySelector('.dropdown-filter');
-      if (locationFilter && locationFilter.value) {
-        // Remove everything after the first '[' and trim
-        let locName = locationFilter.value.split('[')[0].trim();
-        searchTerm = locName.toLowerCase();
-      }
-    }
-  } else if (isLocationFilter) {
+  if (isLocationFilter) {
     searchTerm = filter.substring(1);
   }
 
@@ -609,14 +596,34 @@ function filterItems(filterInput, dropdownList) {
           if (!tagList.some(t => t.toLowerCase().startsWith(searchKey))) disp = 'none';
         }
       }
-    // Filter by location (seenat) if starts with @ or is just a dot, otherwise by display text
-    } else if (isLocationFilter || isDotFilter) {
+    // Filter by location (seenat) if starts with @, otherwise by display text with tokenized matching
+    } else if (isLocationFilter) {
       const seenat = (item.getAttribute("seenat") || "").toLowerCase();
       if (!seenat.includes(searchTerm)) {
         disp = 'none';
       }
     } else {
-      if (!item.textContent.toLowerCase().includes(searchTerm)) {
+      const tokens = _tokenizeFilterInput(searchTerm);
+      const itemText = item.textContent.toLowerCase();
+      const matchAll = tokens.length === 0 || tokens.every(function(token) {
+        let term = token;
+        let mode = 'contains';
+        if (term.startsWith('-') && term.length > 1) {
+          mode = 'not_contains';
+          term = term.substring(1);
+        } else if (term.startsWith('=') && term.length > 1) {
+          mode = 'exact';
+          term = term.substring(1);
+        }
+        if (mode === 'not_contains') {
+          return itemText.indexOf(term) === -1;
+        } else if (mode === 'exact') {
+          return itemText === term;
+        } else {
+          return itemText.indexOf(term) !== -1;
+        }
+      });
+      if (!matchAll) {
         disp = 'none';
       }
     }
