@@ -67,21 +67,21 @@ touch code/VERSION.pm
 # Visit a brew with dedup enabled — dedup list renders with similarity sorting
 ```
 
-## Stage 3: `code/comments.pm` helper
+## Stage 3: `code/comments.pm` helper ✓
 
-Add `sub comments_list_sql` returning the `COMMENTS_LIST` SQL (from mig_046),
+Added `sub comments_list_sql` returning the `COMMENTS_LIST` SQL (from mig_046),
 using `=` instead of `:` in column suffixes.
 
-Update 8 call sites across 4 modules — replace `"COMMENTS_LIST"` with
+Updated 8 call sites across 4 modules — replace `"COMMENTS_LIST"` with
 `comments::comments_list_sql()`:
-- `comments.pm` lines 154, 420, 440, 462
-- `locations.pm` lines 321, 334
-- `brews.pm` line 456
-- `persons.pm` line 73
+- `comments.pm` — 4 listrecords calls
+- `locations.pm` — 2 listrecords calls
+- `brews.pm` — 1 listrecords call
+- `persons.pm` — 1 listrecords call
 
-Also rewrite 3 direct count queries against `COMMENTS_LIST` (comments.pm lines
-414, 436, 456) to use base tables directly — these reference suffixed column
-names (`"Id_A_link:Comment"`) which is fragile.
+Also rewrote 3 direct count queries against `COMMENTS_LIST` to use base tables
+directly (`comments` + `glasses` + `locations` joins), avoiding fragile
+suffixed column name references.
 
 ### Test
 ```bash
@@ -95,35 +95,35 @@ touch code/VERSION.pm
 #   at the bottom of an edit page should render correctly
 ```
 
-## Stage 4: Remaining views
+## Stage 4: Remaining views ✓
 
-Replace view name with inline SQL from migrate.pm (use `=` instead of `:`):
+Replaced view names with inline SQL from migrate.pm (using `=` instead of `:`):
 
-| File | Line | View | SQL source |
-|------|------|------|------------|
-| `locations.pm` | 34 | `LOCATIONS_LIST` | mig_043 |
-| `locations.pm` | 110 | `producer_brews_list` | mig_037 |
-| `locations.pm` | 142 | `LOCATIONS_DEDUP_LIST` | mig_037 |
-| `persons.pm` | 20 | `PERSONS_LIST` | mig_042 |
-| `photos.pm` | 327 | `PHOTOS_LIST` | mig_045 |
+| File | View | SQL source |
+|------|------|------------|
+| `locations.pm` | `LOCATIONS_LIST` | mig_043 |
+| `locations.pm` | `producer_brews_list` | mig_037 |
+| `locations.pm` | `LOCATIONS_DEDUP_LIST` | mig_037 |
+| `persons.pm` | `PERSONS_LIST` | mig_042 |
+| `photos.pm` | `PHOTOS_LIST` | mig_045 |
 
-Also rewrite `locations.pm:106` — `SELECT count(*) FROM producer_brews_list ...`
-→ direct join of `brews` + `glasses` + `locations`.
+Also removed dead `SELECT count(*) FROM producer_brews_list` query (`$nbrews` was
+never used).
 
 ### Test
 ```bash
 perl -c code/locations.pm code/persons.pm code/photos.pm
 touch code/VERSION.pm
 # Visit ?o=Location — location listing renders (sort, filter)
-# Visit a producer location — producer brews count shows, list renders
+# Visit a producer location — producer brews list renders
 # Visit ?o=Location&e=X&edit=1 — dedup list renders with geo distance
 # Visit ?o=Person — person listing renders
 # Visit ?o=Photos — photo listing renders (sort, filter)
 ```
 
-## Stage 5: `code/migrate.pm`
+## Stage 5: `code/migrate.pm` ✓
 
-Add migration 47 dropping all 8 `_list` views, bump `$CODE_DB_VERSION` to 47:
+Added migration 47 dropping all 8 `_list` views, bumped `$CODE_DB_VERSION` to 47:
 
 ```sql
 DROP VIEW IF EXISTS locations_list;

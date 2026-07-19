@@ -512,10 +512,10 @@ JS
       print "Comments and ratings for <b>$p->{Name}</b><br/>\n";
       print "</div>\n";
       print "<div style='overflow-x: auto;'>\n";
-      print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+      print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
           where => q{EXISTS (SELECT 1 FROM comments c2
                      LEFT JOIN glasses g2 ON g2.Id = c2.Glass
-                     WHERE c2.Id = "Id_A_link:Comment"
+                     WHERE c2.Id = "Id_A_link=Comment"
                        AND (c2.Brew = ? OR g2.Brew = ?))
                      AND xUsername = ?},
           params => [$p->{Id}, $p->{Id}, $c->{username}],

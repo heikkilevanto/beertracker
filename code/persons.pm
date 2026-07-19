@@ -17,7 +17,28 @@ sub listpersons {
     return;
   }
   my $sort = $c->{sort} || "Last-";
-  print listrecords::listrecords($c, "PERSONS_LIST", $sort,
+  print listrecords::listrecords($c,
+      q{SELECT
+      persons.Id AS "Id_link=Person",
+      persons.Name AS "Name_A_as=Person_C2",
+      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R3_noheader_nofilter",
+      '' AS TR1,
+      count(distinct comments.Id) - 1 AS Com,
+      persons.description AS "Description_A",
+      strftime('%Y-%m-%d %w ', max(coalesce(glasses.Timestamp, comments.Ts)), '-06:00') ||
+        strftime('%H:%M', max(coalesce(glasses.Timestamp, comments.Ts))) AS "Last_A",
+      '' AS TR2,
+      '' AS "Spc_A_noheader",
+      persons.Tags AS "Tags_A",
+      locations.Id AS "LocId_A_link=Location_cont",
+      locations.Name AS "Location_A"
+    FROM persons
+    LEFT JOIN comment_persons cp ON cp.Person = persons.Id
+    LEFT JOIN comments ON comments.Id = cp.Comment
+    LEFT JOIN glasses ON glasses.Id = comments.Glass
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    GROUP BY persons.Id},
+      $sort,
       { title => "Persons" });
   return;
 } # listpersons
@@ -70,8 +91,8 @@ sub editperson {
   }
 
   my $name = $p->{Name};
-  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
-      where => "EXISTS (SELECT 1 FROM comment_persons cp WHERE cp.Comment = \"Id_A_link:Comment\" AND cp.Person = ?) AND xUsername = ?",
+  print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+      where => "EXISTS (SELECT 1 FROM comment_persons cp WHERE cp.Comment = \"Id_A_link=Comment\" AND cp.Person = ?) AND xUsername = ?",
       params => [$p->{Id}, $c->{username}],
       title => "Comments mentioning $name",
       initial_filter => { CommentType => "person" },

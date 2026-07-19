@@ -151,7 +151,7 @@ sub listallcomments {
     return;
   }
 
-  print listrecords::listrecords($c, "COMMENTS_LIST", "Last-",
+  print listrecords::listrecords($c, comments::comments_list_sql(), "Last-",
       { where => "xUsername=?", params => $c->{username},
         title => "Comments by $c->{username}" });
   return;
@@ -411,18 +411,19 @@ sub commentform {
   }
   my $sibling_html = "";
   if ($context_brew) {
-    my ($cnt) = db::queryarray($c, q{SELECT COUNT(*) FROM COMMENTS_LIST WHERE
-        EXISTS (SELECT 1 FROM comments c2 LEFT JOIN glasses g2 ON g2.Id = c2.Glass
-                WHERE c2.Id = "Id_A_link:Comment" AND (c2.Brew = ? OR g2.Brew = ?))
-        AND xUsername = ? AND "Id_A_link:Comment" != ?},
+    my ($cnt) = db::queryarray($c, q{SELECT COUNT(*) FROM comments
+        LEFT JOIN glasses ON glasses.Id = comments.Glass
+        WHERE EXISTS (SELECT 1 FROM comments c2 LEFT JOIN glasses g2 ON g2.Id = c2.Glass
+                      WHERE c2.Id = comments.Id AND (c2.Brew = ? OR g2.Brew = ?))
+          AND COALESCE(glasses.Username, comments.Username) = ? AND comments.Id != ?},
         $context_brew, $context_brew, $c->{username}, $com->{Id});
     if ($cnt && $cnt > 0) {
-      $sibling_html = listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+      $sibling_html = listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
           where => q{EXISTS (SELECT 1 FROM comments c2
                      LEFT JOIN glasses g2 ON g2.Id = c2.Glass
-                     WHERE c2.Id = "Id_A_link:Comment"
+                     WHERE c2.Id = "Id_A_link=Comment"
                        AND (c2.Brew = ? OR g2.Brew = ?))
-                     AND xUsername = ? AND "Id_A_link:Comment" != ?},
+                     AND xUsername = ? AND "Id_A_link=Comment" != ?},
           params => [$context_brew, $context_brew, $c->{username}, $com->{Id}],
           title => "Other comments on this brew",
           initial_filter => { CommentType => "brew" },
@@ -433,13 +434,17 @@ sub commentform {
       });
     }
   } elsif ($context_loc) {
-    my ($cnt) = db::queryarray($c, q{SELECT COUNT(*) FROM COMMENTS_LIST WHERE
-        CAST("LocId_A_link:Location" AS INTEGER) = ? AND xUsername = ? AND "Id_A_link:Comment" != ?},
+    my ($cnt) = db::queryarray($c, q{SELECT COUNT(*) FROM comments
+        LEFT JOIN glasses ON glasses.Id = comments.Glass
+        LEFT JOIN locations loc_glass ON loc_glass.Id = glasses.Location
+        LEFT JOIN locations loc_comment ON loc_comment.Id = comments.Location
+        WHERE COALESCE(loc_comment.Id, loc_glass.Id) = ?
+          AND COALESCE(glasses.Username, comments.Username) = ? AND comments.Id != ?},
         $context_loc, $c->{username}, $com->{Id});
     if ($cnt && $cnt > 0) {
-      $sibling_html = listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
-          where => q{CAST("LocId_A_link:Location" AS INTEGER) = ? AND xUsername = ?
-                     AND "Id_A_link:Comment" != ?},
+      $sibling_html = listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+          where => q{CAST("LocId_A_link=Location" AS INTEGER) = ? AND xUsername = ?
+                     AND "Id_A_link=Comment" != ?},
           params => [$context_loc, $c->{username}, $com->{Id}],
           title => "Other comments at this location",
           initial_filter => { CommentType => "location" },
@@ -453,16 +458,17 @@ sub commentform {
     my ($pid) = db::queryarray($c,
         "SELECT Person FROM comment_persons WHERE Comment = ?", $com->{Id});
     if ($pid) {
-      my ($cnt) = db::queryarray($c, q{SELECT COUNT(*) FROM COMMENTS_LIST WHERE
-          EXISTS (SELECT 1 FROM comment_persons cp
-                  WHERE cp.Comment = "Id_A_link:Comment" AND cp.Person = ?)
-          AND xUsername = ? AND "Id_A_link:Comment" != ?},
+      my ($cnt) = db::queryarray($c, q{SELECT COUNT(*) FROM comments
+          LEFT JOIN glasses ON glasses.Id = comments.Glass
+          WHERE EXISTS (SELECT 1 FROM comment_persons cp
+                        WHERE cp.Comment = comments.Id AND cp.Person = ?)
+            AND COALESCE(glasses.Username, comments.Username) = ? AND comments.Id != ?},
           $pid, $c->{username}, $com->{Id});
       if ($cnt && $cnt > 0) {
-        $sibling_html = listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+        $sibling_html = listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
             where => q{EXISTS (SELECT 1 FROM comment_persons cp
-                       WHERE cp.Comment = "Id_A_link:Comment" AND cp.Person = ?)
-                       AND xUsername = ? AND "Id_A_link:Comment" != ?},
+                       WHERE cp.Comment = "Id_A_link=Comment" AND cp.Person = ?)
+                       AND xUsername = ? AND "Id_A_link=Comment" != ?},
             params => [$pid, $c->{username}, $com->{Id}],
             title => "Other comments mentioning this person",
             initial_filter => { CommentType => "person" },
@@ -703,6 +709,48 @@ sub postcomment {
   return "";
 } # postcomment
 
+
+################################################################################
+# Return the COMMENTS_LIST inline SQL (from mig_046) with = suffix separators.
+sub comments_list_sql {
+  return q{SELECT
+      comments.Id AS "Id_A_link=Comment",
+      strftime('%Y-%m-%d %w ', COALESCE(glasses.Timestamp, comments.Ts), '-06:00') ||
+        strftime('%H:%M', COALESCE(glasses.Timestamp, comments.Ts)) AS "Last_A_contline",
+      comments.CommentType AS "CommentType_A",
+      COALESCE(loc_comment.Id, loc_glass.Id) AS "LocId_A_link=Location",
+      COALESCE(loc_comment.Name, loc_glass.Name) AS "LocName_A",
+      (SELECT Filename FROM photos WHERE Comment = comments.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_noheader_nofilter",
+
+      '' AS TR1,
+      comments.Brew AS "BrewId_A_link=Brew",
+      COALESCE(brew_comment.Name, brew_glass.Name) AS "BrewName_A_contline",
+      COALESCE(ploc_comment.Id, ploc_glass.Id) AS "ProdLocId_A_link=Location",
+      COALESCE(ploc_comment.Name, ploc_glass.Name) AS "Prod_A",
+
+      '' AS TR2,
+      comments.Rating AS "Rate_A",
+      comments.Comment AS "Comment_A",
+
+      '' AS TR3,
+      '' AS "Clr_noheader_nofilter",
+      group_concat(persons.Name || '|' || persons.Id, '; ') AS "PersonName_A",
+
+      COALESCE(glasses.Username, comments.Username) AS xUsername
+
+    FROM comments
+    LEFT JOIN glasses       ON glasses.Id       = comments.Glass
+    LEFT JOIN brews brew_glass   ON brew_glass.Id   = glasses.Brew
+    LEFT JOIN brews brew_comment ON brew_comment.Id = comments.Brew
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons            ON persons.Id  = cp.Person
+    LEFT JOIN locations loc_glass   ON loc_glass.Id   = glasses.Location
+    LEFT JOIN locations loc_comment ON loc_comment.Id = comments.Location
+    LEFT JOIN locations ploc_glass   ON ploc_glass.Id   = brew_glass.ProducerLocation
+    LEFT JOIN locations ploc_comment ON ploc_comment.Id = brew_comment.ProducerLocation
+    GROUP BY comments.Id};
+}
 
 ################################################################################
 # Report module loaded ok

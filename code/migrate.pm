@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 46;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 47;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -65,6 +65,7 @@ our @MIGRATIONS = (
   [44, 'comments_list include person IDs in PersonName_A', \&mig_044_comments_list_person_ids],
   [45, 'photos_list make Id a link button, render IdClr as Id', \&mig_045_photos_list_id_link],
   [46, 'comments_list reorder TR1 — BrewName before Prod, add producer/location ID links', \&mig_046_comments_list_reorder_tr1],
+  [47, '716 drop _list views, now inline SQL in Perl', \&mig_047_drop_list_views],
 );
 
 ################################################################################
@@ -1287,6 +1288,22 @@ sub mig_046_comments_list_reorder_tr1 {
     GROUP BY comments.Id
   });
 } # mig_046_comments_list_reorder_tr1
+
+################################################################################
+# Migration 47: drop _list views — now inline SQL in Perl
+################################################################################
+sub mig_047_drop_list_views {
+  my $c = shift;
+
+  db::execute($c, "DROP VIEW IF EXISTS locations_list");
+  db::execute($c, "DROP VIEW IF EXISTS producer_brews_list");
+  db::execute($c, "DROP VIEW IF EXISTS locations_dedup_list");
+  db::execute($c, "DROP VIEW IF EXISTS brews_list");
+  db::execute($c, "DROP VIEW IF EXISTS brews_dedup_list");
+  db::execute($c, "DROP VIEW IF EXISTS comments_list");
+  db::execute($c, "DROP VIEW IF EXISTS persons_list");
+  db::execute($c, "DROP VIEW IF EXISTS photos_list");
+} # mig_047_drop_list_views
 
 ################################################################################
 

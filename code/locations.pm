@@ -31,7 +31,33 @@ sub listlocations {
   my $extraparams = {};
   $extraparams->{lat} = '?';
   $extraparams->{lon} = '?';
-  print listrecords::listrecords($c, "LOCATIONS_LIST", $sort,
+  print listrecords::listrecords($c,
+      q{SELECT
+      locations.Id AS "Id_link=Location",
+      locations.Name AS "Name_A_as=LocName_cont",
+      CASE
+        WHEN locations.LocType IS NOT NULL AND locations.LocType != '' AND
+             locations.LocSubType IS NOT NULL AND locations.LocSubType != ''
+        THEN '[' || locations.LocType || ', ' || locations.LocSubType || ']'
+        WHEN locations.LocType IS NOT NULL AND locations.LocType != ''
+        THEN '[' || locations.LocType || ']'
+        WHEN locations.LocSubType IS NOT NULL AND locations.LocSubType != ''
+        THEN '[' || locations.LocSubType || ']'
+        ELSE ''
+      END AS "LocType_A_cont",
+      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS "Ratings_as=Stats",
+      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R2_noheader_nofilter",
+      '' AS TR1,
+      locations.lat || ' ' || locations.lon AS "Geo",
+      COALESCE(locations.Country,'') || ';' || COALESCE(locations.Region,'') AS "CountryRegion_A_contline",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
+      locations.Tags AS xTags
+    FROM locations
+    LEFT JOIN glasses ON glasses.Location = locations.Id
+    LEFT JOIN location_ratings r ON r.id = locations.Id
+    GROUP BY locations.Id},
+      $sort,
       { extraparams => $extraparams, title => "Locations" });
   return;
 } # listlocations
@@ -103,11 +129,30 @@ sub locationvisits {
 sub producerbrews {
   my $c = shift;
   my $p = shift;
-  my $countsql = "select count(*) as cnt from producer_brews_list where xProducer = ? and xUsername = ?";
-  my $nbrews = db::queryrecord($c, $countsql, $p->{Name}, $c->{username});
   my $oldop = $c->{op};
   $c->{op} = "Brew";  # Make name links to point to brews, not locations
-  print listrecords::listrecords($c, "producer_brews_list", "Last-",
+  print listrecords::listrecords($c,
+      q{with users as (
+        select distinct Username from glasses
+      )
+      select
+        brews.Id AS "IdClr_A",
+        brews.Name AS "Name_A_C2_cont",
+        '' AS TR1,
+        brews.Alc AS "Alc",
+        brews.BrewType || ', ' || brews.SubType AS "Type_A_cont",
+        r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_A",
+        strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+          strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
+        ploc.Name as xProducer,
+        users.Username as xUsername
+      from brews
+      cross join users
+      left join locations ploc on ploc.id = brews.ProducerLocation
+      left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+      left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+      group by brews.id, users.Username},
+      "Last-",
       { where => "xProducer = ? AND xUsername = ?",
         params => [$p->{Name}, $c->{username}],
         title => "Brews by $p->{Name}" });
@@ -139,7 +184,21 @@ sub locationdeduplist {
   $extra->{lat} = $loc->{Lat};
   $extra->{lon} = $loc->{Lon};
   $extra->{refname} = $loc->{Name};
-  print listrecords::listrecords($c, "LOCATIONS_DEDUP_LIST", $sort,
+  print listrecords::listrecords($c,
+      q{select
+        locations.Id AS "Id_A",
+        locations.Name,
+        '?' as Sim,
+        locations.lat || ' ' || locations.lon AS Geo,
+        '' AS TR1,
+        'Chk' as Chk,
+        locations.LocType || ', ' || locations.LocSubType as Type,
+        strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+          strftime('%H:%M', max(glasses.Timestamp)) as "Last_C2"
+      from locations
+      left join glasses on glasses.Location = locations.Id
+      group by locations.Id},
+      $sort,
       { where => "Id_A <> $loc->{Id}", extraparams => $extra,
         browsersortcol => "Sim", title => "Similar locations" });
   print "</form>\n";
@@ -318,8 +377,8 @@ JS
       print photos::photo_form($c, location => $p->{Id}, public_default => 1, return_url => $return_url);
       print "&nbsp;<a href='$c->{url}?o=Comment&e=new&location=$p->{Id}&commenttype=location' onclick='event.stopPropagation()'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
-      print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
-          where => q{CAST("LocId_A_link:Location" AS INTEGER) = ? AND xUsername = ?},
+      print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+          where => q{CAST("LocId_A_link=Location" AS INTEGER) = ? AND xUsername = ?},
           params => [$p->{Id}, $c->{username}],
           title => "Comments",
           initial_filter => { CommentType => "location" },
@@ -331,10 +390,10 @@ JS
       print "<hr/>\n";
       locationvisits($c, $p );
       if ( $p->{LocType} =~ /Producer/ ) {
-        print listrecords::listrecords($c, "COMMENTS_LIST", "Last-", {
+        print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
             where => q{EXISTS (SELECT 1 FROM comments c2
                        LEFT JOIN glasses g2 ON g2.Id = c2.Glass
-                       WHERE c2.Id = "Id_A_link:Comment"
+                       WHERE c2.Id = "Id_A_link=Comment"
                          AND (c2.Brew IN (SELECT Id FROM brews WHERE ProducerLocation = ?)
                            OR g2.Brew IN (SELECT Id FROM brews WHERE ProducerLocation = ?)))
                        AND xUsername = ?},
