@@ -148,14 +148,13 @@ sqlite3 beerdata/beertracker.db \
 # All pages should render identically (SQL is now in Perl)
 ```
 
-## Stage 6: Remove backward compat heuristic and `:` handling
+## Stage 6: Remove backward compat heuristic and `:` handling ✓
 
-Once all callers pass proper SQL (start with `SELECT`), remove the view-name
-fallback in `listrecords.pm`. The heuristic is no longer needed and the
-`else` branch (view name → `"SELECT * FROM $sql"`) can be deleted, leaving
-only the inline SQL code path.
+All callers pass proper SQL (start with `SELECT` or `WITH`). Removed the
+view-name fallback in `listrecords.pm` — the `else` branch (view name →
+`"SELECT * FROM $sql"`) is deleted, leaving only the inline SQL code path.
 
-Also remove `:` from the suffix parser regexes (`_as[=:]` → `_as=`,
+Also removed `:` from the suffix parser regexes (`_as[=:]` → `_as=`,
 `_link[=:]` → `_link=`). Only `=` remains as the separator.
 
 ### Test

@@ -97,15 +97,10 @@ sub listrecords {
     return $cached;
   }
 
-  my $is_inline_sql = ($sql_param =~ /^\s*(?:SELECT|WITH)\b/i);
   my @fields;
-  if ($is_inline_sql) {
-      my $intro_sth = db::query($c, "$sql_param LIMIT 0");
-      @fields = @{$intro_sth->{NAME}};
-      $intro_sth->finish;
-  } else {
-      @fields = db::tablefields($c, $sql_param, "", 1);
-  }
+  my $intro_sth = db::query($c, "$sql_param LIMIT 0");
+  @fields = @{$intro_sth->{NAME}};
+  $intro_sth->finish;
   my @orig_fields = @fields;  # Preserve for SQL ORDER BY (before suffix stripping)
   my @extra_attr = ("") x scalar(@fields);
   my %px_override;
@@ -126,8 +121,8 @@ sub listrecords {
               $suf->{colspan} = $1;
               $extra_attr[$i] = "colspan='$1'";
               $changed = 1;
-           } elsif ($field =~ s/_as[=:]([^_]+)$//) {
-               $suf->{as_name} = $1;
+            } elsif ($field =~ s/_as=([^_]+)$//) {
+                $suf->{as_name} = $1;
                $changed = 1;
           } elsif ($field =~ s/_(\d+px)$//) {
               $suf->{width_px} = $1;
@@ -146,7 +141,7 @@ sub listrecords {
            } elsif ($field =~ s/_noheader$//) {
                $suf->{noheader} = 1;
                $changed = 1;
-             } elsif ($field =~ s/_link[=:]([A-Z][a-zA-Z]+)$//) {
+              } elsif ($field =~ s/_link=([A-Z][a-zA-Z]+)$//) {
                   $suf->{link} = $1;
                  $suf->{nofilter} = 1;
                  $suf->{noheader} = 1;
@@ -185,12 +180,7 @@ sub listrecords {
 
   $where = "where $where" if ($where);
 
-  my $sql;
-  if ($is_inline_sql) {
-      $sql = "select * from ($sql_param) $where $order";
-  } else {
-      $sql = "select * from $sql_param $where $order";
-  }
+  my $sql = "select * from ($sql_param) $where $order";
   my @paramarr = ();
   if ( $params ) {
     @paramarr = ref $params eq 'ARRAY' ? @$params : ($params);
