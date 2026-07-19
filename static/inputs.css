@@ -190,3 +190,49 @@
   height: 0;
   overflow: hidden;
 }
+
+/* Help link in the main form */
+.help-link {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border: 1px solid #666;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.85em;
+  color: #999;
+  vertical-align: middle;
+  user-select: none;
+}
+.help-link:hover {
+  color: #fff;
+  border-color: #fff;
+}
+
+/* Help popup */
+.help-popup {
+  position: fixed;
+  z-index: 2000;
+  background-color: var(--altbgcolor, #2a3a4a);
+  border: 1px solid #666;
+  border-radius: 6px;
+  padding: 8px 12px;
+  max-width: 280px;
+  box-shadow: 3px 3px 10px rgba(0,0,0,0.6);
+  font-size: 0.85em;
+  line-height: 1.5;
+  color: #fff;
+}
+.help-popup-close {
+  float: right;
+  cursor: pointer;
+  margin-left: 8px;
+  font-weight: bold;
+  color: #999;
+  font-size: 1.1em;
+}
+.help-popup-close:hover {
+  color: #fff;
+}

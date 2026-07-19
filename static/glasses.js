@@ -159,6 +159,158 @@ function editrecord() {  // Switch form to edit mode for the current record in-p
   document.getElementById('edit-buttons-right').style.display = '';
 }
 
+// Help text for form input fields (arrays, joined at lookup with .join('\n'))
+var FIELD_HELP = {
+  date: [
+    'Date: YYYY-MM-DD',
+    'Default today',
+    'L = 5 min after last entry',
+    'Y = yesterday',
+  ],
+  time: [
+    'Time: HH:MM:SS',
+    'Default now. Colon optional: 2355 -> 23:55',
+    'L = 5 min after last entry',
+    '-N = N minutes ago (max 360)',
+    '-H:MM = H hours MM minutes ago',
+  ],
+  vol: [
+    'Volume (cl)',
+    'Letter codes: T=2  G=16  S=25  M=33  L=40  C=44  W/B=75',
+    'H prefix = half (HB=37)',
+    '"12 oz" = ounces',
+    'X = unknown (recorded as 0)',
+  ],
+  alc: [
+    'Alcohol %',
+    'X = unknown (recorded as 0)',
+    'Auto-filled from brew default',
+  ],
+  pr: [
+    'Price',
+    'Negative = whole container',
+    'X = free / no price',
+  ],
+  tap: [
+    'Tap',
+    'Usually auto-filled',
+  ],
+  note: [
+    'Note',
+    'Note about this specific glass',
+  ],
+  Location: [
+    'Location',
+    '#tag = filter by tags',
+    'Click "Location" label for GPS nearest',
+  ],
+  Brew: [
+    'Brew',
+    '@name = filter by location',
+    '#tag = filter by tags',
+    '[text] = filter by style',
+    '"scan" = open barcode scanner',
+    'Auto-fills alc/vol/price defaults',
+  ],
+  updateGeo: [
+    'Update Geo',
+    'Autofilled. Update the location\'s coords',
+  ],
+  setdef: [
+    'Set Default',
+    'Update default price and volume for the brew',
+  ],
+};
+
+var lastFocusedField = null;
+var helpPopupEl = null;
+
+function getFieldKey(el) {
+  if (el.name) return el.name;
+  if (el.id) return el.id;
+  var dd = el.closest ? el.closest('.dropdown') : null;
+  if (dd) {
+    var hidden = dd.querySelector('input[type="hidden"]');
+    if (hidden) return hidden.id || hidden.name;
+    return dd.id.replace(/^dropdown-/, '');
+  }
+  return null;
+}
+
+function showHelpPopup(text, fieldEl) {
+  hideHelpPopup();
+  var popup = document.createElement('div');
+  popup.className = 'help-popup';
+  popup.innerHTML = '<span class="help-popup-close">&times;</span><div>' +
+    text.replace(/\n/g, '<br>') + '</div>';
+  document.body.appendChild(popup);
+  helpPopupEl = popup;
+
+  var closeBtn = popup.querySelector('.help-popup-close');
+  closeBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    hideHelpPopup();
+  });
+
+  var rect = fieldEl.getBoundingClientRect();
+  var pw = popup.offsetWidth || 280;
+  var ph = popup.offsetHeight || 200;
+
+  var top = rect.bottom + 4;
+  var left = rect.left;
+
+  if (top + ph > window.innerHeight - 10) {
+    top = rect.top - ph - 4;
+    if (top < 10) top = 10;
+  }
+  if (left + pw > window.innerWidth - 10) {
+    left = window.innerWidth - pw - 10;
+  }
+  if (left < 10) left = 10;
+
+  popup.style.top = top + 'px';
+  popup.style.left = left + 'px';
+}
+
+function hideHelpPopup() {
+  if (helpPopupEl) {
+    helpPopupEl.remove();
+    helpPopupEl = null;
+  }
+}
+
+function initFieldHelp() {
+  var form = document.getElementById('mainform');
+  if (!form) return;
+
+  var helpLink = document.getElementById('help-trigger');
+  if (!helpLink) return;
+
+  form.addEventListener('focusin', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' ||
+        e.target.tagName === 'TEXTAREA') {
+      lastFocusedField = e.target;
+      if (helpPopupEl) hideHelpPopup();
+    }
+  });
+
+  helpLink.addEventListener('click', function(e) {
+    e.stopPropagation();
+    var field = lastFocusedField || document.getElementById('date');
+    if (!field) return;
+    var key = getFieldKey(field);
+    if (!key || !FIELD_HELP[key]) return;
+    showHelpPopup(FIELD_HELP[key].join('\n'), field);
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!helpPopupEl) return;
+    if (helpPopupEl.contains(e.target)) return;
+    if (e.target === helpLink) return;
+    hideHelpPopup();
+  });
+}
+
 function initGlassForm() {
   setdate();
 
@@ -263,4 +415,6 @@ function initGlassForm() {
   // Autofill geo from GPS on page load if a location is already selected
   // (syncGeoDisabled is called again inside the GPS callback after checkbox is set)
   updateGeoFromLocation();
+
+  initFieldHelp();
 }

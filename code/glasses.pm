@@ -113,10 +113,11 @@ sub maininputform {
   # Formatting magic
   my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
   my $sz4 = "size='4' style='text-align:right' $clr";
+  my $sz6 = "size='6'  $clr";
   my $sz8 = "size='8'  $clr";
   my $sz20 = "size='20' $clr";
 
-  my $html = "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
+  my $html = "\n<form method='POST' accept-charset='UTF-8' class='no-print' id='mainform' " .
              "onClick='setdate();' " .
              "enctype='multipart/form-data'>\n";
   $html .= "<table>\n";
@@ -138,7 +139,8 @@ sub maininputform {
            # and a valid date. Note also the leading space
    $html .= "<input name='time' id='time' value='$time' data-rawval='$rawtime' " .
             "pattern='(?: ?(?:0[0-9]|1[0-9]|2[0-3])(?::?[0-5][0-9])?(?::?[0-5][0-9])?|-[0-9]+(?::[0-5][0-9])?)' ".
-            "placeholder='HH:MM' $sz8/> &nbsp;\n";
+            "placeholder='HH:MM' $sz6/> &nbsp;\n";
+   $html .= "<span id='help-trigger' class='help-link' title='Help for focused field'>?</span>\n";
   my $onclick = "onclick='selectNearest(\"#dropdown-Location\")'";
   $html .= "<tr><td $onclick>Location</td>\n";
   $html .= "<td>" . locations::selectlocation($c, "Location", $rec->{Location}, "newlocname", "non") .
