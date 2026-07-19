@@ -20,7 +20,40 @@ sub listbrews {
     editbrew($c);
     return;
   }
-  print listrecords::listrecords($c, "BREWS_LIST", "Last-",
+  print listrecords::listrecords($c,
+    q{with users as (
+      select distinct Username from glasses
+    )
+    select
+      brews.Id AS "Id_A_link=Brew",
+      brews.Name AS "Name_A_cont",
+      brews.BrewType || ', ' || brews.SubType AS "Type_A",
+      (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
+        AS "Photo_R3_noheader_nofilter",
+
+      '' AS TR1,
+      brews.Alc AS "Alc",
+      ploc.Id AS "PlocId_A_link=Location_cont",
+      ploc.Name AS "Producer_A_cont",
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as=Stats",
+
+      '' AS TR2,
+      count(glasses.Id) AS "Count",
+      locations.Id AS "LocId_A_link=Location_cont",
+      locations.Name AS "Location_A_as=LocName_cont",
+      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+        strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
+
+      users.Username AS xUsername
+    from brews
+    cross join users
+    left join locations ploc on ploc.Id = brews.ProducerLocation
+    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+    left join locations on locations.Id = glasses.Location
+    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+    group by brews.Id, users.Username
+    ORDER BY "Last" DESC},
+    undef,
     { where => "xUsername = ?", params => $c->{username}, title => "Brews" });
   return;
 } # listbrews
@@ -220,8 +253,34 @@ sub brewdeduplist {
   my $sort = $c->{sort} || "Last-";
   my $extra = {};
   $extra->{refname} = $brew->{Name};
-  print listrecords::listrecords($c, "BREWS_DEDUP_LIST", $sort,
-      { where => qq{"Id_A_link:Brew" <> $brew->{Id} AND xUsername = ?},
+  print listrecords::listrecords($c,
+      q{with users as (
+        select distinct Username from glasses
+      )
+      select
+        brews.Id AS "Id_A_link=Brew",
+        brews.Name,
+        '?' as Sim,
+        r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
+        brews.Alc as Alc,
+        brews.BrewType || ', ' || brews.Subtype AS "Type_A",
+        '' AS TR1,
+        'Chk' as Chk,
+        ploc.Name as Producer,
+        count(glasses.Id) as Count,
+        strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
+          strftime('%H:%M', max(glasses.Timestamp)) as Last,
+        locations.Name AS "Location_C2",
+        users.Username as xUsername
+      from brews
+      cross join users
+      left join locations ploc on ploc.id = brews.ProducerLocation
+      left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+      left join locations on locations.id = glasses.Location
+      left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
+      group by brews.id, users.Username},
+      $sort,
+      { where => qq{"Id_A_link=Brew" <> $brew->{Id} AND xUsername = ?},
         params => $c->{username}, extraparams => $extra,
         browsersortcol => "Sim", title => "Similar brews" });
   print "</form>\n";

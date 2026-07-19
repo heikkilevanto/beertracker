@@ -62,7 +62,7 @@ sub _colspan_last_td {
 
 sub listrecords {
   my $c = shift;
-  my $table = shift;
+  my $sql_param = shift;
   my $sort = shift;
   my $opt = shift || {};
   my $where          = $opt->{where}          || "";
@@ -88,16 +88,24 @@ sub listrecords {
   }
   my $mobile = $c->{mobile} ? 1 : 0;
   my $cache_key = join("\x1e", "listrecords_v3", $c->{username}, $c->{op},
-                       $table, $sort, $where, $params_str, $extraparams_str,
+                       $sql_param, $sort, $where, $params_str, $extraparams_str,
                        $maxrecords, $mobile, $browsersortcol // "",
                        $show_rating_summary, $compact_on_small);
   my $cached = cache::get($c, $cache_key);
   if ( defined $cached ) {
-    print { $c->{log} } "listrecords: cache hit for $table\n";
+    print { $c->{log} } "listrecords: cache hit for $sql_param\n";
     return $cached;
   }
 
-  my @fields = db::tablefields($c, $table, "", 1);
+  my $is_inline_sql = ($sql_param =~ /^\s*(?:SELECT|WITH)\b/i);
+  my @fields;
+  if ($is_inline_sql) {
+      my $intro_sth = db::query($c, "$sql_param LIMIT 0");
+      @fields = @{$intro_sth->{NAME}};
+      $intro_sth->finish;
+  } else {
+      @fields = db::tablefields($c, $sql_param, "", 1);
+  }
   my @orig_fields = @fields;  # Preserve for SQL ORDER BY (before suffix stripping)
   my @extra_attr = ("") x scalar(@fields);
   my %px_override;
@@ -150,7 +158,7 @@ sub listrecords {
                 $suf->{cont} = 1;
                 $changed = 1;
            } elsif ($field =~ /_([a-z][a-zA-Z0-9]*)$/) {
-               print { $c->{log} } "WARNING: listrecords: Unrecognized suffix '_$1' in column '$orig_field' (table: $table)\n";
+                print { $c->{log} } "WARNING: listrecords: Unrecognized suffix '_$1' in column '$orig_field' (sql: $sql_param)\n";
            }
       } while ($changed);
       $fields[$i] = $field;
@@ -166,16 +174,23 @@ sub listrecords {
   }
 
   my $order = "";
-  for (my $i = 0; $i < scalar(@fields); $i++) {
-      my $f = $fields[$i];
-      if ( $sort =~ /$f(-?)/ ) {
-          $order = "Order by $orig_fields[$i]" . ($1 ? " DESC" : "");
+  if ( defined $sort ) {
+      for (my $i = 0; $i < scalar(@fields); $i++) {
+          my $f = $fields[$i];
+          if ( $sort =~ /$f(-?)/ ) {
+              $order = "Order by $orig_fields[$i]" . ($1 ? " DESC" : "");
+          }
       }
   }
 
   $where = "where $where" if ($where);
 
-  my $sql = "select * from $table $where $order";
+  my $sql;
+  if ($is_inline_sql) {
+      $sql = "select * from ($sql_param) $where $order";
+  } else {
+      $sql = "select * from $sql_param $where $order";
+  }
   my @paramarr = ();
   if ( $params ) {
     @paramarr = ref $params eq 'ARRAY' ? @$params : ($params);

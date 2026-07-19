@@ -16,13 +16,14 @@ breaking the rest.
 
 ---
 
-## Stage 1: `code/listrecords.pm`
+## Stage 1: `code/listrecords.pm` ✓
 
 Signature changes from `($c, $table, $sort, $opt)` to `($c, $sql, $sort, $opt)`.
 
-- If `$sql =~ /^SELECT/i` → inline SQL mode. Field names from `$sth->{NAME}`
-  (prepare once without ORDER BY). `$sort` detection loop still applies if
-  `$sort` is non-empty and no `ORDER BY` in `$sql`.
+- If `$sql =~ /^\s*(?:SELECT|WITH)\b/i` → inline SQL mode. Field names from
+  `$sth->{NAME}` (append `LIMIT 0` for introspection). `$sort` detection loop
+  guarded by `defined $sort`. Inline SQL is wrapped as
+  `SELECT * FROM (inline_sql) WHERE ... ORDER BY ...` for correct clause order.
 - Else → view mode. Treat `$sql` as view name, build `"SELECT * FROM $sql"`.
   Field names from `PRAGMA table_info` (current behavior). `$sort` detection
   unchanged.
@@ -45,16 +46,17 @@ perl -c code/listrecords.pm
 # All pages should render identically to before
 ```
 
-## Stage 2: Proof of concept — `brews.pm`
+## Stage 2: Proof of concept — `brews.pm` ✓
 
 Migrate the two brew-specific views:
 
 - `brews.pm:23` — replace `"BREWS_LIST"` with inline SQL from mig_041.
-  Use `=` instead of `:` in column suffixes (e.g., `_link=Brew`).
-  `$sort` can be dropped (ORDER BY embedded in SQL).
+  Includes the `with users as (...) ` CTE. Uses `=` instead of `:` in column
+  suffixes (e.g., `_link=Brew`, `_as=Stats`, `_as=LocName`).
+  `$sort` dropped (ORDER BY embedded in SQL, applied via subquery wrap).
 - `brews.pm:223` — replace `"BREWS_DEDUP_LIST"` with inline SQL from mig_038.
-  Use `=` instead of `:` in column suffixes.
-  Keep `$sort` dynamic (the caller already sets it from `$c->{sort}`).
+  Includes the `with users as (...) ` CTE. Uses `=` instead of `:` in column
+  suffixes. Keeps `$sort` dynamic.
 
 ### Test
 ```bash
