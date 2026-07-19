@@ -118,9 +118,9 @@ sub listrecords {
               $suf->{colspan} = $1;
               $extra_attr[$i] = "colspan='$1'";
               $changed = 1;
-          } elsif ($field =~ s/_as:([^_]+)$//) {
-              $suf->{as_name} = $1;
-              $changed = 1;
+           } elsif ($field =~ s/_as[=:]([^_]+)$//) {
+               $suf->{as_name} = $1;
+               $changed = 1;
           } elsif ($field =~ s/_(\d+px)$//) {
               $suf->{width_px} = $1;
               $px_override{$i} = $1;
@@ -138,8 +138,8 @@ sub listrecords {
            } elsif ($field =~ s/_noheader$//) {
                $suf->{noheader} = 1;
                $changed = 1;
-            } elsif ($field =~ s/_link:([A-Z][a-zA-Z]+)$//) {
-                 $suf->{link} = $1;
+             } elsif ($field =~ s/_link[=:]([A-Z][a-zA-Z]+)$//) {
+                  $suf->{link} = $1;
                  $suf->{nofilter} = 1;
                  $suf->{noheader} = 1;
                  $changed = 1;
