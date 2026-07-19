@@ -666,8 +666,13 @@ sub selectbrew {
       $defvol = $defvol || "";
       $barcode = $barcode || "";
       $seenat = $seenat || "";
+      my $tags_str = "";
+      if ($su) {
+          $tags_str = lc($su);
+      }
+      my $tags_attr = $tags_str ? " tags='" . util::htmlesc($tags_str) . "'" : "";
       $opts .= "<div class='dropdown-item' id='$id' alc='$alc' " .
-         "defprice='$defprice' defvol='$defvol' brewtype='$bt' barcode='$barcode' seenat='$seenat' >$disp</div>\n";
+         "defprice='$defprice' defvol='$defvol' brewtype='$bt' barcode='$barcode' seenat='$seenat'$tags_attr>$disp</div>\n";
     }
     cache::set($c, $cache_key, $opts);
   }

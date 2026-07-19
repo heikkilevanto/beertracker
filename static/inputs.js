@@ -440,7 +440,8 @@ function getOrCreateTagRow(dropdownList) {
 // Render tag chips and optional "All of #tag" link into tagRow.
 // tagSearch is the lowercased text after '#' (empty string means show all items with any tag).
 // A trailing space in tagSearch means exact (case-insensitive) match instead of prefix match.
-function renderTagRow(tagRow, tagSearch, dropdownList, filterInput) {
+// selbrewtype is optional: if set, only items whose brewtype matches contribute their tags.
+function renderTagRow(tagRow, tagSearch, dropdownList, filterInput, selbrewtype) {
   const container = dropdownList.closest('.dropdown');
   const isMulti   = container && container.getAttribute('data-multi') === '1';
   const chipsDiv  = container && container.querySelector('.dropdown-chips');
@@ -450,11 +451,15 @@ function renderTagRow(tagRow, tagSearch, dropdownList, filterInput) {
   const isExact = tagSearch.endsWith(' ');
   const searchKey = isExact ? tagSearch.trimEnd() : tagSearch;
 
-  // Collect unique matching tags from all items, in list (recency) order, cap at 8
+  // Collect unique matching tags from visible items, in list (recency) order, cap at 8
   const seenTags = new Set();
   const matchingTags = [];
   Array.from(dropdownList.querySelectorAll('.dropdown-item')).forEach(item => {
     if (item.id === 'tag-row' || item.id === 'actions') return;
+    if (selbrewtype && selbrewtype.value) {
+      const brewtype = item.getAttribute('brewtype');
+      if (brewtype && brewtype !== selbrewtype.value) return;
+    }
     const rawTags = (item.getAttribute('tags') || '').trim();
     if (!rawTags) return;
     rawTags.split(/\s+/).forEach(tag => {
@@ -550,7 +555,8 @@ function filterItems(filterInput, dropdownList) {
   if (isTagFilter) {
     if (actionsItem) actionsItem.style.display = 'none';
     tagRow.style.display = '';
-    renderTagRow(tagRow, filter.substring(1), dropdownList, filterInput);
+    dropdownList.scrollTop = 0;
+    renderTagRow(tagRow, filter.substring(1), dropdownList, filterInput, selbrewtype);
   } else {
     tagRow.style.display = 'none';
     // actionsItem visibility is handled by the normal text-match pass below
