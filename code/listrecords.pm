@@ -22,13 +22,7 @@ sub linebreak {
   my $c = shift;
   my $field = shift;
   my $tags = "</tr>\n<tr>\n";  # Stop previous line and start a new one
-  if ( $field =~ /^TRMOB/i ) {  # break for mobile display only
-    if ( $c->{mobile} ) {
-      return $tags;
-    } else {
-      return " "; # non-empty, but not a line break
-    }
-  } elsif ( $field =~ /^TR/i ) { # unconditional break
+  if ( $field =~ /^TR/i ) {
     return $tags;
   }
   return ""; # Not a line break at all
@@ -76,21 +70,8 @@ sub listrecords {
   my $show_rating_summary = $opt->{show_rating_summary} || 0;
   my $hide_headers_default = $opt->{hide_headers_default} || 0;
 
-  # Build cache key from all inputs that affect the rendered HTML.
-  my $params_str = "";
-  if ( $params ) {
-    my @pa = ref $params eq 'ARRAY' ? @$params : ($params);
-    $params_str = join("\x1f", @pa);
-  }
-  my $extraparams_str = "";
-  if ( $extraparams ) {
-    $extraparams_str = join("\x1f", map { "$_=" . ($extraparams->{$_} // "") } sort keys %$extraparams);
-  }
-  my $mobile = $c->{mobile} ? 1 : 0;
-  my $cache_key = join("\x1e", "listrecords_v4", $c->{username}, $c->{op},
-                       $sql_param, $sort, $where, $params_str, $extraparams_str,
-                       $maxrecords, $mobile, $browsersortcol // "",
-                       $show_rating_summary, $hide_headers_default);
+  my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where,
+    $params ? (ref $params eq 'ARRAY' ? @$params : $params) : ());
   my $cached = cache::get($c, $cache_key);
   if ( defined $cached ) {
     print { $c->{log} } "listrecords: cache hit for $sql_param\n";

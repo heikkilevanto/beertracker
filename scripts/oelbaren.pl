@@ -31,6 +31,9 @@ foreach my $design ($dom->findnodes($xpath)) {
     my ($number) = $beer[0] =~ m/\>(.*?)\</g;
 
     my ($maker, $model) = $beer[1] =~ m/\<td\>\<big\>(.*?) *\<b\>(.*?)\<\/b\>.*?\<br\/\>/g;
+    use HTML::Entities;
+    $maker = decode_entities($maker) if $maker;
+    $model = decode_entities($model) if $model;
     
     # Skip empty taps
     if ($model) {
@@ -43,7 +46,9 @@ foreach my $design ($dom->findnodes($xpath)) {
         print STDERR "Could not parse line '$beer[1]'\n";
       }
       $abv = $abv || 0; # Defend against parsing errors
+      $type = decode_entities($type) if $type;
       $type = $type || "??";
+      $country = decode_entities($country) if $country;
       $country = $country || "??";
       # <td>30cl <big>65</big><br/>20cl <big>45</big></td>
       # <td>30cl <big>55</big></td>

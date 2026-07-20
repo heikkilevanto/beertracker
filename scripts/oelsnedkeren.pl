@@ -45,6 +45,11 @@ foreach my $design ($dom->findnodes($xpath)) {
   my ($type)  = $beer[1] =~ m/beer-style">(.*?)</g;
   my ($abv)   = $beer[2] =~ m/beer-abv">(.*?)%/g;
   my ($desc)  = $beer[4] =~ m/beer-description">[ ]*(.*?)[ ]*</g;
+  use HTML::Entities;
+  $maker = decode_entities($maker) if $maker;
+  $model = decode_entities($model) if $model;
+  $type  = decode_entities($type)  if $type;
+  $desc  = decode_entities($desc)  if $desc;
   #    print "RESULT:", $model, $maker, $type, $abv;
 
   # The prices are not listed with the beers, but separately:
