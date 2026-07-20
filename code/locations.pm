@@ -8,6 +8,26 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use URI::Escape qw(uri_escape_utf8);
 
+our $loc_field_order = [
+  [ "Name",            "The name of the location", "r" ],
+  [ "LocType",         "Bar, Producer, Shop, Restaurant, etc.", "r" ],
+  [ "LocSubType",      "Beer, Wine, Spirit, etc." ],
+  [ "Address",         "Street address" ],
+  [ "Country",         "Auto-filled from address lookup", "a" ],
+  [ "Region",          "Region within the country", "a" ],
+  [ "Lat",             "Latitude, auto-filled from address", "a" ],
+  [ "Lon",             "Longitude, auto-filled from address", "a" ],
+  [ "Website",         "The location's website URL" ],
+  [ "Contact",         "Contact information" ],
+  [ "SearchLink",      "URL for searching this location's beer menu" ],
+  [ "UntappdLink",     "URL to Untappd page" ],
+  [ "ShortName",       "Short identifier, auto-computed from name", "a" ],
+  [ "OfficialName",    "Official registered name" ],
+  [ "Description",     "Description or notes about this location" ],
+  [ "Tags",            "Space-separated tags for filtering" ],
+  [ "Scraper",         "Scraper script for beer menu" ],
+];
+
 
 # TODO - Add current and latest as options to it
 
@@ -274,7 +294,7 @@ sub editlocation {
         "enctype='multipart/form-data'>\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
     my $tags_ref = db::all_tags($c, "LOCATIONS");
-    print inputs::inputform($c, "LOCATIONS", $p, "", "", "<br/>", "Id", $tags_ref );
+    print inputs::inputform($c, "LOCATIONS", $p, "", "", "<br/>", "Id", $tags_ref, $loc_field_order );
 
     if ( $p->{Id} ne "new" ) {
       # Editing existing record: show Edit button, hide submit
@@ -567,7 +587,7 @@ sub selectlocation {
     # Default LocType/LocSubType for inline new-location form (issue #714)
     $defaults = { LocType => "Bar", LocSubType => "Beer" };
   }
-  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, { table => "LOCATIONS", newfield => $newfield, skip => $skip, disabled => $disabled, defaults => $defaults } );
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, { table => "LOCATIONS", newfield => $newfield, skip => $skip, disabled => $disabled, defaults => $defaults, fieldorder => $loc_field_order } );
   $s .= "<script>geotabledist();</script>\n";
   return $s;
 

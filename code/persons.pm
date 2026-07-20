@@ -7,6 +7,16 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
+our $person_field_order = [
+  [ "Name",            "The name of the person", "r" ],
+  [ "FullName",        "Full official name" ],
+  [ "Description",     "Description or notes about this person" ],
+  [ "Contact",         "Contact information" ],
+  [ "Location",        "Where this person is usually found" ],
+  [ "RelatedPerson",   "Related person (e.g. partner)" ],
+  [ "Tags",            "Space-separated tags for filtering" ],
+];
+
 ################################################################################
 # List of persons
 ################################################################################
@@ -68,7 +78,7 @@ sub editperson {
   }
 
   my $tags_ref = db::all_tags($c, "PERSONS");
-  print inputs::inputform( $c, "PERSONS", $p, "", "", "<br/>", "Id", $tags_ref );
+  print inputs::inputform( $c, "PERSONS", $p, "", "", "<br/>", "Id", $tags_ref, $person_field_order );
   if ( $c->{edit} =~ /^new/i ) {
     print "<br/><input type='submit' name='submit' value='Insert Person' />\n";
   } else {
@@ -154,7 +164,7 @@ sub selectperson {
     }
   }
   my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts,
-   { table => "PERSONS", newfield => "newperson", skip => "Id|Username", disabled => $disabled, multi => $multi, prechips => $prechips } );
+   { table => "PERSONS", newfield => "newperson", skip => "Id|Username", disabled => $disabled, multi => $multi, prechips => $prechips, fieldorder => $person_field_order } );
   return $s;
 } # selectperson
 
