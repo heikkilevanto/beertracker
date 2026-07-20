@@ -190,10 +190,24 @@ function fieldclick_cell(event, el, col) {
 function lr_clearfilters(el) {
   const wrapper = el.closest('[data-lr-wrapper]');
   const table = wrapper.querySelector('table');
-  wrapper.classList.remove('lr-compact');
   table.querySelectorAll('thead td input[data-col]').forEach(inp => { inp.value = ''; });
   const first = table.querySelector('thead input[data-col]');
   if (first) dochangefilter(first);
+}
+
+function lr_toggleheaders(el) {
+  const wrapper = el.closest('[data-lr-wrapper]');
+  wrapper.classList.toggle('lr-compact');
+}
+
+function lr_showhelp() {
+  const popup = document.getElementById('lr-help-popup');
+  if (popup) popup.style.display = 'block';
+}
+
+function lr_hidehelp() {
+  const popup = document.getElementById('lr-help-popup');
+  if (popup) popup.style.display = 'none';
 }
 
 /////////////////////

@@ -74,7 +74,7 @@ sub listrecords {
   my $initial_filter = $opt->{initial_filter} || {};
   my $no_new_link    = $opt->{no_new_link}    || 0;
   my $show_rating_summary = $opt->{show_rating_summary} || 0;
-  my $compact_on_small   = $opt->{compact_on_small}   || 0;
+  my $hide_headers_default = $opt->{hide_headers_default} || 0;
 
   # Build cache key from all inputs that affect the rendered HTML.
   my $params_str = "";
@@ -87,10 +87,10 @@ sub listrecords {
     $extraparams_str = join("\x1f", map { "$_=" . ($extraparams->{$_} // "") } sort keys %$extraparams);
   }
   my $mobile = $c->{mobile} ? 1 : 0;
-  my $cache_key = join("\x1e", "listrecords_v3", $c->{username}, $c->{op},
+  my $cache_key = join("\x1e", "listrecords_v4", $c->{username}, $c->{op},
                        $sql_param, $sort, $where, $params_str, $extraparams_str,
                        $maxrecords, $mobile, $browsersortcol // "",
-                       $show_rating_summary, $compact_on_small);
+                       $show_rating_summary, $hide_headers_default);
   my $cached = cache::get($c, $cache_key);
   if ( defined $cached ) {
     print { $c->{log} } "listrecords: cache hit for $sql_param\n";
@@ -201,6 +201,27 @@ sub listrecords {
     tbody[data-lr-fs] > tr[data-first] > td { white-space: nowrap; }
     .lr-compact thead > tr { display: none; }
     .lr-compact .lr-page-nav-div { display: none !important; }
+    .lr-help-popup {
+      position: fixed; z-index: 2000; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--altbgcolor, #2a3a4a);
+      border: 1px solid #888; border-radius: 8px;
+      padding: 16px 20px; max-width: 400px; width: 90%;
+      box-shadow: 4px 4px 16px rgba(0,0,0,0.6);
+      font-size: 0.9em; line-height: 1.6; color: #fff;
+      display: none;
+    }
+    .lr-help-popup-close {
+      float: right; cursor: pointer; font-weight: bold;
+      color: #999; font-size: 1.2em; margin-left: 8px;
+    }
+    .lr-help-popup-close:hover { color: #fff; }
+    .lr-help-popup h3 { margin: 0 0 8px 0; }
+    .lr-help-popup ul { margin: 4px 0; padding-left: 1.5em; }
+    .lr-help-popup kbd {
+      background: #444; border: 1px solid #666; border-radius: 3px;
+      padding: 0 4px; font-family: inherit;
+    }
     </style>\n";
 
   # Header bar — always rendered, two lines
@@ -213,7 +234,11 @@ sub listrecords {
     $s .= "       style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'><span>New</span></a>\n";
   }
   $s .= "    <span class='lr-clr' onclick='lr_clearfilters(this)'\n";
-  $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small'>Clr</span>\n";
+  $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; margin-left:8px'>Clr</span>\n";
+  $s .= "    <span class='lr-hdr' onclick='lr_toggleheaders(this)'\n";
+  $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small'>Hdr</span>\n";
+  $s .= "    <span class='lr-help' onclick='lr_showhelp()'\n";
+  $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; display:inline-block; width:1.6em; text-align:center'>?</span>\n";
   $s .= "  </div>\n";
   $s .= "  <div class='lr-page-nav-div' style='display:flex; align-items:center; flex-wrap:wrap; gap:8px;'>\n";
   $s .= "    Showing <select class='lr-size-select' onchange='lr_changesize(this)'>\n";
@@ -235,6 +260,21 @@ sub listrecords {
   $s .= "    <a href='#' class='lr-next' onclick='return lr_page(this,1)'><span>Next</span></a>\n";
   $s .= "  </div>\n";
   $s .= "</div>\n";
+  $s .= "<div class='lr-help-popup' id='lr-help-popup'>\n";
+  $s .= "  <span class='lr-help-popup-close' onclick='lr_hidehelp()'>&times;</span>\n";
+  $s .= "  <h3>Sorting &amp; Filtering</h3>\n";
+  $s .= "  <ul>\n";
+  $s .= "    <li><b>Sort</b>: click a column header input to sort ascending, click again for descending. The sort arrow (▲/▼) appears in the input.</li>\n";
+  $s .= "    <li><b>Filter</b>: type text in any column header input. Multiple words are AND, comma-separated words are OR. Prefix with <kbd>-</kbd> to exclude, <kbd>=</kbd> for exact match.</li>\n";
+  $s .= "    <li><b>Click to filter</b>: click on almost any word in the list to trigger a filter for that word.</li>\n";
+  $s .= "    <li><b>Clear</b>: the <kbd>Clr</kbd> button clears all filters at once.</li>\n";
+  $s .= "    <li><b>Headers</b>: the <kbd>Hdr</kbd> button shows or hides the column headers and navigation.</li>\n";
+  $s .= "    <li><b>Navigate</b>: use the page size selector, <b>Prev</b>/<b>Next</b>, or the page dropdown to move between pages.</li>\n";
+  $s .= "  </ul>\n";
+  $s .= "</div>\n";
+  if ($hide_headers_default) {
+    $s .= "<script>(function(w){w.classList.add('lr-compact');})(document.querySelector('[data-lr-wrapper]'));<\/script>\n";
+  }
 
   my $geotable = "";
   if ( $extraparams && (($extraparams->{lat} // '') eq '?') && (($extraparams->{lon} // '') eq '?') ) {
@@ -759,9 +799,6 @@ sub listrecords {
       $s .= "Comments: $comcount. ";
     }
     $s .= "</div>\n";
-  }
-  if ($compact_on_small && $rowcount > 0 && $rowcount <= 5) {
-    $s .= "<script>(function(w){w.classList.add('lr-compact');})(document.querySelector('[data-lr-wrapper]'));<\/script>\n";
   }
   $s .= "<!-- listrecords: table body done -->\n";
 

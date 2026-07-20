@@ -383,7 +383,7 @@ JS
           title => "Comments",
           initial_filter => { CommentType => "location" },
           show_rating_summary => 1,
-          compact_on_small => 1,
+          hide_headers_default => 1,
           no_new_link => 1,
           maxrecords => 10,
       });
@@ -400,7 +400,7 @@ JS
             params => [$p->{Id}, $p->{Id}, $c->{username}],
             title => "Producer comments",
             show_rating_summary => 1,
-            compact_on_small => 1,
+            hide_headers_default => 1,
             no_new_link => 1,
             maxrecords => 10,
         });
