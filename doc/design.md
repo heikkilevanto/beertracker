@@ -156,7 +156,7 @@ Column display semantics are driven by suffix tags on the view's column names:
 
 - `_link:Entity` — renders value as a link to `?o=Entity&e=value`
 - `_cont` — merges the next column into this table cell
-- `_contline` — all following columns inherit `_cont` until a `TR`/`TRMOB`
+- `_contline` — all following columns inherit `_cont` until a `TR`
 - `_A` — auto-width column
 - `_R<N>` — rowspan (for photo thumbnails)
 - `_C<N>` — colspan
@@ -164,7 +164,7 @@ Column display semantics are driven by suffix tags on the view's column names:
 - `_filter` — clicking puts the whole field value into the filter
 - `_nofilter` — no filter input in the header
 - `_noheader` — no header cell
-- `'' as TR<N>` — row break (`TRMOB<N>` only on mobile)
+- `'' as TR<N>` — row break
 
 Per-word token filtering is the default: cell values are split into clickable
 `<span>` tokens. Each record gets its own `<tbody>` for show/hide and sorting.
