@@ -20,7 +20,7 @@ Column names encode display semantics via suffixes parsed by `listrecords.pm`:
 |--------|---------|
 | `_link:Entity` | Turns value into `<a href='?o=Entity&e=value'><span>value</span></a>` |
 | `_cont` | Merge this column into the previous cell (continued content) |
-| `_contline` | All following columns inherit `_cont` until a `TR`/`TRMOB` |
+| `_contline` | All following columns inherit `_cont` until a `TR` |
 | `_A` | Auto-width column |
 | `_R<N>` | Rowspan (photo thumbnails: `_R8`, `_R2`, `_R3`) |
 | `_C<N>` | Colspan |
@@ -30,7 +30,7 @@ Column names encode display semantics via suffixes parsed by `listrecords.pm`:
 | `_as:DisplayName` | Show column under a different name |
 | `<N>px` | Fixed pixel width |
 | `x` prefix | Hidden column (for WHERE filtering) |
-| `'' as TR<N>` / `'' as TRMOB<N>` | Row break (pseudo-column; TRMOB only shown on mobile) |
+| `'' as TR<N>` | Row break (pseudo-column) |
 | `Chk`, `Clr`, `Sim` | Special pseudo-fields |
 
 ## Link Conventions
@@ -44,7 +44,7 @@ Column names encode display semantics via suffixes parsed by `listrecords.pm`:
 
 ## Photo Thumbnails
 
-Most lists include a `Photo_R<N>` column (not all — e.g. producers do not). Typically placed on the rightmost side. Uses a subquery: `(SELECT Filename FROM photos WHERE ... ORDER BY Ts DESC LIMIT 1)`. Rowspan spans the number of visual data rows (including `TR<N>`/`TRMOB<N>` breaks).
+Most lists include a `Photo_R<N>` column (not all — e.g. producers do not). Typically placed on the rightmost side. Uses a subquery: `(SELECT Filename FROM photos WHERE ... ORDER BY Ts DESC LIMIT 1)`. Rowspan spans the number of visual data rows (including `TR<N>` breaks).
 
 ## Sorting
 
