@@ -223,7 +223,6 @@ var FIELD_HELP = {
 };
 
 var lastFocusedField = null;
-var helpPopupEl = null;
 
 function getFieldKey(el) {
   if (el.name) return el.name;
@@ -235,48 +234,6 @@ function getFieldKey(el) {
     return dd.id.replace(/^dropdown-/, '');
   }
   return null;
-}
-
-function showHelpPopup(text, fieldEl) {
-  hideHelpPopup();
-  var popup = document.createElement('div');
-  popup.className = 'help-popup';
-  popup.innerHTML = '<span class="help-popup-close">&times;</span><div>' +
-    text.replace(/\n/g, '<br>') + '</div>';
-  document.body.appendChild(popup);
-  helpPopupEl = popup;
-
-  var closeBtn = popup.querySelector('.help-popup-close');
-  closeBtn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    hideHelpPopup();
-  });
-
-  var rect = fieldEl.getBoundingClientRect();
-  var pw = popup.offsetWidth || 280;
-  var ph = popup.offsetHeight || 200;
-
-  var top = rect.bottom + 4;
-  var left = rect.left;
-
-  if (top + ph > window.innerHeight - 10) {
-    top = rect.top - ph - 4;
-    if (top < 10) top = 10;
-  }
-  if (left + pw > window.innerWidth - 10) {
-    left = window.innerWidth - pw - 10;
-  }
-  if (left < 10) left = 10;
-
-  popup.style.top = top + 'px';
-  popup.style.left = left + 'px';
-}
-
-function hideHelpPopup() {
-  if (helpPopupEl) {
-    helpPopupEl.remove();
-    helpPopupEl = null;
-  }
 }
 
 function initFieldHelp() {
@@ -303,12 +260,6 @@ function initFieldHelp() {
     showHelpPopup(FIELD_HELP[key].join('\n'), field);
   });
 
-  document.addEventListener('click', function(e) {
-    if (!helpPopupEl) return;
-    if (helpPopupEl.contains(e.target)) return;
-    if (e.target === helpLink) return;
-    hideHelpPopup();
-  });
 }
 
 function initGlassForm() {

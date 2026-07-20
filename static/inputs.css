@@ -236,3 +236,30 @@
 .help-popup-close:hover {
   color: #fff;
 }
+
+/* Flag indicators in inputform labels */
+.flag-required {
+  color: #e08080;
+  font-weight: bold;
+}
+.flag-autofill {
+  color: #88aaff;
+  font-size: 0.85em;
+}
+
+/* Inputform table layout */
+.inputform-table td:first-child {
+  white-space: nowrap;
+  width: 1%;
+  padding-right: 8px;
+}
+.inputform-table td.marker-cell {
+  white-space: nowrap;
+  padding: 0 4px;
+  width: 1%;
+  vertical-align: middle;
+  text-align: right;
+}
+.inputform-table {
+  width: auto;
+}

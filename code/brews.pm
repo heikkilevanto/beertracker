@@ -10,6 +10,27 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use URI::Escape qw(uri_escape_utf8);
 
+our $brew_field_order = [
+  [ "Name",            "The name of the brew", "r" ],
+  [ "ShortName",       "Short unique identifier, auto-computed from name", "a" ],
+  [ "BrewType",        "Beer, Cider, Wine, Spirit, etc.", "r" ],
+  [ "SubType",         "NEIPA, Imperial Stout, etc." ],
+  [ "BrewStyle",       "Style description (West Coast IPA, etc.)" ],
+  [ "ProducerLocation", "The brewery or producer" ],
+  [ "Country",         "Auto-filled from the selected producer", "a" ],
+  [ "Region",          "Region within the country", "a" ],
+  [ "Alc",             "Alcohol percentage" ],
+  [ "Year",            "Vintage year" ],
+  [ "Flavor",          "Tasting notes and flavor profile" ],
+  [ "Details",         "Additional information" ],
+  [ "DefPrice",        "Default price per unit" ],
+  [ "DefVol",          "Default volume in cl" ],
+  [ "Barcode",         "EAN / GTIN barcode number" ],
+  [ "DetailsLink",     "URL to Untappd or similar" ],
+  [ "IsGeneric",       "Check for a generic entry (not a specific brand)" ],
+  [ "Parent",          "Parent brew ID if this is a variant" ],
+];
+
 ################################################################################
 # List of brews
 ################################################################################
@@ -361,9 +382,9 @@ sub editbrew {
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
 
-    print inputs::inputform($c, "BREWS", $p);
-    
-    
+    print inputs::inputform($c, "BREWS", $p, undef, undef, undef, undef, undef, $brew_field_order);
+
+
     if ( $p->{Id} ne "new" ) {
       # Editing existing record: show Edit button, hide submit
       print "<button type='button' class='edit-enable-btn' onclick=\"enableEditing(this.form); var d=document.getElementById('dropdown-BrewType'); if(d)d.classList.remove('open'); var n=document.querySelector('input[name=\\'Name\\']'); if(n)n.focus();\">Edit</button>\n";
@@ -686,7 +707,7 @@ sub selectbrew {
 
   my $defaults = {};
   $defaults->{BrewType} = $brewtype if $brewtype;
-  my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, { table => "BREWS", newfield => "newbrew", scan => 1, defaults => $defaults } );
+  my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, { table => "BREWS", newfield => "newbrew", scan => 1, defaults => $defaults, fieldorder => $brew_field_order } );
 
   return $s;
 } # selectbrew

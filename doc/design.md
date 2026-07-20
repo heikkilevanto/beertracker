@@ -295,6 +295,7 @@ When about to release a new version, try to follow this checklist:
 - [ ] Verify that each module is in a reasonable state. 
 - [ ] Verify most of functionality
 - [ ] Get a summary of major changes since last version
+- [ ] Check design.md and manual.md are up to date
 - [ ] Use the release candidate for a couple of days to find last details
 - [ ] Draft release notes
 - [ ] Make sure the db.schema is up to date

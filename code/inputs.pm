@@ -20,7 +20,7 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 #    ... );
 # Omit the "new" line if you don't want it
 # Optional args in hashref $opt (6th param):
-#   table, newfield, skip, disabled, scan, multi, prechips, simplenew, extraattr, defaults, required
+#   table, newfield, skip, disabled, scan, multi, prechips, simplenew, extraattr, defaults, required, fieldorder
 # Returns a string ready to be printed in a form
 
 
@@ -43,6 +43,7 @@ sub dropdown {
   my $extraattr      = $opt->{extraattr}  || "";
   my $newdefaults    = $opt->{defaults}   || {};
   my $required       = $opt->{required};
+  my $fieldorder     = $opt->{fieldorder};
 
   my $newdiv = "";
   my $actions = "";
@@ -57,7 +58,7 @@ sub dropdown {
     my @fields = db::tablefields($c, $tablename, "", 1);
     $tags_for_form = db::all_tags($c, $tablename) if (grep { $_ eq "Tags" } @fields);
     $newdiv  = "<div class='dropdown-new' id='newdiv-$inputname' hidden>\n";
-    $newdiv .= inputform($c, $tablename, $newdefaults, $newfieldprefix, $inputname, "", $skipnewfields, $tags_for_form);
+    $newdiv .= inputform($c, $tablename, $newdefaults, $newfieldprefix, $inputname, "", $skipnewfields, $tags_for_form, $fieldorder);
     $newdiv .= "</div>";
   } elsif ($simplenew eq "simplenew") {
     $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>new</span>";
@@ -125,6 +126,8 @@ sub inputform {
   my $separatortag = shift || "<br/>";
   my $skipfields = shift || "Id"; # regexp. "Id|HiddenField|AlsoThis"  "all" for showing all
   my $available_tags_ref = shift; # Optional: arrayref of all known tag strings for chip UI
+  my $field_order = shift; # Optional: arrayref of [fieldname, help] pairs
+  # TODO - Too many arguments, refactor to pass a hash
 
   # Determine if we should disable fields (editing existing, not new)
   my $disabled = "";
@@ -138,8 +141,47 @@ sub inputform {
     $hdr =~ s/^(new)(.)(.*)/"New " . uc($2). "$3:"/ge; # "newloc" -> "New Loc:"
     $form .= "<b>$hdr</b> $separatortag \n";
   }
-  $form .= "<table>\n";
-  foreach my $f ( db::tablefields($c,$table,$skipfields) ) {
+  $form .= "<table class='inputform-table'>\n";
+  my @all_fields = db::tablefields($c,$table,$skipfields);
+  my @ordered_fields;
+  my %help_for;
+  my %flags_for;
+  if ($field_order) {
+    my %remaining;
+    foreach my $f (@all_fields) {
+      (my $raw = $f) =~ s/^\W//;
+      $remaining{lc($raw)} = $f;
+    }
+    foreach my $entry (@$field_order) {
+      my ($fname, $help, $flags) = @$entry;
+      my $key = lc($fname);
+      if (exists $remaining{$key}) {
+        my $f = $remaining{$key};
+        push @ordered_fields, $f;
+        (my $raw = $f) =~ s/^\W//;
+        if ($help || $flags) {
+          my $display_help = $help || "";
+          if ($flags) {
+            my @flag_labels;
+            foreach my $flag (split /,/, $flags) {
+              my $label = { r => "Required", a => "Auto-filled" }->{$flag} || $flag;
+              push @flag_labels, $label;
+            }
+            $display_help .= "\n(" . join(", ", @flag_labels) . ")";
+          }
+          $help_for{$raw} = $display_help;
+        }
+        $flags_for{$raw} = $flags if $flags;
+        delete $remaining{$key};
+      } else {
+        warn "[inputform] Unknown field '$fname' in field_order";
+      }
+    }
+    push @ordered_fields, grep { (my $r = $_) =~ s/^\W//; exists $remaining{lc($r)} } @all_fields;
+  } else {
+    @ordered_fields = @all_fields;
+  }
+  foreach my $f ( @ordered_fields ) {
     $form .= "<tr>\n";
     my $special = $1 if ( $f =~ s/^(\W)// );
     my $pl = $f;
@@ -151,38 +193,53 @@ sub inputform {
     my $inpname = $inputprefix . $f;
     my $val = "";
     $val = "value='$rec->{$f}'" if ( $rec && defined($rec->{$f}) );
+    my $help_link_html = "";
+    if (my $help = $help_for{$f}) {
+      my $esc_help = util::htmlesc($help);
+      $help_link_html = "<span class='help-link' data-help=\"$esc_help\" " .
+        "onclick=\"showHelpPopup(this.dataset.help, this)\" title='Show help'>?</span>";
+    }
+    my $flag_html = "";
+    if (my $flags = $flags_for{$f}) {
+      if ($flags =~ /\br\b/) {
+        $flag_html = "<span class='flag-required' title='Required'>*</span>";
+      } elsif ($flags =~ /\ba\b/) {
+        $flag_html = "<span class='flag-autofill' title='Auto-filled'>&#x21BB;</span>";
+      }
+    }
+    my $marker_cell = "<td class='marker-cell'>$flag_html$help_link_html</td>\n";
     if ( $special && $f ne "IsGeneric") {
       if ( $f =~ /Lat/ ) {
-        $form .= geo::geolabel($c, $inputprefix);
+        $form .= geo::geolabel($c, $inputprefix) . $marker_cell;
       } elsif ( $f =~ /producerlocation/i ) {
         if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
-          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Location&e=$rec->{$f}'><span>Prod [$rec->{$f}]</span></a></td>\n<td>\n";
+          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Location&e=$rec->{$f}'><span>Prod [$rec->{$f}]</span></a></td>\n$marker_cell<td>\n";
         } else {
-          $form .= "<td>Producer</td>\n<td>\n";
+          $form .= "<td>Prod</td>\n$marker_cell<td>\n";
         }
       } elsif ( $f =~ /location/i && $inputprefix !~ /newperson/ ) {
         if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
-          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Location&e=$rec->{$f}'><span>Loc [$rec->{$f}]</span></a></td>\n<td>\n";
+          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Location&e=$rec->{$f}'><span>Loc [$rec->{$f}]</span></a></td>\n$marker_cell<td>\n";
         } else {
-          $form .= "<td>Location</td>\n<td>\n";
+          $form .= "<td>Location</td>\n$marker_cell<td>\n";
         }
       } elsif ( $f =~ /person/i && $inputprefix !~ /newperson/ ) {
         if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
-          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Person&e=$rec->{$f}'><span>Person [$rec->{$f}]</span></a></td>\n<td>\n";
+          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Person&e=$rec->{$f}'><span>Person [$rec->{$f}]</span></a></td>\n$marker_cell<td>\n";
         } else {
-          $form .= "<td>Person</td>\n<td>\n";
+          $form .= "<td>Person</td>\n$marker_cell<td>\n";
         }
       } elsif ( $f =~ /^Parent$/i ) {
         if ( $rec->{$f} && $rec->{$f} =~ /^\d+$/ ) {
-          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Brew&e=$rec->{$f}'><span>Parent [$rec->{$f}]</span></a></td>\n<td>\n";
+          $form .= "<td><a class='field-link-preview' href='$c->{url}?o=Brew&e=$rec->{$f}'><span>Parent [$rec->{$f}]</span></a></td>\n$marker_cell<td>\n";
         } else {
-          $form .= "<td>Parent</td>\n<td>\n";
+          $form .= "<td>Parent</td>\n$marker_cell<td>\n";
         }
       } else {
-        $form .= "<td colspan=2>\n";
+        $form .= "<td colspan=3>\n";
       }
     } else {
-      $form .= "<td>$pl</td>\n";
+      $form .= "<td>$pl</td>\n$marker_cell";
     }
     if ( $special ) {
       if ( $f =~ /producerlocation/i ) {
@@ -202,11 +259,6 @@ sub inputform {
         $form .= geo::geoInput($c, $inputprefix, $rec->{Lat}, $rec->{Lon}, $disabled );
       } elsif ( $f =~ /Lon/i ) {
         # Both handled under Lat
-      } elsif ( $f =~ /IsGeneric/i ) {
-        $form .= "<td>\n";
-        my $checked = "";
-        $checked = "checked" if ($rec && $rec->{$f});
-        $form .= "<input type=checkbox name='$f' $checked value='1' $disabled/>";
       } elsif ( $f =~ /^Parent$/i ) {
         $form .= "<input name='$inpname' $val $disabled/>\n";
         $form .= $separatortag;
@@ -214,7 +266,12 @@ sub inputform {
         util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
       }
     } else {  # Regular input field
-      if ( $f =~ /Barcode/i ) {
+      if ( $f =~ /IsGeneric/i ) {
+        $form .= "<td>\n";
+        my $checked = "";
+        $checked = "checked" if ($rec && $rec->{$f});
+        $form .= "<input type=checkbox name='$f' $checked value='1' $disabled/>";
+      } elsif ( $f =~ /Barcode/i ) {
         # Special handling for barcode field - add scan link
         $form .= barcodeInput($c, $inpname, $rec->{$f}, $disabled );
       } elsif ( $f =~ /^Tags$/i && $available_tags_ref ) {
@@ -253,7 +310,7 @@ sub inputform {
         $form .= "<td>\n";
         $form .= "<input name='$inpname' value='$esc' $clr $disabled/>\n";
         $form .= "<a id='lnk-$inpname' href='$esc' target='_blank'" .
-                 " class='field-link-preview' style='display:$display'><span>&#x1F517;</span></a>\n";
+                 " class='url-preview' style='display:$display'><span>&#x1F517;</span></a>\n";
         $form .= $separatortag;
       } elsif ( $f =~ /^BrewType$/i && $table eq "BREWS" ) {
         my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";

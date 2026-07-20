@@ -652,9 +652,9 @@ function enableEditing(form) {
   const barcodeLinks = form.querySelectorAll('.barcode-scan-link');
   barcodeLinks.forEach(link => link.hidden = false);
 
-  // Hide URL preview and record-link icons while editing
-  const linkPreviews = form.querySelectorAll('.field-link-preview');
-  linkPreviews.forEach(a => a.style.display = 'none');
+  // Hide URL preview icons while editing
+  const urlPreviews = form.querySelectorAll('.url-preview');
+  urlPreviews.forEach(a => a.style.display = 'none');
 
   // Show tags-available sections and chip-remove links
   const tagsAvailableDivs = form.querySelectorAll('.tags-available');
@@ -738,4 +738,58 @@ function selectNearest(dropdownId) {
     }
   );
 }
+
+
+// Help popup (used by inputform help-link buttons and main glass form)
+var helpPopupEl = null;
+
+function showHelpPopup(text, fieldEl) {
+  hideHelpPopup();
+  var popup = document.createElement('div');
+  popup.className = 'help-popup';
+  popup.innerHTML = '<span class="help-popup-close">&times;</span><div>' +
+    text.replace(/\n/g, '<br>') + '</div>';
+  document.body.appendChild(popup);
+  helpPopupEl = popup;
+
+  var closeBtn = popup.querySelector('.help-popup-close');
+  closeBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    hideHelpPopup();
+  });
+
+  var rect = fieldEl.getBoundingClientRect();
+  var pw = popup.offsetWidth || 280;
+  var ph = popup.offsetHeight || 200;
+
+  var top = rect.bottom + 4;
+  var left = rect.left;
+
+  if (top + ph > window.innerHeight - 10) {
+    top = rect.top - ph - 4;
+    if (top < 10) top = 10;
+  }
+  if (left + pw > window.innerWidth - 10) {
+    left = window.innerWidth - pw - 10;
+  }
+  if (left < 10) left = 10;
+
+  popup.style.top = top + 'px';
+  popup.style.left = left + 'px';
+}
+
+function hideHelpPopup() {
+  if (helpPopupEl) {
+    helpPopupEl.remove();
+    helpPopupEl = null;
+  }
+}
+
+// Close help popup when clicking outside (on any .help-link too)
+document.addEventListener('click', function(e) {
+  if (!helpPopupEl) return;
+  if (helpPopupEl.contains(e.target)) return;
+  if (e.target.closest('.help-link')) return;
+  hideHelpPopup();
+});
 
