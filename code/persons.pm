@@ -8,13 +8,13 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
 our $person_field_order = [
-  [ "Name",            "The name of the person", "r" ],
+  [ "Name",            "The name I know the person as", "r" ],
   [ "FullName",        "Full official name" ],
   [ "Description",     "Description or notes about this person" ],
-  [ "Contact",         "Contact information" ],
-  [ "Location",        "Where this person is usually found" ],
+  [ "Contact",         "Email, phone, or such" ],
+  [ "Location",        "The location the person is related to" ],
   [ "RelatedPerson",   "Related person (e.g. partner)" ],
-  [ "Tags",            "Space-separated tags for filtering" ],
+  [ "Tags",            "For filtering" ],
 ];
 
 ################################################################################
