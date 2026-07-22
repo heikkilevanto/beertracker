@@ -605,8 +605,11 @@ function filterItems(filterInput, dropdownList) {
       }
     // Filter by location (seenat) if starts with @, otherwise by display text with tokenized matching
     } else if (isLocationFilter) {
-      const seenat = (item.getAttribute("seenat") || "").toLowerCase();
-      if (!_matchAlternatives(seenat, searchTerm, 'contains')) {
+      const seenat  = (item.getAttribute("seenat")  || "").toLowerCase();
+      const country = (item.getAttribute("country") || "").toLowerCase();
+      const region  = (item.getAttribute("region")  || "").toLowerCase();
+      const locFilter = [seenat, country, region].filter(Boolean).join(' ');
+      if (!_matchAlternatives(locFilter, searchTerm, 'contains')) {
         disp = 'none';
       }
     } else {

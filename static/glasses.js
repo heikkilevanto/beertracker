@@ -201,6 +201,7 @@ var FIELD_HELP = {
   ],
   Location: [
     'Location',
+    '@name = filter by country/region',
     '#tag = filter by tags',
     'Click "Location" label for GPS nearest',
   ],
