@@ -39,6 +39,8 @@ The input form is how you record what you're drinking. It's designed for quick e
 
 Most fields remember your last entry, so if you're drinking multiple beers at the same place, you just change the beer name and hit Record. Click on any field and start typing to replace the value.
 
+Click the **?** button (next to the Record button) to see a help popup for the currently focused field. It lists the shortcuts and tips available for that field.
+
 The main fields are:
 - Date and Time (usually auto-filled to now)
 - Location (pick from your history or add a new one)
@@ -51,7 +53,7 @@ The main fields are:
 The date field defaults to today. If you want a different date, just type it in as `YYYY-MM-DD` (like `2024-03-15`).
 
 Shortcuts:
-- **L** - Use the date from your last entry (plus 5 minutes)
+- **L** - Use the date and time from your last entry (plus 5 minutes)
 - **Y** - Yesterday's date
 
 When editing an old entry, it keeps the original date unless you change it.
@@ -62,7 +64,7 @@ The time field defaults to now. You can type time in several formats:
 - `23:55` - Standard format
 - `2355` - No colon needed
 - `15` - Just the hour (becomes 15:00)
-- **L** - 5 minutes after your last entry
+- `L` - 5 minutes after your last entry
 - `-30` - 30 minutes ago (also adjusts the date if it crosses midnight)
 - `-1:30` or `-90` - 1 hour 30 minutes ago
 - `-360` is the maximum offset (6 hours); anything larger falls back to current time
@@ -72,6 +74,10 @@ The system adds seconds automatically to make each entry unique. Those are usual
 ### Location
 
 Pick where you're drinking from the dropdown. It shows your most recent locations first, so your regular spots are easy to find. You can also type to search.
+
+Filter shortcuts in the dropdown:
+- **@name** — filter by country or region (e.g., `@finland` or `@helsinki`)
+- **#tag** — filter by tags (e.g., `#terrace`)
 
 Click the "Location" label itself to auto-select your nearest location (if you've enabled geolocation).
 
@@ -88,10 +94,15 @@ Choose what you're tracking: Beer, Wine, Booze, Restaurant, Night, or Bar.
 ### What You're Drinking
 
 For Beer/Wine/Booze, pick from the dropdown. It shows your recent drinks first, making it quick to log something you've had before. You can type a part of the name, and the list filters out all that don't match.
-There is also a trick, if you type something like @xxx, it shows only drinks you have had at a location that matches xxx. If you want to filter by style, you can just type it "smoke", but if that matches too many smoked
-porters, you can put it in square brackets "[smoke]". Only the opening bracket is important. You can filter by anything that shows in the entry, even alc %, by entering "4.6%". 
 
-If the system knows the drink, the volume, alcohol, and price fields will auto-fill with previous values.
+Filter shortcuts in the dropdown:
+- **@name** — show only drinks you've had at a location matching *name* (e.g., `@ølbaren`)
+- **#tag** — filter by tags (e.g., `#sour`)
+- **[text]** — filter by style (e.g., `[stout]`). Only the opening bracket matters.
+- You can also filter by anything shown in the entry, even alc%: `4.6%`
+
+If the system knows the drink, the volume, alcohol, and price fields will auto-fill 
+from the brew.
 
 To add a new beer, select "new brew" and fill in the details. The brewery field also lets you pick from recent breweries or add a new one.
 
@@ -109,7 +120,10 @@ How much you drank, usually in centiliters. You can type shorthand codes for com
 
 Prefix with **H** for half portions: `HB` = 37cl
 
-You can also enter `12 oz` for US fluid ounces (converts to 36cl), or just type the number directly like `33`.
+You can also enter `12 oz` for US fluid ounces (converts to 36cl).
+
+You can see the list if you click on the help button (?) after clicking on the
+volume. 
 
 Type **X** if you don't know or don't want to record the volume.
 
