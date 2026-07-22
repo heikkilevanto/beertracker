@@ -155,9 +155,9 @@ sub format_date_relative {
   my $today = strftime('%Y-%m-%d', localtime($now_utc6));
   my $yest_utc6 = $now_utc6 - 86400;
   my $yesterday = strftime('%Y-%m-%d', localtime($yest_utc6));
-  
+
   my $formatted_time = $time_str ? ($time_str lt "06:00" ? "($time_str)" : $time_str) : "";
-  
+
   if ($date_str eq $today) {
     return $formatted_time;
   } elsif ($date_str eq $yesterday) {
@@ -201,7 +201,7 @@ sub format_date_absolute {
 
 
 ################################################################################
-# Helper functions for beerboard 
+# Helper functions for beerboard
 ################################################################################
 
 sub render_location_selector {
@@ -211,7 +211,7 @@ sub render_location_selector {
   $url =~ s/"/&quot;/g;
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
   print "Beer list \n";
-  print "<select onchange=\"document.location='$url?o=Board&loc=' + 
+  print "<select onchange=\"document.location='$url?o=Board&loc=' +
        encodeURIComponent(this.value);\" style='display:inline-block; width:5.5em;'>\n";
   for my $l ( scrapeboard::get_scraper_locations($c) ) {
     my $sel = "";
@@ -251,22 +251,22 @@ sub get_location_param {
 
 sub load_beerlist_from_db {
   my ($c, $locparam, $qrylim) = @_;
-  
+
   # Get location ID
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
   return ([], undef) unless $loc_rec;
   my $loc_id = $loc_rec->{Id};
-  
+
   # Get the latest scrape marker
   my ($last_epoch) = db::queryarray($c,
     "SELECT strftime('%s', LastSeen) as last_epoch FROM tap_beers " .
     "WHERE Location = ? AND Tap IS NULL ORDER BY LastSeen DESC LIMIT 1",
     $loc_id);
-  
+
   # Load from DB
-  my $sql = "SELECT 
-      ct.Tap, ct.Brew, ct.BrewName AS beer, 
-      pl.Name AS maker, pl.Id AS maker_id, 
+  my $sql = "SELECT
+      ct.Tap, ct.Brew, ct.BrewName AS beer,
+      pl.Name AS maker, pl.Id AS maker_id,
       b.SubType AS type, b.Alc AS alc,
       b.DetailsLink AS details_link,
       b.ShortName AS brew_shortname,
@@ -276,7 +276,7 @@ sub load_beerlist_from_db {
       b.DefPrice, b.DefVol,
       ur.rating_count, ur.average_rating, ur.comment_count,
       strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
-      strftime('%H:%M', tb.FirstSeen) as first_seen_time, 
+      strftime('%H:%M', tb.FirstSeen) as first_seen_time,
       strftime('%s', tb.FirstSeen) as first_seen_ts,
       ug.seen_count, ug.seen_min_date, ug.seen_max_date
     FROM current_taps ct
@@ -299,7 +299,7 @@ sub load_beerlist_from_db {
     WHERE ct.Location = ?
     ORDER BY ct.Tap";
   my $sth = db::query($c, $sql, $c->{username}, $c->{username}, $loc_id);
-  
+
   my $beerlist = [];
   while (my $row = $sth->fetchrow_hashref) {
     my $sizePrice = [];
@@ -325,7 +325,7 @@ sub load_beerlist_from_db {
         push @$sizePrice, { vol => 'L', price => undef };
       }
     }
-    
+
     push @$beerlist, {
       id => $row->{Tap},
       maker => $row->{maker} || "",
@@ -351,7 +351,7 @@ sub load_beerlist_from_db {
       shortname => $row->{shortname}
     };
   }
-  
+
   print "<!-- Loaded beerlist from DB for '$locparam' -->\n";
   return ($beerlist, $last_epoch);
 }
@@ -490,7 +490,7 @@ sub render_beer_row {
   my $expanded_display = ($extraboard == $id) ? 'table-row' : 'none';
   # Compact row
   print "<tr id='compact_$id' style='$bg display: $compact_display;'>\n";
-  print "<td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" style=\"cursor: pointer;\"><span $beerstyle>#$dispid</span></td>\n";
+  print "<td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" ><span $beerstyle>#$dispid</span></td>\n";
   print "<td>$buttons_compact</td>\n";
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
   print "<td>$processed_data->{dispbeer_short} $processed_data->{dispmak} ";
@@ -503,7 +503,7 @@ sub render_beer_row {
   print "</tr>\n";
   # Expanded rows
   print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
-  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" style=\"cursor: pointer;\">";
+  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" >";
   print "<span $beerstyle id='here'>#$dispid</span> ";
   print "</td>\n";
   print "<td colspan=4 >";

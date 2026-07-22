@@ -320,8 +320,9 @@ if ( $q->request_method eq "POST" ) {
     $c->{dbh}->disconnect;
   };
   if ( $@ ) {
-    util::error("$@\n$debugparams");
-    $c->{dbh}->rollback;
+    my $err = $@;
+    $c->{dbh}->rollback();
+    util::error("$err\n$debugparams"); # does not return
   }
 
   cache::clear($c, "POST");  # Data may have changed; invalidate all cached lists
