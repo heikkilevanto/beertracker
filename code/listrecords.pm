@@ -69,6 +69,7 @@ sub listrecords {
   my $no_new_link    = $opt->{no_new_link}    || 0;
   my $show_rating_summary = $opt->{show_rating_summary} || 0;
   my $hide_headers_default = $opt->{hide_headers_default} || 0;
+  my $gap_column = $opt->{gap_column};
 
   my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where,
     $params ? (ref $params eq 'ARRAY' ? @$params : $params) : ());
@@ -157,6 +158,16 @@ sub listrecords {
               $order = "Order by $orig_fields[$i]" . ($1 ? " DESC" : "");
           }
       }
+  }
+
+  my $gap_col_idx = -1;
+  if ($gap_column) {
+    for (my $i = 0; $i < scalar(@fields); $i++) {
+      if ($fields[$i] eq $gap_column) {
+        $gap_col_idx = $i;
+        last;
+      }
+    }
   }
 
   $where = "where $where" if ($where);
@@ -324,8 +335,10 @@ sub listrecords {
       $sty = "style='max-width:$w; text-align:center'";
     } elsif ( $f =~ /^(Sub)$/ ) {
       $sty = "style='max-width:70px; text-align:center'";
-    } elsif ( $f =~ /^(Com|Count)$/ ) {
+    } elsif ( $f =~ /^(Com|Count|d)$/ ) {
       $sty = "style='text-align:right; max-width:50px'";
+    } elsif ( $f =~ /^Pr$/ ) {
+      $sty = "style='text-align:right; max-width:35px'";
     } elsif ( $f =~ /^Photo$/ ) {
       $sty = "style='width:96px; text-align:center; padding:1px'";
     } elsif ( $f =~ /^Photos$/ ) {
@@ -448,8 +461,19 @@ sub listrecords {
 
   my ($ratesum, $ratecount, $comcount) = (0, 0, 0);
 
-  my $rowcount = 0;
+  my ($rowcount, $prev_gap) = (0, 0);
   while ( my @rec = $list_sth->fetchrow_array ) {
+    if ($gap_col_idx >= 0 && defined $rec[$gap_col_idx] && $rec[$gap_col_idx] ne '') {
+      my $curr_gap = $rec[$gap_col_idx];
+      my $daydiff = $prev_gap - $curr_gap;
+      $prev_gap = $curr_gap;
+      if ($daydiff > 1) {
+        $daydiff--;
+        my $gap_text = $daydiff > 1 ? "... $daydiff days ..." : "...";
+        my $colspan = scalar(@fields);
+        $s .= "<tbody data-gap='1' data-lr-fs='1'><tr data-first=1 class='top-border'><td colspan='$colspan' style='text-align:center;color:#888'>$gap_text</td></tr></tbody>\n";
+      }
+    }
     $rowcount++;
     my $tds = "";
     my $id = $rec[0]; # Id has to be first if using the Check pseudofield
@@ -708,6 +732,46 @@ sub listrecords {
           $v = util::extlink($v, $label);
           $word_split = 0;
         }
+      } elsif ( $fn eq "Day" ) {
+        if ($v) {
+          my ($date, $wd) = util::splitdate($v);
+          $wd =~ s/Sun/<b>Sun<\/b>/;
+          $v = "<a href='$url?o=Graph&date=$date&ndays=1'><span>$date $wd</span></a>";
+        }
+        $word_split = 0;
+      } elsif ( $fn eq "d" ) {
+        if ($v) {
+          $data_attrs .= " data-sort-key='$v'";
+          $v = util::unit($v, "d");
+        } else {
+          $v = "";
+        }
+      } elsif ( $fn eq "Pr" ) {
+        if ($v) {
+          $data_attrs .= " data-sort-key='$v'";
+          $v = util::unit($v, ".-");
+        } else {
+          $v = "";
+        }
+      } elsif ( $fn eq "Locations" ) {
+        if ($v) {
+          my %seen;
+          my @parts;
+          foreach my $entry (split(/,/, $v)) {
+            $entry =~ s/^\s+|\s+$//g;
+            my ($id, $name) = split(/::/, $entry, 2);
+            next unless $id && !$seen{$id}++;
+            my $link = "<a href='$url?o=Location&e=$id'"
+              . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+              . "><span>L:$id</span></a>";
+            if ($name) {
+              $link .= " " . _word_spans($name, $i);
+            }
+            push @parts, $link;
+          }
+          $v = join(", ", @parts);
+        }
+        $word_split = 0;
       }
       if ( $was_null_field && $fn =~ /^(Type|Sub|LocType|LocSubType|BrewType)$/i && !$v ) {
         $v = "<span class='null-value'>NULL</span>";

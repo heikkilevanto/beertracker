@@ -134,54 +134,23 @@ sub datastats {
 
 sub dailystats {
   my $c = shift;
-  my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" );
-
-  print "<div style='overflow-x: auto;'>";
-  print "<table style='white-space: nowrap;'>\n";
-  print "<tr><td></td><td colspan='3'><b>Daily stats</b></td></tr>\n";
-
   my $sql = "SELECT
-    strftime('%Y-%m-%d %w', Glasses.TimeStamp, '-06:00' ) as date,
-    floor(julianday( Glasses.TimeStamp, '-06:00', '12:00' )) as julian,
-    sum(StDrinks) as drinks,
-    SUM(ABS(glasses.price)) AS price,
-    GROUP_CONCAT(DISTINCT locations.name) AS locations
+    strftime('%Y-%m-%d %w', glasses.Timestamp, '-06:00') AS \"Day\",
+    floor(julianday(glasses.Timestamp, '-06:00', '12:00')) AS \"X_Gap\",
+    SUM(StDrinks) AS \"d\",
+    SUM(ABS(glasses.price)) AS \"Pr\",
+    GROUP_CONCAT(locations.id || '::' || COALESCE(locations.name, '')) AS \"Locations\"
     FROM glasses
     LEFT JOIN locations ON glasses.location = locations.id
-    where Username = ?
-    GROUP BY date
-    ORDER BY date desc";
-
-  # Unfortunately group_concat will not take a delimiter. If a place name
-  # has a comma, it looks a bit silly. Usually clear enough from context.
-  my $sth = db::query($c, $sql, $c->{username});
-  my $prev = 0;
-  while ( my $rec = $sth->fetchrow_hashref ) {
-    my $jul     = $rec->{julian};
-    my $daydiff = $prev - $jul;
-    $prev = $jul;
-    if ( $daydiff > 1 ) {
-      print "<tr><td colspan='2'>... ";
-      $daydiff--;    # Count only empty days in between)
-      print "$daydiff days ..." if ( $daydiff > 1 );
-      print "</td></tr>\n";
-    }
-    print "<tr>";
-    my ( $date, $wd ) = util::splitdate( $rec->{date} );
-    $wd =~ s/Sun/<b>Sun<\/b>/;
-    print "<td>$date $wd</td>";
-    print "<td align='right'>" . util::unit( $rec->{drinks}, "d" ) . "</td>";
-    print "<td align='right'>" . util::unit( $rec->{price},  ".-" ) . "</td>";
-    my $locs = $rec->{locations};
-    $locs =~ s/,/, /g;
-    print "<td>&nbsp; $locs</td>\n";
-
-    #print "<td>", JSON->new->encode($rec), "</td>", "\n";
-    print "</tr>";
-  }
-
-  print "</table></div>\n";
-
+    WHERE Username = ?
+    GROUP BY \"Day\"";
+  print listrecords::listrecords($c, $sql, "Day-", {
+    params    => [$c->{username}],
+    title     => "Daily stats",
+    gap_column => "X_Gap",
+    no_new_link => 1,
+    maxrecords  => 0,
+  });
 }    # dailystats
 
 
