@@ -98,7 +98,7 @@ sub monthstat {
     $dayofmonth = 1 if $dayofmonth < 1;
   }
 
-  open F, ">$c->{plotfile}"
+  open my $fh, ">", $c->{plotfile}
     or util::error("Could not open $c->{plotfile} for writing");
   my @ydays;
   my @ydrinks;
@@ -207,7 +207,7 @@ sub monthstat {
         $plotline .= "NaN  ";
       }
       $dd = "NaN" unless ($d);      # unknown value
-      my $plotval = $money_mode ? ($monthprices{$calm} || "NaN") : $dd;
+      my $plotval = $money_mode ? (defined $monthprices{$calm} ? $monthprices{$calm} : "NaN") : $dd;
       if ($money_mode && $monthprices{$calm} && $calm eq $lastym) {
         my $price_div = ($calm eq $firstym) ? ($dayofmonth - $monthfirstday{$calm} + 1) : $dayofmonth;
         $plotval = int($plotval / $price_div * 30);
@@ -227,7 +227,7 @@ sub monthstat {
     }
     if ($mcount) {
       $mdrinks = sprintf( "%3.1f", $mdrinks / $mcount );
-      $mprice  = sprintf( "%3.1d", $mprice / $mcount );
+      $mprice  = sprintf( "%3.1f", $mprice / $mcount );
       my $dw = $1 if ( $mdrinks =~ /([0-9.]+)/ );
       $dw = util::unit( int( $dw * 7 + 0.5 ), "/w" );
       $t .=
@@ -240,7 +240,7 @@ sub monthstat {
     $plotline .= "\n";
     push( @plotlines, $plotline );
   }
-  print F sort(@plotlines);
+  print $fh sort(@plotlines);
 
   # Projections
   # Projections for the visible last month (respect filters)
@@ -268,11 +268,14 @@ sub monthstat {
   my $min_s = ( $min eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $min );
   my $avg_s = ( $avg eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $avg );
   my $max_s = ( $max eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $max );
-  print F "\n";
-  print F "2001-$cur $min_s\n";  # low
-  print F "2001-$cur $avg_s\n";  # mid (current average)
-  print F "2001-$cur $max_s\n";  # high
-  close(F);
+  print $fh "\n";
+
+  print $fh "2001-$cur $min_s\n";  # low
+
+  print $fh "2001-$cur $avg_s\n";  # mid (current average)
+
+  print $fh "2001-$cur $max_s\n";  # high
+  close($fh);
   $t .= "<tr><td>Avg</td>\n";
   my $granddr    = 0;
   my $granddays  = 0;
@@ -392,10 +395,10 @@ sub monthstat {
   $cmd .= "\"$c->{plotfile}\" "
     . "using 1:2 with points pt 6 lc \"$yearcolors[$lasty]\" lw 2 notitle,";
   $cmd .= "\n";
-  open C, ">$c->{cmdfile}"
-    or util::error("Could not open $c->{plotfile} for writing");
-  print C $cmd;
-  close(C);
+  open my $ch, ">", $c->{cmdfile}
+    or util::error("Could not open $c->{cmdfile} for writing");
+  print $ch $cmd;
+  close($ch);
   system("gnuplot $c->{cmdfile} ");
 
   my $sz = "style='max-width:95vw;max-height:120vh'";

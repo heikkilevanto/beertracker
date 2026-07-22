@@ -301,8 +301,8 @@ sub brewdeduplist {
       left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
       group by brews.id, users.Username},
       $sort,
-      { where => qq{"Id_A_link=Brew" <> $brew->{Id} AND xUsername = ?},
-        params => $c->{username}, extraparams => $extra,
+      { where => qq{"Id_A_link=Brew" <> ? AND xUsername = ?},
+        params => [$brew->{Id}, $c->{username}], extraparams => $extra,
         browsersortcol => "Sim", title => "Similar brews" });
   print "</form>\n";
   print "</div>\n";
@@ -666,7 +666,7 @@ sub selectbrew {
     $opts = "";
     while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $barcode, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {
       my $disp = "";
-      if ($pr && $na !~ /$pr/ ) {
+      if ($pr && $na !~ /\Q$pr\E/ ) {
         $disp .= "<i><span style='font-size: x-small;'>$pr:</span></i> ";
       }
       $disp .= "<b>$na</b>" if ($na);

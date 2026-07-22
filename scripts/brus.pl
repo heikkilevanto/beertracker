@@ -47,10 +47,10 @@ for (my $i = 0; $i < @dts; $i++) {
     }
 
     # Parse tap_name: "Beer Name - Type - Subtype ABV%"
-    my ($beer, $type, $abv) = $tap_name =~ /^(.+?) - (.+?) (\d+\.\d+)%$/;
+    my ($beer, $type, $abv) = $tap_name =~ /^(.+?) - (.+?) (\d+(?:\.\d+)?)%$/;
     if (!$beer) {
-        # Fallback if no subtype
-        ($beer, $type, $abv) = $tap_name =~ /^(.+?) - (.+?) (\d+\.\d+)%$/;
+        # Fallback if no subtype: "Beer Name - ABV%"
+        ($beer, $abv) = $tap_name =~ /^(.+?) - (\d+(?:\.\d+)?)%$/;
     }
     $abv = $abv || 0;
 

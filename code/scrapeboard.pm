@@ -65,8 +65,8 @@ sub updateboard {
   my $script = $c->{scriptdir} . $scriptfile;
   $arg = '' unless defined $arg;
   my $json = `timeout 5s perl $script $arg`;
-  if ($!) {
-    print { $c->{log} } "updateboard: Timeout running $script: $!\n";
+  if ($? != 0) {
+    print { $c->{log} } "updateboard: Scraper failed for $locparam (exit " . ($? >> 8) . ")\n";
     return;
   }
   chomp($json);

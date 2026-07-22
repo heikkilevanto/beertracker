@@ -219,7 +219,7 @@ sub locationdeduplist {
       left join glasses on glasses.Location = locations.Id
       group by locations.Id},
       $sort,
-      { where => "Id_A <> $loc->{Id}", extraparams => $extra,
+      { where => "Id_A <> ?", extraparams => $extra, params => $loc->{Id},
         browsersortcol => "Sim", title => "Similar locations" });
   print "</form>\n";
   print "</div>\n";
@@ -286,6 +286,7 @@ sub editlocation {
   } else {
     my $sql = "select * from Locations where id = ?";
     $p = db::queryrecord($c, $sql, $c->{edit});
+    util::error("Location #$c->{edit} not found") unless $p && $p->{Id};
     print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
   }
 

@@ -69,8 +69,8 @@ foreach my $item ($tap_section->findnodes('.//li[@class="menu-item"]')) {
         my $formatted = sprintf("%.1f", $raw_tap_num);
         if ($used_tap_numbers{$formatted}) {
             my $suffix = 0.1;
+            $suffix += 0.1 while $used_tap_numbers{sprintf("%.1f", $raw_tap_num + $suffix)};
             my $suffixed = sprintf("%.1f", $raw_tap_num + $suffix);
-            $suffixed = sprintf("%.1f", $raw_tap_num + $suffix) while $used_tap_numbers{$suffixed};
             $tap_num = $suffixed;
             $used_tap_numbers{$tap_num} = 1;
             print STDERR "Duplicate tap num, assigned $tap_num\n" if $debug;

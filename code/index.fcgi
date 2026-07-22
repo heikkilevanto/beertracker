@@ -45,8 +45,8 @@ use CGI::Fast qw( -utf8 );
 ################################################################################
 # This is necessary after we moved index.fcgi into the code dir
 if ( cwd() =~ /\/code$/ ) {
-  chdir("..")
-    or util::error("Can not chdir to .. from code/: $!" );
+  chdir("..");
+    # Can not call util::error yet! Should never happen anyway.
 }
 
 ################################################################################

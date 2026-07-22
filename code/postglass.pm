@@ -209,7 +209,7 @@ sub postglass {
     }
   }
 
-  graph::clearcachefiles($c,"postglass");  
+  graph::clearcachefiles($c,"postglass");
 } # postglass
 
 ################################################################################
@@ -271,7 +271,7 @@ sub gettimestamp {
     util::error("No previous glass found for 'L' timestamp") unless $newstamp;
     ($d, $t) = split(" ", $newstamp);
   }
-  util::error("Bad date '$d' ") unless ( $d =~ /^\d\d-\d\d-\d\d|$/ );
+  util::error("Bad date '$d' ") unless ( $d =~ /^\d\d\d\d-\d\d-\d\d$/ );
   util::error("Bad time '$t' ") unless ( $t =~ /^\d\d:\d\d(:\d\d|)?$/ );
   $glass->{Timestamp} = "$d $t";
   print { $c->{log} } "gettimestamp: '$glass->{Timestamp}' \n";
@@ -347,7 +347,7 @@ sub fixprice {
     return;
   }
 
-  my $pr = $glass->{Price} || "";
+  my $pr = defined $glass->{Price} ? $glass->{Price} : "";
   if ( $pr =~ /^-\d/ ) { # Negative price: bottle/container purchase, store as 0 for drinking
     $glass->{Price} = 0;
     return;
