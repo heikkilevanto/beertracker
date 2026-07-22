@@ -740,9 +740,9 @@ sub listrecords {
         }
         $word_split = 0;
       } elsif ( $fn eq "d" ) {
-        if ($v) {
+        if (defined $v && $v ne '') {
           $data_attrs .= " data-sort-key='$v'";
-          $v = util::unit($v, "d");
+          $v = sprintf('%.1f', $v) . "<span style='font-size: xx-small'>d</span> ";
         } else {
           $v = "";
         }
