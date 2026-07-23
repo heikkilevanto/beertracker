@@ -26,7 +26,7 @@ use POSIX qw(strftime);
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 47;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 48;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -66,6 +66,7 @@ our @MIGRATIONS = (
   [45, 'photos_list make Id a link button, render IdClr as Id', \&mig_045_photos_list_id_link],
   [46, 'comments_list reorder TR1 — BrewName before Prod, add producer/location ID links', \&mig_046_comments_list_reorder_tr1],
   [47, '716 drop _list views, now inline SQL in Perl', \&mig_047_drop_list_views],
+  [48, 'fix HTML entities in text fields', \&mig_048_fix_html_entities],
 );
 
 ################################################################################
@@ -1304,6 +1305,27 @@ sub mig_047_drop_list_views {
   db::execute($c, "DROP VIEW IF EXISTS persons_list");
   db::execute($c, "DROP VIEW IF EXISTS photos_list");
 } # mig_047_drop_list_views
+
+################################################################################
+# Migration 48: fix HTML entities in text fields
+# Some scrapers stored HTML-encoded entities (e.g. &amp;) in LOCATIONS.Name and
+# BREWS.Name before decode_entities() was added to the scraper scripts.
+################################################################################
+sub mig_048_fix_html_entities {
+  my $c = shift;
+
+  my $log = $c->{log};
+
+  # Fix locations
+  my $sql_loc = "UPDATE LOCATIONS SET Name = replace(Name, '&amp;', '&') WHERE Name LIKE '%&amp;%'";
+  my $changed_loc = db::execute($c, $sql_loc);
+  print { $log } "mig_048: Updated $changed_loc LOCATIONS.Name rows\n";
+
+  # Fix brew names
+  my $sql_brew = "UPDATE BREWS SET Name = replace(Name, '&amp;', '&') WHERE Name LIKE '%&amp;%'";
+  my $changed_brew = db::execute($c, $sql_brew);
+  print { $log } "mig_048: Updated $changed_brew BREWS.Name rows\n";
+} # mig_048_fix_html_entities
 
 ################################################################################
 

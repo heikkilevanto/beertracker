@@ -9,6 +9,7 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use JSON;
 use URI::Escape qw(uri_escape_utf8);
+use HTML::Entities;
 
 ################################################################################
 # get_scraper_locations($c, $days)
@@ -110,6 +111,10 @@ sub updateboard {
     my $style = $e->{type} || "";
     my $alc = $e->{alc} || "";
     my $tap_num = $e->{id};
+
+    # Decode HTML entities to guard against scrapers that don't
+    $maker = decode_entities($maker);
+    $beer = decode_entities($beer);
 
     next unless $maker && $beer;  # Skip incomplete entries
 
