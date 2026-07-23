@@ -162,6 +162,10 @@ sub updateboard {
 
     # Tap is new or changed - ensure producer exists
     my $prod_rec = db::findrecord($c, "LOCATIONS", "Name", $maker, "collate nocase");
+    # Fall back to OfficialName for scrapers that use variant names
+    if (!$prod_rec) {
+      $prod_rec = db::findrecord($c, "LOCATIONS", "OfficialName", $maker, "collate nocase");
+    }
     my $prod_id;
     if ($prod_rec) {
       $prod_id = $prod_rec->{Id};
