@@ -255,7 +255,7 @@ my $sudo_as = "";  # e.g. "dennis"
 
 if ( $devversion && $sudo_as ) {
   $c->{username} = $sudo_as;
-  warn "sudo: acting as '$sudo_as'\n";
+  print { $c->{log} } "sudo: acting as '$sudo_as'\n";
 }
 
 

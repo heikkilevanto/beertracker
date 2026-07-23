@@ -174,7 +174,7 @@ sub inputform {
         $flags_for{$raw} = $flags if $flags;
         delete $remaining{$key};
       } else {
-        warn "[inputform] Unknown field '$fname' in field_order";
+        print { $c->{log} } "[inputform] Unknown field '$fname' in field_order\n";
       }
     }
     push @ordered_fields, grep { (my $r = $_) =~ s/^\W//; exists $remaining{lc($r)} } @all_fields;

@@ -588,7 +588,13 @@ sub selectlocation {
     # Default LocType/LocSubType for inline new-location form (issue #714)
     $defaults = { LocType => "Bar", LocSubType => "Beer" };
   }
-  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, { table => "LOCATIONS", newfield => $newfield, skip => $skip, disabled => $disabled, defaults => $defaults, fieldorder => $loc_field_order } );
+  # Filter field_order to exclude skipped fields to avoid warnings in inputform
+  my @filtered_field_order;
+  my $skip_re = qr/^$skip$/;
+  foreach my $entry (@$loc_field_order) {
+    push @filtered_field_order, $entry unless $entry->[0] =~ $skip_re;
+  }
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, { table => "LOCATIONS", newfield => $newfield, skip => $skip, disabled => $disabled, defaults => $defaults, fieldorder => \@filtered_field_order } );
   $s .= "<script>geotabledist();</script>\n";
   return $s;
 
