@@ -419,12 +419,13 @@ JS
       print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
           where => q{CAST("LocId_A_link=Location" AS INTEGER) = ? AND xUsername = ?},
           params => [$p->{Id}, $c->{username}],
-          title => "Comments (XXX)",
+          title => "Comments",
           initial_filter => { CommentType => "location" },
           show_rating_summary => 1,
           hide_headers_default => 1,
           no_new_link => 1,
           maxrecords => 10,
+          norecmessage => "No comments",
       });
       print "<hr/>\n";
       locationvisits($c, $p );

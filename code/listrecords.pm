@@ -70,6 +70,7 @@ sub listrecords {
   my $show_rating_summary = $opt->{show_rating_summary} || 0;
   my $hide_headers_default = $opt->{hide_headers_default} || 0;
   my $gap_column = $opt->{gap_column};
+  my $norecmessage = $opt->{norecmessage};
 
   my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where,
     $params ? (ref $params eq 'ARRAY' ? @$params : $params) : ());
@@ -178,6 +179,15 @@ sub listrecords {
     @paramarr = ref $params eq 'ARRAY' ? @$params : ($params);
   }
   my $list_sth = @paramarr ? db::query($c, $sql, @paramarr) : db::query($c, $sql);
+  if ( $norecmessage ) {
+    my $peek = $list_sth->fetchrow_arrayref;
+    if ( !$peek ) {
+      $list_sth->finish;
+      return "<i>" . util::htmlesc($norecmessage) . "</i>\n";
+    }
+    $list_sth->finish;
+    $list_sth = @paramarr ? db::query($c, $sql, @paramarr) : db::query($c, $sql);
+  }
 
   my $url = $c->{url};
   my $op = $c->{op};
