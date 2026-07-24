@@ -768,7 +768,7 @@ sub listrecords {
           my %seen;
           my @parts;
           foreach my $entry (split(/,/, $v)) {
-            $entry =~ s/^\s+|\s+$//g;
+            $entry =~ s/^\s+|\s+$//;
             my ($id, $name) = split(/::/, $entry, 2);
             next unless $id && !$seen{$id}++;
             my $link = "<a href='$url?o=Location&e=$id'"
@@ -893,35 +893,15 @@ sub listrecords {
 }
 
 ################################################################################
-# Word-level filter tokenisation for list cell values.
-# Parses «…» markers into single tokens (spaces preserved), splits remaining
-# text by whitespace into individual words. Each word is rendered as a
-# clickable <span>, preserving original special characters in the display.
+# Split cell text by whitespace into individual clickable words.
+# Each word is rendered as a clickable <span> for column filtering.
 # The JS fieldclick_word handler strips non-allowed characters on click.
 sub _word_spans {
     my $v = shift;
     my $col_idx = shift;
     return $v if $v eq '';
 
-    my @segments;
-    while ($v =~ /(.*?)\x{ab}(.*?)\x{bb}/sg) {
-        my ($before, $quoted) = ($1, $2);
-
-        if (length $before) {
-            foreach my $word (split /\s+/, $before) {
-                push @segments, $word if length $word;
-            }
-        }
-
-        push @segments, $quoted if length $quoted;
-    }
-
-    my $after = pos($v) ? substr($v, pos($v)) : $v;
-    if (length $after) {
-        foreach my $word (split /\s+/, $after) {
-            push @segments, $word if length $word;
-        }
-    }
+    my @segments = grep { length } split /\s+/, $v;
 
     return util::htmlesc($v) unless @segments;
 

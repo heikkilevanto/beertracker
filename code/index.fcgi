@@ -15,6 +15,8 @@
 # Modules and UTF-8 stuff
 ################################################################################
 use strict;
+
+# All perl modules used anywhere in the system should be listed here
 use POSIX qw(strftime localtime locale_h);
 use JSON;
 use Cwd qw(cwd);
@@ -74,7 +76,7 @@ require "./code/listrecords.pm"; # A way to produce a nice list from db records
 require "./code/aboutpage.pm"; # The About page
 require "./code/debug.pm"; # The Debug page
 require "./code/VERSION.pm"; # auto-generated version info
-require "./code/superuser.pm"; # Superuser functions: Copåy prod data, git pull
+require "./code/superuser.pm"; # Superuser functions: Copy prod data, git pull
 require "./code/db.pm"; # Various database helpers
 require "./code/cache.pm"; # In-process cache for expensive queries
 require "./code/geo.pm"; # Geo coordinate stuff
@@ -321,7 +323,7 @@ if ( $q->request_method eq "POST" ) {
   };
   if ( $@ ) {
     my $err = $@;
-    $c->{dbh}->rollback();
+    $c->{dbh}->rollback() if ( $c->{dbh} ) ;
     util::error("$err\n$debugparams"); # does not return
   }
 

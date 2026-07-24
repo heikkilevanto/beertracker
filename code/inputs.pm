@@ -189,7 +189,6 @@ sub inputform {
     $pl = util::trim($placeholderprefix .$pl);
     $pl =~ s/^([A-z])[a-z]+/$1/ if ( length($pl) > 20 );
     while ( length($pl) > 20 && $pl =~ s/([A-Z])([a-z]+)/$1/ ) { } ;  # Shorten pl
-    #$pl .= $special if ($special) ;
     my $inpname = $inputprefix . $f;
     my $val = "";
     $val = "value='$rec->{$f}'" if ( $rec && defined($rec->{$f}) );
@@ -263,7 +262,7 @@ sub inputform {
         $form .= "<input name='$inpname' $val $disabled/>\n";
         $form .= $separatortag;
       } else  {
-        util::error ( "inputform: Special field '$f' not handled yet");  # Sould not happen
+        util::error ( "inputform: Special field '$f' not handled yet");  # Should not happen
       }
     } else {  # Regular input field
       if ( $f =~ /IsGeneric/i ) {
