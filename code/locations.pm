@@ -29,14 +29,6 @@ our $loc_field_order = [
 ];
 
 
-# TODO - Add current and latest as options to it
-
-
-
-# Formatting magic
-my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
-#my $sz = "size='4' style='text-align:right' $clr";
-
 ################################################################################
 # Lists of locations
 ################################################################################
@@ -545,12 +537,12 @@ sub selectlocation {
   my $skip = "Id";
   my $newfield = "newloc";
   if ( $prods eq "prod" ) {
-    $where = "where LOCATIONS.LocType = \"Producer\" ";
+    $where = "where LOCATIONS.LocType = 'Producer' ";
     $newfield = "newprod";
     $skip .= "|LocType|LocSubType";
   } elsif ( $prods eq "non" ) {
     # NOTE: Must handle NULL LocType — NULL <> 'Producer' is NULL (falsy).
-    $where = "where (LOCATIONS.LocType IS NULL OR LOCATIONS.LocType <> \"Producer\") ";
+    $where = "where (LOCATIONS.LocType IS NULL OR LOCATIONS.LocType <> 'Producer') ";
   }
   # The opts list is the expensive part. Cache per user and location filter type.
   my $cache_key = "selectlocation_opts:$c->{username}:$prods";
@@ -619,7 +611,7 @@ sub selectlocation {
   $s .= "<script>geotabledist();</script>\n";
   return $s;
 
-} # seleclocation
+} # selectlocation
 
 
 ################################################################################
