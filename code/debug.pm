@@ -7,7 +7,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use POSIX qw(strftime localtime locale_h);
+use POSIX qw(strftime localtime);
 use File::Basename;
 use Cwd qw(abs_path cwd);
 
@@ -103,7 +103,7 @@ sub debugpage {
   print "<b style='cursor:pointer' onclick='toggleElement(this.nextElementSibling); setTimeout(function(){ this.nextElementSibling.scrollIntoView(false); }.bind(this), 0)'>Log tail ($nlines lines, click to expand)</b>\n";
   print "<div style='display:none'>\n";
   my $logfile = $c->{datadir} . "debug.log";
-  if ( ! -f $logfile ) {
+  unless( -f $logfile ) {
     print "<p>No log file found.</p>\n";
   } else {
     my $output = `tail -n $nlines \Q$logfile\E`;

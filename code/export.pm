@@ -382,7 +382,7 @@ sub insert_statement {
     my $val = $row->{$col};
     if (!defined $val) {
       push @vals, "NULL";
-    } elsif ($val =~ /^-?\d+(\.\d+)?$/) {
+    } elsif ($val =~ /^-?[1-9]\d*(\.\d+)?$/) {
       push @vals, $val;
     } else {
       $val =~ s/'/''/g;

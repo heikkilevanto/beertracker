@@ -72,7 +72,6 @@ sub dberror {
     "$msg \n\n" .
     "SQL: $sql \n";
   $errmsg .= longmess("Stack Trace");
-  #util::error($errmsg);
   print { $c->{log} } $errmsg;
   print "\n\n"; # Works even before sending headers
   print "<pre>\n\n";
@@ -132,7 +131,7 @@ sub logquery {
   my @params = @_;
 
   # If limit is not positive, skip logging entirely
-  return unless ( $log_sql_limit && $log_sql_limit > 0 );
+  return unless ( $log_sql_limit > 0 );
 
   # If we've already reached the process-wide limit, skip logging
   return if ( $log_sql_count >= $log_sql_limit );
@@ -151,7 +150,7 @@ sub logquery {
   $sql =~ s/\bwhere\s+(\w+)\s+in\s*\(\s*([^,()]+(?:\s*,\s*[^,()]+){0,5})\s*,[^)]*\)/where $1 in ($2,..)/i;
   $msg .= $sql;
   $msg .= " [" .  join(', ', map { defined $_ ? $_ : 'NULL' } @params).  "]" if (@params);
-  $msg = substr($msg,0,239) unless (! $c->{devversion} );
+  $msg = substr($msg,0,239) unless ( $c->{devversion} );
   print { $c->{log} } "$msg\n";
 }
 
@@ -337,7 +336,7 @@ sub postrecord {
   my $defaults = shift || {};
 
   my $sub = util::param($c,"submit");
-  if ($sub =~ /^Update/i || $c->{edit} =~ /^New/i ) {
+  if ($sub =~ /^Update/i && $c->{edit} =~ /^New/i ) {
     db::updaterecord( $c, $table, $c->{edit}, $inputprefix);
   } elsif ( $sub =~ /^Create|^Insert/i ) {
     $c->{edit} = db::insertrecord( $c, $table, $inputprefix, $defaults);
