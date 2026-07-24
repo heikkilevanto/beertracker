@@ -18,7 +18,7 @@ function dochangefilter (inputElement) {
   const filterinputs = table.querySelectorAll('thead input');
 
   // Build per-column arrays of filter tokens with mode (contains/not_contains/exact)
-  const ALLOWLIST = /[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß -]/g;
+  const ALLOWLIST = /[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß &-]/g;
   let filters = [];
   for ( let i=0; i<filterinputs.length; i++) {
     let filterinp = filterinputs[i];
@@ -158,7 +158,7 @@ function fieldclick(event,el,index) {
 
 function fieldclick_word(event, el, col) {
   var token = el.textContent;
-  token = token.replace(/[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß -]/g, '');
+  token = token.replace(/[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß &-]/g, '');
   if ( !token ) return;
 
   const table = el.closest('table');
@@ -176,7 +176,7 @@ function fieldclick_word(event, el, col) {
 function fieldclick_cell(event, el, col) {
   var text = el.textContent;
   text = text.replace(/\s+/g, ' ').trim();
-  text = text.replace(/[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß -]/g, '');
+  text = text.replace(/[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß &-]/g, '');
   if ( !text ) return;
 
   const table = el.closest('table');

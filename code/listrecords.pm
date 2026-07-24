@@ -866,7 +866,9 @@ sub listrecords {
   if ($initial_filter) {
     for my $i (0..$#fields) {
       if (exists $initial_filter->{$fields[$i]}) {
-        my $v = util::htmlesc($initial_filter->{$fields[$i]});
+        my $v = $initial_filter->{$fields[$i]};
+        $v =~ s/\\/\\\\/g;
+        $v =~ s/'/\\'/g;
         $s .= "<script>autoFilterTable($i, '$v');<\/script>\n";
         last;
       }
