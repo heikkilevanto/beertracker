@@ -34,12 +34,17 @@ sub set {
   $c->{cache}{$key} = $value;
 } # set
 
+sub count {
+  my $c      = shift;
+  return 0 if (! $c->{cache} );
+  return scalar(%{ $c->{cache} });
+}
 # Wipe the entire cache (call after a successful POST).
 sub clear {
   my $c      = shift;
   my $reason = shift || "";
   $clears++;
-  my $entries = scalar keys %{ $c->{cache} };
+  my $entries = count($c);
   my $msg = "cache: cleared $entries entries";
   $msg .= " ($reason)" if $reason;
   print { $c->{log} } "$msg\n";
@@ -49,7 +54,7 @@ sub clear {
 # Return a one-line stats summary for logging.
 sub stats {
   my $c      = shift;
-  my $entries = scalar keys %{ $c->{cache} };
+  my $entries = count($c);
   return "cache: entries=$entries hits=$hits misses=$misses clears=$clears";
 } # stats
 

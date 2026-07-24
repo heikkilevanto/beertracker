@@ -20,7 +20,6 @@ use URI::Escape qw(uri_escape_utf8);
 sub beerboard {
   my $c = shift;
 
-  my $qrylim = util::param($c,"f");
 
   my ($locparam, $foundrec) = get_location_param($c);
 
@@ -33,7 +32,7 @@ sub beerboard {
 
   render_location_selector($c, $locparam);
 
-  my ($beerlist, $last_epoch) = load_beerlist_from_db($c, $locparam, $qrylim);
+  my ($beerlist, $last_epoch) = load_beerlist_from_db($c, $locparam);
 
   if (!$beerlist || !@$beerlist) {
     print "Trying to get the list for $locparam - reload to see it <br/>\n";
@@ -49,67 +48,67 @@ sub beerboard {
   }
 
   my $nbeers = 0;
-    if ($c->{qry}) {
-      my $loc_esc = uri_escape_utf8($locparam);
-      print "Filter:<b>$c->{qry}</b> " .
-        "(<a href='$c->{url}?o=$c->{op}&loc=$loc_esc'><span>Clear</span></a>) " .
-        "<p>\n";
-    }
+  if ($c->{qry}) {
+    my $loc_esc = uri_escape_utf8($locparam);
+    print "Filter:<b>$c->{qry}</b> " .
+      "(<a href='$c->{url}?o=$c->{op}&loc=$loc_esc'><span>Clear</span></a>) " .
+      "<p>\n";
+  }
 
-    # Always expand the beer I drank most recently, if any
-    my $extraboard = -3; # none by default
-    if ($foundrec && $foundrec->{brewid} && @$beerlist) {
-      foreach my $e (@$beerlist) {
-        if ($foundrec->{brewid} == $e->{brew_id}) {
-          $extraboard = $e->{id};
-          last;
-        }
+  # Always expand the beer I drank most recently, if any
+  my $extraboard = -3; # none by default
+  if ($foundrec && $foundrec->{brewid} && @$beerlist) {
+    foreach my $e (@$beerlist) {
+      if ($foundrec->{brewid} == $e->{brew_id}) {
+        $extraboard = $e->{id};
+        last;
       }
     }
+  }
 
-    my $expand_display = 'none';
-    print "<div id='expand-all' style='display:$expand_display;'><a href='#' onclick='collapseAll(); return false;'><span>Collapse All</span></a></div>\n";
+  my $expand_display = 'none';
+  print "<div id='expand-all' style='display:$expand_display;'><a href='#' onclick='collapseAll(); return false;'><span>Collapse All</span></a></div>\n";
 
-    print "<table id='beerboard' border=0 style='white-space: nowrap;'>\n";
-    my $previd  = 0;
-    my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
-    my $locid = $locrec ? $locrec->{Id} : undef;
-    foreach my $e ( sort {$a->{"id"} <=> $b->{"id"} } @$beerlist )  {
-      $nbeers++;
-      my $id = $e->{"id"} || 0;
-      my $mak = $e->{"maker"} || "" ;
-      my $beer = $e->{"beer"} || "" ;
-      my $sty = $e->{"type"} || "";
-      my $loc = $locparam;
-      my $alc = $e->{"alc"} || "";
-      $alc = sprintf("%4.1f",$alc) if ($alc);
-      if ( $c->{qry} && $c->{qry} =~ /PA/i ) {
-        next unless ( "$sty $mak $beer" =~ /PA/i );
-      }
-
-      if ( $id - $previd > 1 ) {
-        print "<tr><td align=center>. . .</td></tr>\n";
-      }
-
-      my $processed_data = prepare_beer_entry_data($c, $e, $locparam);
-      my $hiddenbuttons = generate_hidden_fields($c, $e, $locparam, $locid, $id, $processed_data);
-      my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $alc);
-      my $buttons_expanded = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 1, $alc);
-
-      my $beerstyle = styles::brewtextstyle($c, $processed_data->{origsty}, "Board:$e->{'id'} '$e->{'beer'}' $e->{'maker'} sty=$processed_data->{origsty}");
-
-      my $dispid = $id;
-
-      my $seenline = seenline($c, $e->{seen_count}, $e->{seen_min_date}, $e->{seen_max_date});
-
-      render_beer_row($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons);
-
-      $previd = $id;
-    } # beer loop
-    print "</table>\n";
-    if (! $nbeers ) {
-      print "Sorry, got no beers from $locparam\n";
+  print "<table id='beerboard' border=0 style='white-space: nowrap;'>\n";
+  my $previd  = 0;
+  my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
+  my $locid = $locrec ? $locrec->{Id} : undef;
+  foreach my $e ( sort {$a->{"id"} <=> $b->{"id"} } @$beerlist )  {
+    $nbeers++;
+    my $id = $e->{"id"} || 0;
+    my $mak = $e->{"maker"} || "" ;
+    my $beer = $e->{"beer"} || "" ;
+    my $sty = $e->{"type"} || "";
+    my $loc = $locparam;
+    my $alc = $e->{"alc"} || "";
+    $alc = sprintf("%4.1f",$alc) if ($alc);
+    if ( $c->{qry} && $c->{qry} =~ /PA/i ) {
+      next unless ( "$sty $mak $beer" =~ /PA/i );
     }
+
+    if ( $id - $previd > 1 ) {
+      print "<tr><td align=center>. . .</td></tr>\n";
+    }
+
+    my $processed_data = prepare_beer_entry_data($c, $e, $locparam);
+    my $hiddenbuttons = generate_hidden_fields($c, $e, $locparam, $locid, $id, $processed_data);
+    my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $alc);
+    my $buttons_expanded = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 1, $alc);
+
+    my $beerstyle = styles::brewtextstyle($c, $processed_data->{origsty}, "Board:$e->{'id'} '$e->{'beer'}' $e->{'maker'} sty=$processed_data->{origsty}");
+
+    my $dispid = $id;
+
+    my $seenline = seenline($c, $e->{seen_count}, $e->{seen_min_date}, $e->{seen_max_date});
+
+    render_beer_row($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons);
+
+    $previd = $id;
+  } # beer loop
+  print "</table>\n";
+  if (! $nbeers ) {
+    print "Sorry, got no beers from $locparam\n";
+  }
   # Keep $c->{qry}, so we filter the big list too
   $c->{qry} = "" if ($c->{qry} =~ /PA/i );   # But not 'PA', it is only for the board
   print "<hr/>\n";
@@ -250,7 +249,7 @@ sub get_location_param {
 }
 
 sub load_beerlist_from_db {
-  my ($c, $locparam, $qrylim) = @_;
+  my ($c, $locparam) = @_;
 
   # Get location ID
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);

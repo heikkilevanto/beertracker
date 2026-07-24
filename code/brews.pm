@@ -80,10 +80,6 @@ sub listbrews {
 } # listbrews
 
 ################################################################################
-# List all comments for the given brew
-################################################################################
-
-################################################################################
 # List latest prices at various locations
 ################################################################################
 sub listbrewprices {
@@ -530,9 +526,6 @@ JS
       print photos::photo_form($c, brew => $p->{Id}, public_default => 1, return_url => $return_url);
       print "&nbsp;<a href='$c->{url}?o=Comment&e=new&brew=$p->{Id}&commenttype=brew'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
-      print "<div onclick='toggleElement(this.nextElementSibling);'>";
-      print "Comments and ratings for <b>$p->{Name}</b><br/>\n";
-      print "</div>\n";
       print "<div style='overflow-x: auto;'>\n";
       print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
           where => q{EXISTS (SELECT 1 FROM comments c2
@@ -545,7 +538,7 @@ JS
           show_rating_summary => 1,
           hide_headers_default => 1,
           no_new_link => 1,
-          norecmessage => "No comments",
+          norecmessage => "No comments for $p->{Name}",
       });
       print "</div>\n";
       print "<hr/>\n";

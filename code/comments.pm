@@ -1,5 +1,5 @@
 # Part of my beertracker
-# Stuff for comment records and photos (TODO)
+# Stuff for comment records
 
 # TODO - This too big for a module. Split it somehow.
 
