@@ -66,7 +66,6 @@ sub about {
   print aboutlink("GitHub","https://github.com/heikkilevanto/beertracker");
   print aboutlink("Issues", "https://github.com/heikkilevanto/beertracker/issues?".
        "q=is%3Aissue%20is%3Aopen%20sort%3Aupdated-desc%20-label%3ALater%20-label%3ANextVersion");
-  print aboutlink("Edit","https://github.dev/heikkilevanto/beertracker/tree/master");
   print aboutlink("User manual", "https://github.com/heikkilevanto/beertracker/blob/master/doc/manual.md" );
   print aboutlink("Design doc", "https://github.com/heikkilevanto/beertracker/blob/master/doc/design.md" );
   print "</ul><p>\n";
@@ -76,16 +75,6 @@ sub about {
   print "</ul><p>\n";
   print "<hr/>";
 
-  print "Shorthand for drink volumes<br/><ul>\n";
-  for my $k ( sort keys(%glasses::volumes) ) {
-    print "<li><b>$k</b> $glasses::volumes{$k}</li>\n";
-  }
-  print "</ul>\n";
-  print "You can prefix them with 'h' for half, as in HW = half wine = 37cl<br/>\n";
-  print "Of course you can just enter the number of centiliters <br/>\n";
-  print "Or even ounces, when traveling: '6oz' = 18 cl<br/>\n";
-
-  print "<p><hr>\n";
   print "This site uses one session cookie to keep you logged in. <br/>\n";
   print "No third-party cookies or trackers of any kind. <br/>\n";
   print "It collects no personally identifiable information beyond what you enter.<br/>\n";
