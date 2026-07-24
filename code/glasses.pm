@@ -9,17 +9,15 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use POSIX qw(strftime localtime locale_h);
-
-our %volumes = ( # Comment is displayed on the About page
-  'T' => " 2 Taster, sizes vary, always small",
-  'G' => "16 Glass of wine - 12 in places, at home 16 is more realistic",
-  'S' => "25 Small, usually 25",
-  'M' => "33 Medium, typically a bottle beer",
-  'L' => "40 Large, 40cl in most places I frequent",
-  'C' => "44 A can of 44 cl",
-  'W' => "75 Bottle of wine",
-  'B' => "75 Bottle of wine",
+our %volumes = ( # Comment is not used any more.
+  'T' => " 2", # Taster, sizes vary, always small"
+  'G' => "16", # Glass of wine - 12 in places, at home 16 is more realistic"
+  'S' => "25", # Small, usually 25"
+  'M' => "33", # Medium, typically a bottle beer"
+  'L' => "40", # Large, 40cl in most places I frequent"
+  'C' => "44", # A can of 44 cl"
+  'W' => "75", # Bottle of wine"
+  'B' => "75", # Bottle of wine"
 );
 
 ################################################################################
@@ -123,8 +121,7 @@ sub maininputform {
   $html .= "<table>\n";
 
   $html .= "<tr><td width='100px'>Id $rec->{Id}</td>\n";
-  my $stamp = util::datestr("%F %T");
-  $html .= "<td>" ; # <input name='stamp' value='$stamp' size=25 $clr/>";
+  $html .= "<td>" ;
   my ($date,$time) = ( "", "");
   ($date,$time) = split ( ' ',$rec->{Timestamp} ) if ($rec->{Timestamp} );
   my ($rawdate, $rawtime) = ($date, $time);  # Save real values before leading-space marker
@@ -203,7 +200,7 @@ sub maininputform {
   my $alc = $rec->{Alc} || "";
   $alc .= "%" if ($alc);
   $html .= "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' data-empty=1 />\n";
-  my $pr = $rec->{Price} || "";
+  my $pr = $rec->{Price} // "";
   $pr .= ".-" if ($pr && $pr > 0);
   $html .= "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' />\n";
   $html .= "</td></tr>\n";

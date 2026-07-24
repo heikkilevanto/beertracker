@@ -228,7 +228,7 @@ sub plotgraph {
   my $g = shift;
   my $c = $g->{c};
   my $white = "textcolor \"white\" ";
-  my $xformat; # = "\"%d\\n%b\"";  # 14 Jul
+  my $xformat;
   my $weekline = "";
   my $batitle =  "title \"ba\"";
   my $plotweekline =
