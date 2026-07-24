@@ -431,6 +431,7 @@ sub commentform {
           hide_headers_default => 1,
           no_new_link => 1,
           maxrecords => 10,
+          norecmessage => "No other comments on this brew",
       });
     }
   } elsif ($context_loc) {
@@ -452,6 +453,7 @@ sub commentform {
           hide_headers_default => 1,
           no_new_link => 1,
           maxrecords => 10,
+          norecmessage => "No other comments at this location",
       });
     }
   } elsif ($com->{Id} && $com->{CommentType} eq 'person') {
@@ -476,6 +478,7 @@ sub commentform {
             hide_headers_default => 1,
             no_new_link => 1,
             maxrecords => 10,
+            norecmessage => "No other comments mentioning this person",
         });
       }
     }

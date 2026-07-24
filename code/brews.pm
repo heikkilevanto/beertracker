@@ -303,7 +303,8 @@ sub brewdeduplist {
       $sort,
       { where => qq{"Id_A_link=Brew" <> ? AND xUsername = ?},
         params => [$brew->{Id}, $c->{username}], extraparams => $extra,
-        browsersortcol => "Sim", title => "Similar brews" });
+        browsersortcol => "Sim", title => "Similar brews",
+        norecmessage => "No similar brews" });
   print "</form>\n";
   print "</div>\n";
   print "<!-- brewdeduplist end -->\n";
@@ -544,6 +545,7 @@ JS
           show_rating_summary => 1,
           hide_headers_default => 1,
           no_new_link => 1,
+          norecmessage => "No comments",
       });
       print "</div>\n";
       print "<hr/>\n";

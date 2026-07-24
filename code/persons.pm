@@ -107,6 +107,7 @@ sub editperson {
       title => "Comments mentioning $name",
       initial_filter => { CommentType => "person" },
       no_new_link => 1,
+      norecmessage => "No comments",
   });
 } # editperson
 

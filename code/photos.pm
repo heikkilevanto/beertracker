@@ -386,7 +386,8 @@ sub listphotos {
       "Ts-",
       { where => $where, params => [$c->{username}, $c->{username},
          $c->{username}, $c->{username}],
-        title => "Photos for $c->{username}" });
+        title => "Photos for $c->{username}",
+        norecmessage => "No photos" });
 } # listphotos
 
 ################################################################################

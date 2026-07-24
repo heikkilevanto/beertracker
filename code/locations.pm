@@ -238,7 +238,8 @@ sub locationdeduplist {
       group by locations.Id},
       $sort,
       { where => "Id_A <> ?", extraparams => $extra, params => $loc->{Id},
-        browsersortcol => "Sim", title => "Similar locations" });
+        browsersortcol => "Sim", title => "Similar locations",
+        norecmessage => "No similar locations" });
   print "</form>\n";
   print "</div>\n";
   print "<!-- locationdeduplist end -->\n";
@@ -443,6 +444,7 @@ JS
             hide_headers_default => 1,
             no_new_link => 1,
             maxrecords => 10,
+            norecmessage => "No producer comments",
         });
         print "<hr/>\n";
         producerbrews($c, $p);
