@@ -106,6 +106,7 @@ sub editperson {
       params => [$p->{Id}, $c->{username}],
       title => "Comments mentioning $name",
       initial_filter => { CommentType => "person" },
+      hide_headers_default => 1,
       no_new_link => 1,
       norecmessage => "No comments",
   });
