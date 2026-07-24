@@ -51,8 +51,9 @@ sub listlocations {
   my $extraparams = {};
   $extraparams->{lat} = '?';
   $extraparams->{lon} = '?';
+  my $username = $c->{dbh}->quote($c->{username});
   print listrecords::listrecords($c,
-      q{SELECT
+      qq{SELECT
       locations.Id AS "Id_link=Location",
       locations.Name AS "Name_A_as=LocName_cont",
       CASE
@@ -65,7 +66,7 @@ sub listlocations {
         THEN '[' || locations.LocSubType || ']'
         ELSE ''
       END AS "LocType_A_cont",
-      r.rating_count || ';' || r.rating_average || ';' || r.comment_count AS "Ratings_as=Stats",
+      COALESCE(r.rating_count, 0) || ';' || COALESCE(r.rating_average, '') || ';' || COALESCE(r.comment_count, 0) AS "Ratings_as=Stats",
       (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R2_noheader_nofilter",
       '' AS TR1,
       locations.lat || ' ' || locations.lon AS "Geo",
@@ -75,7 +76,24 @@ sub listlocations {
       locations.Tags AS xTags
     FROM locations
     LEFT JOIN glasses ON glasses.Location = locations.Id
-    LEFT JOIN location_ratings r ON r.id = locations.Id
+    LEFT JOIN (
+      select
+        l.id,
+        count(merged.Rating)   as rating_count,
+        avg(merged.Rating)     as rating_average,
+        count(merged.Comment)  as comment_count
+      from locations l
+      left join (
+        select g.Location as loc_id, c.Rating, c.Comment
+          from comments c join glasses g on g.Id = c.Glass
+          where COALESCE(g.Username, c.Username) = $username
+        union all
+        select c.Location as loc_id, c.Rating, c.Comment
+          from comments c where c.Location is not null and c.Glass is null
+          and c.Username = $username
+      ) merged on merged.loc_id = l.Id
+      group by l.Id
+    ) r ON r.id = locations.Id
     GROUP BY locations.Id},
       $sort,
       { extraparams => $extraparams, title => "Locations" });
@@ -401,7 +419,7 @@ JS
       print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
           where => q{CAST("LocId_A_link=Location" AS INTEGER) = ? AND xUsername = ?},
           params => [$p->{Id}, $c->{username}],
-          title => "Comments",
+          title => "Comments (XXX)",
           initial_filter => { CommentType => "location" },
           show_rating_summary => 1,
           hide_headers_default => 1,

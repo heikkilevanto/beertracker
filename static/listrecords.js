@@ -356,7 +356,7 @@ function lr_updateInfo(table, currPage, totalVisible, totalPages) {
   // Update count on first line
   const countSpan = wrapper.querySelector('.lr-count');
   if (countSpan) {
-    const grandTotal = table.tBodies.length;
+    const grandTotal = Array.from(table.tBodies).filter(function(t) { return t.rows.length > 0; }).length;
     countSpan.textContent = totalVisible < grandTotal ? totalVisible + '/' + grandTotal + ' ' : grandTotal + ' ';
   }
 
@@ -486,7 +486,12 @@ function autoFilterTable(col, token) {
   dochangefilter(input);
   var vis = Array.from(table.tBodies).filter(function(t){return t.style.display !== 'none';});
   if (vis.length === 0) {
-    input.value = '';
-    dochangefilter(input);
+    var hasData = Array.from(table.tBodies).some(function(t) {
+      return t.querySelector('tr');
+    });
+    if (hasData) {
+      input.value = '';
+      dochangefilter(input);
+    }
   }
 }
