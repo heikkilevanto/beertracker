@@ -31,7 +31,7 @@ sub listpersons {
       q{SELECT
       persons.Id AS "Id_link=Person",
       persons.Name AS "Name_A_as=Person_C2",
-      (SELECT Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R3_noheader_nofilter",
+      (SELECT Id || ':' || Filename FROM photos WHERE Person = persons.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R3_noheader_nofilter",
       '' AS TR1,
       count(distinct comments.Id) - 1 AS Com,
       persons.description AS "Description_A",

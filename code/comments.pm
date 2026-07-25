@@ -723,7 +723,7 @@ sub comments_list_sql {
       comments.CommentType AS "CommentType_A",
       COALESCE(loc_comment.Id, loc_glass.Id) AS "LocId_A_link=Location",
       COALESCE(loc_comment.Name, loc_glass.Name) AS "LocName_A",
-      (SELECT Filename FROM photos WHERE Comment = comments.Id ORDER BY Ts DESC LIMIT 1)
+      (SELECT Id || ':' || Filename FROM photos WHERE Comment = comments.Id ORDER BY Ts DESC LIMIT 1)
         AS "Photo_noheader_nofilter",
 
       '' AS TR1,

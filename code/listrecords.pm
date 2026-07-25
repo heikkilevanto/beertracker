@@ -699,14 +699,24 @@ sub listrecords {
       } elsif ( $fn eq "Comment" ) {
         $v = "$v";
       } elsif ( $fn eq "Photo" ) {
-        my $id_idx;
-        for (my $j = 0; $j < scalar(@fields); $j++) {
-            if ($fields[$j] eq 'Id' || $fields[$j] eq 'IdClr') {
-                $id_idx = $j;
-                last;
-            }
+        my $photoid;
+        if ($v =~ /^(\d+):(.*)$/) {
+            $photoid = $1;
+            $v = $2;
         }
-        my $editurl = "$c->{url}?o=Photos&e=$rec[$id_idx]";
+        my $editurl;
+        if (defined $photoid) {
+            $editurl = "$c->{url}?o=Photos&e=$photoid";
+        } else {
+            my $id_idx;
+            for (my $j = 0; $j < scalar(@fields); $j++) {
+                if ($fields[$j] eq 'Id' || $fields[$j] eq 'IdClr') {
+                    $id_idx = $j;
+                    last;
+                }
+            }
+            $editurl = "$c->{url}?o=Photos&e=$rec[$id_idx]";
+        }
         $v = photos::imagetag($c, $v, "thumb", $editurl);
         $word_split = 0;
         if (!$v) {

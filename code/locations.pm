@@ -59,7 +59,7 @@ sub listlocations {
         ELSE ''
       END AS "LocType_A_cont",
       COALESCE(r.rating_count, 0) || ';' || COALESCE(r.rating_average, '') || ';' || COALESCE(r.comment_count, 0) AS "Ratings_as=Stats",
-      (SELECT Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R2_noheader_nofilter",
+      (SELECT Id || ':' || Filename FROM photos WHERE Location = locations.Id ORDER BY Ts DESC LIMIT 1) AS "Photo_R2_noheader_nofilter",
       '' AS TR1,
       locations.lat || ' ' || locations.lon AS "Geo",
       COALESCE(locations.Country,'') || ';' || COALESCE(locations.Region,'') AS "CountryRegion_A_contline",

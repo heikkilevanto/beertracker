@@ -49,7 +49,7 @@ sub listbrews {
       brews.Id AS "Id_A_link=Brew",
       brews.Name AS "Name_A_cont",
       brews.BrewType || ', ' || brews.SubType AS "Type_A",
-      (SELECT Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
+      (SELECT Id || ':' || Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
         AS "Photo_R3_noheader_nofilter",
 
       '' AS TR1,
