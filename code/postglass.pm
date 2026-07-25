@@ -44,7 +44,6 @@ sub postglass {
 
 
   my $glass = glasses::findrec($c); # Get defaults from last glass or the record we are editing
-    # TODO Is this needed?
   my $brewid = util::param($c,"Brew");
   if ( $brewid eq "new" ) {
     $brewid = brews::postbrew($c, "new" );

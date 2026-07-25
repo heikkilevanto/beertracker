@@ -14,7 +14,7 @@ use URI::Escape qw(uri_escape_utf8);
 # Main entry point: Display histogram graphs and filter form
 ############################################################
 sub ratings_histogram {
-    my ($c) = @_;
+    my ($c) = shift;
 
     my $filter = {
         year      => util::param($c, 'year'),
@@ -95,7 +95,7 @@ sub histogram_form {
 } # histogram_form
 
 ############################################################
-# Run SQL query returning counts for ratings 1..10, with filter
+# Run SQL query returning counts for ratings 1..9, with filter
 ############################################################
 sub histogram_data {
     my ($c, $filter) = @_;
@@ -106,7 +106,6 @@ sub histogram_data {
       JOIN glasses ON comments.Glass = glasses.Id
       LEFT JOIN locations ON glasses.Location = locations.Id
     };
-#      JOIN brews ON glasses.Brew = brews.Id
 
     my @where = ('glasses.Username = ?');
     my @bind  = ($c->{username});
@@ -135,7 +134,7 @@ sub histogram_data {
     my @counts = (0) x 10;
     for my $row (@$rows) {
       my $r = $row->{rating} // 0;
-      next if $r < 1 || $r > 10;
+      next if $r < 1 || $r > 9;
       $counts[$r] = $row->{cnt} || 0;
     }
 

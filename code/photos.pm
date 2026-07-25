@@ -16,9 +16,6 @@ $imagesizes{"thumb"} = 90;
 $imagesizes{"mob"} = 240;  # 320 is full width on my phone
 $imagesizes{"pc"} = 640;
 
-# TODO
-#- When clearing the cache, delete scaled images over a month old, but not .orig
-
 # Get image file name. Width can be in pixels, or special values like
 # "orig" for the original image, "" for the plain name to be saved in the record,
 # or "thumb", "mob", "pc" for default sizes
@@ -550,10 +547,8 @@ sub editphoto {
   my $c = shift;
   my $photo_id = $c->{edit};
 
-  my ($p) = do {
-    my $sth = db::query($c, "SELECT * FROM photos WHERE Id = ?", $photo_id);
-    $sth->fetchrow_hashref;
-  };
+  my $sth = db::query($c, "SELECT * FROM photos WHERE Id = ?", $photo_id);
+  my $p = $sth->fetchrow_hashref;
   util::error("Photo $photo_id not found") unless $p;
   util::error("Photo $photo_id is not visible to you")
     unless $p->{Public} || lc($p->{Uploader}) eq lc($c->{username});
