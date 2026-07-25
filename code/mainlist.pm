@@ -72,10 +72,6 @@ sub glassquery {
 
 ################################################################################
 # A helper to calculate blood alcohol for a given effdate
-# Returns a hash with bloodalcs for each timestamp for the effdate
-#  $bloodalc{$id} = ba after ingesting that glass
-#  $bloodalc{"max"} = max ba for the date
-#  $bloodalc{"now"} = ba at current time (if effdate = curr date)
 ################################################################################
 # Compute blood alcohol from a pre-fetched list of glasses (DESC timestamp order).
 # Iterates from the back (chronological order). Sets $rec->{ba} on each record.
@@ -124,7 +120,7 @@ sub bloodalc_compute {
 
 # Thin wrapper: fetches glasses for an effdate, calls bloodalc_compute, caches result.
 # Also populates per-ID BA entries for backward compat with current oneday
-# (will be removed in Phase 2 when oneday uses $rec->{ba} directly).
+# Old code, used only from util::topstats
 sub bloodalc {
   my $c = shift;
   my $effdate = shift; # effdate we are interested in
@@ -180,7 +176,7 @@ sub bloodalcnow {
   $alcinbody = 0 if ( $alcinbody < 0);
   my $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
   return sprintf("%0.2f", $curba );
-}
+} # bloodalcnow
 
 ################################################################################
 # List glasses for one day

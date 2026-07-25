@@ -7,7 +7,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-our $person_field_order = [
+my $person_field_order = [
   [ "Name",            "The name I know the person as", "r" ],
   [ "FullName",        "Full official name" ],
   [ "Description",     "Description or notes about this person" ],

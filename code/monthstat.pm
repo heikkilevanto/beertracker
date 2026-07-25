@@ -7,7 +7,6 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use POSIX qw(strftime localtime locale_h);
 
 # TODO - Split this into smaller functions, it is quite long as it is
 
@@ -78,7 +77,7 @@ sub monthstat {
 
   my $pngfile = $c->{plotfile};
   $pngfile =~ s/\.plot/-stat.png/;
-  
+
   # Use filtered end month for x-axis range, or current date if not filtered
   my $lasty      = util::datestr( "%Y", 0 );
   my $lastm      = util::datestr( "%m", 0 );
@@ -88,7 +87,7 @@ sub monthstat {
       $lastm = $2;
     }
   }
-  
+
   my $lastym     = "$lasty-$lastm";
   # Use actual last day from data when filtering to past months to avoid inflating averages
   my $dayofmonth = ($gend && $lastmonthday) ? $lastmonthday : util::datestr("%d");
@@ -192,7 +191,7 @@ sub monthstat {
       $dw = $dw || 0;
       $dw = util::unit( int( $dw * 7 + 0.5 ), "/w" );
       $t .= "<td align=right>";
-      if ($p) {    # Skips the fake Feb
+      if ($p) {
         $t .= "$d<br/>$dw<br/>$p";
         if ( $calm eq $lastym && $monthprices{$calm} ) {
           $p = "";
@@ -413,7 +412,7 @@ sub monthstat {
     print "<a href='$c->{url}?o=Months&s=money$filter_qs'><span>Show money spent</span></a><br/>\n";
   }
   print $t;    # The table we built above
-}    # Monthly stats
+}  # monthstats
 
 
 ################################################################################
