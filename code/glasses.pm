@@ -62,7 +62,7 @@ sub selectbrewtype {
     $opts .= "<div class='dropdown-item' id='Adjustment'>Adjustment</div>\n";
   }
   my $s = inputs::dropdown($c, "selbrewtype", $selected, $selected, $opts,
-    { simplenew => 1 });
+    { simplenew => 1, required => 1 });
    return $s;
 } # selectbrewtype
 

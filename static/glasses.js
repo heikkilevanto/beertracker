@@ -199,6 +199,12 @@ var FIELD_HELP = {
     'Note',
     'Note about this specific glass',
   ],
+  selbrewtype: [
+    'Beer, wine, etc. Or special "empty" glasses for reporting non-drinks (Night, Meal, Restaurant) - mostly for attaching comments/photos.',
+    'Night = report a session',
+    'Meal = report a meal',
+    'Restaurant = comment on the place/bar itself',
+  ],
   Location: [
     'Location',
     '@name = filter by country/region',
