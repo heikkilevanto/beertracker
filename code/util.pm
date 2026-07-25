@@ -7,7 +7,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use POSIX qw(strftime localtime locale_h);
+use POSIX qw(strftime localtime);
 use Carp qw(longmess);
 use JSON;
 use URI::Escape qw(uri_escape_utf8);
@@ -28,7 +28,7 @@ use URI::Escape qw(uri_escape_utf8);
 ################################################################################
 
 
-# Helper to trim leading and trailing spaces
+# Helper to trim leading and trailing spaces, compress internal spaces too
 sub trim {
   my $val = shift // "";  # // checks if value is defined, even if it is a false value
   $val =~ s/^ +//; # Trim leading spaces
@@ -39,7 +39,7 @@ sub trim {
 
 # Helper to sanitize numbers
 sub number {
-  my $v = shift || "";
+  my $v = shift // "";
   $v =~ s/,/./g;  # occasionally I type a decimal comma
   return $v if ( $v =~ /^ *x/i ); # X means explicit clearing of the field
   $v =~ s/[^0-9.-]//g; # Remove all non-numeric chars

@@ -7,7 +7,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use POSIX qw(strftime localtime locale_h);
+use POSIX qw(strftime localtime);
 use URI::Escape;
 
 
@@ -183,7 +183,8 @@ sub yearbar {
 sub yearline {
   my ( $price, $drinks, $visits, $name, $dot ) = @_;
   my $s = "<tr>";
-  $price  = util::unit( sprintf( "%6d",   $price ),  ".-" ) || "";
+  $price = $price // "";
+  $price  = util::unit( sprintf( "%6d",   $price ),  ".-" );
   $drinks = util::unit( sprintf( "%7.1f", $drinks ), "d" ) if ($drinks);
   $visits = sprintf( "%4d", $visits ) if ($visits);
   $s .= "<td class='num'>&nbsp; $price &nbsp; </td>";
@@ -368,7 +369,7 @@ sub yearsummary {
       . util::param( $c, 'maxl' )
       . "'><span>Prev</span></a> \n";
     my $all =
-        "<a href='$c->{url}?o=Years&&maxl="
+        "<a href='$c->{url}?o=Years&maxl="
       . util::param( $c, 'maxl' )
       . "'><span>All</span></a> \n";
     my $next =

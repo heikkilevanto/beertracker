@@ -38,8 +38,8 @@ sub brewcolor {
     "e5bc27", "vienna",
     "7A5C33", "Dark|dunkel|schwarz|juleb|Classic",
     "adaa9d", "smoke|rauch|sc?h?lenkerla",
-    "350f07", "stout|port|porter|black",  # imp comes later
-    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|farm|gose|oud|farm|Sais|Saison|wild",
+    "350f07", "stout|port|porter|black",
+    "1a8d8d", "sour|kriek|framb|lambie?c?k?|gueuze|gueze|geuz|geuez|berl|gose|oud|farm|Sais|Saison|wild",
     "8cf2ed", "booze|spirit|sc?h?nap+s|whisky|coctail",
     "e07e1d", "cider",
     "eaeac7", "weiss|wit|wheat|weizen|white",
@@ -53,7 +53,6 @@ sub brewcolor {
               "|ESB|Ginger|Table" ,
                 # Any kind of ales (after Pale Ale)
     "00ff00", "Non", # non-alcoholic beers
-    "350f07", "Imp",
     "dbb83b", "misc|mix|random",
     );
 
@@ -119,7 +118,7 @@ sub shortbeerstyle {
   $sty =~ s/\b(Beer|Style)\b//i; # Stop words
   $sty =~ s/\W+/ /g;  # non-word chars, typically dashes
   $sty =~ s/\s+/ /g;  # multiple spaces etc
-  if ( $sty =~ /( PA |Pale Ale)/i ) {
+  if ( $sty =~ /(\bPA\b|Pale Ale)/i ) {
     return "APA"   if ( $sty =~ /America|US/i );
     return "Belgian" if ( $sty =~ /Belg/i );
     return "NEPA"  if ( $sty =~ /Hazy|Haze|New England|NE/i);

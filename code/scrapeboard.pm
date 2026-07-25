@@ -187,7 +187,7 @@ sub updateboard {
       my $short_style = styles::shortbeerstyle($style);
       # Extract year from beer name if present
       my $year = undef;
-      if ($beer =~ /(20[23][0-9])/) {
+      if ($beer =~ /(20[123][0-9])/) {
         $year = $1;
       }
       my $sql = "INSERT INTO BREWS " .

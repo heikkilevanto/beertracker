@@ -11,13 +11,12 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;    # Source code and string literals are utf-8
 use File::Basename;
-use URI::Escape;
 
 
 ################################################################################
 # Statistics of the data file
 ################################################################################
-# TODO - Get more interesting stats. 
+# TODO - Get more interesting stats.
 # NOTE - Maybe later get global values and values for current user.
 sub datastats {
   my $c = shift;
@@ -125,7 +124,7 @@ sub datastats {
   # TODO: Persons - what to say of them? Have no categories.
 
   print "</table>\n";
-}    # datastats
+} # datastats
 
 ################################################################################
 # Daily Statistics

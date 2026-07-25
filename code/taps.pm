@@ -23,16 +23,7 @@ sub update_taps {
 
   # Use pre-fetched current taps if provided, otherwise fetch here
   my %current;
-  if ($current_ref) {
-    %current = %$current_ref;
-  } else {
-    # TAPS_FALLBACK: fallback fetch - current_ref should always be passed; this branch may be dead code
-    print { $c->{log} } "taps: TAPS_FALLBACK fetching current taps for location $location_id (current_ref not provided)\n";
-    my $cur_sth = db::query($c, "SELECT Tap, Brew, Id FROM current_taps WHERE Location = ?", $location_id);
-    while (my $row = $cur_sth->fetchrow_hashref) {
-      $current{$row->{Tap}} = $row;
-    }
-  }
+  %current = %$current_ref;
 
   foreach my $tap (@$beerlist) {
     next unless $tap->{brew_id};
@@ -76,7 +67,7 @@ sub update_taps {
     if (@sizes) {
       my ($has_defprice) = db::queryarray($c,
         "SELECT DefPrice FROM BREWS WHERE Id = ?", $tap->{brew_id});
-if (!$has_defprice) {
+      if (!$has_defprice) {
         my $largest = $sizes[-1];
         db::execute($c, "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?",
           $largest->{price}, $largest->{vol}, $tap->{brew_id});
@@ -96,7 +87,6 @@ if (!$has_defprice) {
   # Update LastSeen for active taps
   my $update_sql = "UPDATE tap_beers SET LastSeen = ? WHERE Location = ? AND Gone IS NULL";
   db::execute($c, $update_sql, $now, $location_id);
-  #print { $c->{log} } "taps: Updated LastSeen for active taps at location $location_id\n";
 
   # Add scrape marker (one per location, indicating last scrape time)
   # Manual upsert: update LastSeen if marker exists, insert if not.
@@ -104,7 +94,6 @@ if (!$has_defprice) {
   if ($rows == 0) {
     db::execute($c, "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen) VALUES (?, NULL, NULL, ?, ?)", $location_id, $now, $now);
   }
-  #print { $c->{log} } "taps: Added scrape marker for location $location_id\n";
 
   return $taps_changed;
 } # update_taps

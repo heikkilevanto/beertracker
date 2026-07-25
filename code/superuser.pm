@@ -6,10 +6,7 @@
 # - copyproddata:  Copies the production data into the dev setup, so I can test
 # with data that is up to date. Only available in the dev version.
 #
-# - gitstatus: Shows the git status on both dev and production version, and allows
-# a git pull to be run on any of them. Also lists branches and offers checkout.
-#
-# - gitcheckout: Checks out a branch for testing.
+# - Various git operations
 
 package superuser;
 use strict;
@@ -18,7 +15,6 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use POSIX qw(strftime localtime locale_h);
 use File::Basename;
 use Cwd qw(abs_path cwd);
 use HTML::Entities;
@@ -70,7 +66,8 @@ sub checksuperuser {
 
 sub is_superuser {
   my $c = shift;
-  return $c->{username} eq "heikki" ? 1 : 0;
+  return 1 if ( $c->{username} eq "heikki" );
+  return 0;
 } # is_superuser
 
 # Helper: check superuser, validate param 'p' (must start with 'beertracker').
