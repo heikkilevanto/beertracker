@@ -200,7 +200,8 @@ var FIELD_HELP = {
     'Note about this specific glass',
   ],
   selbrewtype: [
-    'Beer, wine, etc. Or special "empty" glasses for reporting non-drinks (Night, Meal, Restaurant) - mostly for attaching comments/photos.',
+    'Beer, wine, etc. Or special "empty" glasses for reporting non-drinks, ' +
+      'mostly for attaching comments and photos.',
     'Night = report a session',
     'Meal = report a meal',
     'Restaurant = comment on the place/bar itself',
