@@ -259,7 +259,9 @@ sub yearsummary {
   my $sql = "
     select
       locations.Name as name,
-      sum(ABS(glasses.Price)) as price,
+      sum(CASE WHEN glasses.Brew = (SELECT id FROM brews WHERE name = 'Payment Adjustment' LIMIT 1)
+               THEN glasses.Price
+               ELSE ABS(glasses.Price) END) as price,
       sum(glasses.StDrinks) as drinks,
       count(distinct(strftime('%Y-%m-%d',glasses.timestamp, '-06:00'))) as visits
     from glasses

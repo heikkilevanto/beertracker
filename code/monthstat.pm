@@ -43,7 +43,9 @@ sub monthstat {
   my $sumsql = qq{
   select
     distinct strftime ('%Y-%m', timestamp,'-06:00') as calmon,
-  	sum(ABS(price)) as pr,
+    sum(CASE WHEN Brew = (SELECT id FROM brews WHERE name = 'Payment Adjustment' LIMIT 1)
+             THEN price
+             ELSE ABS(price) END) as pr,
   	sum(stdrinks) as drinks,
   	min( strftime ('%d', timestamp,'-06:00')) as first,
  	  max( strftime ('%d', timestamp,'-06:00')) as last
