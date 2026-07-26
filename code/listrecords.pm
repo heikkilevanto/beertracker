@@ -671,7 +671,8 @@ sub listrecords {
             my $disp = "$time $wd";
             $disp = "$date" if ( $date lt $cutoff );
             $data_attrs .= " data-sort-key='$date $time' title='$date $time $wd'";
-            $v = $disp;
+            $v = "<span data-col='$i' data-filter='$date' onclick='fieldclick(event,this)'>"
+               . "<span style='position:absolute;left:-9999px'>$date </span>$disp</span>";
           }
         }
       } elsif ( $fn eq "Last" ) {
