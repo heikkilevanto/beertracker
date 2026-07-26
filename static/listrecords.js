@@ -19,7 +19,7 @@ function dochangefilter (inputElement) {
   const filterinputs = table.querySelectorAll('thead input');
 
   // Build per-column arrays of filter tokens with mode (contains/not_contains/exact)
-  const ALLOWLIST = /[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß &-]/g;
+  const ALLOWLIST = /[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß. &-]/g;
   let filters = [];
   for ( let i=0; i<filterinputs.length; i++) {
     let filterinp = filterinputs[i];
