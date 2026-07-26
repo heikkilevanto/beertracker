@@ -384,6 +384,7 @@ sub listphotos {
       { where => $where, params => [$c->{username}, $c->{username},
          $c->{username}, $c->{username}],
         title => "Photos for $c->{username}",
+        hide_headers_default => 1,
         norecmessage => "No photos" });
 } # listphotos
 

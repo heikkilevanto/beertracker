@@ -13,6 +13,8 @@ function changefilter (inputElement) {
 function dochangefilter (inputElement) {
   const table = inputElement.closest('table');
   if (!table) return;
+  const wrapper = table.closest('[data-lr-wrapper]');
+  if (wrapper) wrapper.classList.remove('lr-compact');
   console.time("filter") ;
 
   const filterinputs = table.querySelectorAll('thead input');
