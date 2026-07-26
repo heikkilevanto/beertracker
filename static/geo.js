@@ -111,7 +111,7 @@ function geotablecells(pos) {
         dist = dist.toFixed(1);
       else
         dist = dist.toFixed(2);
-      td.textContent=dist;
+      td.innerHTML = '<span data-col="' + td.getAttribute('data-col') + '" data-filter="' + dist + '" onclick="fieldclick(event,this)">' + dist + '</span>';
     }
   }
 }

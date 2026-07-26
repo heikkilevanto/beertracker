@@ -587,8 +587,27 @@ sub listrecords {
         # bare location name — no @ prefix, link prefix handles identification
       } elsif ( $fn eq "CountryRegion" ) {
         my ($country, $region) = split(/;/, $v, 2);
-        $v = util::locdesc($c, $country, $region);
-        $v .= "&nbsp;&nbsp;" if $v;
+        $country = '' unless defined $country;
+        $region  = '' unless defined $region;
+        $region =~ s/^\s+|\s+$//g;
+        my @parts;
+        if ($region ne '' && $country eq 'Denmark') {
+            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
+        } elsif ($country eq 'Denmark') {
+            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>DK</span>";
+        } elsif ($region ne '') {
+            my $code = $country;
+            if (exists $util::COUNTRY_CODES{$country}) {
+                $code = (split /,\s*/, $util::COUNTRY_CODES{$country})[0];
+            }
+            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($code) . "</span>";
+            push @parts, ", ";
+            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
+        } elsif ($country ne '') {
+            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($country) . "</span>";
+        }
+        $v = join("", @parts);
+        $v .= "&nbsp;&nbsp;" if @parts;
         $word_split = 0;
       } elsif ( $fn eq "PersonName" ) {
         if ($v) {
@@ -660,7 +679,8 @@ sub listrecords {
         my $disp = "$time $wd";
         $disp = "$date" if ( $date lt $cutoff );
         $data_attrs .= " data-sort-key='$date $time' title='$date $time $wd'";
-        $v = $disp;
+        $v = "<span data-col='$i' data-filter='$date' onclick='fieldclick(event,this)'>"
+           . "<span style='position:absolute;left:-9999px'>$date </span>$disp</span>";
       } elsif ( $fn eq "Sim" ) { # Name similarity
         if ( $v && $extraparams && $extraparams->{refname} ) {
           my $name_idx;
@@ -686,7 +706,8 @@ sub listrecords {
             $data_attrs .= " lat=$lat lon=$lon";
             $v = '?';
           } else {
-            $v = geo::geodist( $extraparams->{lat}, $extraparams->{lon}, $lat, $lon );
+            my $dist = geo::geodist( $extraparams->{lat}, $extraparams->{lon}, $lat, $lon );
+            $v = "<span data-col='$i' data-filter='$dist' onclick='fieldclick(event,this)'>$dist</span>";
           }
         } elsif ( $v ) {
           # no reference lat/lon, show raw coordinates
