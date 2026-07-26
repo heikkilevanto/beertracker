@@ -324,7 +324,7 @@ sub listphotos {
   print listrecords::listrecords($c,
       q{SELECT
       p.Filename AS Photo_R8,
-      p.Id AS "Id_A_contline",
+      p.Id AS "Id_A_contline_link=Photo",
       SUBSTR(p.Ts, 1, 16) AS Ts_A,
 
       '' AS TR1,
