@@ -124,11 +124,9 @@ sub listrecords {
            } elsif ($field =~ s/_noheader$//) {
                $suf->{noheader} = 1;
                $changed = 1;
-              } elsif ($field =~ s/_link=([A-Z][a-zA-Z]+)$//) {
-                  $suf->{link} = $1;
-                 $suf->{nofilter} = 1;
-                 $suf->{noheader} = 1;
-                 $changed = 1;
+               } elsif ($field =~ s/_link=([A-Z][a-zA-Z]+)$//) {
+                   $suf->{link} = $1;
+                  $changed = 1;
             } elsif ($field =~ s/_contline$//) {
                 $suf->{contline} = 1;
                 $changed = 1;
@@ -534,6 +532,7 @@ sub listrecords {
         $word_split = 0;
       } elsif ( $suffix_info[$i]{link} ) {
         if ($v) {
+          $data_attrs .= " data-sort-key='$v'";
           my $entity = $suffix_info[$i]{link};
           my $pfx = uc(substr($entity, 0, 1));
           $v = "<a href='$url?o=$entity&e=$v'"
