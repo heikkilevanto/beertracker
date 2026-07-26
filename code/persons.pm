@@ -40,7 +40,7 @@ sub listpersons {
       '' AS TR2,
       '' AS "Spc_A_noheader",
       persons.Tags AS "Tags_A",
-      locations.Id AS "LocId_A_link=Location_cont",
+      locations.Id AS "LocId_A_link=Location_noheader_cont",
       locations.Name AS "Location_A"
     FROM persons
     LEFT JOIN comment_persons cp ON cp.Person = persons.Id
