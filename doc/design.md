@@ -30,6 +30,7 @@ use it for real in January 2016, and have been using the system ever since.
 - v3.2 Jan'26: Tracking beer taps, prices, AI-assisted refactoring
 - v3.3 Mar'26: Fast cgi, caching, db migration tool, barcodes, multi-persons
 - v3.4 May'26: Tags, country/region, scraper for untappd, more links, bottle/box
+- v3.5   ?'26: Improved lists,
 
 ## Architecture
 
@@ -73,6 +74,9 @@ one to be trusted, and not the one in locations.
 Tracks people you meet, with contact info, description, home/related location,
 and possible related persons.
 
+### comment_persons
+Joins one or more persons to a given comment record.
+
 ### locations
 Represents physical places such as bars, restaurants, breweries, or homes,
 including addresses, coordinates, contact info, and type. Also used for
@@ -83,6 +87,9 @@ to act as defaults for similar fields in brews.
 Track what beers various places have on tap now or in the past. Also what
 volumes the beer was sold at, and for what price.
 
+### photos
+Metadata of photos. The actual files are stored in beerdata/username.photo.
+
 ### globals
 Single-row key/value store for system-wide metadata. Currently holds one row:
 `db_version` (integer), which tracks the applied migration level and is
@@ -90,11 +97,16 @@ managed exclusively by `code/migrate.pm`.
 
 ### Relationships
 - `brews.ProducerLocation → locations.Id`
+- `brews.Parent → brews.Id`
 - `glasses.Brew → brews.Id`
 - `glasses.Location → locations.Id`
 - `comments.Glass → glasses.Id`
+- `comments.Brew → brews.Id`
+- `comments.Location → locations.Id`
+- `comment_persons.Comment/Comment → comments.Id / persons.Id`
 - `persons.Location → locations.Id`
 - `persons.RelatedPerson → persons.Id`
+- `photos.* → glasses, locations, persons, comments, brews`
 - `tap_beers.Location → locations.Id`
 - `tap_beers.Brew → brews.Id`
 
@@ -139,18 +151,21 @@ Other utilities:
 - `code/scrapeboard.pm` - Scraping and updating beer boards
 - `code/superuser.pm` - Superuser functions: Copy prod data, git pull
 - `code/util.pm` - Various helper functions
-- `code/VERSION.pm` - auto-generated version info
+- `code/login.pm` - Login routine, http basic or a cookie
+- `code/debug.pm` - List of modules, tail of the debug log
+- `code/cache.pm` - In-memory caching of various html and sql results. 
+- `code/VERSION.pm` - Auto-generated version info
 
 There are also a small number of javascript and css files under static
 
 ### listrecords — generic list renderer
 
 `code/listrecords.pm` is the shared engine for tabular list pages. Each entity
-(brews, locations, persons, photos, comments) defines a SQL view named
-`${ENTITY}_LIST` that encapsulates all joins, aggregations, and computed
-columns. The Perl module calls `listrecords::listrecords()` with the view name,
-sort key, optional WHERE clause, and bind params — it handles the HTML
-rendering, caching, filtering, and pagination.
+(brews, locations, persons, photos, comments) defines a SQL query that
+encapsulates all joins, aggregations, and computed columns. The Perl module 
+calls `listrecords::listrecords()` with the query, sort key, optional WHERE 
+clause, and bind params — it handles the HTML rendering, caching, filtering, 
+and pagination.
 
 Column display semantics are driven by suffix tags on the view's column names:
 
@@ -178,11 +193,11 @@ See also `plans/lists.md` for the full set of conventions.
 ## External Modules and Dependencies
 
 BeerTracker requires the following Perl modules: 
-- `CGI`
+- `CGI::Fast`
 - `Carp`
 - `Cwd`
 - `DBI`
-- `File::Copy`, `File::Path`
+- `File::Copy`, `File::Path`, `File::Basename`
 - `JSON`
 - `LWP::UserAgent`
 - `Math::Trig`
@@ -190,6 +205,9 @@ BeerTracker requires the following Perl modules:
 - `Time::Piece`
 - `URI::Escape`, `URI::URL`
 - `XML::LibXML`
+- `HTML::Entities`
+- `Text::LevenshteinXS`
+- `Digest::SHA`, `Authen::Htpasswd`
 
 The code calls external programs
 - `gnuplot` for various graphs
@@ -239,8 +257,11 @@ Each scraper outputs a JSON array of beer objects with the following fields:
   - `vol`: Volume in cl (number or "S"/"L" for small/large when unknown)
   - `price`: Price in local currency (number, optional)
 
-New scrapers should follow this format and be registered in `scrapeboard.pm`.
+New scrapers should follow this format and be registered in the scraper field
+in the location record.
 
+`scripts/scrapeall.pl` is invoked by cron and scrapes all known bars that have
+been visitd in the recent months.
 
 ## Configuration and Deployment
 Beertracker lives as a FastCGI script under Apache (mod_fcgid). There is a config example under
@@ -271,6 +292,9 @@ To add a migration: write a `mig_NNN_description` sub, register it in
 Do not edit the schema file directly; implement schema changes as migrations in 
 `code/migrate.pm` and verify them locally. After verifying, run
 `tools/dbdump.sh` and commit `doc/db.schema` together with the migration code.
+
+Once a migration is committed, pulled and run on the production system, it may
+be deleted.
 
 ### Git trickery
 The git hook `pre-commit` invokes `tools/makeversion.sh` which updates the

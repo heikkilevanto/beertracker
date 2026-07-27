@@ -85,11 +85,11 @@ To add a new location, select "new location" from the dropdown and fill in the d
 
 ### Record Type
 
-Choose what you're tracking: Beer, Wine, Booze, Restaurant, Night, or Bar.
+Choose what you're tracking: Beer, Wine, Booze, Restaurant, Night, or Meal.
 
-**Beer/Wine/Booze** show the normal fields - which drink, volume, alcohol percentage, and price.
+**Beer/Wine/Booze/etc.** show the normal fields - which drink, volume, alcohol percentage, and price.
 
-**Restaurant/Night/Bar** are for recording visits without specific drinks. The brew fields hide, and you just enter the type of place and how much you spent. This is handy for tracking restaurant visits or nights out, and for anchoring comments.
+**Restaurant/Night/Meal** are for recording visits without specific drinks. The brew fields hide, and you just enter the type of place and how much you spent. This is handy for tracking restaurant visits or nights out, and for anchoring comments and photos.
 
 ### What You're Drinking
 
@@ -165,6 +165,8 @@ Click "(more)" in the left column to reveal:
 
 **Def checkbox** - Check this to update the beer's default price and volume to what you just entered. Useful when prices change or you usually drink a different size than what's stored.
 
+**Upd Geo** checkbox causes the locations geo coordinates to be updated. 
+
 ### Buttons
 
 **Record** - Save a new entry
@@ -198,18 +200,23 @@ You can add comments and ratings to any entry. These show up in the full list an
 
 **Adding comments**: In the full list below the input form, find the entry you want to comment on and click the little speech bubble icon or "comment" link. A text box appears where you can write your thoughts. Comments can be as short or long as you want.
 
-**Ratings**: When commenting, you can also give a rating from 1-10. Just select a rating from the dropdown. This is useful for remembering which beers you liked.
+**Ratings**: When commenting, you can also give a rating from 1-9. Just select a rating from the dropdown. This is useful for remembering which beers you liked.
 
 **Photos**: You can attach a photo to any entry - handy for remembering what the beer looked like, or capturing the scene at a restaurant. Click the Photo button. On a phone that should open up the camera, on machines without cameras you can still upload a photo.
 
-**People**: You can tag who you were drinking with. This is especially useful for restaurant and night entries to remember who was at dinner. Just add their names when commenting or editing. Only one name
-per comment.
+**People**: You can tag who you were drinking with. This is especially useful for restaurant and night entries to remember who was at dinner. Just add their names when adding or editing a comment.
 
 **Multiple comments**: You can add multiple comments to the same entry over time. Each comment gets timestamped, so you can track how your opinion changes.
 
 **Empty entries for comments**: Sometimes you want to comment on a general experience rather than a specific drink. Use the Restaurant, Night, or Bar type to create an entry with no drink details that you can hang comments on.
 
 **Finding comments**: Use the "Comments" filter link at the top of the full list to see only entries that have comments. Similarly, "Ratings" shows only entries you've rated. This makes it easy to review your tasting notes when deciding what to order.
+
+## Tags
+It is possible to attach tags to brews, locations, and persons. Those can be 
+entered when creating a new record, or when editing an existing one. Many dropdowns
+offer filtering by tags by typing a '#'. Many lists show tags, and can be sorted
+or filtered by them.
 
 ---
 
@@ -243,17 +250,14 @@ and such.
 The list itself is divided into days, and those can be divided into locations,
 if you have been drinking at different places.
 
-The first line of each beer has the time, brewery, and name of the beer. These
-can be marked with 'new' if it looks like it is the first time you enter such.
-That is useful for catching spelling errors. The brewery and beer names are links
-that cause the list to be filtered so that only that beer or brewery is shown.
-That makes it easier to see what you have thought about the beer, or what else
-the brewery has made.
+The first line of each beer has the brewery, and name of the beer. The 
+brewery and beer names are links to the brewery / beer specific pages where
+you can see and edit more details about them.
 
 Next comes a number of small facts about the beer. They are on a line of their
 own when seen on a phone, or appended to the first line on a wider computer
 screen.
-* Style. This is solor-coded to match the graph (see below). It is also a link
+* Style. This is color-coded to match the graph (see below). It is also a link
 to filter the list by this style.
 * Price
 * Volume
@@ -279,6 +283,12 @@ That is by far the easiest way to enter data.
 
 At the end of each day or location there will be summaries on how much you have
 drank there.
+
+Clickin on the location summary line offers you to enter a payment adjustment,
+in case the actual bill differs from what you expected (free drinks, tips,
+outdated prices). It tells what the system exptected you to pay, and you can
+enter what you actually paid. That creates an "empty" glass of "Adjustment"
+type to record the difference. Makes a difference for some statistics etc.
 
 ### Graph
 Shows a graph of your drinking. Time is on the X-axis, with different background
@@ -438,4 +448,4 @@ If you run into bugs and real problems, please file them as issues on GitHub, at
 https://github.com/heikkilevanto/beertracker/issues. Even better, if you can fix it
 yourself, file a pull request.
 
-See also the [README](./README.md)
+See also the [README](../README.md)
