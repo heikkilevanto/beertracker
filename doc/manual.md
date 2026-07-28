@@ -384,13 +384,14 @@ biggest spending locations first. The list shows also the number of drinks at
 the location. The sorting defaults to money, but can be changed to number of
 drinks.
 
-### Small lists
-There are a number of "small" lists. The main menu only has the Beer List, but
-from that it is easy to navigate to the other ones. All the lists default to
-chronological order with the most recent first, but can be sorted alphabetically.
+### Lists
+There are several lists of variosu kinds of records. All the lists default to 
+chronological order with the most recent first, but can be sorted by clicking 
+on any header field.
 
-There is also a search box that filters only the lines matching what ever you
-enter there.
+The list headers can shown / hidden with the "Hdr" button. When shown, you can
+enter a filter term into any of the inputs. See the help text for more advanced
+features. 
 
 #### Location
 Shows a list of the most recent watering holes you have visited. For each there

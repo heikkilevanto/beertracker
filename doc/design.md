@@ -30,7 +30,7 @@ use it for real in January 2016, and have been using the system ever since.
 - v3.2 Jan'26: Tracking beer taps, prices, AI-assisted refactoring
 - v3.3 Mar'26: Fast cgi, caching, db migration tool, barcodes, multi-persons
 - v3.4 May'26: Tags, country/region, scraper for untappd, more links, bottle/box
-- v3.5   ?'26: Improved lists,
+- v3.5 Jul'26: Improved lists with filtering, Id links, UI improvements, bugfixes
 
 ## Architecture
 
