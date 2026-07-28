@@ -390,7 +390,8 @@ sub topline {
   }
   $s .= $name;
   my $v = Version::version_info();
-  my $vertext = $v->{tag} . "+" . $v->{commits};
+  my $vertext = $v->{tag};
+  $vertext .= "+" . $v->{commits} if $v->{commits};
   $vertext .= "*" if $c->{git_dirty};
   my $reload_url = $c->{url} . "?o=$c->{op}&reload=1";
   $s .= "&nbsp;<a href='$reload_url'><span>$vertext</span></a>&nbsp;";
