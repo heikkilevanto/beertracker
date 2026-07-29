@@ -56,7 +56,17 @@ sub histogram_form {
       distinct BrewType as v
       from glasses where username = ?
       order by timestamp desc";
-    my $brewsel = db::querydropdown( $c, "brew_type", $brew_type, "(all)", $sql, $c->{username});
+    my $brews_sth = db::query($c, $sql, $c->{username});
+    my $brew_opts = "<div class='dropdown-item' id=''>(all)</div>\n";
+    $brew_opts .= "<div class='dropdown-item' id='non_empty'>(Non-empty)</div>\n";
+    my $brew_selname = ($brew_type eq '') ? '(all)' : $brew_type;
+    $brew_selname = '(Non-empty)' if ($brew_type eq 'non_empty');
+    while (my $v = $brews_sth->fetchrow_array) {
+        $brew_opts .= "<div class='dropdown-item' id='$v'>$v</div>\n";
+        $brew_selname = $v if ($v eq $brew_type);
+    }
+    $brews_sth->finish;
+    my $brewsel = inputs::dropdown($c, 'brew_type', $brew_type, $brew_selname, $brew_opts);
 
     $sql = "select
       distinct LocType as v
@@ -116,8 +126,12 @@ sub histogram_data {
     }
 
     if (defined $filter->{brew_type} && length $filter->{brew_type}) {
-      push @where, "BrewType = ?";
-      push @bind, $filter->{brew_type};
+      if ($filter->{brew_type} eq 'non_empty') {
+        push @where, "BrewType NOT IN (" . glasses::emptyglass_sql_list() . ")";
+      } else {
+        push @where, "BrewType = ?";
+        push @bind, $filter->{brew_type};
+      }
     }
 
     if (defined $filter->{loc_type} && length $filter->{loc_type}) {
@@ -217,7 +231,9 @@ sub data_table {
   if ( $filtering) {
     $html .= "<th>Filtered";
     $html .= "<br>$filter->{year}" if ($filter->{year});
-    $html .= "<br>$filter->{brew_type}" if ($filter->{brew_type});
+    my $bt_display = $filter->{brew_type};
+    $bt_display = '(Non-empty)' if ($bt_display eq 'non_empty');
+    $html .= "<br>$bt_display" if ($filter->{brew_type});
     $html .= "<br>$filter->{loc_type}" if ($filter->{loc_type});
     $html .= "</th>" ;
   }
@@ -307,8 +323,12 @@ sub top_rated_glasses {
     }
 
     if (defined $filter->{brew_type} && length $filter->{brew_type}) {
-      push @where, "g.BrewType = ?";
-      push @bind, $filter->{brew_type};
+      if ($filter->{brew_type} eq 'non_empty') {
+        push @where, "g.BrewType NOT IN (" . glasses::emptyglass_sql_list() . ")";
+      } else {
+        push @where, "g.BrewType = ?";
+        push @bind, $filter->{brew_type};
+      }
     }
 
     if (defined $filter->{loc_type} && length $filter->{loc_type}) {

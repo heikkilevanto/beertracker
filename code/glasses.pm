@@ -24,7 +24,7 @@ our %volumes = ( # Comment is not used any more.
 # Helper to decide if a glass is "empty"
 # Canonical list: all empty glass types live here
 ################################################################################
-my @empty_types = qw(Night Meal Restaurant );
+my @empty_types = qw(Night Meal Restaurant Adjustment);
   # Night first, as it is most likely to be used on main list day summary line.
 
 sub isemptyglass {
