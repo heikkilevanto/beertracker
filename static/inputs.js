@@ -642,15 +642,15 @@ function enableEditing(form) {
   // Enable all disabled inputs
   const inputs = form.querySelectorAll('input[disabled], textarea[disabled], select[disabled]');
   inputs.forEach(input => input.removeAttribute('disabled'));
-  
+
   // Enable dropdown filters
   const dropdownFilters = form.querySelectorAll('.dropdown-filter');
   dropdownFilters.forEach(filter => filter.removeAttribute('disabled'));
-  
+
   // Show geo edit links
   const geoLinks = form.querySelectorAll('.geo-edit-links');
   geoLinks.forEach(link => link.hidden = false);
-  
+
   // Show barcode scan links
   const barcodeLinks = form.querySelectorAll('.barcode-scan-link');
   barcodeLinks.forEach(link => link.hidden = false);
@@ -668,18 +668,19 @@ function enableEditing(form) {
   // Hide Edit button, show Submit button(s)
   const editBtn = form.querySelector('.edit-enable-btn');
   if (editBtn) editBtn.hidden = true;
-  
+
   const submitBtns = form.querySelectorAll('.edit-submit-btn');
   submitBtns.forEach(btn => btn.hidden = false);
-  
+
   // Focus first enabled input
   const firstInput = form.querySelector('input:not([type=hidden]):not([disabled])');
   if (firstInput) firstInput.focus();
 
-  // Prefill lat/lon from GPS if empty
+  // Prefill lat/lon from GPS if empty (mobile only — desktop WiFi positioning is often wrong)
   var latInput = form.querySelector('input[name="Lat"]');
   var lonInput = form.querySelector('input[name="Lon"]');
-  if (latInput && lonInput && !latInput.value && !lonInput.value && navigator.geolocation) {
+  if (latInput && lonInput && !latInput.value && !lonInput.value && navigator.geolocation
+      && /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
     navigator.geolocation.getCurrentPosition(
       function(pos) {
         latInput.value = pos.coords.latitude.toFixed(6);
