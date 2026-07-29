@@ -99,7 +99,7 @@ function shownote() {
   const toggle = document.getElementById("notetag");
   toggle.hidden = true;
   const leftcol = document.getElementById("leftcol");
-  leftcol.innerHTML = '<input type="checkbox" name="setdef" />Def';
+  leftcol.innerHTML = '<input type="checkbox" name="setdef" />Set Def';
 }
 
 function updateGeoFromLocation() {
