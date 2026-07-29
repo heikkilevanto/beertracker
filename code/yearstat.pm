@@ -23,24 +23,33 @@ my @BARCOLS = qw(
 );
 
 # Query per-year/per-location totals and return data structure:
-#   $result->{data}{$year}{$loc} = total_price
+#   $result->{data}{$year}{$loc} = total_value
 #   $result->{years}   = [ sorted asc ]
 #   $result->{toplocs} = [ top-N loc names sorted desc by grand total ]
 #   $result->{colors}  = { locname => hex_color, "Other" => hex_color }
+#   $result->{metric}  = "money" or "drinks"
 sub yearbarsql {
   my $c = shift;
   my $n = shift;  # number of top locations
+  my $metric = shift || "money";  # "money" or "drinks"
+
+  my $sum_expr  = $metric eq "drinks"
+    ? "SUM(glasses.StDrinks) AS total"
+    : "SUM(ABS(glasses.Price)) AS total";
+  my $null_check = $metric eq "drinks"
+    ? "AND glasses.StDrinks IS NOT NULL"
+    : "AND glasses.Price IS NOT NULL";
 
   my $sql = "
     SELECT
       strftime('%Y', glasses.Timestamp, '-06:00') AS yr,
       locations.Name AS loc,
-      SUM(ABS(glasses.Price)) AS total
+      $sum_expr
     FROM glasses
     LEFT JOIN locations ON glasses.Location = locations.Id
     WHERE glasses.Username = ?
       AND glasses.Brew IS NOT NULL
-      AND glasses.Price IS NOT NULL
+      $null_check
       AND strftime('%Y', glasses.Timestamp, '-06:00') IS NOT NULL
     GROUP BY yr, loc
     ORDER BY yr, total DESC";
@@ -79,6 +88,7 @@ sub yearbarsql {
     years   => \@years,
     toplocs => \@toplocs,
     colors  => \%colors,
+    metric  => $metric,
   };
 } # yearbarsql
 
@@ -125,6 +135,21 @@ sub yearbar_plot {
   }
   $plotcmd .= "'$c->{plotfile}' using $col:xtic(1) lc rgb \"#$colors->{Other}\" notitle";
 
+  # Projection marker (filled circle) for current year
+  my $proj_cmd = "";
+  if (defined $res->{projection} && $res->{projection} > 0) {
+    my $curryear = util::datestr("%Y");
+    for my $i (0 .. $#$years) {
+      if ($years->[$i] eq $curryear) {
+        my $x = $i;
+        my $proj = sprintf("%.0f", $res->{projection});
+        $proj_cmd = "set label at $x, $proj point pt 7 ps 2 lc \"white\" front\n";
+        last;
+      }
+    }
+  }
+
+  my $yticlabel = $res->{metric} eq "drinks" ? "Drinks" : "Kroner";
   my $bgcolor = $c->{bgcolor};
   my $cmd = ""
     . "set term png small size 700,300\n"
@@ -134,6 +159,7 @@ sub yearbar_plot {
     . "set style fill solid noborder\n"
     . "set boxwidth 0.8\n"
     . "set yrange [0:]\n"
+    . "set ylabel \"$yticlabel\" textcolor \"white\"\n"
     . "set xtics textcolor \"white\"\n"
     . "set ytics textcolor \"white\"\n"
     . "set border linecolor \"white\"\n"
@@ -141,6 +167,7 @@ sub yearbar_plot {
     . "set object 1 rect noclip from screen 0,0 to screen 1,1 "
     . "behind fc \"$bgcolor\" fillstyle solid border\n"
     . "unset key\n"
+    . "$proj_cmd"
     . "plot $plotcmd\n";
 
   open my $cfh, '>', $c->{cmdfile}
@@ -155,11 +182,25 @@ sub yearbar_plot {
 sub yearbar {
   my $c = shift;
   my $n = util::param($c, "maxl") || 8;
+  my $sortdr = shift;
 
-  my $pngfile = $c->{datadir} . $c->{username} . ".yearbars-$n.png";
+  my $metric = $sortdr ? "drinks" : "money";
+  my $suffix = $sortdr ? "-drinks" : "";
+  my $pngfile = $c->{datadir} . $c->{username} . ".yearbars-$n$suffix.png";
 
-  my $res = yearbarsql($c, $n);
+  my $res = yearbarsql($c, $n, $metric);
   return $res unless $res;  # no price data
+
+  # Project current year's total to a full year
+  my $curryear = util::datestr("%Y");
+  if (exists $res->{data}{$curryear}) {
+    my $total = 0;
+    $total += $_ for values %{$res->{data}{$curryear}};
+    my $today = util::datestr("%j");
+    if ($today > 0) {
+      $res->{projection} = 365 * $total / $today;
+    }
+  }
 
   if (-r $pngfile) {
     print { $c->{log} } "yearbar: reusing cached $pngfile\n";
@@ -252,7 +293,7 @@ sub yearsummary {
   # Show stacked bar graph when viewing all years
   my %dotcolors;
   if ( !$c->{qry} ) {
-    my $colors = yearbar($c);
+    my $colors = yearbar($c, $sortdr);
     %dotcolors = %$colors if $colors;
   }
 
