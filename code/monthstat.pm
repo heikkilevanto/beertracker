@@ -127,7 +127,7 @@ sub monthstat {
   }
 
   # Anything after this will be white by default
-  # Should work for a few years
+  # Should work for a few years. We don't have data from before 2016.
   my $t = "";
   $t .= "<br/><table class=data >\n";
   $t .= "<tr><td>&nbsp;</td>\n";
@@ -253,9 +253,16 @@ sub monthstat {
   my $max;
   if ($money_mode) {
     $d   = ( $monthprices{$curmonth} || 0 );
-    $min = "NaN";
-    $avg = ($d > 0 && $dayofmonth) ? int($d / $dayofmonth * 30) : "NaN";
-    $max = "NaN";
+    if ($d > 0) {
+      $min = $d;
+      $avg = $dayofmonth ? int($d / $dayofmonth * 30) : "NaN";
+      $max = ($avg ne "NaN") ? int(2 * $avg - $min) : "NaN";
+      $max = 0 if ($max ne "NaN" && $max < 0);
+    } else {
+      $min = "NaN";
+      $avg = "NaN";
+      $max = "NaN";
+    }
   } else {
     $d   = ( $monthdrinks{$curmonth} || 0 );
     $min = ($d > 0) ? ($d / 30) : "NaN";
