@@ -265,7 +265,7 @@ sub listrecords {
   $s .= "  <h3>Sorting &amp; Filtering</h3>\n";
   $s .= "  <ul>\n";
   $s .= "    <li><b>Sort</b>: click a column header input to sort ascending, click again for descending. The sort arrow (▲/▼) appears in the input.</li>\n";
-  $s .= "    <li><b>Filter</b>: type text in any column header input. Multiple words are AND, comma-separated words are OR. Prefix with <kbd>-</kbd> to exclude, <kbd>=</kbd> for exact match, <kbd>&gt;=</kbd> <kbd>&gt;</kbd> <kbd>&lt;=</kbd> <kbd>&lt;</kbd> for relational comparison.</li>\n";
+  $s .= "    <li><b>Filter</b>: type text in any column header input. Multiple words are AND, comma-separated words are OR. Prefix with <kbd>-</kbd> to exclude, <kbd>=</kbd> for exact match, <kbd>!=</kbd> for not-equals, <kbd>&gt;=</kbd> <kbd>&gt;</kbd> <kbd>&lt;=</kbd> <kbd>&lt;</kbd> for relational comparison.</li>\n";
   $s .= "    <li><b>Click to filter</b>: click on almost any word in the list to trigger a filter for that word.</li>\n";
   $s .= "    <li><b>Clear</b>: the <kbd>Clr</kbd> button clears all filters at once.</li>\n";
   $s .= "    <li><b>Headers</b>: the <kbd>Hdr</kbd> button shows or hides the column headers and navigation.</li>\n";

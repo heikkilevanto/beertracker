@@ -19,7 +19,7 @@ function dochangefilter (inputElement) {
   const filterinputs = table.querySelectorAll('thead input');
 
   // Build per-column arrays of filter tokens with mode (contains/not_contains/exact)
-  const ALLOWLIST = /[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß. &-]/g;
+  const ALLOWLIST = /[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß., <>=-]/g;
   let filters = [];
   for ( let i=0; i<filterinputs.length; i++) {
     let filterinp = filterinputs[i];
@@ -43,6 +43,9 @@ function dochangefilter (inputElement) {
         } else if (term.startsWith('<') && term.length > 1) {
           mode = 'lt';
           term = term.substring(1);
+        } else if (term.startsWith('!=') && term.length > 2) {
+          mode = 'ne';
+          term = term.substring(2);
         } else if (term.startsWith('=') && term.length > 1) {
           mode = 'exact';
           term = term.substring(1);
@@ -88,14 +91,10 @@ function dochangefilter (inputElement) {
             const text = colEls[ce].textContent;
             const normText = text.normalize('NFC').toLowerCase().replace(ALLOWLIST, '');
             const matchAll = filters[col].every(function(f) {
-              if (f.mode === 'not_contains') {
-                return normText.indexOf(f.term) === -1;
-              } else if (f.mode === 'exact') {
-                return normText === f.term;
-              } else if (f.mode === 'gt' || f.mode === 'gte' || f.mode === 'lt' || f.mode === 'lte') {
+              if (f.mode === 'gt' || f.mode === 'gte' || f.mode === 'lt' || f.mode === 'lte') {
                 return _compareRelational(f.mode, normText, f.term);
               } else {
-                return normText.indexOf(f.term) !== -1;
+                return _matchAlternatives(normText, f.term, f.mode);
               }
             });
             if ( !matchAll ) {
