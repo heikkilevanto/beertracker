@@ -705,6 +705,14 @@ function selectNearest(dropdownId) {
 
   navigator.geolocation.getCurrentPosition(
     function(pos) {
+      if (lastKnownPosition) {
+        const moved = haversineKm(lastKnownPosition.lat, lastKnownPosition.lon, pos.coords.latitude, pos.coords.longitude);
+        if (moved >= MOVEMENT_THRESHOLD_KM) {
+          lastKnownPosition = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          lastPositionTime = Date.now();
+          geotablecells(pos);
+        }
+      }
       const items = root.querySelectorAll('.dropdown-item');
       let best = null, min = Infinity;
 
