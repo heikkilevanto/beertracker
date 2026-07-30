@@ -474,7 +474,7 @@ sub commentform {
             params => [$pid, $c->{username}, $com->{Id}],
             title => "Other comments mentioning this person",
             initial_filter => { CommentType => "person" },
-  
+
             hide_headers_default => 1,
             no_new_link => 1,
             maxrecords => 10,
@@ -733,8 +733,8 @@ sub comments_list_sql {
       COALESCE(ploc_comment.Name, ploc_glass.Name) AS "Prod_A",
 
       '' AS TR2,
-      comments.Rating AS "Rate_avg_A",
-      comments.Comment AS "Comment_cnt_A",
+      comments.Rating AS "Rate_avg_cnt_A",
+      comments.Comment AS "Comment_A",
 
       '' AS TR3,
       '' AS "Clr_noheader_nofilter",

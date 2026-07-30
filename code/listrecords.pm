@@ -644,7 +644,8 @@ sub listrecords {
       } elsif ( $fn eq "Rate" ) {
         if ($v) {
           $data_attrs .= " data-sort-key='$v'";
-          $v = "($v)";
+          my $rclass = comments::get_rating_class($v);
+          $v = "<b class='$rclass'>($v)</b>";
         }
       } elsif ( $fn eq "Chk" ) {
         $v = "<input type=checkbox name=Chk$id />";
@@ -871,7 +872,8 @@ sub listrecords {
       for my $i (0..$#fields) {
         my $ag = $suffix_info[$i]{aggregate} or next;
         my $fn = $suffix_info[$i]{as_name} || $fields[$i];
-        $s .= "<span data-col='$i' data-aggregate='$ag' style='white-space:nowrap'>"
+        my $rate_attr = ($fn =~ /Rate|Rating/) ? " data-rate='1'" : "";
+        $s .= "<span data-col='$i' data-aggregate='$ag'$rate_attr style='white-space:nowrap'>"
             . "<b>" . util::htmlesc($fn) . "</b>: </span>\n";
       }
       $s .= "</div>\n";

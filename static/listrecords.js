@@ -471,7 +471,15 @@ function lr_update_footer(aggEl) {
     if (ag === 'sum') result = sum;
     else if (ag === 'avg') result = count ? (sum / count).toFixed(1) : '';
     else if (ag === 'cnt') result = count;
-    cell.textContent = cell.textContent.replace(/:.*/, ': ' + result);
+    if (cell.dataset.rate && result !== '' && ag === 'avg') {
+      let rclass = 'rating-gold';
+      if (result <= 3) rclass = 'rating-rubbish';
+      else if (result <= 5) rclass = 'rating-bronze';
+      else if (result <= 7) rclass = 'rating-silver';
+      cell.innerHTML = cell.innerHTML.replace(/:.*/, ': <b class="' + rclass + '">' + result + '</b>');
+    } else {
+      cell.textContent = cell.textContent.replace(/:.*/, ': ' + result);
+    }
   });
 }
 
