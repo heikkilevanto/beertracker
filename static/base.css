@@ -8,6 +8,7 @@ html {
   margin: 0;
   padding: 0;
   height: 100%;
+  overflow: hidden;
 }
 
 body {
@@ -20,6 +21,7 @@ body {
   font-size: 0.9rem; /* replaces '* { font-size: small; }' */
   font-family: sans-serif;
   height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -44,6 +46,7 @@ body {
 /* Content wrapper - scrollable */
 .content-wrapper {
   flex: 1;
+  min-height: 0;
   overflow: auto;
   padding: 0;
 }
