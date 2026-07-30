@@ -33,3 +33,25 @@ function _matchAlternatives(text, alternativesStr, mode) {
   });
   return mode === 'not_contains' ? !anyMatch : anyMatch;
 }
+
+// Relational comparison: try numeric first (parseFloat), fall back to alphabetical.
+// `text` and `term` should be pre-lowercased.
+function _compareRelational(op, text, term) {
+  const numA = parseFloat(text);
+  const numB = parseFloat(term);
+  if (!isNaN(numA) && !isNaN(numB)) {
+    switch (op) {
+      case 'gt': return numA > numB;
+      case 'gte': return numA >= numB;
+      case 'lt': return numA < numB;
+      case 'lte': return numA <= numB;
+    }
+  }
+  switch (op) {
+    case 'gt': return text > term;
+    case 'gte': return text >= term;
+    case 'lt': return text < term;
+    case 'lte': return text <= term;
+  }
+  return false;
+}

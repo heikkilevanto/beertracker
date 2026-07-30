@@ -31,11 +31,23 @@ function dochangefilter (inputElement) {
       for (let t = 0; t < rawTokens.length; t++) {
         let term = rawTokens[t];
         let mode = 'contains';
-        if (term.startsWith('-') && term.length > 1) {
-          mode = 'not_contains';
+        if (term.startsWith('>=') && term.length > 2) {
+          mode = 'gte';
+          term = term.substring(2);
+        } else if (term.startsWith('<=') && term.length > 2) {
+          mode = 'lte';
+          term = term.substring(2);
+        } else if (term.startsWith('>') && term.length > 1) {
+          mode = 'gt';
+          term = term.substring(1);
+        } else if (term.startsWith('<') && term.length > 1) {
+          mode = 'lt';
           term = term.substring(1);
         } else if (term.startsWith('=') && term.length > 1) {
           mode = 'exact';
+          term = term.substring(1);
+        } else if (term.startsWith('-') && term.length > 1) {
+          mode = 'not_contains';
           term = term.substring(1);
         }
         term = term.normalize('NFC').replace(ALLOWLIST, '').trim();
@@ -80,6 +92,8 @@ function dochangefilter (inputElement) {
                 return normText.indexOf(f.term) === -1;
               } else if (f.mode === 'exact') {
                 return normText === f.term;
+              } else if (f.mode === 'gt' || f.mode === 'gte' || f.mode === 'lt' || f.mode === 'lte') {
+                return _compareRelational(f.mode, normText, f.term);
               } else {
                 return normText.indexOf(f.term) !== -1;
               }
