@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use DBI;    # For connecting to the other environment's database
 
 # Helper to make a link on the about page
 # These links should have the URL visible
@@ -47,7 +48,18 @@ sub about {
   print "<br>\n";
   print "commit $v->{commit} from $v->{date} ";
   print "on '$v->{branch}' " if ( $v->{branch} && $v->{branch} ne "master" );
-  print "<br/><br/>\n";
+  print "<br>\n";
+
+  # Current environment DB version
+  my ($db_version) = db::queryarray($c, "SELECT v FROM globals WHERE k='db_version'");
+  $db_version = 0 unless defined $db_version;
+  my $code_db_version = $migrate::CODE_DB_VERSION;
+  print "Database version: <b>$db_version</b> ";
+  print "(code expects: <b>$code_db_version</b>)";
+  if ( $db_version != $code_db_version ) {
+    print " <span style='color:red'>MISMATCH - migration needed!</span>";
+  }
+  print "<br><br>\n";
   if ( $c->{devversion} ) {
     print "The production version is ";
     $v = util::getversioninfo("../beertracker");
@@ -60,6 +72,54 @@ sub about {
   print "<br>\n";
   print "commit $v->{commit} from $v->{date} ";
   print "on '$v->{branch}' " if ( $v->{branch} && $v->{branch} ne "master" );
+  print "<br>\n";
+
+  # Other environment DB version
+  my ($other_dir, $other_label);
+  if ( $c->{devversion} ) {
+    $other_dir = "../beertracker";
+    $other_label = "production";
+  } else {
+    $other_dir = "../beertracker-dev";
+    $other_label = "development";
+  }
+
+  my $other_db_path = "$other_dir/beerdata/beertracker.db";
+  my $other_db_version = "N/A";
+  my $other_code_db_version = "N/A";
+
+  if ( -f $other_db_path ) {
+    eval {
+      my $other_dbh = DBI->connect("dbi:SQLite:uri=file:$other_db_path?mode=ro",
+        "", "", { RaiseError => 1, PrintError => 0 });
+      ($other_db_version) = $other_dbh->selectrow_array(
+        "SELECT v FROM globals WHERE k='db_version'");
+      $other_db_version //= "N/A";
+      $other_dbh->disconnect;
+    };
+    if ($@) {
+      $other_db_version = "Error";
+    }
+  }
+
+  my $other_migrate_file = "$other_dir/code/migrate.pm";
+  if ( -f $other_migrate_file ) {
+    open my $fh, '<:utf8', $other_migrate_file or print STDERR "Cannot open $other_migrate_file: $!\n";
+    my $content = do { local $/; <$fh> };
+    close $fh;
+    if ( $content =~ /\$\s*CODE_DB_VERSION\s*=\s*(\d+)/ ) {
+      $other_code_db_version = $1;
+    }
+  }
+
+  print ucfirst($other_label) . " database version: <b>$other_db_version</b> ";
+  print "(code expects: <b>$other_code_db_version</b>)";
+  if ( $other_db_version ne "N/A" && $other_code_db_version ne "N/A"
+    && $other_db_version ne $other_code_db_version )
+  {
+    print " <span style='color:red'>MISMATCH - migration needed!</span>";
+  }
+  print "<br><br>\n";
   print "<hr/>\n";
 
   print "Beertracker on GitHub: <ul>";
