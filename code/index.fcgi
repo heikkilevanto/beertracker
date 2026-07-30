@@ -192,7 +192,7 @@ while (my $q = CGI::Fast->new) {
   }
 
   $request_count++;
-  my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|Mobile|Iphone/i );
+  my $mobile = ( $ENV{'HTTP_USER_AGENT'} =~ /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i );
   my $plotfile = "";
   my $cmdfile = "";
   my $photodir = "";
@@ -502,6 +502,8 @@ END_STYLE
   print jslink("comments");
   print jslink("quagga.min");
   print jslink("barcode");
+  my $mobile_js = $c->{mobile} ? "true" : "false";
+  print "<script>var IS_MOBILE = $mobile_js;</script>\n";
   print "</head><body>\n";
   print "\n";
 } # htmlhead

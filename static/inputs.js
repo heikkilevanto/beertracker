@@ -679,8 +679,7 @@ function enableEditing(form) {
   // Prefill lat/lon from GPS if empty (mobile only — desktop WiFi positioning is often wrong)
   var latInput = form.querySelector('input[name="Lat"]');
   var lonInput = form.querySelector('input[name="Lon"]');
-  if (latInput && lonInput && !latInput.value && !lonInput.value && navigator.geolocation
-      && /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+  if (latInput && lonInput && !latInput.value && !lonInput.value && navigator.geolocation && IS_MOBILE) {
     navigator.geolocation.getCurrentPosition(
       function(pos) {
         latInput.value = pos.coords.latitude.toFixed(6);

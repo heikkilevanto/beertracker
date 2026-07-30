@@ -109,6 +109,7 @@ function updateGeoFromLocation() {
   const updateCheck = document.getElementById('updateGeo');
   if (!latInput || !lonInput || !updateCheck) return;
   if (!locId || !navigator.geolocation) return;
+  if (!IS_MOBILE) return;
 
   navigator.geolocation.getCurrentPosition(
     function(pos) {
@@ -134,9 +135,10 @@ function updateGeoFromLocation() {
           }
         }
       }
-      updateCheck.checked = !hasCoords;
       latInput.disabled = hasCoords;
       lonInput.disabled = hasCoords;
+      var georow = document.getElementById('georow');
+      if (georow) georow.hidden = (locId === 'new' || hasCoords);
     },
     function(err) { console.log("Geo Error: " + err.message); }
   );
