@@ -143,7 +143,8 @@ function dochangefilter (inputElement) {
 
   console.timeEnd("filter") ;
 
-  lr_update_summary(table);
+  const aggEl = wrapper.querySelector('[data-lr-agg]');
+  if (aggEl) lr_update_footer(aggEl);
 
   if (inputElement.tagName === 'INPUT') {
     inputElement.focus();
@@ -359,7 +360,9 @@ function lr_paginate(table) {
   }
 
   lr_updateInfo(table, currPage, totalVisible, totalPages);
-  lr_update_summary(table);
+  const wrapper = table.closest('[data-lr-wrapper]');
+  const aggEl = wrapper ? wrapper.querySelector('[data-lr-agg]') : null;
+  if (aggEl) lr_update_footer(aggEl);
 }
 
 function lr_updateInfo(table, currPage, totalVisible, totalPages) {
@@ -437,49 +440,39 @@ function toggleElement(element) {
   }
 }
 
-// Update rating summary for tables with data-col-rate attribute
-function lr_update_summary(table) {
-  const rateCol = table.dataset.colRate;
-  const commentCol = table.dataset.colComment;
-  if (rateCol === undefined && commentCol === undefined) return;
-
-  const wrapper = table.closest('[data-lr-wrapper]');
+// Update aggregate footer for tables with data-aggregate attributes
+function lr_update_footer(aggEl) {
+  const wrapper = aggEl.closest('[data-lr-wrapper]');
   if (!wrapper) return;
-  const summaryDiv = wrapper.querySelector('.lr-summary');
-  if (!summaryDiv) return;
-
-  let rateSum = 0, rateCount = 0, commentCount = 0;
-  const tbodies = table.tBodies;
-  for (let r = 0; r < tbodies.length; r++) {
-    const tbody = tbodies[r];
-    if ((tbody.dataset.lrFs || '1') !== '1') continue;
-    const firstRow = tbody.querySelector('tr[data-first]');
-    if (!firstRow) continue;
-    if (rateCol !== undefined) {
-      const rateSpan = firstRow.querySelector('span[data-col="' + rateCol + '"]');
-      if (rateSpan && rateSpan.dataset.sortKey) {
-        const v = parseFloat(rateSpan.dataset.sortKey);
-        if (!isNaN(v)) { rateSum += v; rateCount++; }
+  const table = wrapper.querySelector('table');
+  if (!table) return;
+  const cells = aggEl.querySelectorAll('span[data-aggregate]');
+  if (!cells.length) return;
+  const visibleTbodies = table.querySelectorAll('tbody[data-lr-fs="1"]');
+  cells.forEach(function(cell) {
+    const col = cell.dataset.col;
+    const ag = cell.dataset.aggregate;
+    let sum = 0, count = 0;
+    visibleTbodies.forEach(function(tbody) {
+      const span = tbody.querySelector('span[data-col="' + col + '"]');
+      if (!span) return;
+      if (ag === 'cnt') {
+        if (span.textContent.trim()) count++;
+        return;
       }
-    }
-    if (commentCol !== undefined) {
-      const commentSpan = firstRow.querySelector('span[data-col="' + commentCol + '"]');
-      if (commentSpan && commentSpan.textContent.trim()) {
-        commentCount++;
-      }
-    }
-  }
-
-  let html = '';
-  if (rateCount === 1) {
-    html += 'One rating: <b>(' + rateSum + ')</b>. ';
-  } else if (rateCount > 0) {
-    const avg = (rateSum / rateCount).toFixed(1);
-    html += rateCount + ' Ratings averaging <b>(' + avg + ')</b>. ';
-  } else if (commentCount > 0) {
-    html += 'Comments: ' + commentCount + '. ';
-  }
-  summaryDiv.innerHTML = html;
+      const val = span.dataset.aggVal;
+      if (val === undefined) return;
+      const num = parseFloat(val);
+      if (isNaN(num)) return;
+      sum += num;
+      count++;
+    });
+    let result;
+    if (ag === 'sum') result = sum;
+    else if (ag === 'avg') result = count ? (sum / count).toFixed(1) : '';
+    else if (ag === 'cnt') result = count;
+    cell.textContent = cell.textContent.replace(/:.*/, ': ' + result);
+  });
 }
 
 // Auto-sort a table by a given column index on page load

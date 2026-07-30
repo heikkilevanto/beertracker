@@ -67,7 +67,6 @@ sub listrecords {
   my $title          = $opt->{title}          || "";
   my $initial_filter = $opt->{initial_filter} || {};
   my $no_new_link    = $opt->{no_new_link}    || 0;
-  my $show_rating_summary = $opt->{show_rating_summary} || 0;
   my $hide_headers_default = $opt->{hide_headers_default} || 0;
   my $gap_column = $opt->{gap_column};
   my $norecmessage = $opt->{norecmessage};
@@ -133,6 +132,15 @@ sub listrecords {
             } elsif ($field =~ s/_cont$//) {
                 $suf->{cont} = 1;
                 $changed = 1;
+            } elsif ($field =~ s/_sum$//) {
+                $suf->{aggregate} = 'sum';
+                $changed = 1;
+            } elsif ($field =~ s/_avg$//) {
+                $suf->{aggregate} = 'avg';
+                $changed = 1;
+            } elsif ($field =~ s/_cnt$//) {
+                $suf->{aggregate} = 'cnt';
+                $changed = 1;
            } elsif ($field =~ /_([a-z][a-zA-Z0-9]*)$/) {
                 print { $c->{log} } "WARNING: listrecords: Unrecognized suffix '_$1' in column '$orig_field' (sql: $sql_param)\n";
            }
@@ -140,15 +148,6 @@ sub listrecords {
       $fields[$i] = $field;
       $suffix_info[$i] = $suf;
   }
-  my ($rate_col, $comment_col) = (-1, -1);
-  if ($show_rating_summary) {
-    for (my $i = 0; $i < scalar(@fields); $i++) {
-      my $fn = $suffix_info[$i]{as_name} || $fields[$i];
-      $rate_col    = $i if $fn eq "Rate";
-      $comment_col = $i if $fn eq "Comment";
-    }
-  }
-
   my $order = "";
   if ( defined $sort ) {
       for (my $i = 0; $i < scalar(@fields); $i++) {
@@ -285,12 +284,7 @@ sub listrecords {
     $tableid = " id='autosort-table'";
   }
   my $autofilter_attr = ($initial_filter && scalar(keys %$initial_filter)) ? " data-autofilter" : "";
-  my $summary_attrs = "";
-  if ($show_rating_summary && $rate_col >= 0) {
-    $summary_attrs .= " data-col-rate='$rate_col'";
-    $summary_attrs .= " data-col-comment='$comment_col'" if $comment_col >= 0;
-  }
-  my $tableattrs = "$geotable$tableid$autofilter_attr$summary_attrs data-page-size='$maxrecords' data-current-page='1'";
+  my $tableattrs = "$geotable$tableid$autofilter_attr data-page-size='$maxrecords' data-current-page='1'";
 
   $s .= "<table class='listrecords' $tableattrs>\n";
   my @styles;  # One for each column
@@ -467,8 +461,6 @@ sub listrecords {
 
   my $cutoff = util::datestr("%F", -7);  # a week ago, display full date
 
-  my ($ratesum, $ratecount, $comcount) = (0, 0, 0);
-
   my ($rowcount, $prev_gap) = (0, 0);
   while ( my @rec = $list_sth->fetchrow_array ) {
     if ($gap_col_idx >= 0 && defined $rec[$gap_col_idx] && $rec[$gap_col_idx] ne '') {
@@ -490,15 +482,6 @@ sub listrecords {
     my $photo_skipped = 0;
     for ( my $i=0; $i < scalar( @rec ); $i++ ) {
       my $v = $rec[$i];
-      if ($show_rating_summary) {
-        if ($rate_col >= 0 && $i == $rate_col && defined $v) {
-          $ratesum += $v;
-          $ratecount++;
-        }
-        if ($comment_col >= 0 && $i == $comment_col && defined $v && $v ne '') {
-          $comcount++;
-        }
-      }
       my $was_null_field = !defined $v;
       $v //= "";
 
@@ -525,6 +508,12 @@ sub listrecords {
       }
       $fn = $suffix_info[$i]{as_name} if $suffix_info[$i]{as_name};
       my $data_attrs = "data-col='$i'";
+      if ( my $ag = $suffix_info[$i]{aggregate} ) {
+          my $raw = $rec[$i];
+          if (defined $raw && !ref $raw && $raw =~ /^[+-]?\d+\.?\d*$/) {
+              $data_attrs .= " data-agg-val='$raw'";
+          }
+      }
       my $word_split = 1;
       if ( $fn eq "Name" ) {
         $v = _word_spans($v, $i);
@@ -873,19 +862,23 @@ sub listrecords {
     $s .= "<tbody data-lr-fs='1'></tbody>\n";
   }
   $s .= "</table>\n";
-  $s .= "</div>\n";
-  if ($show_rating_summary && $rowcount > 0) {
-    $s .= "<div class='lr-summary'>";
-    if ($ratecount == 1) {
-      $s .= "One rating: <b>" . comments::ratingline($ratesum) . "</b>. ";
-    } elsif ($ratecount > 0) {
-      my $avg = sprintf("%3.1f", $ratesum / $ratecount);
-      $s .= "$ratecount Ratings averaging <b>" . comments::ratingline($avg) . "</b>. ";
-    } elsif ($comcount > 0) {
-      $s .= "Comments: $comcount. ";
+  if ($rowcount > 0) {
+    my $has_footer;
+    for my $i (0..$#fields) { $has_footer = 1 if $suffix_info[$i]{aggregate} }
+    if ($has_footer) {
+      my $fid = "lr-agg-" . int(rand(999999));
+      $s .= "<div id='$fid' data-lr-agg style='display:flex;flex-wrap:wrap;gap:0.5em 1em;padding:2px 0'>\n";
+      for my $i (0..$#fields) {
+        my $ag = $suffix_info[$i]{aggregate} or next;
+        my $fn = $suffix_info[$i]{as_name} || $fields[$i];
+        $s .= "<span data-col='$i' data-aggregate='$ag' style='white-space:nowrap'>"
+            . "<b>" . util::htmlesc($fn) . "</b>: </span>\n";
+      }
+      $s .= "</div>\n";
+      $s .= "<script>lr_update_footer(document.getElementById('$fid'));<\/script>\n";
     }
-    $s .= "</div>\n";
   }
+  $s .= "</div>\n";
   $s .= "<!-- listrecords: table body done -->\n";
 
   if ($geotable) {

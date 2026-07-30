@@ -427,7 +427,7 @@ sub commentform {
           params => [$context_brew, $context_brew, $c->{username}, $com->{Id}],
           title => "Other comments on this brew",
           initial_filter => { CommentType => "brew" },
-          show_rating_summary => 1,
+
           hide_headers_default => 1,
           no_new_link => 1,
           maxrecords => 10,
@@ -449,7 +449,7 @@ sub commentform {
           params => [$context_loc, $c->{username}, $com->{Id}],
           title => "Other comments at this location",
           initial_filter => { CommentType => "location" },
-          show_rating_summary => 1,
+
           hide_headers_default => 1,
           no_new_link => 1,
           maxrecords => 10,
@@ -474,7 +474,7 @@ sub commentform {
             params => [$pid, $c->{username}, $com->{Id}],
             title => "Other comments mentioning this person",
             initial_filter => { CommentType => "person" },
-            show_rating_summary => 1,
+  
             hide_headers_default => 1,
             no_new_link => 1,
             maxrecords => 10,
@@ -733,8 +733,8 @@ sub comments_list_sql {
       COALESCE(ploc_comment.Name, ploc_glass.Name) AS "Prod_A",
 
       '' AS TR2,
-      comments.Rating AS "Rate_A",
-      comments.Comment AS "Comment_A",
+      comments.Rating AS "Rate_avg_A",
+      comments.Comment AS "Comment_cnt_A",
 
       '' AS TR3,
       '' AS "Clr_noheader_nofilter",

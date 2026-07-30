@@ -535,7 +535,7 @@ JS
                      AND xUsername = ?},
           params => [$p->{Id}, $p->{Id}, $c->{username}],
           title => "Comments",
-          show_rating_summary => 1,
+
           hide_headers_default => 1,
           no_new_link => 1,
           norecmessage => "No comments for $p->{Name}",
