@@ -25,7 +25,7 @@ use File::Copy;
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 48;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 49;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -33,6 +33,8 @@ our $CODE_DB_VERSION = 48;  # Bump this when you add migrations
 our @MIGRATIONS = (
   # Keep this here, it is needed when starting from an empty database
   [1, 'create globals table', \&mig_001_create_globals_table],
+  # Add index to speed up the per-user brew list last-seen join
+  [49, 'add idx_glasses_brew_user_ts index', \&mig_049_add_glasses_brew_user_ts_index],
 );
 
 ################################################################################
@@ -162,6 +164,14 @@ sub mig_001_create_globals_table {
   db::execute($c, "CREATE TABLE IF NOT EXISTS globals (k TEXT PRIMARY KEY, v TEXT)");
   db::execute($c, "INSERT OR REPLACE INTO globals(k,v) VALUES('db_version','0')");
 } # mig_001_create_globals_table
+
+
+# Composite index to speed up the brew list query's glasses join per user:
+#   left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
+sub mig_049_add_glasses_brew_user_ts_index {
+  my $c = shift;
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_glasses_brew_user_ts ON glasses(Brew, Username, Timestamp)");
+} # mig_049_add_glasses_brew_user_ts_index
 
 
 ################################################################################
