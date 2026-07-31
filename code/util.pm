@@ -287,7 +287,8 @@ sub topstats {
    sum(stdrinks) as drinks
  from GLASSES
  where username = ?
- and effdate = ( select max (strftime('%Y-%m-%d', timestamp, '-06:00' ) ) from GLASSES where username = ? and (Brew is not null or BrewType = 'Adjustment') )
+ and effdate = ( select max (strftime('%Y-%m-%d', timestamp, '-06:00' ) )
+   from GLASSES where username = ? and (Brew is not null or BrewType = 'Adjustment') )
  and (Brew is not null or BrewType = 'Adjustment')
    ";
   my $rec = db::queryrecord($c, $sql, $c->{username}, $c->{username});

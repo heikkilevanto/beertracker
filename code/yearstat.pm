@@ -35,7 +35,8 @@ sub yearbarsql {
 
   my $sum_expr  = $metric eq "drinks"
     ? "SUM(glasses.StDrinks) AS total"
-    : "SUM(ABS(glasses.Price)) AS total";
+    : "SUM(CASE WHEN glasses.BrewType = 'Adjustment' THEN glasses.Price"
+    . " ELSE ABS(glasses.Price) END) AS total";
   my $null_check = $metric eq "drinks"
     ? "AND glasses.StDrinks IS NOT NULL"
     : "AND glasses.Price IS NOT NULL";
@@ -48,7 +49,7 @@ sub yearbarsql {
     FROM glasses
     LEFT JOIN locations ON glasses.Location = locations.Id
     WHERE glasses.Username = ?
-      AND glasses.Brew IS NOT NULL
+      AND (glasses.Brew IS NOT NULL OR glasses.BrewType = 'Adjustment')
       $null_check
       AND strftime('%Y', glasses.Timestamp, '-06:00') IS NOT NULL
     GROUP BY yr, loc
@@ -300,7 +301,7 @@ sub yearsummary {
   my $sql = "
     select
       locations.Name as name,
-      sum(CASE WHEN glasses.Brew = (SELECT id FROM brews WHERE name = 'Payment Adjustment' LIMIT 1)
+      sum(CASE WHEN glasses.BrewType = 'Adjustment'
                THEN glasses.Price
                ELSE ABS(glasses.Price) END) as price,
       sum(glasses.StDrinks) as drinks,
@@ -309,7 +310,7 @@ sub yearsummary {
     left join locations on glasses.Location = locations.Id
     where strftime('%Y', glasses.Timestamp, '-06:00') = ?
     and glasses.Username = ?
-    and glasses.Brew is not null
+    and (glasses.Brew is not null or glasses.BrewType = 'Adjustment')
     and strftime('%Y', glasses.Timestamp, '-06:00') is not null
     group by name ";
   if ($sortdr) {

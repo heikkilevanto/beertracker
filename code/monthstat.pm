@@ -38,12 +38,12 @@ sub monthstat {
     $where_clause .= " and $calmon_expr <= ?";
     push( @sql_params, $gend );
   }
-  $where_clause .= " and Brew is not null";
+  $where_clause .= " and (Brew is not null or BrewType = 'Adjustment')";
 
   my $sumsql = qq{
   select
     distinct strftime ('%Y-%m', timestamp,'-06:00') as calmon,
-    sum(CASE WHEN Brew = (SELECT id FROM brews WHERE name = 'Payment Adjustment' LIMIT 1)
+    sum(CASE WHEN BrewType = 'Adjustment'
              THEN price
              ELSE ABS(price) END) as pr,
   	sum(stdrinks) as drinks,

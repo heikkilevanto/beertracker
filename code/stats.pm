@@ -137,8 +137,7 @@ sub dailystats {
     strftime('%Y-%m-%d %w', glasses.Timestamp, '-06:00') AS \"Day\",
     floor(julianday(glasses.Timestamp, '-06:00', '12:00')) AS \"X_Gap\",
     SUM(StDrinks) AS \"d\",
-    SUM(CASE WHEN glasses.Brew = (SELECT id FROM brews WHERE name = 'Payment Adjustment' LIMIT 1)
-             THEN glasses.price
+    SUM(CASE WHEN glasses.BrewType = 'Adjustment' THEN glasses.price
              ELSE ABS(glasses.price) END) AS \"Pr\",
     GROUP_CONCAT(locations.id || '::' || COALESCE(locations.name, '')) AS \"Locations\"
     FROM glasses
