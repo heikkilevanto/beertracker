@@ -283,14 +283,12 @@ sub topstats {
    strftime ( '%w', timestamp, '-06:00' ) as wday,
    julianday(strftime('%Y-%m-%d', 'now', 'localtime', '-06:00')) -
       julianday(strftime('%Y-%m-%d', timestamp, '-06:00')) AS daydiff,
-   sum(CASE WHEN Brew = (SELECT id FROM brews WHERE name = 'Payment Adjustment' LIMIT 1)
-            THEN price
-            ELSE ABS(price) END) as price,
+   sum(CASE WHEN BrewType = 'Adjustment' THEN price ELSE ABS(price) END) as price,
    sum(stdrinks) as drinks
  from GLASSES
  where username = ?
- and effdate = ( select max (strftime('%Y-%m-%d', timestamp, '-06:00' ) ) from GLASSES where username = ? and Brew is not null )
- and Brew is not null
+ and effdate = ( select max (strftime('%Y-%m-%d', timestamp, '-06:00' ) ) from GLASSES where username = ? and (Brew is not null or BrewType = 'Adjustment') )
+ and (Brew is not null or BrewType = 'Adjustment')
    ";
   my $rec = db::queryrecord($c, $sql, $c->{username}, $c->{username});
   util::error("Something wrong in topstats query: $sql") unless ($rec);
