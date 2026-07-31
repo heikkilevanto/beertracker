@@ -21,6 +21,16 @@ use POSIX qw(strftime localtime locale_h);
 use JSON;
 use Cwd qw(cwd);
 use File::Copy;
+use Time::Piece;
+use Time::HiRes qw(gettimeofday);
+
+# Text::LevenshteinXS - for calculating string similarity (edit distance)
+# Alternative: use Text::Levenshtein qw(distance); # pure Perl version
+use Text::LevenshteinXS qw(distance);
+
+use URI::Escape;
+use CGI::Fast qw( -utf8 );
+
 
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
@@ -33,14 +43,7 @@ use open ':encoding(UTF-8)';  # Data files are in utf-8
 binmode STDOUT, ":utf8"; # Stdout only. Not STDIN, the CGI module handles that
 binmode STDERR, ":utf8"; #
 
-use Time::Piece;
 
-# Text::LevenshteinXS - for calculating string similarity (edit distance)
-# Alternative: use Text::Levenshtein qw(distance); # pure Perl version
-use Text::LevenshteinXS qw(distance);
-
-use URI::Escape;
-use CGI::Fast qw( -utf8 );
 
 ################################################################################
 # Fix the current directory
@@ -166,6 +169,7 @@ my $cache = {};  # In-process cache, lives for the lifetime of the process
 # Main FastCGI loop — runs once per request; CGI::Fast falls back to plain CGI
 ################################################################################
 while (my $q = CGI::Fast->new) {
+  my $request_start = gettimeofday();  # For request duration logging
   # Reload if the script or VERSION.pm changed (e.g. after git pull)
   my $reload_reason = $q->param('reload')                       ? "manual reload request"
                     : (stat($0))[9]             != $mtime0      ? "script $0 changed on disk"
@@ -201,7 +205,10 @@ while (my $q = CGI::Fast->new) {
 my $c_auth = { cgi => $q };
 login::authenticate($c_auth);
 my $username = $c_auth->{username};
-next unless $username;  # 401 already sent by authenticate()
+if ( !$username ) {
+  log_request_duration($request_start, "Auth failed");
+  next;  # 401 already sent by authenticate()
+}
 
 if ( $username =~ /^[a-zA-Z0-9]+$/ ) {
   $plotfile = $datadir . $username . ".plot";
@@ -274,6 +281,7 @@ print $log "\n\n" . $now->ymd . " " . $now->hms . " " .
 if ( $devversion && $c->{op} =~ /copyproddata/i ) {
   print $log "Copying prod data to dev \n";
   superuser::copyproddata($c);
+  log_request_duration($request_start, "copyproddata");
   next;
 }
 
@@ -330,6 +338,7 @@ if ( $q->request_method eq "POST" ) {
   cache::clear($c, "POST");  # Data may have changed; invalidate all cached lists
   # Redirect back to the op, but not editing
   print $c->{cgi}->redirect( $c->{redirect_url} || "$c->{url}?o=$c->{op}" );
+  log_request_duration($request_start, "POST " . $c->{op});
   $log->flush;
   next;
 }
@@ -425,6 +434,7 @@ if ($@) {
 select $old_fh;  # Restore output to FCGI::Stream
 print $body;     # Emit UTF-8 encoded body
 htmlfooter();
+log_request_duration($request_start, "GET " . $c->{op});
 $log->flush;
 
 } # end while (FastCGI loop)
@@ -514,5 +524,16 @@ sub htmlfooter {
   print "</div>\n"; # Close content-wrapper
   print "</body></html>\n";
 }
+
+# Log the duration of a request. Called once at each request exit point.
+# Skip logging for fast requests (< 0.2s); flag slow ones (> 0.8s).
+sub log_request_duration {
+  my ($start, $label) = @_;
+  my $elapsed = gettimeofday() - $start;
+  #return if $elapsed < 0.2;
+  my $flag = $elapsed > 0.8 ? "  TOO LONG!" : "";
+  my $now = localtime;
+  print { $log } $now->hms . sprintf("  %s took %.3fs$flag\n", $label, $elapsed);
+} # log_request_duration
 
 
