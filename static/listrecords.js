@@ -31,25 +31,25 @@ function dochangefilter (inputElement) {
       for (let t = 0; t < rawTokens.length; t++) {
         let term = rawTokens[t];
         let mode = 'contains';
-        if (term.startsWith('>=') && term.length > 2) {
+        if (term.startsWith('>=')) {
           mode = 'gte';
           term = term.substring(2);
-        } else if (term.startsWith('<=') && term.length > 2) {
+        } else if (term.startsWith('<=')) {
           mode = 'lte';
           term = term.substring(2);
-        } else if (term.startsWith('>') && term.length > 1) {
+        } else if (term.startsWith('>')) {
           mode = 'gt';
           term = term.substring(1);
-        } else if (term.startsWith('<') && term.length > 1) {
+        } else if (term.startsWith('<')) {
           mode = 'lt';
           term = term.substring(1);
-        } else if (term.startsWith('!=') && term.length > 2) {
+        } else if (term.startsWith('!=')) {
           mode = 'ne';
           term = term.substring(2);
-        } else if (term.startsWith('=') && term.length > 1) {
+        } else if (term.startsWith('=')) {
           mode = 'exact';
           term = term.substring(1);
-        } else if (term.startsWith('-') && term.length > 1) {
+        } else if (term.startsWith('-')) {
           mode = 'not_contains';
           term = term.substring(1);
         }
