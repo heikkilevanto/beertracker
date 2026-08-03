@@ -880,6 +880,9 @@ sub listrecords {
       $s .= "<script>lr_update_footer(document.getElementById('$fid'));<\/script>\n";
     }
   }
+  if ($rowcount > 0) {
+    $s .= "<script>var c=document.querySelector('[data-lr-wrapper] .lr-count');if(c)c.textContent='$rowcount ';<\/script>\n";
+  }
   $s .= "</div>\n";
   $s .= "<!-- listrecords: table body done -->\n";
 
@@ -898,7 +901,7 @@ sub listrecords {
       $s .= "<script>autoSortTable('autosort-table', $sort_idx, true);</script>\n";
     }
   }
-  $s .= "<script>document.querySelectorAll('[data-lr-wrapper]').forEach(function(w){var p=w.parentNode,s=w.nextSibling;p.removeChild(w);Array.from(w.querySelectorAll('table')).forEach(function(t){lr_paginate(t);});p.insertBefore(w,s);});<\/script>\n";
+  $s .= "<script>document.querySelectorAll('[data-lr-wrapper] table').forEach(function(t){lr_paginate(t);});<\/script>\n";
   if ($initial_filter) {
     for my $i (0..$#fields) {
       if (exists $initial_filter->{$fields[$i]}) {
