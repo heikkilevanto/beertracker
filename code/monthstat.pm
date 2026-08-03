@@ -143,6 +143,7 @@ sub monthstat {
   }
   $t .= "<td align='right'><b>&nbsp;Avg</b></td>";
   $t .= "</tr>\n";
+  my $max_plot_val = 0;
   foreach my $m ( 1 .. 12 ) {
     my $plotline;
     $t .= "<tr><td><b>$months[$m]</b></td>\n";
@@ -213,6 +214,9 @@ sub monthstat {
         my $price_div = ($calm eq $firstym) ? ($dayofmonth - $monthfirstday{$calm} + 1) : $dayofmonth;
         $plotval = int($plotval / $price_div * 30);
       }
+      if ($plotval ne "NaN" && $plotval =~ /^[0-9.]+$/ && $calm ne $lastym && $plotval > $max_plot_val) {
+        $max_plot_val = $plotval;
+      }
       if ( $plotyear == 2001 ) {    # After current month
         if ( $m == 1 ) {
           $plotline .= "$plotval $prevplotval  ";
@@ -245,12 +249,18 @@ sub monthstat {
 
   # Projections
   # Projections for the visible last month (respect filters)
+
   my $cur      = $lastm;              # month number of last visible month
   my $curmonth = $lastym;             # YYYY-MM of last visible month
+
+  # Compute cap for projection dot based on max value seen on graph
+  my $proj_cap = $max_plot_val > 0 ? $max_plot_val * 1.25 : 10;
+
   my $d;
   my $min;
   my $avg;
   my $max;
+  my $arrow_max_s = "NaN";
   if ($money_mode) {
     $d   = ( $monthprices{$curmonth} || 0 );
     if ($d > 0) {
@@ -258,6 +268,8 @@ sub monthstat {
       $avg = $dayofmonth ? int($d / $dayofmonth * 30) : "NaN";
       $max = ($avg ne "NaN") ? int(2 * $avg - $min) : "NaN";
       $max = 0 if ($max ne "NaN" && $max < 0);
+      $arrow_max_s = ($max ne "NaN") ? sprintf("%3.1f", $max) : "NaN";
+      $max = "NaN" if ($max ne "NaN" && $max > $proj_cap);
     } else {
       $min = "NaN";
       $avg = "NaN";
@@ -268,8 +280,9 @@ sub monthstat {
     $min = ($d > 0) ? ($d / 30) : "NaN";
     $avg = ($d > 0 && $dayofmonth) ? ($d / $dayofmonth) : "NaN";
     $max = ($avg ne "NaN" && $min ne "NaN") ? (2 * $avg - $min) : "NaN";
+    $arrow_max_s = ($max ne "NaN") ? sprintf("%3.1f", $max) : "NaN";
     if ( $max ne "NaN" ) {
-      $max = "NaN" if ( $max > 10 );
+      $max = "NaN" if ( $max > $proj_cap );
       $max = 0  if ( $max < 0 );
     }
   }
@@ -284,6 +297,35 @@ sub monthstat {
 
   print $fh "2001-$cur $max_s\n";  # high
   close($fh);
+
+  # Dashed red lines from previous month value to low/high projection dots
+  my $proj_arrow_cmd = "";
+  my $prev_m = $cur - 1;
+  if ($prev_m >= 1) {
+    my $prev_calmon = sprintf("%d-%02d", $lasty, $prev_m);
+    my $prev_plotval = "NaN";
+    my $prev_m_str = sprintf("%02d", $prev_m);
+    if ($money_mode) {
+      if (defined $monthprices{$prev_calmon} && $monthprices{$prev_calmon}) {
+        $prev_plotval = $monthprices{$prev_calmon};
+      }
+    } else {
+      if ($monthdrinks{$prev_calmon}) {
+        my $prev_div = 30;
+        if ($prev_calmon eq $firstym) {
+          my $fd = $monthfirstday{$prev_calmon};
+          $prev_div = 30 - $fd + 1;
+        }
+        $prev_plotval = sprintf("%3.1f", $monthdrinks{$prev_calmon} / $prev_div);
+      }
+    }
+    if ($prev_plotval ne "NaN" && $min_s ne "NaN") {
+      $proj_arrow_cmd .= "set arrow from \"2001-$prev_m_str\", $prev_plotval to \"2001-$cur\", $min_s nohead linecolor \"red\" linewidth 1 dashtype 2\n";
+    }
+    if ($prev_plotval ne "NaN" && $arrow_max_s ne "NaN") {
+      $proj_arrow_cmd .= "set arrow from \"2001-$prev_m_str\", $prev_plotval to \"2001-$cur\", $arrow_max_s nohead linecolor \"red\" linewidth 1 dashtype 2\n";
+    }
+  }
   $t .= "<tr><td>Avg</td>\n";
   my $granddr    = 0;
   my $granddays  = 0;
@@ -355,13 +397,14 @@ sub monthstat {
   my $y2_cmd = "set link y2 via y inverse y\nset y2tics $white\nset format y2 '%.0s%c'\n";
   my $ytics_cmd = "set ytics " . ($money_mode ? "$white" : "1 $white") . "\n"
     . "set format y '%.0s%c'\n";
-  my $arrow_cmd = $money_mode ? ""
+  my $arrow_cmd = ($money_mode ? ""
     : "set arrow from \"2000-$firstm_str\", 1 to \"2001-$lastm_str\", 1 nohead linewidth 0.1 linecolor \"green\" \n"
     . "set arrow from \"2000-$firstm_str\", 4 to \"2001-$lastm_str\", 4 nohead linewidth 0.1 linecolor \"yellow\" \n"
     . "set arrow from \"2000-$firstm_str\", 7 to \"2001-$lastm_str\", 7 nohead linewidth 0.1 linecolor \"orange\" \n"
     . "set arrow from \"2000-$firstm_str\", 10 to \"2001-$lastm_str\", 10 nohead linewidth 0.1 linecolor \"red\" \n"
     . "set arrow from \"2000-$firstm_str\", 13 to \"2001-$lastm_str\", 13 nohead linewidth 0.1 linecolor \"#f409c9\" \n"
-    . "set arrow from \"2001-01\", 0 to \"2001-01\", 10 nohead linewidth 0.1 linecolor \"white\" \n";
+    . "set arrow from \"2001-01\", 0 to \"2001-01\", 10 nohead linewidth 0.1 linecolor \"white\" \n")
+    . $proj_arrow_cmd;
   my $cmd    = ""
     . "set term png small size $imgsz \n"
     . "set out \"$pngfile\" \n"
