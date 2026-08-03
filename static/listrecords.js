@@ -81,12 +81,8 @@ function dochangefilter (inputElement, done) {
     }
   }
 
-  // Detach table from DOM — all subsequent mutations have zero reflow cost
   const wrapper = table.closest('[data-lr-wrapper]');
   if (!wrapper) return;
-  const tableParent = wrapper.parentNode;
-  const tableSibling = wrapper.nextSibling;
-  tableParent.removeChild(wrapper);
 
   const firstrows = table.querySelectorAll('tbody tr[data-first]');
 
@@ -98,15 +94,6 @@ function dochangefilter (inputElement, done) {
 
   let visibleCount = 0;
   let r = 0;
-  let reattached = false;
-
-  function reattach() {
-    if (tableSibling) {
-      tableParent.insertBefore(wrapper, tableSibling);
-    } else {
-      tableParent.appendChild(wrapper);
-    }
-  }
 
   // Filter a single record (one tbody) and apply its visibility
   function processRow(row) {
@@ -180,7 +167,6 @@ function dochangefilter (inputElement, done) {
     table.dataset.lrFiltering = '0';
     table.dataset.currentPage = 1;
     lr_paginate(table);
-    reattach();
 
     const aggEl = wrapper.querySelector('[data-lr-agg]');
     if (aggEl) lr_update_footer(aggEl);
@@ -213,8 +199,7 @@ function dochangefilter (inputElement, done) {
 
   function step() {
     if (gen !== lrTableGen(table)) {
-      // Superseded by newer input — restore the table, let the new pass run
-      reattach();
+      // Superseded by newer input — let the new pass run
       if (done) done();
       return;
     }
@@ -223,10 +208,6 @@ function dochangefilter (inputElement, done) {
       processRow(firstrows[r]);
     }
     keepOnCurrentPage();
-    if (!reattached) {
-      reattached = true;
-      reattach();
-    }
     if (r < firstrows.length) {
       setTimeout(step, 0);
       return;
@@ -235,7 +216,6 @@ function dochangefilter (inputElement, done) {
     table.dataset.lrFiltering = '0';
     table.dataset.currentPage = 1;
     lr_paginate(table);
-    reattach();
 
     const aggEl = wrapper.querySelector('[data-lr-agg]');
     if (aggEl) lr_update_footer(aggEl);
