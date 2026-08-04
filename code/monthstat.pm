@@ -410,6 +410,7 @@ sub monthstat {
     . "set term png small size $imgsz \n"
     . "set out \"$pngfile\" \n"
     . "set yrange [0:$proj_cap] \n"
+    . "set tmargin 0 \n"
     . "set xtics $white\n"
     . "set mxtics 1 \n"
     . $ytics_cmd
@@ -454,7 +455,7 @@ sub monthstat {
   system("gnuplot $c->{cmdfile} ");
 
   my $sz = "style='max-width:95vw;max-height:120vh'";
-  print "<img src=\"$pngfile\" $sz /><br/>\n";
+  print "<br/><img src=\"$pngfile\" $sz /><br/>\n";
   # Toggle between drinks and money graph
   my $filter_qs = "";
   $filter_qs .= "&gstart=$gstart" if $c->{cgi}->param("gstart");
