@@ -254,7 +254,7 @@ sub monthstat {
   my $curmonth = $lastym;             # YYYY-MM of last visible month
 
   # Compute cap for projection dot based on max value seen on graph
-  my $proj_cap = $max_plot_val > 0 ? $max_plot_val * 1.25 : 10;
+  my $proj_cap = $max_plot_val > 0 ? $max_plot_val * 1.05 : 10;
 
   my $d;
   my $min;
@@ -289,6 +289,7 @@ sub monthstat {
   my $min_s = ( $min eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $min );
   my $avg_s = ( $avg eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $avg );
   my $max_s = ( $max eq "NaN" ) ? "NaN" : sprintf( "%3.1f", $max );
+  print { $c->{log} } "monthstat $curmonth " . ($money_mode ? "m" : "d") . ": min=$min_s avg=$avg_s max=$max_s maxy=$max_plot_val cap=$proj_cap\n";
   print $fh "\n";
 
   print $fh "2001-$cur $min_s\n";  # low
@@ -408,7 +409,7 @@ sub monthstat {
   my $cmd    = ""
     . "set term png small size $imgsz \n"
     . "set out \"$pngfile\" \n"
-    . "set yrange [0:] \n"
+    . "set yrange [0:$proj_cap] \n"
     . "set xtics $white\n"
     . "set mxtics 1 \n"
     . $ytics_cmd
