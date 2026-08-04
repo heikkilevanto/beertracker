@@ -338,7 +338,8 @@ if ( $q->request_method eq "POST" ) {
   cache::clear($c, "POST");  # Data may have changed; invalidate all cached lists
   # Redirect back to the op, but not editing
   print $c->{cgi}->redirect( $c->{redirect_url} || "$c->{url}?o=$c->{op}" );
-  log_request_duration($request_start, "POST " . $c->{op});
+  my $post_qs = $ENV{'QUERY_STRING'} || "o=" . $c->{op};
+  log_request_duration($request_start, "POST $post_qs");
   $log->flush;
   next;
 }
@@ -434,7 +435,8 @@ if ($@) {
 select $old_fh;  # Restore output to FCGI::Stream
 print $body;     # Emit UTF-8 encoded body
 htmlfooter();
-log_request_duration($request_start, "GET " . $c->{op});
+my $get_qs = $ENV{'QUERY_STRING'} || "o=" . $c->{op};
+log_request_duration($request_start, "GET $get_qs");
 $log->flush;
 
 } # end while (FastCGI loop)
@@ -533,7 +535,7 @@ sub log_request_duration {
   #return if $elapsed < 0.2;
   my $flag = $elapsed > 0.8 ? "  TOO LONG!" : "";
   my $now = localtime;
-  print { $log } $now->hms . sprintf("  %s took %.3fs$flag\n", $label, $elapsed);
+  print { $log } $now->ymd . " " . $now->hms . sprintf(" took %.3fs %s$flag\n", $elapsed, $label);
 } # log_request_duration
 
 
