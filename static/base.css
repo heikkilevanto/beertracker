@@ -8,7 +8,6 @@ html {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden;
 }
 
 body {
@@ -20,8 +19,7 @@ body {
   padding: 0 0 0 5px;
   font-size: 0.9rem; /* replaces '* { font-size: small; }' */
   font-family: sans-serif;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -34,6 +32,9 @@ body {
   overflow-x: auto;
   white-space: nowrap;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
   /* Hide scrollbar while keeping scroll functionality */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
@@ -46,8 +47,6 @@ body {
 /* Content wrapper - scrollable */
 .content-wrapper {
   flex: 1;
-  min-height: 0;
-  overflow: auto;
   padding: 0;
 }
 
