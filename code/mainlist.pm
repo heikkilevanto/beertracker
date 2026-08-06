@@ -39,6 +39,7 @@ sub glassquery {
       glasses.Subtype as subtype,
       brews.Id as brewid,
       brews.Name as brewname,
+      brews.ShortName as shortname,
       brews.IsGeneric as generic,
       brews.DetailsLink as brewlink,
       locations.name as producer,
@@ -223,7 +224,7 @@ sub nameline {
     $html .= "<a href='$c->{url}?o=Location&e=$locationid' ><span><b>$locationname</b></span></a> " ;
   }
   $html .= "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
-  $html .= " " . util::brewlinks($c, $rec->{brewlink}, $rec->{brewname}, $rec->{prodsearchlink}) if ($rec->{brewid});
+  $html .= " " . util::brewlinks($c, $rec->{brewlink}, $rec->{brewname}, $rec->{prodsearchlink}, "", $rec->{brewtype}, $rec->{shortname}) if ($rec->{brewid});
   $html .= "</span>\n";
   $html .= "<br/>\n";
   return $html;

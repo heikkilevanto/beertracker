@@ -517,6 +517,15 @@ JS
       }
       my $uq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // ""));
       $search_html .= util::extlink("https://untappd.com/search?q=$uq", "untappd") . " ";
+      if ($p->{BrewType} =~ /^Wine/i) {
+        $search_html .= util::extlink("https://www.vivino.com/search/wines?q=$uq", "vivino") . " ";
+      } elsif ($p->{BrewType} =~ /^Cider/i) {
+        my $ciderq = uri_escape_utf8(($p->{ShortName} || $p->{Name} || ""));
+        $search_html .= util::extlink("https://www.ciderexpert.com/Cider/SearchList?query=$ciderq", "ciderexpert") . " ";
+      } elsif ($p->{BrewType} =~ /^Spirit/i) {
+        my $spiritq = uri_escape_utf8(($p->{ShortName} || $p->{Name} || ""));
+        $search_html .= util::extlink("https://distiller.com/search?term=$spiritq", "distiller") . " ";
+      }
       my $gq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // "") . " beer");
       $search_html .= util::extlink("https://duckduckgo.com/?q=$gq", "search");
       print "$search_html<br/>\n";

@@ -492,25 +492,43 @@ sub extlink {
 # $name is the brew name used for the fallback search query.
 # $prodsearch is the producer's SearchLink base URL (appended with brew name as fallback).
 # Optional $ddg_fallback: if set and no other link found, link to DuckDuckGo with this query.
+# Optional $brewtype: if set to wine, cider or spirit, always append a fact-search
+# badge ("Vn" to Vivino for wine, "Cx" to Cider Expert for cider, "Ds" to Distiller
+# for spirits).
+# Optional $shortname: if set, used as the Cider Expert / Distiller search term
+# instead of the full brew name (they OR all terms, so a short name cuts out noise).
 sub brewlinks {
   my $c            = shift;
   my $link         = shift // "";
   my $beername     = shift // "";
   my $prodsearch   = shift // "";
   my $ddg_fallback = shift // "";
+  my $brewtype     = shift // "";
+  my $shortname    = shift // "";
+  my $s = "";
   if ($link =~ /untappd/i) {
-    return extlink($link, "Ut");
+    $s .= extlink($link, "Ut");
   } elsif ($link) {
-    return extlink($link, "www");
+    $s .= extlink($link, "www");
   } elsif ($prodsearch) {
     my $sq = $prodsearch . uri_escape_utf8($beername);
-    return extlink($sq, "prod");
+    $s .= extlink($sq, "prod");
   } elsif ($ddg_fallback) {
     my $q = uri_escape_utf8($ddg_fallback);
-    return extlink("https://duckduckgo.com/?q=$q", "search");
-  } else {
-    return "";
+    $s .= extlink("https://duckduckgo.com/?q=$q", "search");
   }
+  # Fact-search badge, always shown for wine/cider regardless of the badges above
+  if ($brewtype =~ /^Wine/i) {
+    my $vq = uri_escape_utf8($beername);
+    $s .= extlink("https://www.vivino.com/search/wines?q=$vq", "Vn");
+  } elsif ($brewtype =~ /^Cider/i) {
+    my $cq = uri_escape_utf8($shortname || $beername);
+    $s .= extlink("https://www.ciderexpert.com/Cider/SearchList?query=$cq", "Cx");
+  } elsif ($brewtype =~ /^Spirit/i) {
+    my $sq = uri_escape_utf8($shortname || $beername);
+    $s .= extlink("https://distiller.com/search?term=$sq", "Ds");
+  }
+  return $s;
 } # brewlinks
 
 # Return link badges for a location.

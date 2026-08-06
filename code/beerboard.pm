@@ -267,6 +267,7 @@ sub load_beerlist_from_db {
       ct.Tap, ct.Brew, ct.BrewName AS beer,
       pl.Name AS maker, pl.Id AS maker_id,
       b.SubType AS type, b.Alc AS alc,
+      b.BrewType AS brewtype,
       b.DetailsLink AS details_link,
       b.ShortName AS brew_shortname,
       pl.SearchLink AS maker_search_link,
@@ -347,7 +348,8 @@ sub load_beerlist_from_db {
       details_link => $row->{details_link},
       brew_shortname => $row->{brew_shortname},
       maker_search_link => $row->{maker_search_link},
-      shortname => $row->{shortname}
+      shortname => $row->{shortname},
+      brewtype => $row->{brewtype}
     };
   }
 
@@ -388,7 +390,7 @@ sub prepare_beer_entry_data {
 
   # Compute external link (priority: DetailsLink > MakerSearchLink > DDG fallback)
   my $ddg_query = ($mak || $beer) ? "$mak $beer" : "";
-  my $extlink_html = util::brewlinks($c, $e->{details_link}, $beer, $e->{maker_search_link}, $ddg_query);
+  my $extlink_html = util::brewlinks($c, $e->{details_link}, $beer, $e->{maker_search_link}, $ddg_query, $e->{brewtype}, $e->{brew_shortname});
 
   # Full maker name as a link for the expanded header
   my $dispmak_full = ($e->{maker_id})
