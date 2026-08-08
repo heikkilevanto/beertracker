@@ -327,7 +327,9 @@ sub topstats {
   my $s = "";
   my $border = "2px";
   if ( $rec->{daydiff} ) {
-    $wday = " <b>$wday</b>: ";
+    my $zeros = int( $rec->{daydiff} ) - 1;
+    my $zmarker = $zeros > 0 ? " <span style='color:#0f0'>${zeros}z</span>" : "";
+    $wday = " <b>$wday</b>$zmarker: ";
     $border = "1px";
   } else {
     $wday = " ";
