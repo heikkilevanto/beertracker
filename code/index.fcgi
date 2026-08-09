@@ -331,7 +331,13 @@ if ( $q->request_method eq "POST" ) {
   };
   if ( $@ ) {
     my $err = $@;
-    $c->{dbh}->rollback() if ( $c->{dbh} ) ;
+    # Best-effort rollback — if the DBH is dead this may itself throw,
+    # but we have never observed that in practice.
+    eval { $c->{dbh}->rollback() } if ( $c->{dbh} );
+    # util::error() calls die, which in a FastCGI loop is uncaught and
+    # terminates this worker process. This is intentional: a full process
+    # restart ensures all in-process caches (Cache.pm) are invalidated,
+    # so the next request starts from a clean slate.
     util::error("$err\n$debugparams"); # does not return
   }
 

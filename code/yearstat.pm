@@ -402,7 +402,7 @@ sub yearsummary {
   print "Show ";
   for my $top ( 5, 10, 20, 50, 100, 999999 ) {
     print "&nbsp; <a href='$c->{url}?o=$c->{op}&q="
-      . uri_escape( $c->{qry} )
+      . uri_escape_utf8( $c->{qry} )
       . "&maxl=$top'><span>Top-$top</span></a>\n";
   }
   if ( $c->{qry} ) {

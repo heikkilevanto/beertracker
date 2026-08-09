@@ -58,7 +58,7 @@ sub addsums {
     $g->{sum7} -= shift( @{$g->{last7} } );
   }
   push( @{ $g->{last30} }, $v);
-  if ( scalar(@{ $g->{last30} } > 30 ) ) {
+  if ( scalar(@{ $g->{last30} }) > 30 ) {
     shift( @{$g->{last30} } );
   }
   my $w = 1;

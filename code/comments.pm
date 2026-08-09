@@ -15,17 +15,6 @@ our @ratings = ( "Zero", "Undrinkable", "Unpleasant", "Could be better",  # zero
 "Ok", "Goes down well", "Nice", "Pretty good", "Excellent", "Perfect");  # 9 is the top
 
 ################################################################################
-# Get a displayable line with a rating
-################################################################################
-sub ratingline {
-  my $rating = shift;
-  my $tag1 = shift || "nop";  # "b" to bold the number
-  my $tag2 = shift || $tag1;  # "i" to get italic text
-  return "" unless $rating;
-  return "<$tag1>($rating)</$tag1> - <$tag2>$ratings[$rating]</$tag2>";
-}
-
-################################################################################
 # Get CSS class for rating color coding
 ################################################################################
 sub get_rating_class {
