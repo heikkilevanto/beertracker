@@ -6,6 +6,7 @@ use warnings;
 
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use open ':encoding(UTF-8)';  # Data files are in utf-8
 
 use Carp qw(longmess);
 
@@ -56,9 +57,9 @@ sub open_db {
     dberror($c, $msg);
     return 0; # rethrow the error after logging
     # Then we catch it in index.fcgi, dump parameters, and roll back
-  };
+   };
 
-}
+} # open_db
 
 ################################################################################
 # Error handling
@@ -76,9 +77,9 @@ sub dberror {
   print "\n\n"; # Works even before sending headers
   print "<pre>\n\n";
   print $errmsg;
-  print "\n</pre>\n";
+   print "\n</pre>\n";
 
-}
+} # dberror
 
 ################################################################################
 # General db helpers
@@ -121,8 +122,8 @@ sub tablefields {
     }
     push @fields, $name ;
   }
-  return @fields;
-}
+   return @fields;
+} # tablefields
 
 # Log a query on STDERR (error.log)
 sub logquery {
@@ -150,9 +151,9 @@ sub logquery {
   $sql =~ s/\bwhere\s+(\w+)\s+in\s*\(\s*([^,()]+(?:\s*,\s*[^,()]+){0,5})\s*,[^)]*\)/where $1 in ($2,..)/i;
   $msg .= $sql;
   $msg .= " [" .  join(', ', map { defined $_ ? $_ : 'NULL' } @params).  "]" if (@params);
-  $msg = substr($msg,0,239) unless ( $c->{devversion} );
-  print { $c->{log} } "$msg\n";
-}
+   $msg = substr($msg,0,239) unless ( $c->{devversion} );
+   print { $c->{log} } "$msg\n";
+} # logquery
 
 # Run a simple DB query
 # Returns a st-handle for fetchrows
@@ -162,9 +163,9 @@ sub query {
   my $sql = shift;
   my @params = @_;
   my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute( @params );
-  return $sth;
-}
+   $sth->execute( @params );
+   return $sth;
+} # query
 
 # Run a DML/DDL statement (INSERT, UPDATE, DELETE, CREATE, ALTER, etc.)
 # Logs the statement and executes it; returns the result of do().
@@ -186,7 +187,7 @@ sub queryrecord {
   my $rec = $sth->fetchrow_hashref;
   $sth->finish;
   return $rec;
-}
+} # queryrecord
 
 # Run a simple query that returns one value per row. Return them in an array
 # "select id from comments where glass = ?", 12345
@@ -198,9 +199,9 @@ sub queryrecordarray {
   return undef unless ($sth);
   my @vals;
   while ( my @r = $sth->fetchrow_array ) { push @vals, $r[0]; }
-  $sth->finish;
-  return @vals;
-}
+   $sth->finish;
+   return @vals;
+} # queryrecordarray
 
 
 # Run a simple query, and return the first (only?) record as an array
@@ -213,9 +214,9 @@ sub queryarray {
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute(@params);
   my @row = $sth->fetchrow_array;
-  $sth->finish;
-  return @row;
-}
+   $sth->finish;
+   return @row;
+} # queryarray
 
 # Run a query and return an inputs::dropdown() widget.
 # Args: $c, $name, $selopt, $firstopt, $sql, @params
@@ -314,7 +315,7 @@ sub findrecord {
   my $rec = $sth->fetchrow_hashref;
   $sth->finish;
   return $rec;
-} # getrecord
+} # findrecord
 
 ################################################################################
 # Helpers for POST functions
@@ -344,7 +345,7 @@ sub postrecord {
     db::deleterecord( $c, $table, $c->{edit});
     $c->{edit} = "";
   }
-}
+} # postrecord
 
 
 ################### Delete a record

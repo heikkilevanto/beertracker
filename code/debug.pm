@@ -6,6 +6,7 @@ use warnings;
 
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use open ':encoding(UTF-8)';  # Data files are in utf-8
 
 use POSIX qw(strftime localtime);
 use File::Basename;

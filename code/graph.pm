@@ -9,6 +9,7 @@ use strict;
 use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use open ':encoding(UTF-8)';  # Data files are in utf-8
 use Time::Piece;
 
 # Useful constants
@@ -309,7 +310,7 @@ sub plotgraph {
     print C $cmd;
     close(C);
     system ("gnuplot $g->{cmdfile} ");
-}
+} # plotgraph
 
 
 # Helper to produce one link under the graph
@@ -324,7 +325,7 @@ sub onelink {
   print "<a href='$c->{url}?o=$c->{op}".$start.$end. "' >" .
     #"<span>$txt</span></a>\n";
     "<span style='border:1px solid white; padding: 1px 4px; color: white; background-color:$c->{altbgcolor}' >$txt</span></a>\n";
-}
+} # onelink
 
 # Helper to produce the links under the graph
 sub graphlinks {
@@ -342,8 +343,8 @@ sub graphlinks {
   onelink($g, "6m", ($t - 6*$onemonth)->ymd );
   onelink($g, "Y",  ($t - $oneyear)->ymd );
   onelink($g, "2y", ($t - 2*$oneyear)->ymd );
-  onelink($g, "all", "2016-01-01",$t->ymd );  # Earlest known data in the system
-}
+    onelink($g, "all", "2016-01-01",$t->ymd );  # Earlest known data in the system
+} # graphlinks
 
 # The graph itself
 sub graph {
