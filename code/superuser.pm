@@ -115,7 +115,8 @@ sub gitstatus {
   my $cmd = $cdcmd . "sudo -u heikki /usr/bin/git fetch 2>&1 && " .
                      "sudo -u heikki /usr/bin/git status -uno 2>&1 " ;
   print "Running git fetch &amp;&amp; git status in $p <p/>\n";
-  my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
+  my $style = "style='font-size:14px;'";
+  $style = "" if ($c->{mobile});
   my $st = `$cmd` ;
   my $rc = $?;  # return code
   print { $c->{log} } "gitstatus: $st \n";
@@ -150,7 +151,8 @@ sub gitstatus {
       $branch =~ s/^\s*\*?\s*//;   # strip leading spaces and current-branch marker
       $branch =~ s/\s.*$//;        # strip trailing annotations
       next unless $branch =~ /^[\w\.\-\/]+$/;  # only safe branch names
-      my $current = ( $line =~ /^\*/ ) ? " <b>(current)</b>" : "";
+      my $current = "";
+      $current = " <b>(current)</b>" if ($line =~ /^\*/);
       my $loading = "document.body.innerHTML=\"<p>Checking out $branch ...</p>\"";
       my $reloc = "window.location.href=\"$c->{url}?o=GitCheckout&p=$p&b=" .
                   uri_escape_utf8($branch) . "\"";
@@ -205,7 +207,8 @@ sub gitpull {
   print "<b>Doing a Git pull for <i>'$p'</i> </b><p/>\n";
   my $cmd = "cd " . quotemeta($gitdir) . " && sudo -u heikki /usr/bin/git pull --ff-only 2>&1";
   print "Running git pull --ff-only in $p <p/>\n";
-  my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
+  my $style = "style='font-size:14px;'";
+  $style = "" if ($c->{mobile});
   my $st = `$cmd` ;
   print { $c->{log} } "gitpull: $st\n";
   my $rc = $?;  # return code
@@ -230,7 +233,8 @@ sub gitcheckout {
   print "<b>Checking out branch <i>'$b'</i> in <i>'$p'</i></b><p/>\n";
   my $cmd = "cd " . quotemeta($gitdir) . " && sudo -u heikki /usr/bin/git checkout " . quotemeta($b) . " 2>&1";
   print "Running git checkout $b in $p <p/>\n";
-  my $style = $c->{mobile} ? "" : "style='font-size:14px;'";
+  my $style = "style='font-size:14px;'";
+  $style = "" if ($c->{mobile});
   my $st = `$cmd` ;
   print { $c->{log} } "gitcheckout: $st\n";
   my $rc = $?;  # return code

@@ -405,7 +405,8 @@ sub adjustment_form {
   my $html = "";
   if ($current_adjustment) {
     # Adjustment exists - show delete button with amount
-    my $sign = $current_adjustment_price >= 0 ? '+' : '';
+    my $sign = '';
+    $sign = '+' if ($current_adjustment_price >= 0);
     $html .= qq{<div id='adjform_$form_id' style='display:none;'>
     <form method='POST' style='display:inline; margin-left:1em;'>
       <span style='font-size:small;'>Adjustment: ${sign}${current_adjustment_price}.-</span>
@@ -610,7 +611,8 @@ sub mainlist {
   }
   print { $c->{log} } "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
   my $original_ndays = $ndays;
-  my $show_form = (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays") || $derived_date) ? 1 : 0;
+  my $show_form = 0;
+  $show_form = 1 if (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays") || $derived_date);
   my $cache_key = "mainlist:$c->{username}:$c->{op}:$c->{qry}:$date:$original_ndays:$show_form";
   my $cached_html = cache::get($c, $cache_key);
   if ($cached_html) {

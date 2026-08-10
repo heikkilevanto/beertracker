@@ -54,7 +54,8 @@ sub selectbrewtype {
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $bt = $sth->fetchrow_array ) {
-    my $em = glasses::isemptyglass($bt) ? " data-isempty='1'" : "";
+    my $em = "";
+    $em = " data-isempty='1'" if (glasses::isemptyglass($bt));
     $opts .= "<div class='dropdown-item' id='$bt'$em>$bt</div>\n";
   }
   # If editing an Adjustment glass, add it to dropdown

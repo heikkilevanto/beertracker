@@ -72,7 +72,8 @@ sub beerboard {
   print "<table id='beerboard' border=0 style='white-space: nowrap;'>\n";
   my $previd  = 0;
   my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
-  my $locid = $locrec ? $locrec->{Id} : undef;
+  my $locid = undef;
+  $locid = $locrec->{Id} if ($locrec);
   foreach my $e ( sort {$a->{"id"} <=> $b->{"id"} } @$beerlist )  {
     $nbeers++;
     my $id = $e->{"id"} || 0;
@@ -124,7 +125,8 @@ sub seenline {
   my $c = shift;
   my ($count, $min_date, $max_date) = @_;
   return "" unless $count;
-  my $times_word = $count == 1 ? "time" : "times";
+  my $times_word = "times";
+  $times_word = "time" if ($count == 1);
   my $seenline = "Seen <b>$count</b> $times_word";
   if ($min_date) {
     my $display_date = $min_date;
@@ -155,7 +157,8 @@ sub format_date_relative {
   my $yest_utc6 = $now_utc6 - 86400;
   my $yesterday = strftime('%Y-%m-%d', localtime($yest_utc6));
 
-  my $formatted_time = $time_str ? ($time_str lt "06:00" ? "($time_str)" : $time_str) : "";
+  my $formatted_time = $time_str;
+  $formatted_time = "($time_str)" if ($time_str && $time_str lt "06:00");
 
   if ($date_str eq $today) {
     return $formatted_time;
@@ -172,7 +175,8 @@ sub format_duration_relative {
   my $age = time() - $first_seen_ts;
   if ($age < 3600) {
     my $minutes = int($age / 60);
-    return $minutes <= 0 ? "less than 1m" : "${minutes}m";
+    if ($minutes <= 0) { return "less than 1m"; }
+    return "${minutes}m";
   } elsif ($age < 4 * 3600) {
     my $hours = int($age / 3600);
     my $mins = int(($age % 3600) / 60);
@@ -182,7 +186,8 @@ sub format_duration_relative {
     return "${hours}h";
   } else {
     my $days = int($age / 86400);
-    my $unit = $days == 1 ? "day" : "days";
+    my $unit = "days";
+    $unit = "day" if ($days == 1);
     return "$days $unit";
   }
 } # format_duration_relative
@@ -389,13 +394,13 @@ sub prepare_beer_entry_data {
   $sty =~ s/'//g;
 
   # Compute external link (priority: DetailsLink > MakerSearchLink > DDG fallback)
-  my $ddg_query = ($mak || $beer) ? "$mak $beer" : "";
+  my $ddg_query = "";
+  $ddg_query = "$mak $beer" if ($mak || $beer);
   my $extlink_html = util::brewlinks($c, $e->{details_link}, $beer, $e->{maker_search_link}, $ddg_query, $e->{brewtype}, $e->{brew_shortname});
 
   # Full maker name as a link for the expanded header
-  my $dispmak_full = ($e->{maker_id})
-    ? "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><span>$mak</span></a>"
-    : $mak;
+  my $dispmak_full = $mak;
+  $dispmak_full = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><span>$mak</span></a>" if ($e->{maker_id});
 
   my $country = $e->{'country'} || "";
 
@@ -486,9 +491,12 @@ sub render_beer_buttons {
 sub render_beer_row {
   my ($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
   my $is_new = $processed_data->{first_seen_ts} && (time() - $processed_data->{first_seen_ts}) < 86400;
-  my $bg = $is_new ? "background-color: $c->{altbgcolor}; " : "";
-  my $compact_display = ($extraboard == $id) ? 'none' : 'table-row';
-  my $expanded_display = ($extraboard == $id) ? 'table-row' : 'none';
+  my $bg = "";
+  $bg = "background-color: $c->{altbgcolor}; " if ($is_new);
+  my $compact_display = 'table-row';
+  $compact_display = 'none' if ($extraboard == $id);
+  my $expanded_display = 'none';
+  $expanded_display = 'table-row' if ($extraboard == $id);
   # Compact row
   print "<tr id='compact_$id' style='$bg display: $compact_display;'>\n";
   print "<td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" ><span $beerstyle>#$dispid</span></td>\n";

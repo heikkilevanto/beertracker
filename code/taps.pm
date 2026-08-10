@@ -60,7 +60,8 @@ sub update_taps {
 
     my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     db::execute($c, $insert_sql, $location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
-    my $action = $cur ? "Closed and opened" : "Opened";
+    my $action = "Opened";
+    $action = "Closed and opened" if ($cur);
     print { $c->{log} } "taps: $action tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
 
     # If brew has no DefPrice, set it from the largest size

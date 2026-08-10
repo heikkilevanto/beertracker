@@ -42,7 +42,11 @@ sub _colspan_last_td {
     return 0 if $gt <= $lt;
     my $tag = substr($$tds_ref, $lt, $gt - $lt);
     last if $tag !~ /display\s*:\s*none/i;
-    $lt = $lt > 0 ? rindex($$tds_ref, "<td", $lt - 1) : -1;
+    if ($lt > 0) {
+      $lt = rindex($$tds_ref, "<td", $lt - 1);
+    } else {
+      $lt = -1;
+    }
   }
   return 0 if $lt < 0;
   return 0 if substr($$tds_ref, $lt, $gt - $lt) =~ /colspan/i;
@@ -71,8 +75,12 @@ sub listrecords {
   my $gap_column = $opt->{gap_column};
   my $norecmessage = $opt->{norecmessage};
 
-  my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where,
-    $params ? (ref $params eq 'ARRAY' ? @$params : $params) : ());
+  my @cache_params = ();
+  if ($params) {
+    if (ref $params eq 'ARRAY') { @cache_params = @$params; }
+    else { @cache_params = ($params); }
+  }
+  my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where, @cache_params);
   my $cached = cache::get($c, $cache_key);
   if ( defined $cached ) {
     print { $c->{log} } "listrecords: cache hit for $sql_param\n";
@@ -153,7 +161,9 @@ sub listrecords {
       for (my $i = 0; $i < scalar(@fields); $i++) {
           my $f = $fields[$i];
           if ( $sort =~ /$f(-?)/ ) {
-              $order = "Order by $orig_fields[$i]" . ($1 ? " DESC" : "");
+              my $direction = "";
+              $direction = " DESC" if ($1);
+              $order = "Order by $orig_fields[$i]" . $direction;
           }
       }
   }
@@ -173,9 +183,11 @@ sub listrecords {
   my $sql = "select * from ($sql_param) $where $order";
   my @paramarr = ();
   if ( $params ) {
-    @paramarr = ref $params eq 'ARRAY' ? @$params : ($params);
+    if (ref $params eq 'ARRAY') { @paramarr = @$params; }
+    else { @paramarr = ($params); }
   }
-  my $list_sth = @paramarr ? db::query($c, $sql, @paramarr) : db::query($c, $sql);
+  my $list_sth = db::query($c, $sql);
+  $list_sth = db::query($c, $sql, @paramarr) if (@paramarr);
   if ( $norecmessage ) {
     my $peek = $list_sth->fetchrow_arrayref;
     if ( !$peek ) {
@@ -183,7 +195,8 @@ sub listrecords {
       return "<i>" . util::htmlesc($norecmessage) . "</i>\n";
     }
     $list_sth->finish;
-    $list_sth = @paramarr ? db::query($c, $sql, @paramarr) : db::query($c, $sql);
+    $list_sth = db::query($c, $sql);
+    $list_sth = db::query($c, $sql, @paramarr) if (@paramarr);
   }
 
   my $url = $c->{url};
@@ -243,7 +256,8 @@ sub listrecords {
   $s .= "    Showing <select class='lr-size-select' onchange='lr_changesize(this)'>\n";
   my $found = 0;
   foreach my $so (10, 20, 50, 100, 200) {
-    my $sel = $so == $maxrecords ? " selected" : "";
+    my $sel = "";
+    $sel = " selected" if ($so == $maxrecords);
     $s .= "      <option value='$so'$sel>$so</option>\n";
     $found = 1 if $so == $maxrecords;
   }
@@ -283,7 +297,8 @@ sub listrecords {
   if ( $browsersortcol ) {
     $tableid = " id='autosort-table'";
   }
-  my $autofilter_attr = ($initial_filter && scalar(keys %$initial_filter)) ? " data-autofilter" : "";
+  my $autofilter_attr = "";
+  $autofilter_attr = " data-autofilter" if ($initial_filter && scalar(keys %$initial_filter));
   my $tableattrs = "$geotable$tableid$autofilter_attr data-page-size='$maxrecords' data-current-page='1'";
 
   $s .= "<table class='listrecords' $tableattrs>\n";
@@ -425,7 +440,8 @@ sub listrecords {
     } elsif ( $f eq "Name" ) {
       $hdr_input = "<input type=text data-col='$i' $sty $filter_events placeholder='Name'$val_attr/>";
     } elsif ( $f  ) {
-      my $on = $f=~/Chk/ ? "" : $filter_events;
+      my $on = $filter_events;
+      $on = "" if ($f =~ /Chk/);
       $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='$f'$val_attr/>";
     } else {
       $hdr_input = "&nbsp;"
@@ -469,7 +485,8 @@ sub listrecords {
       $prev_gap = $curr_gap;
       if ($daydiff > 1) {
         $daydiff--;
-        my $gap_text = $daydiff > 1 ? "... $daydiff days ..." : "...";
+        my $gap_text = "...";
+        $gap_text = "... $daydiff days ..." if ($daydiff > 1);
         my $colspan = scalar(@fields);
         $s .= "<tbody data-gap='1' data-lr-fs='1'><tr data-first=1 class='top-border'><td colspan='$colspan' style='text-align:center;color:#888'>$gap_text</td></tr></tbody>\n";
       }
@@ -562,7 +579,8 @@ sub listrecords {
           my $dispstyle = styles::brewtextstyle($c, $style_str, "$c->{op}:$rec[0] $brewtype/" . ($subtype // ""));
           (my $filter_str = $style_str) =~ s/,/ /g;
           $v = _word_spans($filter_str, $i);
-          my $hidden = ($brewtype eq 'Beer' && $subtype) ? "<span style='display:none'>Beer </span>" : "";
+          my $hidden = "";
+          $hidden = "<span style='display:none'>Beer </span>" if ($brewtype eq 'Beer' && $subtype);
           $v = $hidden . "<span $dispstyle>$v</span>";
           $word_split = 0;
         }
@@ -758,8 +776,9 @@ sub listrecords {
         $v = "Gen" if ($v);
       } elsif ( $fn =~ /^(Website|UntappdLink|SearchLink|DetailsLink)$/i ) {
         if ($v) {
-          my $label = ($fn =~ /Untappd/i) ? "Ut"     :
-                      ($fn =~ /Search/i)  ? "search" : "www";
+          my $label = "www";
+          $label = "Ut"     if ($fn =~ /Untappd/i);
+          $label = "search" if ($fn =~ /Search/i);
           $v = util::extlink($v, $label);
           $word_split = 0;
         }
@@ -827,7 +846,8 @@ sub listrecords {
       if ( $word_split && $v !~ /</ ) {
         $v = _word_spans($v, $i);
       }
-      my $cell_events = $suffix_info[$i]{nofilter} ? "" : " ondblclick='fieldclick_cell(event,this,$i)'";
+      my $cell_events = " ondblclick='fieldclick_cell(event,this,$i)'";
+      $cell_events = "" if ($suffix_info[$i]{nofilter});
       my $cell;
       if (length $v) {
           $cell = "<span ${data_attrs}${cell_events}>$v</span>\n";
@@ -853,7 +873,8 @@ sub listrecords {
       _colspan_last_td(\$tds);
     }
 
-    my $hidden_style = ($maxrecords > 0 && $rowcount > $maxrecords) ? " style='display:none'" : "";
+    my $hidden_style = "";
+    $hidden_style = " style='display:none'" if ($maxrecords > 0 && $rowcount > $maxrecords);
     $s .= "<tbody data-lr-fs='1'$hidden_style>\n";
     $s .= "<tr data-first=1 class='top-border'>\n";
     $s .= "$tds</tr>\n";
@@ -872,7 +893,8 @@ sub listrecords {
       for my $i (0..$#fields) {
         my $ag = $suffix_info[$i]{aggregate} or next;
         my $fn = $suffix_info[$i]{as_name} || $fields[$i];
-        my $rate_attr = ($fn =~ /Rate|Rating/) ? " data-rate='1'" : "";
+        my $rate_attr = "";
+        $rate_attr = " data-rate='1'" if ($fn =~ /Rate|Rating/);
         $s .= "<span data-col='$i' data-aggregate='$ag'$rate_attr style='white-space:nowrap'>"
             . "<b>" . util::htmlesc($fn) . "</b>: </span>\n";
       }

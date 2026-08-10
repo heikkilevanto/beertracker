@@ -38,9 +38,8 @@ sub open_db {
   if ( $c->{dbh} ) {  # close old connection if any
     $c->{dbh}->disconnect;
   }
-  my $dsn = $mode eq 'ro'
-      ? "dbi:SQLite:uri=file:$databasefile?mode=ro"
-      : "dbi:SQLite:dbname=$databasefile";
+  my $dsn = "dbi:SQLite:dbname=$databasefile";
+  $dsn = "dbi:SQLite:uri=file:$databasefile?mode=ro" if ($mode eq 'ro');
   $c->{dbh} = DBI->connect($dsn, "", "", { RaiseError => 1, AutoCommit => 1 })
     or util::error($DBI::errstr);
   $c->{dbh}->{sqlite_unicode} = 1;  # Yes, we use unicode in the database, and want unicode in the results!
@@ -142,7 +141,8 @@ sub logquery {
 
   my($pkg,$fname,$lineno,$sub) = caller(2);
   unless (defined $sub) { ($pkg,$fname,$lineno,$sub) = caller(1); }
-  my $msg = (defined $sub ? "$sub: " : "(unknown): ");
+  my $msg = "(unknown): ";
+  $msg = "$sub: " if (defined $sub);
 
   # Clean whitespace
   $sql =~ s/\s+/ /g;
@@ -150,9 +150,9 @@ sub logquery {
   # trunc long lists
   $sql =~ s/\bwhere\s+(\w+)\s+in\s*\(\s*([^,()]+(?:\s*,\s*[^,()]+){0,5})\s*,[^)]*\)/where $1 in ($2,..)/i;
   $msg .= $sql;
-  $msg .= " [" .  join(', ', map { defined $_ ? $_ : 'NULL' } @params).  "]" if (@params);
-   $msg = substr($msg,0,239) unless ( $c->{devversion} );
-   print { $c->{log} } "$msg\n";
+  $msg .= " [" . join(', ', map { $_ // 'NULL' } @params) . "]" if (@params);
+  $msg = substr($msg,0,239) unless ( $c->{devversion} );
+  print { $c->{log} } "$msg\n";
 } # logquery
 
 # Run a simple DB query
@@ -231,7 +231,8 @@ sub querydropdown {
   return "" unless ($sth);
   my $opts = "";
   $opts .= "<div class='dropdown-item' id=''>$firstopt</div>\n" if ($firstopt);
-  my $selname = ($selopt eq "") ? $firstopt : $selopt;
+  my $selname = $selopt;
+  $selname = $firstopt if ($selopt eq "");
   while ( my $v = $sth->fetchrow_array ) {
     $opts .= "<div class='dropdown-item' id='$v'>$v</div>\n";
     $selname = $v if ($v eq $selopt);

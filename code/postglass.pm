@@ -346,7 +346,7 @@ sub fixprice {
     return;
   }
 
-  my $pr = defined $glass->{Price} ? $glass->{Price} : "";
+  my $pr = $glass->{Price} // "";
   if ( $pr =~ /^-\d/ ) { # Negative price: bottle/container purchase, store as 0 for drinking
     $glass->{Price} = 0;
     return;

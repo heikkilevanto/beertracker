@@ -159,7 +159,8 @@ sub selectperson {
 
   my $current = "";
   while ( my ($id, $name, $last, $tags) = $list_sth->fetchrow_array ) {
-    my $tags_attr = $tags ? " tags='" . util::htmlesc($tags) . "'" : "";
+    my $tags_attr = "";
+    $tags_attr = " tags='" . util::htmlesc($tags) . "'" if ($tags);
     $opts .= "      <div class='dropdown-item' id='$id'$tags_attr>$name</div>\n";
     if ( $id eq $selected ) {
       $current = $name;

@@ -302,7 +302,8 @@ sub commentform {
   $s .= "</tr>\n";
 
   # Public row (hidden by default)
-  my $is_public = ($com->{Id} && !$com->{Username}) ? " checked" : "";
+  my $is_public = "";
+  $is_public = " checked" if ($com->{Id} && !$com->{Username});
   $s .= "<tr id='row-public' hidden>\n";
   $s .= "  <td></td>\n";
   $s .= "  <td><label><input type='checkbox' name='public' value='1'$is_public>" .
@@ -325,8 +326,10 @@ sub commentform {
     $ratopts .= "<div class='dropdown-item $rclass' id='$i'>$i: $ratings[$i]</div>\n";
   }
   my $rat_id   = $r || "";
-  my $rat_name = $r ? "$r: $ratings[$r]" : "Rating";
-  my $rat_class = $r ? get_rating_class($r) : "";
+  my $rat_name = "Rating";
+  $rat_name = "$r: $ratings[$r]" if ($r);
+  my $rat_class = "";
+  $rat_class = get_rating_class($r) if ($r);
   $s .= "<tr>\n";
   $s .= "  <td style='$lcol'>Rating</td>\n";
   $s .= "  <td>\n";
@@ -355,7 +358,8 @@ sub commentform {
   $s .= "</tr>\n";
 
   # Buttons row
-  my $button_text = $com->{Id} ? "Upd" : "Add";
+  my $button_text = "Add";
+  $button_text = "Upd" if ($com->{Id});
   $s .= "<tr>\n";
   $s .= "  <td colspan='2'>\n";
   $s .= "    <input type='submit' name='submit' value='$button_text'>\n";
@@ -478,7 +482,8 @@ sub commentform {
   }
 
   # JS: show/hide rows based on comment type, and "show all" toggle
-  my $glass_is_empty = ($com->{glass_brewtype} && glasses::isemptyglass($com->{glass_brewtype})) ? 1 : 0;
+  my $glass_is_empty = 0;
+  $glass_is_empty = 1 if ($com->{glass_brewtype} && glasses::isemptyglass($com->{glass_brewtype}));
   $s .= "<script>var glassIsEmpty = $glass_is_empty; initCommentForm();</script>\n";
 
   return $s;
@@ -525,7 +530,9 @@ sub editcomment {
     util::error("Comment $ec not found") unless $com;
   }
 
-  print "<b>" . ( $ec ? "Edit comment $ec" : "New comment" ) . "</b><br/>\n";
+  my $heading = "New comment";
+  $heading = "Edit comment $ec" if ($ec);
+  print "<b>$heading</b><br/>\n";
 
   my ($gloc, $gbrew, $gts, $gbrewtype);  # glass display data for commentform (set below if prefill_glass)
 
@@ -537,7 +544,8 @@ sub editcomment {
     print " \@$com->{locname}" if $com->{locname};
     print "</span></a><br/>\n";  # newline after time and location
     if ($com->{brewname}) {
-      my $sep = $com->{prodname} ? "<b>$com->{prodname}</b>: " : "";
+      my $sep = "";
+      $sep = "<b>$com->{prodname}</b>: " if ($com->{prodname});
       print "<a href='$c->{url}?o=Brew&e=$com->{brewid}'><span>${sep}<b>$com->{brewname}</b></span></a><br/>\n";
     }
   } elsif ($com && $com->{Location}) {
@@ -593,7 +601,8 @@ sub editcomment {
   # Cancel: always back to the comments list
   my $returnto   = util::param($c, "returnto") || "";
   $returnto      =~ s/[^a-z]//g;  # Restrict to lowercase letters only (safe page names)
-  my $cancel_url = $returnto ? "$c->{url}?o=$returnto" : "$c->{url}?o=Comment";
+  my $cancel_url = "$c->{url}?o=Comment";
+  $cancel_url = "$c->{url}?o=$returnto" if ($returnto);
   my $glass_id   = $com->{Glass} || $prefill_glass || "";
 
   print commentform($c, $com, $glass_id, $cancel_url, $returnto);
@@ -622,7 +631,8 @@ sub postcomment {
   @person_ids = grep { $_ && $_ =~ /^\d+$/ } @person_ids; # only plain integers
 
   # Username: private (default) uses current user; public comment stores no username
-  my $username = $public ? undef : $c->{username};
+  my $username = $c->{username};
+  $username = undef if ($public);
 
   # Timestamp: user-supplied override takes priority, then glass timestamp, then now
   my $ts_override = util::param($c, "ts") || "";
@@ -696,7 +706,8 @@ sub postcomment {
   } else {
     my $returnto = util::param($c, "returnto") || "";
     $returnto =~ s/[^a-z]//g;  # Restrict to lowercase letters only
-    $c->{redirect_url} = $returnto ? "$c->{url}?o=$returnto" : "$c->{url}?o=comment";
+    $c->{redirect_url} = "$c->{url}?o=comment";
+    $c->{redirect_url} = "$c->{url}?o=$returnto" if ($returnto);
   }
   return "";
 } # postcomment

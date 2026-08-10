@@ -61,7 +61,7 @@ sub unit {
 # Puts quotes around the values, separates them by commas, and handles
 # undef nicely
 sub loglist {
-  return join(", ", map { defined($_) ? "'$_'" : "(undef)" } @_);
+  return join(", ", map { my $v = "'$_'"; $v = "(undef)" unless (defined $_); $v } @_);
 }
 
 # Calculate name similarity using Levenshtein edit distance
@@ -328,7 +328,8 @@ sub topstats {
   my $border = "2px";
   if ( $rec->{daydiff} ) {
     my $zeros = int( $rec->{daydiff} ) - 1;
-    my $zmarker = $zeros > 0 ? " <span style='color:#0f0'>${zeros}z</span>" : "";
+    my $zmarker = "";
+    $zmarker = " <span style='color:#0f0'>${zeros}z</span>" if ($zeros > 0);
     $wday = " <b>$wday</b>$zmarker: ";
     $border = "1px";
   } else {

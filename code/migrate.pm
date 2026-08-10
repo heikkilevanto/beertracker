@@ -142,7 +142,8 @@ sub _read_db_version {
   return 0 unless $exists;
   my ($v) = $c->{dbh}->selectrow_array(
     "SELECT v FROM globals WHERE k='db_version'");
-  return defined($v) ? int($v) : 0;
+  if (defined($v)) { return int($v); }
+  return 0;
 } # _read_db_version
 
 # Back up the database

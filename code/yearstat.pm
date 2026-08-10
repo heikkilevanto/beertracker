@@ -33,13 +33,11 @@ sub yearbarsql {
   my $n = shift;  # number of top locations
   my $metric = shift || "money";  # "money" or "drinks"
 
-  my $sum_expr  = $metric eq "drinks"
-    ? "SUM(glasses.StDrinks) AS total"
-    : "SUM(CASE WHEN glasses.BrewType = 'Adjustment' THEN glasses.Price"
+  my $sum_expr  = "SUM(CASE WHEN glasses.BrewType = 'Adjustment' THEN glasses.Price"
     . " ELSE ABS(glasses.Price) END) AS total";
-  my $null_check = $metric eq "drinks"
-    ? "AND glasses.StDrinks IS NOT NULL"
-    : "AND glasses.Price IS NOT NULL";
+  $sum_expr = "SUM(glasses.StDrinks) AS total" if ($metric eq "drinks");
+  my $null_check = "AND glasses.Price IS NOT NULL";
+  $null_check = "AND glasses.StDrinks IS NOT NULL" if ($metric eq "drinks");
 
   my $sql = "
     SELECT
@@ -150,7 +148,8 @@ sub yearbar_plot {
     }
   }
 
-  my $yticlabel = $res->{metric} eq "drinks" ? "Drinks" : "Kroner";
+  my $yticlabel = "Kroner";
+  $yticlabel = "Drinks" if ($res->{metric} eq "drinks");
   my $bgcolor = $c->{bgcolor};
   my $cmd = ""
     . "set term png small size 700,300\n"
@@ -185,8 +184,10 @@ sub yearbar {
   my $n = util::param($c, "maxl") || 8;
   my $sortdr = shift;
 
-  my $metric = $sortdr ? "drinks" : "money";
-  my $suffix = $sortdr ? "-drinks" : "";
+  my $metric = "money";
+  $metric = "drinks" if ($sortdr);
+  my $suffix = "";
+  $suffix = "-drinks" if ($sortdr);
   my $pngfile = $c->{datadir} . $c->{username} . ".yearbars-$n$suffix.png";
 
   my $res = yearbarsql($c, $n, $metric);
@@ -232,9 +233,8 @@ sub yearline {
   $s .= "<td class='num'>&nbsp; $price &nbsp; </td>";
   $s .= "<td class='num'> &nbsp; $drinks  &nbsp; </td>";
   $s .= "<td class='num'> &nbsp; $visits  &nbsp; </td>";
-  my $dothtml = $dot
-    ? " <span style='display:inline-block;width:10px;height:10px;background:#$dot;margin-left:4px;vertical-align:middle'></span>"
-    : "";
+  my $dothtml = "";
+  $dothtml = " <span style='display:inline-block;width:10px;height:10px;background:#$dot;margin-left:4px;vertical-align:middle'></span>" if ($dot);
   $s .= "<td> &nbsp;$name$dothtml </td>";
   $s .= "</tr>\n";
   return $s;

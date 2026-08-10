@@ -55,7 +55,8 @@ sub updateboard {
   $c->{scrape_status} = undef;
 
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam, "collate nocase");
-  my $scraper_str = $loc_rec ? $loc_rec->{Scraper} : undef;
+  my $scraper_str = undef;
+  $scraper_str = $loc_rec->{Scraper} if ($loc_rec);
 
   if (!$scraper_str) {
     print { $c->{log} } "updateboard: No scraper for '$locparam'\n";

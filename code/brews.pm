@@ -190,7 +190,8 @@ sub listbrewglasses {
   my $latest_year = (sort {$b cmp $a} keys %years)[0] if %years;
   for my $year (sort {$b cmp $a} keys %years) {
     my $count = scalar @{$years{$year}};
-    my $display = ($year eq $latest_year) ? '' : 'display: none; ';
+    my $display = 'display: none; ';
+    $display = '' if ($year eq $latest_year);
     print "<div style='overflow-x: auto; $display'>\n";
     print "<br><div style='font-weight: bold;'>$year</div>\n";
     print "<table style='white-space: nowrap;'>\n";
@@ -515,7 +516,9 @@ JS
           }
         }
       }
-      my $uq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // ""));
+      my $prodprefix = "";
+      $prodprefix = "$prodname " if ($prodname);
+      my $uq = uri_escape_utf8($prodprefix . ($p->{Name} // ""));
       $search_html .= util::extlink("https://untappd.com/search?q=$uq", "untappd") . " ";
       if ($p->{BrewType} =~ /^Wine/i) {
         $search_html .= util::extlink("https://www.vivino.com/search/wines?q=$uq", "vivino") . " ";
@@ -526,7 +529,7 @@ JS
         my $spiritq = uri_escape_utf8(($p->{ShortName} || $p->{Name} || ""));
         $search_html .= util::extlink("https://distiller.com/search?term=$spiritq", "distiller") . " ";
       }
-      my $gq = uri_escape_utf8(($prodname ? "$prodname " : "") . ($p->{Name} // "") . " beer");
+      my $gq = uri_escape_utf8($prodprefix . ($p->{Name} // "") . " beer");
       $search_html .= util::extlink("https://duckduckgo.com/?q=$gq", "search");
       print "$search_html<br/>\n";
       print "<hr/>\n";
@@ -611,11 +614,13 @@ sub brewfielddiff {
 
   my @diffs;
   foreach my $field ( db::tablefields($c, "BREWS", "Id|Parent", 1) ) {
-    my $bval = defined $base->{$field} ? $base->{$field} : "";
-    my $cval = defined $comp->{$field} ? $comp->{$field} : "";
+    my $bval = $base->{$field} // "";
+    my $cval = $comp->{$field} // "";
     next if ($bval eq $cval);
-    my $bdisp = $bval ne "" ? util::htmlesc($bval) : "&mdash;";
-    my $cdisp = $cval ne "" ? util::htmlesc($cval) : "&mdash;";
+    my $bdisp = "&mdash;";
+    $bdisp = util::htmlesc($bval) if ($bval ne "");
+    my $cdisp = "&mdash;";
+    $cdisp = util::htmlesc($cval) if ($cval ne "");
     push @diffs, "<tr><td>$field</td><td>$bdisp</td><td>&rarr;</td><td>$cdisp</td></tr>\n";
   }
   if (@diffs) {
@@ -695,7 +700,8 @@ sub selectbrew {
       if ($su) {
           $tags_str = lc($su);
       }
-      my $tags_attr = $tags_str ? " tags='" . util::htmlesc($tags_str) . "'" : "";
+      my $tags_attr = "";
+      $tags_attr = " tags='" . util::htmlesc($tags_str) . "'" if ($tags_str);
       $opts .= "<div class='dropdown-item' id='$id' alc='$alc' " .
          "defprice='$defprice' defvol='$defvol' brewtype='$bt' barcode='$barcode' seenat='$seenat'$tags_attr>$disp</div>\n";
     }

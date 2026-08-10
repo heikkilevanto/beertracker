@@ -217,7 +217,8 @@ sub collect_ids {
       WHERE Username=? AND strftime('%Y-%m-%d', Timestamp, '-06:00') BETWEEN ? AND ?
   ", $export_username, $datefrom, $dateto);
   $ids{glasses} = \@glasses_ids;
-  my $glasses_list = @glasses_ids ? join(",", @glasses_ids) : "NULL";
+  my $glasses_list = "NULL";
+  $glasses_list = join(",", @glasses_ids) if (@glasses_ids);
 
   # Comments --- by owner and date range
   my @comment_ids = db::queryrecordarray($c, "
@@ -225,7 +226,8 @@ sub collect_ids {
       WHERE Username=? AND strftime('%Y-%m-%d', Ts, '-06:00') BETWEEN ? AND ?
   ", $export_username, $datefrom, $dateto);
   $ids{comments} = \@comment_ids;
-  my $comment_list = @comment_ids ? join(",", @comment_ids) : "NULL";
+  my $comment_list = "NULL";
+  $comment_list = join(",", @comment_ids) if (@comment_ids);
 
   # Photos --- by uploader and date range
   my @photo_ids = db::queryrecordarray($c, "
@@ -253,7 +255,8 @@ sub collect_ids {
     for my $id (@comment_brew_ids) {
       push @brew_ids, $id unless $brew_seen{$id}++;
     }
-    my $brew_list = @brew_ids ? join(",", @brew_ids) : "NULL";
+    my $brew_list = "NULL";
+    $brew_list = join(",", @brew_ids) if (@brew_ids);
 
     # Locations from glasses, comments, and brews.ProducerLocation
     @loc_ids = db::queryrecordarray($c,

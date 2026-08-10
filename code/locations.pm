@@ -580,10 +580,14 @@ sub selectlocation {
       if ($lat && $lon) {
         $dist = "<span lat=$lat lon=$lon style='pointer-events:none; font-size: xx-small;'> ??? </span>";
       }
-      my $substtr = $subtype ? "locsubtype='$subtype'" : "";
-      my $tags_attr    = $tags    ? " tags='"    . util::htmlesc($tags)    . "'" : "";
-      my $country_attr = $country ? " country='" . util::htmlesc($country) . "'" : "";
-      my $region_attr  = $region  ? " region='"  . util::htmlesc($region)  . "'" : "";
+      my $substtr = "";
+      $substtr = "locsubtype='$subtype'" if ($subtype);
+      my $tags_attr = "";
+      $tags_attr = " tags='" . util::htmlesc($tags) . "'" if ($tags);
+      my $country_attr = "";
+      $country_attr = " country='" . util::htmlesc($country) . "'" if ($country);
+      my $region_attr = "";
+      $region_attr = " region='" . util::htmlesc($region) . "'" if ($region);
       $opts .= "      <div class='dropdown-item' id='$id' $substtr$tags_attr$country_attr$region_attr>$name $type $dist</div>\n";
     }
     cache::set($c, $cache_key, $opts);

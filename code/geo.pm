@@ -74,7 +74,8 @@ sub geoInput {
   $s .= "<br>";
   $s .= "<input name='$lonname' id='$lonname' value='$lon' $clr $disabled />\n";
   $s .= "<br>";
-  my $hiddenclass = $disabled ? "class='geo-edit-links' hidden" : "class='geo-edit-links'";
+  my $hiddenclass = "class='geo-edit-links'";
+  $hiddenclass = "class='geo-edit-links' hidden" if ($disabled);
   $s .= "<span onclick='geoclear(\"$inputprefix\")' $hiddenclass>&nbsp; (Clear)</span>\n";
   $s .= "<span onclick='geohere(\"$inputprefix\")' $hiddenclass>&nbsp; (Here)</span>\n";
   $s .= "<script> geodist('$inputprefix');</script>\n";

@@ -67,7 +67,8 @@ sub imagetag {
   }
   my $w    = $imagesizes{$width};
   my $href = $link_url || $orig;
-  my $tgt  = $link_url ? "" : " target='_blank'";
+  my $tgt  = " target='_blank'";
+  $tgt = "" if ($link_url);
   my $itag = "<img src='$fn' width='$w' style='vertical-align:top' />";
   my $tag  = "<a href='$href'$tgt style='margin-right:6px; margin-bottom:6px; display:inline-block'>$itag</a>\n";
   return $tag;
@@ -177,7 +178,8 @@ sub photo_form {
   my $pub_default = $opts{public_default} // 0;
   my $return_url  = $opts{return_url}     // "$c->{url}?o=$c->{op}";
   my $fid         = "photoform_${entity_type}_${entity_id}";
-  my $pub_val     = $pub_default ? '1' : '0';
+  my $pub_val     = '0';
+  $pub_val = '1' if ($pub_default);
 
   my $s = '';
   # The trigger link directly clicks the hidden file input.
@@ -261,7 +263,8 @@ sub post_photo {
       }
     } else {
       my $caption  = util::param($c, 'caption')  || undef;
-      my $ispublic = util::param($c, 'public') ? 1 : 0;
+      my $ispublic = 0;
+      $ispublic = 1 if (util::param($c, 'public'));
       db::execute($c,
         "UPDATE photos SET Caption = ?, Public = ? WHERE Id = ?",
         $caption, $ispublic, $photo_id);
@@ -273,7 +276,8 @@ sub post_photo {
 
   # --- New upload path ---
   my $caption  = util::param($c, 'caption') || undef;
-  my $ispublic = util::param($c, 'public') ? 1 : 0;
+  my $ispublic = 0;
+  $ispublic = 1 if (util::param($c, 'public'));
   $return_url  = $c->{cgi}->param('return_url') || "$c->{url}?o=$c->{op}";
 
   # Determine which entity type/id was submitted
@@ -556,7 +560,8 @@ sub editphoto {
 
   my $return_url  = "$c->{url}?o=Photos";
   my $caption     = util::htmlesc($p->{Caption} // '');
-  my $pub_checked = $p->{Public}  ? ' checked' : '';
+  my $pub_checked = '';
+  $pub_checked = ' checked' if ($p->{Public});
 
   # Entity summary — fetch human-readable details for each attached entity
   my $attached_str = photo_attached_str($c, $p) || 'none';

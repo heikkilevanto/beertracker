@@ -59,7 +59,8 @@ sub histogram_form {
     my $brews_sth = db::query($c, $sql, $c->{username});
     my $brew_opts = "<div class='dropdown-item' id=''>(all)</div>\n";
     $brew_opts .= "<div class='dropdown-item' id='non_empty'>(Non-empty)</div>\n";
-    my $brew_selname = ($brew_type eq '') ? '(all)' : $brew_type;
+    my $brew_selname = $brew_type;
+    $brew_selname = '(all)' if ($brew_type eq '');
     $brew_selname = '(Non-empty)' if ($brew_type eq 'non_empty');
     while (my $v = $brews_sth->fetchrow_array) {
         $brew_opts .= "<div class='dropdown-item' id='$v'>$v</div>\n";
@@ -172,7 +173,8 @@ sub chart_gnuplot {
         or util::error("Could not open $datafile: $!");
     for my $i (1..9) {
         my $cnt = $rows->[$i] || 0;
-        my $plotcnt = $cnt > 0 ? $cnt : 0.001;  # avoid degenerate zero-width box
+        my $plotcnt = 0.001;
+        $plotcnt = $cnt if ($cnt > 0);
         print $fh "$i $plotcnt\n";
     }
     close $fh;
@@ -282,9 +284,12 @@ sub top_rated_glasses {
     my $maxl   = util::param($c, "maxl")   || 20;
     my $bottom = util::param($c, "bottom") || 0;
 
-    my $sort_dir    = $bottom ? "ASC" : "DESC";
-    my $inner_sort  = $bottom ? "ASC" : "DESC";
-    my $heading     = $bottom ? "Bottom Rated Glasses" : "Top Rated Glasses";
+    my $sort_dir    = "DESC";
+    $sort_dir = "ASC" if ($bottom);
+    my $inner_sort  = "DESC";
+    $inner_sort = "ASC" if ($bottom);
+    my $heading     = "Top Rated Glasses";
+    $heading = "Bottom Rated Glasses" if ($bottom);
 
     my $sql = qq{
         SELECT ranked.Id, ranked.Brew, ranked.Timestamp, ranked.Location,
@@ -439,12 +444,15 @@ sub top_rated_glasses {
     for my $n (10, 20, 50, 100, 200) {
       my $url = "$c->{url}?o=$c->{op}&maxl=$n$filter_params";
       $url .= "&bottom=1" if $bottom;
-      my $label = $n == $maxl ? "<b>$n</b>" : $n;
+      my $label = $n;
+      $label = "<b>$n</b>" if ($n == $maxl);
       $html .= "<a href='$url'><span>$label</span></a>\n";
     }
     my $toggle_url = "$c->{url}?o=$c->{op}&maxl=$maxl$filter_params";
     $toggle_url .= "&bottom=1" unless $bottom;
-    $html .= "| <a href='$toggle_url'><span>" . ($bottom ? "top" : "bottom") . "</span></a>\n";
+    my $toggle_label = "bottom";
+    $toggle_label = "top" if ($bottom);
+    $html .= "| <a href='$toggle_url'><span>$toggle_label</span></a>\n";
     $html .= "</span><br>&nbsp;<br>\n";
 
     return $html;

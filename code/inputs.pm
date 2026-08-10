@@ -35,11 +35,15 @@ sub dropdown {
   my $tablename      = $opt->{table}      || "";
   my $newfieldprefix = $opt->{newfield}   || "";
   my $skipnewfields  = $opt->{skip}       || "";
-  my $disabled       = $opt->{disabled}   ? "disabled" : "";
-  my $enablescan     = $opt->{scan}       ? "scan"     : "";
-  my $multi          = $opt->{multi}      ? "multi"    : "";
+  my $disabled       = "";
+  $disabled = "disabled" if ($opt->{disabled});
+  my $enablescan     = "";
+  $enablescan = "scan" if ($opt->{scan});
+  my $multi          = "";
+  $multi = "multi" if ($opt->{multi});
   my $prechips       = $opt->{prechips}   || "";
-  my $simplenew      = $opt->{simplenew}  ? "simplenew": "";
+  my $simplenew      = "";
+  $simplenew = "simplenew" if ($opt->{simplenew});
   my $extraattr      = $opt->{extraattr}  || "";
   my $newdefaults    = $opt->{defaults}   || {};
   my $required       = $opt->{required};
@@ -82,9 +86,12 @@ sub dropdown {
     $options = "<div class='dropdown-item' id='actions'>$actions</div>\n$options";
   }
 
-  my $multiattr    = $multi eq 'multi' ? " data-multi='1'" : "";
-  my $extraattrhtml = $extraattr ? " $extraattr" : "";
-  my $chipsdiv  = $multi eq 'multi' ? "<div class='dropdown-chips'>$prechips</div>\n  " : "";
+  my $multiattr    = "";
+  $multiattr = " data-multi='1'" if ($multi eq 'multi');
+  my $extraattrhtml = "";
+  $extraattrhtml = " $extraattr" if ($extraattr);
+  my $chipsdiv  = "";
+  $chipsdiv = "<div class='dropdown-chips'>$prechips</div>\n  " if ($multi eq 'multi');
   my $s = <<"HTML";
 <!-- DROPDOWN START: input='$inputname' -->
 <div id="dropdown-$inputname" class="dropdown"$multiattr$extraattrhtml>
@@ -274,17 +281,20 @@ sub inputform {
         # Special handling for barcode field - add scan link
         $form .= barcodeInput($c, $inpname, $rec->{$f}, $disabled );
       } elsif ( $f =~ /^Tags$/i && $available_tags_ref ) {
-        my $tag_val = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        my $tag_val = "";
+        $tag_val = $rec->{$f} if ($rec && defined($rec->{$f}));
         $form .= tagsinput($c, $tag_val, $available_tags_ref, $disabled, $inpname);
       } elsif ( $f =~ /^Country$/i ) {
         my $cr = locations::distinct_countries_and_regions($c);
         my $opts = "";
         for my $country (@{$cr->{countries}}) {
           my $esc    = util::htmlesc($country);
-          my $suffix = exists $util::COUNTRY_CODES{$country} ? " [$util::COUNTRY_CODES{$country}]" : "";
+          my $suffix = "";
+          $suffix = " [$util::COUNTRY_CODES{$country}]" if (exists $util::COUNTRY_CODES{$country});
           $opts .= "  <div class='dropdown-item' id='$esc'>$esc$suffix</div>\n";
         }
-        my $curval = ($rec && defined($rec->{$f})) ? util::htmlesc($rec->{$f}) : "";
+        my $curval = "";
+        $curval = util::htmlesc($rec->{$f}) if ($rec && defined($rec->{$f}));
         $form .= "<td>\n";
         $form .= dropdown($c, $inpname, $curval, $curval, $opts, { disabled => $disabled, simplenew => 1 });
       } elsif ( $f =~ /^Region$/i ) {
@@ -295,36 +305,43 @@ sub inputform {
           my $rr = util::htmlesc($r->{region});
           $opts .= "  <div class='dropdown-item' id='$rr' regioncountry='$rc'>$rr</div>\n";
         }
-        my $curval = ($rec && defined($rec->{$f})) ? util::htmlesc($rec->{$f}) : "";
+        my $curval = "";
+        $curval = util::htmlesc($rec->{$f}) if ($rec && defined($rec->{$f}));
         my $country_input = util::htmlesc($inputprefix . "Country");
         $form .= "<td>\n";
         $form .= dropdown($c, $inpname, $curval, $curval, $opts,
                           { disabled => $disabled, simplenew => 1, extraattr => "data-country-input='$country_input'" });
       } elsif ( $f =~ /^(Website|UntappdLink|SearchLink|DetailsLink)$/i ) {
-        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        my $curval = "";
+        $curval = $rec->{$f} if ($rec && defined($rec->{$f}));
         my $esc    = util::htmlesc($curval);
         # Always render an <input> so enableEditing() can enable it.
         # Show a link-preview icon next to the field when there is a URL.
-        my $display = $curval ? "inline" : "none";
+        my $display = "none";
+        $display = "inline" if ($curval);
         $form .= "<td>\n";
         $form .= "<input name='$inpname' value='$esc' $clr $disabled/>\n";
         $form .= "<a id='lnk-$inpname' href='$esc' target='_blank'" .
                  " class='url-preview' style='display:$display'><span>&#x1F517;</span></a>\n";
         $form .= $separatortag;
       } elsif ( $f =~ /^BrewType$/i && $table eq "BREWS" ) {
-        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        my $curval = "";
+        $curval = $rec->{$f} if ($rec && defined($rec->{$f}));
         $form .= "<td>\n";
         $form .= brews::selectbrewtype_dropdown($c, $curval, $disabled);
       } elsif ( $f =~ /^SubType$/i && $table eq "BREWS" ) {
-        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        my $curval = "";
+        $curval = $rec->{$f} if ($rec && defined($rec->{$f}));
         $form .= "<td>\n";
         $form .= brews::selectbrewsubtype_dropdown($c, $curval, $disabled);
       } elsif ( $f =~ /^LocType$/i && $table eq "LOCATIONS" ) {
-        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        my $curval = "";
+        $curval = $rec->{$f} if ($rec && defined($rec->{$f}));
         $form .= "<td>\n";
         $form .= locations::selectloctype_dropdown($c, $curval, $disabled, $inputprefix);
       } elsif ( $f =~ /^LocSubType$/i && $table eq "LOCATIONS" ) {
-        my $curval = ($rec && defined($rec->{$f})) ? $rec->{$f} : "";
+        my $curval = "";
+        $curval = $rec->{$f} if ($rec && defined($rec->{$f}));
         $form .= "<td>\n";
         $form .= locations::selectlocsubtype_dropdown($c, $curval, $disabled, $inputprefix);
       } else {
@@ -369,8 +386,10 @@ sub tagsinput {
   my $fieldname = shift || "Tags";
 
   my @current_tags   = grep { $_ } split /\s+/, $current;
-  my $remove_hidden  = $disabled ? " hidden" : "";
-  my $avail_hidden   = $disabled ? " hidden" : "";
+  my $remove_hidden  = "";
+  $remove_hidden = " hidden" if ($disabled);
+  my $avail_hidden   = "";
+  $avail_hidden = " hidden" if ($disabled);
 
   # Render current tags as chips
   my $chips = "";
@@ -394,7 +413,8 @@ sub tagsinput {
     my $avail_count = 0;
     foreach my $tag (@$available) {
       my $esc  = util::htmlesc($tag);
-      my $used = $current_set{lc($tag)} ? " used" : "";
+      my $used = "";
+      $used = " used" if ($current_set{lc($tag)});
       $avail_html .= "<span class='tag-available-chip$used' data-tag='$esc'>$esc</span>\n";
       $avail_count++;
       $avail_html .= "<span class='tag-line-break'></span>\n" if ($avail_count % 5 == 0);
@@ -433,7 +453,8 @@ sub barcodeInput {
   $s .= "<td>\n";
   $s .= "<input name='$fieldname' id='$fieldname' value='$value' $clr $disabled />\n";
   $s .= "<br>";
-  my $hiddenclass = $disabled ? "class='barcode-scan-link' hidden" : "class='barcode-scan-link'";
+  my $hiddenclass = "class='barcode-scan-link'";
+  $hiddenclass = "class='barcode-scan-link' hidden" if ($disabled);
   $s .= "<span onclick='startBarcodeScanning(\"$fieldname\")' $hiddenclass>&nbsp; (Scan)</span>\n";
   return $s;
 } # barcodeInput

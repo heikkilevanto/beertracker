@@ -145,7 +145,8 @@ sub user_in_htpasswd {
   my ($username, $htpasswd) = @_;
   return undef unless -f $htpasswd;
   my $file = Authen::Htpasswd->new($htpasswd);
-  return $file->lookup_user($username) ? 1 : undef;
+  if ($file->lookup_user($username)) { return 1; }
+  return undef;
 } # user_in_htpasswd
 
 
@@ -202,7 +203,8 @@ sub validate_htpasswd {
   my $file = Authen::Htpasswd->new($htpasswd);
   my $user = $file->lookup_user($username);
   return undef unless $user;
-  return $user->check_password($password) ? 1 : undef;
+  if ($user->check_password($password)) { return 1; }
+  return undef;
 } # validate_htpasswd
 
 
