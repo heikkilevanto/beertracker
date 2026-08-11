@@ -151,7 +151,7 @@ Added `} # function_name` closing comments to `db.pm` (9 functions) and `graph.p
 | 7 | Standardize SQL keyword case (P1) | 60-120 min | Low |
 | 8 | Replace direct DBI calls with helpers (P2) | 60-90 min | Medium |
 | 9 | Extract duplicated queries/formatting (P3) | 90-120 min | Medium |
-| 10 | Add comments to FastCGI error handling (P0 — done) | 5 min | Low |
+| 10 | Add comments to FastCGI error handling (P0 — **done**) | 5 min | Low |
 
 ## Notes
 - No automated tests exist. Must verify manually under Apache after each change.
