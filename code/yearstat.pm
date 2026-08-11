@@ -252,12 +252,12 @@ sub yearsummary {
   }
   else {
     my $sqly =
-        "select distinct strftime('%Y',Timestamp, '-06:00') as yy "
-      . " from glasses "
-      . " where Username = ? "
-      . " and Brew is not null "
-      . " and strftime('%Y',Timestamp, '-06:00') is not null "
-      . " order by yy desc";
+        "SELECT DISTINCT strftime('%Y',Timestamp, '-06:00') AS yy "
+      . " FROM glasses "
+      . " WHERE Username = ? "
+      . " AND Brew IS NOT NULL "
+      . " AND strftime('%Y',Timestamp, '-06:00') IS NOT NULL "
+      . " ORDER BY yy DESC";
     my $years_ref =
       $c->{dbh}->selectcol_arrayref( $sqly, undef, $c->{username} );
     @years = @$years_ref;
@@ -267,14 +267,14 @@ sub yearsummary {
   my $firstyear = undef;
   my $firstday  = 1;
   ($firstyear) = $c->{dbh}->selectrow_array(
-    "select min(strftime('%Y', Timestamp, '-06:00')) from glasses"
-    . " where Username = ? and Brew is not null",
+    "SELECT min(strftime('%Y', Timestamp, '-06:00')) FROM glasses"
+    . " WHERE Username = ? AND Brew IS NOT NULL",
     undef, $c->{username});
   if ($firstyear) {
     ($firstday) = $c->{dbh}->selectrow_array(
-      "select min(cast(strftime('%j', Timestamp, '-06:00') as integer))"
-      . " from glasses where Username = ? and Brew is not null"
-      . " and strftime('%Y', Timestamp, '-06:00') = ?",
+      "SELECT min(cast(strftime('%j', Timestamp, '-06:00') AS integer))"
+      . " FROM glasses WHERE Username = ? AND Brew IS NOT NULL"
+      . " AND strftime('%Y', Timestamp, '-06:00') = ?",
       undef, $c->{username}, $firstyear);
     $firstday = 1 unless $firstday && $firstday > 0;
   }
@@ -284,9 +284,9 @@ sub yearsummary {
   my $lastday = 0;
   if ($sofar) {
     ($lastday) = $c->{dbh}->selectrow_array(
-      "select max(cast(strftime('%j', Timestamp, '-06:00') as integer))"
-      . " from glasses where Username = ? and Brew is not null"
-      . " and strftime('%Y', Timestamp, '-06:00') = ?",
+      "SELECT max(cast(strftime('%j', Timestamp, '-06:00') AS integer))"
+      . " FROM glasses WHERE Username = ? AND Brew IS NOT NULL"
+      . " AND strftime('%Y', Timestamp, '-06:00') = ?",
       undef, $c->{username}, util::datestr("%Y"));
     $lastday = 0 unless $lastday && $lastday > 0;
   }
@@ -299,25 +299,25 @@ sub yearsummary {
   }
 
   my $sql = "
-    select
-      locations.Name as name,
+    SELECT
+      locations.Name AS name,
       sum(CASE WHEN glasses.BrewType = 'Adjustment'
                THEN glasses.Price
-               ELSE ABS(glasses.Price) END) as price,
-      sum(glasses.StDrinks) as drinks,
-      count(distinct(strftime('%Y-%m-%d',glasses.timestamp, '-06:00'))) as visits
-    from glasses
-    left join locations on glasses.Location = locations.Id
-    where strftime('%Y', glasses.Timestamp, '-06:00') = ?
-    and glasses.Username = ?
-    and (glasses.Brew is not null or glasses.BrewType = 'Adjustment')
-    and strftime('%Y', glasses.Timestamp, '-06:00') is not null
-    group by name ";
+               ELSE ABS(glasses.Price) END) AS price,
+      sum(glasses.StDrinks) AS drinks,
+      count(distinct(strftime('%Y-%m-%d',glasses.timestamp, '-06:00'))) AS visits
+    FROM glasses
+    LEFT JOIN locations ON glasses.Location = locations.Id
+    WHERE strftime('%Y', glasses.Timestamp, '-06:00') = ?
+    AND glasses.Username = ?
+    AND (glasses.Brew IS NOT NULL OR glasses.BrewType = 'Adjustment')
+    AND strftime('%Y', glasses.Timestamp, '-06:00') IS NOT NULL
+    GROUP BY name ";
   if ($sortdr) {
-    $sql .= "order by drinks desc, name COLLATE NOCASE";
+    $sql .= "ORDER BY drinks DESC, name COLLATE NOCASE";
   }
   else {
-    $sql .= "order by price desc, name COLLATE NOCASE";
+    $sql .= "ORDER BY price DESC, name COLLATE NOCASE";
   }
   print { $c->{log} } "u='$c->{username}' y=" . join( '-', @years ) . " $sql \n";
   my $sth = $c->{dbh}->prepare($sql);

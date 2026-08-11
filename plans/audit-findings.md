@@ -75,14 +75,14 @@ POST handlers are wrapped in `eval { ... }`. On error, `util::error()` is called
 - `util.pm:64` — ternary inside `map { ... }` closure
 - `yearstat.pm:37-39` — multi-line ternary for SQL expression
 
-### P1: SQL keyword capitalization inconsistency
+### P1: SQL keyword capitalization inconsistency (done)
 **Files:** `db.pm`, `glasses.pm`, `brews.pm`, `locations.pm`, `comments.pm`, many others
 
 Guidelines say use uppercase `SELECT`, `INSERT`, `UPDATE`. Found mixed case:
 - `db.pm:84-88`: `select ... from ... where` (lowercase) with `WHERE` later in same query.
 - Many inline queries in other modules use lowercase.
 
-**Fix approach:** Standardize on uppercase SQL keywords across all modules. Can be done with a project-wide search/sed pass or editor macro.
+**Fix applied:** Standardized on uppercase SQL keywords across all modules in `code/*.pm` (6 commits). Full worklist, rules and manual test plan in `plans/sql-casing.md`. Manual per-statement editing, not sed. Scope limited to `code/*.pm` (excluded `tools/dbchange.sh`, `scripts/`, `doc/db.schema`, and SQL examples in comments). Aggregates/functions (`count`, `sum`, `min`, `max`, `strftime`, `julianday`, etc.) and table/column name case intentionally left as-is. All modules pass `perl -c`; GET smoke tests for all routes pass under Apache with no SQL errors; POST write paths verified manually in browser.
 
 ### P2: Dead code (never called)
 - **`comments::ratingline`** — `comments.pm:20-26`
@@ -148,7 +148,7 @@ Added `} # function_name` closing comments to `db.pm` (9 functions) and `graph.p
 | 3 | Fix `uri_escape` → `uri_escape_utf8` in `yearstat.pm` (P3 — **done**) | 5 min | Low |
 | 4 | Add `use open ':encoding(UTF-8)'` + fix closing comments (P3 — **done**) | 10 min | Low |
 | 5 | Replace `?:` ternary operators — Category A first (P1 — **done**) | 60-90 min | Medium |
-| 7 | Standardize SQL keyword case (P1) | 60-120 min | Low |
+| 7 | Standardize SQL keyword case (P1 — **done**; see `plans/sql-casing.md`) | 60-120 min | Low |
 | 8 | Replace direct DBI calls with helpers (P2) | 60-90 min | Medium |
 | 9 | Extract duplicated queries/formatting (P3) | 90-120 min | Medium |
 | 10 | Add comments to FastCGI error handling (P0 — **done**) | 5 min | Low |

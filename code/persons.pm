@@ -141,17 +141,17 @@ sub selectperson {
   my $multi    = shift || "";  # "multi" for chip multi-select
   my $prechips = shift || "";  # pre-rendered chip HTML for edit mode
   my $sql = "
-  select
+  SELECT
     PERSONS.Id,
     PERSONS.Name,
-    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) as last,
+    strftime ( '%Y-%m-%d %w', max(GLASSES.Timestamp), '-06:00' ) AS last,
     PERSONS.Tags
-  from PERSONS
-  left join comment_persons cp on cp.Person = Persons.Id
-  left join COMMENTS on COMMENTS.Id = cp.Comment
-  left join GLASSES on GLASSES.Id = COMMENTS.Glass
-  group by Persons.id
-  order by GLASSES.Timestamp DESC
+  FROM PERSONS
+  LEFT JOIN comment_persons cp ON cp.Person = Persons.Id
+  LEFT JOIN COMMENTS ON COMMENTS.Id = cp.Comment
+  LEFT JOIN GLASSES ON GLASSES.Id = COMMENTS.Glass
+  GROUP BY Persons.id
+  ORDER BY GLASSES.Timestamp DESC
   ";
   my $list_sth = db::query($c, $sql);
 

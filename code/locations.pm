@@ -69,22 +69,22 @@ sub listlocations {
     FROM locations
     LEFT JOIN glasses ON glasses.Location = locations.Id
     LEFT JOIN (
-      select
+      SELECT
         l.id,
-        count(merged.Rating)   as rating_count,
-        avg(merged.Rating)     as rating_average,
-        count(merged.Comment)  as comment_count
-      from locations l
-      left join (
-        select g.Location as loc_id, c.Rating, c.Comment
-          from comments c join glasses g on g.Id = c.Glass
-          where COALESCE(g.Username, c.Username) = $username
-        union all
-        select c.Location as loc_id, c.Rating, c.Comment
-          from comments c where c.Location is not null and c.Glass is null
-          and c.Username = $username
-      ) merged on merged.loc_id = l.Id
-      group by l.Id
+        count(merged.Rating)   AS rating_count,
+        avg(merged.Rating)     AS rating_average,
+        count(merged.Comment)  AS comment_count
+      FROM locations l
+      LEFT JOIN (
+        SELECT g.Location AS loc_id, c.Rating, c.Comment
+          FROM comments c JOIN glasses g ON g.Id = c.Glass
+          WHERE COALESCE(g.Username, c.Username) = $username
+        UNION ALL
+        SELECT c.Location AS loc_id, c.Rating, c.Comment
+          FROM comments c WHERE c.Location IS NOT NULL AND c.Glass IS NULL
+          AND c.Username = $username
+      ) merged ON merged.loc_id = l.Id
+      GROUP BY l.Id
     ) r ON r.id = locations.Id
     GROUP BY locations.Id},
       $sort,
@@ -110,14 +110,14 @@ sub locationvisits {
   my $locrec = shift;
   my @monthnames = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
   my $listsql = q{
-    select
-       strftime ('%Y-%m', timestamp,'-06:00') as month,
-       count( distinct( strftime( '%d', timestamp, '-06:00' ) ) ) as daycount
-    from glasses
-    where Location = ?
-      and username = ?
-    group by month
-    order by timestamp
+    SELECT
+       strftime ('%Y-%m', timestamp,'-06:00') AS month,
+       count( distinct( strftime( '%d', timestamp, '-06:00' ) ) ) AS daycount
+    FROM glasses
+    WHERE Location = ?
+      AND username = ?
+    GROUP BY month
+    ORDER BY timestamp
   };
   my $sth = db::query($c, $listsql, $locrec->{Id}, $c->{username} );
   my $currentyear = "";
@@ -162,10 +162,10 @@ sub producerbrews {
   my $oldop = $c->{op};
   $c->{op} = "Brew";  # Make name links to point to brews, not locations
   print listrecords::listrecords($c,
-      q{with users as (
-        select distinct Username from glasses
+      q{WITH users AS (
+        SELECT DISTINCT Username FROM glasses
       )
-      select
+      SELECT
         brews.Id AS "IdClr_A",
         brews.Name AS "Name_A_C2_cont",
         '' AS TR1,
@@ -174,14 +174,14 @@ sub producerbrews {
         r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_A",
         strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
           strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
-        ploc.Name as xProducer,
-        users.Username as xUsername
-      from brews
-      cross join users
-      left join locations ploc on ploc.id = brews.ProducerLocation
-      left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
-      left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
-      group by brews.id, users.Username},
+        ploc.Name AS xProducer,
+        users.Username AS xUsername
+      FROM brews
+      CROSS JOIN users
+      LEFT JOIN locations ploc ON ploc.id = brews.ProducerLocation
+      LEFT JOIN glasses ON glasses.Brew = brews.Id AND glasses.Username = users.Username
+      LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
+      GROUP BY brews.id, users.Username},
       "Last-",
       { where => "xProducer = ? AND xUsername = ?",
         params => [$p->{Name}, $c->{username}],
@@ -215,19 +215,19 @@ sub locationdeduplist {
   $extra->{lon} = $loc->{Lon};
   $extra->{refname} = $loc->{Name};
   print listrecords::listrecords($c,
-      q{select
+      q{SELECT
         locations.Id AS "Id_A",
         locations.Name,
-        '?' as Sim,
+        '?' AS Sim,
         locations.lat || ' ' || locations.lon AS Geo,
         '' AS TR1,
-        'Chk' as Chk,
-        locations.LocType || ', ' || locations.LocSubType as Type,
+        'Chk' AS Chk,
+        locations.LocType || ', ' || locations.LocSubType AS Type,
         strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-          strftime('%H:%M', max(glasses.Timestamp)) as "Last_C2"
-      from locations
-      left join glasses on glasses.Location = locations.Id
-      group by locations.Id},
+          strftime('%H:%M', max(glasses.Timestamp)) AS "Last_C2"
+      FROM locations
+      LEFT JOIN glasses ON glasses.Location = locations.Id
+      GROUP BY locations.Id},
       $sort,
       { where => "Id_A <> ?", extraparams => $extra, params => $loc->{Id},
         browsersortcol => "Sim", title => "Similar locations",
@@ -248,7 +248,7 @@ sub selectloctype_dropdown {
   my $disabled = shift || "";
   my $inputprefix = shift || "";
   my $inputname = $inputprefix . "LocType";
-  my $sql = "select distinct LocType from locations where LocType is not null and LocType != '' order by LocType";
+  my $sql = "SELECT DISTINCT LocType FROM locations WHERE LocType IS NOT NULL AND LocType != '' ORDER BY LocType";
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $lt = $sth->fetchrow_array ) {
@@ -267,7 +267,7 @@ sub selectlocsubtype_dropdown {
   my $disabled = shift || "";
   my $inputprefix = shift || "";
   my $inputname = $inputprefix . "LocSubType";
-  my $sql = "select distinct LocType, LocSubType from locations where LocSubType is not null and LocSubType != '' order by LocType, LocSubType";
+  my $sql = "SELECT DISTINCT LocType, LocSubType FROM locations WHERE LocSubType IS NOT NULL AND LocSubType != '' ORDER BY LocType, LocSubType";
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $st = $sth->fetchrow_hashref ) {
@@ -295,7 +295,7 @@ sub editlocation {
     print "<b>Inserting a new location<br/>\n";
     $submit = "Insert";
   } else {
-    my $sql = "select * from Locations where id = ?";
+    my $sql = "SELECT * FROM Locations WHERE id = ?";
     $p = db::queryrecord($c, $sql, $c->{edit});
     util::error("Location #$c->{edit} not found") unless $p && $p->{Id};
     print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
@@ -457,19 +457,19 @@ sub deduplocations {
   foreach my $paramname ($c->{cgi}->param) {
     if ( $paramname =~ /^Chk(\d+)$/ ) {
       my $dup = $1;
-      my $sql = "UPDATE GLASSES set Location = ? where Location = ?  ";
+      my $sql = "UPDATE GLASSES SET Location = ? WHERE Location = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       my $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate Locations: Failed to update GLASSES") unless defined $rows;
       print { $c->{log} } "Updated $rows glasses from $dup to $id\n";
 
-      $sql = "UPDATE PERSONS set Location = ? where Location = ?  ";
+      $sql = "UPDATE PERSONS SET Location = ? WHERE Location = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate Locations: Failed to update PERSONS") unless defined $rows;
       print { $c->{log} } "Updated $rows persons from $dup to $id\n";
 
-      $sql = "UPDATE BREWS set ProducerLocation = ? where ProducerLocation = ?  ";
+      $sql = "UPDATE BREWS SET ProducerLocation = ? WHERE ProducerLocation = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate Locations: Failed to update BREWS") unless defined $rows;
@@ -537,12 +537,12 @@ sub selectlocation {
   my $skip = "Id";
   my $newfield = "newloc";
   if ( $prods eq "prod" ) {
-    $where = "where LOCATIONS.LocType = 'Producer' ";
+    $where = "WHERE LOCATIONS.LocType = 'Producer' ";
     $newfield = "newprod";
     $skip .= "|LocType|LocSubType";
   } elsif ( $prods eq "non" ) {
     # NOTE: Must handle NULL LocType — NULL <> 'Producer' is NULL (falsy).
-    $where = "where (LOCATIONS.LocType IS NULL OR LOCATIONS.LocType <> 'Producer') ";
+    $where = "WHERE (LOCATIONS.LocType IS NULL OR LOCATIONS.LocType <> 'Producer') ";
   }
   # The opts list is the expensive part. Cache per user and location filter type.
   my $cache_key = "selectlocation_opts:$c->{username}:$prods";
@@ -550,7 +550,7 @@ sub selectlocation {
 
   if ( !defined $opts ) {
     my $sql = "
-    select
+    SELECT
       LOCATIONS.Id,
       LOCATIONS.Name,
       LOCATIONS.LocType,
@@ -560,11 +560,11 @@ sub selectlocation {
       LOCATIONS.Tags,
       LOCATIONS.Country,
       LOCATIONS.Region
-    from LOCATIONS
-    left join GLASSES on GLASSES.Location = LOCATIONS.Id
+    FROM LOCATIONS
+    LEFT JOIN GLASSES ON GLASSES.Location = LOCATIONS.Id
     $where
-    group by LOCATIONS.id
-    order by max(GLASSES.Timestamp) DESC
+    GROUP BY LOCATIONS.id
+    ORDER BY max(GLASSES.Timestamp) DESC
     ";
     my $list_sth = db::query($c, $sql);
     $opts = "";

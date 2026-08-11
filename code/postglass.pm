@@ -29,8 +29,8 @@ sub postglass {
 
   if ( $sub eq "Del" ) {
     my $rec = db::getrecord($c, "GLASSES", $c->{edit});
-    my $sql = "delete from GLASSES
-      where id = ? and username = ?";
+    my $sql = "DELETE FROM GLASSES
+      WHERE id = ? AND username = ?";
     db::execute($c, $sql, $c->{edit}, $c->{username});
     my @cols = sort grep { defined $rec->{$_} } keys %$rec;
     my $collist = join(", ", @cols);
@@ -130,7 +130,7 @@ sub postglass {
   }
 
   if ( $sub eq "Save" ) {  # Update existing glass
-    my $sql = "update GLASSES set
+    my $sql = "UPDATE GLASSES SET
         TimeStamp = ?,
         BrewType = ?,
         SubType = ?,
@@ -142,7 +142,7 @@ sub postglass {
         StDrinks = ?,
         Note = ?,
         tap = ?
-      where id = ? and username = ?
+      WHERE id = ? AND username = ?
     ";
   db::execute($c, $sql,
     $glass->{Timestamp},
@@ -162,10 +162,10 @@ sub postglass {
   $c->{redirect_url} = "$c->{url}?o=$c->{op}&date=$effdate&ndays=1" if $effdate;
 
   } else { # Create a new glass
-    my $sql = "insert into GLASSES
+    my $sql = "INSERT INTO GLASSES
       ( Username, TimeStamp, BrewType, SubType,
         Location, Brew, Price, Volume, Alc, StDrinks, Note, Tap )
-      values ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ? )
+      VALUES ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ? )
       ";
     db::execute($c, $sql,
       $c->{username},
@@ -260,10 +260,10 @@ sub gettimestamp {
 
   # "L" in date or time means 5 minutes after the previous one
   if ( $d =~ /^L/i || $t =~ /^L/i ) {
-    my $sql = "select strftime('%Y-%m-%d %H:%M:%S', Timestamp, '+5 minutes') " .
-      "from GLASSES where username = ?  ".
-      "and strftime('%Y-%m-%d %H:%M:%S', Timestamp) is not null " .   # happens on bat timestamps
-      "order by Timestamp desc limit 1";
+    my $sql = "SELECT strftime('%Y-%m-%d %H:%M:%S', Timestamp, '+5 minutes') " .
+      "FROM GLASSES WHERE username = ?  ".
+      "AND strftime('%Y-%m-%d %H:%M:%S', Timestamp) IS NOT NULL " .   # happens on bat timestamps
+      "ORDER BY Timestamp DESC LIMIT 1";
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute( $c->{username} );
     my $newstamp = $sth->fetchrow_array;

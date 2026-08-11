@@ -45,17 +45,17 @@ sub histogram_form {
     my $loc_type  = $opts->{loc_type}  // '';
 
     # Get pulldown values for years
-    my $sql = "select
-      distinct strftime('%Y',Timestamp) as v
-      from glasses
-      where Username = ?
-      order by v desc";
+    my $sql = "SELECT
+      DISTINCT strftime('%Y',Timestamp) AS v
+      FROM glasses
+      WHERE Username = ?
+      ORDER BY v DESC";
     my $yearsel = db::querydropdown( $c, "year", $year, "(all)", $sql, $c->{username});
 
-    $sql = "select
-      distinct BrewType as v
-      from glasses where username = ?
-      order by timestamp desc";
+    $sql = "SELECT
+      DISTINCT BrewType AS v
+      FROM glasses WHERE username = ?
+      ORDER BY timestamp DESC";
     my $brews_sth = db::query($c, $sql, $c->{username});
     my $brew_opts = "<div class='dropdown-item' id=''>(all)</div>\n";
     $brew_opts .= "<div class='dropdown-item' id='non_empty'>(Non-empty)</div>\n";
@@ -69,12 +69,12 @@ sub histogram_form {
     $brews_sth->finish;
     my $brewsel = inputs::dropdown($c, 'brew_type', $brew_type, $brew_selname, $brew_opts);
 
-    $sql = "select
-      distinct LocType as v
-      from glasses, Locations
-      where username = ?
-      and Locations.Id = glasses.location
-      order by timestamp desc";
+    $sql = "SELECT
+      DISTINCT LocType AS v
+      FROM glasses, Locations
+      WHERE username = ?
+      AND Locations.Id = glasses.location
+      ORDER BY timestamp DESC";
     my $locsel = db::querydropdown( $c, "loc_type", $loc_type, "(all)", $sql, $c->{username});
 
     return qq{
@@ -112,7 +112,7 @@ sub histogram_data {
     my ($c, $filter) = @_;
 
     my $sql = qq{
-      SELECT comments.Rating as rating, COUNT(*) AS cnt
+      SELECT comments.Rating AS rating, COUNT(*) AS cnt
       FROM comments
       JOIN glasses ON comments.Glass = glasses.Id
       LEFT JOIN locations ON glasses.Location = locations.Id

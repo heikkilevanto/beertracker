@@ -23,44 +23,44 @@ sub glassquery {
   my $date = shift;
   $date .= " 9"; # fake a weekday number to get comparable effdate
   my $sql = q {
-    select
-      glasses.id as id,
-      strftime('%Y-%m-%d %w', timestamp, '-06:00') as effdate,
-      strftime('%H:%M', timestamp) as time,
-      timestamp as stamp,
-      glasses.price as price,
-      glasses.volume as vol,
-      glasses.alc as alc,
-      glasses.stdrinks as drinks,
-      glasses.note as note,
-      glasses.tap as tap,
-      location as loc,
-      glasses.Brewtype as brewtype,
-      glasses.Subtype as subtype,
-      brews.Id as brewid,
-      brews.Name as brewname,
-      brews.ShortName as shortname,
-      brews.IsGeneric as generic,
-      brews.DetailsLink as brewlink,
-      locations.name as producer,
-      locations.Id as prodid,
-      locations.SearchLink as prodsearchlink,
-      gloc.Name as locname,
-      gloc.Website as locwebsite,
-      gloc.UntappdLink as locutlink,
-      (select count(*) from comments where comments.glass = glasses.id) as comcount,
-      (select count(*) from photos where photos.Glass = glasses.id) as photocount,
+    SELECT
+      glasses.id AS id,
+      strftime('%Y-%m-%d %w', timestamp, '-06:00') AS effdate,
+      strftime('%H:%M', timestamp) AS time,
+      timestamp AS stamp,
+      glasses.price AS price,
+      glasses.volume AS vol,
+      glasses.alc AS alc,
+      glasses.stdrinks AS drinks,
+      glasses.note AS note,
+      glasses.tap AS tap,
+      location AS loc,
+      glasses.Brewtype AS brewtype,
+      glasses.Subtype AS subtype,
+      brews.Id AS brewid,
+      brews.Name AS brewname,
+      brews.ShortName AS shortname,
+      brews.IsGeneric AS generic,
+      brews.DetailsLink AS brewlink,
+      locations.name AS producer,
+      locations.Id AS prodid,
+      locations.SearchLink AS prodsearchlink,
+      gloc.Name AS locname,
+      gloc.Website AS locwebsite,
+      gloc.UntappdLink AS locutlink,
+      (SELECT count(*) FROM comments WHERE comments.glass = glasses.id) AS comcount,
+      (SELECT count(*) FROM photos WHERE photos.Glass = glasses.id) AS photocount,
       br.rating_count,
       br.average_rating,
       br.comment_count
-    from glasses
-    left join brews on brews.id = glasses.brew
-    left join locations on locations.id = brews.producerlocation
-    left join locations gloc on gloc.id = glasses.location
-    left join brew_ratings br on glasses.brew = br.brew AND br.Username = ?
-    where glasses.Username = ?
-      and effdate <= ?
-    order by timestamp desc
+    FROM glasses
+    LEFT JOIN brews ON brews.id = glasses.brew
+    LEFT JOIN locations ON locations.id = brews.producerlocation
+    LEFT JOIN locations gloc ON gloc.id = glasses.location
+    LEFT JOIN brew_ratings br ON glasses.brew = br.brew AND br.Username = ?
+    WHERE glasses.Username = ?
+      AND effdate <= ?
+    ORDER BY timestamp DESC
   };
   # TODO - Location stats?
   # TODO - Price guesses for various sizes? (Needed for copy buttons to different volumes)
@@ -129,16 +129,16 @@ sub bloodalc {
   my $cached = cache::get($c, $cache_key);
   return $cached if $cached;
   my $sql = q(
-    select
-      id as id,
-      stdrinks as drinks,
-      timestamp as stamp
-    from glasses
-    where strftime('%Y-%m-%d', timestamp, '-06:00') = ?
-      and username = ?
-      and stdrinks > 0
-      and volume > 0
-    order by timestamp desc
+    SELECT
+      id AS id,
+      stdrinks AS drinks,
+      timestamp AS stamp
+    FROM glasses
+    WHERE strftime('%Y-%m-%d', timestamp, '-06:00') = ?
+      AND username = ?
+      AND stdrinks > 0
+      AND volume > 0
+    ORDER BY timestamp DESC
   );
   my $get_sth = db::query($c, $sql, $effdate, $c->{username});
   my @glasses;
@@ -270,15 +270,15 @@ sub commentlines {
   my $rec = shift;
   my $html = "";
   if ( $rec->{comcount} ) {
-    my $sql = "select COMMENTS.*,
-      group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData,
-      (select count(*) from photos where photos.Comment = comments.Id) as photocount
-      from comments
-      left join comment_persons cp on cp.Comment = comments.Id
-      left join persons cp_persons on cp_persons.Id = cp.Person
-      where glass = ?
-      group by comments.Id
-      order by comments.Id"; # To keep the order consistent
+    my $sql = "SELECT COMMENTS.*,
+      group_concat(cp_persons.Name || '|' || cp.Person, ', ') AS PeopleData,
+      (SELECT count(*) FROM photos WHERE photos.Comment = comments.Id) AS photocount
+      FROM comments
+      LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+      LEFT JOIN persons cp_persons ON cp_persons.Id = cp.Person
+      WHERE glass = ?
+      GROUP BY comments.Id
+      ORDER BY comments.Id"; # To keep the order consistent
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($rec->{id});
     $html .= "<ul style='margin:0; padding-left:1.2em;'>\n";

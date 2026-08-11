@@ -42,10 +42,10 @@ sub listbrews {
     return;
   }
   print listrecords::listrecords($c,
-    q{with users as (
-      select distinct Username from glasses
+    q{WITH users AS (
+      SELECT DISTINCT Username FROM glasses
     )
-    select
+    SELECT
       brews.Id AS "Id_A_link=Brew",
       brews.Name AS "Name_A_cont",
       brews.BrewType || ', ' || brews.SubType AS "Type_A",
@@ -66,13 +66,13 @@ sub listbrews {
         strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
 
       users.Username AS xUsername
-    from brews
-    cross join users
-    left join locations ploc on ploc.Id = brews.ProducerLocation
-    left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
-    left join locations on locations.Id = glasses.Location
-    left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
-    group by brews.Id, users.Username
+    FROM brews
+    CROSS JOIN users
+    LEFT JOIN locations ploc ON ploc.Id = brews.ProducerLocation
+    LEFT JOIN glasses ON glasses.Brew = brews.Id AND glasses.Username = users.Username
+    LEFT JOIN locations ON locations.Id = glasses.Location
+    LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
+    GROUP BY brews.Id, users.Username
     ORDER BY "Last" DESC},
     undef,
     { where => "xUsername = ?", params => $c->{username}, title => "Brews" });
@@ -87,10 +87,10 @@ sub listbrewprices {
   my $brew = shift;
   print "<!-- listbrewprices -->\n";
   my $sql = "
-    SELECT * from LatestPrices
+    SELECT * FROM LatestPrices
     WHERE Brew = ?
       AND username = ?
-    ORDER by Timestamp DESC";
+    ORDER BY Timestamp DESC";
   my $sth = db::query($c, $sql, $brew->{Id}, $c->{username});
   print "<div onclick='toggleElement(this.nextElementSibling);'>";
   print "Latest prices for <b>$brew->{Name}</b> <br/>\n";
@@ -155,17 +155,17 @@ sub listbrewglasses {
   print "<!-- listbrewglasses -->\n";
   my $sql = "
     SELECT
-      COMMENTS.Id as Cid,
-      strftime('%Y-%m-%d', GLASSES.Timestamp,'-06:00') as Date,
-      strftime('%H:%M', GLASSES.Timestamp) as Time,
-      comments.Rating as Rating,
+      COMMENTS.Id AS Cid,
+      strftime('%Y-%m-%d', GLASSES.Timestamp,'-06:00') AS Date,
+      strftime('%H:%M', GLASSES.Timestamp) AS Time,
+      comments.Rating AS Rating,
       COMMENTS.Comment,
-      GLASSES.Id as Gid,
-      GLASSES.Brew as Brew,
+      GLASSES.Id AS Gid,
+      GLASSES.Brew AS Brew,
       GLASSES.Volume,
       GLASSES.Price,
-      LOCATIONS.Name as Loc,
-      LOCATIONS.Id as Lid
+      LOCATIONS.Name AS Loc,
+      LOCATIONS.Id AS Lid
       FROM GLASSES
       LEFT JOIN COMMENTS ON COMMENTS.Glass = GLASSES.Id
       LEFT JOIN LOCATIONS ON LOCATIONS.Id = GLASSES.Location
@@ -272,31 +272,31 @@ sub brewdeduplist {
   my $extra = {};
   $extra->{refname} = $brew->{Name};
   print listrecords::listrecords($c,
-      q{with users as (
-        select distinct Username from glasses
+      q{WITH users AS (
+        SELECT DISTINCT Username FROM glasses
       )
-      select
+      SELECT
         brews.Id AS "Id_A_link=Brew",
         brews.Name,
-        '?' as Sim,
-        r.rating_count || ';' || r.average_rating || ';' || r.comment_count as Stats,
-        brews.Alc as Alc,
+        '?' AS Sim,
+        r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS Stats,
+        brews.Alc AS Alc,
         brews.BrewType || ', ' || brews.Subtype AS "Type_A",
         '' AS TR1,
-        'Chk' as Chk,
-        ploc.Name as Producer,
-        count(glasses.Id) as Count,
+        'Chk' AS Chk,
+        ploc.Name AS Producer,
+        count(glasses.Id) AS Count,
         strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-          strftime('%H:%M', max(glasses.Timestamp)) as Last,
+          strftime('%H:%M', max(glasses.Timestamp)) AS Last,
         locations.Name AS "Location_C2",
-        users.Username as xUsername
-      from brews
-      cross join users
-      left join locations ploc on ploc.id = brews.ProducerLocation
-      left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
-      left join locations on locations.id = glasses.Location
-      left join brew_ratings r on r.Brew = brews.Id and r.Username = users.Username
-      group by brews.id, users.Username},
+        users.Username AS xUsername
+      FROM brews
+      CROSS JOIN users
+      LEFT JOIN locations ploc ON ploc.id = brews.ProducerLocation
+      LEFT JOIN glasses ON glasses.Brew = brews.Id AND glasses.Username = users.Username
+      LEFT JOIN locations ON locations.id = glasses.Location
+      LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
+      GROUP BY brews.id, users.Username},
       $sort,
       { where => qq{"Id_A_link=Brew" <> ? AND xUsername = ?},
         params => [$brew->{Id}, $c->{username}], extraparams => $extra,
@@ -315,7 +315,7 @@ sub selectbrewtype_dropdown {
   my $c = shift;
   my $selected = shift || "";
   my $disabled = shift || "";
-  my $sql = "select distinct BrewType from brews where BrewType is not null and BrewType != '' order by BrewType";
+  my $sql = "SELECT DISTINCT BrewType FROM brews WHERE BrewType IS NOT NULL AND BrewType != '' ORDER BY BrewType";
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $bt = $sth->fetchrow_array ) {
@@ -332,7 +332,7 @@ sub selectbrewsubtype_dropdown {
   my $c = shift;
   my $selected = shift || "";
   my $disabled = shift || "";
-  my $sql = "select distinct BrewType, SubType from brews where SubType is not null and SubType != '' order by BrewType, SubType";
+  my $sql = "SELECT DISTINCT BrewType, SubType FROM brews WHERE SubType IS NOT NULL AND SubType != '' ORDER BY BrewType, SubType";
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $st = $sth->fetchrow_hashref ) {
@@ -649,26 +649,26 @@ sub selectbrew {
 
   if ( !defined $opts ) {
     my $sql = "
-      select
+      SELECT
         BREWS.Id, BREWS.Brewtype, BREWS.SubType, Brews.Name,
         BREWS.IsGeneric,
-        Locations.Name as Producer,
+        Locations.Name AS Producer,
         BREWS.Alc,
         BREWS.DefPrice,
         BREWS.DefVol,
         BREWS.Barcode,
-        GROUP_CONCAT(DISTINCT SeenLocations.Name) as SeenAt,
+        GROUP_CONCAT(DISTINCT SeenLocations.Name) AS SeenAt,
         br.rating_count,
         br.average_rating,
         br.comment_count
-      from BREWS
-      left join GLASSES on GLASSES.Brew= BREWS.ID
-      left join LOCATIONS on LOCATIONS.Id = BREWS.ProducerLocation
-      left join LOCATIONS as SeenLocations on SeenLocations.Id = GLASSES.Location
-      left join (select brew, rating_count, average_rating, comment_count
-                 from brew_ratings where Username = ?) br on br.brew = BREWS.Id
-      group by BREWS.id
-      order by max(GLASSES.Timestamp) DESC
+      FROM BREWS
+      LEFT JOIN GLASSES ON GLASSES.Brew = BREWS.ID
+      LEFT JOIN LOCATIONS ON LOCATIONS.Id = BREWS.ProducerLocation
+      LEFT JOIN LOCATIONS AS SeenLocations ON SeenLocations.Id = GLASSES.Location
+      LEFT JOIN (SELECT brew, rating_count, average_rating, comment_count
+                 FROM brew_ratings WHERE Username = ?) br ON br.brew = BREWS.Id
+      GROUP BY BREWS.id
+      ORDER BY max(GLASSES.Timestamp) DESC
       ";
     my $list_sth = db::query($c, $sql, $c->{username});
 
@@ -731,31 +731,31 @@ sub dedupbrews {
   foreach my $paramname ($c->{cgi}->param) {
     if ( $paramname =~ /^Chk(\d+)$/ ) {
       my $dup = $1;
-      my $sql = "UPDATE GLASSES set Brew = ? where Brew = ?  ";
+      my $sql = "UPDATE GLASSES SET Brew = ? WHERE Brew = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       my $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update glasses") unless $rows;
       print { $c->{log} } "Updated $rows glasses from $dup to $id\n";
 
-      $sql = "UPDATE COMMENTS set Brew = ? where Brew = ?  ";
+      $sql = "UPDATE COMMENTS SET Brew = ? WHERE Brew = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update comments") unless defined $rows;
       print { $c->{log} } "Updated $rows comments from $dup to $id\n";
 
-      $sql = "UPDATE TAP_BEERS set Brew = ? where Brew = ?  ";
+      $sql = "UPDATE TAP_BEERS SET Brew = ? WHERE Brew = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update tap_beers") unless defined $rows;
       print { $c->{log} } "Updated $rows tap_beers from $dup to $id\n";
 
-      $sql = "UPDATE PHOTOS set Brew = ? where Brew = ?  ";
+      $sql = "UPDATE PHOTOS SET Brew = ? WHERE Brew = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update photos") unless defined $rows;
       print { $c->{log} } "Updated $rows photos from $dup to $id\n";
 
-      $sql = "UPDATE BREWS set Parent = ? where Parent = ?  ";
+      $sql = "UPDATE BREWS SET Parent = ? WHERE Parent = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate brews: Failed to update child Parent pointers") unless defined $rows;

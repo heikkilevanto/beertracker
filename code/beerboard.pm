@@ -242,10 +242,10 @@ sub render_location_selector {
 sub get_location_param {
   my $c = shift;
   # Get the last used location for this user
-  my $sql = "select * from glassrec " .
-            "where username = ? " .
-            "order by stamp desc ".
-            "limit 1";
+  my $sql = "SELECT * FROM glassrec " .
+            "WHERE username = ? " .
+            "ORDER BY stamp DESC ".
+            "LIMIT 1";
   my $foundrec = db::queryrecord($c, $sql, $c->{username});
 
   my $locparam = util::param($c,"loc") || $foundrec->{loc} || "";
@@ -263,7 +263,7 @@ sub load_beerlist_from_db {
 
   # Get the latest scrape marker
   my ($last_epoch) = db::queryarray($c,
-    "SELECT strftime('%s', LastSeen) as last_epoch FROM tap_beers " .
+    "SELECT strftime('%s', LastSeen) AS last_epoch FROM tap_beers " .
     "WHERE Location = ? AND Tap IS NULL ORDER BY LastSeen DESC LIMIT 1",
     $loc_id);
 
@@ -280,9 +280,9 @@ sub load_beerlist_from_db {
       tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
       b.DefPrice, b.DefVol,
       ur.rating_count, ur.average_rating, ur.comment_count,
-      strftime('%Y-%m-%d', tb.FirstSeen) as first_seen_date,
-      strftime('%H:%M', tb.FirstSeen) as first_seen_time,
-      strftime('%s', tb.FirstSeen) as first_seen_ts,
+      strftime('%Y-%m-%d', tb.FirstSeen) AS first_seen_date,
+      strftime('%H:%M', tb.FirstSeen) AS first_seen_time,
+      strftime('%s', tb.FirstSeen) AS first_seen_ts,
       ug.seen_count, ug.seen_min_date, ug.seen_max_date
     FROM current_taps ct
       JOIN tap_beers tb ON ct.Id = tb.Id
@@ -294,9 +294,9 @@ sub load_beerlist_from_db {
       ) ur ON ur.Brew = ct.Brew
       LEFT JOIN (
         SELECT Brew,
-               count(Id) as seen_count,
-               strftime('%Y-%m-%d', min(Timestamp), '-06:00') as seen_min_date,
-               strftime('%Y-%m-%d', max(Timestamp), '-06:00') as seen_max_date
+               count(Id) AS seen_count,
+               strftime('%Y-%m-%d', min(Timestamp), '-06:00') AS seen_min_date,
+               strftime('%Y-%m-%d', max(Timestamp), '-06:00') AS seen_max_date
         FROM glasses
         WHERE Username = ?
         GROUP BY Brew

@@ -166,20 +166,20 @@ sub makedatafile {
   my $sql = "
     SELECT
       Id,
-      strftime('%Y-%m-%d', Timestamp, '-06:00') as EffDate,
-      strftime('%H:%M', Timestamp, '-06:00' ) as Time,
-      Timestamp as stamp,
-      StDrinks as drinks,
+      strftime('%Y-%m-%d', Timestamp, '-06:00') AS EffDate,
+      strftime('%H:%M', Timestamp, '-06:00' ) AS Time,
+      Timestamp AS stamp,
+      StDrinks AS drinks,
       BrewType,
       SubType,
       StDrinks,
       Location
-    from GLASSES
-    where username = ?
-      and effdate = ?
-      and StDrinks > 0
-      and Brew <> ''
-    order by effdate, Time ";
+    FROM GLASSES
+    WHERE username = ?
+      AND effdate = ?
+      AND StDrinks > 0
+      AND Brew <> ''
+    ORDER BY effdate, Time ";
   # The Brew clause filters out 'empty' glasses like Restaurants.
   # The time offset is to sort records right, we don't use it for anything else
   #print { $c->{log} } "$sql \n";

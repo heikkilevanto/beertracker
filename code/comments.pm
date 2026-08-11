@@ -168,14 +168,14 @@ sub listcomments {
 
   my $s = "";
 
-  my $sql = "select COMMENTS.*,
-    group_concat(cp_persons.Name || '|' || cp.Person, ', ') as PeopleData
-    from comments
-    left join comment_persons cp on cp.Comment = comments.Id
-    left join persons cp_persons on cp_persons.Id = cp.Person
-    where glass = ?
-    group by comments.Id
-    order by comments.Id"; # To keep the order consistent
+  my $sql = "SELECT COMMENTS.*,
+    group_concat(cp_persons.Name || '|' || cp.Person, ', ') AS PeopleData
+    FROM comments
+    LEFT JOIN comment_persons cp ON cp.Comment = comments.Id
+    LEFT JOIN persons cp_persons ON cp_persons.Id = cp.Person
+    WHERE glass = ?
+    GROUP BY comments.Id
+    ORDER BY comments.Id"; # To keep the order consistent
   my $sth = db::query($c, $sql, $glassid);
 
   $s .= "&nbsp;<br/>\n";

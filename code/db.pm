@@ -291,7 +291,7 @@ sub getrecord {
   my $table = shift;
   my $id = shift;
   return undef unless ($id);
-  my $sql = "select * from $table where id = ? ";
+  my $sql = "SELECT * FROM $table WHERE id = ? ";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($id);
   my $rec = $sth->fetchrow_hashref;
@@ -310,7 +310,7 @@ sub findrecord {
   my $val = shift;
   my $collate = shift || "";
   return undef unless ($val);
-  my $sql = "select * from $table where $field = ? $collate";
+  my $sql = "SELECT * FROM $table WHERE $field = ? $collate";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute($val);
   my $rec = $sth->fetchrow_hashref;
@@ -354,8 +354,8 @@ sub deleterecord {
   my $c = shift;
   my $table = shift;
   my $id = shift;
-  my $sql = "delete from $table " .
-    " where id = ?";
+  my $sql = "DELETE FROM $table " .
+    " WHERE id = ?";
   print { $c->{log} } "deleterecord: $sql '$id' \n";
   my $sth = $c->{dbh}->prepare($sql);
   $sth->execute( $id );
@@ -402,9 +402,9 @@ sub updaterecord {
     push @values, $val;
     print { $c->{log} } "updaterecord: $f = " . util::loglist($val) . "\n";
   }
-  my $sql = "update $table set " .
+  my $sql = "UPDATE $table SET " .
     join( ", ", @sets) .
-    " where id = ?";
+    " WHERE id = ?";
   print { $c->{log} } "updaterecord: $sql \n";
   print { $c->{log} } "updaterecord: " . util::loglist( @values ) . " \n";
   my $sth = $c->{dbh}->prepare($sql);
@@ -467,7 +467,7 @@ sub insertrecord {
   my $fieldlist = "(" . join( ", ", @sqlfields ) . " )";
   my $qlist = $fieldlist;
   $qlist =~ s/\w+/?/g; # Make a list like ( ?, ?, ?)
-  my $sql = "insert into $table $fieldlist values $qlist";
+  my $sql = "INSERT INTO $table $fieldlist VALUES $qlist";
   print { $c->{log} } "insertrecord: $sql \n";
   print { $c->{log} } "insertrecord: " . util::loglist( @values ) . "\n";
   util::error("insertrecord: Nothing to insert into $table") unless @values;

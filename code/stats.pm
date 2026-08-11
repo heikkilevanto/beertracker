@@ -35,8 +35,8 @@ sub datastats {
 
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td></td><td><b>Users</b></td></tr>\n";
-  my $sql = "select username as username, count(*) as recs " .
-            "from glasses group by username order by username";
+  my $sql = "SELECT username AS username, count(*) AS recs " .
+            "FROM glasses GROUP BY username ORDER BY username";
   my $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
     print "<tr>\n";
@@ -48,8 +48,8 @@ sub datastats {
 
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td></td><td><b>Glasses </b></td></tr>\n";
-  $sql = "select brewtype, count(*) as count from glasses "
-    . "group by brewtype order by count desc";
+  $sql = "SELECT brewtype, count(*) AS count FROM glasses "
+    . "GROUP BY brewtype ORDER BY count DESC";
   $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
     print "<tr>\n";
@@ -61,8 +61,8 @@ sub datastats {
 
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td></td><td><b>Brews </b></td></tr>\n";
-  $sql = "select brewtype, count(*) as count from brews "
-       . "group by brewtype order by count desc";
+  $sql = "SELECT brewtype, count(*) AS count FROM brews "
+       . "GROUP BY brewtype ORDER BY count DESC";
   $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
     print "<tr>\n";
@@ -77,10 +77,10 @@ sub datastats {
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td></td><td><b>Producers</b></td></tr>\n";
   $sql =
-      "select LocType, LocSubType, count(name) as count "
-    . "from locations where LocType = 'Producer' "
-    . "group by LocType, LocSubType "
-    . "order by LocType, count desc,  LocSubType ";
+      "SELECT LocType, LocSubType, count(name) AS count "
+    . "FROM locations WHERE LocType = 'Producer' "
+    . "GROUP BY LocType, LocSubType "
+    . "ORDER BY LocType, count DESC,  LocSubType ";
   $sth = db::query($c, $sql);
   while ( my $rec = $sth->fetchrow_hashref ) {
     print "<tr>\n";
@@ -93,10 +93,10 @@ sub datastats {
   print "<tr><td>&nbsp;</td></tr>\n";
   print "<tr><td></td><td><b>Locations</b></td></tr>\n";
   $sql =
-      "select LocType, LocSubType, count(name) as count "
-    . "from locations where LocType <> 'Producer' "
-    . "group by LocType, LocSubType "
-    . "order by LocType, count desc,  LocSubType COLLATE NOCASE";
+      "SELECT LocType, LocSubType, count(name) AS count "
+    . "FROM locations WHERE LocType <> 'Producer' "
+    . "GROUP BY LocType, LocSubType "
+    . "ORDER BY LocType, count DESC,  LocSubType COLLATE NOCASE";
   $sth = db::query($c, $sql);
   my $singles = "";
 

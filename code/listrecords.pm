@@ -163,7 +163,7 @@ sub listrecords {
           if ( $sort =~ /$f(-?)/ ) {
               my $direction = "";
               $direction = " DESC" if ($1);
-              $order = "Order by $orig_fields[$i]" . $direction;
+              $order = "ORDER BY $orig_fields[$i]" . $direction;
           }
       }
   }
@@ -178,9 +178,9 @@ sub listrecords {
     }
   }
 
-  $where = "where $where" if ($where);
+  $where = "WHERE $where" if ($where);
 
-  my $sql = "select * from ($sql_param) $where $order";
+  my $sql = "SELECT * FROM ($sql_param) $where $order";
   my @paramarr = ();
   if ( $params ) {
     if (ref $params eq 'ARRAY') { @paramarr = @$params; }

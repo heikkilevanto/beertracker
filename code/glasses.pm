@@ -50,7 +50,7 @@ sub emptyglass_sql_list {
 sub selectbrewtype {
   my $c = shift;
   my $selected = shift || "";
-  my $sql = "select distinct BrewType from Glasses WHERE BrewType != 'Adjustment'";
+  my $sql = "SELECT DISTINCT BrewType FROM Glasses WHERE BrewType != 'Adjustment'";
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $bt = $sth->fetchrow_array ) {
@@ -75,7 +75,7 @@ sub selectbrewsubtype {
   my $rec = shift;
   my $sql = 'SELECT BrewType, SubType, MAX(timestamp) AS last_time
     FROM glasses
-    WHERE BrewType in (' . emptyglass_sql_list() . ')
+    WHERE BrewType IN (' . emptyglass_sql_list() . ')
     GROUP BY brewtype,SubType
     ORDER BY last_time DESC ';
   my $sth = db::query($c, $sql );
@@ -254,14 +254,14 @@ sub findrec {
   my $c = shift;
   my $id = $c->{edit};
   if ( ! $id ) {  # Not editing, just get the latest
-    my $sql = "select id from glasses " .
-              "where username = ? " .
-              "order by timestamp desc ".
-              "limit 1";
+    my $sql = "SELECT id FROM glasses " .
+              "WHERE username = ? " .
+              "ORDER BY timestamp DESC ".
+              "LIMIT 1";
     ($id) = db::queryarray($c, $sql, $c->{username});
   }
-  my $sql = "select * from glasses " .
-            "where id = ? and username = ? ";
+  my $sql = "SELECT * FROM glasses " .
+            "WHERE id = ? AND username = ? ";
   my $rec = db::queryrecord($c, $sql, $id, $c->{username});
   return $rec;
 }

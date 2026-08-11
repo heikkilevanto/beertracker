@@ -28,31 +28,31 @@ sub monthstat {
   $gend   =~ s/^(\d{4}-\d{2})-\d{2}$/$1/ if $gend;
 
   my $calmon_expr = "strftime ('%Y-%m', timestamp,'-06:00')";
-  my $where_clause = "where Username = ?";
+  my $where_clause = "WHERE Username = ?";
   my @sql_params = ( $c->{username} );
   if ( $gstart ) {
-    $where_clause .= " and $calmon_expr >= ?";
+    $where_clause .= " AND $calmon_expr >= ?";
     push( @sql_params, $gstart );
   }
   if ( $gend ) {
-    $where_clause .= " and $calmon_expr <= ?";
+    $where_clause .= " AND $calmon_expr <= ?";
     push( @sql_params, $gend );
   }
-  $where_clause .= " and (Brew is not null or BrewType = 'Adjustment')";
+  $where_clause .= " AND (Brew IS NOT NULL OR BrewType = 'Adjustment')";
 
   my $sumsql = qq{
-  select
-    distinct strftime ('%Y-%m', timestamp,'-06:00') as calmon,
+  SELECT
+    DISTINCT strftime ('%Y-%m', timestamp,'-06:00') AS calmon,
     sum(CASE WHEN BrewType = 'Adjustment'
              THEN price
-             ELSE ABS(price) END) as pr,
-  	sum(stdrinks) as drinks,
-  	min( strftime ('%d', timestamp,'-06:00')) as first,
- 	  max( strftime ('%d', timestamp,'-06:00')) as last
-  from glasses
+             ELSE ABS(price) END) AS pr,
+  	sum(stdrinks) AS drinks,
+  	min( strftime ('%d', timestamp,'-06:00')) AS first,
+ 	  max( strftime ('%d', timestamp,'-06:00')) AS last
+  FROM glasses
   $where_clause
-  group by calmon
-  order by calmon
+  GROUP BY calmon
+  ORDER BY calmon
   };
 
   my $sum_sth = db::query($c, $sumsql, @sql_params);
@@ -69,8 +69,8 @@ sub monthstat {
 
   # Determine user's overall first month for partial-month divisor
   my ($firstym) = $c->{dbh}->selectrow_array(
-    "select min(strftime('%Y-%m', Timestamp, '-06:00')) from glasses"
-    . " where Username = ? and Brew is not null",
+    "SELECT min(strftime('%Y-%m', Timestamp, '-06:00')) FROM glasses"
+    . " WHERE Username = ? AND Brew IS NOT NULL",
     undef, $c->{username});
 
   if ( !$firsty ) {

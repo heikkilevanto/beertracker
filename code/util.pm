@@ -277,19 +277,19 @@ sub getversioninfo {
 # Return the current stats: Drinks, blood alc, and money for today
 sub topstats {
   my $c = shift;
-  my $sql = "select
-   strftime ( '%Y-%m-%d', 'now', 'localtime', '-06:00' ) as today,
-   strftime ( '%Y-%m-%d', timestamp, '-06:00' ) as effdate,
-   strftime ( '%w', timestamp, '-06:00' ) as wday,
+  my $sql = "SELECT
+   strftime ( '%Y-%m-%d', 'now', 'localtime', '-06:00' ) AS today,
+   strftime ( '%Y-%m-%d', timestamp, '-06:00' ) AS effdate,
+   strftime ( '%w', timestamp, '-06:00' ) AS wday,
    julianday(strftime('%Y-%m-%d', 'now', 'localtime', '-06:00')) -
       julianday(strftime('%Y-%m-%d', timestamp, '-06:00')) AS daydiff,
-   sum(CASE WHEN BrewType = 'Adjustment' THEN price ELSE ABS(price) END) as price,
-   sum(stdrinks) as drinks
- from GLASSES
- where username = ?
- and effdate = ( select max (strftime('%Y-%m-%d', timestamp, '-06:00' ) )
-   from GLASSES where username = ? and (Brew is not null or BrewType = 'Adjustment') )
- and (Brew is not null or BrewType = 'Adjustment')
+   sum(CASE WHEN BrewType = 'Adjustment' THEN price ELSE ABS(price) END) AS price,
+   sum(stdrinks) AS drinks
+ FROM GLASSES
+ WHERE username = ?
+ AND effdate = ( SELECT max (strftime('%Y-%m-%d', timestamp, '-06:00' ) )
+   FROM GLASSES WHERE username = ? AND (Brew IS NOT NULL OR BrewType = 'Adjustment') )
+ AND (Brew IS NOT NULL OR BrewType = 'Adjustment')
    ";
   my $rec = db::queryrecord($c, $sql, $c->{username}, $c->{username});
   util::error("Something wrong in topstats query: $sql") unless ($rec);
