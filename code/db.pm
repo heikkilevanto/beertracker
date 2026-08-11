@@ -130,6 +130,10 @@ sub logquery {
   my $sql = shift;
   my @params = @_;
 
+  # Count queries per request, for the dev/test footer diagnostic.
+  # Counted even when SQL logging is disabled.
+  $c->{query_count}++;
+
   # If limit is not positive, skip logging entirely
   return unless ( $log_sql_limit > 0 );
 

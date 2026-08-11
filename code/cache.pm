@@ -20,9 +20,11 @@ sub get {
   my $key = shift;
   if ( exists $c->{cache}{$key} ) {
     $hits++;
+    $c->{cache_hits}++;    # per-request, for the dev/test footer diagnostic
     return $c->{cache}{$key};
   }
   $misses++;
+  $c->{cache_misses}++;    # per-request, for the dev/test footer diagnostic
   return undef;
 } # get
 
@@ -32,6 +34,7 @@ sub set {
   my $key   = shift;
   my $value = shift;
   $c->{cache}{$key} = $value;
+  $c->{cache_sets}++;      # per-request, for the dev/test footer diagnostic
 } # set
 
 sub count {

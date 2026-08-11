@@ -9,37 +9,40 @@ isolation, and a debug.log scan for DB errors.
 The **first task** is to make GET error handling return a non-200 HTTP status,
 so that HTTP status becomes a reliable success signal for the tests.
 
-## Task 1 (first): GET errors return HTTP 500 instead of 200
+## Task 1 (done): GET errors return HTTP 500 instead of 200
 
 ### Why
-Today GET handler errors are caught in `index.fcgi:436` and the page still
-finishes with HTTP 200, with the error text embedded in the body. This forces
+GET handler errors used to be caught in `index.fcgi:436` and the page still
+finished with HTTP 200, with the error text embedded in the body. This forced
 any test system to scan the body for `ERROR` / `DB ERROR` markers. Making errors
 return 500 is HTTP-correct and lets `curl -w "%{http_code}"` detect failures.
 
 POST errors already yield non-200 (the worker dies by design at
-`index.fcgi:341` to invalidate caches) — leave that path untouched.
+`index.fcgi:341` to invalidate caches) — that path is untouched.
 
 ### Change (index.fcgi only)
-The whole GET body is already buffered in `$body` (`index.fcgi:367-442`); only
-`htmlhead()` sends the 200 header, and it runs before the eval. Defer it:
+The whole GET response (header + body) is now buffered; `htmlhead()` moved into
+the eval, and on error the buffer is discarded and a real HTTP 500 page is sent:
 
-- Remove the `htmlhead($c);` call at `index.fcgi:365`.
-- In the `if ($@)` branch: log, disconnect `$dbh_ro`, and replace `$body` with a
-  small 500 error page (keep the error text in a `<pre>`, as now).
-- After the eval, only if there was no error: `htmlhead($c);` then `print $body;`
-  then `htmlfooter();`. On error: emit the 500 page (with `no-cache` headers)
-  and skip the wrapper/`htmlfooter` (the partial body already contains an
-  unclosed `<div class='content-wrapper'>`).
-- Keep `log_request_duration` and `$log->flush` in both paths.
+- `htmlhead($c);` was removed from before the eval and is now the first line
+  inside the eval, so its header+head go into the `$body` buffer.
+- `my $get_error = $@;` captures the error; on error the branch logs it,
+  disconnects `$dbh_ro`, and emits a minimal 500 page (no-cache headers, error
+  text in a `<pre>`). The partial buffer (incl. unclosed content-wrapper) is
+  discarded.
+- On success: `print $body;` then `htmlfooter($c);` as before.
+- `log_request_duration` now appends ` ERROR` to the label when the GET failed.
+- `$log->flush` runs in both paths.
 
 ### Verified safe
 - No module prints its own `redirect()`/`header()` during GET body generation
   (all redirects use `$c->{redirect_url}`, consumed only in the POST path;
   the only direct `->redirect` is `superuser::copyproddata`, which runs before
-  htmlhead).
+  the eval).
 - Nothing writes to STDOUT bypassing the buffer (only `index.fcgi:43` sets
   `binmode STDOUT` at startup).
+- `migrate::startup_check` just sets `$c->{op} = 'migrate'` (no output), so it
+  is unaffected.
 
 ### Side effects
 - Browser receives nothing until the page finishes rendering (delayed part is
@@ -49,11 +52,15 @@ The whole GET body is already buffered in `$body` (`index.fcgi:367-442`); only
 - Auth cookie sent only on success.
 - POST behavior and cache-invalidation design unchanged.
 
-### Verify
-- `perl -c code/index.fcgi`.
-- Manually trigger a GET error (e.g. a bad `e=` id) → HTTP 500, no partial page.
-- Normal pages still HTTP 200 with full content.
-- `touch code/VERSION.pm` (separate step) to reload the FCGI script.
+### Verify (done)
+- `perl -c code/index.fcgi` — OK.
+- `o=Comment&e=999999999` (bogus id) → **500** with "Comment 999999999 not
+  found" in a `<pre>`; no partial page.
+- Sweep of all ops (`Graph, Board, Full, Years, Months, short, DataStats,
+  Ratings, About, Export, Comments, Location, Person, Brew, Photos, Debug`,
+  default and bogus op) → all 200, no error markers in body.
+- `debug.log` shows `GET error: ...` plus `GET o=Comment&e=999999999 ERROR`.
+- Footer diagnostic comment still present on success pages.
 
 ## Task 2: Test script skeleton `tools/test-http.pl`
 
@@ -113,16 +120,39 @@ Brew/Location/Glass ids for POSTs and (b) verify/clean up test rows.
   Person (`e=new`, `Name`).
 - Delete test records in FK order (comments before their glass).
 
+## Decided: footer diagnostics as HTML comments (no parameter needed)
+
+Already implemented. `htmlfooter($c)` (index.fcgi) appends an HTML comment just
+before `</body>`, only when `$devversion`:
+
+```
+<!-- beertracker-test elapsed=10ms queries=3 cache_hits=1 cache_misses=1 cache_sets=1 cache_entries=1 -->
+```
+
+- `elapsed` = server-side render time (from `$c->{request_start}`, set via
+  `Time::HiRes` in the FastCGI loop).
+- `queries` = per-request SQL count, incremented in `db::logquery` (counted even
+  when SQL logging is disabled; misses direct `prepare` calls in getrecord/
+  findrecord — close enough as a diagnostic).
+- `cache_hits/misses/sets` = per-request counters in `cache::get`/`set`.
+- `cache_entries` = current size of the in-process cache hash.
+- Gated on `$devversion`, so production pages are untouched.
+- The test script greps the body for `beertracker-test` to assert on timings and
+  counts. Useful for spotting performance regressions (e.g. a page that stops
+  hitting the cache).
+
+Verified: About → 3 queries; first Graph load → 25 queries/869ms, second →
+1 query/9ms with 4 cache hits (confirms the cache diagnostic reflects reality).
+
 ## Open item: `&testing=1` URL parameter (under consideration)
 
 The test script could append `&testing=1` to every request, letting the app
-detect a test run and adapt. Two ideas, not yet decided:
+detect a test run and adapt. One idea remains, not yet decided:
 
 1. **Separate test database** — `testing=1` opens `beerdata/beertracker-test.db`
    (auto-copied from the real dev DB when missing/older) instead of the live
    DB, giving clean isolation without the CopyProdData-before/after dance.
-2. **Footer diagnostics** — `testing=1` appends a small `#testinfo` div (elapsed
-   ms, SQL count, cache hits/misses, version) that the test script can assert on.
+   (The footer-diagnostics idea is superseded by the HTML comment above.)
 
 ### Constraints if we do it
 - Honor `testing=1` **only when `$devversion` is set**; ignore it on the
@@ -147,7 +177,8 @@ detect a test run and adapt. Two ideas, not yet decided:
   behaviour; the script already plans to detect and report that.
 
 ## Notes / risks
-- No `code/` changes except Task 1 (index.fcgi); the rest is additive tooling.
+- `code/` changes: Task 1 (index.fcgi error status) plus the footer diagnostic
+  in index.fcgi/db.pm/cache.pm; the rest is additive tooling.
 - If the `&testing=1` separate-DB idea is adopted, dev DB after a run is
   untouched; otherwise (CopyProdData approach) it equals a prod copy (by design).
 - If dev code is ahead of prod (new migrations), the first GET after

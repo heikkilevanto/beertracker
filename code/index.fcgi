@@ -245,6 +245,7 @@ my $c = {
   'mobile'   => $mobile,
   'log'      => $log,
   'cache'    => $cache,
+  'request_start' => $request_start,
 };
 
 # Input Parameters. Need to have a $c to get them.
@@ -362,14 +363,15 @@ if ( !$dbh_ro || !$dbh_ro->ping ) {
 
 migrate::startup_check($c);  # Redirect to migration form if DB is behind code version
 
-htmlhead($c); # Content-Type + HTML head → directly to FCGI::Stream
-
-# Buffer remaining body through a :utf8 layer (FCGI::Stream ignores binmode :utf8)
+# Buffer the whole response (header + body) so a GET error can return HTTP 500
+# instead of a partial 200 page. On success the buffered head+body is emitted
+# in one go at the end.
 my $body = '';
 open my $buf, '>:utf8', \$body or die "Cannot open body buffer: $!";
 my $old_fh = select $buf;
 
 eval {
+htmlhead($c); # Content-Type + HTML head, buffered like the body
 print util::topline($c);
 print "<div class='content-wrapper'>\n";
 
@@ -433,16 +435,34 @@ if ( $c->{op} =~ /Board/i ) {
 $c->{dbh} = undef;  # Don't disconnect; keep $dbh_ro alive for next request
 
 }; # end eval GET
-if ($@) {
-  print { $c->{log} } "GET error: $@\n";
+my $get_error = $@;
+if ( $get_error ) {
+  print { $c->{log} } "GET error: $get_error\n";
   eval { $dbh_ro->disconnect; $dbh_ro = undef } if $dbh_ro;  # Drop on error, reconnect next request
 }
 
 select $old_fh;  # Restore output to FCGI::Stream
-print $body;     # Emit UTF-8 encoded body
-htmlfooter();
+if ( $get_error ) {
+  # Return a proper HTTP 500 instead of a partial 200 page
+  print $c->{cgi}->header(
+    -status => "500 Internal Server Error",
+    -type => "text/html;charset=UTF-8",
+    -Cache_Control => "no-cache, no-store, must-revalidate",
+    -Pragma => "no-cache",
+    -Expires => "0",
+    -Secure => 1,
+  );
+  my $title = "Beer";
+  $title = "Beer-DEV" if ( $devversion );
+  print "<!DOCTYPE html>\n<html><head><title>$title</title></head>\n<body>\n";
+  print "<pre>\n$get_error\n</pre>\n";
+  print "</body></html>\n";
+} else {
+  print $body;     # Emit UTF-8 encoded body
+  htmlfooter($c);
+}
 my $get_qs = $ENV{'QUERY_STRING'} || "o=" . $c->{op};
-log_request_duration($request_start, "GET $get_qs");
+log_request_duration($request_start, "GET $get_qs" . ( $get_error ? " ERROR" : "" ));
 $log->flush;
 
 } # end while (FastCGI loop)
@@ -529,9 +549,23 @@ END_STYLE
 
 # HTML footer
 sub htmlfooter {
+  my $c = shift;
+  # Dev/test diagnostic as an HTML comment, invisible to the browser but
+  # easy for the test script to grep. Gated on the dev version only.
+  if ( $c->{devversion} ) {
+    my $elapsed = gettimeofday() - ($c->{request_start} // gettimeofday());
+    my $ms = sprintf("%.0f", $elapsed * 1000);
+    my $q = $c->{query_count} // 0;
+    my $h = $c->{cache_hits} // 0;
+    my $m = $c->{cache_misses} // 0;
+    my $s = $c->{cache_sets} // 0;
+    my $e = cache::count($c);
+    print "<!-- beertracker-test elapsed=${ms}ms queries=$q " .
+      "cache_hits=$h cache_misses=$m cache_sets=$s cache_entries=$e -->\n";
+  }
   print "</div>\n"; # Close content-wrapper
   print "</body></html>\n";
-}
+} # htmlfooter
 
 # Log the duration of a request. Called once at each request exit point.
 # Skip logging for fast requests (< 0.2s); flag slow ones (> 0.8s).
