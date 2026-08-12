@@ -95,16 +95,42 @@ function initMenu(menuData, containerId, toggleButtonId) {
 
   topBar.appendChild(closeX);
   container.appendChild(topBar);
+  // Whether the browser's own context menu may be showing over a menu link.
+  // While it is, the browser context menu items (e.g. "Open link in new tab")
+  // must stay clickable, so we must not close the drawer on blur.
+  let browserMenuOpen = false;
+  document.addEventListener("mousedown", (e) => {
+    browserMenuOpen = e.button === 2 && container.contains(e.target);
+  });
+
   // close on Esc or click outside the menu
   document.addEventListener("keydown", (e) => {
+    browserMenuOpen = false;
     if (e.key === "Escape" && container.classList.contains("open")) {
       container.classList.remove("open");
     }
   });
   document.addEventListener("click", (e) => {
+    browserMenuOpen = false;
     if (!container.contains(e.target) &&
         container.classList.contains("open") &&
         e.target !== toggleBtn) {
+      container.classList.remove("open");
+    }
+  });
+
+  // Close the drawer when the page loses focus or is hidden. This happens
+  // when a menu link is opened in another tab/switch to it, or when we tab
+  // away. Note: a pure "open in background tab" fires no event in this page,
+  // so that case cannot be caught, only the switch away from this tab.
+  window.addEventListener("blur", () => {
+    if (!browserMenuOpen && container.classList.contains("open")) {
+      container.classList.remove("open");
+    }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" &&
+        container.classList.contains("open")) {
       container.classList.remove("open");
     }
   });
