@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # Standalone HTTP test script for the beertracker dev site.
 # Run from the repo root: perl tools/test-http.pl
-# GET smoke tests for the About and Debug pages, with selector support.
+# GET smoke + content tests for all core ops, with selector support.
 #
 # Options:
 #   -h   this help text
@@ -92,10 +92,13 @@ sub assert {
   }
 } # assert
 
-# True if the body shows no signs of a Perl error buried in the page
+# True if the body shows no signs of a Perl error buried in the page.
+# Note: the bare word "ERROR" is deliberately NOT a marker here: real user data
+# (e.g. a comment "Coding Error") legitimately contains it. The real error
+# signal is now the HTTP 500 status from index.fcgi, asserted separately.
 sub no_errors_in {
   my $body = shift;
-  my @markers = ( "ERROR", "DB ERROR", "Stack Trace", "Undefined subroutine",
+  my @markers = ( "DB ERROR", "Stack Trace", "Undefined subroutine",
                   "Can't locate", "Use of uninitialized" );
   foreach my $marker (@markers) {
     return 0 if $body =~ /\Q$marker\E/i;
@@ -103,16 +106,19 @@ sub no_errors_in {
   return 1;
 } # no_errors_in
 
-# Assert the common GET smoke checks for a page: status, doctype, footer diagnostic
+# Assert the common GET smoke checks for a page: status, doctype, menu markup,
+# content marker, footer diagnostic, and error markers
 sub assert_page_ok {
   my ($status, $body, $op, $marker) = @_;
   # scalar() keeps a regex match from flattening away in list context
   my $ok_status = $status == 200;
   my $ok_doctype = scalar($body =~ /<!DOCTYPE html>/i);
+  my $ok_menu = scalar($body =~ /id='menu-toggle'/);
   my $ok_marker = scalar($body =~ /\Q$marker\E/i);
   my $ok_diag = scalar($body =~ /beertracker-test .+queries=\d+/);
   assert($ok_status, "$op page returns HTTP 200 (got $status)");
   assert($ok_doctype, "$op page has a DOCTYPE");
+  assert($ok_menu, "$op page has the menu markup");
   assert($ok_marker, "$op page has content marker '$marker'");
   assert($ok_diag, "$op page carries the dev footer diagnostic line");
   assert(no_errors_in($body), "$op page body is free of error markers");
@@ -121,9 +127,16 @@ sub assert_page_ok {
 ################################################################################
 # Tests
 ################################################################################
+
+# Generic GET smoke test for a single op: fetch and assert the common checks
+sub test_op_page {
+  my ($op, $marker) = @_;
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=$op");
+  assert_page_ok($status, $body, $op, $marker);
+} # test_op_page
+
 sub test_about {
-  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=About");
-  assert_page_ok($status, $body, "About", "Beertracker");
+  test_op_page("About", "Beertracker");
 } # test_about
 
 sub test_debug {
@@ -135,11 +148,69 @@ sub test_debug {
   assert_page_ok($status, $page, "Debug", "Grand total");
 } # test_debug
 
+sub test_graph { test_op_page("Graph", "id='mainform'"); } # test_graph
+
+sub test_board { test_op_page("Board", "id='mainform'"); } # test_board
+
+sub test_full {
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full");
+  assert_page_ok($status, $body, "Full", "id='mainform'");
+  assert(scalar($body =~ /Older records/), "Full page has the 'Older records' link");
+} # test_full
+
+sub test_default {
+  # No 'o' parameter at all must fall through to the default graph rendering
+  my ($status, $headers, $body) = req("GET", "$BASE_URL");
+  assert_page_ok($status, $body, "default", "id='mainform'");
+} # test_default
+
+sub test_bogus {
+  # A bogus op must fall through to the default graph rendering
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Bogus");
+  assert_page_ok($status, $body, "Bogus", "id='mainform'");
+} # test_bogus
+
+sub test_years    { test_op_page("Years", "Year <b>"); } # test_years
+sub test_months {
+  # Default page is drinks mode: the toggle offers "Show money spent"
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Months");
+  assert_page_ok($status, $body, "Months", "Show money spent");
+  # Money mode (s=money) instead offers "Show drinks"
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Months&s=money");
+  assert($status == 200, "Months money mode returns HTTP 200 (got $status)");
+  assert(scalar($body =~ /Show drinks/), "Months page (money mode) has the 'Show drinks' link");
+} # test_months
+sub test_short    { test_op_page("short", "Daily stats"); } # test_short
+sub test_datastats { test_op_page("DataStats", "Data file stats"); } # test_datastats
+sub test_ratings  { test_op_page("Ratings", "Ratings statistics"); } # test_ratings
+sub test_export   { test_op_page("Export", "Export data"); } # test_export
+sub test_comment  { test_op_page("Comment", "Comments by"); } # test_comment
+sub test_location { test_op_page("Location", "Locations"); } # test_location
+sub test_person   { test_op_page("Person", "Persons"); } # test_person
+sub test_brew     { test_op_page("Brew", "Brews"); } # test_brew
+sub test_photos   { test_op_page("Photos", "Photos for"); } # test_photos
+
 # name => sets, test => sub. sets holds selector tags: module/op names,
 # abstract group tags, and the special 'quick' tag (included in the default run).
 my @TESTS = (
-  { name => "about", sets => [qw(quick about)], test => \&test_about },
-  { name => "debug", sets => [qw(quick debug)], test => \&test_debug },
+  { name => "graph",     sets => [qw(quick graph glasses mainlist)],                 test => \&test_graph },
+  { name => "board",     sets => [qw(quick board graph beerboard glasses mainlist)], test => \&test_board },
+  { name => "full",      sets => [qw(quick full glasses mainlist)],                  test => \&test_full },
+  { name => "default",   sets => [qw(quick default)],                                test => \&test_default },
+  { name => "bogus",     sets => [qw(quick bogus)],                                  test => \&test_bogus },
+  { name => "years",     sets => [qw(quick years stats yearstat)],                   test => \&test_years },
+  { name => "months",    sets => [qw(quick months stats monthstat)],                 test => \&test_months },
+  { name => "short",     sets => [qw(quick short stats)],                            test => \&test_short },
+  { name => "datastats", sets => [qw(quick datastats stats)],                        test => \&test_datastats },
+  { name => "ratings",   sets => [qw(quick ratings stats ratestats)],                test => \&test_ratings },
+  { name => "about",     sets => [qw(quick about)],                                  test => \&test_about },
+  { name => "debug",     sets => [qw(quick debug)],                                  test => \&test_debug },
+  { name => "export",    sets => [qw(quick export)],                                 test => \&test_export },
+  { name => "comment",   sets => [qw(quick comment comments lists)],                 test => \&test_comment },
+  { name => "location",  sets => [qw(quick location locations lists)],               test => \&test_location },
+  { name => "person",    sets => [qw(quick person persons lists)],                   test => \&test_person },
+  { name => "brew",      sets => [qw(quick brew brews lists)],                       test => \&test_brew },
+  { name => "photos",    sets => [qw(quick photo photos lists)],                     test => \&test_photos },
 );
 
 ################################################################################

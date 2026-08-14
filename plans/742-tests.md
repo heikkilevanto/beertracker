@@ -162,7 +162,7 @@ omit the `quick` tag in `sets` so the default run stays fast and safe.
 (e.g. Graph also uses glasses + mainlist) — acceptable: the filter is "tests
 that touch this module", not "only this module".
 
-## Task 3: GET smoke + content tests
+## Task 3 (done): GET smoke + content tests
 
 - Ops: `Graph, Board, Full, Years, Months, short, DataStats, Ratings, About,
   Export, Comment, Location, Person, Brew, Photos, Debug`, plus `o=` (default)
@@ -176,6 +176,19 @@ that touch this module", not "only this module".
   Ratings→"Ratings statistics", Export→"Export data", Comment→"Comments by",
   Location/Person/Brew/Photos→their listrecords title.
 - No record-id variants here — those belong to Task 4 where harvesting lives.
+
+### Verify (done)
+- `perl -c tools/test-http.pl` — OK.
+- Default run: 18 tests / 111 assertions, all PASS against the live dev site.
+- Selectors verified: `stats` (5 tests), `lists` (5), `brew` (1), unknown
+  selector → lists available names and exits 1.
+- Also removed the bare `ERROR` from `no_errors_in` markers (plan Task 2 spec
+  says it is deliberately not a marker; real user data legitimately contains
+  it) and added a menu-markup check (`id='menu-toggle'`) to `assert_page_ok`.
+- Months marker note: the default `o=Months` page is drinks mode and renders
+  the toggle "Show money spent", not "Show drinks". `test_months` therefore
+  asserts "Show money spent" on the default page and fetches `o=Months&s=money`
+  to assert the "Show drinks" link from the plan.
 
 ## Task 4: edit-page variants, filters, static assets (all DB-less)
 
@@ -345,7 +358,7 @@ if running against the live dev DB becomes a problem:
 ## Execution order
 1. Task 1 (HTTP 500 on GET errors) — **done**; enables status-based checks.
 2. Task 2 skeleton: config, HTTP helper, HTML-id harvest helpers, assertion
-   helpers, GET smoke loop, selector plumbing.
+   helpers, GET smoke loop, selector plumbing.  **done**
 3. Task 3: GET smoke for all ops (no DB, no id variants).
 4. Task 4: harvested-id edit-page variants, `q=` filters, static assets
    (still GET-only, still DB-free).
