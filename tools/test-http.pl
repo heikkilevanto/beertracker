@@ -227,6 +227,8 @@ my @TESTS = (
   { name => "filter_full",   sets => [qw(full graph glasses mainlist filters)],       test => \&test_filter_full },
   # POST round-trips — dev-guarded, never in 'quick'
   { name => "person_roundtrip", sets => [qw(posts roundtrip person persons)],         test => \&test_person_roundtrip },
+  { name => "brew_roundtrip",     sets => [qw(posts roundtrip brew brews)],             test => \&test_brew_roundtrip },
+  { name => "location_roundtrip", sets => [qw(posts roundtrip location locations)],       test => \&test_location_roundtrip },
 );
 
 ################################################################################
@@ -548,8 +550,99 @@ sub test_person_roundtrip {
   return unless defined $loc;
   ($status, $headers, $body) = req("GET", $loc);
   assert_page_ok($status, $body, "Person list after delete", "Persons");
-  assert(scalar($body !~ /\Q$name2\E/), "Person list no longer shows the deleted record '$name2'");
+   assert(scalar($body !~ /\Q$name2\E/), "Person list no longer shows the deleted record '$name2'");
 } # test_person_roundtrip
+
+sub test_brew_roundtrip {
+  # Plan Task 6: create a Brew through the web, verify it on the Brew list,
+  # update it, and delete it — all through HTTP, no DB access.
+  # Note: postbrew() has no Delete branch yet, so the delete step will fail
+  # until delete support is added to brews.pm.
+  my $name = "TST" . time();
+  get_first_id("Brew");
+
+  my ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => "new", Name => $name, BrewType => "Beer", submit => "Insert Brew" });
+  my $loc = assert_post_redirect($status, $headers, "Brew insert");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Brew list after insert", "Brews");
+  assert(scalar($body =~ /\Q$name\E/), "Brew list shows the new record '$name'");
+  my $id = id_before_text($body, "Brew", $name);
+  assert(defined $id, "harvested the new Brew id from the list");
+  if ( defined $id ) {
+    assert(scalar($body =~ /\Qo=Brew&e=$id\E/), "the harvested id links to the Brew edit page");
+  }
+
+  # Update the brew: change the name, submit, verify the old name is gone
+  # and the new one appears on the list page.
+  return unless defined $id;
+  my $name2 = "upd" . time();
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => $id, id => $id, Name => $name2, BrewType => "Beer", submit => "Update Brew" });
+  $loc = assert_post_redirect($status, $headers, "Brew update");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Brew list after update", "Brews");
+  assert(scalar($body !~ /\Q$name\E/), "Brew list no longer shows the old name '$name'");
+  assert(scalar($body =~ /\Q$name2\E/), "Brew list shows the updated name '$name2'");
+
+  # Delete the brew: POST with submit=Delete Brew. postbrew() currently has
+  # no delete branch, so this will fail until delete support is added.
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => $id, id => $id, Name => $name2, BrewType => "Beer", submit => "Delete Brew" });
+  $loc = assert_post_redirect($status, $headers, "Brew delete");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Brew list after delete", "Brews");
+  assert(scalar($body !~ /\Q$name2\E/), "Brew list no longer shows the deleted record '$name2'");
+} # test_brew_roundtrip
+
+sub test_location_roundtrip {
+  # Plan Task 6: create a Location through the web, verify it on the Location
+  # list, update it, and delete it — all through HTTP, no DB access.
+  # Note: postlocation() has no Delete branch yet, so the delete step will fail
+  # until delete support is added to locations.pm.
+  my $name = "TST" . time();
+  get_first_id("Location");
+
+  my ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Location", e => "new", Name => $name, LocType => "Bar", submit => "Insert Location" });
+  my $loc = assert_post_redirect($status, $headers, "Location insert");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Location list after insert", "Locations");
+  assert(scalar($body =~ /\Q$name\E/), "Location list shows the new record '$name'");
+  my $id = id_before_text($body, "Location", $name);
+  assert(defined $id, "harvested the new Location id from the list");
+  if ( defined $id ) {
+    assert(scalar($body =~ /\Qo=Location&e=$id\E/), "the harvested id links to the Location edit page");
+  }
+
+  # Update the location: change the name, submit, verify the old name is gone
+  # and the new one appears on the list page.
+  return unless defined $id;
+  my $name2 = "upd" . time();
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Location", e => $id, id => $id, Name => $name2, LocType => "Bar", submit => "Update Location" });
+  $loc = assert_post_redirect($status, $headers, "Location update");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Location list after update", "Locations");
+  assert(scalar($body !~ /\Q$name\E/), "Location list no longer shows the old name '$name'");
+  assert(scalar($body =~ /\Q$name2\E/), "Location list shows the updated name '$name2'");
+
+  # Delete the location: POST with submit=Delete Location. postlocation()
+  # currently has no delete branch, so this will fail until delete support
+  # is added.
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Location", e => $id, id => $id, Name => $name2, LocType => "Bar", submit => "Delete Location" });
+  $loc = assert_post_redirect($status, $headers, "Location delete");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Location list after delete", "Locations");
+  assert(scalar($body !~ /\Q$name2\E/), "Location list no longer shows the deleted record '$name2'");
+} # test_location_roundtrip
 
 ################################################################################
 # Post-run: CopyProdData sync + debug.log scan
