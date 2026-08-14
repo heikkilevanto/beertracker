@@ -48,8 +48,10 @@ my $list = 0;
 my $sets = 0;
 my $verbose = 0;
 my $quiet = 0;
+my $no_post = 0;
 GetOptions( "h|help" => \$help, "l|list" => \$list, "s|sets" => \$sets,
-            "v|verbose" => \$verbose, "q|quiet" => \$quiet, )
+            "v|verbose" => \$verbose, "q|quiet" => \$quiet,
+            "no-post" => \$no_post, )
   or die usage();
 
 sub usage {
@@ -59,8 +61,9 @@ sub usage {
          "  -s   list the test sets (sets keywords) with a count of tests\n" .
          "  -v   verbose: show each PASS/FAIL line and a header per test\n" .
          "  -q   quiet: no per-test summary lines\n" .
+         "  -P   --no-post: force GET-only, drop any POST round-trip tests\n" .
          "Selector (one or more, default: the 'quick' tests):\n" .
-         "  all       every test\n" .
+         "  all       every test (includes POST round-trips, dev-guarded)\n" .
          "  testname  run exactly that test\n" .
          "  keyword   any sets entry (module/op name or group tag)\n";
 } # usage
@@ -146,6 +149,17 @@ sub no_errors_in {
   return 1;
 } # no_errors_in
 
+# Assert the standard POST response (index.fcgi:347): a 302 with a Location
+# header. Returns the Location value, or undef when the POST did not succeed so
+# the round-trip test cannot continue.
+sub assert_post_redirect {
+  my ($status, $headers, $what) = @_;
+  assert($status == 302, "$what returns a 302 redirect (got $status)");
+  my $loc = $headers->header('Location') || "";
+  assert($loc ne '', "$what redirect has a Location header");
+  return $status == 302 && $loc ne '' ? $loc : undef;
+} # assert_post_redirect
+
 # Assert the common GET smoke checks for a page: status, doctype, menu markup,
 # content marker, footer diagnostic, and error markers
 sub assert_page_ok {
@@ -207,6 +221,8 @@ my @TESTS = (
   { name => "comment_new",   sets => [qw(comment comments glasses newrecords)],       test => \&test_comment_new },
   { name => "filter_board",  sets => [qw(board graph beerboard filters)],             test => \&test_filter_board },
   { name => "filter_full",   sets => [qw(full graph glasses mainlist filters)],       test => \&test_filter_full },
+  # POST round-trips — dev-guarded, never in 'quick'
+  { name => "person_roundtrip", sets => [qw(posts roundtrip person persons)],         test => \&test_person_roundtrip },
 );
 
 ################################################################################
@@ -219,6 +235,14 @@ sub test_op_page {
   my ($status, $headers, $body) = req("GET", "$BASE_URL?o=$op");
   assert_page_ok($status, $body, $op, $marker);
 } # test_op_page
+
+# test_op_page, but also remember the first id on the page for the edit tests
+sub test_op_page_remember {
+  my ($op, $marker) = @_;
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=$op");
+  assert_page_ok($status, $body, $op, $marker);
+  remember_first_id($body, $op);
+} # test_op_page_remember
 
 sub test_about {
   test_op_page("About", "Beertracker");
@@ -233,7 +257,7 @@ sub test_debug {
   assert_page_ok($status, $page, "Debug", "Grand total");
 } # test_debug
 
-sub test_graph { test_op_page("Graph", "id='mainform'"); } # test_graph
+sub test_graph { test_op_page_remember("Graph", "id='mainform'"); } # test_graph
 
 sub test_board { test_op_page("Board", "id='mainform'"); } # test_board
 
@@ -241,6 +265,7 @@ sub test_full {
   my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full");
   assert_page_ok($status, $body, "Full", "id='mainform'");
   assert(scalar($body =~ /Older records/), "Full page has the 'Older records' link");
+  remember_first_id($body, "Full");
 } # test_full
 
 sub test_default {
@@ -269,10 +294,10 @@ sub test_short    { test_op_page("short", "Daily stats"); } # test_short
 sub test_datastats { test_op_page("DataStats", "Data file stats"); } # test_datastats
 sub test_ratings  { test_op_page("Ratings", "Ratings statistics"); } # test_ratings
 sub test_export   { test_op_page("Export", "Export data"); } # test_export
-sub test_comment  { test_op_page("Comment", "Comments by"); } # test_comment
-sub test_location { test_op_page("Location", "Locations"); } # test_location
-sub test_person   { test_op_page("Person", "Persons"); } # test_person
-sub test_brew     { test_op_page("Brew", "Brews"); } # test_brew
+sub test_comment  { test_op_page_remember("Comment", "Comments by"); } # test_comment
+sub test_location { test_op_page_remember("Location", "Locations"); } # test_location
+sub test_person   { test_op_page_remember("Person", "Persons"); } # test_person
+sub test_brew     { test_op_page_remember("Brew", "Brews"); } # test_brew
 sub test_photos   { test_op_page("Photos", "Photos for"); } # test_photos
 
 ################################################################################
@@ -309,48 +334,83 @@ sub first_id {
   return @ids ? $ids[0] : undef;
 } # first_id
 
+# First id harvested from each list page this run, so the edit-page tests can
+# reuse it instead of refetching the list. The list tests run before their edit
+# counterparts in @TESTS, so the cache is normally already filled.
+my %LIST_IDS;
+
+# Remember the first id seen on $op's list page, if the page has one. Returns
+# the id (undef if the list had none).
+sub remember_first_id {
+  my ($body, $op) = @_;
+  my $id = first_id($body, $op);
+  $LIST_IDS{$op} = $id if defined $id;
+  return $id;
+} # remember_first_id
+
+# First id for $op: the one cached by the list test if any, else fetch the list
+# page now (e.g. when only an edit test was selected).
+sub get_first_id {
+  my ($op) = @_;
+  return $LIST_IDS{$op} if defined $LIST_IDS{$op};
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=$op");
+  return remember_first_id($body, $op);
+} # get_first_id
+
+# The id of the row whose cell text $text appears on, harvested from a rendered
+# list page. The id column (a link like o=$op&e=<id>) precedes the text column,
+# so the last such link before the text is the row's own id. Returns undef when
+# the text or a preceding id link is not found.
+sub id_before_text {
+  my ($body, $op, $text) = @_;
+  my $pos = index($body, $text);
+  return undef if $pos < 0;
+  my $before = substr($body, 0, $pos);
+  my $re = qr{o=$op&e=(\d+)};
+  my $id;
+  while ( $before =~ /$re/g ) {
+    $id = $1;
+  }
+  return $id;
+} # id_before_text
+
 ################################################################################
 # Edit-page variants, filters, static assets (all GET-only, DB-free)
 ################################################################################
 
 sub test_brew_edit {
-  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew");
-  my $id = first_id($body, "Brew");
+  my $id = get_first_id("Brew");
   if ( !defined $id ) { skipmsg("Brew list has no ids to edit"); return; }
-  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
   assert_page_ok($status, $body, "Brew edit", "Editing Brew");
 } # test_brew_edit
 
 sub test_location_edit {
-  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Location");
-  my $id = first_id($body, "Location");
+  my $id = get_first_id("Location");
   if ( !defined $id ) { skipmsg("Location list has no ids to edit"); return; }
-  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Location&e=$id");
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Location&e=$id");
   assert_page_ok($status, $body, "Location edit", "Editing Location");
 } # test_location_edit
 
 sub test_person_edit {
-  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Person");
-  my $id = first_id($body, "Person");
+  my $id = get_first_id("Person");
   if ( !defined $id ) { skipmsg("Person list has no ids to edit"); return; }
-  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Person&e=$id");
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Person&e=$id");
   assert_page_ok($status, $body, "Person edit", "Editing Person");
 } # test_person_edit
 
 sub test_comment_edit {
-  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Comment");
-  my $id = first_id($body, "Comment");
+  my $id = get_first_id("Comment");
   if ( !defined $id ) { skipmsg("Comment list has no ids to edit"); return; }
-  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Comment&e=$id");
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Comment&e=$id");
   assert_page_ok($status, $body, "Comment edit", "Edit comment");
 } # test_comment_edit
 
 sub test_glass_edit {
   # The edit-glass page: input form + comments + photos (o=Full&e=<glassid>)
-  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full");
-  my $id = first_id($body, "Full");
+  my $id = get_first_id("Full");
   if ( !defined $id ) { skipmsg("Full list has no glass ids to edit"); return; }
-  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&e=$id");
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&e=$id");
   assert_page_ok($status, $body, "Full glass edit", "id='mainform'");
   assert(scalar($body =~ /name='submit' value='Save'/), "glass edit form has the Save button");
   assert(scalar($body =~ /name='submit' value='Del'/),   "glass edit form has the Del button");
@@ -360,10 +420,9 @@ sub test_glass_edit {
 
 sub test_graph_edit {
   # Editing a glass via the Graph page
-  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Graph");
-  my $id = first_id($body, "Graph");
+  my $id = get_first_id("Graph");
   if ( !defined $id ) { skipmsg("Graph list has no glass ids to edit"); return; }
-  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Graph&e=$id");
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Graph&e=$id");
   assert_page_ok($status, $body, "Graph glass edit", "id='mainform'");
   assert(scalar($body =~ /name='submit' value='Save'/), "Graph glass edit form has the Save button");
 } # test_graph_edit
@@ -386,10 +445,9 @@ sub test_person_new {
 
 sub test_comment_new {
   # New-comment form prefilled from a glass
-  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full");
-  my $id = first_id($body, "Full");
+  my $id = get_first_id("Full");
   if ( !defined $id ) { skipmsg("Full list has no glass ids for comment prefill"); return; }
-  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Comment&e=new&glass=$id");
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Comment&e=new&glass=$id");
   assert_page_ok($status, $body, "Comment new", "New comment");
   assert(scalar($body =~ /o=Full&e=$id/), "new-comment page links back to its glass");
 } # test_comment_new
@@ -425,6 +483,59 @@ sub test_static_assets {
     assert($status == 200, "static/$asset returns HTTP 200 (got $status)");
   }
 } # test_static_assets
+
+################################################################################
+# POST round-trips (dev-guarded, not in 'quick')
+################################################################################
+# Each test creates a record through the web and verifies it on the rendered
+# list page — all through HTTP, no DB access. Markers are TST<epoch> tokens so
+# the records are greppable in pages. POST tests are not in the 'quick' set and
+# are only allowed on a -dev checkout; the post-run CopyProdData sync (Task 5)
+# wipes any residue. The o/e params are sent in the POST body, the way the
+# app's own forms do it.
+
+sub test_person_roundtrip {
+  # Plan Task 6: create a Person through the web, verify it on the Person list
+  # page. Cleanup is left to the post-run CopyProdData sync (the plan's "same
+  # cleanup note" as Brew/Location). The o/e params go in the POST body, as the
+  # app's forms do: CGI::Fast only reads the query string into params on GET.
+  #
+  # A warm-up GET first: right after a git pull / VERSION.pm touch the fcgi
+  # reloads on the first request, replying 302 and eating it. req absorbs that
+  # one-time bounce for GETs, so the insert POST below lands in a fresh process
+  # instead of being silently dropped (a reload 302 is indistinguishable from
+  # a success redirect on a POST). Only fetch if the list was not already
+  # fetched this run (a stored first Person id means it was); get_first_id
+  # does both, and caches the id for the edit tests.
+  my $name = "TST" . time();
+  get_first_id("Person");
+
+  my ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Person", e => "new", Name => $name, submit => "Insert Person" });
+  my $loc = assert_post_redirect($status, $headers, "Person insert");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Person list after insert", "Persons");
+  assert(scalar($body =~ /\Q$name\E/), "Person list shows the new record '$name'");
+  my $id = id_before_text($body, "Person", $name);
+  assert(defined $id, "harvested the new Person id from the list");
+  if ( defined $id ) {
+    assert(scalar($body =~ /\Qo=Person&e=$id\E/), "the harvested id links to the Person edit page");
+  }
+
+  # Update the person: change the name, submit, verify the old name is gone
+  # and the new one appears on the list page.
+  return unless defined $id;
+  my $name2 = "upd" . time();
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Person", e => $id, id => $id, Name => $name2, submit => "Update Person" });
+  $loc = assert_post_redirect($status, $headers, "Person update");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Person list after update", "Persons");
+  assert(scalar($body !~ /\Q$name\E/), "Person list no longer shows the old name '$name'");
+  assert(scalar($body =~ /\Q$name2\E/), "Person list shows the updated name '$name2'");
+} # test_person_roundtrip
 
 ################################################################################
 # Post-run: CopyProdData sync + debug.log scan
@@ -491,7 +602,12 @@ sub scan_log_appended {
 sub post_run {
   my ($log_before) = @_;
   if ( $post_count > 0 ) {
-    sync_proddata();
+    if ( $fail > 0 ) {
+      print "post-run: $fail test(s) failed, skipping CopyProdData sync " .
+          "so the database can be inspected\n";
+    } else {
+      sync_proddata();
+    }
   } elsif ( !$quiet ) {
     print "post-run: no POST requests, skipping CopyProdData sync\n";
   }
@@ -589,6 +705,27 @@ if ( !@run ) {
   exit 1;
 }
 
+# POST round-trips are dev-guarded: they write to the dev DB, so they may only
+# run against a -dev checkout/URL. --no-post drops them from the run.
+my @post_run = grep { my $p = 0;
+                      foreach my $c (@{ $_->{sets} }) { $p = 1 if $c eq 'posts'; }
+                      $p } @run;
+if ( @post_run ) {
+  if ( $no_post ) {
+    @run = grep { my $p = 0;
+                  foreach my $c (@{ $_->{sets} }) { $p = 1 if $c eq 'posts'; }
+                  !$p } @run;
+    print "note: --no-post given, skipping " . scalar(@post_run) . " POST test(s)\n";
+    if ( !@run ) {
+      print "note: nothing left to run\n";
+      exit 0;
+    }
+  } elsif ( $reldir !~ /-dev/i ) {
+    print "aborting: POST tests require a '-dev' checkout (this directory is '$reldir')\n";
+    exit 1;
+  }
+}
+
 # Record debug.log size before the run; the post-run scan only looks at the
 # appended portion, so pre-existing log errors are not re-flagged.
 my $log_before = log_size();
@@ -633,12 +770,14 @@ foreach my $t (@run) {
 }
 my $nsets = scalar keys %seen;
 my $ntests = $pass + $fail;  # Every assertion counts as a test; skips are extra
+# Label the run with the set(s) we were asked to run, or 'quick' on the default
+my $label = @ARGV ? join(", ", @ARGV) : "quick";
 if ( $fail == 0 ) {
-  print "all: $nsets sets, $ntests tests, all PASS";
+  print "$label done: $nsets sets, $ntests tests, all PASS";
   print " ($skipped skipped)" if $skipped;
   print "\n";
 } else {
-  print "all: $nsets sets, $ntests tests, $pass PASS, $fail FAIL";
+  print "$label done: $nsets sets, $ntests tests, $pass PASS, $fail FAIL";
   print ", $skipped skipped" if $skipped;
   print "\n";
 }

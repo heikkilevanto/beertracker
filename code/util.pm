@@ -61,7 +61,7 @@ sub unit {
 # Puts quotes around the values, separates them by commas, and handles
 # undef nicely
 sub loglist {
-  return join(", ", map { my $v = "'$_'"; $v = "(undef)" unless (defined $_); $v } @_);
+  return join(", ", map { defined $_ ? "'$_'" : "(undef)" } @_);
 }
 
 # Calculate name similarity using Levenshtein edit distance

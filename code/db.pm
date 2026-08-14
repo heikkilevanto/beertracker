@@ -342,7 +342,7 @@ sub postrecord {
   my $defaults = shift || {};
 
   my $sub = util::param($c,"submit");
-  if ($sub =~ /^Update/i && $c->{edit} =~ /^New/i ) {
+  if ($sub =~ /^Update/i && $c->{edit} !~ /^New/i ) {
     db::updaterecord( $c, $table, $c->{edit}, $inputprefix);
   } elsif ( $sub =~ /^Create|^Insert/i ) {
     $c->{edit} = db::insertrecord( $c, $table, $inputprefix, $defaults);
