@@ -100,16 +100,18 @@ sub editperson {
     print "<hr/>\n";
   }
 
-  my $name = $p->{Name};
-  print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
-      where => "EXISTS (SELECT 1 FROM comment_persons cp WHERE cp.Comment = \"Id_A_link=Comment\" AND cp.Person = ?) AND xUsername = ?",
-      params => [$p->{Id}, $c->{username}],
-      title => "Comments mentioning $name",
-      initial_filter => { CommentType => "person" },
-      hide_headers_default => 1,
-      no_new_link => 1,
-      norecmessage => "No comments",
-  });
+  if ( $c->{edit} !~ /^new/i ) {
+    my $name = $p->{Name} // "";
+    print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+        where => "EXISTS (SELECT 1 FROM comment_persons cp WHERE cp.Comment = \"Id_A_link=Comment\" AND cp.Person = ?) AND xUsername = ?",
+        params => [$p->{Id}, $c->{username}],
+        title => "Comments mentioning $name",
+        initial_filter => { CommentType => "person" },
+        hide_headers_default => 1,
+        no_new_link => 1,
+        norecmessage => "No comments",
+    });
+  }
 } # editperson
 
 

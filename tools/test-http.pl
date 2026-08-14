@@ -72,14 +72,28 @@ my $ua = LWP::UserAgent->new(timeout => 30);
 $ua->cookie_jar(HTTP::Cookies->new);      # Keep cookies for future POST tests
 $ua->max_redirect(0);                     # So Location headers can be asserted later
 
+my $post_count = 0;  # POST requests made this run; drives the final CopyProdData sync
+
 sub req {
-  my ($method, $url) = @_;
-  my $res = $ua->get($url);
+  my ($method, $url, $form) = @_;
+  $form ||= {};
+  my $res;
+  if ( $method eq 'POST' ) {
+    $post_count++;
+    $res = $ua->post($url, $form);
+  } else {
+    $res = $ua->get($url);
+  }
   # After a git pull the fcgi script reloads itself: the first request gets a
   # 302 with an empty body (index.fcgi), then exec's a fresh process. Absorb
-  # that one-time bounce for GETs; POST Location headers are still returned
-  # verbatim so round-trip tests can assert them.
-  if ( $res->code == 302 && $res->header('Location') && $res->content eq '' && $method eq 'GET' ) {
+  # that one-time bounce for GETs, but only when the Location still points at a
+  # page with a query string (the reload redirects to "?o=..."). A real
+  # redirect without a query (e.g. CopyProdData's 302 to the bare base URL) is
+  # a genuine response and must be returned verbatim; POST Location headers are
+  # always returned verbatim so round-trip tests can assert them.
+  if ( $method eq 'GET' && $res->code == 302 &&
+       $res->header('Location') && $res->content eq '' &&
+       $res->header('Location') =~ /\?/ ) {
     print STDERR "note: server reloaded itself, retrying $url\n";
     $res = $ua->get($url);
   }
@@ -413,6 +427,78 @@ sub test_static_assets {
 } # test_static_assets
 
 ################################################################################
+# Post-run: CopyProdData sync + debug.log scan
+################################################################################
+# Debug log lives in the repo's beerdata directory (index.fcgi opens
+# $datadir . "debug.log", and $datadir is "./beerdata/" from the repo root).
+my $LOGFILE = "./beerdata/debug.log";
+
+# Record debug.log size before the run; scan only the appended portion after.
+sub log_size {
+  return -s $LOGFILE || 0;
+} # log_size
+
+# The one CopyProdData after the run, only when the run made POST requests.
+# GET-only runs never touch the database, so no sync is needed. If dev code is
+# ahead of prod (new migrations), the first GET after CopyProdData lands on the
+# migrate form; detect that and report instead of failing confusingly.
+sub sync_proddata {
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=CopyProdData");
+  assert($status == 302, "CopyProdData redirects (got $status)");
+  return unless $status == 302;
+  my $loc = $headers->header('Location') || "$BASE_URL";
+  # Follow the redirect; if dev code is ahead of prod, this renders the migrate
+  # form (startup_check in index.fcgi switches op to 'migrate').
+  ($status, $headers, $body) = req("GET", $loc);
+  if ( $status == 302 && ($headers->header('Location') || "") =~ /o=migrate/i ) {
+    print "note: run migrations first (dev DB is behind the code)\n";
+    return;
+  }
+  if ( $status == 200 && $body =~ /Database Migration Required/i ) {
+    print "note: run migrations first (dev DB is behind the code)\n";
+    return;
+  }
+  assert($status == 200, "page after CopyProdData loads (got $status)");
+  assert(no_errors_in($body), "page after CopyProdData is free of error markers");
+} # sync_proddata
+
+# Scan the appended portion of debug.log for new error lines. The bare word
+# "ERROR" IS a marker here, unlike in no_errors_in(): this is the server log,
+# not rendered user data, so a line containing ERROR means an error occurred.
+sub scan_log_appended {
+  my ($log_before) = @_;
+  return unless -f $LOGFILE;
+  open my $fh, "<:utf8", $LOGFILE or do {
+    assert(0, "cannot open $LOGFILE: $!");
+    return;
+  };
+  seek $fh, $log_before, 0;
+  my $appended = do { local $/; <$fh> };
+  close $fh;
+  my @bad;
+  while ( $appended =~ /^(.*(?:DB ERROR|ERROR|Use of uninitialized).*)$/gim ) {
+    push @bad, $1;
+  }
+  assert(!@bad, "no new DB ERROR/ERROR/Use of uninitialized lines in debug.log");
+  foreach my $line (@bad) {
+    print "  log: $line\n";
+  }
+} # scan_log_appended
+
+# Post-run: the conditional CopyProdData sync (only when POSTs happened) and the
+# debug.log scan, once around the whole run rather than per test. Runs even when
+# a mid-run failure aborted the tests.
+sub post_run {
+  my ($log_before) = @_;
+  if ( $post_count > 0 ) {
+    sync_proddata();
+  } elsif ( !$quiet ) {
+    print "post-run: no POST requests, skipping CopyProdData sync\n";
+  }
+  scan_log_appended($log_before);
+} # post_run
+
+################################################################################
 # Test selection
 ################################################################################
 # Select the tests to run. Any number of selectors may be given; the result
@@ -503,16 +589,38 @@ if ( !@run ) {
   exit 1;
 }
 
-foreach my $t (@run) {
-  print "\n" . $t->{name} . ":\n" if $verbose;
-  $tpass = 0;
-  $tfail = 0;
-  $tskip = 0;
-  $t->{test}->();
-  my $tline = "$t->{name}: $tpass PASS";
-  $tline .= ", $tskip SKIP" if $tskip;
-  $tline .= ", $tfail FAIL" if $tfail;
-  print "$tline\n" unless $quiet;
+# Record debug.log size before the run; the post-run scan only looks at the
+# appended portion, so pre-existing log errors are not re-flagged.
+my $log_before = log_size();
+
+# Wrap the run so a mid-run failure (e.g. a POST killing the worker) still
+# triggers the post-run CopyProdData sync (when POSTs happened) and the
+# debug.log scan, then re-raises the error for the exit code.
+my $run_error;
+eval {
+  foreach my $t (@run) {
+    print "\n" . $t->{name} . ":\n" if $verbose;
+    $tpass = 0;
+    $tfail = 0;
+    $tskip = 0;
+    $t->{test}->();
+    my $tline = "$t->{name}: $tpass PASS";
+    $tline .= ", $tskip SKIP" if $tskip;
+    $tline .= ", $tfail FAIL" if $tfail;
+    print "$tline\n" unless $quiet;
+  }
+  1;
+} or do {
+  $run_error = $@ || "unknown run failure";
+  print "run aborted: $run_error\n";
+};
+
+# Post-run: conditional CopyProdData sync + debug.log scan, once around the run
+post_run($log_before);
+
+# Re-raise a mid-run failure so it counts as a failure for the exit code
+if ( $run_error ) {
+  $fail++;
 }
 
 # Grand summary: distinct sets (ignoring the 'quick' tag), tests run, and totals

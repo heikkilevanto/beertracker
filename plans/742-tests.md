@@ -4,8 +4,8 @@
 Build a standalone Perl test script, `tools/test-http.pl`, that exercises the live
 dev site over HTTP (the curl loop idea) with real assertions: GET smoke + content
 checks, edit-page variants driven by **record IDs harvested from the rendered
-list pages**, CopyProdData pre/post for data isolation, and a debug.log scan for
-DB errors.
+list pages**, a post-run CopyProdData sync for data isolation, and a
+debug.log scan for DB errors.
 
 Ordering is deliberate: **all GET-based testing comes first and never touches the
 database**, then data sync, and only last come the POST round-trips (dev-guarded).
@@ -123,8 +123,8 @@ edit/record links themselves, and those carry the ids:
 
 - **(no argument)** — the default: the quick tests (all GET smoke/content
   checks; nothing that writes data).
-- `all` — everything, including POST round-trips and the CopyProdData
-  pre/post sync (needs the dev-only guard).
+- `all` — everything, including POST round-trips and the post-run CopyProdData
+  sync (needs the dev-only guard).
 - `modulename` — all tests that invoke that module (e.g. `graph`, `brews`,
   `comments`). A page test counts if any of its exercised modules/ops matches.
 - `testname` — run exactly that one test.
@@ -212,20 +212,25 @@ list pages:
 
 ## Task 5: Data sync + debug.log scan (GET-only)
 
-- Pre- and post-run: GET `o=CopyProdData` (restores a fresh prod copy, wiping
-  test residue; matches normal dev workflow). Record `debug.log` size before,
-  scan the appended portion for new `DB ERROR`/`ERROR`/`Use of uninitialized`
-  lines after — fail if any.
+- **No CopyProdData before the run.** Each run starts against the dev DB as it
+  is; a pre-sync would always clobber the dev data and was only ever needed to
+  wipe POST residue — which doesn't exist yet at the start.
+- **One CopyProdData after the run, and only if the run made POST requests.**
+  GET-only runs (quick/`all` with no `posts` selector) never touch the database,
+  so they leave the dev DB exactly as they found it. Only when the run actually
+  performed POST round-trips is the final `GET o=CopyProdData` issued, restoring
+  a fresh prod copy and wiping the test residue (Brew/Location/Person records
+  have no web delete; that is their cleanup).
+- Record `debug.log` size before, scan the appended portion for new
+  `DB ERROR`/`ERROR`/`Use of uninitialized` lines after — fail if any.
 - If dev code is ahead of prod (new migrations), the first GET after
   CopyProdData redirects to `o=migrate`; detect and report "run migrations
   first" instead of failing confusingly.
 - Wrap the run so a mid-run failure (e.g. a POST killing the worker) still
-  triggers the post-CopyProdData sync and log scan. In the default run this
-  task does the pre/post sync *once around the whole run*, not per test.
+  triggers the final sync (when POSTs happened) and log scan. In the default run
+  this task does the post-run sync *once around the whole run*, not per test.
 - No DB access here either: the test script only reads the log file and the
-  HTTP responses. This sync also doubles as the garbage collector for any
-  record the POST round-trips left behind (which is why POST tests can afford
-  to be sloppy about cleanup).
+  HTTP responses.
 
 ## Task 6: POST round-trips (much later, dev-guarded)
 
@@ -261,7 +266,8 @@ it — **through the web only**, still without opening the DB. Unique test marke
 
 The current design deliberately avoids a DBI connection to
 `beerdata/beertracker.db`. Ids come from the rendered pages and residue is wiped
-by CopyProdData pre/post, so reads aren't needed. If we later want:
+by the post-run CopyProdData sync (POST runs only), so reads aren't needed. If
+we later want:
 
 - verification of a delete for records with no web delete (Brew/Location/
   Person), or
@@ -307,8 +313,9 @@ extra diagnostics). Decided it is **not needed yet**:
 
 - The footer HTML comments (above) already provide the per-request diagnostics
   with no parameter at all.
-- Data isolation is handled by CopyProdData-before/after, which matches the
-  normal dev workflow.
+- Data isolation is handled by the post-run CopyProdData sync (only issued when
+  the run made POST requests), which leaves the dev DB untouched for GET-only
+  runs.
 - A `testing=1` switch would require dev-only gating plus care with the
   persistent dbh, cache, and graph files (see below).
 
@@ -349,7 +356,11 @@ if running against the live dev DB becomes a problem:
   renders. This keeps the tests honest (they exercise real user-visible links)
   and removes any permission/locking/coupling concerns with the running dev DB.
 - The `&testing=1` separate-DB idea is deferred (above); with the current
-  CopyProdData approach, the dev DB after a run equals a prod copy (by design).
+  CopyProdData approach, the dev DB after a GET-only run is left as it was, and
+  after a POST run it equals a fresh prod copy (by design).
+- A GET-only run never syncs data at all: no pre-sync (would clobber dev data
+  needlessly) and no post-sync (nothing was changed). Only POST runs get the
+  final CopyProdData.
 - If dev code is ahead of prod (new migrations), the first GET after
   CopyProdData redirects to `o=migrate`; detect and report "run migrations
   first" instead of failing confusingly.
@@ -362,7 +373,8 @@ if running against the live dev DB becomes a problem:
 3. Task 3: GET smoke for all ops (no DB, no id variants).
 4. Task 4: harvested-id edit-page variants, `q=` filters, static assets
    (still GET-only, still DB-free).
-5. Task 5: CopyProdData pre/post, debug.log scan, migration detection.
+5. Task 5: debug.log scan + conditional post-run CopyProdData sync, migration
+   detection.
 6. Task 6 (last): POST round-trips — dev-guarded, cleanup via web + post-run
    CopyProdData sync.
 7. Polish: `--no-post`, `--verbose`, `perl -c`, verify prod-URL refusal.
