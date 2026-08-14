@@ -3,8 +3,15 @@
 ## Summary
 Build a standalone Perl test script, `tools/test-http.pl`, that exercises the live
 dev site over HTTP (the curl loop idea) with real assertions: GET smoke + content
-checks, POST round-trips with self-cleanup, CopyProdData pre/post for data
-isolation, and a debug.log scan for DB errors.
+checks, edit-page variants driven by **record IDs harvested from the rendered
+list pages**, CopyProdData pre/post for data isolation, and a debug.log scan for
+DB errors.
+
+Ordering is deliberate: **all GET-based testing comes first and never touches the
+database**, then data sync, and only last come the POST round-trips (dev-guarded).
+The test script itself does **not** open the dev DB — real record IDs come from
+parsing the links the app itself renders, so the tests exercise the exact URLs a
+user sees.
 
 The **first task** is to make GET error handling return a non-200 HTTP status,
 so that HTTP status becomes a reliable success signal for the tests.
@@ -71,15 +78,17 @@ modelled on `tools/test-login.pl`. Uses LWP::UserAgent + HTTP::Cookies
 ### Config & safety
 - `$BASE_URL` default `http://127.0.0.1/beertracker-dev/code/index.fcgi`,
   overridable via `--url=`.
-- Flags: `--no-post` (GET-only mode), `--verbose`.
-- **Post-guard**: POST tests abort unless the URL contains `-dev` *and* the
-  script runs from a `-dev` checkout. CopyProdData is inherently dev-only
-  (`superuser.pm:34`).
+- The default run is GET-only. POST tests only run with an explicit selector
+  (below) *and* pass the **dev post-guard**: they abort unless the URL contains
+  `-dev` *and* the script runs from a `-dev` checkout. CopyProdData is
+  inherently dev-only (`superuser.pm:34`).
+- `--no-post` flag to force GET-only even when a POST selector was given.
 
 ### HTTP helper
 `req($method, $url, \%form)` via LWP with a cookie jar, 30s timeout, redirects
 **not** auto-followed so the `Location` header can be asserted; returns
-`(status, headers, body)`.
+`(status, headers, body)`. POST is supported in the helper from the start
+(needed late, harmless early), but no POST *tests* exist until Task 6.
 
 For GET requests, a `302` with an empty body and a `Location` header means the
 fcgi script reloaded itself (task-1 change; happens once right after a `git
@@ -87,14 +96,27 @@ pull` when `VERSION.pm`/the script mtime changed). `req` absorbs that one-time
 bounce by retrying the GET once, so the first test isn't spuriously flagged;
 POST `Location` headers are still returned verbatim for round-trip assertions.
 
+### Record-ID harvesting from HTML (no DB access)
+The test script never opens the database. Instead, the list pages render the
+edit/record links themselves, and those carry the ids:
+
+- Brew list → `o=Brew&e=<id>`; Location list → `o=Location&e=<id>`;
+  Person list → `o=Person&e=<id>`; Comments list → `o=Comment&e=<id>`;
+  main list (Full/Graph) → `o=Full&e=<glassid>`.
+- Helpers parse a fetched body and return the distinct ids in page order:
+  - `harvest_ids($body, $op)` — all distinct ids for that op.
+  - `first_id($body, $op)` — the first one, for edit-page variants.
+- The regexes are small and kept next to the tests that use them, so they stay
+  visible and easy to fix if a link format changes. Empty results (empty dev
+  DB) make the test skip cleanly instead of failing.
+
 ### Assertion helpers
 - `assert($cond, $msg)` with pass/fail counters; summary + exit code 0/1.
-- `no_errors_in($body)`: body lacks `ERROR`, `DB ERROR`, `Stack Trace`,
-  `Undefined subroutine`, `Can't locate`, `Use of uninitialized` (case-insens.).
-
-### DB helper
-Read-only DBI connection to `beerdata/beertracker.db` to (a) pick real
-Brew/Location/Glass ids for POSTs and (b) verify/clean up test rows.
+- `no_errors_in($body)`: body lacks crash markers — `DB ERROR`, `Stack Trace`,
+  `Undefined subroutine`, `Can't locate`, `Use of uninitialized`
+  (case-insens.). Note: the bare word `ERROR` is deliberately **not** a marker,
+  because real user data (e.g. a comment "Coding Error") legitimately contains
+  it; the real error signal is now the HTTP 500 from Task 1, asserted via status.
 
 ### Test selection via command-line argument
 `tools/test-http.pl` takes one optional argument that selects what to run:
@@ -145,30 +167,96 @@ that touch this module", not "only this module".
 - Ops: `Graph, Board, Full, Years, Months, short, DataStats, Ratings, About,
   Export, Comment, Location, Person, Brew, Photos, Debug`, plus `o=` (default)
   and bogus `o=Bogus` (must fall through to Graph). Skip `GitStatus/GitPull/
-  CopyProdData` (side effects).
+  CopyProdData` (side effects) and `migrate`.
 - Assert: status 200 (now a real success signal), `<!DOCTYPE html>`, menu
   markup, `no_errors_in`.
-- Per-page content marker: About→"Beertracker", Debug→module table,
-  Graph/Board→`id='mainform'`, Full→glass rows, stats pages→tables, etc.
-- Variants with real ids (`o=Comment&e=…`, `o=Graph&e=…`, `o=Brew&e=…`),
-  a `q=` filter (`o=Full&q=IPA`), and static assets (`static/base.css`, JS)
-  → 200.
+- Per-page content marker: About→"Beertracker", Debug→"Grand total",
+  Graph/Board/Full→`id='mainform'`, Full→"Older records", Years→"Year <b>",
+  Months→"Show drinks", short→"Daily stats", DataStats→"Data file stats",
+  Ratings→"Ratings statistics", Export→"Export data", Comment→"Comments by",
+  Location/Person/Brew/Photos→their listrecords title.
+- No record-id variants here — those belong to Task 4 where harvesting lives.
 
-## Task 4: Data sync + POST round-trips
+## Task 4: edit-page variants, filters, static assets (all DB-less)
+
+Now the harvest helpers earn their keep, driven by ids remembered from the
+list pages:
+
+- For each list page from Task 3, harvest a real id and GET the matching edit
+  page, asserting the edit-form markers:
+  - `o=Brew&e=<id>` → "Editing Brew", `o=Location&e=<id>` → "Editing Location",
+    `o=Person&e=<id>` → "Editing Person", `o=Comment&e=<id>` → "Edit comment",
+    `o=Full&e=<glassid>` → the edit-glass page (input form + comments + photos).
+  - New-record forms: `o=Brew&e=new`, `o=Location&e=new`, `o=Person&e=new`,
+    and `o=Comment&e=new&glass=<id>` (new-comment prefill from a glass).
+  - `o=Graph&e=<glassid>` — editing via the Graph page.
+- `q=` filter variants: `o=Full&q=IPA` and `o=Board&q=…` → assert "Filter:<b>";
+  `o=Years&q=<year>` picked from the Years page's "Year <b>" links.
+- Static assets: `static/base.css`, `static/menu.js`, plus `static/beer-dev.png`
+  → 200 (direct HTTP, not the fcgi URL).
+- A list page that yields no ids (empty/fresh dev DB) makes its variant tests
+  skip, printing "skipped", rather than failing.
+
+## Task 5: Data sync + debug.log scan (GET-only)
 
 - Pre- and post-run: GET `o=CopyProdData` (restores a fresh prod copy, wiping
   test residue; matches normal dev workflow). Record `debug.log` size before,
-  scan the appended portion for new `DB ERROR`/`ERROR` lines after.
-- Unique test marker `TST<epoch>` in name/note; cleanup via web delete where
-  supported, else direct DBI, in an `END`/trap block so each test is
-  individually re-runnable.
-- Glass: `submit=Record` with real Location/Brew/`selbrewtype`, date/time,
-  `vol=33`, `alc`, `pr=50`, `note=TST…` → expect 302; verify row; then
-  update (`Save`) and delete (`Del`).
-- Brew (`e=new`, `Name`, `BrewType`, Create), Location (`e=new`, `Name`,
-  `LocType`), Comment (`commentedit=1`, `glass`, `rating`, `comment`),
-  Person (`e=new`, `Name`).
-- Delete test records in FK order (comments before their glass).
+  scan the appended portion for new `DB ERROR`/`ERROR`/`Use of uninitialized`
+  lines after — fail if any.
+- If dev code is ahead of prod (new migrations), the first GET after
+  CopyProdData redirects to `o=migrate`; detect and report "run migrations
+  first" instead of failing confusingly.
+- Wrap the run so a mid-run failure (e.g. a POST killing the worker) still
+  triggers the post-CopyProdData sync and log scan. In the default run this
+  task does the pre/post sync *once around the whole run*, not per test.
+- No DB access here either: the test script only reads the log file and the
+  HTTP responses. This sync also doubles as the garbage collector for any
+  record the POST round-trips left behind (which is why POST tests can afford
+  to be sloppy about cleanup).
+
+## Task 6: POST round-trips (much later, dev-guarded)
+
+Each test = a `sub` that creates a record, verifies it, updates it, and deletes
+it — **through the web only**, still without opening the DB. Unique test marker
+`TST<epoch>` in name/note so rows are findable (and greppable) in pages.
+
+- Every POST asserts a 302 with a `Location` header (the app's standard
+  POST response; `index.fcgi:347`).
+- **Glass**: POST with `submit=Record`, real `Location`/`Brew`/`selbrewtype`
+  (ids harvested in Task 4), `date`/`time`, `vol=33`, `alc`, `pr=50`,
+  `note=TST…`. Follow the redirect, harvest the new glass id from the main list
+  (find the `TST…` note, take the nearest `o=Full&e=<id>` link), then update
+  (`submit=Save`) and delete (`submit=Del`), verifying the row appears/disappears
+  in the page.
+- **Brew**: POST `o=Brew&e=new`, `Name=TST…`, `BrewType=Beer`,
+  `submit=Insert Brew`. Verify the name + harvested id on the Brew list page.
+  Brews have no web delete; rely on the post-run CopyProdData sync to remove it.
+- **Location**: POST `o=Location&e=new`, `Name=TST…`, `LocType=Bar`,
+  `submit=Insert Location`; verify on the Location list page (same cleanup note).
+- **Person**: POST `o=Person&e=new`, `Name=TST…`, `submit=Insert Person`;
+  verify on the Person list page (same cleanup note).
+- **Comment**: POST `commentedit=1`, `glass=<id>`, `rating=7`,
+  `comment=TST…`, `commenttype=brew`, `submit=Add`; verify on the glass page;
+  delete via `submit=Del&comment_id=<id>`.
+- Cleanup order: comments before their glass; everything else is left to the
+  post-run CopyProdData sync. Comment/glass tests that are individually
+  re-runnable clean up after themselves.
+- POST tests are **not** in the `quick` set; they require `all` or a `posts`/
+  module selector, and the dev post-guard.
+
+## Deferred: DBI access from the test script (avoid unless needed)
+
+The current design deliberately avoids a DBI connection to
+`beerdata/beertracker.db`. Ids come from the rendered pages and residue is wiped
+by CopyProdData pre/post, so reads aren't needed. If we later want:
+
+- verification of a delete for records with no web delete (Brew/Location/
+  Person), or
+- fully self-contained POST tests without the CopyProdData dance,
+
+then a read-only DBI helper can be added behind a `--db` flag (connect
+`dbi:SQLite:uri=file:...?mode=ro` to pick ids / verify rows / clean leftovers).
+Keep it optional: the default and `quick` suites must stay DB-free.
 
 ## Dev footer diagnostics: HTML comments for the tests to grep
 
@@ -242,7 +330,11 @@ if running against the live dev DB becomes a problem:
 
 ## Notes / risks
 - `code/` changes: Task 1 (index.fcgi error status) plus the footer diagnostic
-  in index.fcgi/db.pm/cache.pm; the rest is additive tooling.
+  in index.fcgi/db.pm/cache.pm; the rest is additive tooling. Since then the
+  focus is the test script itself.
+- The test script **never opens the dev DB**; ids come from the HTML the app
+  renders. This keeps the tests honest (they exercise real user-visible links)
+  and removes any permission/locking/coupling concerns with the running dev DB.
 - The `&testing=1` separate-DB idea is deferred (above); with the current
   CopyProdData approach, the dev DB after a run equals a prod copy (by design).
 - If dev code is ahead of prod (new migrations), the first GET after
@@ -251,8 +343,13 @@ if running against the live dev DB becomes a problem:
 - Never intentionally trigger POST errors in tests (kills the worker by design).
 
 ## Execution order
-1. Task 1 (HTTP 500 on GET errors) — small, enables status-based checks.
-2. Task 2 skeleton: config, HTTP/assertion/DB helpers, GET smoke loop.
-3. Task 3: content markers, id-param variants, static assets.
-4. Task 4: CopyProdData pre/post, POST round-trips, cleanup, log scan.
-5. Polish: `--verbose`, `perl -c`, verify prod-URL refusal.
+1. Task 1 (HTTP 500 on GET errors) — **done**; enables status-based checks.
+2. Task 2 skeleton: config, HTTP helper, HTML-id harvest helpers, assertion
+   helpers, GET smoke loop, selector plumbing.
+3. Task 3: GET smoke for all ops (no DB, no id variants).
+4. Task 4: harvested-id edit-page variants, `q=` filters, static assets
+   (still GET-only, still DB-free).
+5. Task 5: CopyProdData pre/post, debug.log scan, migration detection.
+6. Task 6 (last): POST round-trips — dev-guarded, cleanup via web + post-run
+   CopyProdData sync.
+7. Polish: `--no-post`, `--verbose`, `perl -c`, verify prod-URL refusal.
