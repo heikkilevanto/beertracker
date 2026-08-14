@@ -81,6 +81,12 @@ modelled on `tools/test-login.pl`. Uses LWP::UserAgent + HTTP::Cookies
 **not** auto-followed so the `Location` header can be asserted; returns
 `(status, headers, body)`.
 
+For GET requests, a `302` with an empty body and a `Location` header means the
+fcgi script reloaded itself (task-1 change; happens once right after a `git
+pull` when `VERSION.pm`/the script mtime changed). `req` absorbs that one-time
+bounce by retrying the GET once, so the first test isn't spuriously flagged;
+POST `Location` headers are still returned verbatim for round-trip assertions.
+
 ### Assertion helpers
 - `assert($cond, $msg)` with pass/fail counters; summary + exit code 0/1.
 - `no_errors_in($body)`: body lacks `ERROR`, `DB ERROR`, `Stack Trace`,

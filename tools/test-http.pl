@@ -60,6 +60,14 @@ $ua->max_redirect(0);                     # So Location headers can be asserted 
 sub req {
   my ($method, $url) = @_;
   my $res = $ua->get($url);
+  # After a git pull the fcgi script reloads itself: the first request gets a
+  # 302 with an empty body (index.fcgi), then exec's a fresh process. Absorb
+  # that one-time bounce for GETs; POST Location headers are still returned
+  # verbatim so round-trip tests can assert them.
+  if ( $res->code == 302 && $res->header('Location') && $res->content eq '' && $method eq 'GET' ) {
+    print STDERR "note: server reloaded itself, retrying $url\n";
+    $res = $ua->get($url);
+  }
   return ($res->code, $res->headers, $res->decoded_content);
 } # req
 
