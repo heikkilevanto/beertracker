@@ -43,6 +43,8 @@ my $BASE_URL = "http://127.0.0.1/$reldir/code/index.fcgi";
 my $STATIC_URL = $BASE_URL;
 $STATIC_URL =~ s{/code/index\.fcgi$}{/static};
 
+my $on_dev = $reldir =~ /-dev/i;   # True if the checkout dir name ends in -dev
+
 my $help = 0;
 my $list = 0;
 my $sets = 0;
@@ -169,12 +171,14 @@ sub assert_page_ok {
   my $ok_doctype = scalar($body =~ /<!DOCTYPE html>/i);
   my $ok_menu = scalar($body =~ /id='menu-toggle'/);
   my $ok_marker = scalar($body =~ /\Q$marker\E/i);
-  my $ok_diag = scalar($body =~ /beertracker-test .+queries=\d+/);
   assert($ok_status, "$op page returns HTTP 200 (got $status)");
   assert($ok_doctype, "$op page has a DOCTYPE");
   assert($ok_menu, "$op page has the menu markup");
   assert($ok_marker, "$op page has content marker '$marker'");
-  assert($ok_diag, "$op page carries the dev footer diagnostic line");
+  if ($on_dev) {
+    my $ok_diag = scalar($body =~ /beertracker-test .+queries=\d+/);
+    assert($ok_diag, "$op page carries the dev footer diagnostic line");
+  }
   assert(no_errors_in($body), "$op page body is free of error markers");
 } # assert_page_ok
 
