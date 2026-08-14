@@ -90,6 +90,50 @@ modelled on `tools/test-login.pl`. Uses LWP::UserAgent + HTTP::Cookies
 Read-only DBI connection to `beerdata/beertracker.db` to (a) pick real
 Brew/Location/Glass ids for POSTs and (b) verify/clean up test rows.
 
+### Test selection via command-line argument
+`tools/test-http.pl` takes one optional argument that selects what to run:
+
+- **(no argument)** — the default: the quick tests (all GET smoke/content
+  checks; nothing that writes data).
+- `all` — everything, including POST round-trips and the CopyProdData
+  pre/post sync (needs the dev-only guard).
+- `modulename` — all tests that invoke that module (e.g. `graph`, `brews`,
+  `comments`). A page test counts if any of its exercised modules/ops matches.
+- `testname` — run exactly that one test.
+
+The selector argument can also name a **more abstract test set**, not tied to a
+single module — e.g. `posts` (all POST round-trips), `lists` (all list/edit
+pages: Brew, Location, Person, Photos, Comment), `stats` (Years/Months/short/
+DataStats/Ratings). Each test can carry one or more such group tags. A selector
+matches against group tags, module names, and full test names alike.
+
+Structure: each test is its own `sub test_Xxx($c)` (with the test name derived
+from the sub name), and a driving table registers them. All selection flags live
+in a single `sets` list — module/op names, abstract group tags, and the
+special `quick` tag (tests included in the default run) — so there is no
+separate flags column:
+
+```perl
+# name => sub, sets => [selectors this test matches; "quick" = default run]
+my @TESTS = (
+  { name => "graph",           sets => [qw(quick lists graph glasses mainlist)], test => \&test_graph },
+  { name => "roundtrip_glass", sets => [qw(posts postglass glasses)],            test => \&test_roundtrip_glass },
+  ...
+);
+```
+
+Selection logic: if no arg → tests whose `sets` contains `quick`; `all` →
+everything; otherwise match the arg case-insensitively against each test's
+`name` (exact) and against each entry in `sets` (substring). Unknown arg →
+list the available names/selectors and exit non-zero.
+
+Rationale: the driving table keeps selection simple and declarative, and makes
+it easy to add a test (new sub + one table row). Slower/destructive tests simply
+omit the `quick` tag in `sets` so the default run stays fast and safe.
+"Module" selectors mostly hit page-level tests that render more than one module
+(e.g. Graph also uses glasses + mainlist) — acceptable: the filter is "tests
+that touch this module", not "only this module".
+
 ## Task 3: GET smoke + content tests
 
 - Ops: `Graph, Board, Full, Years, Months, short, DataStats, Ratings, About,
@@ -120,10 +164,13 @@ Brew/Location/Glass ids for POSTs and (b) verify/clean up test rows.
   Person (`e=new`, `Name`).
 - Delete test records in FK order (comments before their glass).
 
-## Decided: footer diagnostics as HTML comments (no parameter needed)
+## Dev footer diagnostics: HTML comments for the tests to grep
 
-Already implemented. `htmlfooter($c)` (index.fcgi) appends an HTML comment just
-before `</body>`, only when `$devversion`:
+Already implemented. The idea is that each rendered dev page carries useful
+debug info (timings, counter values) as **HTML comments**, invisible in the
+browser but trivially greppable by the test script. `htmlfooter($c)`
+(index.fcgi) appends such a comment just before `</body>`, only when
+`$devversion`:
 
 ```
 <!-- beertracker-test elapsed=10ms queries=3 cache_hits=1 cache_misses=1 cache_sets=1 cache_entries=1 -->
@@ -139,20 +186,31 @@ before `</body>`, only when `$devversion`:
 - Gated on `$devversion`, so production pages are untouched.
 - The test script greps the body for `beertracker-test` to assert on timings and
   counts. Useful for spotting performance regressions (e.g. a page that stops
-  hitting the cache).
+  hitting the cache). Any further per-page diagnostics should be added here as
+  key=value pairs, so the tests always have a single, greppable line to parse.
 
 Verified: About → 3 queries; first Graph load → 25 queries/869ms, second →
 1 query/9ms with 4 cache hits (confirms the cache diagnostic reflects reality).
 
-## Open item: `&testing=1` URL parameter (under consideration)
+## Considered, deferred: `&testing=1` URL parameter (not needed yet)
 
-The test script could append `&testing=1` to every request, letting the app
-detect a test run and adapt. One idea remains, not yet decided:
+We considered having the test script append `&testing=1` to every request so
+the app could detect a test run (open a different database, isolate the cache,
+extra diagnostics). Decided it is **not needed yet**:
+
+- The footer HTML comments (above) already provide the per-request diagnostics
+  with no parameter at all.
+- Data isolation is handled by CopyProdData-before/after, which matches the
+  normal dev workflow.
+- A `testing=1` switch would require dev-only gating plus care with the
+  persistent dbh, cache, and graph files (see below).
+
+The separate-test-database idea may be worth revisiting in a **future version**
+if running against the live dev DB becomes a problem:
 
 1. **Separate test database** — `testing=1` opens `beerdata/beertracker-test.db`
    (auto-copied from the real dev DB when missing/older) instead of the live
    DB, giving clean isolation without the CopyProdData-before/after dance.
-   (The footer-diagnostics idea is superseded by the HTML comment above.)
 
 ### Constraints if we do it
 - Honor `testing=1` **only when `$devversion` is set**; ignore it on the
@@ -167,7 +225,7 @@ detect a test run and adapt. One idea remains, not yet decided:
 - **DB connection**: testing requests must open a fresh connection to the test
   DB and skip the persistent `$dbh_ro` reuse (index.fcgi:355).
 
-### Files touched (if implemented)
+### Files touched (if revisited)
 - `index.fcgi`: detect param, build context (`$c->{testing}`, test datadir,
   fresh cache, skip `$dbh_ro` reuse); append testinfo in `htmlfooter`.
 - `db.pm`: `open_db` targets the test file when testing; auto-copy real DB;
@@ -179,8 +237,8 @@ detect a test run and adapt. One idea remains, not yet decided:
 ## Notes / risks
 - `code/` changes: Task 1 (index.fcgi error status) plus the footer diagnostic
   in index.fcgi/db.pm/cache.pm; the rest is additive tooling.
-- If the `&testing=1` separate-DB idea is adopted, dev DB after a run is
-  untouched; otherwise (CopyProdData approach) it equals a prod copy (by design).
+- The `&testing=1` separate-DB idea is deferred (above); with the current
+  CopyProdData approach, the dev DB after a run equals a prod copy (by design).
 - If dev code is ahead of prod (new migrations), the first GET after
   CopyProdData redirects to `o=migrate`; detect and report "run migrations
   first" instead of failing confusingly.
