@@ -120,10 +120,11 @@ sub editperson {
 ################################################################################
 sub postperson {
   my $c = shift; # context
-  # Validate
+  # Validate name only for insert/update; deletes don't need it
+  my $submit = util::param($c, "submit");
   my $name = util::param($c, "Name");
   util::error ("A Person must have a name" )
-    unless $name;
+    unless $name || $submit =~ /Delete/i;
   $c->{cgi}->param('Tags', util::clean_tags(util::param($c, 'Tags')));
   db::postrecord($c, "PERSONS");
   return;

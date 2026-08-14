@@ -539,6 +539,16 @@ sub test_person_roundtrip {
   assert_page_ok($status, $body, "Person list after update", "Persons");
   assert(scalar($body !~ /\Q$name\E/), "Person list no longer shows the old name '$name'");
   assert(scalar($body =~ /\Q$name2\E/), "Person list shows the updated name '$name2'");
+
+  # Delete the person: POST with submit=Delete Person. Persons have a web
+  # delete button, so this test cleans up after itself.
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Person", e => $id, id => $id, submit => "Delete Person" });
+  $loc = assert_post_redirect($status, $headers, "Person delete");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Person list after delete", "Persons");
+  assert(scalar($body !~ /\Q$name2\E/), "Person list no longer shows the deleted record '$name2'");
 } # test_person_roundtrip
 
 ################################################################################
