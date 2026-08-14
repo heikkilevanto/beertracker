@@ -656,5 +656,16 @@ function atype_change_$pid(v) {
 } # editphoto
 
 ################################################################################
+# Check if any photos reference a given entity (Brew, Location, Person, etc.).
+# The photos table has no explicit FK constraints, so db::can_delete cannot
+# discover these references — callers must check separately.
+sub has_photos {
+  my ($c, $entity, $id) = @_;
+  my ($cnt) = db::queryarray($c,
+    "SELECT COUNT(*) FROM photos WHERE $entity = ?", $id);
+  return $cnt > 0;
+} # has_photos
+
+################################################################################
 # Report module loaded ok
 1;

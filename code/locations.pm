@@ -312,6 +312,9 @@ sub editlocation {
       # Editing existing record: show Edit button, hide submit
       print "<button type='button' class='edit-enable-btn' onclick='enableEditing(this.form)'>Edit</button>\n";
       print "<input type='submit' name='submit' value='$submit Location' class='edit-submit-btn' hidden />\n";
+      if ( db::can_delete($c, "LOCATIONS", $p->{Id}) && !photos::has_photos($c, "Location", $p->{Id}) ) {
+        print "<input type='submit' name='submit' value='Delete Location' class='edit-submit-btn' hidden />\n";
+      }
     } else {
       # New record: normal submit button
       print "<input type='submit' name='submit' value='$submit Location' />\n";
@@ -490,6 +493,11 @@ sub deduplocations {
 sub postlocation {
   my $c = shift; # context
   my $id = shift || $c->{edit};
+  my $submit = util::param($c, "submit");
+  if ($submit =~ /Delete/i) {
+    db::deleterecord($c, "LOCATIONS", $id);
+    return $id;
+  }
   if ( util::param($c,"dedup") ) {
     deduplocations($c,$id);
     return;

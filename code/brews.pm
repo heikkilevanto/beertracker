@@ -388,6 +388,9 @@ sub editbrew {
       print "<button type='button' class='edit-enable-btn' onclick=\"enableEditing(this.form); var d=document.getElementById('dropdown-BrewType'); if(d)d.classList.remove('open'); var n=document.querySelector('input[name=\\'Name\\']'); if(n)n.focus();\">Edit</button>\n";
       print "<button type='button' onclick=\"window.location.href='$c->{url}?o=$c->{op}&e=new&duplicate=$p->{Id}'\">Duplicate</button>\n";
       print "<input type='submit' name='submit' value='$submit Brew' class='edit-submit-btn' hidden />\n";
+      if ( db::can_delete($c, "BREWS", $p->{Id}) && !photos::has_photos($c, "Brew", $p->{Id}) ) {
+        print "<input type='submit' name='submit' value='Delete Brew' class='edit-submit-btn' hidden />\n";
+      }
     } else {
       # New record: normal submit button
       print "<input type='submit' name='submit' value='$submit Brew' />\n";
@@ -776,6 +779,11 @@ sub dedupbrews {
 sub postbrew {
   my $c = shift; # context
   my $id = shift || $c->{edit};
+  my $submit = util::param($c, "submit");
+  if ($submit =~ /Delete/i) {
+    db::deleterecord($c, "BREWS", $id);
+    return $id;
+  }
   my $setdefaultprice = util::param($c, "setdefaultprice");
   my $setdefaultvol = util::param($c, "setdefaultvol");
   if ($setdefaultprice && $setdefaultvol) {

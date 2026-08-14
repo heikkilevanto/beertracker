@@ -368,6 +368,33 @@ sub deleterecord {
 } # deleterecord
 
 
+################################################################################
+# Check if a record can be safely deleted
+# Discovers tables with foreign keys referencing $table via PRAGMA foreign_key_list,
+# then checks each for child rows with the given $id. Returns 1 if safe, 0 if
+# referencing rows exist. Does NOT check tables without explicit FK constraints
+# (callers must check those separately, e.g. photos.pm::has_photos).
+sub can_delete {
+  my ($c, $table, $id) = @_;
+  my @tables = queryrecordarray($c,
+    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'");
+  for my $t (@tables) {
+    my $sth = query($c, "PRAGMA foreign_key_list($t)");
+    while (my $fk = $sth->fetchrow_hashref) {
+      # $fk->{table} is the parent table this table's FK points to
+      # $fk->{from} is the column in $t (the child)
+      if (uc($fk->{table}) eq uc($table)) {
+        my ($cnt) = queryarray($c,
+          "SELECT COUNT(*) FROM $t WHERE " . $fk->{from} . " = ?", $id);
+        return 0 if $cnt > 0;
+      }
+    }
+    $sth->finish;
+  }
+  return 1;
+} # can_delete
+
+
 ########## Update a record directly from CGI parameters
 sub updaterecord {
   my $c = shift;
