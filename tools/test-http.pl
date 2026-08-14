@@ -20,6 +20,8 @@
 use strict;
 use warnings;
 use utf8;
+use Cwd;
+use File::Basename;
 use Getopt::Long;
 use LWP::UserAgent;
 use HTTP::Cookies;
@@ -27,7 +29,15 @@ use HTTP::Cookies;
 ################################################################################
 # Config
 ################################################################################
-my $BASE_URL = "http://127.0.0.1/beertracker-dev/code/index.fcgi";
+# The path component of the base URL comes from the basename of the checkout
+# directory, so a copy of the code under another name (beertracker, a debug
+# checkout like beertracker-x, ...) can be tested without editing this file.
+my $reldir = basename(getcwd());
+if ( $reldir !~ /beertracker/i ) {
+  die "Cannot use the current directory '$reldir' for testing: its name does " .
+      "not contain 'beertracker'. Run this script from a beertracker checkout.\n";
+}
+my $BASE_URL = "http://127.0.0.1/$reldir/code/index.fcgi";
 
 # Static assets are served next to the fcgi script under /static/
 my $STATIC_URL = $BASE_URL;
