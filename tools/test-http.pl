@@ -25,6 +25,7 @@ use File::Basename;
 use Getopt::Long;
 use LWP::UserAgent;
 use HTTP::Cookies;
+use POSIX qw(strftime);  # date/time for the glass round-trip POSTs
 
 ################################################################################
 # Config
@@ -229,6 +230,7 @@ my @TESTS = (
   { name => "person_roundtrip", sets => [qw(posts roundtrip person persons)],         test => \&test_person_roundtrip },
   { name => "brew_roundtrip",     sets => [qw(posts roundtrip brew brews)],             test => \&test_brew_roundtrip },
   { name => "location_roundtrip", sets => [qw(posts roundtrip location locations)],       test => \&test_location_roundtrip },
+  { name => "glass_roundtrip",    sets => [qw(posts roundtrip postglass glasses)],        test => \&test_glass_roundtrip },
 );
 
 ################################################################################
@@ -365,19 +367,25 @@ sub get_first_id {
 
 # The id of the row whose cell text $text appears on, harvested from a rendered
 # list page. The id column (a link like o=$op&e=<id>) precedes the text column,
-# so the last such link before the text is the row's own id. Returns undef when
-# the text or a preceding id link is not found.
+# so the link before the text is the row's own id. The text can also occur in a
+# non-row context — e.g. the main input form's data-note attribute on the Full
+# page mirrors the latest glass's note before the main list renders — so we
+# examine each occurrence and take the first one that has a preceding id link.
+# Returns undef when no occurrence has one.
 sub id_before_text {
   my ($body, $op, $text) = @_;
-  my $pos = index($body, $text);
-  return undef if $pos < 0;
-  my $before = substr($body, 0, $pos);
   my $re = qr{o=$op&e=(\d+)};
-  my $id;
-  while ( $before =~ /$re/g ) {
-    $id = $1;
+  my $pos = 0;
+  while ( (my $found = index($body, $text, $pos)) >= 0 ) {
+    my $before = substr($body, 0, $found);
+    my $id;
+    while ( $before =~ /$re/g ) {
+      $id = $1;
+    }
+    return $id if defined $id;
+    $pos = $found + length($text);
   }
-  return $id;
+  return undef;
 } # id_before_text
 
 ################################################################################
@@ -556,8 +564,7 @@ sub test_person_roundtrip {
 sub test_brew_roundtrip {
   # Plan Task 6: create a Brew through the web, verify it on the Brew list,
   # update it, and delete it — all through HTTP, no DB access.
-  # Note: postbrew() has no Delete branch yet, so the delete step will fail
-  # until delete support is added to brews.pm.
+  # postbrew() has a Delete branch (brews.pm:783), so the delete step works.
   my $name = "TST" . time();
   get_first_id("Brew");
 
@@ -587,8 +594,9 @@ sub test_brew_roundtrip {
   assert(scalar($body !~ /\Q$name\E/), "Brew list no longer shows the old name '$name'");
   assert(scalar($body =~ /\Q$name2\E/), "Brew list shows the updated name '$name2'");
 
-  # Delete the brew: POST with submit=Delete Brew. postbrew() currently has
-  # no delete branch, so this will fail until delete support is added.
+  # Delete the brew: POST with submit=Delete Brew, handled by postbrew()
+  # (brews.pm:783). Deleting an existing brew with no child glasses should
+  # succeed.
   ($status, $headers, $body) = req("POST", "$BASE_URL",
       { o => "Brew", e => $id, id => $id, Name => $name2, BrewType => "Beer", submit => "Delete Brew" });
   $loc = assert_post_redirect($status, $headers, "Brew delete");
@@ -601,8 +609,8 @@ sub test_brew_roundtrip {
 sub test_location_roundtrip {
   # Plan Task 6: create a Location through the web, verify it on the Location
   # list, update it, and delete it — all through HTTP, no DB access.
-  # Note: postlocation() has no Delete branch yet, so the delete step will fail
-  # until delete support is added to locations.pm.
+  # postlocation() has a Delete branch (locations.pm:497), so the delete step
+  # works.
   my $name = "TST" . time();
   get_first_id("Location");
 
@@ -632,9 +640,9 @@ sub test_location_roundtrip {
   assert(scalar($body !~ /\Q$name\E/), "Location list no longer shows the old name '$name'");
   assert(scalar($body =~ /\Q$name2\E/), "Location list shows the updated name '$name2'");
 
-  # Delete the location: POST with submit=Delete Location. postlocation()
-  # currently has no delete branch, so this will fail until delete support
-  # is added.
+  # Delete the location: POST with submit=Delete Location, handled by
+  # postlocation() (locations.pm:497). Deleting an existing location with no
+  # child glasses should succeed.
   ($status, $headers, $body) = req("POST", "$BASE_URL",
       { o => "Location", e => $id, id => $id, Name => $name2, LocType => "Bar", submit => "Delete Location" });
   $loc = assert_post_redirect($status, $headers, "Location delete");
@@ -643,6 +651,92 @@ sub test_location_roundtrip {
   assert_page_ok($status, $body, "Location list after delete", "Locations");
   assert(scalar($body !~ /\Q$name2\E/), "Location list no longer shows the deleted record '$name2'");
 } # test_location_roundtrip
+
+# The id and BrewType of the first brew in the main input form's dropdown that
+# already has a DefPrice, else (). A brew with a DefPrice means the
+# DefPrice/DefVol auto-update in postglass is a no-op, so the glass POST cannot
+# write to the brews table. Each dropdown item carries defprice='…' and
+# brewtype='…' attributes (brews.pm:708); the id='actions' item does not match
+# \d+. The regex lives right next to the test, per the "regexes stay visible"
+# convention.
+sub brew_with_defprice {
+  my $body = shift;
+  while ( $body =~ m{<div class='dropdown-item' id='(\d+)'[^>]*?defprice='([^']+)'[^>]*?brewtype='([^']*)'}g ) {
+    return ($1, $3);
+  }
+  return ();
+} # brew_with_defprice
+
+sub test_glass_roundtrip {
+  # Plan Task 6a: create a glass through the web (POST submit=Record), verify it
+  # on the main list, update it (submit=Save), and delete it (submit=Del) — all
+  # through HTTP, no DB access. The note is TST<epoch> so it is greppable in
+  # pages, and the volume is an unlikely 11 cl so it never collides with real
+  # drinking data in stats or price guessing. Only brews with an existing
+  # DefPrice are used, so the brews table is never written.
+  my $locid = get_first_id("Location");
+  if ( !defined $locid ) { skipmsg("Location list has no ids for a glass"); return; }
+  # Warm-up GET (get_first_id) absorbs the one-time fcgi reload bounce before
+  # the first POST, so the insert is not silently dropped by a reload 302.
+  get_first_id("Full");
+
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full");
+  my ($brewid, $brewtype) = brew_with_defprice($body);
+  if ( !defined $brewid ) { skipmsg("no brew with a DefPrice in the dev data"); return; }
+
+  my $note = "TST" . time();
+  my $date = strftime("%Y-%m-%d", localtime());
+  my $time = strftime("%H:%M", localtime());
+
+  # Insert: record the glass
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Full", Location => $locid, Brew => $brewid, selbrewtype => $brewtype,
+        date => $date, time => $time, vol => "11", alc => "4.6", pr => "50",
+        note => $note, submit => "Record" });
+  my $loc = assert_post_redirect($status, $headers, "Glass insert");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Full after glass insert", "id='mainform'");
+  assert(scalar($body =~ /\Q$note\E/), "Full page shows the new note '$note'");
+  my $id = id_before_text($body, "Full", $note);
+  assert(defined $id, "harvested the new glass id from the main list");
+  if ( defined $id ) {
+    assert(scalar($body =~ /\Qo=Full&e=$id\E/), "the harvested id links to the glass edit page");
+  }
+  return unless defined $id;
+
+  # Verify the volume landed: the edit form shows value='11c', and the note is
+  # in the form
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&e=$id");
+  assert_page_ok($status, $body, "glass edit form", "id='mainform'");
+  assert(scalar($body =~ /name='vol'[^>]*value='11c'/), "glass edit form shows vol value='11c'");
+  assert(scalar($body =~ /name='note'[^>]*value='\Q$note\E'/), "glass edit form shows the note '$note'");
+
+  # Update: change the note. Must resend Location/Brew/vol — postglass
+  # overwrites the glass with the posted params, and a missing vol would
+  # default to 40 cl. $note2 must not contain $note as a substring, or the
+  # "old note gone" assertion below would fail.
+  my $note2 = "TST" . (time()+1) . "upd";
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Full", e => $id, Location => $locid, Brew => $brewid,
+        selbrewtype => $brewtype, date => $date, time => $time, vol => "11",
+        alc => "4.6", pr => "50", note => $note2, submit => "Save" });
+  $loc = assert_post_redirect($status, $headers, "Glass update");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Full after glass update", "id='mainform'");
+  assert(scalar($body !~ /\Q$note\E/), "Full page no longer shows the old note '$note'");
+  assert(scalar($body =~ /\Q$note2\E/), "Full page shows the updated note '$note2'");
+
+  # Delete: POST with submit=Del, then verify the note is gone
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Full", e => $id, submit => "Del" });
+  $loc = assert_post_redirect($status, $headers, "Glass delete");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Full after glass delete", "id='mainform'");
+  assert(scalar($body !~ /\Q$note2\E/), "Full page no longer shows the deleted record '$note2'");
+} # test_glass_roundtrip
 
 ################################################################################
 # Post-run: CopyProdData sync + debug.log scan

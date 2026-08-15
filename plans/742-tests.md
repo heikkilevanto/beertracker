@@ -262,6 +262,117 @@ it — **through the web only**, still without opening the DB. Unique test marke
 - POST tests are **not** in the `quick` set; they require `all` or a `posts`/
   module selector, and the dev post-guard.
 
+## Task 6a (planned, not yet implemented): Glass round-trip in tools/test-http.pl
+
+The glass round-trip from Task 6 is missing. It creates a glass through the web
+(POST `submit=Record`), verifies it on the main list, updates it
+(`submit=Save`), and deletes it (`submit=Del`) — all through HTTP, no DB
+access. Two markers identify the record as a test and keep it harmless:
+the note is `TST<epoch>` (greppable in pages, like the other roundtrips) and
+the volume is an **unlikely 11 cl** so it never collides with real drinking
+data in stats or price guessing.
+
+### Registration (add to @TESTS, not in 'quick')
+```perl
+{ name => "glass_roundtrip", sets => [qw(posts roundtrip postglass glasses)], test => \&test_glass_roundtrip },
+```
+It inherits the existing dev-guard (the `posts` tag + the `-dev`/`--no-post`
+logic) and the post-run CopyProdData sync. No new guarding code needed.
+
+### New helper: `brew_with_defprice($body)`
+Use a brew that already has a `DefPrice`, so the `DefPrice=50/DefVol=11`
+auto-update in `postglass.pm:189` becomes a no-op (that is the only real
+side effect the glass POST can have on the `brews` table). Also harvest the
+brew's real `BrewType` to send as `selbrewtype`.
+
+Rather than looping over `o=Brew&e=<id>` edit pages, parse the main input
+form's brew dropdown on the Full page — each item carries `defprice='…'` and
+`brewtype='…'` attributes (`brews.pm:708`), so one fetch yields the brew id
+and its type. Returns `($brewid, $brewtype)` for the first item with a
+non-empty `defprice`, else `()` (then the test skips):
+```perl
+sub brew_with_defprice {
+  my $body = shift;
+  while ( $body =~ m{<div class='dropdown-item' id='(\d+)'[^>]*?defprice='([^']+)'[^>]*?brewtype='([^']*)'}g ) {
+    return ($1, $3);
+  }
+  return ();
+}
+```
+(The `id='actions'` item does not match `\d+`. The regex lives right next to
+the test, per the "regexes stay visible" convention.)
+
+### Test flow (`test_glass_roundtrip`, placed after `test_location_roundtrip`)
+Add `use POSIX qw(strftime);` to the script imports for the date/time.
+
+1. `my $locid = get_first_id("Location");` — skip if the list has no ids.
+2. Warm-up GET (`get_first_id("Full")`) to absorb the one-time fcgi reload
+   bounce before the first POST.
+3. GET `?o=Full`, parse `brew_with_defprice` → `($brewid, $brewtype)`;
+   skip if no brew has a DefPrice in the dev data.
+4. **Insert** — POST `o=Full, Location, Brew, selbrewtype, date=today,
+   time=now, vol=>"11", alc=>"4.6", pr=>"50", note=>"TST".time(),
+   submit=>Record`. Assert 302 + Location (`assert_post_redirect`).
+5. Follow the redirect; `assert_page_ok` (`id='mainform'`); assert the note
+   appears; harvest the glass id via `id_before_text($body, "Full", $note)`;
+   assert the `o=Full&e=$id` link exists.
+6. **Verify vol landed** — GET `?o=Full&e=$id` (edit form); assert the vol
+   input shows `value='11c'` and the note is in the form.
+7. **Update** — POST `o=Full, e=$id, Location, Brew, selbrewtype, date,
+   time, vol=>"11", alc, pr, note=>$note2, submit=>Save`. Use
+   `$note2 = "TST" . (time()+1) . "upd"` — it **must not contain `$note` as
+   a substring**, or the "old note gone" assertion fails. Assert 302, follow
+   redirect, assert old note gone / new note present.
+8. **Delete** — POST `o=Full, e=$id, submit=>Del`. Assert 302, follow
+   redirect, assert note2 absent.
+
+Note: the update **must** resend `Location`/`Brew`/`vol`. On Save,
+`postglass` overwrites `$glass->{Brew}`/`{Location}` with the posted params,
+and `vol` defaults to `"L"` → 40 cl when missing (`postglass.pm:66,289`).
+
+### Side effects on other tables (analysis)
+- **glasses** — the row itself; insert → update → delete. Intended.
+- **brews** — **no write**: only brews with an existing `DefPrice` are used,
+  so the `DefPrice/DefVol` auto-update (`postglass.pm:189`) is skipped.
+  `setdef`/`updateGeo` are not sent, so `update_brew_defaults` and
+  `locations.Lat/Lon` never run.
+- **locations / persons / tap_beers** — untouched.
+- **comments / comment_persons / photos** — untouched: the glass gets no
+  comments or photos, so the delete triggers neither the
+  `comments.Glass ON DELETE SET NULL` FK (FKs are enforced, `db.pm:49`) nor
+  orphaned `photos.Glass` rows.
+- **Transient view/stat effects while the row exists** (gone after the
+  delete, or after the post-run CopyProdData sync): `brew_ratings`
+  glass_count +1 for the brew; `LatestPrices` gains a spurious 50.-/11cl
+  "latest" row; Year/Month/short/blood-alcohol aggregates gain ~+50.- and
+  ~+0.33 std drinks for today; `fixprice` guessing can never inherit from it
+  because vol=11 matches no real (brew, location, volume) — the reason for
+  the unlikely volume.
+- **Non-DB**: `graph::clearcachefiles` on each glass POST unlinks the user's
+  cached graph PNGs and touches `beerdata/<user>.last` (same as any real
+  glass POST, transient); `debug.log` gets normal param-dump/POST lines (the
+  log scan fails only on ERROR lines); a POST error would kill the fcgi
+  worker by design, so the test avoids erroring.
+
+### Cleanup / re-runnability
+The test deletes its own glass, so re-runs do not accumulate rows; each run
+uses a fresh epoch in the note. A mid-run abort leaves a greppable
+`TST<epoch>` glass, but the post-run CopyProdData sync (fires whenever POSTs
+happened and the run passed) restores a fresh prod copy; if the run failed
+the sync is skipped so the DB can be inspected.
+
+### Files touched
+`tools/test-http.pl` only (imports + helper + test sub + one `@TESTS` row).
+No `code/VERSION.pm` touch — the test script is standalone, not loaded by
+index.fcgi.
+
+### Verification (once implemented)
+- `perl -c tools/test-http.pl`.
+- `perl tools/test-http.pl -v glass_roundtrip` (dev checkout, so the POST
+  guard passes).
+- `perl tools/test-http.pl posts` to run all four roundtrips; confirm the
+  post-run sync ran.
+
 ## Deferred: DBI access from the test script (avoid unless needed)
 
 The current design deliberately avoids a DBI connection to
