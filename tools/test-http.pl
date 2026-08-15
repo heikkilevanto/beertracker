@@ -231,6 +231,7 @@ my @TESTS = (
   { name => "brew_roundtrip",     sets => [qw(posts roundtrip brew brews)],             test => \&test_brew_roundtrip },
   { name => "location_roundtrip", sets => [qw(posts roundtrip location locations)],       test => \&test_location_roundtrip },
   { name => "glass_roundtrip",    sets => [qw(posts roundtrip postglass glasses)],        test => \&test_glass_roundtrip },
+  { name => "comment_roundtrip",  sets => [qw(posts roundtrip comment comments)],          test => \&test_comment_roundtrip },
 );
 
 ################################################################################
@@ -737,6 +738,71 @@ sub test_glass_roundtrip {
   assert_page_ok($status, $body, "Full after glass delete", "id='mainform'");
   assert(scalar($body !~ /\Q$note2\E/), "Full page no longer shows the deleted record '$note2'");
 } # test_glass_roundtrip
+
+sub test_comment_roundtrip {
+  # Plan Task 6b: attach a comment to an existing glass through the web (POST
+  # commentedit=1), verify it, update it, and delete it — all through HTTP, no
+  # DB access. The comment text is TST<epoch> so it is greppable in pages, and
+  # the rating is a midrange 7. The comment sits on an existing glass, so no
+  # glass cleanup is needed; the comment delete cleans up after itself.
+  my $glassid = get_first_id("Full");
+  if ( !defined $glassid ) { skipmsg("Full list has no glass ids for a comment"); return; }
+
+  my $note = "TST" . time();
+
+  # Insert: add the comment to the glass. Dispatch runs on the commentedit=1
+  # param (index.fcgi:322), so o/e just follow the app's own form fields.
+  my ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { commentedit => "1", o => "Comment", e => "new", glass => $glassid,
+        rating => "7", comment => $note, commenttype => "brew", submit => "Add" });
+  my $loc = assert_post_redirect($status, $headers, "Comment insert");
+  return unless defined $loc;
+  # The redirect lands back on the glass's page (o=Full&date=...&ndays=1)
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Full after comment insert", "id='mainform'");
+  assert(scalar($body =~ /\Q$note\E/), "glass page shows the new comment '$note'");
+  my $id = id_before_text($body, "Comment", $note);
+  assert(defined $id, "harvested the new comment id from the glass page");
+  if ( defined $id ) {
+    assert(scalar($body =~ /\Qo=Comment&e=$id\E/), "the harvested id links to the comment edit page");
+  }
+  return unless defined $id;
+
+  # Verify the comment landed: the edit page shows the heading, the note in
+  # the textarea, and the rating/type dropdowns preselected
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Comment&e=$id");
+  assert_page_ok($status, $body, "Comment edit form", "Edit comment");
+  assert(scalar($body =~ /name='comment'[^>]*>\s*\Q$note\E/), "comment edit form shows the note '$note'");
+  assert(scalar($body =~ /id="rating"\s+name="rating"\s+value="7"/), "comment edit form shows rating value='7'");
+  assert(scalar($body =~ /id="commenttype"\s+name="commenttype"\s+value="brew"/), "comment edit form shows type 'brew'");
+
+  # Update: change the rating and the note. Must resend glass — postcomment's
+  # UPDATE is gated on Glass IS NOT DISTINCT FROM ? (comments.pm:673). $note2
+  # must not contain $note as a substring, or the "old note gone" assertion
+  # below would fail.
+  my $note2 = "TST" . (time()+1) . "upd";
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { commentedit => "1", o => "Comment", e => $id, glass => $glassid,
+        comment_id => $id, rating => "8", comment => $note2,
+        commenttype => "brew", submit => "Upd" });
+  $loc = assert_post_redirect($status, $headers, "Comment update");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Full after comment update", "id='mainform'");
+  assert(scalar($body !~ /\Q$note\E/), "glass page no longer shows the old comment '$note'");
+  assert(scalar($body =~ /\Q$note2\E/), "glass page shows the updated comment '$note2'");
+
+  # Delete: POST with submit=Del and comment_id. Must resend glass so the
+  # redirect lands back on the glass page for verification.
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { commentedit => "1", o => "Comment", e => $id, glass => $glassid,
+        comment_id => $id, submit => "Del" });
+  $loc = assert_post_redirect($status, $headers, "Comment delete");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Full after comment delete", "id='mainform'");
+  assert(scalar($body !~ /\Q$note2\E/), "glass page no longer shows the deleted comment '$note2'");
+} # test_comment_roundtrip
 
 ################################################################################
 # Post-run: CopyProdData sync + debug.log scan

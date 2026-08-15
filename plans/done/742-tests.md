@@ -69,7 +69,7 @@ the eval, and on error the buffer is discarded and a real HTTP 500 page is sent:
 - `debug.log` shows `GET error: ...` plus `GET o=Comment&e=999999999 ERROR`.
 - Footer diagnostic comment still present on success pages.
 
-## Task 2: Test script skeleton `tools/test-http.pl`
+## Task 2 (done): Test script skeleton `tools/test-http.pl`
 
 Standalone Perl script, run from the repo root (`perl tools/test-http.pl`),
 modelled on `tools/test-login.pl`. Uses LWP::UserAgent + HTTP::Cookies
@@ -190,7 +190,7 @@ that touch this module", not "only this module".
   asserts "Show money spent" on the default page and fetches `o=Months&s=money`
   to assert the "Show drinks" link from the plan.
 
-## Task 4: edit-page variants, filters, static assets (all DB-less)
+## Task 4 (done): edit-page variants, filters, static assets (all DB-less)
 
 Now the harvest helpers earn their keep, driven by ids remembered from the
 list pages:
@@ -210,7 +210,7 @@ list pages:
 - A list page that yields no ids (empty/fresh dev DB) makes its variant tests
   skip, printing "skipped", rather than failing.
 
-## Task 5: Data sync + debug.log scan (GET-only)
+## Task 5 (done): Data sync + debug.log scan (GET-only)
 
 - **No CopyProdData before the run.** Each run starts against the dev DB as it
   is; a pre-sync would always clobber the dev data and was only ever needed to
@@ -232,7 +232,7 @@ list pages:
 - No DB access here either: the test script only reads the log file and the
   HTTP responses.
 
-## Task 6: POST round-trips (much later, dev-guarded)
+## Task 6 (done): POST round-trips (much later, dev-guarded)
 
 Each test = a `sub` that creates a record, verifies it, updates it, and deletes
 it — **through the web only**, still without opening the DB. Unique test marker
@@ -262,7 +262,7 @@ it — **through the web only**, still without opening the DB. Unique test marke
 - POST tests are **not** in the `quick` set; they require `all` or a `posts`/
   module selector, and the dev post-guard.
 
-## Task 6a (planned, not yet implemented): Glass round-trip in tools/test-http.pl
+## Task 6a (done): Glass round-trip in tools/test-http.pl
 
 The glass round-trip from Task 6 is missing. It creates a glass through the web
 (POST `submit=Record`), verifies it on the main list, updates it
@@ -366,12 +366,113 @@ the sync is skipped so the DB can be inspected.
 No `code/VERSION.pm` touch — the test script is standalone, not loaded by
 index.fcgi.
 
-### Verification (once implemented)
+### Verification (done)
 - `perl -c tools/test-http.pl`.
 - `perl tools/test-http.pl -v glass_roundtrip` (dev checkout, so the POST
   guard passes).
-- `perl tools/test-http.pl posts` to run all four roundtrips; confirm the
-  post-run sync ran.
+- `perl tools/test-http.pl posts` — all roundtrips (person, brew, location,
+  glass, comment) pass; the post-run CopyProdData sync ran.
+
+## Task 6b (done): Comment round-trip in tools/test-http.pl
+
+The comment round-trip from Task 6. It attaches a comment to an **existing**
+glass (no glass is created — comments always sit on a glass), verifies it,
+updates it, and deletes it — all through HTTP, no DB access. The comment text
+is `TST<epoch>` (greppable in pages), and the rating is a midrange 7.
+
+### Registration (add to @TESTS, not in 'quick', after glass_roundtrip)
+```perl
+{ name => "comment_roundtrip", sets => [qw(posts roundtrip comment comments)], test => \&test_comment_roundtrip },
+```
+It inherits the existing dev-guard (the `posts` tag + the `-dev`/`--no-post`
+logic) and the post-run CopyProdData sync. No new guarding code needed.
+
+### Why the flow works (comments.pm)
+- **Dispatch**: `index.fcgi:322` routes on the `commentedit=1` param →
+  `comments::postcomment` (regardless of `o`).
+- **Insert**: no `comment_id` → INSERT (`comments.pm:685`); `Ts` is inherited
+  from the glass; redirect to `?o=Full&date=$effdate&ndays=1`
+  (`comments.pm:704`) — i.e. back to the glass's page, which renders the
+  comment via `commentlines` (`mainlist.pm:286`, gated on `comcount`).
+- **Harvest**: `commentline` renders the `o=Comment&e=<id>` link immediately
+  before the note text (`comments.pm:40`), so
+  `id_before_text($body, "Comment", $note)` returns the new comment's id. The
+  `(New comment)` link is `e=new` — not digits — so it cannot match.
+- **Update**: `comment_id` set + submit != Del → UPDATE branch
+  (`comments.pm:665-683`), gated on `Glass IS NOT DISTINCT FROM ?` — must
+  resend `glass`.
+- **Delete**: `submit=Del` + `comment_id` → DELETE (`comments.pm:666`). Must
+  resend `glass`, else the redirect falls back to `?o=comment` instead of the
+  glass page.
+- `o=Comment` and `e=<new|id>` go in the POST body (form realism; postcomment
+  only reads `comment_id`/`glass`/`submit`/`rating`/`comment`/`commenttype`).
+
+### Test flow (`test_comment_roundtrip`, placed after `test_glass_roundtrip`)
+1. `my $glassid = get_first_id("Full");` — skip if the main list has no glass
+   ids. (The warm-up GET also absorbs the one-time fcgi reload bounce before
+   the first POST.)
+2. `$note = "TST" . time();` — rating `7`, `commenttype=brew`.
+3. **Insert** — POST `commentedit=1, o=Comment, e=new, glass=$glassid,
+   rating=7, comment=$note, commenttype=brew, submit=Add`. Assert 302 +
+   Location (`assert_post_redirect`).
+4. Follow redirect; `assert_page_ok` (`id='mainform'`); assert the note
+   appears; harvest `$id = id_before_text($body, "Comment", $note)`; assert
+   the `o=Comment&e=$id` link exists.
+5. **Verify persisted** — GET `?o=Comment&e=$id`; assert "Edit comment"
+   heading, note in the textarea (`name='comment'`), and the rating/type
+   dropdowns show `value='7'` / `value='brew'`.
+6. **Update** — POST `commentedit=1, o=Comment, e=$id, glass=$glassid,
+   comment_id=$id, rating=8, comment=$note2, commenttype=brew, submit=Upd`.
+   Use `$note2 = "TST" . (time()+1) . "upd"` — it **must not contain `$note`
+   as a substring**, or the "old note gone" assertion fails. Assert 302,
+   follow redirect, assert old note gone / new note present.
+7. **Delete** — POST `commentedit=1, o=Comment, e=$id, glass=$glassid,
+   comment_id=$id, submit=Del`. Assert 302, follow redirect, assert `$note2`
+   absent.
+
+Note: the plan's Task 6 bullet for comment only lists insert → verify →
+delete, but the task intro says every round-trip does create/verify/**update**/
+delete, and the comment form's `submit=Upd`/`comment_id` UPDATE branch
+(`comments.pm:665`) is otherwise untested — hence the update step.
+
+### Side effects on other tables (analysis)
+- **comments** — the row itself; insert → update → delete. Intended.
+- **comment_persons** — untouched: no `person_id` chips are sent (the update
+  branch re-runs DELETE+INSERT with an empty list, a no-op).
+- **glasses / brews / locations / persons / photos** — no writes. The
+  comment's `Brew`/`Location` columns stay NULL (not posted); `Ts` is read
+  from the glass only.
+- **Transient view effects while the comment exists** (gone after the delete,
+  or after the post-run CopyProdData sync): the glass's brew gains a rating-7
+  entry in `brew_ratings` (avg/count shown on brew list, beerboard, main list)
+  and the Ratings histogram shifts by one 7.
+- **Non-DB**: `cache::clear` on each POST (same as any write); debug.log gets
+  normal POST lines; no glass graph-PNG cleanup (that only happens in
+  postglass).
+
+### Cleanup / re-runnability
+The test deletes its own comment, so re-runs do not accumulate rows; each run
+uses a fresh epoch in the note. A mid-run abort leaves a greppable
+`TST<epoch>` comment, but the post-run CopyProdData sync (fires whenever POSTs
+happened and the run passed) restores a fresh prod copy; if the run failed the
+sync is skipped so the DB can be inspected. Attaching to an existing glass
+means no glass cleanup is needed.
+
+### Files touched
+`tools/test-http.pl` only (one `@TESTS` row + one test sub).
+No `code/VERSION.pm` touch — the test script is standalone, not loaded by
+index.fcgi.
+
+### Verification (done)
+- `perl -c tools/test-http.pl` — OK.
+- `perl tools/test-http.pl comment_roundtrip` (dev checkout, POST guard
+  passes) — 39 PASS, no fails.
+- `perl tools/test-http.pl posts` — all five round-trips (person, brew,
+  location, glass, comment) = 171 PASS; post-run CopyProdData sync ran and
+  left no `TST<epoch>` residue on the Comment/Full pages.
+- Note: the dropdown hidden inputs render their attributes on separate lines
+  with double quotes (`inputs.pm` template), so the rating/commenttype
+  assertions match `id="rating"\s+name="rating"\s+value="7"` etc.
 
 ## Deferred: DBI access from the test script (avoid unless needed)
 
@@ -481,11 +582,12 @@ if running against the live dev DB becomes a problem:
 1. Task 1 (HTTP 500 on GET errors) — **done**; enables status-based checks.
 2. Task 2 skeleton: config, HTTP helper, HTML-id harvest helpers, assertion
    helpers, GET smoke loop, selector plumbing.  **done**
-3. Task 3: GET smoke for all ops (no DB, no id variants).
+3. Task 3: GET smoke for all ops (no DB, no id variants).  **done**
 4. Task 4: harvested-id edit-page variants, `q=` filters, static assets
-   (still GET-only, still DB-free).
+   (still GET-only, still DB-free).  **done**
 5. Task 5: debug.log scan + conditional post-run CopyProdData sync, migration
-   detection.
+   detection.  **done**
 6. Task 6 (last): POST round-trips — dev-guarded, cleanup via web + post-run
-   CopyProdData sync.
+   CopyProdData sync.  **done** (person, brew, location, glass, comment)
 7. Polish: `--no-post`, `--verbose`, `perl -c`, verify prod-URL refusal.
+   **done** (prod-URL refusal verified manually)
