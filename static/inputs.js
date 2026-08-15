@@ -408,6 +408,15 @@ function applyItemSelection(item, filterInput, hiddenInput, dropdownList) {
     if (regioninp && selregion && !regioninp.value.trim()) setDropdownValue(regioninp, selregion);
   }
 
+  // update main brew type when a brew is selected
+  if (hiddenInput.name === 'Brew') {
+    const mainType = document.getElementById('selbrewtype');
+    const itemType = item.getAttribute('brewtype');
+    if (mainType && itemType && mainType.value !== itemType) {
+      setDropdownValue(mainType, itemType);
+    }
+  }
+
   // update subtype if Restaurant brewtype
   const selbrewtype = document.getElementById("selbrewtype");
   const selbrewsubtype = document.getElementById("selbrewsubtype");
