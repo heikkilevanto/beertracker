@@ -80,6 +80,17 @@ sub addsums {
   } # Count also the hidden part of the graph here.
 } # addsums
 
+# The value of one glass: number of drinks, or the price when in price mode
+sub glassvalue {
+  my $g = shift;
+  my $rec = shift;
+  my $value = $rec->{StDrinks};
+  if ( $g->{mode} eq "price" ) {
+    $value = $rec->{Price} || 0;  # Unpriced glasses count as 0
+  }
+  return $value;
+} # glassvalue
+
 # Make a data file line for one day
 sub oneday {
   my $g = shift;
@@ -94,10 +105,11 @@ sub oneday {
   while ( my $rec = $g->{sth}->fetchrow_hashref ) {
     print { $c->{log} } "$rec->{Id}: $rec->{EffDate} $rec->{BrewType}/$rec->{SubType} ='$rec->{StDrinks}' \n"
       if ( ! $rec->{StDrinks}) ;
-    $sum += $rec->{StDrinks};
+    my $unit = glassvalue($g, $rec);
+    $sum += $unit;
     push (@drinks, $rec);
   }
-  if ( $g->{range} < 95 ) { # Over 3m we don't show them anyway.
+  if ( $g->{range} < 95 && $g->{mode} ne "price" ) { # Over 3m we don't show them anyway.
     my $bloodalc = mainlist::bloodalc_compute($c, [reverse @drinks]); # @drinks is ASC; bloodalc_compute expects DESC
     $alc = $bloodalc->{max} * 10; # scale to display
     $alc = "NaN" if ($alc < 0.2);
@@ -115,12 +127,13 @@ sub oneday {
       $cnt--;
     }
     my $color = styles::brewinfo($c, $r, "graph:$r->{Id} $r->{BrewType}/$r->{SubType}")->{color};
+    my $unit = glassvalue($g, $r);
     my $y = $top;
-    if ( $r->{StDrinks} < 0.2 ) {
+    if ( $unit < 0.2 ) {
       $y = $top + 0.2; # Show at least something visible
     } # without messing with total height
     $drinksline .= "$y 0x$color ";
-    $top -= $r->{StDrinks};
+    $top -= $unit;
     $loc = $r->{Location};
     $cnt--;
   }
@@ -173,7 +186,8 @@ sub makedatafile {
       BrewType,
       SubType,
       StDrinks,
-      Location
+      Location,
+      Price
     FROM GLASSES
     WHERE username = ?
       AND effdate = ?
@@ -232,6 +246,7 @@ sub plotgraph {
   my $xformat;
   my $weekline = "";
   my $batitle =  "title \"ba\"";
+  $batitle = "notitle" if ( $g->{mode} eq "price" ); # No ba curve on the money graph
   my $plotweekline =
     "'$g->{plotfile}' using 1:4 with linespoints lc \"#00dd10\" pointtype 7 axes x1y2 title \"$g->{lastwk} wk\", " . #weekly
     "'' using 1:5 with points lc \"red\" pointtype 6 axes x1y2 $batitle, ";  # bloodalc
@@ -257,6 +272,9 @@ sub plotgraph {
     $fillstyle = $fillstyleborder;
   }
 
+  my $increment = "1"; # y tic spacing; on a money scale the values are large
+  $increment = "" if ( $g->{mode} eq "price" ); # so let gnuplot auto-scale the tics
+
   my $cmd = "" .
       "set term png small size $g->{imgsz} \n".
       $pointsize .
@@ -269,8 +287,8 @@ sub plotgraph {
       "set y2range [ -.2 : $g->{maxd} ] \n" .
       #"set link y2 via y/7 inverse y*7\n".  #y2 is drink/day, y is per week
       "set border linecolor \"white\" \n" .
-      "set ytics out nomirror 1 $white \n" .
-      "set y2tics out nomirror 1 $white \n" .
+      "set ytics out nomirror $increment $white \n" .
+      "set y2tics out nomirror $increment $white \n" .
 #      "set mytics 7 \n" .
 #      "set my2tics 7 \n" .
       #"set y2tics 0,1 out format \"%2.0f\" $white \n" .   # 0,1
@@ -281,15 +299,17 @@ sub plotgraph {
       "set grid xtics ytics  linewidth 0.1 linecolor \"white\" \n".
       "set object 1 rect noclip from screen 0, screen 0 to screen 1, screen 1 " .
         "behind fc \"$c->{bgcolor}\" fillstyle solid border \n" .  # green bkg
-      "set arrow from graph -0.01, first 1 to graph 1.01, first 1 nohead linewidth 3 linecolor \"green\" \n" .   # front
-      "set arrow from graph -0.01, first 4 to graph 1.01, first 4 nohead linewidth 3 linecolor \"yellow\" \n" .
-      "set arrow from graph -0.01, first 7 to graph 1.01, first 7 nohead linewidth 3 linecolor \"orange\" \n" .
-      "set arrow from graph -0.01, first 10 to graph 1.01, first 10 nohead linewidth 3 linecolor \"red\" \n" .
-      "";
-    my $y = 13;
-    while ( $y < $g->{maxd} -1 ) {
-      $cmd .= "set arrow from graph -0.01, first $y to graph 1.01, first $y nohead linewidth 1 linecolor \"#f409c9\" \n" ;
-      $y += 3;
+        "";  # end of the always-needed command preamble
+    if ( $g->{mode} ne "price" ) { # Drink-pace lines are meaningless on a money scale
+      $cmd .= "set arrow from graph -0.01, first 1 to graph 1.01, first 1 nohead linewidth 3 linecolor \"green\" \n" .   # front
+        "set arrow from graph -0.01, first 4 to graph 1.01, first 4 nohead linewidth 3 linecolor \"yellow\" \n" .
+        "set arrow from graph -0.01, first 7 to graph 1.01, first 7 nohead linewidth 3 linecolor \"orange\" \n" .
+        "set arrow from graph -0.01, first 10 to graph 1.01, first 10 nohead linewidth 3 linecolor \"red\" \n";
+      my $y = 13;
+      while ( $y < $g->{maxd} -1 ) {
+        $cmd .= "set arrow from graph -0.01, first $y to graph 1.01, first $y nohead linewidth 1 linecolor \"#f409c9\" \n" ;
+        $y += 3;
+      }
     }
     $cmd .= $g->{weekends};
     $cmd .= "plot ";
@@ -319,10 +339,14 @@ sub onelink {
   my $txt = shift;
   my $start = shift || "";
   my $end = shift || "" ;
+  my $mode = shift;  # undef: inherit current mode, "" : no gmode, "price" : price graph
+  $mode = $g->{mode} unless ( defined $mode );
   $start = "&gstart=$start" if ($start);
   $end = "&gend=$end" if ($end);
   my $c = $g->{c};
-  print "<a href='$c->{url}?o=$c->{op}".$start.$end. "' >" .
+  my $url = "$c->{url}?o=$c->{op}".$start.$end;
+  $url .= "&gmode=$mode" if ( $mode );
+  print "<a href='$url' >" .
     #"<span>$txt</span></a>\n";
     "<span style='border:1px solid white; padding: 1px 4px; color: white; background-color:$c->{altbgcolor}' >$txt</span></a>\n";
 } # onelink
@@ -343,7 +367,16 @@ sub graphlinks {
   onelink($g, "6m", ($t - 6*$onemonth)->ymd );
   onelink($g, "Y",  ($t - $oneyear)->ymd );
   onelink($g, "2y", ($t - 2*$oneyear)->ymd );
+  onelink($g, "5y", ($t - 5*$oneyear)->ymd );
     onelink($g, "all", "2016-01-01",$t->ymd );  # Earlest known data in the system
+  # Toggle between drinks and price, keeping the currently shown range
+  my $toggle = '$';
+  my $togglemode = "price";
+  if ( $g->{mode} eq "price" ) {
+    $toggle = "d";
+    $togglemode = "";
+  }
+  onelink($g, $toggle, $g->{start}, $g->{end}, $togglemode );
 } # graphlinks
 
 # The graph itself
@@ -355,11 +388,16 @@ sub graph {
   # Date range, default to 30 days leading to tomorrow
   $g->{start} = util::param($c,"gstart", util::datestr("%F",-30) );
   $g->{end} = util::param($c,"gend", util::datestr("%F",1) );
+  # "price" shows the money spent per glass instead of the number of drinks
+  $g->{mode} = "";
+  $g->{mode} = "price" if ( util::param($c,"gmode","") eq "price" );
+  my $modename = "";
+  $modename = "-$g->{mode}" if ( $g->{mode} );
   # TODO - Keep start and stop as Time::Piece refs in g
 
-  $g->{plotfile} = $c->{datadir} . $c->{username} . ".plot";
-  $g->{cmdfile} = $c->{datadir} . $c->{username} . ".cmd";
-  $g->{pngfile} = $c->{datadir} . $c->{username} . "$g->{start}-$g->{end}.png";
+  $g->{plotfile} = $c->{datadir} . $c->{username} . ".plot$modename";
+  $g->{cmdfile} = $c->{datadir} . $c->{username} . ".cmd$modename";
+  $g->{pngfile} = $c->{datadir} . $c->{username} . "$g->{start}-$g->{end}$modename.png";
 
   if (  -r $g->{pngfile} ) { # Have a cached file
     print "\n<!-- Cached graph op='$c->{op}' file='$g->{pngfile}' -->\n";
