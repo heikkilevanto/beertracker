@@ -255,6 +255,13 @@ function initDropdown(container) {
       filterItems(filterInput, dropdownList);
     } else {
       applyItemSelection(item, filterInput, hiddenInput, dropdownList);
+      // A brew picked manually has no barcode; clear any stale value.
+      if (hiddenInput.name === 'Brew') {
+        const barcodeInput = document.getElementById('barcode');
+        if (barcodeInput) { barcodeInput.value = ''; barcodeInput.disabled = false; }
+        const checkbox = document.getElementById('setbrewcode');
+        if (checkbox) { checkbox.checked = false; checkbox.disabled = false; }
+      }
     }
   });
 
