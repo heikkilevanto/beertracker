@@ -183,13 +183,12 @@ sub maininputform {
 
    # Barcode for this glass, plus the override-checkbox for the brew code.
    # Hidden (behind "(more)") on new glasses, like note/geo.
-   $html .= "<tr id='barcodeline' $hidenote><td>Barcode</td><td>\n";
+   $html .= "<tr id='barcodeline' $hidenote><td>\n";
+   $html .= "<label><input type='checkbox' name='setbrewcode' id='setbrewcode' /> Upd Br</label>\n";
+   $html .= "</td><td>\n";
    $html .= "<input id='barcode' name='barcode' value='$rec->{Barcode}' " .
-            "placeholder='X clears' size='16' $clr/>\n";
-   $html .= "<div>\n";
+            "placeholder='Barcode' size='12' $clr/>\n";
    $html .= " <button type='button' onclick='startBarcodeScanning(\"barcode\")'>Scan</button>\n";
-   $html .= " <label><input type='checkbox' name='setbrewcode' id='setbrewcode' /> Upd brew</label>\n";
-   $html .= "</div>\n";
    $html .= "</td></tr>\n";
 
    my $hidedgeo = "hidden";
