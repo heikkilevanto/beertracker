@@ -96,6 +96,8 @@ function shownote() {
   noteline.hidden = false;
   const georow = document.getElementById("georow");
   if (georow) georow.hidden = false;
+  const barcodeline = document.getElementById("barcodeline");
+  if (barcodeline) barcodeline.hidden = false;
   const toggle = document.getElementById("notetag");
   toggle.hidden = true;
   const leftcol = document.getElementById("leftcol");
@@ -196,6 +198,17 @@ var FIELD_HELP = {
   tap: [
     'Tap',
     'Usually auto-filled',
+  ],
+  barcode: [
+    'Barcode on the glass',
+    'The Scan button only fills this field, it does not pick the brew',
+    'Use the "scan" link in the Brew dropdown to resolve the brew',
+    'X = delete the barcode',
+  ],
+  setbrewcode: [
+    'Brew code',
+    'On save, store this barcode as the brew\'s default code',
+    'Pre-checked when the brew has no code yet',
   ],
   note: [
     'Note',

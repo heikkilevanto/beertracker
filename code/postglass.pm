@@ -79,6 +79,8 @@ sub postglass {
     }
     # Empty glasses must not have a tap attached
     $glass->{Tap} = undef;
+    # Nor a barcode
+    $glass->{Barcode} = undef;
   } elsif ( $selbrewtype eq 'Adjustment' ) { # payment adjustment glass
     $glass->{Brew} = $brewid;
     $glass->{SubType} = util::param($c,"selbrewsubtype") ; # 'Up' or 'Dn'
@@ -87,6 +89,7 @@ sub postglass {
     $glass->{StDrinks} = 0;
     $glass->{Note} = util::param($c,"note");  # Get note from form, don't inherit
     $glass->{Tap} = undef;  # Don't inherit tap from previous glass
+    $glass->{Barcode} = undef;  # Don't inherit barcode from previous glass
     gettimestamp($c, $glass);
     $glass->{Price} = util::paramnumber($c, "pr");
   } else { # real glass
@@ -104,6 +107,20 @@ sub postglass {
     gettimestamp($c, $glass);
     fixvol($c, $glass, $brew);
     fixprice($c, $glass);
+
+    # Barcode: 'X' clears it, otherwise take the input. On edit with an
+    # empty/disabled input, keep the stored value (already in $glass from
+    # findrec). On a new glass, never inherit from the previous record.
+    my $barcode = util::param($c, "barcode");   # "" when absent/disabled
+    $barcode =~ s/^\s+//;
+    $barcode =~ s/\s+$//;
+    if ( $barcode =~ /^x/i ) {
+      $glass->{Barcode} = undef;                # 'X' = delete the barcode
+    } elsif ( $barcode ne "" ) {
+      $glass->{Barcode} = $barcode;
+    } elsif ( !$c->{edit} ) {
+      $glass->{Barcode} = undef;                # new glass: never inherit
+    }
 
 
 
@@ -141,7 +158,8 @@ sub postglass {
         Alc = ?,
         StDrinks = ?,
         Note = ?,
-        tap = ?
+        tap = ?,
+        Barcode = ?
       WHERE id = ? AND username = ?
     ";
   db::execute($c, $sql,
@@ -156,6 +174,7 @@ sub postglass {
     $glass->{StDrinks},
     $glass->{Note},
     $glass->{Tap},
+    $glass->{Barcode},
     $glass->{Id}, $c->{username} );
   print { $c->{log} } "Updated glass id '$c->{edit}'\n";
   my ($effdate) = db::queryarray($c, "SELECT strftime('%Y-%m-%d', ?, '-06:00')", $glass->{Timestamp});
@@ -164,8 +183,8 @@ sub postglass {
   } else { # Create a new glass
     my $sql = "INSERT INTO GLASSES
       ( Username, TimeStamp, BrewType, SubType,
-        Location, Brew, Price, Volume, Alc, StDrinks, Note, Tap )
-      VALUES ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ? )
+        Location, Brew, Price, Volume, Alc, StDrinks, Note, Tap, Barcode )
+      VALUES ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ? )
       ";
     db::execute($c, $sql,
       $c->{username},
@@ -179,7 +198,8 @@ sub postglass {
       $glass->{Alc},
       $glass->{StDrinks},
       $glass->{Note},
-      $glass->{Tap}
+      $glass->{Tap},
+      $glass->{Barcode}
       );
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print { $c->{log} } "Inserted Glass id '$id' \n";
@@ -191,6 +211,18 @@ sub postglass {
     my $sth = $c->{dbh}->prepare($sql);
     $sth->execute($glass->{Price}, $glass->{Volume}, $brewid);
     print { $c->{log} } "Updated brew '$brewid' with DefPrice '$glass->{Price}' and DefVol '$glass->{Volume}'\n";
+  }
+
+  # If the brew has no barcode, remember this glass's code.
+  # The override checkbox forces the update even when one exists.
+  if ( $brew && $glass->{Barcode} ) {
+    my $forcecode = util::param($c, "setbrewcode");
+    my $brewcode  = $brew->{Barcode} // "";
+    if ( $forcecode || !$brewcode ) {
+      db::execute($c, "UPDATE brews SET Barcode = ? WHERE Id = ?",
+        $glass->{Barcode}, $brew->{Id});
+      print { $c->{log} } "postglass: Set brew '$brew->{Id}' Barcode to '$glass->{Barcode}'\n";
+    }
   }
 
   # If setdef checkbox is checked, update brew defaults

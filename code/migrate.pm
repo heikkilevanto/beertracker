@@ -25,7 +25,7 @@ use File::Copy;
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 49;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 50;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -35,6 +35,8 @@ our @MIGRATIONS = (
   [1, 'create globals table', \&mig_001_create_globals_table],
   # Add index to speed up the per-user brew list last-seen join
   [49, 'add idx_glasses_brew_user_ts index', \&mig_049_add_glasses_brew_user_ts_index],
+  # Issue 744 - barcodes live on the glass; volume/price/alc per (Brew, Barcode)
+  [50, 'add glasses.Barcode column and index', \&mig_050_add_glasses_barcode],
 );
 
 ################################################################################
@@ -173,6 +175,16 @@ sub mig_049_add_glasses_brew_user_ts_index {
   my $c = shift;
   db::execute($c, "CREATE INDEX IF NOT EXISTS idx_glasses_brew_user_ts ON glasses(Brew, Username, Timestamp)");
 } # mig_049_add_glasses_brew_user_ts_index
+
+
+# Issue 744 - barcode lives on the glass, not just on the brew.
+# Each glass records the exact barcode scanned at that drinking event; the
+# brew's single Barcode stays as a fallback/seed.
+sub mig_050_add_glasses_barcode {
+  my $c = shift;
+  db::execute($c, "ALTER TABLE glasses ADD COLUMN Barcode text");
+  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_glasses_barcode ON glasses (Username, Barcode, Timestamp)");
+} # mig_050_add_glasses_barcode
 
 
 ################################################################################

@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-07-31 11:51 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-08-17 11:57 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied 
@@ -31,7 +31,7 @@ create table glasses (
     Alc decimal,
     StDrinks decimal, -- Calculated from volume and alc
     Note text, -- note for this one glass, like what mixed beer
-    Tap integer, -- Which tap number the brew came from
+    Tap integer, Barcode text, -- Which tap number the brew came from
 
     foreign key (Brew) references Brews(id),
     foreign key (Location) references Locations(id)
@@ -409,6 +409,8 @@ create index idx_brews_parent on brews(Parent);
 create index idx_locations_scraper on locations(Scraper);
 
 create index idx_glasses_brew_user_ts on glasses(Brew, Username, Timestamp);
+
+create index idx_glasses_barcode on glasses (Username, Barcode, Timestamp);
 
 commit;
 

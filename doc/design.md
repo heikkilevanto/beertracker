@@ -54,7 +54,10 @@ heavy frameworks.
 ### glasses
 Stores individual drinking events, either actual drinks or placeholders like
 restaurant visits. Each record is private per user and can reference a brew
-and a location.
+and a location. A glass also records the exact `Barcode` that was scanned at
+that event; the main input form embeds a per-user barcode map (built from the
+latest own glass per Brew/Barcode) so a scanned code resolves to a brew with
+that glass's volume/price/alcohol.
 
 ### comments
 Private notes and ratings tied to a specific glass, optionally mentioning a
@@ -69,6 +72,9 @@ a whole new producer, but mention that the house wine was a Chianti, or
 when a producer is more like an importer who can have wines from various
 regions and countries. Therefore the Country and Region in brews is the
 one to be trusted, and not the one in locations.
+The brew's single `Barcode` is now just a fallback/seed for scanning: the
+primary record of a barcode lives on the glasses (one per drinking event),
+and scanning resolves against the glass history first.
 
 ### persons
 Tracks people you meet, with contact info, description, home/related location,

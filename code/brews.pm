@@ -659,7 +659,6 @@ sub selectbrew {
         BREWS.Alc,
         BREWS.DefPrice,
         BREWS.DefVol,
-        BREWS.Barcode,
         GROUP_CONCAT(DISTINCT SeenLocations.Name) AS SeenAt,
         br.rating_count,
         br.average_rating,
@@ -676,7 +675,7 @@ sub selectbrew {
     my $list_sth = db::query($c, $sql, $c->{username});
 
     $opts = "";
-    while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $barcode, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {
+    while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {
       my $disp = "";
       if ($pr && $na !~ /\Q$pr\E/ ) {
         $disp .= "<i><span style='font-size: x-small;'>$pr:</span></i> ";
@@ -697,7 +696,6 @@ sub selectbrew {
       $defprice = $defprice || "";
       $defprice = " $defprice" if ($defprice =~ /^-\d/);  # Leading space = container price; JS will pre-fill with space so onfocus trim activates
       $defvol = $defvol || "";
-      $barcode = $barcode || "";
       $seenat = $seenat || "";
       my $tags_str = "";
       if ($su) {
@@ -706,7 +704,7 @@ sub selectbrew {
       my $tags_attr = "";
       $tags_attr = " tags='" . util::htmlesc($tags_str) . "'" if ($tags_str);
       $opts .= "<div class='dropdown-item' id='$id' alc='$alc' " .
-         "defprice='$defprice' defvol='$defvol' brewtype='$bt' barcode='$barcode' seenat='$seenat'$tags_attr>$disp</div>\n";
+         "defprice='$defprice' defvol='$defvol' brewtype='$bt' seenat='$seenat'$tags_attr>$disp</div>\n";
     }
     cache::set($c, $cache_key, $opts);
   }

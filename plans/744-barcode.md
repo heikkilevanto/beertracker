@@ -55,7 +55,7 @@ state after a scan (three cases, see Scan JS):
 
 Built from two throwaway queries:
 1. `SELECT Brew, Barcode, Volume, Price, Alc FROM glasses
-   WHERE Username = ? AND Barcode IS NOT NULL
+   WHERE Username = ? AND Barcode IS NOT NULL AND Barcode != ''
    ORDER BY Timestamp DESC` — keep the first (i.e. latest) row per
    (Brew, Barcode) in Perl. (No window functions needed at personal scale.)
 2. `SELECT Id, Barcode, DefVol, DefPrice, Alc FROM brews
@@ -73,7 +73,12 @@ scanned code is known on the very next render.
 ## Main input form (`code/glasses.pm`, `maininputform`)
 - In the "(more)" row (`tr id='noteline'`, revealed by `shownote()`), add:
   - a single barcode input `id='barcode' name='barcode'` (value from
-    `$rec->{Barcode}`; a disabled input simply won't submit — see Scan JS);
+    `$rec->{Barcode}`; a disabled input simply won't submit — see Scan JS),
+    with a small "Scan" button beside it
+    (`startBarcodeScanning('barcode')`, cf. `inputs::barcodeInput`). That
+    button only fills the field; the full resolution (brew pick + defaults +
+    checkbox state) happens via the Brew dropdown's scan link. The
+    placeholder notes that `X` clears the barcode.
   - an override checkbox `name='setbrewcode'` (label e.g. "brew code").
 - The checkbox is read by postglass; unchecked+disabled when the scanned code
   already is the brew's default. Its default rendered state is unchecked,
@@ -84,9 +89,23 @@ scanned code is known on the very next render.
   *previous* glass's code on every new glass.
 
 ## POST handling (`code/postglass.pm`)
-- Real-glass branch only: `$glass->{Barcode} = util::param($c, "barcode");`
-  and add `Barcode` to the INSERT and UPDATE column lists.
-- Empty/adjustment glasses get no barcode.
+- Real-glass branch only, after the other input values are read:
+  ```perl
+  # Barcode: 'X' clears it, otherwise take the input. On edit with an
+  # empty/disabled input, keep the stored value (already in $glass from
+  # findrec). On a new glass, never inherit from the previous record.
+  my $barcode = util::param($c, "barcode");   # "" when absent/disabled
+  if ( $barcode =~ /^x/i ) {
+    $glass->{Barcode} = undef;                # 'X' = delete the barcode
+  } elsif ( $barcode ne "" ) {
+    $glass->{Barcode} = $barcode;
+  } elsif ( !$c->{edit} ) {
+    $glass->{Barcode} = undef;                # new glass: never inherit
+  }
+  ```
+  Empty string is stored as NULL.
+- Empty/adjustment glasses get no barcode (never set).
+- Add `Barcode` to the INSERT and UPDATE column lists.
 - After save, near the existing DefPrice auto-update block
   (`postglass.pm:188`), add:
   ```perl
@@ -102,6 +121,8 @@ scanned code is known on the very next render.
     }
   }
   ```
+  Note: a NULL/cleared `$glass->{Barcode}` (X or empty) never fires this
+  block — clearing the barcode on a glass never touches the brew's code.
 
 ## Scan JS (`static/inputs.js`, `scanBarcodeForDropdown`)
 - On a scanned code (`code`):
@@ -143,6 +164,17 @@ scanned code is known on the very next render.
 - `code/index.fcgi` — unchanged (no new op, no JSON endpoint).
 - `doc/db.schema` — refreshed via `tools/dbdump.sh` after migrating.
 
+## Documentation
+- `doc/design.md` — update the `glasses` section (mention the per-glass
+  barcode) and the `brews` section (Barcode is now just a fallback seed for
+  scanning; the primary record is on glasses). This file is edited by hand.
+- `doc/manual.md` — if it describes scanning/barcode input, note the new
+  behavior (scan resolves from the user's glass history, override checkbox to
+  update the brew's default barcode, barcode shown behind "(more)").
+- `doc/db.schema` — covered above via `tools/dbdump.sh`.
+- The v3.x release-notes file, if we keep one per release, should mention the
+  change (compare `doc/v3.4-release-notes.md`).
+
 ## Notes and limitations
 - The page payload grows with scanned history (one small JSON entry per
   distinct code). Fine for a personal tracker; documented as the future API
@@ -155,9 +187,19 @@ scanned code is known on the very next render.
 - Override-checkbox states after a scan (driven by the entry's `def`):
   no brew code → pre-checked (updates brew); different brew code → unchecked,
   opt-in; same as brew code → unchecked + disabled, and the barcode input is
-  disabled too (nothing new to record, so not submitting it is harmless).
+  disabled too. A disabled input isn't submitted, so on a **new** glass such a
+  scan doesn't record the code on the glass (accepted — it is already the
+  brew's default code, so nothing is lost). On **edit**, postglass copies the
+  stored value over, so nothing is wiped.
 - Manual entry (typing a code without scanning, or a no-match scan + manual
   brew pick) leaves the checkbox at its rendered default (unchecked, enabled).
+- `X` in the barcode field deletes the barcode from the glass (consistent
+  with the `X` convention for volume/price). It never clears the brew's code.
+- Empty/missing barcode is stored as NULL, so the map queries' `Barcode != ''`
+  filter stays correct.
+- The barcode input's own "Scan" button only fills the field; the Brew
+  dropdown's scan link is the full resolver (brew pick + vol/pr/alc + checkbox
+  state).
 
 ## Verification
 - `perl -c` on changed `.pm` files; review `inputs.js`.
@@ -173,4 +215,7 @@ scanned code is known on the very next render.
   - Editing a glass shows the barcode behind "(more)".
   - Two codes for the same brew (can vs bottle) both resolve to the brew with
     their own volumes.
+  - Typing `X` in the barcode field and saving clears the stored barcode.
+  - Editing a glass whose barcode input was disabled (scanned code == brew's
+    default) keeps the stored barcode.
 - Touch `code/VERSION.pm` (separate call) and reload; POST clears caches.

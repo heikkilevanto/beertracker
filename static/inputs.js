@@ -212,6 +212,12 @@ function initDropdown(container) {
             else inp.removeAttribute("required");
           });
           newDiv.querySelector("input")?.focus();
+          // Prefill the new-brew Barcode field from the glass barcode, if any
+          const glassBc = document.getElementById('barcode');
+          if (glassBc && glassBc.value) {
+            const newBc = newDiv.querySelector('[name$="Barcode"]');
+            if (newBc) newBc.value = glassBc.value;
+          }
           // Propagate Country/Region typed in the new-producer sub-form up to the brew fields
           if (hiddenInput.name.match(/ProducerLocation$/i)) {
             const fieldPrefix   = hiddenInput.name.replace(/ProducerLocation$/i, '');
@@ -296,7 +302,9 @@ function initDropdown(container) {
   });
 }
 
-  // Scan barcode and filter dropdown
+  // Scan barcode and resolve it from the embedded barcode map.
+  // The scanned code is always written to the form's barcode input, so it is
+  // recorded even when no brew/glass matches (user picks the brew manually).
   function scanBarcodeForDropdown(container, filterInput, hiddenInput, dropdownList) {
     const tempInput = document.createElement('input');
     tempInput.type = 'hidden';
@@ -312,28 +320,7 @@ function initDropdown(container) {
       tempInput.removeEventListener('input', onScanned);
       const scannedCode = tempInput.value;
       tempInput.remove();
-
-      const items = Array.from(dropdownList.children);
-      const matches = items.filter(item => {
-        const itemBarcode = item.getAttribute('barcode');
-        return itemBarcode && itemBarcode === scannedCode;
-      });
-
-      if (matches.length === 1) {
-        applyItemSelection(matches[0], filterInput, hiddenInput, dropdownList);
-      } else if (matches.length > 1) {
-        items.forEach(item => {
-          item.style.display = matches.includes(item) ? '' : 'none';
-        });
-        filterInput.value = '[' + matches.length + ' matches for ' + scannedCode + ']';
-        dropdownList.style.display = 'block';
-      } else {
-        filterInput.value = 'No brew found with barcode ' + scannedCode;
-        setTimeout(() => {
-          filterInput.value = '';
-          filterInput.focus();
-        }, 2000);
-      }
+      resolveScannedBarcode(scannedCode, filterInput, hiddenInput, dropdownList);
     }
 
     tempInput.addEventListener('input', onScanned);
@@ -347,6 +334,72 @@ function initDropdown(container) {
     }, 30000);
 
     startBarcodeScanning(tempInput.id);
+  }
+
+  // Look a scanned code up in the embedded #barcode-map JSON, select the brew,
+  // pre-fill vol/price/alc, and set the override-checkbox/barcode state.
+  function resolveScannedBarcode(code, filterInput, hiddenInput, dropdownList) {
+    const barcodeInput = document.getElementById('barcode');
+    const checkbox = document.getElementById('setbrewcode');
+    const barcodeline = document.getElementById('barcodeline');
+    if (barcodeInput) barcodeInput.value = code;   // store even on a no-match
+    if (barcodeline) barcodeline.hidden = false;   // let the user see the state
+
+    let entry = null;
+    const mapEl = document.getElementById('barcode-map');
+    if (mapEl) {
+      try {
+        entry = JSON.parse(mapEl.textContent)[code] || null;
+      } catch (e) {
+        entry = null;
+      }
+    }
+
+    if (!entry) {
+      // Not found: keep the code in the input; user picks the brew manually.
+      if (checkbox) { checkbox.checked = false; checkbox.disabled = false; }
+      if (barcodeInput) barcodeInput.disabled = false;
+      filterInput.value = 'No glass or brew found with barcode ' + code;
+      setTimeout(() => {
+        filterInput.value = '';
+        filterInput.focus();
+      }, 2000);
+      return;
+    }
+
+    // Found: locate the brew item and apply its defaults + brewtype sync,
+    // then override vol/pr/alc with this entry's values.
+    const items = Array.from(dropdownList.children);
+    const item = items.find(el => el.id && el.id === String(entry.brew));
+    if (item && hiddenInput) {
+      applyItemSelection(item, filterInput, hiddenInput, dropdownList);
+    }
+    const volinp = document.getElementById('vol');
+    const prinp = document.getElementById('pr');
+    const alcinp = document.getElementById('alc');
+    if (volinp) volinp.value = (entry.vol != null && entry.vol !== '') ? entry.vol + 'c' : '';
+    if (prinp) prinp.value = (entry.price != null && entry.price !== '') ? entry.price + '.-' : '';
+    if (alcinp) alcinp.value = (entry.alc != null && entry.alc !== '') ? entry.alc + '%' : '';
+
+    // Override-checkbox + barcode-input state, driven by the entry's def:
+    //   def == ""      -> brew has no default code -> pre-check the override.
+    //   def != code    -> brew has a different code -> unchecked, opt-in.
+    //   def == code    -> already the brew's code -> nothing to update.
+    const def = entry.def || '';
+    if (checkbox) {
+      if (def === '') {
+        checkbox.checked = true;
+        checkbox.disabled = false;
+      } else {
+        checkbox.checked = false;
+        checkbox.disabled = (def === code);
+      }
+    }
+    if (barcodeInput) {
+      // Disable only when the code already is the brew's default: not
+      // submitting it then loses nothing (postglass keeps the stored value).
+      barcodeInput.disabled = (def === code);
+    }
   }
 
 // Add a chip to the chips container for a given dropdown item (deduplicates by id)

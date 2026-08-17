@@ -9,6 +9,8 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
+use JSON;
+
 our %volumes = ( # Comment is not used any more.
   'T' => " 2", # Taster, sizes vary, always small"
   'G' => "16", # Glass of wine - 12 in places, at home 16 is more realistic"
@@ -166,6 +168,7 @@ sub maininputform {
   my $hidenote = "hidden";
   my $rawnote = $rec->{Note} || "";  # Save before zeroing for non-edit mode
   $rec->{Note} = "" unless ( $c->{edit} );  # Do not inherit from previous
+  $rec->{Barcode} = "" unless ( $c->{edit} );  # Do not inherit from previous
   if ( $c->{edit} ) {
     $hidenote = "";
   }
@@ -176,6 +179,17 @@ sub maininputform {
   }
    $html .= "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' data-rawval='$rawtap' size='2' $clr/></td><td>\n";
    $html .= "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' $sz20/>\n";
+   $html .= "</td></tr>\n";
+
+   # Barcode for this glass, plus the override-checkbox for the brew code.
+   # Hidden (behind "(more)") on new glasses, like note/geo.
+   $html .= "<tr id='barcodeline' $hidenote><td>Barcode</td><td>\n";
+   $html .= "<input id='barcode' name='barcode' value='$rec->{Barcode}' " .
+            "placeholder='X clears' size='16' $clr/>\n";
+   $html .= "<div>\n";
+   $html .= " <button type='button' onclick='startBarcodeScanning(\"barcode\")'>Scan</button>\n";
+   $html .= " <label><input type='checkbox' name='setbrewcode' id='setbrewcode' /> Upd brew</label>\n";
+   $html .= "</div>\n";
    $html .= "</td></tr>\n";
 
    my $hidedgeo = "hidden";
@@ -241,6 +255,8 @@ sub maininputform {
   $html .= "<hr/>";
 
   # Javascript trickery
+  # The barcode map drives scanning: barcode -> {brew, vol, price, alc, def}.
+  $html .= "<script id='barcode-map' type='application/json'>" . barcodemap($c) . "</script>\n";
   $html .= "<script defer>initGlassForm();</script>\n";
   cache::set($c, $cache_key, $html);
   print $html;
@@ -265,6 +281,55 @@ sub findrec {
   my $rec = db::queryrecord($c, $sql, $id, $c->{username});
   return $rec;
 }
+
+################################################################################
+# Embedded barcode map for the main input form
+# barcode -> {brew, vol, price, alc, def} where def is the brew's current
+# default Barcode ("" if none). Built per render from the latest own glass per
+# (Brew, Barcode), plus every brews.Barcode fallback. Per user: glasses are
+# per-user; brews are shared.
+################################################################################
+sub barcodemap {
+  my $c = shift;
+  my %map;
+  # Latest own glass per (Brew, Barcode) gives the vol/price/alc per code,
+  # plus the brew's current default code (def) via LEFT JOIN — a glass whose
+  # brew has no default code stays in the map with def="".
+  my $sql = "SELECT g.Brew, g.Barcode, g.Volume, g.Price, g.Alc, " .
+            "b.Barcode AS DefBarcode FROM glasses g " .
+            "LEFT JOIN brews b ON b.Id = g.Brew " .
+            "WHERE g.Username = ? AND g.Barcode IS NOT NULL AND g.Barcode != '' " .
+            "ORDER BY g.Timestamp DESC";
+  my $sth = db::query($c, $sql, $c->{username});
+  while ( my $row = $sth->fetchrow_hashref ) {
+    my $key = $row->{Barcode};
+    next if ( exists $map{$key} );  # First (latest) row per (Brew, Barcode)
+    $map{$key} = {
+      brew  => $row->{Brew},
+      vol   => $row->{Volume},
+      price => $row->{Price},
+      alc   => $row->{Alc},
+      def   => $row->{DefBarcode} // "",
+    };
+  }
+  # Brew fallbacks: each brew's code is the seed/fallback, plus its defaults.
+  my $sql2 = "SELECT Id, Barcode, DefVol, DefPrice, Alc FROM brews " .
+             "WHERE Barcode IS NOT NULL AND Barcode != ''";
+  my $sth2 = db::query($c, $sql2);
+  while ( my $brew = $sth2->fetchrow_hashref ) {
+    # Add a fallback entry for the brew's own code, unless already in the map
+    if ( !exists $map{$brew->{Barcode}} ) {
+      $map{$brew->{Barcode}} = {
+        brew  => $brew->{Id},
+        vol   => $brew->{DefVol},
+        price => $brew->{DefPrice},
+        alc   => $brew->{Alc},
+        def   => $brew->{Barcode},
+      };
+    }
+  }
+  return JSON->new->pretty->encode(\%map);
+} # barcodemap
 
 ################################################################################
 # Report module loaded ok
