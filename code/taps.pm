@@ -64,6 +64,9 @@ sub update_taps {
     $action = "Closed and opened" if ($cur);
     print { $c->{log} } "taps: $action tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
 
+    # First seen on tap: remember the brew's earliest appearance
+    db::execute($c, "UPDATE brews SET FirstSeen = COALESCE(FirstSeen, strftime('%Y-%m-%d', ?)) WHERE Id = ?", $now, $tap->{brew_id});
+
     # If brew has no DefPrice, set it from the largest size
     if (@sizes) {
       my ($has_defprice) = db::queryarray($c,

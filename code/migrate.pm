@@ -25,7 +25,7 @@ use File::Copy;
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 50;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 51;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -37,6 +37,9 @@ our @MIGRATIONS = (
   [49, 'add idx_glasses_brew_user_ts index', \&mig_049_add_glasses_brew_user_ts_index],
   # Issue 744 - barcodes live on the glass; volume/price/alc per (Brew, Barcode)
   [50, 'add glasses.Barcode column and index', \&mig_050_add_glasses_barcode],
+  # Issue 745 - lifecycle dates: when places opened/closed, brews released/discontinued,
+  # plus an auto-collected FirstSeen date
+  [51, 'add lifecycle dates to locations and brews', \&mig_051_add_lifecycle_dates],
 );
 
 ################################################################################
@@ -185,6 +188,59 @@ sub mig_050_add_glasses_barcode {
   db::execute($c, "ALTER TABLE glasses ADD COLUMN Barcode text");
   db::execute($c, "CREATE INDEX IF NOT EXISTS idx_glasses_barcode ON glasses (Username, Barcode, Timestamp)");
 } # mig_050_add_glasses_barcode
+
+
+# Issue 745 - lifecycle dates for locations and brews.
+# Dates may be partial (just a year, e.g. '2019'); they are stored as entered.
+# FirstSeen is full YYYY-MM-DD, backfilled from existing data:
+#   - brews: earliest date seen on tap
+#   - locations: earliest glass (with the shared -06:00 day offset)
+sub mig_051_add_lifecycle_dates {
+  my $c = shift;
+  db::execute($c, "ALTER TABLE locations ADD COLUMN Opened text");
+  db::execute($c, "ALTER TABLE locations ADD COLUMN Closed text");
+  db::execute($c, "ALTER TABLE locations ADD COLUMN FirstSeen text");
+  db::execute($c, "ALTER TABLE brews ADD COLUMN Released text");
+  db::execute($c, "ALTER TABLE brews ADD COLUMN Discontinued text");
+  db::execute($c, "ALTER TABLE brews ADD COLUMN FirstSeen text");
+
+  # Backfill FirstSeen for brews: the earliest of the first tap appearance and
+  # the first glass, whichever came first (a brew can be drunk long before it
+  # ever shows up on a tap)
+  db::execute($c, "UPDATE brews SET FirstSeen = (
+      SELECT MIN(first_seen) FROM (
+        SELECT strftime('%Y-%m-%d', MIN(tap_beers.FirstSeen)) AS first_seen
+          FROM tap_beers WHERE tap_beers.Brew = brews.Id
+        UNION ALL
+        SELECT strftime('%Y-%m-%d', MIN(glasses.Timestamp), '-06:00')
+          FROM glasses WHERE glasses.Brew = brews.Id
+      ))
+    WHERE EXISTS (SELECT 1 FROM tap_beers WHERE tap_beers.Brew = brews.Id)
+       OR EXISTS (SELECT 1 FROM glasses WHERE glasses.Brew = brews.Id)");
+
+  # Backfill FirstSeen for locations that have glasses
+  db::execute($c, "UPDATE locations SET FirstSeen = (
+      SELECT strftime('%Y-%m-%d', MIN(glasses.Timestamp), '-06:00')
+      FROM glasses WHERE glasses.Location = locations.Id)
+    WHERE EXISTS (SELECT 1 FROM glasses WHERE glasses.Location = locations.Id)");
+
+  # The brew_taps view references FirstSeen and Gone unqualified. Now that
+  # locations also has a FirstSeen column (joined against by this view), the
+  # unqualified FirstSeen became ambiguous and the view broke. Rebuild it with
+  # qualified column references; same columns/order as before.
+  db::execute($c, "DROP VIEW IF EXISTS brew_taps");
+  db::execute($c, q{
+    CREATE VIEW brew_taps AS
+    SELECT
+      tap_beers.*,
+      locations.Name AS LocationName,
+      round(julianday(coalesce(tap_beers.Gone, 'now')) - julianday(tap_beers.FirstSeen)) AS Days,
+      strftime('%Y-%m-%d', tap_beers.FirstSeen) AS Since,
+      strftime('%Y-%m-%d', tap_beers.Gone) AS GoneFormatted
+    FROM tap_beers
+    JOIN locations ON tap_beers.Location = locations.Id
+  });
+} # mig_051_add_lifecycle_dates
 
 
 ################################################################################

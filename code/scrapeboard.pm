@@ -26,6 +26,7 @@ sub get_scraper_locations {
     FROM locations l
     LEFT JOIN glasses g ON g.Location = l.Id
     WHERE l.Scraper IS NOT NULL
+      AND (l.Closed IS NULL OR l.Closed = '')
     GROUP BY l.Id
   };
   my @params;
@@ -57,6 +58,11 @@ sub updateboard {
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam, "collate nocase");
   my $scraper_str = undef;
   $scraper_str = $loc_rec->{Scraper} if ($loc_rec);
+
+  if ($loc_rec && $loc_rec->{Closed}) {
+    print { $c->{log} } "updateboard: skipping closed location '$locparam'\n";
+    return;  # No scraping for closed places
+  }
 
   if (!$scraper_str) {
     print { $c->{log} } "updateboard: No scraper for '$locparam'\n";

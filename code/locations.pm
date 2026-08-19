@@ -24,6 +24,9 @@ our $loc_field_order = [
   [ "SearchLink",      "URL for searching this location's beer menu" ],
   [ "UntappdLink",     "URL to Untappd page" ],
   [ "Description",     "Further description" ],
+  [ "Opened",          'year or full date, e.g. "2019" or "-3d" or "Y"' ],
+  [ "Closed",          "empty = still open" ],
+  [ "FirstSeen",       "auto-set from first visit" ],
   [ "Tags",            "for filtering" ],
   [ "Scraper",         "Scraper script for beer menu" ],
 ];
@@ -65,7 +68,8 @@ sub listlocations {
       COALESCE(locations.Country,'') || ';' || COALESCE(locations.Region,'') AS "CountryRegion_A_contline",
       strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
         strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
-      locations.Tags AS xTags
+      locations.Tags AS xTags,
+      CASE WHEN locations.Closed IS NOT NULL AND locations.Closed != '' THEN 'X' ELSE '' END AS "Closed"
     FROM locations
     LEFT JOIN glasses ON glasses.Location = locations.Id
     LEFT JOIN (
@@ -170,6 +174,7 @@ sub producerbrews {
         brews.Name AS "Name_A_C2_cont",
         '' AS TR1,
         brews.Alc AS "Alc",
+        CASE WHEN brews.Discontinued IS NOT NULL AND brews.Discontinued != '' THEN 'X' ELSE '' END AS "Discont",
         brews.BrewType || ', ' || brews.SubType AS "Type_A_cont",
         r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_A",
         strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
@@ -460,6 +465,11 @@ sub deduplocations {
   foreach my $paramname ($c->{cgi}->param) {
     if ( $paramname =~ /^Chk(\d+)$/ ) {
       my $dup = $1;
+      # Merge lifecycle dates from the duplicate before it is deleted.
+      # Opened/FirstSeen: earliest wins; Closed: latest wins.
+      db::merge_dates($c, "LOCATIONS", $id, $dup,
+        { earliest => [qw(Opened FirstSeen)], latest => [qw(Closed)] });
+
       my $sql = "UPDATE GLASSES SET Location = ? WHERE Location = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       my $rows = db::execute($c, $sql, $id, $dup);
@@ -541,16 +551,17 @@ sub selectlocation {
     print { $c->{log} } "selectlocation called with non-numerical 'selected' argument: '$selected' \n";
     $selected = 0;
   }
-  my $where = "";
+  my $where = "WHERE ( LOCATIONS.Closed IS NULL OR LOCATIONS.Closed = '') ";
   my $skip = "Id";
   my $newfield = "newloc";
   if ( $prods eq "prod" ) {
-    $where = "WHERE LOCATIONS.LocType = 'Producer' ";
+    $where = "WHERE LOCATIONS.LocType = 'Producer' AND ( LOCATIONS.Closed IS NULL OR LOCATIONS.Closed = '')";
     $newfield = "newprod";
     $skip .= "|LocType|LocSubType";
   } elsif ( $prods eq "non" ) {
     # NOTE: Must handle NULL LocType — NULL <> 'Producer' is NULL (falsy).
-    $where = "WHERE (LOCATIONS.LocType IS NULL OR LOCATIONS.LocType <> 'Producer') ";
+    $where = "WHERE (LOCATIONS.LocType IS NULL OR LOCATIONS.LocType <> 'Producer') " .
+             "AND ( LOCATIONS.Closed IS NULL OR LOCATIONS.Closed = '')";
   }
   # The opts list is the expensive part. Cache per user and location filter type.
   my $cache_key = "selectlocation_opts:$c->{username}:$prods";

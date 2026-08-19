@@ -29,6 +29,10 @@ sub beerboard {
     print "Sorry, no beer list for '$locparam' - showing 'Ølbaren' instead<br/>\n";
     $locparam = "Ølbaren"; # A good default
   }
+  # Closed places still show their last cached board, with a note
+  if ($loc_rec_check && $loc_rec_check->{Closed}) {
+    print "<div style='font-weight: bold;'>This place is closed</div>\n";
+  }
 
   render_location_selector($c, $locparam);
 

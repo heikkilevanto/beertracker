@@ -209,6 +209,25 @@ sub normalize_country {
   return $val;
 } # normalize_country
 
+# Normalize a lifecycle date value. Dates may be partial (a year, e.g. "2019")
+# and are stored as entered; full dates are YYYY-MM-DD.
+# - empty string clears the field (this is how you reopen / re-release)
+# - "Y" means yesterday
+# - "-Nd" means N days before today (e.g. "-3d")
+# - anything else passes through unchanged
+sub normalize_date {
+  my $c = shift;
+  my $val = trim(shift // '');
+  return '' unless $val;
+  if ( $val =~ /^Y$/i ) {
+    return datestr("%F", -1, 1);
+  }
+  if ( $val =~ /^-(\d+)d$/i ) {
+    return datestr("%F", -$1, 1);
+  }
+  return $val;
+} # normalize_date
+
 # Escape HTML special characters
 sub htmlesc {
   my $s = shift // '';

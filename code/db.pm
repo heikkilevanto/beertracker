@@ -395,6 +395,55 @@ sub can_delete {
 } # can_delete
 
 
+########## Merge lifecycle dates from a duplicate record into the kept record
+# Args: $c, $table, $kept_id, $dup_id, $opts
+#   opts->{earliest} => arrayref of fields where the earliest date wins
+#   opts->{latest}   => arrayref of fields where the latest date wins
+# For each field: if the kept record has no value, the duplicate's value is
+# copied over. If both have values, the earliest (or latest, per opts) wins.
+# Dates are compared as strings (YYYY-MM-DD sorts lexically; a partial year
+# like '2019' sorts before any '2019-...' date). Logs each merged field and
+# updates the kept record when anything changed.
+sub merge_dates {
+  my $c = shift;
+  my $table = shift;
+  my $kept_id = shift;
+  my $dup_id  = shift;
+  my $opts = shift || {};
+  my @earliest = @{ $opts->{earliest} || [] };
+  my @latest   = @{ $opts->{latest}   || [] };
+  return unless (@earliest || @latest);
+
+  my $kept = getrecord($c, $table, $kept_id) or return;
+  my $dup  = getrecord($c, $table, $dup_id)  or return;
+
+  my %earliest = map { $_ => 1 } @earliest;
+  my %latest   = map { $_ => 1 } @latest;
+  my @sets;
+  my @values;
+  foreach my $f (@earliest, @latest) {
+    my $kv = $kept->{$f} // "";
+    my $dv = $dup->{$f}  // "";
+    next if $dv eq "";
+    my $win = 0;
+    if ( $kv eq "" ) {
+      $win = 1;
+    } elsif ( $earliest{$f} && $dv lt $kv ) {
+      $win = 1;
+    } elsif ( $latest{$f} && $dv gt $kv ) {
+      $win = 1;
+    }
+    next unless $win;
+    push @sets, "$f = ?";
+    push @values, $dv;
+    print { $c->{log} } "merge_dates: $table $kept_id: $f '$kv' <- '$dv' (from $dup_id)\n";
+  }
+  if (@sets) {
+    db::execute($c, "UPDATE $table SET " . join(", ", @sets) . " WHERE Id = ?", @values, $kept_id);
+  }
+} # merge_dates
+
+
 ########## Update a record directly from CGI parameters
 sub updaterecord {
   my $c = shift;
@@ -410,6 +459,7 @@ sub updaterecord {
     my $special = $1 if ( $f =~ s/^(-)// );
     my $val = util::param($c, $inputprefix.$f );
     $val = util::normalize_country($c, $val) if $f =~ /Country$/i;
+    $val = util::normalize_date($c, $val) if $f =~ /^(Opened|Closed|Released|Discontinued|FirstSeen)$/;
     $val = util::clean_tags($val)             if $f =~ /Tags$/i;
     if ( $special ) {
       print { $c->{log} } "updaterecord: Met a special field '$f' \n";
@@ -460,6 +510,7 @@ sub insertrecord {
   for my $f ( db::tablefields($c, $table,undef,1)) {  # 1 indicates no -prefix
     my $val = util::param($c, $inputprefix.$f );
     $val = util::normalize_country($c, $val) if $f =~ /Country$/i;
+    $val = util::normalize_date($c, $val) if $f =~ /^(Opened|Closed|Released|Discontinued|FirstSeen)$/;
     $val = util::clean_tags($val)            if $f =~ /Tags$/i;
     print { $c->{log} } "insertrecord: '$inputprefix' '$f' got value '$val' \n";
     if ( $val eq '' ) {

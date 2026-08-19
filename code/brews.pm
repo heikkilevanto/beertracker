@@ -23,6 +23,9 @@ our $brew_field_order = [
   [ "Year",            "Vintage year" ],
   [ "Flavor",          "Hops, grapes, fruit, etc" ],
   [ "Details",         "Additional information" ],
+  [ "Released",        'year or full date, e.g. "2019" or "-3d" or "Y"' ],
+  [ "Discontinued",    "empty = still available" ],
+  [ "FirstSeen",       "auto-set from first tap/glass" ],
   [ "DefPrice",        "Default price per unit" ],
   [ "DefVol",          "Default volume in cl" ],
   [ "Barcode",         "from a label etc" ],
@@ -54,6 +57,7 @@ sub listbrews {
 
       '' AS TR1,
       brews.Alc AS "Alc",
+      CASE WHEN brews.Discontinued IS NOT NULL AND brews.Discontinued != '' THEN 'X' ELSE '' END AS "Discont",
       ploc.Id AS "PlocId_A_link=Location_cont",
       ploc.Name AS "Producer_A_cont",
       r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as=Stats",
@@ -669,6 +673,7 @@ sub selectbrew {
       LEFT JOIN LOCATIONS AS SeenLocations ON SeenLocations.Id = GLASSES.Location
       LEFT JOIN (SELECT brew, rating_count, average_rating, comment_count
                  FROM brew_ratings WHERE Username = ?) br ON br.brew = BREWS.Id
+      WHERE (BREWS.Discontinued IS NULL OR BREWS.Discontinued = '')
       GROUP BY BREWS.id
       ORDER BY max(GLASSES.Timestamp) DESC
       ";
@@ -732,6 +737,11 @@ sub dedupbrews {
   foreach my $paramname ($c->{cgi}->param) {
     if ( $paramname =~ /^Chk(\d+)$/ ) {
       my $dup = $1;
+      # Merge lifecycle dates from the duplicate before it is deleted.
+      # Released/FirstSeen: earliest wins; Discontinued: latest wins.
+      db::merge_dates($c, "BREWS", $id, $dup,
+        { earliest => [qw(Released FirstSeen)], latest => [qw(Discontinued)] });
+
       my $sql = "UPDATE GLASSES SET Brew = ? WHERE Brew = ?  ";
       print { $c->{log} } "$sql with '$id' and '$dup' \n";
       my $rows = db::execute($c, $sql, $id, $dup);

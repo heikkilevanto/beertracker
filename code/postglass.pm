@@ -203,6 +203,16 @@ sub postglass {
       );
     my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print { $c->{log} } "Inserted Glass id '$id' \n";
+
+    # FirstSeen lifecycle dates: first visit to this location, and first glass of
+    # this brew (brews never seen on tap thus fall back to their first glass).
+    my ($effdate) = db::queryarray($c, "SELECT strftime('%Y-%m-%d', ?, '-06:00')", $glass->{Timestamp});
+    if ($effdate) {
+      db::execute($c, "UPDATE locations SET FirstSeen = COALESCE(NULLIF(FirstSeen, ''), ?) WHERE Id = ?", $effdate, $locid);
+      if ($glass->{Brew}) {
+        db::execute($c, "UPDATE brews SET FirstSeen = COALESCE(NULLIF(FirstSeen, ''), ?) WHERE Id = ?", $effdate, $glass->{Brew});
+      }
+    }
   }
 
   # If the brew has no DefPrice, set it from this glass
