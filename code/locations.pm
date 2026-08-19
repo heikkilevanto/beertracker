@@ -42,7 +42,6 @@ sub listlocations {
     editlocation($c);
     return;
   }
-  my $sort = $c->{sort} || "Last-";
   my $extraparams = {};
   $extraparams->{lat} = '?';
   $extraparams->{lon} = '?';
@@ -68,6 +67,11 @@ sub listlocations {
       COALESCE(locations.Country,'') || ';' || COALESCE(locations.Region,'') AS "CountryRegion_A_contline",
       strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
         strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
+      (SELECT strftime('%Y-%m-%d %w ', max(g.Timestamp), '-06:00') ||
+              strftime('%H:%M', max(g.Timestamp))
+       FROM glasses g
+       JOIN brews b ON g.Brew = b.Id
+       WHERE b.ProducerLocation = locations.Id) AS "LastProd_cont",
       locations.Tags AS xTags,
       CASE WHEN locations.Closed IS NOT NULL AND locations.Closed != '' THEN 'X' ELSE '' END AS "Closed"
     FROM locations
@@ -90,8 +94,9 @@ sub listlocations {
       ) merged ON merged.loc_id = l.Id
       GROUP BY l.Id
     ) r ON r.id = locations.Id
-    GROUP BY locations.Id},
-      $sort,
+    GROUP BY locations.Id
+    ORDER BY "Last_cont" DESC, "LastProd_cont" DESC},
+      undef,
       { extraparams => $extraparams, title => "Locations" });
   return;
 } # listlocations

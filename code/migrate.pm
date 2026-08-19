@@ -25,7 +25,7 @@ use File::Copy;
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 51;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 52;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -40,6 +40,8 @@ our @MIGRATIONS = (
   # Issue 745 - lifecycle dates: when places opened/closed, brews released/discontinued,
   # plus an auto-collected FirstSeen date
   [51, 'add lifecycle dates to locations and brews', \&mig_051_add_lifecycle_dates],
+  # Issue 745 - backfill FirstSeen for producers from the oldest glass of their brews
+  [52, 'backfill producer locations FirstSeen', \&mig_052_backfill_producer_firstseen],
 );
 
 ################################################################################
@@ -241,6 +243,25 @@ sub mig_051_add_lifecycle_dates {
     JOIN locations ON tap_beers.Location = locations.Id
   });
 } # mig_051_add_lifecycle_dates
+
+
+# Issue 745 - the location FirstSeen backfill in mig_051 only looked at glasses
+# drunk AT the location. Producers are rarely drunk at, so their FirstSeen is
+# usually never filled. Backfill it from the oldest glass of any brew made by
+# the producer (brews.ProducerLocation), same -06:00 day offset as elsewhere.
+sub mig_052_backfill_producer_firstseen {
+  my $c = shift;
+  db::execute($c, "UPDATE locations SET FirstSeen = (
+      SELECT strftime('%Y-%m-%d', MIN(glasses.Timestamp), '-06:00')
+      FROM glasses
+      JOIN brews ON glasses.Brew = brews.Id
+      WHERE brews.ProducerLocation = locations.Id)
+    WHERE LocType = 'Producer'
+      AND (FirstSeen IS NULL OR FirstSeen = '')
+      AND EXISTS (SELECT 1 FROM glasses
+                  JOIN brews ON glasses.Brew = brews.Id
+                  WHERE brews.ProducerLocation = locations.Id)");
+} # mig_052_backfill_producer_firstseen
 
 
 ################################################################################

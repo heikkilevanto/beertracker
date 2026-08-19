@@ -344,7 +344,7 @@ sub listrecords {
       $sty = "style='max-width:55px; text-align:center'";
     } elsif ( $f =~ /^(Stats)$/ ) {
       $sty = "style='max-width:100px; text-align:center'";
-    } elsif ( $f =~ /^(Last|Ts)$/ ) {
+    } elsif ( $f =~ /^(Last|LastProd|Ts)$/ ) {
       $sty = "style='max-width:100px'";
     } elsif ( $f =~ /^(Type)$/ ) {
       my $w = "100px";
@@ -683,13 +683,19 @@ sub listrecords {
                . "<span style='position:absolute;left:-9999px'>$date </span>$disp</span>";
           }
         }
-      } elsif ( $fn eq "Last" ) {
-        my ($date, $wd, $time) = util::splitdate($v);
-        my $disp = "$time $wd";
-        $disp = "$date" if ( $date lt $cutoff );
-        $data_attrs .= " data-sort-key='$date $time' title='$date $time $wd'";
-        $v = "<span data-col='$i' data-filter='$date' onclick='fieldclick(event,this)'>"
-           . "<span style='position:absolute;left:-9999px'>$date </span>$disp</span>";
+      } elsif ( $fn eq "Last" || $fn eq "LastProd" ) {
+        if ( $v ne '' ) {
+          my ($date, $wd, $time) = util::splitdate($v);
+          my $disp = "$time $wd";
+          $disp = "$date" if ( $date lt $cutoff );
+          $data_attrs .= " data-sort-key='$date $time'";
+          $data_attrs .= " title='$date $time $wd'" if ( $fn eq "Last" );
+          $disp = "[$disp]" if ( $fn eq "LastProd" );
+          $v = "<span data-col='$i' data-filter='$date' onclick='fieldclick(event,this)'>"
+             . "<span style='position:absolute;left:-9999px'>$date </span>$disp</span>";
+        } else {
+          $v = "";
+        }
       } elsif ( $fn eq "Sim" ) { # Name similarity
         if ( $v && $extraparams && $extraparams->{refname} ) {
           my $name_idx;
