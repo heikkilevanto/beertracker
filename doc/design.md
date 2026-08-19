@@ -169,9 +169,9 @@ There are also a small number of javascript and css files under static
 `code/listrecords.pm` is the shared engine for tabular list pages. Each entity
 (brews, locations, persons, photos, comments) defines a SQL query that
 encapsulates all joins, aggregations, and computed columns. The Perl module 
-calls `listrecords::listrecords()` with the query, sort key, optional WHERE 
-clause, and bind params — it handles the HTML rendering, caching, filtering, 
-and pagination.
+calls `listrecords::listrecords()` with the query and optional WHERE 
+clause and bind params — it handles the HTML rendering, caching, filtering, 
+and pagination. The SQL query itself carries its own `ORDER BY`.
 
 Column display semantics are driven by suffix tags on the view's column names:
 

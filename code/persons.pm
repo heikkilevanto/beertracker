@@ -26,7 +26,6 @@ sub listpersons {
     editperson($c);
     return;
   }
-  my $sort = $c->{sort} || "Last-";
   print listrecords::listrecords($c,
       q{SELECT
       persons.Id AS "Id_link=Person",
@@ -47,8 +46,7 @@ sub listpersons {
     LEFT JOIN comments ON comments.Id = cp.Comment
     LEFT JOIN glasses ON glasses.Id = comments.Glass
     LEFT JOIN locations ON locations.Id = glasses.Location
-    GROUP BY persons.Id},
-      $sort,
+    GROUP BY persons.Id ORDER BY "Last_A" DESC},
       { title => "Persons" });
   return;
 } # listpersons
@@ -102,7 +100,7 @@ sub editperson {
 
   if ( $c->{edit} !~ /^new/i ) {
     my $name = $p->{Name} // "";
-    print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+    print listrecords::listrecords($c, comments::comments_list_sql(), {
         where => "EXISTS (SELECT 1 FROM comment_persons cp WHERE cp.Comment = \"Id_A_link=Comment\" AND cp.Person = ?) AND xUsername = ?",
         params => [$p->{Id}, $c->{username}],
         title => "Comments mentioning $name",

@@ -96,7 +96,6 @@ sub listlocations {
     ) r ON r.id = locations.Id
     GROUP BY locations.Id
     ORDER BY "Last_cont" DESC, "LastProd_cont" DESC},
-      undef,
       { extraparams => $extraparams, title => "Locations" });
   return;
 } # listlocations
@@ -191,8 +190,7 @@ sub producerbrews {
       LEFT JOIN locations ploc ON ploc.id = brews.ProducerLocation
       LEFT JOIN glasses ON glasses.Brew = brews.Id AND glasses.Username = users.Username
       LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
-      GROUP BY brews.id, users.Username},
-      "Last-",
+      GROUP BY brews.id, users.Username ORDER BY "Last" DESC},
       { where => "xProducer = ? AND xUsername = ?",
         params => [$p->{Name}, $c->{username}],
         title => "Brews by $p->{Name}" });
@@ -219,7 +217,6 @@ sub locationdeduplist {
   print "<input type=hidden name='e' value='$c->{edit}' />\n";
   print "<input type=hidden name='dedup' value='1' />\n";
   print "<br/>\n";
-  my $sort = $c->{sort} || "Last-";
   my $extra = {};
   $extra->{lat} = $loc->{Lat};
   $extra->{lon} = $loc->{Lon};
@@ -237,8 +234,7 @@ sub locationdeduplist {
           strftime('%H:%M', max(glasses.Timestamp)) AS "Last_C2"
       FROM locations
       LEFT JOIN glasses ON glasses.Location = locations.Id
-      GROUP BY locations.Id},
-      $sort,
+      GROUP BY locations.Id ORDER BY "Last_C2" DESC},
       { where => "Id_A <> ?", extraparams => $extra, params => $loc->{Id},
         browsersortcol => "Sim", title => "Similar locations",
         norecmessage => "No similar locations" });
@@ -422,7 +418,7 @@ JS
       print photos::photo_form($c, location => $p->{Id}, public_default => 1, return_url => $return_url);
       print "&nbsp;<a href='$c->{url}?o=Comment&e=new&location=$p->{Id}&commenttype=location' onclick='event.stopPropagation()'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
-      print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+      print listrecords::listrecords($c, comments::comments_list_sql(), {
           where => q{CAST("LocId_A_link=Location" AS INTEGER) = ? AND xUsername = ?},
           params => [$p->{Id}, $c->{username}],
           title => "Comments",
@@ -436,7 +432,7 @@ JS
       print "<hr/>\n";
       locationvisits($c, $p );
       if ( $p->{LocType} =~ /Producer/ ) {
-        print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+        print listrecords::listrecords($c, comments::comments_list_sql(), {
             where => q{EXISTS (SELECT 1 FROM comments c2
                        LEFT JOIN glasses g2 ON g2.Id = c2.Glass
                        WHERE c2.Id = "Id_A_link=Comment"

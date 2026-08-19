@@ -144,8 +144,8 @@ sub dailystats {
     FROM glasses
     LEFT JOIN locations ON glasses.location = locations.id
     WHERE Username = ?
-    GROUP BY \"Day\"";
-  print listrecords::listrecords($c, $sql, "Day-", {
+    GROUP BY \"Day\" ORDER BY \"Day\" DESC";
+  print listrecords::listrecords($c, $sql, {
     params    => [$c->{username}],
     title     => "Daily stats",
     gap_column => "X_Gap",

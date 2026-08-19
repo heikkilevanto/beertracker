@@ -140,7 +140,7 @@ sub listallcomments {
     return;
   }
 
-  print listrecords::listrecords($c, comments::comments_list_sql(), "Last-",
+  print listrecords::listrecords($c, comments::comments_list_sql(),
       { where => "xUsername=?", params => $c->{username},
         title => "Comments by $c->{username}" });
   return;
@@ -411,7 +411,7 @@ sub commentform {
           AND COALESCE(glasses.Username, comments.Username) = ? AND comments.Id != ?},
         $context_brew, $context_brew, $c->{username}, $com->{Id});
     if ($cnt && $cnt > 0) {
-      $sibling_html = listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+      $sibling_html = listrecords::listrecords($c, comments::comments_list_sql(), {
           where => q{EXISTS (SELECT 1 FROM comments c2
                      LEFT JOIN glasses g2 ON g2.Id = c2.Glass
                      WHERE c2.Id = "Id_A_link=Comment"
@@ -436,7 +436,7 @@ sub commentform {
           AND COALESCE(glasses.Username, comments.Username) = ? AND comments.Id != ?},
         $context_loc, $c->{username}, $com->{Id});
     if ($cnt && $cnt > 0) {
-      $sibling_html = listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+      $sibling_html = listrecords::listrecords($c, comments::comments_list_sql(), {
           where => q{CAST("LocId_A_link=Location" AS INTEGER) = ? AND xUsername = ?
                      AND "Id_A_link=Comment" != ?},
           params => [$context_loc, $c->{username}, $com->{Id}],
@@ -460,7 +460,7 @@ sub commentform {
             AND COALESCE(glasses.Username, comments.Username) = ? AND comments.Id != ?},
           $pid, $c->{username}, $com->{Id});
       if ($cnt && $cnt > 0) {
-        $sibling_html = listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+        $sibling_html = listrecords::listrecords($c, comments::comments_list_sql(), {
             where => q{EXISTS (SELECT 1 FROM comment_persons cp
                        WHERE cp.Comment = "Id_A_link=Comment" AND cp.Person = ?)
                        AND xUsername = ? AND "Id_A_link=Comment" != ?},
@@ -752,7 +752,8 @@ sub comments_list_sql {
     LEFT JOIN locations loc_comment ON loc_comment.Id = comments.Location
     LEFT JOIN locations ploc_glass   ON ploc_glass.Id   = brew_glass.ProducerLocation
     LEFT JOIN locations ploc_comment ON ploc_comment.Id = brew_comment.ProducerLocation
-    GROUP BY comments.Id};
+    GROUP BY comments.Id
+    ORDER BY "Last_A_contline" DESC};
 }
 
 ################################################################################

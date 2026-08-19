@@ -78,7 +78,6 @@ sub listbrews {
     LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
     GROUP BY brews.Id, users.Username
     ORDER BY "Last" DESC},
-    undef,
     { where => "xUsername = ?", params => $c->{username}, title => "Brews" });
   return;
 } # listbrews
@@ -272,7 +271,6 @@ sub brewdeduplist {
   print "<input type=hidden name='e' value='$c->{edit}' />\n";
   print "<input type=hidden name='dedup' value='1' />\n";
   print "<br/>\n";
-  my $sort = $c->{sort} || "Last-";
   my $extra = {};
   $extra->{refname} = $brew->{Name};
   print listrecords::listrecords($c,
@@ -300,8 +298,7 @@ sub brewdeduplist {
       LEFT JOIN glasses ON glasses.Brew = brews.Id AND glasses.Username = users.Username
       LEFT JOIN locations ON locations.id = glasses.Location
       LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
-      GROUP BY brews.id, users.Username},
-      $sort,
+      GROUP BY brews.id, users.Username ORDER BY "Last" DESC},
       { where => qq{"Id_A_link=Brew" <> ? AND xUsername = ?},
         params => [$brew->{Id}, $c->{username}], extraparams => $extra,
         browsersortcol => "Sim", title => "Similar brews",
@@ -546,7 +543,7 @@ JS
       print "&nbsp;<a href='$c->{url}?o=Comment&e=new&brew=$p->{Id}&commenttype=brew'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
       print "<div style='overflow-x: auto;'>\n";
-      print listrecords::listrecords($c, comments::comments_list_sql(), "Last-", {
+      print listrecords::listrecords($c, comments::comments_list_sql(), {
           where => q{EXISTS (SELECT 1 FROM comments c2
                      LEFT JOIN glasses g2 ON g2.Id = c2.Glass
                      WHERE c2.Id = "Id_A_link=Comment"

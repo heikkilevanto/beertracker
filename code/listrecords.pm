@@ -61,7 +61,6 @@ sub _colspan_last_td {
 sub listrecords {
   my $c = shift;
   my $sql_param = shift;
-  my $sort = shift;
   my $opt = shift || {};
   my $where          = $opt->{where}          || "";
   my $params         = $opt->{params};
@@ -91,7 +90,6 @@ sub listrecords {
   my $intro_sth = db::query($c, "$sql_param LIMIT 0");
   @fields = @{$intro_sth->{NAME}};
   $intro_sth->finish;
-  my @orig_fields = @fields;  # Preserve for SQL ORDER BY (before suffix stripping)
   my @extra_attr = ("") x scalar(@fields);
   my %px_override;
   my %auto_override;
@@ -156,18 +154,6 @@ sub listrecords {
       $fields[$i] = $field;
       $suffix_info[$i] = $suf;
   }
-  my $order = "";
-  if ( defined $sort ) {
-      for (my $i = 0; $i < scalar(@fields); $i++) {
-          my $f = $fields[$i];
-          if ( $sort =~ /$f(-?)/ ) {
-              my $direction = "";
-              $direction = " DESC" if ($1);
-              $order = "ORDER BY $orig_fields[$i]" . $direction;
-          }
-      }
-  }
-
   my $gap_col_idx = -1;
   if ($gap_column) {
     for (my $i = 0; $i < scalar(@fields); $i++) {
@@ -180,7 +166,7 @@ sub listrecords {
 
   $where = "WHERE $where" if ($where);
 
-  my $sql = "SELECT * FROM ($sql_param) $where $order";
+  my $sql = "SELECT * FROM ($sql_param) $where";
   my @paramarr = ();
   if ( $params ) {
     if (ref $params eq 'ARRAY') { @paramarr = @$params; }

@@ -383,8 +383,8 @@ sub listphotos {
     LEFT JOIN brews b_g      ON b_g.Id = g_g.Brew
     LEFT JOIN locations l_g  ON l_g.Id = g_g.Location
     LEFT JOIN locations pl_g ON pl_g.Id = b_g.ProducerLocation
-    LEFT JOIN comments c     ON c.Id = p.Comment},
-      "Ts-",
+    LEFT JOIN comments c     ON c.Id = p.Comment
+    ORDER BY "Ts_A" DESC},
       { where => $where, params => [$c->{username}, $c->{username},
          $c->{username}, $c->{username}],
         title => "Photos for $c->{username}",
