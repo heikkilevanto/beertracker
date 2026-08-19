@@ -1,8 +1,8 @@
 # Beertracker database schema
-# Schema dumped at 2026-08-17 11:57 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-08-19 12:52 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
-# Most changes must be done by adding a migration to migrate.pm, then they will be applied 
+# Most changes must be done by adding a migration to migrate.pm, then they will be applied
 # automatically to both dev and production systems.
 # A few difficult changes can be done manually here, but that requires running tools/dbchange
 # in both dev and production, and needs to be coordinated with related code releases.
@@ -31,7 +31,8 @@ create table glasses (
     Alc decimal,
     StDrinks decimal, -- Calculated from volume and alc
     Note text, -- note for this one glass, like what mixed beer
-    Tap integer, Barcode text, -- Which tap number the brew came from
+    Tap integer, -- Which tap number the brew came from
+    Barcode text, -- Scanned from the bottle (or such)
 
     foreign key (Brew) references Brews(id),
     foreign key (Location) references Locations(id)
@@ -63,7 +64,10 @@ create table brews (
     Barcode text, -- bar code on the bottle or box
     DetailsLink text, -- Link to producers or untappd page about the brew
     ShortName text, -- Shortened name for tight displays
-    Parent integer references brews(Id),  -- Where this was copied from
+    Parent integer references brews(Id), -- Where this was copied from
+    Released text,  -- When it came on the market (possbly just yyyy)
+    Discontinued text, -- Marks no longer available
+    FirstSeen text,  -- First time we saw it
 
     foreign key (ProducerLocation) references Locations(id)
 );
@@ -146,8 +150,11 @@ create table locations (
   SearchLink text, -- Producer web page search
   UntappdLink text, -- Link to untappd for the producer
   ShortName text,  -- Shortened name for tight displays
-  Scraper text  -- Scraper script and args, "untappd.pl foobar/999999"
-  );
+  Scraper text,  -- Scraper script and args, "untappd.pl foobar/999999"
+  Opened text,  -- When the place opened, guess, can be just yyyy
+  Closed text, -- Indicates place is closed
+  FirstSeen text -- First time we saw it
+);
 
 -- table "tap_beers"
 drop table if exists "tap_beers";
@@ -286,18 +293,6 @@ left join locations pl on b.ProducerLocation = pl.Id
 where tb.Gone is null
 order by tb.Location, tb.Tap;
 
--- view brew_taps
-drop view if exists brew_taps;
-create view brew_taps as
-select
-  tap_beers.*,
-  locations.Name as LocationName,
-  round(julianday(coalesce(Gone, 'now')) - julianday(FirstSeen)) as Days,
-  strftime('%Y-%m-%d', FirstSeen) as Since,
-  strftime('%Y-%m-%d', Gone) as GoneFormatted
-from tap_beers
-join locations on tap_beers.Location = locations.Id;
-
 -- view loc_ratings
 drop view if exists loc_ratings;
 create view loc_ratings as
@@ -353,6 +348,18 @@ create view brew_ratings as
     left join comments c on c.glass = g.id and c.CommentType = 'brew'
     where g.brew is not null
     group by g.Username, g.brew;
+
+-- view brew_taps
+drop view if exists brew_taps;
+create view brew_taps as
+    select
+      tap_beers.*,
+      locations.Name as LocationName,
+      round(julianday(coalesce(tap_beers.Gone, 'now')) - julianday(tap_beers.FirstSeen)) as Days,
+      strftime('%Y-%m-%d', tap_beers.FirstSeen) as Since,
+      strftime('%Y-%m-%d', tap_beers.Gone) as GoneFormatted
+    from tap_beers
+    join locations on tap_beers.Location = locations.Id;
 
 create index idx_glasses_username on glasses (Username collate nocase);
 
