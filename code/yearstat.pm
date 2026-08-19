@@ -226,8 +226,8 @@ sub yearbar {
 sub yearline {
   my ( $price, $drinks, $visits, $name, $dot ) = @_;
   my $s = "<tr>";
-  $price = $price // "";
-  $price  = util::unit( sprintf( "%6d",   $price ),  ".-" );
+  $price = $price // "0";
+  $price = util::unit( sprintf( "%6d", $price ), ".-" ) ;
   $drinks = util::unit( sprintf( "%7.1f", $drinks ), "d" ) if ($drinks);
   $visits = sprintf( "%4d", $visits ) if ($visits);
   $s .= "<td class='num'>&nbsp; $price &nbsp; </td>";
@@ -242,7 +242,7 @@ sub yearline {
 
 sub yearsummary {
   my $c      = shift;
-  my $sortdr = ( $c->{sort} );
+  my $sortdr = util::param($c, "s");
 
   my $sofar = "so far";
   my @years;

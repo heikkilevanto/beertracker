@@ -15,7 +15,7 @@ sub monthstat {
   my $firsty = "";
   my %monthdrinks;
   my %monthprices;
-  my $money_mode = ($c->{sort} =~ /^m/);
+  my $money_mode = (util::param($c, "s") =~ /^m/);
   my $lastmonthday;    # last day of the last month
 
   # Optional date range filters from gstart and gend parameters (month-based)

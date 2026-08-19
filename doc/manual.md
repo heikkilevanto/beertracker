@@ -376,7 +376,8 @@ drinks per day and week, and amount of money spent. For the current month there
 is also a projection where we might end at the same speed.
 
 There are also averages for each calendar month, and averages and sums for
-each year.
+each year. The graph can be toggled between drinks and money spent with the
+"Show money spent" / "Show drinks" link.
 
 #### Years
 This shows in a table form where I have spent most money for each year, with the
