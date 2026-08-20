@@ -24,8 +24,10 @@ TAG_CMDS=$(cd "$REPO" && git tag --sort=creatordate --format='%(creatordate:shor
       date=$1; tag=$2; n++
       # alternate label height between graph 0.97 and 0.88 to reduce overlap
       ypos = (n % 2 == 1) ? "graph 0.97" : "graph 0.88"
-      print "set arrow " n " from \"" date "\", graph 0 to \"" date "\", graph 1 nohead lc rgb \"#cc4444\" lw 1 dt 2"
-      print "set label " n " \"" tag "\" at \"" date "\", " ypos " rotate by 90 right font \",9\" tc rgb \"#cc4444\""
+      if (tag ~ /^v[0-9]+\.0$/) { color = "#00008b"; fontsize = 12 }
+      else { color = "#cc4444"; fontsize = 9 }
+      print "set arrow " n " from \"" date "\", graph 0 to \"" date "\", graph 1 nohead lc rgb \"" color "\" lw 1 dt 2"
+      print "set label " n " \"" tag "\" at \"" date "\", " ypos " rotate by 90 right font \"," fontsize "\" tc rgb \"" color "\""
     }
   ')
 
