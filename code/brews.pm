@@ -45,7 +45,7 @@ sub listbrews {
     return;
   }
   print listrecords::listrecords($c,
-    q{WITH users AS (
+    qq{WITH users AS (
       SELECT DISTINCT Username FROM glasses
     )
     SELECT
@@ -66,8 +66,7 @@ sub listbrews {
       count(glasses.Id) AS "Count",
       locations.Id AS "LocId_A_link=Location_cont",
       locations.Name AS "Location_A_as=LocName_cont",
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
+      } . db::lastseen_sql() . qq{ AS "Last",
 
       users.Username AS xUsername
     FROM brews
@@ -274,7 +273,7 @@ sub brewdeduplist {
   my $extra = {};
   $extra->{refname} = $brew->{Name};
   print listrecords::listrecords($c,
-      q{WITH users AS (
+      qq{WITH users AS (
         SELECT DISTINCT Username FROM glasses
       )
       SELECT
@@ -288,8 +287,7 @@ sub brewdeduplist {
         'Chk' AS Chk,
         ploc.Name AS Producer,
         count(glasses.Id) AS Count,
-        strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-          strftime('%H:%M', max(glasses.Timestamp)) AS Last,
+        } . db::lastseen_sql() . qq{ AS Last,
         locations.Name AS "Location_C2",
         users.Username AS xUsername
       FROM brews

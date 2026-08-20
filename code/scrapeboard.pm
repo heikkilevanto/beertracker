@@ -131,32 +131,18 @@ sub updateboard {
       $e->{brew_id} = $cur->{Brew};
 
       # If DB has no prices but scraper does, update prices directly
-      my @sizes = sort { ($a->{vol} || 0) <=> ($b->{vol} || 0) } @{$e->{sizePrice} || []};
-      if (@sizes) {
+      my ($sizes, $sp) = util::sizeprices($e->{sizePrice});
+      if (@$sizes) {
         my $db_has_prices = $cur->{PriceS} || $cur->{PriceM} || $cur->{PriceL};
         unless ($db_has_prices) {
-          my ($sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
-          if (@sizes >= 1) {
-            $sizeS = $sizes[0]->{vol};
-            $priceS = $sizes[0]->{price};
-          }
-          if (@sizes == 2) {
-            $sizeL = $sizes[1]->{vol};
-            $priceL = $sizes[1]->{price};
-          } elsif (@sizes >= 3) {
-            $sizeM = $sizes[1]->{vol};
-            $priceM = $sizes[1]->{price};
-            $sizeL = $sizes[2]->{vol};
-            $priceL = $sizes[2]->{price};
-          }
           db::execute($c,
             "UPDATE tap_beers SET SizeS=?, PriceS=?, SizeM=?, PriceM=?, SizeL=?, PriceL=? WHERE Id=?",
-            $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL, $cur->{Id});
+            $sp->{SizeS}, $sp->{PriceS}, $sp->{SizeM}, $sp->{PriceM}, $sp->{SizeL}, $sp->{PriceL}, $cur->{Id});
           print { $c->{log} } "updateboard: Added prices to tap $tap_num ($beer) at location $locparam\n";
 
           # Also update brew's DefPrice/DefVol if not already set
           if (!$cur->{DefPrice}) {
-            my $largest = $sizes[-1];
+            my $largest = $sizes->[-1];
             db::execute($c, "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?",
               $largest->{price}, $largest->{vol}, $cur->{Brew});
             print { $c->{log} } "updateboard: Set brew $cur->{Brew} DefPrice=$largest->{price} DefVol=$largest->{vol}\n";
@@ -179,8 +165,7 @@ sub updateboard {
     } else {
       # Insert new producer
       my $sql = "INSERT INTO LOCATIONS (Name, LocType, LocSubType) VALUES (?, 'Producer', 'Beer')";
-      db::execute($c, $sql, $maker);
-      $prod_id = $c->{dbh}->last_insert_id(undef, undef, "LOCATIONS", undef);
+      $prod_id = db::insertrow($c, $sql, $maker);
       $inserted_producers++;
       print { $c->{log} } "updateboard: Inserted producer '$maker' (id $prod_id)\n";
     }
@@ -200,8 +185,7 @@ sub updateboard {
       my $sql = "INSERT INTO BREWS " .
         "(Name, BrewType, SubType, BrewStyle, Alc, ProducerLocation, Year) " .
         "VALUES (?, 'Beer', ?, ?, ?, ?, ?)";
-      db::execute($c, $sql, $beer, $short_style, $style, $alc, $prod_id, $year);
-      $brew_id = $c->{dbh}->last_insert_id(undef, undef, "BREWS", undef);
+      $brew_id = db::insertrow($c, $sql, $beer, $short_style, $style, $alc, $prod_id, $year);
       $inserted_brews++;
       print { $c->{log} } "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";
     }

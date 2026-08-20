@@ -135,17 +135,7 @@ sub seenline {
   if ($min_date) {
     my $display_date = $min_date;
     if ($count > 1 && $max_date) {
-      my $now_utc6 = time() - 6 * 3600;
-      my $today = strftime('%Y-%m-%d', localtime($now_utc6));
-      my $yest_utc6 = $now_utc6 - 86400;
-      my $yesterday = strftime('%Y-%m-%d', localtime($yest_utc6));
-      if ($max_date eq $today) {
-        $display_date .= " to today";
-      } elsif ($max_date eq $yesterday) {
-        $display_date .= " to yesterday";
-      } else {
-        $display_date .= " to $max_date";
-      }
+      $display_date .= " to " . util::reldate($max_date);
     }
     $seenline .= " $display_date";
   }
@@ -153,20 +143,16 @@ sub seenline {
 } # seenline
 
 sub format_date_relative {
-  # TODO - Should probably be in util.pm
   my ($date_str, $time_str) = @_;
   return "" unless $date_str;
-  my $now_utc6 = time() - 6 * 3600;
-  my $today = strftime('%Y-%m-%d', localtime($now_utc6));
-  my $yest_utc6 = $now_utc6 - 86400;
-  my $yesterday = strftime('%Y-%m-%d', localtime($yest_utc6));
+  my $rel = util::reldate($date_str);
 
   my $formatted_time = $time_str;
   $formatted_time = "($time_str)" if ($time_str && $time_str lt "06:00");
 
-  if ($date_str eq $today) {
+  if ($rel eq "today") {
     return $formatted_time;
-  } elsif ($date_str eq $yesterday) {
+  } elsif ($rel eq "yesterday") {
     return "yesterday $formatted_time";
   } else {
     return $date_str;

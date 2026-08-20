@@ -181,6 +181,16 @@ sub execute {
   return $c->{dbh}->do($sql, undef, @params);
 } # execute
 
+# Execute an INSERT and return the new row's id.
+# Centralizes the last_insert_id call for programmatic inserts.
+# Args: $c, $sql, @params
+sub insertrow {
+  my $c = shift;
+  my $sql = shift;
+  db::execute($c, $sql, @_);
+  return $c->{dbh}->last_insert_id(undef, undef, undef, undef) || undef;
+} # insertrow
+
 # Run a simple query, and return the first (only?) record as a hash ref
 sub queryrecord {
   my $c = shift;
@@ -321,6 +331,31 @@ sub findrecord {
   $sth->finish;
   return $rec;
 } # findrecord
+
+
+############ Effective date of a glass
+# The date (YYYY-MM-DD) of a glass's timestamp shifted by the 6-hour offset,
+# so late-night drinks count as the previous day.
+# Returns undef if the glass is not found or not owned by the user.
+sub glasseffdate {
+  my $c = shift;
+  my $id = shift;
+  my $username = shift;
+  return undef unless ($id);
+  my ($effdate) = db::queryarray($c,
+    "SELECT strftime('%Y-%m-%d', Timestamp, '-06:00') FROM glasses WHERE Id = ? AND Username = ?",
+    $id, $username);
+  return $effdate;
+} # glasseffdate
+
+
+############ SQL fragment for the "last seen" display column
+# Returns the strftime expression for the date+weekday and time of the most
+# recent glass, e.g. "2026-08-20 Thu 23:40". $ts is the timestamp column.
+sub lastseen_sql {
+  my $ts = shift || "glasses.Timestamp";
+  return "strftime('%Y-%m-%d %w ', max($ts), '-06:00') || strftime('%H:%M', max($ts))";
+} # lastseen_sql
 
 ################################################################################
 # Helpers for POST functions

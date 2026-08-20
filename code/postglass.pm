@@ -186,7 +186,7 @@ sub postglass {
         Location, Brew, Price, Volume, Alc, StDrinks, Note, Tap, Barcode )
       VALUES ( ?, ?, ?, ?, ?,  ?, ?, ?, ?, ?, ?, ?, ? )
       ";
-    db::execute($c, $sql,
+    my $id = db::insertrow($c, $sql,
       $c->{username},
       $glass->{Timestamp},
       $glass->{BrewType},
@@ -201,7 +201,6 @@ sub postglass {
       $glass->{Tap},
       $glass->{Barcode}
       );
-    my $id = $c->{dbh}->last_insert_id(undef, undef, "GLASSES", undef) || undef;
     print { $c->{log} } "Inserted Glass id '$id' \n";
 
     # FirstSeen lifecycle dates: first visit to this location, and first glass of

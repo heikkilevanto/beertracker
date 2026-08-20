@@ -590,9 +590,7 @@ sub mainlist {
   my $derived_date;
   if ( !defined $c->{cgi}->param("date") ) {
     if ( $c->{edit} ) {
-      ($derived_date) = $c->{dbh}->selectrow_array(
-        "SELECT strftime('%Y-%m-%d', Timestamp, '-06:00') FROM glasses WHERE Id = ? AND Username = ?",
-        undef, $c->{edit}, $c->{username});
+      $derived_date = db::glasseffdate($c, $c->{edit}, $c->{username});
     } elsif ( my $ec = util::param($c, "ec") ) {
       ($derived_date) = $c->{dbh}->selectrow_array(
         "SELECT strftime('%Y-%m-%d', g.Timestamp, '-06:00')

@@ -233,10 +233,9 @@ sub post_photo {
       my $src = db::queryrecord($c, "SELECT * FROM photos WHERE Id = ?", $photo_id);
       util::error("Source photo $photo_id not found") unless $src;
       my $col = ucfirst($attach_type);
-      db::execute($c,
+      my $new_id = db::insertrow($c,
         "INSERT INTO photos (Filename, $col, Uploader, Caption, Public, Ts) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
         $src->{Filename}, $attach_id, $src->{Uploader}, $src->{Caption}, $src->{Public});
-      my $new_id = $c->{dbh}->last_insert_id("","","","");
       print { $c->{log} } "Added attachment: photo $new_id (copy of $photo_id) for $attach_type $attach_id\n";
       $c->{redirect_url} = "$c->{url}?o=Photos&e=$new_id";
       return;

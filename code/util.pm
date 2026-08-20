@@ -56,6 +56,30 @@ sub unit {
   return "$v<span style='font-size: xx-small'>$u</span> ";
 }
 
+# Split a list of {vol, price} hashes into the S/M/L size+price columns used
+# by tap_beers. Sizes are sorted by volume ascending.
+# Returns ($sizes, $columns): $sizes is the sorted arrayref, $columns is a
+# hashref with SizeS/PriceS/SizeM/PriceM/SizeL/PriceL keys (missing ones undef).
+sub sizeprices {
+  my $sizeprice = shift || [];
+  my @sizes = sort { ($a->{vol} || 0) <=> ($b->{vol} || 0) } @$sizeprice;
+  my %out;
+  if (@sizes >= 1) {
+    $out{SizeS}  = $sizes[0]->{vol};
+    $out{PriceS} = $sizes[0]->{price};
+  }
+  if (@sizes == 2) {
+    $out{SizeL}  = $sizes[1]->{vol};
+    $out{PriceL} = $sizes[1]->{price};
+  } elsif (@sizes >= 3) {
+    $out{SizeM}  = $sizes[1]->{vol};
+    $out{PriceM} = $sizes[1]->{price};
+    $out{SizeL}  = $sizes[2]->{vol};
+    $out{PriceL} = $sizes[2]->{price};
+  }
+  return \@sizes, \%out;
+} # sizeprices
+
 
 # Helper for logging lists of values
 # Puts quotes around the values, separates them by commas, and handles

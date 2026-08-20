@@ -654,9 +654,9 @@ sub postcomment {
     my $newcont = util::param($c,"newpersonContact") || undef;
     my $newtags = util::clean_tags(util::param($c,"newpersonTags")) || undef;
     util::error("A Person must have a name") unless $newname;
-    db::execute($c, "INSERT INTO persons (Name, FullName, Description, Contact, Tags) VALUES (?, ?, ?, ?, ?)",
+    my $newid = db::insertrow($c,
+      "INSERT INTO persons (Name, FullName, Description, Contact, Tags) VALUES (?, ?, ?, ?, ?)",
       $newname, $newfull, $newdesc, $newcont, $newtags);
-    my $newid = $c->{dbh}->last_insert_id(undef, undef, "PERSONS", undef);
     print { $c->{log} } "Inserted person '$newid' for comment '$comment_id' \n";
     push @person_ids, $newid;  # treat the new person as a chip
     $person = undef;
@@ -682,11 +682,10 @@ sub postcomment {
       }
     }
   } else { # Insert new comment
-    db::execute($c,
+    $comment_id = db::insertrow($c,
       "INSERT INTO comments (Glass, Rating, Comment, CommentType, Username, Ts, Location, Brew)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       $glass || undef, $rating, $comment, $commenttype, $username, $ts, $location, $brew);
-    $comment_id = $c->{dbh}->last_insert_id(undef, undef, "COMMENTS", undef);
     print { $c->{log} } "Inserted comment '$comment_id' for glass '$glass' \n";
     for my $pid (@person_ids) {
       db::execute($c, "INSERT OR IGNORE INTO comment_persons (Comment, Person) VALUES (?,?)",
@@ -697,9 +696,7 @@ sub postcomment {
   # Redirect to avoid duplicate form submission on refresh, back to the glass's date
   my $effdate;
   if ( $glass ) {
-    ($effdate) = $c->{dbh}->selectrow_array(
-      "SELECT strftime('%Y-%m-%d', Timestamp, '-06:00') FROM glasses WHERE Id = ? AND Username = ?",
-      undef, $glass, $c->{username});
+    $effdate = db::glasseffdate($c, $glass, $c->{username});
   }
   if ( $effdate ) {
     $c->{redirect_url} = "$c->{url}?o=Full&date=$effdate&ndays=1";

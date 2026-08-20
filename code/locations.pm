@@ -65,10 +65,8 @@ sub listlocations {
       '' AS TR1,
       locations.lat || ' ' || locations.lon AS "Geo",
       COALESCE(locations.Country,'') || ';' || COALESCE(locations.Region,'') AS "CountryRegion_A_contline",
-      strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
-        strftime('%H:%M', max(glasses.Timestamp)) AS "Last_cont",
-      (SELECT strftime('%Y-%m-%d %w ', max(g.Timestamp), '-06:00') ||
-              strftime('%H:%M', max(g.Timestamp))
+      } . db::lastseen_sql() . qq{ AS "Last_cont",
+      (SELECT } . db::lastseen_sql("g.Timestamp") . qq{
        FROM glasses g
        JOIN brews b ON g.Brew = b.Id
        WHERE b.ProducerLocation = locations.Id) AS "LastProd_cont",

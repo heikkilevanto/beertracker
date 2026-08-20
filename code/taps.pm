@@ -42,24 +42,11 @@ sub update_taps {
 
     # Insert tap (new or changed)
     $taps_changed++;
-    my @sizes = sort { ($a->{vol} || 0) <=> ($b->{vol} || 0) } @{$tap->{sizePrice} || []};
-    my ($sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
-    if (@sizes >= 1) {
-      $sizeS = $sizes[0]->{vol};
-      $priceS = $sizes[0]->{price};
-    }
-    if (@sizes == 2) {
-      $sizeL = $sizes[1]->{vol};
-      $priceL = $sizes[1]->{price};
-    } elsif (@sizes >= 3) {
-      $sizeM = $sizes[1]->{vol};
-      $priceM = $sizes[1]->{price};
-      $sizeL = $sizes[2]->{vol};
-      $priceL = $sizes[2]->{price};
-    }
+    my ($sizes, $sp) = util::sizeprices($tap->{sizePrice});
 
     my $insert_sql = "INSERT INTO tap_beers (Location, Tap, Brew, FirstSeen, LastSeen, SizeS, PriceS, SizeM, PriceM, SizeL, PriceL) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    db::execute($c, $insert_sql, $location_id, $tap_num, $tap->{brew_id}, $now, $now, $sizeS, $priceS, $sizeM, $priceM, $sizeL, $priceL);
+    db::execute($c, $insert_sql, $location_id, $tap_num, $tap->{brew_id}, $now, $now,
+      $sp->{SizeS}, $sp->{PriceS}, $sp->{SizeM}, $sp->{PriceM}, $sp->{SizeL}, $sp->{PriceL});
     my $action = "Opened";
     $action = "Closed and opened" if ($cur);
     print { $c->{log} } "taps: $action tap $tap_num with brew $tap->{brew_id} at location $location_id\n";
@@ -68,11 +55,11 @@ sub update_taps {
     db::execute($c, "UPDATE brews SET FirstSeen = COALESCE(FirstSeen, strftime('%Y-%m-%d', ?)) WHERE Id = ?", $now, $tap->{brew_id});
 
     # If brew has no DefPrice, set it from the largest size
-    if (@sizes) {
+    if (@$sizes) {
       my ($has_defprice) = db::queryarray($c,
         "SELECT DefPrice FROM BREWS WHERE Id = ?", $tap->{brew_id});
       if (!$has_defprice) {
-        my $largest = $sizes[-1];
+        my $largest = $sizes->[-1];
         db::execute($c, "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?",
           $largest->{price}, $largest->{vol}, $tap->{brew_id});
         print { $c->{log} } "taps: Set brew $tap->{brew_id} DefPrice=$largest->{price} DefVol=$largest->{vol}\n";
