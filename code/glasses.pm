@@ -169,6 +169,7 @@ sub maininputform {
   my $rawnote = $rec->{Note} || "";  # Save before zeroing for non-edit mode
   $rec->{Note} = "" unless ( $c->{edit} );  # Do not inherit from previous
   $rec->{Barcode} = "" unless ( $c->{edit} );  # Do not inherit from previous
+  my $barcode = $rec->{Barcode} || "";  # Barcode may be NULL in the DB
   if ( $c->{edit} ) {
     $hidenote = "";
   }
@@ -186,7 +187,7 @@ sub maininputform {
    $html .= "<tr id='barcodeline' $hidenote><td>\n";
    $html .= "<label><input type='checkbox' name='setbrewcode' id='setbrewcode' /> Upd Br</label>\n";
    $html .= "</td><td>\n";
-   $html .= "<input id='barcode' name='barcode' value='$rec->{Barcode}' " .
+   $html .= "<input id='barcode' name='barcode' value='$barcode' " .
             "placeholder='Barcode' size='12' $clr/>\n";
    $html .= " <button type='button' onclick='startBarcodeScanning(\"barcode\")'>Scan</button>\n";
    $html .= "</td></tr>\n";

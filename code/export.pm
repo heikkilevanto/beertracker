@@ -198,7 +198,7 @@ sub delete_tarball {
 
   # Validate: no path components, must match our naming convention
   util::error("Invalid tarball name")
-    unless $tarball =~ /^beertracker_export_[a-zA-Z0-9_T]+\.tgz$/;
+    unless $tarball =~ /^beertracker_export_[a-zA-Z0-9]+_\d{8}-\d{6}\.tgz$/;
 
   my $export_photodir = user_photodir($c, $export_username);
   my $path = "$export_photodir/$tarball";
