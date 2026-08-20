@@ -320,7 +320,6 @@ sub yearsummary {
     $sql .= "ORDER BY price DESC, name COLLATE NOCASE";
   }
   print { $c->{log} } "u='$c->{username}' y=" . join( '-', @years ) . " $sql \n";
-  my $sth = $c->{dbh}->prepare($sql);
 
   my $nlines = util::param( $c, "maxl" ) || 10;
   if ($sortdr) {
@@ -347,7 +346,7 @@ sub yearsummary {
     print "<tr><td class='num'>Kroner &nbsp;</td>"
       . "<td class='num'>Drinks &nbsp;</td>"
       . "<td class='num'>Visits&nbsp;</td><td></td></tr>\n";
-    $sth->execute( "$y", $c->{username} );
+    my $sth = db::query( $c, $sql, "$y", $c->{username} );
     my $ln = $nlines;
 
     while (1) {

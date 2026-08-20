@@ -218,8 +218,7 @@ sub postglass {
   # If the brew has no DefPrice, set it from this glass
   if ( $brew && !$brew->{DefPrice} && $glass->{Price} && $glass->{Volume} ) {
     my $sql = "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute($glass->{Price}, $glass->{Volume}, $brewid);
+    db::execute($c, $sql, $glass->{Price}, $glass->{Volume}, $brewid);
     print { $c->{log} } "Updated brew '$brewid' with DefPrice '$glass->{Price}' and DefVol '$glass->{Volume}'\n";
   }
 
@@ -306,9 +305,7 @@ sub gettimestamp {
       "FROM GLASSES WHERE username = ?  ".
       "AND strftime('%Y-%m-%d %H:%M:%S', Timestamp) IS NOT NULL " .   # happens on bat timestamps
       "ORDER BY Timestamp DESC LIMIT 1";
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute( $c->{username} );
-    my $newstamp = $sth->fetchrow_array;
+    my ($newstamp) = db::queryarray($c, $sql, $c->{username});
     util::error("No previous glass found for 'L' timestamp") unless $newstamp;
     ($d, $t) = split(" ", $newstamp);
   }

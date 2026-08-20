@@ -279,8 +279,7 @@ sub commentlines {
       WHERE glass = ?
       GROUP BY comments.Id
       ORDER BY comments.Id"; # To keep the order consistent
-    my $sth = $c->{dbh}->prepare($sql);
-    $sth->execute($rec->{id});
+    my $sth = db::query($c, $sql, $rec->{id});
     $html .= "<ul style='margin:0; padding-left:1.2em;'>\n";
     while ( my $com = $sth->fetchrow_hashref() ) {
       $html .= "<li>". comments::commentline($c, $com). "</li>\n  ";
@@ -396,10 +395,7 @@ sub adjustment_form {
 
   # Get adjustment brew ID
   my $sql = "SELECT Id FROM brews WHERE BrewType='Adjustment' LIMIT 1";
-  my $sth = $c->{dbh}->prepare($sql);
-  $sth->execute();
-  my ($adjustment_brew_id) = $sth->fetchrow_array();
-  $sth->finish();
+  my ($adjustment_brew_id) = db::queryarray($c, $sql);
   return unless $adjustment_brew_id;  # No adjustment brew configured
 
   my $html = "";
