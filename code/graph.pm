@@ -31,7 +31,7 @@ sub clearcachefiles {
   foreach my $pf ( glob($datadir."*") ) {
     next if ( $pf =~ /(\.data)|(db.*)$/ ); # Always keep data files
     next if ( -d $pf ); # Skip subdirs, if we have such
-    if ( $pf =~ /\/$c->{username}.*png/ ||   # All png files for this user
+    if ( $pf =~ /\/$c->{username}.*(png|plot|cmd)/ ||   # All cached graph files for this user
          -M $pf > 7 ) {  # And any file older than a week
       unlink ($pf)
         or util::error ("Could not unlink $pf $!");
@@ -392,12 +392,16 @@ sub graph {
   $g->{mode} = "";
   $g->{mode} = "price" if ( util::param($c,"gmode","") eq "price" );
   my $modename = "";
-  $modename = "-$g->{mode}" if ( $g->{mode} );
+  if ( $g->{mode} ) {
+    # Short indicator for the on-disk graph files
+    $modename = "-pr" if ( $g->{mode} eq "price" );
+    $modename = "-$g->{mode}" if ( !$modename );
+  }
   # TODO - Keep start and stop as Time::Piece refs in g
 
-  $g->{plotfile} = $c->{datadir} . $c->{username} . ".plot$modename";
-  $g->{cmdfile} = $c->{datadir} . $c->{username} . ".cmd$modename";
-  $g->{pngfile} = $c->{datadir} . $c->{username} . "$g->{start}-$g->{end}$modename.png";
+  $g->{plotfile} = $c->{datadir} . $c->{username} . "$modename.plot";
+  $g->{cmdfile} = $c->{datadir} . $c->{username} . "$modename.cmd";
+  $g->{pngfile} = $c->{datadir} . $c->{username} . "-$g->{start}-$g->{end}$modename.png";
 
   if (  -r $g->{pngfile} ) { # Have a cached file
     print "\n<!-- Cached graph op='$c->{op}' file='$g->{pngfile}' -->\n";
