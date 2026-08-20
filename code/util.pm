@@ -466,7 +466,7 @@ sub showmenu {
         push @more, { label => "Get Production Data", url => "o=CopyProdData" };
     }
 
-    if ($c->{username} eq "heikki") {
+    if ( superuser::is_superuser($c) ) {
         push @more, { label => "Git Status", url => "o=GitStatus" };
         if ($c->{op} =~ /GitPull/i) {
             push @more, { label => "Git Pull", url => "o=GitPull" };
