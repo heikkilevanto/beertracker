@@ -26,19 +26,16 @@ my $onemonth = $oneyear / 12;
 sub clearcachefiles {
   my $c = shift;
   my $reason = shift || "";
-  my $datadir = $c->{datadir};
-  print { $c->{log} } "clear: d='$datadir'\n";
-  foreach my $pf ( glob($datadir."*") ) {
-    next if ( $pf =~ /(\.data)|(db.*)$/ ); # Always keep data files
-    next if ( -d $pf ); # Skip subdirs, if we have such
-    if ( $pf =~ /\/$c->{username}.*(png|plot|cmd)/ ||   # All cached graph files for this user
-         -M $pf > 7 ) {  # And any file older than a week
-      unlink ($pf)
-        or util::error ("Could not unlink $pf $!");
-      }
+  my $usrdir = $c->{usrdir};
+  print { $c->{log} } "clear: d='$usrdir'\n";
+  foreach my $pf ( glob($usrdir."*") ) {
+    next if ( -d $pf ); # Skip subdirs, e.g. the photo dir
+    next if ( $pf =~ /\.data$/ ); # Always keep data files
+    unlink ($pf)
+      or util::error ("Could not unlink $pf $!");
   }
   # Create a zero-sized file called username.last
-  my $lastfile = $datadir . $c->{username} . '.last';
+  my $lastfile = $usrdir . $c->{username} . '.last';
   open my $fh, '>', $lastfile or util::error("Could not create $lastfile: $!");
   close $fh;
   cache::clear($c, $reason);
@@ -399,9 +396,9 @@ sub graph {
   }
   # TODO - Keep start and stop as Time::Piece refs in g
 
-  $g->{plotfile} = $c->{datadir} . $c->{username} . "$modename.plot";
-  $g->{cmdfile} = $c->{datadir} . $c->{username} . "$modename.cmd";
-  $g->{pngfile} = $c->{datadir} . $c->{username} . "-$g->{start}-$g->{end}$modename.png";
+  $g->{plotfile} = $c->{usrdir} . $c->{username} . "$modename.plot";
+  $g->{cmdfile} = $c->{usrdir} . $c->{username} . "$modename.cmd";
+  $g->{pngfile} = $c->{usrdir} . $c->{username} . "-$g->{start}-$g->{end}$modename.png";
 
   if (  -r $g->{pngfile} ) { # Have a cached file
     print "\n<!-- Cached graph op='$c->{op}' file='$g->{pngfile}' -->\n";

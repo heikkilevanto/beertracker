@@ -188,7 +188,7 @@ sub yearbar {
   $metric = "drinks" if ($sortdr);
   my $suffix = "";
   $suffix = "-drinks" if ($sortdr);
-  my $pngfile = $c->{datadir} . $c->{username} . ".yearbars-$n$suffix.png";
+  my $pngfile = $c->{usrdir} . $c->{username} . ".yearbars-$n$suffix.png";
 
   my $res = yearbarsql($c, $n, $metric);
   return $res unless $res;  # no price data

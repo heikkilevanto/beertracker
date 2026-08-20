@@ -94,7 +94,8 @@ Track what beers various places have on tap now or in the past. Also what
 volumes the beer was sold at, and for what price.
 
 ### photos
-Metadata of photos. The actual files are stored in beerdata/username.photo.
+Metadata of photos. The actual files are stored in
+`beerdata/<username>/<username>.photo`.
 
 ### globals
 Single-row key/value store for system-wide metadata. Currently holds one row:

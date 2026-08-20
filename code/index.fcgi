@@ -200,6 +200,7 @@ while (my $q = CGI::Fast->new) {
   my $plotfile = "";
   my $cmdfile = "";
   my $photodir = "";
+  my $usrdir = "";
 # Build a minimal context so login.pm can use the CGI object.
 # authenticate() sets $c_auth->{username}; sends 401 and returns empty username on failure.
 my $c_auth = { cgi => $q };
@@ -211,9 +212,13 @@ if ( !$username ) {
 }
 
 if ( $username =~ /^[a-zA-Z0-9]+$/ ) {
-  $plotfile = $datadir . $username . ".plot";
-  $cmdfile  = $datadir . $username . ".cmd";
-  $photodir = $datadir . $username . ".photo";
+  $usrdir = $datadir . $username . "/";
+  unless ( -d $usrdir ) {
+    mkdir $usrdir or util::error("Could not create $usrdir: $!");
+  }
+  $plotfile = $usrdir . $username . ".plot";
+  $cmdfile  = $usrdir . $username . ".cmd";
+  $photodir = $usrdir . $username . ".photo";
 } else {
   util::error ("Bad username\n");
 }
@@ -230,6 +235,7 @@ if ( $username =~ /^[a-zA-Z0-9]+$/ ) {
 my $c = {
   'username' => $username,
   'datadir'  => $datadir,
+  'usrdir'   => $usrdir,
   'scriptdir'    => $scriptdir,
   'plotfile' => $plotfile,
   'cmdfile'  => $cmdfile,

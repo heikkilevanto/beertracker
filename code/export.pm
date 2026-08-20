@@ -44,6 +44,15 @@ sub export_params {
 
 
 ################################################################################
+# Build the photo dir path for a user in the per-user layout
+################################################################################
+sub user_photodir {
+  my ($c, $user) = @_;
+  return $c->{datadir} . $user . "/" . $user . ".photo";
+} # user_photodir
+
+
+################################################################################
 # Form for parameters
 ################################################################################
 sub exportform {
@@ -148,7 +157,7 @@ sub list_tarballs {
 
   my $found_any = 0;
   for my $user (@$users_ref) {
-    my $photodir = $c->{datadir} . $user . ".photo";
+    my $photodir = user_photodir($c, $user);
     for my $path ( sort { (stat $b)[9] <=> (stat $a)[9] }
                    glob("$photodir/beertracker_export_*.tgz") ) {
     next unless -f $path;
@@ -191,7 +200,7 @@ sub delete_tarball {
   util::error("Invalid tarball name")
     unless $tarball =~ /^beertracker_export_[a-zA-Z0-9_T]+\.tgz$/;
 
-  my $export_photodir = $c->{datadir} . $export_username . ".photo";
+  my $export_photodir = user_photodir($c, $export_username);
   my $path = "$export_photodir/$tarball";
   if (-f $path) {
     unlink $path or util::error("Could not delete $tarball: $!");
@@ -460,7 +469,7 @@ sub make_tarball {
     if (@photo_ids) {
       my $id_list = join(",", @photo_ids);
       # Photos may belong to the export_username, so build their photodir directly
-      my $export_photodir = $c->{datadir} . $export_username . ".photo";
+      my $export_photodir = user_photodir($c, $export_username);
       my $sth = db::query($c, "SELECT Filename FROM Photos WHERE Id IN ($id_list)");
       while ( my $row = db::nextrow($sth) ) {
         my $orig = $export_photodir . "/" . $row->{Filename} . "+orig.jpg";
@@ -476,7 +485,7 @@ sub make_tarball {
   }
 
   # Ensure destination photo dir exists and build tar path
-  my $export_photodir = $c->{datadir} . $export_username . ".photo";
+  my $export_photodir = user_photodir($c, $export_username);
   make_path($export_photodir);
   my $now_stamp = util::datestr("%Y%m%d-%H%M%S", 0, 1);
   my $tarname = "beertracker_export_${export_username}_${now_stamp}.tgz";
