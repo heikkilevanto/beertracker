@@ -16,14 +16,12 @@ sub update_taps {
   my $location_id = shift;
   my $beerlist = shift;
   my $current_ref = shift;  # Pre-fetched current board from scrapeboard.pm
+  my %current = %$current_ref; # current taps from the scraper
 
   my $now = util::now();
   my $taps_changed = 0;
   my %scraped_taps;
 
-  # Use pre-fetched current taps if provided, otherwise fetch here
-  my %current;
-  %current = %$current_ref;
 
   foreach my $tap (@$beerlist) {
     next unless $tap->{brew_id};
@@ -57,10 +55,10 @@ sub update_taps {
     # If brew has no DefPrice, set it from the largest size
     if (@$sizes) {
       my ($has_defprice) = db::queryarray($c,
-        "SELECT DefPrice FROM BREWS WHERE Id = ?", $tap->{brew_id});
+        "SELECT DefPrice FROM brews WHERE Id = ?", $tap->{brew_id});
       if (!$has_defprice) {
         my $largest = $sizes->[-1];
-        db::execute($c, "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?",
+        db::execute($c, "UPDATE brews SET DefPrice = ?, DefVol = ? WHERE Id = ?",
           $largest->{price}, $largest->{vol}, $tap->{brew_id});
         print { $c->{log} } "taps: Set brew $tap->{brew_id} DefPrice=$largest->{price} DefVol=$largest->{vol}\n";
       }
