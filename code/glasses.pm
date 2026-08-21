@@ -179,7 +179,7 @@ sub maininputform {
     $tap = " $tap";
   }
    $html .= "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' data-rawval='$rawtap' size='2' $clr/></td><td>\n";
-   $html .= "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' $sz20/>\n";
+   $html .= "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' size='20' onfocus='value=value.trim();select();' autocapitalize='sentences'/>\n";
    $html .= "</td></tr>\n";
 
    # Barcode for this glass, plus the override-checkbox for the brew code.
