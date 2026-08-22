@@ -273,7 +273,18 @@ sub load_beerlist_from_db {
       strftime('%Y-%m-%d', tb.FirstSeen) AS first_seen_date,
       strftime('%H:%M', tb.FirstSeen) AS first_seen_time,
       strftime('%s', tb.FirstSeen) AS first_seen_ts,
-      ug.seen_count, ug.seen_min_date, ug.seen_max_date
+      ug.seen_count, ug.seen_min_date, ug.seen_max_date,
+      (SELECT round(avg(julianday(h.Gone) - julianday(h.FirstSeen)), 1)
+       FROM tap_beers h
+       WHERE h.Brew = ct.Brew AND h.Location = ct.Location
+         AND h.Gone IS NOT NULL
+         AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
+       HAVING count(*) >= 2) as avg_days_on_tap,
+      (SELECT count(*) FROM tap_beers h
+       WHERE h.Brew = ct.Brew AND h.Location = ct.Location
+         AND h.Gone IS NOT NULL
+         AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
+       HAVING count(*) >= 2) as tap_history_count
     FROM current_taps ct
       JOIN tap_beers tb ON ct.Id = tb.Id
       JOIN brews b ON ct.Brew = b.Id
@@ -344,7 +355,9 @@ sub load_beerlist_from_db {
       brew_shortname => $row->{brew_shortname},
       maker_search_link => $row->{maker_search_link},
       shortname => $row->{shortname},
-      brewtype => $row->{brewtype}
+      brewtype => $row->{brewtype},
+      avg_days_on_tap => $row->{avg_days_on_tap},
+      tap_history_count => $row->{tap_history_count}
     };
   }
 
@@ -413,7 +426,9 @@ sub prepare_beer_entry_data {
     first_seen_relative => format_duration_relative($e->{first_seen_ts}),
     first_seen_absolute => format_date_absolute($e->{first_seen_date}, $e->{first_seen_time}),
     extlink_html => $extlink_html,
-    dispmak_full => $dispmak_full
+    dispmak_full => $dispmak_full,
+    avg_days_on_tap => $e->{avg_days_on_tap},
+    tap_history_count => $e->{tap_history_count}
   };
 }
 
@@ -525,10 +540,22 @@ sub render_beer_row {
   if ($processed_data->{first_seen_relative}) {
     my $rel = $processed_data->{first_seen_relative};
     my $abs = $processed_data->{first_seen_absolute};
+    my $daysleft = "";
+    my $kegcount = "";
+    if ($processed_data->{avg_days_on_tap}) {
+      my $elapsed = (time() - $processed_data->{first_seen_ts}) / 86400;
+      my $remaining = $processed_data->{avg_days_on_tap} - $elapsed;
+      if ($remaining > 0) {
+        $daysleft = ", ~" . sprintf("%.1f", $remaining) . " days left";
+      } else {
+        $daysleft = ", should be empty soon";
+      }
+      $kegcount = ", based on $processed_data->{tap_history_count} kegs";
+    }
     print " <span style='font-size: x-small; cursor: pointer;'"
         . " onclick=\"var s=this.nextElementSibling; s.style.display=(s.style.display==='none'?'inline':'none');\">"
-        . "On for $rel</span>"
-        . "<span style='font-size: x-small; display:none;'>, since $abs</span>";
+        . "On for $rel$daysleft</span>"
+        . "<span style='font-size: x-small; display:none;'>, since $abs$kegcount</span>";
   }
   if ( $processed_data->{average_rating} ) {
     print " " . comments::avgratings($c, $processed_data->{rating_count}, $processed_data->{average_rating}, $processed_data->{comment_count});
