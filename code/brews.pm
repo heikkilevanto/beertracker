@@ -839,18 +839,45 @@ sub listbrewtaps {
 
   my @current = grep { !defined $_->{Gone} } @$taps;
   my @history = grep { defined $_->{Gone} } @$taps;
+  my $history_count = scalar(@history);
+
+  my %loc_sum;
+  my %loc_cnt;
+  my $global_sum = 0;
+  my $global_cnt = 0;
+  foreach my $tap (@history) {
+    next if $tap->{Days} >= 45;
+    $global_sum += $tap->{Days};
+    $global_cnt++;
+    $loc_sum{$tap->{Location}} += $tap->{Days};
+    $loc_cnt{$tap->{Location}}++;
+  }
+
+  my %loc_avg;
+  foreach my $loc (keys %loc_cnt) {
+    $loc_avg{$loc} = $loc_sum{$loc} / $loc_cnt{$loc} if $loc_cnt{$loc} >= 2;
+  }
+  my $global_avg = $global_cnt >= 2 ? $global_sum / $global_cnt : undef;
 
   if (@current) {
     print "<div style='white-space: nowrap;'>\n";
     foreach my $tap (@current) {
-      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{LocationName}</span></a></b> since $tap->{Since} ($tap->{Days} days)<br/>\n";
+      my $marker = $tap->{Days} >= 45 ? " ???" : "";
+      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{LocationName}</span></a></b> since $tap->{Since} ($tap->{Days} days)$marker<br/>\n";
+      if (exists $loc_avg{$tap->{Location}}) {
+        my $avg = $loc_avg{$tap->{Location}};
+        my $remaining = $avg - $tap->{Days};
+        if ($remaining > 0) {
+          print "&nbsp;&nbsp;&nbsp;<i>Seems to stay on for " . sprintf("%.1f", $avg) . " days, might last about " . sprintf("%.1f", $remaining) . " days</i><br/>\n";
+        } else {
+          print "&nbsp;&nbsp;&nbsp;<i>Seems to stay on for " . sprintf("%.1f", $avg) . " days, should be empty soon</i><br/>\n";
+        }
+      }
     }
     print "</div>\n";
   } else {
     print "This beer is not currently on tap anywhere.<br/>\n";
   }
-
-  my $history_count = scalar(@history);
 
   if ($history_count > 0) {
     print "<br/>\n";
@@ -859,12 +886,17 @@ sub listbrewtaps {
     print "</div>\n";
     print "<div style='display: none; white-space: nowrap;'>\n";
     foreach my $tap (@history) {
-      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{LocationName}</span></a></b> $tap->{Since} to $tap->{GoneFormatted} ($tap->{Days} days)<br/>\n";
+      my $marker = $tap->{Days} >= 45 ? " ???" : "";
+      print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{LocationName}</span></a></b> $tap->{Since} to $tap->{GoneFormatted} ($tap->{Days} days)$marker<br/>\n";
+    }
+    if (defined $global_avg) {
+      print "<i>Seems to stay on for " . sprintf("%.1f", $global_avg) . " days</i><br/>\n";
     }
     print "</div>\n";
   } else {
     print "<br/>\n(no tap history)\n";
   }
+
   print "<hr/>\n";
 } # listbrewtaps
 
