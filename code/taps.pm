@@ -52,18 +52,6 @@ sub update_taps {
     # First seen on tap: remember the brew's earliest appearance
     db::execute($c, "UPDATE brews SET FirstSeen = COALESCE(FirstSeen, strftime('%Y-%m-%d', ?)) WHERE Id = ?", $now, $tap->{brew_id});
 
-    # If brew has no DefPrice, set it from the largest size
-    if (@$sizes) {
-      my ($has_defprice) = db::queryarray($c,
-        "SELECT DefPrice FROM brews WHERE Id = ?", $tap->{brew_id});
-      if (!$has_defprice) {
-        my $largest = $sizes->[-1];
-        db::execute($c, "UPDATE brews SET DefPrice = ?, DefVol = ? WHERE Id = ?",
-          $largest->{price}, $largest->{vol}, $tap->{brew_id});
-        print { $c->{log} } "taps: Set brew $tap->{brew_id} DefPrice=$largest->{price} DefVol=$largest->{vol}\n";
-      }
-    }
-
   } # foreach tap
 
   # Close taps that were not in the scraped list

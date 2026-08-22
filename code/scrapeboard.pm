@@ -140,13 +140,7 @@ sub updateboard {
             $sp->{SizeS}, $sp->{PriceS}, $sp->{SizeM}, $sp->{PriceM}, $sp->{SizeL}, $sp->{PriceL}, $cur->{Id});
           print { $c->{log} } "updateboard: Added prices to tap $tap_num ($beer) at location $locparam\n";
 
-          # Also update brew's DefPrice/DefVol if not already set
-          if (!$cur->{DefPrice}) {
-            my $largest = $sizes->[-1];
-            db::execute($c, "UPDATE BREWS SET DefPrice = ?, DefVol = ? WHERE Id = ?",
-              $largest->{price}, $largest->{vol}, $cur->{Brew});
-            print { $c->{log} } "updateboard: Set brew $cur->{Brew} DefPrice=$largest->{price} DefVol=$largest->{vol}\n";
-          }
+          set_defprice_if_needed($c, $cur->{Brew}, $cur->{DefPrice}, $sizes);
         }
       }
 
@@ -171,8 +165,8 @@ sub updateboard {
     }
 
     # Ensure brew exists
-    my $sql_check = "SELECT Id FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
-    my ($brew_id) = db::queryarray($c, $sql_check, $beer, $prod_id);
+    my $sql_check = "SELECT Id, DefPrice FROM BREWS WHERE Name = ? AND ProducerLocation = ?";
+    my ($brew_id, $defprice) = db::queryarray($c, $sql_check, $beer, $prod_id);
 
     if (!$brew_id) {
       # Insert new brew
@@ -190,6 +184,8 @@ sub updateboard {
       print { $c->{log} } "updateboard: Inserted brew '$beer' by '$maker' (id $brew_id)\n";
     }
     $e->{brew_id} = $brew_id;
+    my ($sizes) = util::sizeprices($e->{sizePrice});
+    set_defprice_if_needed($c, $brew_id, $defprice, $sizes);
   }
 
   print { $c->{log} } "updateboard: $inserted_brews new brews inserted\n" if $inserted_brews;
@@ -233,6 +229,18 @@ sub post_form {
   return $form;
 }
 
+
+# Set DefPrice and DefVol on a brew from the largest scraped size, if not already set
+# Args: $c, $brew_id, $defprice (current value, may be undef), $sizes (from util::sizeprices)
+sub set_defprice_if_needed {
+  my ($c, $brew_id, $defprice, $sizes) = @_;
+  return unless @$sizes;
+  return if $defprice;
+  my $largest = $sizes->[-1];
+  db::execute($c, "UPDATE brews SET DefPrice = ?, DefVol = ? WHERE Id = ?",
+    $largest->{price}, $largest->{vol}, $brew_id);
+  print { $c->{log} } "updateboard: Set brew $brew_id DefPrice=$largest->{price} DefVol=$largest->{vol}\n";
+} # set_defprice_if_needed
 
 ################################################################################
 # Tell Perl the module loaded fine
