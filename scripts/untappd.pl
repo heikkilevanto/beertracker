@@ -6,7 +6,6 @@
 
 use XML::LibXML;
 use JSON;
-use LWP::UserAgent;
 use utf8;
 
 my $debug = 0;
@@ -15,13 +14,15 @@ my $venue_id = $ARGV[0] or die "Usage: $0 <venue-id>\nExample: $0 olsnedkeren/41
 my $base_url = "https://untappd.com/v/$venue_id";
 
 binmode STDOUT, ":encoding(UTF-8)";
-my $ua = LWP::UserAgent->new( timeout => 10 );
-$ua->agent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
-my $res = $ua->get($base_url);
-die "Failed to fetch $base_url: " . $res->status_line . "\n" unless $res->is_success;
+my $ua = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+my $html = `curl -s -m 15 -A '$ua' '$base_url'`;
+if ($? != 0) {
+    die "Failed to fetch $base_url: curl exited with " . ($? >> 8) . "\n";
+}
+die "Empty response from $base_url\n" unless $html;
 
 my $dom = XML::LibXML->load_html(
-    string          => $res->content,
+    string          => $html,
     recover         => 1,
     suppress_errors => 1,
 );
