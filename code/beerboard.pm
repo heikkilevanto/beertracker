@@ -522,7 +522,14 @@ sub render_beer_row {
   print "</td>\n";
   print "<td colspan=4 >";
   print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width:100px'>\n";
-  print "$processed_data->{dispmak_full}: $processed_data->{dispbeer} ";
+  if ($e->{maker_id}) {
+    print "<a href='$c->{url}?o=Location&e=$e->{maker_id}' style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'><span>L$e->{maker_id}</span></a> ";
+  }
+  print "$processed_data->{dispmak_full}: ";
+  if ($e->{brew_id}) {
+    print "<a href='$c->{url}?o=Brew&e=$e->{brew_id}' style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'><span>B$e->{brew_id}</span></a> ";
+  }
+  print "$processed_data->{dispbeer} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span>" if ($processed_data->{country});
   print "</span></td></tr>\n";
   print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $buttons_expanded &nbsp;\n";
