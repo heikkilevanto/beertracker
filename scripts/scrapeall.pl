@@ -23,6 +23,9 @@ use Cwd qw(cwd abs_path);
 use File::Basename qw(dirname);
 use Time::Piece;
 use Getopt::Long;
+use Encode qw(decode_utf8);
+
+@ARGV = map { decode_utf8($_) } @ARGV;
 
 my $scriptdir = dirname(abs_path(__FILE__));
 my $projectroot = dirname($scriptdir);
