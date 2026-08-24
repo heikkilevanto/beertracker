@@ -407,9 +407,15 @@ sub adjustment_form {
   $form_counter++;
   my $form_id = "adj_${locationid}_${form_counter}";
 
-  # Get adjustment brew ID
-  my $sql = "SELECT Id FROM brews WHERE BrewType='Adjustment' LIMIT 1";
-  my ($adjustment_brew_id) = db::queryarray($c, $sql);
+  # Get adjustment brew ID (cached per request in $c)
+  my $adjustment_brew_id;
+  if (exists $c->{adjustment_brew_id}) {
+    $adjustment_brew_id = $c->{adjustment_brew_id};
+  } else {
+    my $sql = "SELECT Id FROM brews WHERE BrewType='Adjustment' LIMIT 1";
+    ($adjustment_brew_id) = db::queryarray($c, $sql);
+    $c->{adjustment_brew_id} = $adjustment_brew_id;
+  }
   return unless $adjustment_brew_id;  # No adjustment brew configured
 
   my $html = "";
