@@ -624,16 +624,16 @@ sub matching_rec {
 
 # Render a filtered list of glasses matching $c->{qry}.
 # Uses the $c->{sth} set by mainlist() via glassquery().
-# Scans from $c->{date} backwards, showing up to maxl matching records.
+# Scans from $c->{date} backwards, showing up to $ndays days that have matches.
 sub filtered_list {
   my $c = shift;
-  my $maxl = util::paramnumber($c, "maxl", 45) || 45;
+  my $ndays = util::paramnumber($c, "ndays", 7) || 7;
+  my $ndays_orig = $ndays;
   my $date = $c->{date};
   my $html = "";
   my $shown = 0;
-  my $more = 0;
 
-  while ( db::peekrow($c->{sth}) ) {
+  while ( $ndays > 0 && db::peekrow($c->{sth}) ) {
     my $day_effdate = db::peekrow($c->{sth})->{effdate};
     my @glasses;
     while ( my $row = db::nextrow($c->{sth}) ) {
@@ -652,12 +652,11 @@ sub filtered_list {
     my @matching = grep { matching_rec($c, $_) } @glasses;
     next unless @matching;
 
+    # Only count days that have matching records
+    $ndays--;
+
     my $cur_loc;
     foreach my $rec (@matching) {
-      if ( $shown >= $maxl ) {
-        $more = 1;
-        last;
-      }
       if ( !defined $cur_loc || $rec->{loc} != $cur_loc ) {
         my ($lhtml) = locationhead($c, $rec);
         $html .= $lhtml;
@@ -671,16 +670,6 @@ sub filtered_list {
       $html .= "<br/>\n";
       $shown++;
     }
-
-    if ( $shown >= $maxl ) {
-      if ( !$more ) {
-        # All matching records for this day were shown; check stream for more
-        if ( db::peekrow($c->{sth}) ) {
-          $more = 1;
-        }
-      }
-      last;
-    }
   }
 
   if ( $shown == 0 ) {
@@ -688,11 +677,11 @@ sub filtered_list {
     $html .= "<i>No matches for '$q_disp'</i><br/>\n";
   }
 
-  if ( $more ) {
+  if ( db::peekrow($c->{sth}) ) {
     my $q_esc = uri_escape_utf8($c->{qry});
     my $date_esc = uri_escape_utf8($date);
-    my $more_l = $maxl * 2;
-    $html .= qq{<a href='$c->{url}?o=$c->{op}&q=$q_esc&maxl=$more_l&date=$date_esc'><span>More results</span></a><br/>\n};
+    my $more_ndays = $ndays_orig * 2;
+    $html .= qq{<a href='$c->{url}?o=$c->{op}&q=$q_esc&ndays=$more_ndays&date=$date_esc'><span>More results</span></a><br/>\n};
   }
 
   $c->{sth}->finish;
@@ -729,11 +718,7 @@ sub mainlist {
   my $original_ndays = $ndays;
   my $show_form = 0;
   $show_form = 1 if (defined $c->{cgi}->param("q") || defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays") || $derived_date);
-  my $maxl = 0;
-  if ($c->{qry}) {
-    $maxl = util::paramnumber($c, "maxl", 45) || 45;
-  }
-  my $cache_key = "mainlist:$c->{username}:$c->{op}:$c->{qry}:$date:$original_ndays:$show_form:$maxl";
+  my $cache_key = "mainlist:$c->{username}:$c->{op}:$c->{qry}:$date:$original_ndays:$show_form";
   my $cached_html = cache::get($c, $cache_key);
   if ($cached_html) {
     print { $c->{log} } "mainlist: cache hit\n" if $c->{devversion};
@@ -747,42 +732,21 @@ sub mainlist {
     $html .= qq{<input type="hidden" name="o" value="$c->{op}" />\n};
     $html .= qq{<table>\n};
     my $qry_esc = util::htmlesc($c->{qry});
-    $html .= qq{<tr><td>Filter:</td><td><input type="text" name="q" id="filter-q" value="$qry_esc" style="width: 10em;" /></td></tr>\n};
+    $html .= qq{<tr><td>Filter:</td><td><input type="text" name="q" value="$qry_esc" style="width: 10em;" /></td></tr>\n};
     $html .= qq{<tr><td>Date from:</td><td><input type="text" name="date" value="$date" style="width: 8em;" /></td></tr>\n};
-    # Always render both rows; hide the irrelevant one server-side for non-JS clients
-    my $lines_disp = $c->{qry} ? "" : qq{ style="display: none;"};
-    my $days_disp  = $c->{qry} ? qq{ style="display: none;"} : "";
-    $html .= qq{<tr id="maxl-row"$lines_disp><td><input type="submit" value="Show" /></td><td><input type="number" name="maxl" value="$maxl" style="width: 3em;" /> lines &nbsp; <a href="$c->{url}?o=$c->{op}"><span>clr</span></a></td></tr>\n};
-    $html .= qq{<tr id="ndays-row"$days_disp><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days &nbsp; <a href="$c->{url}?o=$c->{op}"><span>clr</span></a></td></tr>\n};
+    $html .= qq{<tr><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days &nbsp; <a href="$c->{url}?o=$c->{op}"><span>clr</span></a></td></tr>\n};
     $html .= qq{</table>\n};
-    $html .= qq{</form>\n};
-    $html .= qq{<script>
-(function() {
-  var q = document.getElementById('filter-q');
-  var linesRow = document.getElementById('maxl-row');
-  var daysRow = document.getElementById('ndays-row');
-  if (!q || !linesRow || !daysRow) return;
-  function toggle() {
-    if (q.value.trim()) {
-      linesRow.style.display = '';
-      daysRow.style.display = 'none';
-    } else {
-      linesRow.style.display = 'none';
-      daysRow.style.display = '';
-    }
-  }
-  q.addEventListener('input', toggle);
-})();
-</script>\n};
-    $html .= qq{<br/>\n};
+    $html .= qq{</form><br/>\n};
   }
   $c->{sth} = glassquery($c, $date);
   if ($c->{qry}) {
     $c->{date} = $date;
     $html .= filtered_list($c);
   } else {
-    while ( $ndays-- ) {
+    my $days_shown = 0;
+    while ( $days_shown < $ndays && db::peekrow($c->{sth}) ) {
       $html .= oneday($c);
+      $days_shown++;
     }
     my $next_rec = db::peekrow($c->{sth});
     if ($next_rec) {
