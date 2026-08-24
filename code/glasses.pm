@@ -217,8 +217,9 @@ sub maininputform {
   $html .= "<input name='alc' id='alc' placeholder='alc' $sz4 value='$alc' data-empty=1 />\n";
   my $pr = $rec->{Price} // "";
   $pr .= ".-" if ($pr && $pr > 0);
-  $html .= "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' />\n";
-  $html .= "</td></tr>\n";
+   $html .= "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' />\n";
+   $html .= "<label data-empty=2 style='font-size:small; margin-left:0.5em;'><input type='checkbox' name='addcomment' id='addcomment' /> comment</label>\n";
+   $html .= "</td></tr>\n";
 
   # Buttons
   $html .= "<tr><td>\n";

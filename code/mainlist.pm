@@ -420,6 +420,9 @@ sub adjustment_form {
       <input type='hidden' name='time' value='$last_glass_time:00'/>
       <select name='selbrewtype' style='font-size:small;'>
         @{[glasses::emptyglass_options()]}      </select>
+      <label style='font-size:small; margin-left:0.5em;'>
+        <input type='checkbox' name='addcomment' value='1'/> comment
+      </label>
       <button type='submit' style='font-size:small;'>Add empty</button>
     </form>
     </div>
@@ -464,6 +467,9 @@ sub adjustment_form {
       <input type='hidden' name='time' value='$last_glass_time:00'/>
       <select name='selbrewtype' style='font-size:small;'>
         @{[glasses::emptyglass_options()]}      </select>
+      <label style='font-size:small; margin-left:0.5em;'>
+        <input type='checkbox' name='addcomment' value='1'/> comment
+      </label>
       <button type='submit' style='font-size:small;'>Add empty</button>
     </form>
     </div>

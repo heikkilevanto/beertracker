@@ -205,6 +205,19 @@ sub postglass {
       );
     print { $c->{log} } "Inserted Glass id '$id' \n";
 
+    # If user asked to add a comment, redirect to the comment form for this glass
+    if ( util::param($c, "addcomment") ) {
+      my $commenttype;
+      if ( $glass->{BrewType} eq 'Night' ) {
+        $commenttype = 'night';
+      } elsif ( $glass->{BrewType} =~ /^(Restaurant|Meal|Bar)$/ ) {
+        $commenttype = 'location';
+      } else {
+        $commenttype = 'brew';
+      }
+      $c->{redirect_url} = "$c->{url}?o=Comment&e=new&glass=$id&commenttype=$commenttype";
+    }
+
     # FirstSeen lifecycle dates: first visit to this location, and first glass of
     # this brew (brews never seen on tap thus fall back to their first glass).
     my ($effdate) = db::queryarray($c, "SELECT strftime('%Y-%m-%d', ?, '-06:00')", $glass->{Timestamp});
