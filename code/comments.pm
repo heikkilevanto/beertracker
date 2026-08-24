@@ -700,7 +700,7 @@ sub postcomment {
   }
    if ( $effdate ) {
      my $today = util::datestr("%F");
-     my $datepart = ($effdate ge $today) ? "&date=$effdate" : "";
+      my $datepart = ($effdate && $effdate lt $today) ? "&date=$effdate" : "";
      $c->{redirect_url} = "$c->{url}?o=Full$datepart";
    } else {
     my $returnto = util::param($c, "returnto") || "";

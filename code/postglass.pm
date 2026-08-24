@@ -179,7 +179,7 @@ sub postglass {
   print { $c->{log} } "Updated glass id '$c->{edit}'\n";
   my ($effdate) = db::queryarray($c, "SELECT strftime('%Y-%m-%d', ?, '-06:00')", $glass->{Timestamp});
   my $today = util::datestr("%F");
-  my $datepart = ($effdate && $effdate ge $today) ? "&date=$effdate" : "";
+  my $datepart = ($effdate && $effdate lt $today) ? "&date=$effdate" : "";
   $c->{redirect_url} = "$c->{url}?o=$c->{op}$datepart" if $effdate;
 
   } else { # Create a new glass
