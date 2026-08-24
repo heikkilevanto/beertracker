@@ -225,6 +225,9 @@ sub nameline {
   }
   $html .= "<span style='font-size: x-small;'> [$rec->{brewid}]</span>" if($rec->{brewid});
   $html .= " " . util::brewlinks($c, $rec->{brewlink}, $rec->{brewname}, $rec->{prodsearchlink}, "", $rec->{brewtype}, $rec->{shortname}) if ($rec->{brewid});
+  if (glasses::isemptyglass($rec->{brewtype}) && $rec->{price}) {
+    $html .= util::unit($rec->{price}, ",-");
+  }
   $html .= "</span>\n";
   $html .= "<br/>\n";
   return $html;
@@ -566,7 +569,7 @@ sub oneday {
     $locdrsum += $rec->{drinks} if ($rec->{drinks});
     $locmaxba = $rec->{ba} if $rec->{ba} && $rec->{ba} > $locmaxba;
     $html .= nameline($c, $rec, $loc, $locname);
-    $html .= numbersline($c, $rec);
+    $html .= numbersline($c, $rec) unless glasses::isemptyglass($rec->{brewtype});
     $html .= photoline($c,$rec);
     $html .= commentlines($c,$rec);
     $html .= buttonline($c,$rec);
