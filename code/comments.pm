@@ -698,9 +698,11 @@ sub postcomment {
   if ( $glass ) {
     $effdate = db::glasseffdate($c, $glass, $c->{username});
   }
-  if ( $effdate ) {
-    $c->{redirect_url} = "$c->{url}?o=Full&date=$effdate&ndays=1";
-  } else {
+   if ( $effdate ) {
+     my $today = util::datestr("%F");
+     my $datepart = ($effdate ge $today) ? "&date=$effdate" : "";
+     $c->{redirect_url} = "$c->{url}?o=Full$datepart";
+   } else {
     my $returnto = util::param($c, "returnto") || "";
     $returnto =~ s/[^a-z]//g;  # Restrict to lowercase letters only
     $c->{redirect_url} = "$c->{url}?o=comment";
