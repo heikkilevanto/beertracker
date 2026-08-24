@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
+use URI::Escape qw(uri_escape_utf8);
 
 my $form_counter = 0;  # Counter for unique form IDs across page load
 
@@ -213,10 +214,20 @@ sub nameline {
   $time = "($time)" if ($time lt "0600");
   my $op = $c->{op};
   $op = "Graph" if ( $op eq "Person" ); # Edit the glass, even if coming from persons
-  $html .= "<span style='white-space: nowrap;'>\n";
-  $html .= "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
-        "<span>$time</span></a> \n";
-  $html .= styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}, "glass:$rec->{id} '" . ($rec->{brewname} // "") . "' $rec->{brewtype}/" . ($rec->{subtype} // "")) . " \n";
+   $html .= "<span style='white-space: nowrap;'>\n";
+   $html .= "<a href='$c->{url}?o=$op&e=$rec->{id}'>" .
+         "<span>$time</span></a> \n";
+   my $style_str;
+   if ( $rec->{brewtype} eq 'Beer' ) {
+     $style_str = $rec->{subtype} || 'Beer';
+   } else {
+     $style_str = $rec->{brewtype};
+     $style_str .= ",$rec->{subtype}" if $rec->{subtype};
+   }
+   my $style_url = uri_escape_utf8($style_str);
+   $html .= "<a href='$c->{url}?o=$c->{op}&q=$style_url'>" .
+     styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}, "glass:$rec->{id} '" . ($rec->{brewname} // "") . "' $rec->{brewtype}/" . ($rec->{subtype} // "")) .
+     "</a> \n";
   $html .= "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
   if ( $rec->{brewname} ) {
     $html .= "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;
@@ -587,6 +598,108 @@ sub oneday {
 } # oneday
 
 ################################################################################
+# Grep-style filtering
+################################################################################
+
+# Return true if $rec matches the current filter query $c->{qry}.
+# Empty/undefined query matches all. Tokens use AND-logic across fields.
+sub matching_rec {
+  my $c = shift;
+  my $rec = shift;
+  return 1 unless $c->{qry};
+  my @tokens = util::filter_tokens($c->{qry});
+  return 1 unless @tokens;
+  foreach my $token (@tokens) {
+    my $matched = 0;
+    for my $field (qw(brewname producer locname subtype brewtype shortname note tap)) {
+      my $val = $rec->{$field};
+      next unless defined $val && $val ne "";
+      $matched = 1 if ( $val =~ /\Q$token\E/i );
+      last if $matched;
+    }
+    return 0 unless $matched;
+  }
+  return 1;
+} # matching_rec
+
+# Render a filtered list of glasses matching $c->{qry}.
+# Uses the $c->{sth} set by mainlist() via glassquery().
+# Scans from $c->{date} backwards, showing up to maxl matching records.
+sub filtered_list {
+  my $c = shift;
+  my $maxl = util::paramnumber($c, "maxl", 45) || 45;
+  my $date = $c->{date};
+  my $html = "";
+  my $shown = 0;
+  my $more = 0;
+
+  while ( db::peekrow($c->{sth}) ) {
+    my $day_effdate = db::peekrow($c->{sth})->{effdate};
+    my @glasses;
+    while ( my $row = db::nextrow($c->{sth}) ) {
+      if ( $row->{effdate} ne $day_effdate ) {
+        db::pushback_row($c->{sth}, $row);
+        last;
+      }
+      push @glasses, $row;
+    }
+    next unless @glasses;
+
+    # Compute blood alc for the full day (per-record BA depends on full day)
+    bloodalc_compute($c, \@glasses);
+
+    # Pre-filter to matching records for this day
+    my @matching = grep { matching_rec($c, $_) } @glasses;
+    next unless @matching;
+
+    my $cur_loc;
+    foreach my $rec (@matching) {
+      if ( $shown >= $maxl ) {
+        $more = 1;
+        last;
+      }
+      if ( !defined $cur_loc || $rec->{loc} != $cur_loc ) {
+        my ($lhtml) = locationhead($c, $rec);
+        $html .= $lhtml;
+        $cur_loc = $rec->{loc};
+      }
+      $html .= nameline($c, $rec, $rec->{loc}, $rec->{locname});
+      $html .= numbersline($c, $rec) unless glasses::isemptyglass($rec->{brewtype});
+      $html .= photoline($c, $rec);
+      $html .= commentlines($c, $rec);
+      $html .= buttonline($c, $rec);
+      $html .= "<br/>\n";
+      $shown++;
+    }
+
+    if ( $shown >= $maxl ) {
+      if ( !$more ) {
+        # All matching records for this day were shown; check stream for more
+        if ( db::peekrow($c->{sth}) ) {
+          $more = 1;
+        }
+      }
+      last;
+    }
+  }
+
+  if ( $shown == 0 ) {
+    my $q_disp = util::htmlesc($c->{qry});
+    $html .= "<i>No matches for '$q_disp'</i><br/>\n";
+  }
+
+  if ( $more ) {
+    my $q_esc = uri_escape_utf8($c->{qry});
+    my $date_esc = uri_escape_utf8($date);
+    my $more_l = $maxl * 2;
+    $html .= qq{<a href='$c->{url}?o=$c->{op}&q=$q_esc&maxl=$more_l&date=$date_esc'><span>More results</span></a><br/>\n};
+  }
+
+  $c->{sth}->finish;
+  return $html;
+} # filtered_list
+
+################################################################################
 # mainlist itself
 ################################################################################
 
@@ -615,8 +728,12 @@ sub mainlist {
   print { $c->{log} } "mainlist $ndays days back from $date \n" if ( $c->{devversion} );
   my $original_ndays = $ndays;
   my $show_form = 0;
-  $show_form = 1 if (defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays") || $derived_date);
-  my $cache_key = "mainlist:$c->{username}:$c->{op}:$c->{qry}:$date:$original_ndays:$show_form";
+  $show_form = 1 if (defined $c->{cgi}->param("q") || defined $c->{cgi}->param("date") || defined $c->{cgi}->param("ndays") || $derived_date);
+  my $maxl = 0;
+  if ($c->{qry}) {
+    $maxl = util::paramnumber($c, "maxl", 45) || 45;
+  }
+  my $cache_key = "mainlist:$c->{username}:$c->{op}:$c->{qry}:$date:$original_ndays:$show_form:$maxl";
   my $cached_html = cache::get($c, $cache_key);
   if ($cached_html) {
     print { $c->{log} } "mainlist: cache hit\n" if $c->{devversion};
@@ -629,21 +746,51 @@ sub mainlist {
     $html .= qq{<form method="GET">\n};
     $html .= qq{<input type="hidden" name="o" value="$c->{op}" />\n};
     $html .= qq{<table>\n};
+    my $qry_esc = util::htmlesc($c->{qry});
+    $html .= qq{<tr><td>Filter:</td><td><input type="text" name="q" id="filter-q" value="$qry_esc" style="width: 10em;" /></td></tr>\n};
     $html .= qq{<tr><td>Date from:</td><td><input type="text" name="date" value="$date" style="width: 8em;" /></td></tr>\n};
-    $html .= qq{<tr><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days &nbsp; <a href="$c->{url}?o=$c->{op}"><span>def</span></a></td></tr>\n};
+    # Always render both rows; hide the irrelevant one server-side for non-JS clients
+    my $lines_disp = $c->{qry} ? "" : qq{ style="display: none;"};
+    my $days_disp  = $c->{qry} ? qq{ style="display: none;"} : "";
+    $html .= qq{<tr id="maxl-row"$lines_disp><td><input type="submit" value="Show" /></td><td><input type="number" name="maxl" value="$maxl" style="width: 3em;" /> lines &nbsp; <a href="$c->{url}?o=$c->{op}"><span>clr</span></a></td></tr>\n};
+    $html .= qq{<tr id="ndays-row"$days_disp><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days &nbsp; <a href="$c->{url}?o=$c->{op}"><span>clr</span></a></td></tr>\n};
     $html .= qq{</table>\n};
-    $html .= qq{</form><br/>\n};
+    $html .= qq{</form>\n};
+    $html .= qq{<script>
+(function() {
+  var q = document.getElementById('filter-q');
+  var linesRow = document.getElementById('maxl-row');
+  var daysRow = document.getElementById('ndays-row');
+  if (!q || !linesRow || !daysRow) return;
+  function toggle() {
+    if (q.value.trim()) {
+      linesRow.style.display = '';
+      daysRow.style.display = 'none';
+    } else {
+      linesRow.style.display = 'none';
+      daysRow.style.display = '';
+    }
+  }
+  q.addEventListener('input', toggle);
+})();
+</script>\n};
+    $html .= qq{<br/>\n};
   }
   $c->{sth} = glassquery($c, $date);
-  while ( $ndays-- ) {
-    $html .= oneday($c);
+  if ($c->{qry}) {
+    $c->{date} = $date;
+    $html .= filtered_list($c);
+  } else {
+    while ( $ndays-- ) {
+      $html .= oneday($c);
+    }
+    my $next_rec = db::peekrow($c->{sth});
+    if ($next_rec) {
+      my ($new_date) = split(' ', $next_rec->{effdate});
+      $html .= qq{<a href="$c->{url}?o=$c->{op}&date=$new_date&ndays=$original_ndays"><span>Older records</span></a><br/>\n};
+    }
+    $c->{sth}->finish;
   }
-  my $next_rec = db::peekrow($c->{sth});
-  if ($next_rec) {
-    my ($new_date) = split(' ', $next_rec->{effdate});
-    $html .= qq{<a href="$c->{url}?o=$c->{op}&date=$new_date&ndays=$original_ndays"><span>Older records</span></a><br/>\n};
-  }
-  $c->{sth}->finish;
   cache::set($c, $cache_key, $html);
   print $html;
 }

@@ -170,7 +170,7 @@ sub param {
   util::error("No context c ") unless $c;
   util::error("No cgi in c") unless $c->{cgi};
   my $val = $c->{cgi}->param($tag) // $def;
-  $val =~ s/[^a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%!#=_-]/_/g;
+  $val =~ s/[^"a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%!#=_-]/_/g;
   return $val;
 }
 
@@ -270,6 +270,22 @@ sub paramnumber {
   $val = number($val);
   return $val;
 }
+
+# Tokenize filter input respecting "..." quoting.
+# Returns a list of tokens. Quoted segments become single tokens (quotes
+# stripped). Unquoted segments are split on whitespace.
+sub filter_tokens {
+  my $val = shift // "";
+  my @tokens;
+  while ( $val =~ /"([^"]*)"|(\S+)/g ) {
+    if ( defined $1 ) {
+      push @tokens, $1;  # quoted content as one token
+    } else {
+      push @tokens, $2;  # unquoted token
+    }
+  }
+  return @tokens;
+} # filter_tokens
 
 ################################################################################
 # Error handling and debug logging
