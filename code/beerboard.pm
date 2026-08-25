@@ -8,7 +8,7 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use POSIX qw(strftime localtime);
-use URI::Escape qw(uri_escape_utf8);
+use Time::Local;
 
 
 
@@ -34,13 +34,35 @@ sub beerboard {
     print "<div style='font-weight: bold;'>This place is closed</div>\n";
   }
 
-  render_location_selector($c, $locparam);
+  # Parse the beerboard datetime parameter (bd)
+  # Supports: HH, HH:MM, YYYY-MM-DD, YYYY-MM-DD HH:MM, -N, Y (N days ago)
+  my $bd_param = util::param($c, "bd");
+  my $as_of = undef;
+  my $bd_display = "";
+  if ($bd_param) {
+    $as_of = util::parse_beerboard_date($c, $bd_param);
+    if ($as_of) {
+      $bd_display = substr($as_of, 0, 16); # YYYY-MM-DD HH:MM for display
+    }
+  }
 
-  my ($beerlist, $last_epoch) = load_beerlist_from_db($c, $locparam);
+  # Compute reference epoch for "is new" checks (use $as_of if historical)
+  my $ref_time = time();
+  if ($as_of) {
+    if ($as_of =~ /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/) {
+      $ref_time = Time::Local::timelocal($6, $5, $4, $3, $2 - 1, $1);
+    }
+  }
+
+  # If showing a historical board, open the controls section by default
+  my $open_controls = $as_of ? 1 : 0;
+  render_location_selector($c, $locparam, $bd_param, $as_of, $open_controls);
+
+  my ($beerlist, $last_epoch) = load_beerlist_from_db($c, $locparam, $as_of);
 
   if (!$beerlist || !@$beerlist) {
     print "Trying to get the list for $locparam - reload to see it <br/>\n";
-    trigger_background_update($c, $locparam);
+    trigger_background_update($c, $locparam) unless $as_of;
     return;
   }
 
@@ -51,12 +73,9 @@ sub beerboard {
     trigger_background_update($c, $locparam);
   }
 
-  my $nbeers = 0;
-  if ($c->{qry}) {
-    my $loc_esc = uri_escape_utf8($locparam);
-    print "Filter:<b>$c->{qry}</b> " .
-      "(<a href='$c->{url}?o=$c->{op}&loc=$loc_esc'><span>Clear</span></a>) " .
-      "<p>\n";
+  # Display the datetime if showing a historical board
+  if ($bd_display) {
+    print "<div style='font-weight: bold;'>Board as of $bd_display</div>\n";
   }
 
   # Always expand the beer I drank most recently, if any
@@ -70,6 +89,7 @@ sub beerboard {
     }
   }
 
+  my $nbeers = 0;
   my $expand_display = 'none';
   print "<div id='expand-all' style='display:$expand_display;'><a href='#' onclick='collapseAll(); return false;'><span>Collapse All</span></a></div>\n";
 
@@ -81,24 +101,10 @@ sub beerboard {
   foreach my $e ( sort {$a->{"id"} <=> $b->{"id"} } @$beerlist )  {
     $nbeers++;
     my $id = $e->{"id"} || 0;
-    my $mak = $e->{"maker"} || "" ;
-    my $beer = $e->{"beer"} || "" ;
-    my $sty = $e->{"type"} || "";
-    my $loc = $locparam;
-    my $alc = $e->{"alc"} || "";
-    $alc = sprintf("%4.1f",$alc) if ($alc);
-    if ( $c->{qry} && $c->{qry} =~ /PA/i ) {
-      next unless ( "$sty $mak $beer" =~ /PA/i );
-    }
-
-    if ( $id - $previd > 1 ) {
-      print "<tr><td align=center>. . .</td></tr>\n";
-    }
-
     my $processed_data = prepare_beer_entry_data($c, $e, $locparam);
     my $hiddenbuttons = generate_hidden_fields($c, $e, $locparam, $locid, $id, $processed_data);
-    my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $alc);
-    my $buttons_expanded = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 1, $alc);
+    my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $e->{"alc"} || 0);
+    my $buttons_expanded = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 1, $e->{"alc"} || 0);
 
     my $beerstyle = styles::brewtextstyle($c, $processed_data->{origsty}, "Board:$e->{'id'} '$e->{'beer'}' $e->{'maker'} sty=$processed_data->{origsty}");
 
@@ -106,7 +112,7 @@ sub beerboard {
 
     my $seenline = seenline($c, $e->{seen_count}, $e->{seen_min_date}, $e->{seen_max_date});
 
-    render_beer_row($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons);
+    render_beer_row($c, $e, $processed_data, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $seenline, $locparam, $hiddenbuttons, $ref_time);
 
     $previd = $id;
   } # beer loop
@@ -114,8 +120,6 @@ sub beerboard {
   if (! $nbeers ) {
     print "Sorry, got no beers from $locparam\n";
   }
-  # Keep $c->{qry}, so we filter the big list too
-  $c->{qry} = "" if ($c->{qry} =~ /PA/i );   # But not 'PA', it is only for the board
   print "<hr/>\n";
 } # beerboard
 
@@ -199,12 +203,14 @@ sub format_date_absolute {
 ################################################################################
 
 sub render_location_selector {
-  my ($c, $locparam) = @_;
-  # Pull-down for choosing the bar
+  my ($c, $locparam, $bd_param, $as_of, $open_controls) = @_;
+  $bd_param //= "";
+  my $controls_display = $open_controls ? 'block' : 'none';
+  # Pull-down for choosing the bar — always visible
   my $url = $c->{url};
   $url =~ s/"/&quot;/g;
   print "\n<form method='POST' accept-charset='UTF-8' style='display:inline;' class='no-print' >\n";
-  print "Beer list \n";
+  print "<a href='#' onclick='toggleControls(); return false;'><span>Beer list</span></a> \n";
   print "<select onchange=\"document.location='$url?o=Board&loc=' +
        encodeURIComponent(this.value);\" style='display:inline-block; width:5.5em;'>\n";
   for my $l ( scrapeboard::get_scraper_locations($c) ) {
@@ -214,20 +220,63 @@ sub render_location_selector {
   }
   print "</select>\n";
   print "</form>\n";
+
+  # Collapsible controls section — initially hidden
+  # Contains: datetime+Show, filter+PA+Clr, www link, Reload, Exp/Collapse
+  print "<div id='board-controls' style='display:$controls_display; margin: 0.5em 0;'>\n";
+  print "<table border=0 style='white-space: nowrap;'>\n";
+
+  # Row 1: Datetime field + Show button (GET navigation, clears JS filters)
+  my $now_display = strftime('%Y-%m-%d %H:%M', localtime(time()));
+  # Prefill: show actual datetime, not relative shortcuts like 'y'
+  my $bd_value = "";
+  if ($as_of) {
+    $bd_value = substr($as_of, 0, 16); # YYYY-MM-DD HH:MM
+  } else {
+    $bd_value = $now_display;
+  }
+  print "<tr>\n";
+  print "<td><input type='text' id='bd-input' size='16' value='" . util::htmlesc($bd_value) . "' pattern='\\d{4}-\\d{2}-\\d{2}[T ]\\d{1,2}(:\\d{2})?|\\d{4}-\\d{2}-\\d{2}|\\d{1,2}:\\d{2}|\\d{1,2}|\\d{4}|[Yy]+|-\\d+d?' onfocus='this.select();' title='YYYY-MM-DD HH:MM, YYYY-MM-DD, HH:MM, HHMM, Y (yesterday), YY (2d ago), -N (N d ago)' onkeydown=\"if(event.key==='Enter'){document.getElementById('bd-form-input').value=this.value;document.getElementById('bd-form-input').form.submit();return false;}\" /> &nbsp;</td>\n";
+  print "<td>";
+  print "<form method='GET' style='display:inline;'>\n";
+  print "<input type='hidden' name='o' value='$c->{op}' />\n";
+  print "<input type='hidden' name='loc' value='" . util::htmlesc($locparam) . "' />\n";
+  print "<input type='hidden' name='bd' id='bd-form-input' value='' />\n";
+  print "<input type='submit' value='Show' onclick=\"document.getElementById('bd-form-input').value = document.getElementById('bd-input').value;\" />\n";
+  print "</form>\n";
+  print "</td>\n";
+  print "</tr>\n";
+
+  # Row 2: Text filter + PA + Clr buttons (JS client-side filtering)
+  print "<tr>\n";
+  print "<td><input type='text' id='board-filter' size='12' placeholder='Filter' onfocus='this.select();' /> &nbsp;</td>\n";
+  print "<td>";
+  print "<input type='button' value='PA' onclick='applyPAFilter();' /> \n";
+  print "<input type='button' value='Clr' onclick='clearBoardFilter();' />\n";
+  print "</td>\n";
+  print "</tr>\n";
+
+  # Row 3: External links (www, untappd) + Reload + Exp — all on one line
+  print "<tr>\n";
+  print "<td>\n";
   my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
   if ($locrec && $locrec->{Website}) {
-    print " &nbsp; <i><a href='$locrec->{Website}' target='_blank' ><span>www</span></a></i>" ;
+    print "<i><a href='$locrec->{Website}' target='_blank'><span>www</span></a></i> ";
   }
-  my $loc_esc = uri_escape_utf8($locparam);
-  print "&nbsp; (<a href='$c->{url}?o=$c->{op}&loc=$loc_esc&q=PA'><span>PA</span></a>) "
-    if ($c->{qry} ne "PA" );
-
+  if ($locrec->{UntappdLink}) {
+    print "<i><a href='$locrec->{UntappdLink}' target='_blank'><span>Ut</span></a></i> ";
+  }
+  print "</td>\n";
+  print "<td>\n";
   print scrapeboard::post_form($c, 'updateboard', $locparam, '(Reload)');
+  print " &nbsp; <a href='#' onclick='expandAll(); return false;'><span>(Exp)</span></a>";
+  print "</td>\n";
+  print "</tr>\n";
 
-  print "&nbsp; <a href='#' onclick='expandAll(); return false;'><span>(Exp)</span></a>";
-
+  print "</table>\n";
+  print "</div>\n";
   print "<p>\n";
-}
+} # render_location_selector
 
 sub get_location_param {
   my $c = shift;
@@ -244,55 +293,61 @@ sub get_location_param {
 }
 
 sub load_beerlist_from_db {
-  my ($c, $locparam) = @_;
+  my ($c, $locparam, $as_of) = @_;
 
   # Get location ID
   my $loc_rec = db::findrecord($c, "LOCATIONS", "Name", $locparam);
   return ([], undef) unless $loc_rec;
   my $loc_id = $loc_rec->{Id};
 
-  # Get the latest scrape marker
-  my ($last_epoch) = db::queryarray($c,
-    "SELECT strftime('%s', LastSeen) AS last_epoch FROM tap_beers " .
-    "WHERE Location = ? AND Tap IS NULL ORDER BY LastSeen DESC LIMIT 1",
-    $loc_id);
+  # Get the latest scrape marker (only meaningful for current view)
+  my $last_epoch = undef;
+  if (!$as_of) {
+    ($last_epoch) = db::queryarray($c,
+      "SELECT strftime('%s', LastSeen) AS last_epoch FROM tap_beers " .
+      "WHERE Location = ? AND Tap IS NULL ORDER BY LastSeen DESC LIMIT 1",
+      $loc_id);
+  }
 
-  # Load from DB
-  my $sql = "SELECT
-      ct.Tap, ct.Brew, ct.BrewName AS beer,
-      pl.Name AS maker, pl.Id AS maker_id,
-      b.SubType AS type, b.Alc AS alc,
-      b.BrewType AS brewtype,
-      b.DetailsLink AS details_link,
-      b.ShortName AS brew_shortname,
-      pl.SearchLink AS maker_search_link,
-      pl.ShortName AS shortname,
-      tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
-      b.DefPrice, b.DefVol,
-      ur.rating_count, ur.average_rating, ur.comment_count,
-      strftime('%Y-%m-%d', tb.FirstSeen) AS first_seen_date,
-      strftime('%H:%M', tb.FirstSeen) AS first_seen_time,
-      strftime('%s', tb.FirstSeen) AS first_seen_ts,
-      ug.seen_count, ug.seen_min_date, ug.seen_max_date,
-      (SELECT round(avg(julianday(h.Gone) - julianday(h.FirstSeen)), 1)
-       FROM tap_beers h
-       WHERE h.Brew = ct.Brew AND h.Location = ct.Location
-         AND h.Gone IS NOT NULL
-         AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
-       HAVING count(*) >= 2) as avg_days_on_tap,
-      (SELECT count(*) FROM tap_beers h
-       WHERE h.Brew = ct.Brew AND h.Location = ct.Location
-         AND h.Gone IS NOT NULL
-         AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
-       HAVING count(*) >= 2) as tap_history_count
-    FROM current_taps ct
-      JOIN tap_beers tb ON ct.Id = tb.Id
-      JOIN brews b ON ct.Brew = b.Id
+  # Common SELECT columns and JOINs
+  # For historical view ($as_of set), query tap_beers directly with date filter
+  # instead of using the current_taps view (which only shows Gone IS NULL).
+  my ($sql, @params);
+  if ($as_of) {
+    $sql = "SELECT
+        tb.Tap, tb.Brew, b.Name AS beer,
+        pl.Name AS maker, pl.Id AS maker_id,
+        b.SubType AS type, b.Alc AS alc,
+        b.BrewType AS brewtype,
+        b.DetailsLink AS details_link,
+        b.ShortName AS brew_shortname,
+        pl.SearchLink AS maker_search_link,
+        pl.ShortName AS shortname,
+        tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
+        b.DefPrice, b.DefVol,
+        ur.rating_count, ur.average_rating, ur.comment_count,
+        strftime('%Y-%m-%d', tb.FirstSeen) AS first_seen_date,
+        strftime('%H:%M', tb.FirstSeen) AS first_seen_time,
+        strftime('%s', tb.FirstSeen) AS first_seen_ts,
+        ug.seen_count, ug.seen_min_date, ug.seen_max_date,
+        (SELECT round(avg(julianday(h.Gone) - julianday(h.FirstSeen)), 1)
+         FROM tap_beers h
+         WHERE h.Brew = tb.Brew AND h.Location = tb.Location
+           AND h.Gone IS NOT NULL
+           AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
+         HAVING count(*) >= 2) as avg_days_on_tap,
+        (SELECT count(*) FROM tap_beers h
+         WHERE h.Brew = tb.Brew AND h.Location = tb.Location
+           AND h.Gone IS NOT NULL
+           AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
+         HAVING count(*) >= 2) as tap_history_count
+    FROM tap_beers tb
+      JOIN brews b ON tb.Brew = b.Id
       LEFT JOIN locations pl ON b.ProducerLocation = pl.Id
       LEFT JOIN (
         SELECT brew, rating_count, average_rating, comment_count
         FROM brew_ratings WHERE Username = ?
-      ) ur ON ur.Brew = ct.Brew
+      ) ur ON ur.Brew = tb.Brew
       LEFT JOIN (
         SELECT Brew,
                count(Id) AS seen_count,
@@ -301,10 +356,63 @@ sub load_beerlist_from_db {
         FROM glasses
         WHERE Username = ?
         GROUP BY Brew
-      ) ug ON ug.Brew = ct.Brew
-    WHERE ct.Location = ?
-    ORDER BY ct.Tap";
-  my $sth = db::query($c, $sql, $c->{username}, $c->{username}, $loc_id);
+      ) ug ON ug.Brew = tb.Brew
+    WHERE tb.Location = ?
+      AND tb.FirstSeen <= ?
+      AND (tb.Gone IS NULL OR tb.Gone >= ?)
+      AND tb.Tap IS NOT NULL AND tb.Brew IS NOT NULL
+    ORDER BY tb.Tap";
+    @params = ($c->{username}, $c->{username}, $loc_id, $as_of, $as_of);
+  } else {
+    $sql = "SELECT
+        ct.Tap, ct.Brew, ct.BrewName AS beer,
+        pl.Name AS maker, pl.Id AS maker_id,
+        b.SubType AS type, b.Alc AS alc,
+        b.BrewType AS brewtype,
+        b.DetailsLink AS details_link,
+        b.ShortName AS brew_shortname,
+        pl.SearchLink AS maker_search_link,
+        pl.ShortName AS shortname,
+        tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
+        b.DefPrice, b.DefVol,
+        ur.rating_count, ur.average_rating, ur.comment_count,
+        strftime('%Y-%m-%d', tb.FirstSeen) AS first_seen_date,
+        strftime('%H:%M', tb.FirstSeen) AS first_seen_time,
+        strftime('%s', tb.FirstSeen) AS first_seen_ts,
+        ug.seen_count, ug.seen_min_date, ug.seen_max_date,
+        (SELECT round(avg(julianday(h.Gone) - julianday(h.FirstSeen)), 1)
+         FROM tap_beers h
+         WHERE h.Brew = ct.Brew AND h.Location = ct.Location
+           AND h.Gone IS NOT NULL
+           AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
+         HAVING count(*) >= 2) as avg_days_on_tap,
+        (SELECT count(*) FROM tap_beers h
+         WHERE h.Brew = ct.Brew AND h.Location = ct.Location
+           AND h.Gone IS NOT NULL
+           AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
+         HAVING count(*) >= 2) as tap_history_count
+      FROM current_taps ct
+        JOIN tap_beers tb ON ct.Id = tb.Id
+        JOIN brews b ON ct.Brew = b.Id
+        LEFT JOIN locations pl ON b.ProducerLocation = pl.Id
+        LEFT JOIN (
+          SELECT brew, rating_count, average_rating, comment_count
+          FROM brew_ratings WHERE Username = ?
+        ) ur ON ur.Brew = ct.Brew
+        LEFT JOIN (
+          SELECT Brew,
+                 count(Id) AS seen_count,
+                 strftime('%Y-%m-%d', min(Timestamp), '-06:00') AS seen_min_date,
+                 strftime('%Y-%m-%d', max(Timestamp), '-06:00') AS seen_max_date
+          FROM glasses
+          WHERE Username = ?
+          GROUP BY Brew
+        ) ug ON ug.Brew = ct.Brew
+      WHERE ct.Location = ?
+      ORDER BY ct.Tap";
+    @params = ($c->{username}, $c->{username}, $loc_id);
+  }
+  my $sth = db::query($c, $sql, @params);
 
   my $beerlist = [];
   while (my $row = $sth->fetchrow_hashref) {
@@ -494,22 +602,35 @@ sub render_beer_buttons {
 }
 
 sub render_beer_row {
-  my ($c, $e, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $processed_data, $seenline, $locparam, $hiddenbuttons) = @_;
-  my $is_new = $processed_data->{first_seen_ts} && (time() - $processed_data->{first_seen_ts}) < 86400;
+  my ($c, $e, $processed_data, $buttons_compact, $buttons_expanded, $beerstyle, $extraboard, $id, $dispid, $seenline, $locparam, $hiddenbuttons, $ref_time) = @_;
+  $ref_time //= time();
+  my $is_new = $processed_data->{first_seen_ts} && ($ref_time - $processed_data->{first_seen_ts}) < 86400;
   my $bg = "";
   $bg = "background-color: $c->{altbgcolor}; " if ($is_new);
   my $compact_display = 'table-row';
   $compact_display = 'none' if ($extraboard == $id);
   my $expanded_display = 'none';
   $expanded_display = 'table-row' if ($extraboard == $id);
+
+  # Data attributes for client-side JS filtering
+  my $data_style = util::htmlesc($processed_data->{origsty} || "");
+  my $data_maker = util::htmlesc($e->{maker} || "");
+  my $data_name  = util::htmlesc($e->{beer} || "");
+  my $data_brewtype = util::htmlesc($e->{brewtype} || "");
+
+  # Clickable style label — opens controls + filters by style
+  my $style_disp = styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
+  my $style_link = "<a href='#' data-fstyle=\"" . util::htmlesc($processed_data->{origsty} || "") . "\" onclick='openControlsAndFilter(this.getAttribute(\"data-fstyle\")); return false;'>$style_disp</a>";
+
   # Compact row
-  print "<tr id='compact_$id' style='$bg display: $compact_display;'>\n";
+  print "<tr id='compact_$id' style='$bg display: $compact_display;' " .
+    "data-style='$data_style' data-maker='$data_maker' data-name='$data_name' data-brewtype='$data_brewtype'>\n";
   print "<td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" ><span $beerstyle>#$dispid</span></td>\n";
   print "<td>$buttons_compact</td>\n";
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
   print "<td>$processed_data->{dispbeer_short} $processed_data->{dispmak} ";
   print "<span style='font-size: x-small;'>($processed_data->{country})</span> " if ($processed_data->{country});
-  print styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
+  print $style_link;
   if ( $processed_data->{average_rating} ) {
     print " " . comments::avgratings($c, $processed_data->{rating_count}, $processed_data->{average_rating}, $processed_data->{comment_count});
   }
@@ -543,7 +664,7 @@ sub render_beer_row {
     print " &nbsp; $processed_data->{extlink_html}";
   }
   print "</td></tr>\n";
-  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
+  print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4><span style='font-size: x-small;'><b>$e->{alc}%</b></span> " . $style_link;
   if ($processed_data->{first_seen_relative}) {
     my $rel = $processed_data->{first_seen_relative};
     my $abs = $processed_data->{first_seen_absolute};

@@ -252,6 +252,67 @@ sub normalize_date {
   return $val;
 } # normalize_date
 
+# Parse a beerboard datetime input string into a SQL-safe 'YYYY-MM-DD HH:MM:SS' string.
+# Returns undef for empty input (means "current taps / now").
+# Supports:
+#   YYYY-MM-DD HH:MM  → as-is
+#   YYYY-MM-DD HH     → YYYY-MM-DD HH:00:00
+#   YYYY-MM-DD        → today's time + that date
+#   HH:MM             → today at that time (local)
+#   HH                → today at that hour
+#   YY                → day before yesterday, at now's time
+#   Y                 → yesterday, at now's time
+#   -N or -Nd         → N days ago, at now's time
+sub parse_beerboard_date {
+  my $c = shift;
+  my $val = trim(shift // '');
+  return undef unless $val;
+
+  # Combined datetime: YYYY-MM-DD HH:MM or YYYY-MM-DD HH or YYYY-MM-DDTHH:MM
+  if ( $val =~ /^(\d{4}-\d{2}-\d{2})[T ]+(\d{1,2})(?::(\d{2}))?$/ ) {
+    my ($d, $h, $m) = ($1, $2, $3 // 0);
+    return sprintf("%s %02d:%02d:00", $d, $h, $m);
+  }
+
+  # Full date only: YYYY-MM-DD → use current time
+  if ( $val =~ /^(\d{4}-\d{2}-\d{2})$/ ) {
+    return $1 . " " . strftime('%H:%M:%S', localtime(time()));
+  }
+
+  # Y / YY / YYY / ... → N days ago (number of Y's = days back)
+  if ( $val =~ /^y+$/i ) {
+    return datestr("%F %T", -length($val), 1);
+  }
+
+  # -N or -Nd → N days ago
+  if ( $val =~ /^-(?:(\d+)d?)$/ ) {
+    return datestr("%F %T", -$1, 1);
+  }
+
+  # Time only: HH:MM → today at that time
+  if ( $val =~ /^(\d{1,2}):(\d{2})$/ ) {
+    my $today = strftime('%Y-%m-%d', localtime(time()));
+    return sprintf("%s %02d:%02d:00", $today, $1, $2);
+  }
+
+  # Time only: HH → today at that hour
+  if ( $val =~ /^(\d{1,2})$/ ) {
+    my $today = strftime('%Y-%m-%d', localtime(time()));
+    return sprintf("%s %02d:00:00", $today, $1);
+  }
+
+  # Time only: HHMM (4 digits, no colon) → today at HH:MM
+  if ( $val =~ /^(\d{2})(\d{2})$/ ) {
+    my $today = strftime('%Y-%m-%d', localtime(time()));
+    return sprintf("%s %02d:%02d:00", $today, $1, $2);
+  }
+
+  # Unrecognized → undef (current taps)
+  print { $c->{log} } "parse_beerboard_date: unrecognized input '$val'\n"
+    if $c->{devversion};
+  return undef;
+} # parse_beerboard_date
+
 # Escape HTML special characters
 sub htmlesc {
   my $s = shift // '';
