@@ -254,14 +254,16 @@ sub normalize_date {
 
 # Parse a beerboard datetime input string into a SQL-safe 'YYYY-MM-DD HH:MM:SS' string.
 # Returns undef for empty input (means "current taps / now").
-# Supports:
+# Supports (case-insensitive where noted):
 #   YYYY-MM-DD HH:MM  → as-is
 #   YYYY-MM-DD HH     → YYYY-MM-DD HH:00:00
+#   YYYY-MM-DD[T ]HH:MM → as-is (ISO T separator)
 #   YYYY-MM-DD        → today's time + that date
 #   HH:MM             → today at that time (local)
 #   HH                → today at that hour
-#   YY                → day before yesterday, at now's time
-#   Y                 → yesterday, at now's time
+#   HHMM              → today at HH:MM (4-digit, no colon)
+#   Y                 → yesterday (1 day back)
+#   YY                → 2 days back (N Y's = N days back)
 #   -N or -Nd         → N days ago, at now's time
 sub parse_beerboard_date {
   my $c = shift;

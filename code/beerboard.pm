@@ -35,7 +35,7 @@ sub beerboard {
   }
 
   # Parse the beerboard datetime parameter (bd)
-  # Supports: HH, HH:MM, YYYY-MM-DD, YYYY-MM-DD HH:MM, -N, Y (N days ago)
+  # Supports: HH, HH:MM, HHMM, YYYY-MM-DD, YYYY-MM-DD HH:MM, -N, Y/YY/YYY (N days ago)
   my $bd_param = util::param($c, "bd");
   my $as_of = undef;
   my $bd_display = "";
@@ -101,7 +101,7 @@ sub beerboard {
   foreach my $e ( sort {$a->{"id"} <=> $b->{"id"} } @$beerlist )  {
     $nbeers++;
     my $id = $e->{"id"} || 0;
-    my $processed_data = prepare_beer_entry_data($c, $e, $locparam);
+    my $processed_data = prepare_beer_entry_data($c, $e, $locparam, $ref_time);
     my $hiddenbuttons = generate_hidden_fields($c, $e, $locparam, $locid, $id, $processed_data);
     my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $e->{"alc"} || 0);
     my $buttons_expanded = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 1, $e->{"alc"} || 0);
@@ -164,9 +164,10 @@ sub format_date_relative {
 } # format_date_relative
 
 sub format_duration_relative {
-  my ($first_seen_ts) = @_;
+  my ($first_seen_ts, $ref_time) = @_;
+  $ref_time //= time();
   return "" unless $first_seen_ts;
-  my $age = time() - $first_seen_ts;
+  my $age = $ref_time - $first_seen_ts;
   if ($age < 3600) {
     my $minutes = int($age / 60);
     if ($minutes <= 0) { return "less than 1m"; }
@@ -474,7 +475,8 @@ sub load_beerlist_from_db {
 }
 
 sub prepare_beer_entry_data {
-  my ($c, $e, $locparam) = @_;
+  my ($c, $e, $locparam, $ref_time) = @_;
+  $ref_time //= time();
   my $mak = $e->{"maker"} || "";
   my $beer = $e->{"beer"} || "";
   my $sty = $e->{"type"} || "";
@@ -531,7 +533,7 @@ sub prepare_beer_entry_data {
     first_seen_time => $e->{first_seen_time},
     first_seen_ts => $e->{first_seen_ts},
     first_seen_date_formatted => format_date_relative($e->{first_seen_date}, $e->{first_seen_time}),
-    first_seen_relative => format_duration_relative($e->{first_seen_ts}),
+    first_seen_relative => format_duration_relative($e->{first_seen_ts}, $ref_time),
     first_seen_absolute => format_date_absolute($e->{first_seen_date}, $e->{first_seen_time}),
     extlink_html => $extlink_html,
     dispmak_full => $dispmak_full,
@@ -671,7 +673,7 @@ sub render_beer_row {
     my $daysleft = "";
     my $kegcount = "";
     if ($processed_data->{avg_days_on_tap}) {
-      my $elapsed = (time() - $processed_data->{first_seen_ts}) / 86400;
+      my $elapsed = ($ref_time - $processed_data->{first_seen_ts}) / 86400;
       my $remaining = $processed_data->{avg_days_on_tap} - $elapsed;
       if ($remaining > 0) {
         $daysleft = ", ~" . sprintf("%.1f", $remaining) . " days left";
