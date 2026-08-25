@@ -69,7 +69,9 @@ sub beerboard {
   my $is_old = $last_epoch && (time() - $last_epoch) > 20 * 60;
   if ($is_old) {
     my $timestamp = strftime('%Y-%m-%d %H:%M', localtime($last_epoch));
-    print "<div style='font-weight: bold;'>The beer board is from $timestamp</div>\n";
+    print "<div style='font-weight: bold;'>The beer board is from $timestamp ";
+    print scrapeboard::post_form($c, 'updateboard', $locparam, '(Reload)');
+    print "</div>\n";
     trigger_background_update($c, $locparam);
   }
 
