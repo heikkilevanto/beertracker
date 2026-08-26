@@ -46,6 +46,15 @@ sub eff_day_of {
     return sprintf("%04d-%02d-%02d", $Y + 1900, $M + 1, $D);
 } # eff_day_of
 
+# Parse an ISO "YYYY-MM-DD HH:MM:SS" timestamp to a local epoch.
+sub ts_epoch {
+    my ($ts) = @_;
+    return undef unless $ts;
+    $ts =~ /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/;
+    return undef unless $1;
+    return timelocal($6, $5, $4, $3, $2 - 1, $1 - 1900);  # local
+} # ts_epoch
+
 # Add (or subtract) a number of calendar days to a "YYYY-MM-DD" string.
 # Uses local noon so DST transitions do not shift the derived date.
 sub date_plus_days {
@@ -271,18 +280,74 @@ sub render_timeline {
     }
     $sth->finish;
 
-    # Scrape markers
-    my ($marker_str) = db::queryarray($c, q{
-        SELECT group_concat(SUBSTR(FirstSeen,1,10), ', ')
-        FROM (SELECT FirstSeen FROM tap_beers
-              WHERE Location = ? AND Tap IS NULL AND Brew IS NULL
-              ORDER BY FirstSeen DESC LIMIT 5)
+    # Latest scrape timestamp (for staleness warning).
+    # The NULL/NULL marker row stores the true last-scrape time in LastSeen
+    # (FirstSeen is frozen at the row's creation), so read LastSeen; fall back
+    # to actual beer activity if no marker exists.
+    my ($latest_scrape) = db::queryarray($c, q{
+        SELECT MAX(LastSeen) FROM tap_beers
+        WHERE Location = ? AND Tap IS NULL AND Brew IS NULL
     }, $loc_id);
-    $marker_str ||= "none";
+    if (!$latest_scrape) {
+        ($latest_scrape) = db::queryarray($c, q{
+            SELECT MAX(ts) FROM (
+                SELECT FirstSeen AS ts FROM tap_beers WHERE Location = ?
+                UNION SELECT Gone FROM tap_beers
+                WHERE Location = ? AND Gone IS NOT NULL
+            )
+        }, $loc_id, $loc_id);
+    }
+
+    # Recent scrape runs within the displayed window (for the run list).
+    # A run is approximated by any day the location's tap data changed, i.e.
+    # FirstSeen/Gone timestamps of beer rows (and the marker's LastSeen).
+    my $ssth = $c->{dbh}->prepare(q{
+        SELECT ts FROM (
+            SELECT FirstSeen AS ts FROM tap_beers
+            WHERE Location = ? AND FirstSeen >= ? AND FirstSeen < ?
+            UNION ALL
+            SELECT Gone AS ts FROM tap_beers
+            WHERE Location = ? AND Gone IS NOT NULL AND Gone >= ? AND Gone < ?
+            UNION ALL
+            SELECT LastSeen AS ts FROM tap_beers
+            WHERE Location = ? AND Tap IS NULL AND Brew IS NULL
+              AND LastSeen >= ? AND LastSeen < ?
+        ) ORDER BY ts DESC
+    });
+    $ssth->execute($loc_id, $env_start, $env_end,
+                   $loc_id, $env_start, $env_end,
+                   $loc_id, $env_start, $env_end);
+    my %bydate;
+    my %seen;
+    my @order;
+    while (my $sr = $ssth->fetchrow_hashref) {
+        my $ts = $sr->{ts};
+        my ($date, $time) = $ts =~ /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/;
+        next unless $date;
+        if (!exists $bydate{$date}) { $bydate{$date} = []; push @order, $date; }
+        next if $seen{$date}{$time}++;
+        push @{$bydate{$date}}, $time;
+    }
+    $ssth->finish;
+
+    # Staleness warning (above the table)
+    my $warn_html = "";
+    if ($latest_scrape) {
+        my $ep = ts_epoch($latest_scrape);
+        if ($ep && (time() - $ep) > 86400) {
+            my $days = int((time() - $ep) / 86400);
+            my $latest_day = substr($latest_scrape, 0, 10);
+            $warn_html = "<div class='scrape-warn'>Warning: latest scrape was "
+                . util::htmlesc($latest_day) . " &mdash; about "
+                . $days . " day" . ($days == 1 ? "" : "s") . " ago.</div>\n";
+        }
+    }
 
     print render_controls($c, $locname, $days, $from);
     print "<div id='details'><span class='close' onclick='closeDetails()'>&#10005;</span>"
         . "<div id='details-body'></div></div>";
+
+    print $warn_html if $warn_html;
 
     my $N = scalar(@buckets);
     my $table_w = 40 + $N * 22 + ($N + 1) * 2;  # + border-spacing
@@ -349,7 +414,7 @@ sub render_timeline {
         print "</tr>\n";
     }
     print "</tbody></table>\n</div>\n";
-    print "<div class='footer'>Last scraped: " . util::htmlesc($marker_str) . "</div>\n";
+    print build_scrape_list($c, \%bydate, \@order);
 
     my $det = JSON->new->encode(\%details);
     my $kegs_json = JSON->new->encode(\%kegs);
@@ -357,6 +422,12 @@ sub render_timeline {
         . "var TAP_LOC = '" . util::htmlesc($locname) . "';\n"
         . "var TAP_DETAILS = $det;\n"
         . "var TAP_KEGS = $kegs_json;\n"
+        . "function scrapeShowMore() {\n"
+        . "  var lines = document.querySelectorAll('.scrape-line');\n"
+        . "  for (var i = 0; i < lines.length; i++) { lines[i].style.display = ''; }\n"
+        . "  var m = document.getElementById('scrape-more');\n"
+        . "  if (m) { m.style.display = 'none'; }\n"
+        . "}\n"
         . "</script>\n";
 } # render_timeline
 
@@ -392,6 +463,33 @@ sub build_cells {
     return @cells;
 } # build_cells
 
+# Build the "recent scraper runs" list. One date per line, times on the same
+# line when there are multiple runs in a day. After 5 lines the remainder is
+# hidden behind an "nn more" toggle that reveals everything when clicked.
+sub build_scrape_list {
+    my ($c, $bydate, $order) = @_;
+    my $total = scalar(@$order);
+    return "<div class='scrapes'></div>\n" unless $total;
+    my $show = 5;
+    my $html = "<div class='scrapes'>\n";
+    for my $i (0 .. $#$order) {
+        my $date = $order->[$i];
+        my $times = join(", ", @{$bydate->{$date}});
+        my $hidden = ($i >= $show) ? " style='display:none;'" : "";
+        $html .= "<div class='scrape-line'$hidden><span>"
+            . util::htmlesc($date) . ": " . util::htmlesc($times)
+            . "</span></div>\n";
+    }
+    if ($total > $show) {
+        my $rest = $total - $show;
+        $html .= "<div class='scrape-more' id='scrape-more'>"
+            . "<a href='#' onclick='scrapeShowMore(); return false;'>"
+            . "<span>" . $rest . " more</span></a></div>\n";
+    }
+    $html .= "</div>\n";
+    return $html;
+} # build_scrape_list
+
 ################################################################################
 # Single-tap detail view
 ################################################################################
@@ -423,7 +521,7 @@ sub render_single_tap {
         . "'><span>&laquo; Back to timeline</span></a></p>\n";
 
     print "<table class='tap-detail'>\n";
-    print "<thead><tr><th>Beer</th><th>On &ndash; Off</th>"
+    print "<thead><tr><th>Style</th><th>Beer</th><th>On &ndash; Off</th>"
         . "<th>Days</th><th>Price</th></tr></thead>\n<tbody>\n";
     while (my $r = $sth->fetchrow_hashref) {
         my $ge = $r->{Gone};
@@ -434,8 +532,6 @@ sub render_single_tap {
         my @prices = keg_prices($r);
         my $price = @prices ? join(" ", map { util::htmlesc($_) } @prices) : "";
 
-        my $style_str = $r->{SubType} || $r->{BrewType} || "Beer";
-        my $style_url = uri_escape_utf8($style_str);
         my $style_disp = styles::brewstyledisplay($c, $r->{BrewType}, $r->{SubType},
             "tap:$tap '" . ($r->{BrewName} // "") . "'");
         my $prodname = $r->{prod_shortname} || $r->{ProducerName};
@@ -447,10 +543,10 @@ sub render_single_tap {
         my $brew = "<a href='$c->{url}?o=Brew&e=" . util::htmlesc($r->{Brew})
             . "'><span><b>" . util::htmlesc($brewname || "?") . "</b></span></a>";
         my $sep = $c->{mobile} ? "<br/>" : " ";
-        my $beer = "<a href='$c->{url}?o=$c->{op}&q=$style_url'>$style_disp</a> "
-            . "$prod$sep$brew";
+        my $beer = "$prod$sep$brew";
 
         print "<tr>";
+        print "<td>$style_disp</td>";
         print "<td>$beer</td>";
         print "<td>" . util::htmlesc(substr($r->{FirstSeen}, 0, 10))
             . " &ndash; " . util::htmlesc($gone_disp) . "</td>";

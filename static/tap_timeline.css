@@ -53,6 +53,15 @@ table.timeline th.daycol { width: 22px; }
 
 .footer { margin-top: 1em; color: #999; font-size: .8em; }
 
+.scrape-warn {
+  margin: .4em 0; padding: .3em .5em; border: 1px solid #c0392b;
+  background: rgba(192,57,43,.12); color: #c0392b; border-radius: 3px;
+  font-size: .85em;
+}
+.scrapes { margin-top: .6em; font-size: .82em; }
+.scrapes .scrape-line { color: #999; }
+.scrapes .scrape-more { margin-top: .2em; }
+
 table.keg-hist { border-collapse: collapse; margin-top: .6em; font-size: .82em; }
 .keg-hist th, .keg-hist td {
   border: 1px solid #888; padding: 1px 6px; text-align: left; white-space: nowrap;
