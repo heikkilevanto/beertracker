@@ -88,12 +88,38 @@ sub taphistory {
     }
     my $locrec = db::findrecord($c, "LOCATIONS", "Name", $locparam, "collate nocase");
 
-    # Days parameter (whitelist)
-    my $days = util::param($c, "days") || 30;
-    $days = 30 unless $days =~ /^(14|30|60|90)$/;
+    # From parameter: anchor day for the first (rightmost) column, default today
+    my $from = util::param($c, "from");
+    if (!$from || $from !~ /^\d{4}-\d{2}-\d{2}$/) {
+        if ($from && $from =~ /^(\d{1,2})$/) {
+            # A bare 1-2 digit number is a month: use the previous occurrence,
+            # anchored on the last day of that month.
+            my $m = $1 + 0;
+            my @t = localtime(time());
+            my $cur_m = $t[4] + 1;
+            my $y = $t[5] + 1900;
+            $y-- if $m >= $cur_m;
+            my $nm = ($m == 12) ? 1 : $m + 1;
+            my $ny = ($m == 12) ? $y + 1 : $y;
+            my $first_next = timelocal(0, 0, 12, 1, $nm - 1, $ny - 1900);
+            $from = strftime("%Y-%m-%d", localtime($first_next - 86400));
+        } else {
+            my @t = localtime(time());
+            $from = strftime("%Y-%m-%d", @t);
+        }
+    }
+
+    # Days: accept either a period token (14d/30d/3m/6m/1y) or a bare number
+    my %PERIOD = ( "14d" => 14, "30d" => 30, "3m" => 90, "6m" => 180, "1y" => 365 );
+    my $dp = util::param($c, "days") || "30d";
+    my $days = $PERIOD{$dp};
+    if (!defined $days && $dp =~ /^\d+$/) {
+        $days = $dp + 0;
+    }
+    $days = 30 unless defined $days;
 
     if (!$locrec) {
-        render_selector_only($c, $locparam);
+        render_selector_only($c, $locparam, $days, $from);
         return;
     }
 
@@ -103,11 +129,11 @@ sub taphistory {
     # Single-tap detail view
     my $tap = util::param($c, "tap");
     if (defined $tap && $tap =~ /^\d+$/) {
-        render_single_tap($c, $loc_id, $locname, $tap, $days);
+        render_single_tap($c, $loc_id, $locname, $tap, $days, $from);
         return;
     }
 
-    render_timeline($c, $loc_id, $locname, $days);
+    render_timeline($c, $loc_id, $locname, $days, $from);
 } # taphistory
 
 ################################################################################
@@ -115,18 +141,10 @@ sub taphistory {
 ################################################################################
 
 sub render_timeline {
-    my ($c, $loc_id, $locname, $days) = @_;
+    my ($c, $loc_id, $locname, $days, $from) = @_;
 
-    # Reference "now" = latest LastSeen for the location
-    my ($ref) = db::queryarray($c,
-        "SELECT max(LastSeen) FROM tap_beers WHERE Location = ?", $loc_id);
-    my $end_ref = $ref;  # fall back to now if no scrape data at all
-    if (!$end_ref) {
-        my @t = localtime(time());
-        $end_ref = strftime("%Y-%m-%d %H:%M:%S", @t);
-    }
-    $end_ref =~ s/T/ / if $end_ref;
-
+    # Reference "now" anchored on the chosen From day (first/rightmost column)
+    my $end_ref = "$from 12:00:00";
     my $end_epoch = ts_epoch($end_ref) // time();
     my $end_day = eff_day_of($end_ref);
     my $start_day = date_plus_days($end_day, -($days - 1));
@@ -232,7 +250,7 @@ sub render_timeline {
     }, $loc_id);
     $marker_str ||= "none";
 
-    print render_controls($c, $locname, $days);
+    print render_controls($c, $locname, $days, $from);
     print "<div id='details'><span class='close' onclick='closeDetails()'>&#10005;</span>"
         . "<div id='details-body'></div></div>";
 
@@ -241,11 +259,33 @@ sub render_timeline {
     print "<div class='overflow-auto'>\n"
         . "<table class='timeline' style='width:" . $table_w . "px'>\n";
     print "<colgroup><col width='40'><col width='22' span='$N'></colgroup>\n";
-    print "<thead><tr><th class='tapcol'>Tap</th>\n";
+    my $today = strftime("%Y-%m-%d", localtime(time()));
+    my $corner = ($from eq $today)
+        ? "<th class='tapcol'><span>Tap</span></th>"
+        : "<th class='tapcol'><a href='#' onclick='tapClearFrom(); return false;'>"
+          . "<span>&laquo;&laquo;</span></a></th>";
+    print "<thead><tr>$corner\n";
+    my $i = 0;
     for my $bk (reverse @buckets) {
         my ($yyyy, $mm, $dd) = $bk->{day} =~ /^(\d\d\d\d)-(\d\d)-(\d\d)$/;
-        print "<th class='daycol'><span class='mon'>" . $MON_ABBR[$mm - 1]
-            . "</span><span class='day'>$dd</span></th>\n";
+        my $epoch = timelocal(0, 0, 12, $dd, $mm - 1, $yyyy - 1900);
+        my $wday = (localtime($epoch))[6];
+        my $weekend = ($wday == 0 || $wday == 6);
+        my $cls = "daycol" . ($weekend ? " weekend" : "");
+        my $is_first = ($i == 0) || ($dd eq "01");
+        my ($mon, $daytxt);
+        if ($is_first) {
+            $mon = "<span class='mon'>" . $MON_ABBR[$mm - 1] . "</span>";
+            $daytxt = "<span class='day'>'" . substr($yyyy, 2) . "</span>";
+        } else {
+            $mon = "";
+            $daytxt = "<span class='day'>$dd</span><span class='mon'>"
+                . $MON_ABBR[$mm - 1] . "</span>";
+        }
+        my $dattr = util::htmlesc($bk->{day});
+        print "<th class='$cls' style='cursor:pointer;' onclick='tapSetFrom(\"$dattr\")'>"
+            . "$mon$daytxt</th>\n";
+        $i++;
     }
     print "</tr></thead>\n<tbody>\n";
 
@@ -253,7 +293,8 @@ sub render_timeline {
         my @cells = build_cells($tap_days{$tap});
         print "<tr>\n";
         print "<td class='tapcol'><a href='$c->{url}?o=Taps&loc="
-            . uri_escape_utf8($locname) . "&amp;tap=$tap'><span>#$tap</span></a></td>\n";
+            . uri_escape_utf8($locname) . "&amp;days=$days&amp;from="
+            . util::htmlesc($from) . "&amp;tap=$tap'><span>#$tap</span></a></td>\n";
         for my $cell (@cells) {
             my ($rec, $span) = @$cell;
             if (!defined $rec) {
@@ -323,13 +364,9 @@ sub build_cells {
 ################################################################################
 
 sub render_single_tap {
-    my ($c, $loc_id, $locname, $tap, $days) = @_;
+    my ($c, $loc_id, $locname, $tap, $days, $from) = @_;
 
-    my $end_ref = undef;
-    my ($ref) = db::queryarray($c,
-        "SELECT max(LastSeen) FROM tap_beers WHERE Location = ?", $loc_id);
-    $end_ref = $ref if $ref;
-    $end_ref =~ s/T/ / if $end_ref;
+    my $end_ref = "$from 12:00:00";
     my $end_epoch = ts_epoch($end_ref) // time();
     my $env_start = date_plus_days(eff_day_of($end_ref), -($days - 1)) . " 06:00:00";
     my $env_end   = date_plus_days(eff_day_of($end_ref), 1) . " 06:00:00";
@@ -352,7 +389,8 @@ sub render_single_tap {
 
     print "<h1>Tap #$tap at " . util::htmlesc($locname) . "</h1>\n";
     print "<p><a href='$c->{url}?o=Taps&loc=" . uri_escape_utf8($locname)
-        . "&amp;days=$days'><span>&laquo; Back to timeline</span></a></p>\n";
+        . "&amp;days=$days&amp;from=" . util::htmlesc($from)
+        . "'><span>&laquo; Back to timeline</span></a></p>\n";
 
     print "<table class='tap-detail'>\n";
     print "<thead><tr><th>Beer</th><th>On since</th>"
@@ -400,28 +438,34 @@ sub render_single_tap {
 ################################################################################
 
 sub render_controls {
-    my ($c, $locname, $days) = @_;
+    my ($c, $locname, $days, $from) = @_;
+    my %PERIOD = ( "14d" => 14, "30d" => 30, "3m" => 90, "6m" => 180, "1y" => 365 );
     my @locs = scrapeboard::get_scraper_locations($c);
-    my $sel = "<label>Location: <select id='tap-loc' onchange='tapGoto()'>\n";
+    my $sel = "<label>Taps: <select id='tap-loc' onchange='tapGoto()' "
+        . "style='width:5.5em;'>\n";
     for my $l (@locs) {
         my $s = ($l eq $locname) ? " selected" : "";
         $sel .= "<option value='" . util::htmlesc($l) . "'$s>" . util::htmlesc($l) . "</option>\n";
     }
     $sel .= "</select></label>\n";
-    my $day = "<label>Days: <select id='tap-days' onchange='tapGoto()'>\n";
-    for my $v (14, 30, 60, 90) {
+    my $day = "<select id='tap-days' onchange='tapGoto()'>\n";
+    for my $k (qw(14d 30d 3m 6m 1y)) {
+        my $v = $PERIOD{$k};
         my $s = ($v == $days) ? " selected" : "";
-        $day .= "<option value='$v'$s>$v days</option>\n";
+        $day .= "<option value='$v'$s>$k</option>\n";
     }
-    $day .= "</select></label>\n";
-    return "<div class='controls'>$sel$day</div>\n";
+    $day .= "</select>\n";
+    my $fromf = "<label>From: <input type='text' id='tap-from' size='10' "
+        . "value='" . util::htmlesc($from) . "' onfocus='this.select();' "
+        . "onchange='tapGoto()' /></label>\n";
+    return "<br/>\n<div class='controls'>$sel$day$fromf</div>\n";
 } # render_controls
 
 sub render_selector_only {
-    my ($c, $locparam) = @_;
+    my ($c, $locparam, $days, $from) = @_;
     print "<h1>Tap Timeline</h1>\n";
     print "<p>No scraper location found. Choose a location:</p>\n";
-    print render_controls($c, $locparam || "", 30);
+    print render_controls($c, $locparam || "", $days, $from);
 } # render_selector_only
 
 1; # Return true for require

@@ -41,6 +41,7 @@ table.timeline th.tapcol, table.timeline td.tapcol {
 table.timeline th.daycol { width: 22px; }
 .daycol .mon { display: block; font-size: .6em; line-height: 1; color: #aaa; }
 .daycol .day { display: block; font-size: .82em; line-height: 1.1; color: inherit; }
+.daycol.weekend { background: var(--altbgcolor); border-width: 2px; border-color: rgba(255,255,255,0.7); }
 
 .tap-cell {
   display: block; box-sizing: border-box; width: 100%;

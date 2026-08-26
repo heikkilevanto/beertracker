@@ -44,6 +44,23 @@ function clearHighlights() {
 function tapGoto() {
   var loc = document.getElementById("tap-loc").value;
   var days = document.getElementById("tap-days").value;
+  var from = document.getElementById("tap-from").value;
+  document.location = "?o=Taps&loc=" + encodeURIComponent(loc)
+      + "&days=" + days + "&from=" + encodeURIComponent(from);
+}
+
+// Click a date legend to anchor the timeline's first column on that date.
+function tapSetFrom(d) {
+  var loc = document.getElementById("tap-loc").value;
+  var days = document.getElementById("tap-days").value;
+  document.location = "?o=Taps&loc=" + encodeURIComponent(loc)
+      + "&days=" + days + "&from=" + encodeURIComponent(d);
+}
+
+// Click the "<<" (Tap) header to clear the anchor back to today.
+function tapClearFrom() {
+  var loc = document.getElementById("tap-loc").value;
+  var days = document.getElementById("tap-days").value;
   document.location = "?o=Taps&loc=" + encodeURIComponent(loc) + "&days=" + days;
 }
 
