@@ -52,6 +52,16 @@ sub date_plus_days {
     return sprintf("%04d-%02d-%02d", $Y + 1900, $M + 1, $D);
 } # date_plus_days
 
+# Whole-day difference (b - a) between two "YYYY-MM-DD" strings, at local noon.
+sub day_diff {
+    my ($a, $b) = @_;
+    $a =~ /^(\d{4})-(\d{2})-(\d{2})/;
+    my $ea = timelocal(0, 0, 12, $3, $2 - 1, $1 - 1900);
+    $b =~ /^(\d{4})-(\d{2})-(\d{2})/;
+    my $eb = timelocal(0, 0, 12, $3, $2 - 1, $1 - 1900);
+    return int(($eb - $ea) / 86400);
+} # day_diff
+
 # Foreground color for a hex background, matching styles::brewtextstyle.
 sub fg_for {
     my ($c, $hex) = @_;
@@ -72,6 +82,16 @@ sub ts_epoch {
 } # ts_epoch
 
 my @MON_ABBR = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+
+# Format a price as Finnish euros: integer -> "54.-", fractional -> "54,50".
+sub eurofmt {
+    my ($p) = @_;
+    return "" unless defined $p && $p ne "";
+    $p =~ s/,/./;
+    if ($p =~ /^(\d+)(?:\.0+)?$/) { return "$1.-"; }
+    $p =~ s/\./,/;
+    return $p;
+} # eurofmt
 
 ################################################################################
 # Main entry
@@ -164,10 +184,12 @@ sub render_timeline {
 
     # Fetch overlapping tap periods
     my $sth = $c->{dbh}->prepare(q{
-        SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName, b.ShortName,
-               b.BrewType, b.SubType, b.BrewStyle,
+               SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName,
+               b.ShortName AS brew_shortname,
+               b.BrewType, b.SubType, b.BrewStyle, b.Alc,
                tb.FirstSeen, tb.Gone,
-               pl.Name AS ProducerName, pl.Id AS ProducerId,
+               pl.Name AS ProducerName, pl.ShortName AS prod_shortname,
+               pl.Id AS ProducerId,
                tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL
         FROM tap_beers tb
         LEFT JOIN brews b ON tb.Brew = b.Id
@@ -181,6 +203,7 @@ sub render_timeline {
 
     my %tap_days;     # tap -> [ rec-or-undef ] x N (chronological)
     my %details;      # bid -> info
+    my %kegs;         # bid -> [ keg history within the window ]
     my %seen_bid;
 
     while (my $r = $sth->fetchrow_hashref) {
@@ -193,11 +216,12 @@ sub render_timeline {
         unless ($seen_bid{$bid}) {
             $seen_bid{$bid} = 1;
             $details{$bid} = {
-                name  => $r->{BrewName} || "?",
+                name  => ($r->{brew_shortname} || $r->{BrewName}) || "?",
                 sub   => $sub || $type || "Unknown",
                 style => $r->{BrewStyle} || "",
-                prod  => $r->{ProducerName} || "",
+                prod  => ($r->{prod_shortname} || $r->{ProducerName}) || "",
                 prodid=> $r->{ProducerId} || "",
+                alc   => $r->{Alc},
                 color => "#$bg",
                 fg    => $fg,
             };
@@ -206,15 +230,18 @@ sub render_timeline {
         my $ge = $r->{Gone};
         my $fs_epoch = ts_epoch($r->{FirstSeen}) // 0;
         my $ge_epoch = $ge ? (ts_epoch($ge) // $end_epoch) : $end_epoch;
-        my $dur = int(($ge_epoch - $fs_epoch) / 86400);
+        my $fs_day = substr($r->{FirstSeen}, 0, 10);
+        my $ge_day = $ge ? substr($ge, 0, 10) : eff_day_of($end_ref);
+        my $dur = day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
 
         my $rec = {
             bid    => $bid,
-            name   => $r->{BrewName} || "?",
+            kegid  => $r->{Id},
+            name   => ($r->{brew_shortname} || $r->{BrewName}) || "?",
             sub    => $sub || $type || "Unknown",
             type   => $type,
             style  => $r->{BrewStyle} || "",
-            prod   => $r->{ProducerName} || "",
+            prod   => ($r->{prod_shortname} || $r->{ProducerName}) || "",
             prodid => $r->{ProducerId} || "",
             bg     => "#$bg",
             fg     => $fg,
@@ -227,6 +254,19 @@ sub render_timeline {
         if ($r->{PriceS})      { $rec->{price} = "$r->{SizeS} cl / $r->{PriceS}"; }
         elsif ($r->{PriceM})   { $rec->{price} = "$r->{SizeM} cl / $r->{PriceM}"; }
         elsif ($r->{PriceL})   { $rec->{price} = "$r->{SizeL} cl / $r->{PriceL}"; }
+
+        my @kprices;
+        if ($r->{PriceS}) { push @kprices, eurofmt($r->{PriceS}); }
+        if ($r->{PriceM}) { push @kprices, eurofmt($r->{PriceM}); }
+        if ($r->{PriceL}) { push @kprices, eurofmt($r->{PriceL}); }
+        push @{$kegs{$bid}}, {
+            id     => $r->{Id},
+            tap    => int($r->{Tap}),
+            first  => substr($r->{FirstSeen}, 0, 10),
+            gone   => $ge ? substr($ge, 0, 10) : "",
+            days   => $dur,
+            prices => [ @kprices ],
+        };
 
         my $tap = int($r->{Tap});
         $tap_days{$tap} = [ (undef) x scalar(@buckets) ] unless exists $tap_days{$tap};
@@ -311,10 +351,14 @@ sub render_timeline {
                     . "<span class='tap-cell' style='color:" . $rec->{fg} . "' "
                     . "title='" . $title . "' "
                     . "data-brewid='" . util::htmlesc($rec->{bid}) . "' "
+                    . "data-kegid='" . util::htmlesc($rec->{kegid}) . "' "
                     . "data-tap='$tap' data-since='$ds' data-gone='$dg' "
                     . "data-days='" . $rec->{days} . "' data-price='$dp' "
                     . "onclick='showDetails(this)'>"
-                    . util::htmlesc($rec->{name}) . "</span></td>\n";
+                    . util::htmlesc($rec->{name})
+                    . ($rec->{prod} ? " <span class='tap-prod'>"
+                        . util::htmlesc($rec->{prod}) . "</span>" : "")
+                    . "</span></td>\n";
             }
         }
         print "</tr>\n";
@@ -323,9 +367,11 @@ sub render_timeline {
     print "<div class='footer'>Last scraped: " . util::htmlesc($marker_str) . "</div>\n";
 
     my $det = JSON->new->encode(\%details);
+    my $kegs_json = JSON->new->encode(\%kegs);
     print "<script>\n"
         . "var TAP_LOC = '" . util::htmlesc($locname) . "';\n"
         . "var TAP_DETAILS = $det;\n"
+        . "var TAP_KEGS = $kegs_json;\n"
         . "</script>\n";
 } # render_timeline
 
@@ -368,24 +414,22 @@ sub render_single_tap {
 
     my $end_ref = "$from 12:00:00";
     my $end_epoch = ts_epoch($end_ref) // time();
-    my $env_start = date_plus_days(eff_day_of($end_ref), -($days - 1)) . " 06:00:00";
-    my $env_end   = date_plus_days(eff_day_of($end_ref), 1) . " 06:00:00";
 
     my $sth = $c->{dbh}->prepare(q{
         SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName,
+               b.ShortName AS brew_shortname,
                b.BrewType, b.SubType, b.BrewStyle,
                tb.FirstSeen, tb.Gone,
-               pl.Name AS ProducerName, pl.Id AS ProducerId,
+               pl.Name AS ProducerName, pl.ShortName AS prod_shortname,
+               pl.Id AS ProducerId,
                tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL
         FROM tap_beers tb
         LEFT JOIN brews b ON tb.Brew = b.Id
         LEFT JOIN locations pl ON b.ProducerLocation = pl.Id
         WHERE tb.Location = ? AND tb.Tap = ? AND tb.Brew IS NOT NULL
-          AND tb.FirstSeen <= ?
-          AND (tb.Gone IS NULL OR tb.Gone >= ?)
         ORDER BY tb.FirstSeen DESC
     });
-    $sth->execute($loc_id, $tap, $env_end, $env_start);
+    $sth->execute($loc_id, $tap);
 
     print "<h1>Tap #$tap at " . util::htmlesc($locname) . "</h1>\n";
     print "<p><a href='$c->{url}?o=Taps&loc=" . uri_escape_utf8($locname)
@@ -393,38 +437,42 @@ sub render_single_tap {
         . "'><span>&laquo; Back to timeline</span></a></p>\n";
 
     print "<table class='tap-detail'>\n";
-    print "<thead><tr><th>Beer</th><th>On since</th>"
-        . "<th>Gone</th><th>Days</th><th>Volume / Price</th></tr></thead>\n<tbody>\n";
+    print "<thead><tr><th>Beer</th><th>On &ndash; Off</th>"
+        . "<th>Days</th><th>Price</th></tr></thead>\n<tbody>\n";
     while (my $r = $sth->fetchrow_hashref) {
         my $ge = $r->{Gone};
         my $fs_epoch = ts_epoch($r->{FirstSeen}) // 0;
         my $ge_epoch = $ge ? (ts_epoch($ge) // $end_epoch) : $end_epoch;
-        my $dur = int(($ge_epoch - $fs_epoch) / 86400);
-        my $gone_disp = $ge ? substr($ge, 0, 10) : "<b>still on tap</b>";
+        my $fs_day = substr($r->{FirstSeen}, 0, 10);
+        my $ge_day = $ge ? substr($ge, 0, 10) : eff_day_of($end_ref);
+        my $dur = day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
+        my $gone_disp = $ge ? substr($ge, 0, 10) : "still on";
         my @prices;
-        if ($r->{PriceS}) { push @prices, "$r->{SizeS} cl / $r->{PriceS}"; }
-        if ($r->{PriceM}) { push @prices, "$r->{SizeM} cl / $r->{PriceM}"; }
-        if ($r->{PriceL}) { push @prices, "$r->{SizeL} cl / $r->{PriceL}"; }
-        my $price = @prices ? join("<br/>", map { util::htmlesc($_) } @prices) : "";
+        if ($r->{PriceS}) { push @prices, eurofmt($r->{PriceS}); }
+        if ($r->{PriceM}) { push @prices, eurofmt($r->{PriceM}); }
+        if ($r->{PriceL}) { push @prices, eurofmt($r->{PriceL}); }
+        my $price = @prices ? join(" ", map { util::htmlesc($_) } @prices) : "";
 
         my $style_str = $r->{SubType} || $r->{BrewType} || "Beer";
         my $style_url = uri_escape_utf8($style_str);
         my $style_disp = styles::brewstyledisplay($c, $r->{BrewType}, $r->{SubType},
             "tap:$tap '" . ($r->{BrewName} // "") . "'");
-        my $prod = $r->{ProducerName}
+        my $prodname = $r->{prod_shortname} || $r->{ProducerName};
+        my $brewname = $r->{brew_shortname} || $r->{BrewName};
+        my $prod = $prodname
             ? " <a href='$c->{url}?o=Location&e=" . util::htmlesc($r->{ProducerId})
-              . "'><span><i>" . util::htmlesc($r->{ProducerName}) . ":</i></span></a>"
+              . "'><span><i>" . util::htmlesc($prodname) . ":</i></span></a>"
             : "";
         my $brew = "<a href='$c->{url}?o=Brew&e=" . util::htmlesc($r->{Brew})
-            . "'><span><b>" . util::htmlesc($r->{BrewName} || "?") . "</b></span></a>";
-        my $bidspan = " <span style='font-size:x-small;'>[" . util::htmlesc($r->{Brew}) . "]</span>";
+            . "'><span><b>" . util::htmlesc($brewname || "?") . "</b></span></a>";
+        my $sep = $c->{mobile} ? "<br/>" : " ";
         my $beer = "<a href='$c->{url}?o=$c->{op}&q=$style_url'>$style_disp</a> "
-            . "$prod $brew$bidspan";
+            . "$prod$sep$brew";
 
         print "<tr>";
         print "<td>$beer</td>";
-        print "<td>" . util::htmlesc(substr($r->{FirstSeen}, 0, 10)) . "</td>";
-        print "<td>$gone_disp</td>";
+        print "<td>" . util::htmlesc(substr($r->{FirstSeen}, 0, 10))
+            . " &ndash; " . util::htmlesc($gone_disp) . "</td>";
         print "<td>$dur</td>";
         print "<td>$price</td>";
         print "</tr>\n";

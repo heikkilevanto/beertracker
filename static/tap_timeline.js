@@ -3,11 +3,7 @@
 
 function showDetails(el) {
   var bid = el.dataset.brewid;
-  var tap = el.dataset.tap;
-  var since = el.dataset.since;
-  var gone = el.dataset.gone;
-  var days = el.dataset.days;
-  var price = el.dataset.price;
+  var kegid = el.dataset.kegid;
   var d = TAP_DETAILS[bid];
   if (!d) return;
   var styleUrl = encodeURIComponent(d.sub);
@@ -16,17 +12,38 @@ function showDetails(el) {
        + "[" + escHtml(d.sub) + "]</span></a> "
        + "<a href='?o=Location&e=" + d.prodid + "'><span><i>" + escHtml(d.prod) + ":</i></span></a> "
        + "<a href='?o=Brew&e=" + bid + "'><span><b>" + escHtml(d.name) + "</b></span></a>"
-       + " <span style='font-size:x-small;'>[" + bid + "]</span><br>";
-  html += "Tap #" + tap + (TAP_LOC ? " at " + escHtml(TAP_LOC) : "") + "<br>";
-  html += "Since " + since + " &mdash; " + (gone === "still on tap" ? "<b>still on tap</b>" : gone) + "<br>";
-  html += "Duration: " + days + " days<br>";
-  if (price) html += "Price: " + escHtml(price);
+       + " <span style='font-size:x-small;'>[" + bid + "]</span>"
+       + (d.alc ? " <span class='alc'>" + escHtml(d.alc) + "%</span>" : "")
+       + "<br>";
+  html += kegHistory(bid, kegid);
   document.getElementById("details-body").innerHTML = html;
   document.getElementById("details").classList.add("open");
   clearHighlights();
   document.querySelectorAll(".tap-cell[data-brewid='" + bid + "']").forEach(function (cell) {
     cell.classList.add("tap-highlighted");
   });
+}
+
+// Build a small table of every keg of this brew seen in the displayed window.
+function kegHistory(bid, kegid) {
+  var ks = TAP_KEGS[bid];
+  if (!ks || !ks.length) return "";
+  ks = ks.slice().sort(function (a, b) {
+    return a.first < b.first ? 1 : (a.first > b.first ? -1 : 0);
+  });
+  var h = "<table class='keg-hist'>"
+       + "<tr><th>Tap</th><th>On</th><th>Off</th><th>Days</th><th>Price</th></tr>";
+  for (var i = 0; i < ks.length; i++) {
+    var k = ks[i];
+    var off = k.gone ? k.gone : "—";
+    var pr = (k.prices && k.prices.length) ? k.prices.join(" ") : "";
+    var hl = (String(k.id) === String(kegid)) ? " class='hl'" : "";
+    h += "<tr" + hl + "><td>#" + k.tap + "</td><td>" + escHtml(k.first) + "</td><td>"
+       + escHtml(off) + "</td><td>" + k.days + "d</td><td>" + escHtml(pr)
+       + "</td></tr>";
+  }
+  h += "</table>";
+  return h;
 }
 
 function closeDetails() {
