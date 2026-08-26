@@ -472,16 +472,34 @@ sub test_comment_new {
 
 # q= filter variants
 sub test_filter_board {
+  # Beer Board filtering is client-side JS only (beerboard.pm never reads q
+  # server-side), so a GET cannot verify filtering. Assert the client-side
+  # filter control is present and that q= is accepted without error.
   my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Board&q=IPA");
   assert_page_ok($status, $body, "Board q=IPA", "id='mainform'");
-  assert(scalar($body =~ /Filter:<b>IPA<\/b>/), "Board filter line shows 'Filter: IPA'");
+  assert(scalar($body =~ /id='board-filter'/), "Board has the client-side filter control");
 } # test_filter_board
 
 sub test_filter_full {
-  # NOTE: mainlist.pm does not actually filter on q (no "Filter:" line on the
-  # Full page), so this only asserts the q= variant is accepted without errors.
+  # mainlist.pm server-side grep filtering on q: the Filter: form input must
+  # carry the query, and a no-match query must report "No matches".
   my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&q=IPA");
   assert_page_ok($status, $body, "Full q=IPA", "id='mainform'");
+  assert(scalar($body =~ /name="q" value="IPA"/), "Full filter form preserves the q query");
+
+  # Deterministic no-match: a unique token can never match, so filtered_list
+  # must render "No matches for '<token>'".
+  my $tok = "TST" . time();
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&q=$tok");
+  assert_page_ok($status, $body, "Full q=$tok", "id='mainform'");
+  assert(scalar($body =~ /No matches for '\Q$tok\E'/), "Full reports no matches for an unknown query");
+
+  # Date-range filtering (server-side, via the Filter form's date/ndays inputs)
+  my $d = "2026-01-01";
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&date=$d&ndays=3");
+  assert_page_ok($status, $body, "Full date/ndays", "id='mainform'");
+  assert(scalar($body =~ /name="date" value="$d"/), "Full filter form preserves the date");
+  assert(scalar($body =~ /name="ndays" value="3"/), "Full filter form preserves ndalys=3");
 } # test_filter_full
 
 sub test_filter_years {
