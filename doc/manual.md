@@ -350,6 +350,33 @@ into something like "3 rat=6.3"
 Before the beer board is always the graph (see bove), and under it the display
 continues as the full list (see above).
 
+### Tap Timeline
+Shows, for one location, what beer was on each tap on each day, as a grid of
+taps (rows) against days (columns). Each cell is the beer that was most recently
+on that tap that day; consecutive days with the same beer are merged into one
+block. Weekends (Sat–Sun) are shaded, and the first of each month (and the
+first, rightmost column) is marked with the month and a two-digit year
+(e.g. `'26`).
+
+At the top are a few controls:
+* **Taps** – pull-down to choose the location (only locations with a scripted
+  beer board are listed).
+* **Period** – how many days to show: `14d`, `30d`, `3m`, `6m` or `1y`
+  (14/30/90/180/365 days).
+* **From** – the anchor day shown in the first (rightmost) column; defaults to
+  today. You can type a plain date (`YYYY-MM-DD`), or just a two-digit month
+  number (e.g. `11`) to jump to the previous occurrence of that month. Clicking
+  a date column header re-anchors the timeline on that day; the `<<` in the
+  top-left corner clears the anchor back to today.
+* **Tap** – shown in the top-left corner when the anchor is today; otherwise the
+  `<<` clear control.
+
+Clicking a beer cell opens a detail pane with the brew, its abv%, and a table of
+every keg of that brew seen in the window: tap number, on/off dates, duration
+(the clicked keg is highlighted), and prices. Tapping a tap number in the left
+column opens the single-tap view, which lists the full known history of that tap
+(not limited to the displayed window).
+
 ### Stats
 Shows some statistics for each day, month, or year. On top is a line with links
 to each statistic. When selected from the menu, this starts as the monthly

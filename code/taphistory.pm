@@ -7,9 +7,10 @@
 # are merged with colspan for a Gantt-like look.
 #
 # Entry points:
-#   o=Taps&loc=<name>              location timeline (default: first scraper loc)
-#   o=Taps&loc=<name>&tap=<N>      single-tap chronological detail
-#   o=Taps&loc=<name>&days=14|30|60|90   number of daily columns (default 30)
+#   o=Taps&loc=<name>                            location timeline (default: first scraper loc)
+#   o=Taps&loc=<name>&tap=<N>                    single-tap detail (full known history for that tap)
+#   o=Taps&loc=<name>&days=14d|30d|3m|6m|1y       number of daily columns (default 30d; a bare number also works)
+#   o=Taps&loc=<name>&from=YYYY-MM-DD            anchor day for the first (rightmost) column (default today)
 
 package taphistory;
 
@@ -24,6 +25,9 @@ use JSON;
 use URI::Escape qw(uri_escape_utf8);
 
 # styles.pm is loaded by index.fcgi via require; call styles::* directly.
+
+# Period tokens -> number of daily columns
+my %PERIOD = ( "14d" => 14, "30d" => 30, "3m" => 90, "6m" => 180, "1y" => 365 );
 
 ################################################################################
 # Helpers
@@ -72,15 +76,6 @@ sub fg_for {
     return $lum < 64 ? "#ffffff" : $c->{bgcolor};
 } # fg_for
 
-# Parse a local "YYYY-MM-DD HH:MM:SS" into an epoch (local).
-sub ts_epoch {
-    my ($ts) = @_;
-    return undef unless $ts;
-    $ts =~ /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/;
-    return undef unless $1;
-    return timelocal($6, $5, $4, $3, $2 - 1, $1 - 1900);
-} # ts_epoch
-
 my @MON_ABBR = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
 
 # Format a price as Finnish euros: integer -> "54.-", fractional -> "54,50".
@@ -92,6 +87,16 @@ sub eurofmt {
     $p =~ s/\./,/;
     return $p;
 } # eurofmt
+
+# Collect the available prices of a tap_beers row, formatted via eurofmt.
+sub keg_prices {
+    my ($r) = @_;
+    my @p;
+    if ($r->{PriceS}) { push @p, eurofmt($r->{PriceS}); }
+    if ($r->{PriceM}) { push @p, eurofmt($r->{PriceM}); }
+    if ($r->{PriceL}) { push @p, eurofmt($r->{PriceL}); }
+    return @p;
+} # keg_prices
 
 ################################################################################
 # Main entry
@@ -130,7 +135,6 @@ sub taphistory {
     }
 
     # Days: accept either a period token (14d/30d/3m/6m/1y) or a bare number
-    my %PERIOD = ( "14d" => 14, "30d" => 30, "3m" => 90, "6m" => 180, "1y" => 365 );
     my $dp = util::param($c, "days") || "30d";
     my $days = $PERIOD{$dp};
     if (!defined $days && $dp =~ /^\d+$/) {
@@ -165,7 +169,6 @@ sub render_timeline {
 
     # Reference "now" anchored on the chosen From day (first/rightmost column)
     my $end_ref = "$from 12:00:00";
-    my $end_epoch = ts_epoch($end_ref) // time();
     my $end_day = eff_day_of($end_ref);
     my $start_day = date_plus_days($end_day, -($days - 1));
 
@@ -210,11 +213,10 @@ sub render_timeline {
         my $bid = $r->{Brew};
         my $type = $r->{BrewType} || "";
         my $sub = $r->{SubType} || "";
-        my $bg = styles::brewcolor($c, "$type,$sub");
-        my $fg = fg_for($c, $bg);
 
         unless ($seen_bid{$bid}) {
             $seen_bid{$bid} = 1;
+            my $bg = styles::brewcolor($c, "$type,$sub");
             $details{$bid} = {
                 name  => ($r->{brew_shortname} || $r->{BrewName}) || "?",
                 sub   => $sub || $type || "Unknown",
@@ -223,13 +225,12 @@ sub render_timeline {
                 prodid=> $r->{ProducerId} || "",
                 alc   => $r->{Alc},
                 color => "#$bg",
-                fg    => $fg,
+                fg    => fg_for($c, $bg),
             };
         }
+        my $d = $details{$bid};
 
         my $ge = $r->{Gone};
-        my $fs_epoch = ts_epoch($r->{FirstSeen}) // 0;
-        my $ge_epoch = $ge ? (ts_epoch($ge) // $end_epoch) : $end_epoch;
         my $fs_day = substr($r->{FirstSeen}, 0, 10);
         my $ge_day = $ge ? substr($ge, 0, 10) : eff_day_of($end_ref);
         my $dur = day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
@@ -237,35 +238,24 @@ sub render_timeline {
         my $rec = {
             bid    => $bid,
             kegid  => $r->{Id},
-            name   => ($r->{brew_shortname} || $r->{BrewName}) || "?",
-            sub    => $sub || $type || "Unknown",
-            type   => $type,
-            style  => $r->{BrewStyle} || "",
-            prod   => ($r->{prod_shortname} || $r->{ProducerName}) || "",
-            prodid => $r->{ProducerId} || "",
-            bg     => "#$bg",
-            fg     => $fg,
-            fs     => $r->{FirstSeen},
-            since  => substr($r->{FirstSeen}, 0, 10),
-            gone   => $ge ? substr($ge, 0, 10) : "still on tap",
+            name   => $d->{name},
+            style  => $d->{style},
+            prod   => $d->{prod},
+            bg     => $d->{color},
+            fg     => $d->{fg},
+            since  => $fs_day,
+            gone   => $ge ? $ge_day : "still on tap",
             days   => $dur,
-            price  => "",
+            fs     => $r->{FirstSeen},
         };
-        if ($r->{PriceS})      { $rec->{price} = "$r->{SizeS} cl / $r->{PriceS}"; }
-        elsif ($r->{PriceM})   { $rec->{price} = "$r->{SizeM} cl / $r->{PriceM}"; }
-        elsif ($r->{PriceL})   { $rec->{price} = "$r->{SizeL} cl / $r->{PriceL}"; }
 
-        my @kprices;
-        if ($r->{PriceS}) { push @kprices, eurofmt($r->{PriceS}); }
-        if ($r->{PriceM}) { push @kprices, eurofmt($r->{PriceM}); }
-        if ($r->{PriceL}) { push @kprices, eurofmt($r->{PriceL}); }
         push @{$kegs{$bid}}, {
             id     => $r->{Id},
             tap    => int($r->{Tap}),
-            first  => substr($r->{FirstSeen}, 0, 10),
-            gone   => $ge ? substr($ge, 0, 10) : "",
+            first  => $fs_day,
+            gone   => $ge ? $ge_day : "",
             days   => $dur,
-            prices => [ @kprices ],
+            prices => [ keg_prices($r) ],
         };
 
         my $tap = int($r->{Tap});
@@ -344,16 +334,11 @@ sub render_timeline {
                     . ($rec->{style} ? " — " . util::htmlesc($rec->{style}) : "")
                     . ($rec->{prod} ? " (" . util::htmlesc($rec->{prod}) . ")" : "")
                     . " | " . util::htmlesc($rec->{since});
-                my $ds = util::htmlesc($rec->{since});
-                my $dg = util::htmlesc($rec->{gone});
-                my $dp = util::htmlesc($rec->{price});
                 print "<td colspan='$span' style='background-color:" . $rec->{bg} . "'>"
                     . "<span class='tap-cell' style='color:" . $rec->{fg} . "' "
                     . "title='" . $title . "' "
                     . "data-brewid='" . util::htmlesc($rec->{bid}) . "' "
                     . "data-kegid='" . util::htmlesc($rec->{kegid}) . "' "
-                    . "data-tap='$tap' data-since='$ds' data-gone='$dg' "
-                    . "data-days='" . $rec->{days} . "' data-price='$dp' "
                     . "onclick='showDetails(this)'>"
                     . util::htmlesc($rec->{name})
                     . ($rec->{prod} ? " <span class='tap-prod'>"
@@ -377,6 +362,8 @@ sub render_timeline {
 
 # Half-open overlap test: period covers bucket [bs, be) iff
 #   FirstSeen < be  AND  bs < coalesce(Gone, end_ref)
+# Timestamps are compared lexically; that is safe because the
+# "YYYY-MM-DD HH:MM:SS" format sorts chronologically.
 sub day_overlap {
     my ($fs, $ge, $bs, $be, $end_ref) = @_;
     $ge = $end_ref unless $ge;
@@ -413,7 +400,6 @@ sub render_single_tap {
     my ($c, $loc_id, $locname, $tap, $days, $from) = @_;
 
     my $end_ref = "$from 12:00:00";
-    my $end_epoch = ts_epoch($end_ref) // time();
 
     my $sth = $c->{dbh}->prepare(q{
         SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName,
@@ -441,16 +427,11 @@ sub render_single_tap {
         . "<th>Days</th><th>Price</th></tr></thead>\n<tbody>\n";
     while (my $r = $sth->fetchrow_hashref) {
         my $ge = $r->{Gone};
-        my $fs_epoch = ts_epoch($r->{FirstSeen}) // 0;
-        my $ge_epoch = $ge ? (ts_epoch($ge) // $end_epoch) : $end_epoch;
         my $fs_day = substr($r->{FirstSeen}, 0, 10);
         my $ge_day = $ge ? substr($ge, 0, 10) : eff_day_of($end_ref);
         my $dur = day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
         my $gone_disp = $ge ? substr($ge, 0, 10) : "still on";
-        my @prices;
-        if ($r->{PriceS}) { push @prices, eurofmt($r->{PriceS}); }
-        if ($r->{PriceM}) { push @prices, eurofmt($r->{PriceM}); }
-        if ($r->{PriceL}) { push @prices, eurofmt($r->{PriceL}); }
+        my @prices = keg_prices($r);
         my $price = @prices ? join(" ", map { util::htmlesc($_) } @prices) : "";
 
         my $style_str = $r->{SubType} || $r->{BrewType} || "Beer";
@@ -487,7 +468,6 @@ sub render_single_tap {
 
 sub render_controls {
     my ($c, $locname, $days, $from) = @_;
-    my %PERIOD = ( "14d" => 14, "30d" => 30, "3m" => 90, "6m" => 180, "1y" => 365 );
     my @locs = scrapeboard::get_scraper_locations($c);
     my $sel = "<label>Taps: <select id='tap-loc' onchange='tapGoto()' "
         . "style='width:5.5em;'>\n";

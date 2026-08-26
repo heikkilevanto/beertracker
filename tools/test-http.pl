@@ -213,6 +213,9 @@ my @TESTS = (
   { name => "person_new",    sets => [qw(quick person persons lists newrecords)],     test => \&test_person_new },
   { name => "filter_years",  sets => [qw(quick years stats yearstat filters)],        test => \&test_filter_years },
   { name => "static_assets", sets => [qw(quick static)],                              test => \&test_static_assets },
+  # Tap Timeline (o=Taps): GET-only smoke + content; no DB writes, so safe in 'quick'
+  { name => "taps",          sets => [qw(quick taps taphistory)],                    test => \&test_taps },
+  { name => "taps_single",   sets => [qw(quick taps taphistory)],                    test => \&test_taps_single },
   # Heavy pages / tests that refetch the main list — not in 'quick'
   { name => "graph",         sets => [qw(graph glasses mainlist)],                    test => \&test_graph },
   { name => "board",         sets => [qw(board graph beerboard glasses mainlist)],    test => \&test_board },
@@ -497,7 +500,46 @@ sub test_static_assets {
     my ($status, $headers, $body) = req("GET", "$STATIC_URL/$asset");
     assert($status == 200, "static/$asset returns HTTP 200 (got $status)");
   }
-} # test_static_assets
+  } # test_static_assets
+
+################################################################################
+# Tap Timeline (o=Taps): GET-only smoke + content for the timeline and the
+# single-tap detail view. No DB writes, so these stay in the 'quick' set.
+################################################################################
+
+# The tap-id links in the timeline's tap column look like
+#   o=Taps&loc=...&amp;days=...&amp;from=...&amp;tap=<N>
+my $TAP_ID_RE = qr{o=Taps[^"]*?tap=(\d+)};
+
+sub test_taps {
+  # Default timeline: the controls (Taps: label, From: input) plus the table
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Taps");
+  assert_page_ok($status, $body, "Taps", "Taps:");
+  assert(scalar($body =~ /<table class='timeline'/), "Taps timeline table is rendered");
+  assert(scalar($body =~ /From:/), "Taps controls carry the From: input");
+
+  # Period-token, bare-number, and From-anchor variants must still render
+  for my $variant (qw(days=3m days=14 from=2026-01-01 from=11)) {
+    ($status, $headers, $body) = req("GET", "$BASE_URL?o=Taps&$variant");
+    assert_page_ok($status, $body, "Taps $variant", "Taps:");
+    assert(scalar($body =~ /<table class='timeline'/), "Taps timeline renders for $variant");
+  }
+} # test_taps
+
+sub test_taps_single {
+  # Harvest a tap id from the default timeline, then drill into its detail view
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Taps");
+  if ( $body !~ /$TAP_ID_RE/ ) {
+    skipmsg("Taps timeline has no tap links to drill into");
+    return;
+  }
+  my $tap = $1;
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Taps&tap=$tap");
+  assert_page_ok($status, $body, "Taps tap=$tap", "Tap #");
+  assert(scalar($body =~ /<table class='tap-detail'/), "single-tap detail table is rendered");
+  assert(scalar($body =~ /On &ndash; Off/), "single-tap detail shows the On &ndash; Off header");
+  assert(scalar($body =~ /Back to timeline/), "single-tap detail links back to the timeline");
+} # test_taps_single
 
 ################################################################################
 # POST round-trips (dev-guarded, not in 'quick')
