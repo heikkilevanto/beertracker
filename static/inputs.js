@@ -746,6 +746,8 @@ function enableEditing(form) {
   if (firstInput) firstInput.focus();
 
   // Prefill lat/lon from GPS if empty (mobile only — desktop WiFi positioning is often wrong)
+  var loctypeInput = form.querySelector('#LocType');
+  if (loctypeInput && loctypeInput.value === 'Producer') return; // skip GPS for producers
   var latInput = form.querySelector('input[name="Lat"]');
   var lonInput = form.querySelector('input[name="Lon"]');
   if (latInput && lonInput && !latInput.value && !lonInput.value && navigator.geolocation && IS_MOBILE) {
