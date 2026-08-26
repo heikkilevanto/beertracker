@@ -223,6 +223,7 @@ sub render_location_selector {
   }
   print "</select>\n";
   print "</form>\n";
+  print " <a href='$url?o=Taps&loc=" . util::htmlesc($locparam) . "'><span>History</span></a> \n";
 
   # Collapsible controls section — initially hidden
   # Contains: datetime+Show, filter+PA+Clr, www link, Reload, Exp/Collapse

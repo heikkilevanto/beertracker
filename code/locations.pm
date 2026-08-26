@@ -302,8 +302,9 @@ sub editlocation {
     my $sql = "SELECT * FROM Locations WHERE id = ?";
     $p = db::queryrecord($c, $sql, $c->{edit});
     util::error("Location #$c->{edit} not found") unless $p && $p->{Id};
-    print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
-  }
+     print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
+     print "<a href='$c->{url}?o=Taps&loc=" . util::htmlesc($p->{Name}) . "'><span>Tap History</span></a><br/>\n";
+   }
 
   if ( $p->{Id} ) {  # found the location
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .

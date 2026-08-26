@@ -547,6 +547,7 @@ sub showmenu {
         { label => "Years",   url => "o=Years" },
         { label => "Data",    url => "o=DataStats" },
         { label => "Ratings", url => "o=Ratings" },
+        { label => "Tap History", url => "o=Taps" },
     );
     push @menu, { label => "Stats ...", children => \@stats };
 

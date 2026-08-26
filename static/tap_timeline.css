@@ -1,0 +1,58 @@
+/* Tap Timeline page (plan 750) */
+
+#details {
+  display: none;
+  border: 1px solid #888;
+  border-radius: 6px;
+  padding: .6em .8em;
+  margin-bottom: 1em;
+  color: inherit;
+  position: relative;
+}
+#details.open { display: block; }
+#details .close {
+  position: absolute; top: .4em; right: .6em;
+  cursor: pointer; font-weight: bold; color: inherit;
+}
+#details a { color: #6cf; }
+.stylebadge {
+  display: inline-block; padding: 0 6px; border-radius: 4px;
+  font-size: .8em; border: 1px solid #aaa; color: #111;
+}
+
+.controls { display: flex; gap: 1em; flex-wrap: wrap; align-items: center; margin-bottom: .8em; }
+.controls label { font-size: .9em; }
+
+.overflow-auto { overflow: auto; max-width: 100%; }
+
+table.timeline { border-collapse: separate; border-spacing: 2px; table-layout: fixed; }
+table.timeline th, table.timeline td {
+  border: 1px solid rgba(255,255,255,0.25); border-radius: 4px;
+  padding: 0; font-size: .72em;
+}
+table.timeline thead th {
+  color: inherit; padding: 1px 0;
+  white-space: nowrap; text-align: center;
+}
+table.timeline th.tapcol, table.timeline td.tapcol {
+  color: inherit; text-align: center;
+  width: 40px; font-weight: bold;
+}
+table.timeline th.daycol { width: 22px; }
+.daycol .mon { display: block; font-size: .6em; line-height: 1; color: #aaa; }
+.daycol .day { display: block; font-size: .82em; line-height: 1.1; color: inherit; }
+
+.tap-cell {
+  display: block; box-sizing: border-box; width: 100%;
+  white-space: nowrap; overflow: hidden;   /* clip at cell edge, no ellipsis */
+  padding: 1px 2px; cursor: pointer; line-height: 1.3;
+}
+.tap-cell.tap-highlighted { outline: 2px solid #fff; }
+
+.footer { margin-top: 1em; color: #999; font-size: .8em; }
+
+table.tap-detail { border-collapse: collapse; margin-top: .5em; }
+table.tap-detail th, table.tap-detail td {
+  border: 1px solid #888; padding: 2px 6px; font-size: .9em; text-align: left;
+}
+table.tap-detail th { background: #e8e8e8; color: #222; }

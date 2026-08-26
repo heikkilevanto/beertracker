@@ -74,6 +74,7 @@ require "./code/mainlist.pm"; # The main "full" list
 require "./code/beerboard.pm"; # The beer board for the current bar
 require "./code/scrapeboard.pm"; # Scraping and updating beer boards
 require "./code/taps.pm"; # Updating tap_beers table
+require "./code/taphistory.pm"; # Tap Timeline (location tap history)
 require "./code/inputs.pm"; # Helper routines for input forms
 require "./code/listrecords.pm"; # A way to produce a nice list from db records
 require "./code/aboutpage.pm"; # The About page
@@ -413,6 +414,8 @@ if ( $c->{op} =~ /Board/i ) {
   }
 } elsif ( $c->{op} =~ /Location/i ) {
   locations::listlocations($c);
+} elsif ( $c->{op} =~ /Taps/i ) {
+  taphistory::taphistory($c);
 } elsif ( $c->{op} =~ /migrate/i ) {
   migrate::migrate_form($c);
 } elsif ( $c->{op} =~ /Export/i ) {
@@ -534,6 +537,9 @@ END_STYLE
   print csslink("layout");
   print csslink("menu");
   print csslink("inputs");
+  # Tap Timeline page styles. Loaded always for simplicity; could instead be
+  # loaded conditionally from inside taphistory.pm (only when $c->{op} =~ /Taps/i).
+  print csslink("tap_timeline");
   # JS files
   print jslink("menu");
   print jslink("geo");
@@ -541,6 +547,9 @@ END_STYLE
   print jslink("inputs");
   print jslink("listrecords");
   print jslink("beerboard");
+  # Tap Timeline page JS. Loaded always for simplicity; could instead be
+  # loaded only from inside taphistory.pm (only when $c->{op} =~ /Taps/i).
+  print jslink("tap_timeline");
   print jslink("glasses");
   print jslink("comments");
   print jslink("quagga.min");
