@@ -137,6 +137,10 @@ function updateGeoFromLocation() {
           }
         }
       }
+      // Auto-check "Upd Geo" when location lacks coords (backfill), uncheck when it has them
+      if (locId !== 'new') {
+        updateCheck.checked = !hasCoords;
+      }
       latInput.disabled = hasCoords;
       lonInput.disabled = hasCoords;
       var georow = document.getElementById('georow');
@@ -237,7 +241,7 @@ var FIELD_HELP = {
   ],
   updateGeo: [
     'Update Geo',
-    'Autofilled. Update the location\'s coords',
+    'Auto-checked when location has no coords. Saves current GPS to location.',
   ],
   setdef: [
     'Set Default',
