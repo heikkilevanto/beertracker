@@ -86,6 +86,7 @@ sub fg_for {
 } # fg_for
 
 my @MON_ABBR = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+my @WDAY_ABBR = qw(Sun Mon Tue Wed Thu Fri Sat);
 
 # Format a price as Finnish euros: integer -> "54.-", fractional -> "54,50".
 sub eurofmt {
@@ -337,7 +338,10 @@ sub render_timeline {
         my $cls = "daycol" . ($weekend ? " weekend" : "");
         my $is_first = ($i == 0) || ($dd eq "01");
         my ($mon, $daytxt);
-        if ($is_first) {
+        if ($weekend) {
+            $mon = "<span class='mon wd'>" . $WDAY_ABBR[$wday] . "</span>";
+            $daytxt = "<span class='day'>$dd</span>";
+        } elsif ($is_first) {
             $mon = "<span class='mon'>" . $MON_ABBR[$mm - 1] . "</span>";
             $daytxt = "<span class='day'>'" . substr($yyyy, 2) . "</span>";
         } else {
