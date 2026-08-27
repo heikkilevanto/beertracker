@@ -223,7 +223,6 @@ sub render_location_selector {
   }
   print "</select>\n";
   print "</form>\n";
-  print " <a href='$url?o=Taps&loc=" . util::htmlesc($locparam) . "'><span>History</span></a> \n";
 
   # Collapsible controls section — initially hidden
   # Contains: datetime+Show, filter+PA+Clr, www link, Reload, Exp/Collapse
@@ -263,12 +262,13 @@ sub render_location_selector {
   # Row 3: External links (www, untappd) + Reload + Exp — all on one line
   print "<tr>\n";
   print "<td>\n";
+  print " <a href='$url?o=Taps&loc=" . util::htmlesc($locparam) . "'><span>(History)</span></a> ";
   my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
   if ($locrec && $locrec->{Website}) {
-    print "<i><a href='$locrec->{Website}' target='_blank'><span>www</span></a></i> ";
+    print "<i><a href='$locrec->{Website}' target='_blank'><span>(www)</span></a></i> ";
   }
   if ($locrec->{UntappdLink}) {
-    print "<i><a href='$locrec->{UntappdLink}' target='_blank'><span>Ut</span></a></i> ";
+    print "<i><a href='$locrec->{UntappdLink}' target='_blank'><span>(Ut)</span></a></i> ";
   }
   print "</td>\n";
   print "<td>\n";

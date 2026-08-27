@@ -298,38 +298,6 @@ sub render_timeline {
         }, $loc_id, $loc_id);
     }
 
-    # Recent scrape runs within the displayed window (for the run list).
-    # A run is approximated by any day the location's tap data changed, i.e.
-    # FirstSeen/Gone timestamps of beer rows (and the marker's LastSeen).
-    my $ssth = $c->{dbh}->prepare(q{
-        SELECT ts FROM (
-            SELECT FirstSeen AS ts FROM tap_beers
-            WHERE Location = ? AND FirstSeen >= ? AND FirstSeen < ?
-            UNION ALL
-            SELECT Gone AS ts FROM tap_beers
-            WHERE Location = ? AND Gone IS NOT NULL AND Gone >= ? AND Gone < ?
-            UNION ALL
-            SELECT LastSeen AS ts FROM tap_beers
-            WHERE Location = ? AND Tap IS NULL AND Brew IS NULL
-              AND LastSeen >= ? AND LastSeen < ?
-        ) ORDER BY ts DESC
-    });
-    $ssth->execute($loc_id, $env_start, $env_end,
-                   $loc_id, $env_start, $env_end,
-                   $loc_id, $env_start, $env_end);
-    my %bydate;
-    my %seen;
-    my @order;
-    while (my $sr = $ssth->fetchrow_hashref) {
-        my $ts = $sr->{ts};
-        my ($date, $time) = $ts =~ /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/;
-        next unless $date;
-        if (!exists $bydate{$date}) { $bydate{$date} = []; push @order, $date; }
-        next if $seen{$date}{$time}++;
-        push @{$bydate{$date}}, $time;
-    }
-    $ssth->finish;
-
     # Staleness warning (above the table)
     my $warn_html = "";
     if ($latest_scrape) {
@@ -414,7 +382,12 @@ sub render_timeline {
         print "</tr>\n";
     }
     print "</tbody></table>\n</div>\n";
-    print build_scrape_list($c, \%bydate, \@order);
+    if ($latest_scrape) {
+        my ($sc_day, $sc_time) = $latest_scrape
+            =~ /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/;
+        print "<div class='footer'>Last scraped: "
+            . util::htmlesc("$sc_day $sc_time") . "</div>\n";
+    }
 
     my $det = JSON->new->encode(\%details);
     my $kegs_json = JSON->new->encode(\%kegs);
@@ -422,12 +395,6 @@ sub render_timeline {
         . "var TAP_LOC = '" . util::htmlesc($locname) . "';\n"
         . "var TAP_DETAILS = $det;\n"
         . "var TAP_KEGS = $kegs_json;\n"
-        . "function scrapeShowMore() {\n"
-        . "  var lines = document.querySelectorAll('.scrape-line');\n"
-        . "  for (var i = 0; i < lines.length; i++) { lines[i].style.display = ''; }\n"
-        . "  var m = document.getElementById('scrape-more');\n"
-        . "  if (m) { m.style.display = 'none'; }\n"
-        . "}\n"
         . "</script>\n";
 } # render_timeline
 
@@ -462,33 +429,6 @@ sub build_cells {
     }
     return @cells;
 } # build_cells
-
-# Build the "recent scraper runs" list. One date per line, times on the same
-# line when there are multiple runs in a day. After 5 lines the remainder is
-# hidden behind an "nn more" toggle that reveals everything when clicked.
-sub build_scrape_list {
-    my ($c, $bydate, $order) = @_;
-    my $total = scalar(@$order);
-    return "<div class='scrapes'></div>\n" unless $total;
-    my $show = 5;
-    my $html = "<div class='scrapes'>\n";
-    for my $i (0 .. $#$order) {
-        my $date = $order->[$i];
-        my $times = join(", ", @{$bydate->{$date}});
-        my $hidden = ($i >= $show) ? " style='display:none;'" : "";
-        $html .= "<div class='scrape-line'$hidden><span>"
-            . util::htmlesc($date) . ": " . util::htmlesc($times)
-            . "</span></div>\n";
-    }
-    if ($total > $show) {
-        my $rest = $total - $show;
-        $html .= "<div class='scrape-more' id='scrape-more'>"
-            . "<a href='#' onclick='scrapeShowMore(); return false;'>"
-            . "<span>" . $rest . " more</span></a></div>\n";
-    }
-    $html .= "</div>\n";
-    return $html;
-} # build_scrape_list
 
 ################################################################################
 # Single-tap detail view
