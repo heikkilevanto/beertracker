@@ -196,12 +196,7 @@ sub photo_form {
       . "accept='image/*' capture='environment' />\n";
   $s .= "</form>\n";
   # Auto-submit as soon as a file is picked.
-  $s .= qq{<script>
-document.getElementById('${fid}_file').addEventListener('change', function() {
-  if (this.files.length) { document.getElementById('${fid}_form').submit(); }
-});
-</script>
-};
+  $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ photoAutoSubmit('${fid}_form', '${fid}_file'); });</script>\n";
   return $s;
 } # photo_form
 
@@ -623,7 +618,7 @@ sub editphoto {
   <input type='hidden' name='photo_id'   value='$pid' />
   <input type='hidden' name='return_url' value='$return_url' />
   Type: <select name='attach_type' id='atype_$pid'
-    onchange='atype_change_$pid(this.value)'>
+    onchange='atype_change($pid, this.value)'>
     <option value='person'>Person</option>
     <option value='location'>Location</option>
     <option value='brew'>Brew</option>
@@ -634,13 +629,7 @@ sub editphoto {
   <input type='submit' name='submit' value='Add Attachment' />
 </form>
 </details>
-<script>
-function atype_change_$pid(v) {
-  ['person','location','brew'].forEach(function(t) {
-    document.getElementById('atype_' + t + '_$pid').style.display = (t === v) ? '' : 'none';
-  });
-}
-</script>
+
 <hr/>
 };
 

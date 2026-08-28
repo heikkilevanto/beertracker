@@ -112,7 +112,7 @@ sub dropdown {
   </div>
   $newdiv
 </div>
-<script>initDropdown(document.getElementById('dropdown-$inputname'));</script>
+<script>document.addEventListener('DOMContentLoaded', function(){ initDropdown(document.getElementById('dropdown-$inputname')); });</script>
 <!-- DROPDOWN END: input='$inputname' -->
 HTML
 
@@ -434,7 +434,7 @@ sub tagsinput {
   }
   $s .= "  <input type='hidden' name='$fieldname' id='$fieldname' value='" . util::htmlesc($current) . "'/>\n";
   $s .= "</div>\n";
-  $s .= "<script>initTagsInput(document.getElementById('tags-input-$fieldname'), '$fieldname');</script>\n";
+  $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ initTagsInput(document.getElementById('tags-input-$fieldname'), '$fieldname'); });</script>\n";
   # No closing </td> — parent (inputform) adds it
   return $s;
 } # tagsinput

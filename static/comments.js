@@ -82,3 +82,24 @@ function initCommentForm() {
     updateCommentFields();
   }
 }
+
+// Sync the rating dropdown's filter chip colour class (rating-rubbish/bronze/silver/gold)
+// with the currently selected rating item. Runs on load (this file is deferred).
+(function() {
+  var dd = document.getElementById('dropdown-rating');
+  if (!dd) return;
+  var hidden = dd.querySelector('input[type=hidden]');
+  var filter = dd.querySelector('.dropdown-filter');
+  var ratingClasses = ['rating-rubbish', 'rating-bronze', 'rating-silver', 'rating-gold'];
+  function syncClass() {
+    ratingClasses.forEach(function(c) { filter.classList.remove(c); });
+    if (!hidden.value) return;
+    var item = dd.querySelector('.dropdown-item[id="' + hidden.value + '"]');
+    if (item) {
+      var cls = Array.from(item.classList).find(function(c) { return c.startsWith('rating-'); });
+      if (cls) filter.classList.add(cls);
+    }
+  }
+  hidden.addEventListener('input', syncClass);
+  syncClass();
+})();

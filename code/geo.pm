@@ -78,7 +78,7 @@ sub geoInput {
   $hiddenclass = "class='geo-edit-links' hidden" if ($disabled);
   $s .= "<span onclick='geoclear(\"$inputprefix\")' $hiddenclass>&nbsp; (Clear)</span>\n";
   $s .= "<span onclick='geohere(\"$inputprefix\")' $hiddenclass>&nbsp; (Here)</span>\n";
-  $s .= "<script> geodist('$inputprefix');</script>\n";
+  $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ geodist('$inputprefix'); });</script>\n";
   return $s;
 } # geoInput
 

@@ -455,8 +455,10 @@ sub showmenu {
 <button id='menu-toggle'>☰ Menu</button>
 <div id='menu'></div>
 <script>
+document.addEventListener('DOMContentLoaded', function() {
     var menuData = $menu_json;
     initMenu(menuData, "menu", "menu-toggle");
+});
 </script>
 END
 }

@@ -708,22 +708,7 @@ sub trigger_background_update {
   $form .= "<input type='hidden' name='loc' value='$locparam'>";
   $form .= "</form>";
   print $form;
-  print "<script>
-    setTimeout(() => {
-      fetch('$c->{url}', {
-        method: 'POST',
-        body: new FormData(document.getElementById('$form_id'))
-      }).then(response => {
-        if (response.ok) {
-          console.log('Background update completed successfully');
-        } else {
-          console.error('Background update failed with status', response.status);
-        }
-      }).catch(error => {
-        console.error('Background update error:', error);
-      });
-    }, 3000);
-  </script>\n";
+  print "<script>document.addEventListener('DOMContentLoaded', function(){ scheduleBackgroundUpdate('$form_id', '$c->{url}'); });</script>\n";
 }
 
 

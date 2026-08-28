@@ -122,3 +122,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// Schedule a background POST of the board-controls form a few seconds after load,
+// so server-side filtering/state updates happen without blocking the page.
+function scheduleBackgroundUpdate(formId, url) {
+  setTimeout(function() {
+    var form = document.getElementById(formId);
+    if (!form) return;
+    fetch(url, {
+      method: 'POST',
+      body: new FormData(form)
+    }).then(function(response) {
+      if (response.ok) {
+        console.log('Background update completed successfully');
+      } else {
+        console.error('Background update failed with status', response.status);
+      }
+    }).catch(function(error) {
+      console.error('Background update error:', error);
+    });
+  }, 3000);
+}

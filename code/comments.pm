@@ -334,26 +334,6 @@ sub commentform {
   $s .= "  <td style='$lcol'>Rating</td>\n";
   $s .= "  <td>\n";
   $s .= inputs::dropdown($c, "rating", $rat_id, $rat_name, $ratopts);
-  $s .= qq{  <script>
-(function(){
-  var dd = document.getElementById('dropdown-rating');
-  if (!dd) return;
-  var hidden = dd.querySelector('input[type=hidden]');
-  var filter = dd.querySelector('.dropdown-filter');
-  var ratingClasses = ['rating-rubbish','rating-bronze','rating-silver','rating-gold'];
-  function syncClass() {
-    ratingClasses.forEach(function(c){filter.classList.remove(c);});
-    if (!hidden.value) return;
-    var item = dd.querySelector('.dropdown-item[id="'+hidden.value+'"]');
-    if (item) {
-      var cls = Array.from(item.classList).find(function(c){return c.startsWith('rating-');});
-      if (cls) filter.classList.add(cls);
-    }
-  }
-  hidden.addEventListener('input', syncClass);
-  syncClass();
-})();
-  </script>\n};
   $s .= "  </td>\n";
   $s .= "</tr>\n";
 
@@ -484,7 +464,7 @@ sub commentform {
   # JS: show/hide rows based on comment type, and "show all" toggle
   my $glass_is_empty = 0;
   $glass_is_empty = 1 if ($com->{glass_brewtype} && glasses::isemptyglass($com->{glass_brewtype}));
-  $s .= "<script>var glassIsEmpty = $glass_is_empty; initCommentForm();</script>\n";
+    $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ var glassIsEmpty = $glass_is_empty; initCommentForm(); });</script>\n";
 
   return $s;
 } # commentform

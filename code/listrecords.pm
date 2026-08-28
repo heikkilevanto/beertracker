@@ -190,37 +190,6 @@ sub listrecords {
 
   my $s = "";
   $s .= "<!-- listrecords: $sql -->\n";
-  $s .= "<style>
-    .lr-wrapper { overflow-x: auto; }
-    table[data-page-size] { border-collapse: separate; border-spacing: 0; }
-    .top-border td { border-top: 2px solid white; }
-    .null-value { color: #999; font-style: italic; }
-    .filtering-active { filter: brightness(1.3); }
-    tbody[data-lr-fs] > tr[data-first] > td { white-space: nowrap; }
-    .lr-compact thead > tr { display: none; }
-    .lr-compact .lr-page-nav-div { display: none !important; }
-    .lr-help-popup {
-      position: fixed; z-index: 2000; left: 50%; top: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--altbgcolor, #2a3a4a);
-      border: 1px solid #888; border-radius: 8px;
-      padding: 16px 20px; max-width: 400px; width: 90%;
-      box-shadow: 4px 4px 16px rgba(0,0,0,0.6);
-      font-size: 0.9em; line-height: 1.6; color: #fff;
-      display: none;
-    }
-    .lr-help-popup-close {
-      float: right; cursor: pointer; font-weight: bold;
-      color: #999; font-size: 1.2em; margin-left: 8px;
-    }
-    .lr-help-popup-close:hover { color: #fff; }
-    .lr-help-popup h3 { margin: 0 0 8px 0; }
-    .lr-help-popup ul { margin: 4px 0; padding-left: 1.5em; }
-    .lr-help-popup kbd {
-      background: #444; border: 1px solid #666; border-radius: 3px;
-      padding: 0 4px; font-family: inherit;
-    }
-    </style>\n";
 
   # Header bar — always rendered, two lines
   $s .= "<div class='lr-wrapper' data-lr-wrapper>\n";
@@ -891,7 +860,7 @@ sub listrecords {
             . "<b>" . util::htmlesc($fn) . "</b>: </span>\n";
       }
       $s .= "</div>\n";
-      $s .= "<script>lr_update_footer(document.getElementById('$fid'));<\/script>\n";
+      $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ lr_update_footer(document.getElementById('$fid')); });<\/script>\n";
     }
   }
   if ($rowcount > 0) {
@@ -901,7 +870,7 @@ sub listrecords {
   $s .= "<!-- listrecords: table body done -->\n";
 
   if ($geotable) {
-    $s .= "<script>geotabledist();</script>\n";
+    $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ geotabledist(); });</script>\n";
   }
   if ( $browsersortcol ) {
     my $sort_idx;
@@ -912,17 +881,17 @@ sub listrecords {
       }
     }
     if ( defined $sort_idx ) {
-      $s .= "<script>autoSortTable('autosort-table', $sort_idx, true);</script>\n";
+      $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ autoSortTable('autosort-table', $sort_idx, true); });</script>\n";
     }
   }
-  $s .= "<script>document.querySelectorAll('[data-lr-wrapper] table').forEach(function(t){lr_paginate(t);});<\/script>\n";
+  $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ document.querySelectorAll('[data-lr-wrapper] table').forEach(function(t){lr_paginate(t);}); });<\/script>\n";
   if ($initial_filter) {
     for my $i (0..$#fields) {
       if (exists $initial_filter->{$fields[$i]}) {
         my $v = $initial_filter->{$fields[$i]};
         $v =~ s/\\/\\\\/g;
         $v =~ s/'/\\'/g;
-        $s .= "<script>autoFilterTable($i, '$v');<\/script>\n";
+        $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ autoFilterTable($i, '$v'); });</script>\n";
         last;
       }
     }

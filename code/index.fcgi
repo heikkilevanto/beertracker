@@ -497,7 +497,7 @@ sub jslink {
   my $module = shift;
   my $fn = "static/$module.js";
   my $mtime = (stat($fn))[9] || time;
-  return "<script src='$fn?m=$mtime'></script>\n";
+  return "<script defer src='$fn?m=$mtime'></script>\n";
 }
 
 sub htmlhead {
@@ -538,6 +538,7 @@ END_STYLE
   print csslink("layout");
   print csslink("menu");
   print csslink("inputs");
+  print csslink("listrecords");
   # Tap Timeline page styles. Loaded always for simplicity; could instead be
   # loaded conditionally from inside taphistory.pm (only when $c->{op} =~ /Taps/i).
   print csslink("tap_timeline");
@@ -553,6 +554,10 @@ END_STYLE
   print jslink("tap_timeline");
   print jslink("glasses");
   print jslink("comments");
+  print jslink("brews");
+  print jslink("locations");
+  print jslink("photos");
+  print jslink("mainlist");
   print jslink("quagga.min");
   print jslink("barcode");
   my $mobile_js = $c->{mobile} ? "true" : "false";

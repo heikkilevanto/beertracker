@@ -446,21 +446,12 @@ sub adjustment_form {
       <button type='submit' style='font-size:small;'>Add empty</button>
     </form>
     </div>
-    <script>
-    (function() {
-      const tables = document.querySelectorAll('table');
-      const lastTable = tables[tables.length - 1];
-      lastTable.style.cursor = 'pointer';
-      lastTable.onclick = function() {
-        const form = document.getElementById('adjform_$form_id');
-        form.style.display = form.style.display === 'none' ? 'inline' : 'none';
-      };
-    })();
-    </script>};
+    <script>document.addEventListener('DOMContentLoaded', function(){ initAdjForm('$form_id'); });</script>
+};
   } else {
     # No adjustment - show entry form
     $html .= qq{<div id='adjform_$form_id' style='display:none;'>
-    <form method='POST' style='display:inline; margin-left:1em;' onsubmit='return updateAdjustment_$form_id();'>
+      <form method='POST' style='display:inline; margin-left:1em;' onsubmit='return updateAdjustment(\"$form_id\", $locprsum);'>
       <span style='font-size:small;'>Expected: ${locprsum}.-, Paid:</span>
       <input name='actualpaid' id='actualpaid_$form_id' size='4' required style='font-size:small;'/>
       <input type='hidden' name='o' value='Graph'/>
@@ -493,28 +484,8 @@ sub adjustment_form {
       <button type='submit' style='font-size:small;'>Add empty</button>
     </form>
     </div>
-    <script>
-    function updateAdjustment_$form_id() {
-      const actualInput = document.getElementById('actualpaid_$form_id');
-      const actual = parseFloat(actualInput.value) || 0;
-      const expected = $locprsum;
-      const diff = actual - expected;
-      document.getElementById('pr_$form_id').value = diff;
-      const pct = expected > 0 ? Math.round((diff / expected) * 100) : 0;
-      document.getElementById('note_$form_id').value = 'Expected: ' + expected + '.-, Paid: ' + actual + '.-, Diff: ' + diff + '.- =' + pct + '%' ;
-      document.getElementById('subtype_$form_id').value = diff >= 0 ? 'Up' : 'Dn';
-      return true;
-    }
-    (function() {
-      const tables = document.querySelectorAll('table');
-      const lastTable = tables[tables.length - 1];
-      lastTable.style.cursor = 'pointer';
-      lastTable.onclick = function() {
-        const form = document.getElementById('adjform_$form_id');
-        form.style.display = form.style.display === 'none' ? 'inline' : 'none';
-      };
-    })();
-    </script>};
+    <script>document.addEventListener('DOMContentLoaded', function(){ initAdjForm('$form_id'); });</script>
+};
   }
   $html .= "<br/>\n";
   return $html;
