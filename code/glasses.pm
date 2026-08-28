@@ -258,7 +258,7 @@ sub maininputform {
   # Javascript trickery
   # The barcode map drives scanning: barcode -> {brew, vol, price, alc, def}.
   $html .= "<script id='barcode-map' type='application/json'>" . barcodemap($c) . "</script>\n";
-  $html .= "<script defer>initGlassForm();</script>\n";
+  $html .= "<script>document.addEventListener('DOMContentLoaded', function(){ initGlassForm(); });</script>\n";
   cache::set($c, $cache_key, $html);
   print $html;
 } # maininputform

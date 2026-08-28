@@ -21,11 +21,17 @@ function updateAdjustment(formId, expected) {
   return true;
 }
 
-// Wire the last table's click to toggle its adjustment form.
+// Wire the summary table (the element right before the adjform div) click to
+// toggle its adjustment form. Binding to the specific preceding table keeps each
+// row independent regardless of when this runs (deferred / DOMContentLoaded).
 function initAdjForm(formId) {
-  var tables = document.querySelectorAll('table');
-  var lastTable = tables[tables.length - 1];
-  if (!lastTable) return;
-  lastTable.style.cursor = 'pointer';
-  lastTable.onclick = function() { toggleAdjForm(formId); };
+  var adj = document.getElementById('adjform_' + formId);
+  if (!adj) return;
+  var table = adj.previousElementSibling;
+  while (table && (table.tagName !== 'TABLE')) {
+    table = table.previousElementSibling;
+  }
+  if (!table) return;
+  table.style.cursor = 'pointer';
+  table.onclick = function() { toggleAdjForm(formId); };
 }
