@@ -461,7 +461,7 @@ sub listrecords {
   $s .= "</thead>\n";
   $s .=  "<!-- listrecords: table headers done, now the body -->\n";
 
-  my $cutoff = util::datestr("%F", -7);  # a week ago, display full date
+  my $cutoff = dateutil::datestr("%F", -7);  # a week ago, display full date
 
   my ($rowcount, $prev_gap) = (0, 0);
   while ( my @rec = $list_sth->fetchrow_array ) {
@@ -671,7 +671,7 @@ sub listrecords {
         }
       } elsif ( $fn eq "Last" || $fn eq "LastProd" ) {
         if ( $v ne '' ) {
-          my ($date, $wd, $time) = util::splitdate($v);
+          my ($date, $wd, $time) = dateutil::splitdate($v);
           my $disp = "$time $wd";
           $disp = "$date" if ( $date lt $cutoff );
           $data_attrs .= " data-sort-key='$date $time'";
@@ -776,7 +776,7 @@ sub listrecords {
         }
       } elsif ( $fn eq "Day" ) {
         if ($v) {
-          my ($date, $wd) = util::splitdate($v);
+          my ($date, $wd) = dateutil::splitdate($v);
           $wd =~ s/Sun/<b>Sun<\/b>/;
           $v = "<a href='$url?o=Graph&date=$date&ndays=1'><span>$date $wd</span></a>";
         }

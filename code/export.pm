@@ -447,7 +447,7 @@ sub make_tarball {
   my $sql_text  = "-- Export of BeerTracker data\n";
   $sql_text    .= "-- for user '$export_username'\n";
   $sql_text    .= "-- Date range: $datefrom to $dateto\n";
-  $sql_text    .= "-- Export done at " . util::datestr() . "\n\n";
+  $sql_text    .= "-- Export done at " . dateutil::datestr() . "\n\n";
   for my $t (@$tables) {
     $sql_text .= $t->{sql} . "\n";
   }
@@ -487,7 +487,7 @@ sub make_tarball {
   # Ensure destination photo dir exists and build tar path
   my $export_photodir = user_photodir($c, $export_username);
   make_path($export_photodir);
-  my $now_stamp = util::datestr("%Y%m%d-%H%M%S", 0, 1);
+  my $now_stamp = dateutil::datestr("%Y%m%d-%H%M%S", 0, 1);
   my $tarname = "beertracker_export_${export_username}_${now_stamp}.tgz";
   my $tarpath = "$export_photodir/$tarname";
 

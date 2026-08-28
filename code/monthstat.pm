@@ -81,8 +81,8 @@ sub monthstat {
   $pngfile =~ s/\.plot/-stat.png/;
 
   # Use filtered end month for x-axis range, or current date if not filtered
-  my $lasty      = util::datestr( "%Y", 0 );
-  my $lastm      = util::datestr( "%m", 0 );
+  my $lasty      = dateutil::datestr( "%Y", 0 );
+  my $lastm      = dateutil::datestr( "%m", 0 );
   if ( $gend ) {
     if ( $gend =~ /^(\d{4})-(\d{2})/ ) {
       $lasty = $1;
@@ -92,7 +92,7 @@ sub monthstat {
 
   my $lastym     = "$lasty-$lastm";
   # Use actual last day from data when filtering to past months to avoid inflating averages
-  my $dayofmonth = util::datestr("%d");
+  my $dayofmonth = dateutil::datestr("%d");
   $dayofmonth = $lastmonthday if ($gend && $lastmonthday);
   # Don't count today unless there are beers recorded for it
   if (!$gend && $lastmonthday && $lastmonthday < $dayofmonth) {

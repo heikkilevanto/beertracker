@@ -169,7 +169,7 @@ sub makedatafile {
   my $g = shift;
   my $c = $g->{c};
 
-  my $today = util::datestr("%F");
+  my $today = dateutil::datestr("%F");
   my $start = Time::Piece->strptime( $g->{start}, "%Y-%m-%d" );
   my $end = Time::Piece->strptime( $g->{end}, "%Y-%m-%d" );
   $g->{range} = ($end - $start) / $oneday;
@@ -383,8 +383,8 @@ sub graph {
   $g->{c} = $c;
   $g->{imgsz} = "640,480";
   # Date range, default to 30 days leading to tomorrow
-  $g->{start} = util::param($c,"gstart", util::datestr("%F",-30) );
-  $g->{end} = util::param($c,"gend", util::datestr("%F",1) );
+  $g->{start} = util::param($c,"gstart", dateutil::datestr("%F",-30) );
+  $g->{end} = util::param($c,"gend", dateutil::datestr("%F",1) );
   # "price" shows the money spent per glass instead of the number of drinks
   $g->{mode} = "";
   $g->{mode} = "price" if ( util::param($c,"gmode","") eq "price" );

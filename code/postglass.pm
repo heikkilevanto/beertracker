@@ -178,7 +178,7 @@ sub postglass {
     $glass->{Id}, $c->{username} );
   print { $c->{log} } "Updated glass id '$c->{edit}'\n";
   my ($effdate) = db::queryarray($c, "SELECT strftime('%Y-%m-%d', ?, '-06:00')", $glass->{Timestamp});
-  my $today = util::datestr("%F");
+  my $today = dateutil::datestr("%F");
   my $datepart = ($effdate && $effdate lt $today) ? "&date=$effdate" : "";
   $c->{redirect_url} = "$c->{url}?o=$c->{op}$datepart" if $effdate;
 
@@ -272,8 +272,8 @@ sub postglass {
 sub gettimestamp {
   my $c = shift;
   my $glass = shift;
-  my $d = util::param($c, "date") || util::datestr("%F",0,1);
-  my $t = util::param($c, "time") || util::datestr("%H:%M",0,1);  # Precise time
+  my $d = util::param($c, "date") || dateutil::datestr("%F",0,1);
+  my $t = util::param($c, "time") || dateutil::datestr("%H:%M",0,1);  # Precise time
   if ( $c->{edit} ) { # Keep old values unless explicitly changed
     my ($origd, $origt) = split(' ',$glass->{Timestamp});
     $d = $origd if ( $d =~ /^ / );
@@ -303,14 +303,14 @@ sub gettimestamp {
     $t .= "00";
   }
   $t .= ":" if ( $t =~ /^\d+:\d+$/ ); # 21:00 -> 21:00:
-  $t .= util::datestr("%S",0,1) if ( $t =~ /^\d+:\d+:$/ );  # 21:00: -> 21:00:31
+  $t .= dateutil::datestr("%S",0,1) if ( $t =~ /^\d+:\d+:$/ );  # 21:00: -> 21:00:31
   # Get seconds from current time, to make timestamps a bit more unique and
   # sortable. We are not likely to display them ever, and even then they won't
   # matter much.
 
   # "Y" means date of yesterday
   if ( $d =~ /^Y/i ) {
-    $d = util::datestr("%F", -1, 1);
+    $d = dateutil::datestr("%F", -1, 1);
   }
 
   # "L" in date or time means 5 minutes after the previous one

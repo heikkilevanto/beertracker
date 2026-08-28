@@ -40,7 +40,7 @@ sub beerboard {
   my $as_of = undef;
   my $bd_display = "";
   if ($bd_param) {
-    $as_of = util::parse_beerboard_date($c, $bd_param);
+    $as_of = dateutil::parse_beerboard_date($c, $bd_param);
     if ($as_of) {
       $bd_display = substr($as_of, 0, 16); # YYYY-MM-DD HH:MM for display
     }
@@ -49,9 +49,7 @@ sub beerboard {
   # Compute reference epoch for "is new" checks (use $as_of if historical)
   my $ref_time = time();
   if ($as_of) {
-    if ($as_of =~ /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/) {
-      $ref_time = Time::Local::timelocal($6, $5, $4, $3, $2 - 1, $1);
-    }
+    $ref_time = dateutil::ts_epoch($as_of) // time();
   }
 
   # If showing a historical board, open the controls section by default
@@ -141,7 +139,7 @@ sub seenline {
   if ($min_date) {
     my $display_date = $min_date;
     if ($count > 1 && $max_date) {
-      $display_date .= " to " . util::reldate($max_date);
+      $display_date .= " to " . dateutil::reldate($max_date);
     }
     $seenline .= " $display_date";
   }
@@ -151,7 +149,7 @@ sub seenline {
 sub format_date_relative {
   my ($date_str, $time_str) = @_;
   return "" unless $date_str;
-  my $rel = util::reldate($date_str);
+  my $rel = dateutil::reldate($date_str);
 
   my $formatted_time = $time_str;
   $formatted_time = "($time_str)" if ($time_str && $time_str lt "06:00");

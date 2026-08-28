@@ -18,7 +18,7 @@ sub update_taps {
   my $current_ref = shift;  # Pre-fetched current board from scrapeboard.pm
   my %current = %$current_ref; # current taps from the scraper
 
-  my $now = util::now();
+  my $now = dateutil::now();
   my $taps_changed = 0;
   my %scraped_taps;
 

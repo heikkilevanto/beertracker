@@ -66,6 +66,7 @@ require "./code/glasses.pm"; # Main input for and the full list
 require "./code/postglass.pm"; # POST handling for glass records
 require "./code/comments.pm"; # Stuff for comments, ratings, and photos
 require "./code/util.pm"; # Various helper functions
+require "./code/dateutil.pm"; # Date/time helpers (moved from util and taphistory)
 require "./code/graph.pm"; # The daily graph
 require "./code/stats.pm"; # Various statistics
 require "./code/monthstat.pm"; # Monthly statistics

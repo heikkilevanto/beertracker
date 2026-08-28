@@ -137,7 +137,7 @@ sub yearbar_plot {
   # Projection marker (filled circle) for current year
   my $proj_cmd = "";
   if (defined $res->{projection} && $res->{projection} > 0) {
-    my $curryear = util::datestr("%Y");
+    my $curryear = dateutil::datestr("%Y");
     for my $i (0 .. $#$years) {
       if ($years->[$i] eq $curryear) {
         my $x = $i;
@@ -194,11 +194,11 @@ sub yearbar {
   return $res unless $res;  # no price data
 
   # Project current year's total to a full year
-  my $curryear = util::datestr("%Y");
+  my $curryear = dateutil::datestr("%Y");
   if (exists $res->{data}{$curryear}) {
     my $total = 0;
     $total += $_ for values %{$res->{data}{$curryear}};
-    my $today = util::datestr("%j");
+    my $today = dateutil::datestr("%j");
     if ($today > 0) {
       $res->{projection} = 365 * $total / $today;
     }
@@ -287,7 +287,7 @@ sub yearsummary {
       "SELECT max(cast(strftime('%j', Timestamp, '-06:00') AS integer))"
       . " FROM glasses WHERE Username = ? AND Brew IS NOT NULL"
       . " AND strftime('%Y', Timestamp, '-06:00') = ?",
-      undef, $c->{username}, util::datestr("%Y"));
+      undef, $c->{username}, dateutil::datestr("%Y"));
     $lastday = 0 unless $lastday && $lastday > 0;
   }
 
@@ -366,19 +366,19 @@ sub yearsummary {
     my $is_sofar = $sofar;
     if ($sofar) {    # Project to the whole year
       $sofar = "";
-      $days  = util::datestr("%j");
+      $days  = dateutil::datestr("%j");
     }
     # For the user's first year, adjust divisor to count from
     # their first entry, not from Jan 1
     if ($firstyear && $y eq $firstyear && $firstday > 1) {
-      if ($y eq util::datestr("%Y")) {
-        $days = util::datestr("%j") - $firstday + 1;
+      if ($y eq dateutil::datestr("%Y")) {
+        $days = dateutil::datestr("%j") - $firstday + 1;
       } else {
         $days = 365 - $firstday + 1;
       }
     }
     # Don't count today unless there are beers recorded for it
-    if ($is_sofar && $lastday > 0 && $lastday < util::datestr("%j")) {
+    if ($is_sofar && $lastday > 0 && $lastday < dateutil::datestr("%j")) {
       if ($firstyear && $y eq $firstyear && $firstday > 1) {
         $days = $lastday - $firstday + 1;
       } else {

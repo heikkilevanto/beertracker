@@ -167,7 +167,7 @@ sub bloodalcnow {
   my $burnrate   = $ba->{burnrate} // .10;
   return 0 unless $bodyweight; # cannot compute without bodyweight
 
-  my $now = util::datestr( "%H:%M", 0, 1);
+  my $now = dateutil::datestr( "%H:%M", 0, 1);
   my ($h,$m) = (0,0);
   ($h,$m) = ($1,$2) if ( $now =~ /^(\d?\d):(\d\d)/ );
   my $drtime = $h + $m/60;
@@ -190,7 +190,7 @@ sub locationhead {
   my $locname = $rec->{locname};
   my $locwebsite = $rec->{locwebsite} || '';
   my $locutlink  = $rec->{locutlink}  || '';
-  my ( $date, $wd ) = util::splitdate($rec->{effdate} );
+  my ( $date, $wd ) = dateutil::splitdate($rec->{effdate} );
   my $html = "";
   my $display = "@" . $locname;
   $html .= "<br/>";
@@ -701,7 +701,7 @@ sub filtered_list {
 sub mainlist {
   my $c = shift;
   $form_counter = 0;  # Reset counter for each page load
-  my $date = util::param($c,"date",util::datestr("%F") );
+  my $date = util::param($c,"date",dateutil::datestr("%F") );
   my $ndays = util::paramnumber($c, "ndays", 7 ) || 7;
   # If no explicit date= param, try to derive from e= (glass) or ec= (comment)
   my $derived_date;

@@ -538,7 +538,7 @@ sub editcomment {
 
   # Context header, shows wha this comment refers to
   if ($com && $com->{Glass}) {
-    my ($date, $wd) = util::splitdate($com->{effdate});
+    my ($date, $wd) = dateutil::splitdate($com->{effdate});
     my $glass_url = "$c->{url}?o=Full&e=$com->{Glass}&date=$date&ndays=1";
     print "On: <a href='$glass_url'><span>$wd $date $com->{effhm}";
     print " \@$com->{locname}" if $com->{locname};
@@ -564,7 +564,7 @@ sub editcomment {
           LEFT JOIN brews b ON b.Id = g.Brew
           WHERE g.Id = ? AND g.Username = ?}, $prefill_glass, $c->{username});
     if ($gdate) {
-      my ($date, $wd) = util::splitdate($gdate);
+      my ($date, $wd) = dateutil::splitdate($gdate);
       print "On: <a href='$c->{url}?o=Full&e=$prefill_glass&date=$date&ndays=1'>" .
             "<span>$wd $date";
       print " \@$gloc" if $gloc;
@@ -645,7 +645,7 @@ sub postcomment {
     ($ts) = db::queryarray($c,
       "SELECT Timestamp FROM glasses WHERE Id = ?", $glass);
   }
-  $ts //= util::datestr("%Y-%m-%d %H:%M:%S", 0, 1);
+  $ts //= dateutil::datestr("%Y-%m-%d %H:%M:%S", 0, 1);
 
   if ( $person && $person eq "new" ) {  # Adding a new person via dropdown-new form
     my $newname = util::param($c,"newpersonName") || undef;
@@ -699,7 +699,7 @@ sub postcomment {
     $effdate = db::glasseffdate($c, $glass, $c->{username});
   }
    if ( $effdate ) {
-     my $today = util::datestr("%F");
+     my $today = dateutil::datestr("%F");
       my $datepart = ($effdate && $effdate lt $today) ? "&date=$effdate" : "";
      $c->{redirect_url} = "$c->{url}?o=Full$datepart";
    } else {

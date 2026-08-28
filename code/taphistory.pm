@@ -33,48 +33,6 @@ my %PERIOD = ( "14d" => 14, "30d" => 30, "3m" => 90, "6m" => 180, "1y" => 365 );
 # Helpers
 ################################################################################
 
-# Effective day of a local timestamp, shifted by the app's -6h day convention
-# so late-night drinking counts as the previous day. Returns "YYYY-MM-DD".
-sub eff_day_of {
-    my ($ts) = @_;
-    return "" unless $ts;
-    $ts =~ /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/;
-    return "" unless $1;
-    my $epoch = timelocal($6, $5, $4, $3, $2 - 1, $1 - 1900);  # local
-    $epoch -= 6 * 3600;
-    my ($Y, $M, $D) = (localtime($epoch))[5, 4, 3];
-    return sprintf("%04d-%02d-%02d", $Y + 1900, $M + 1, $D);
-} # eff_day_of
-
-# Parse an ISO "YYYY-MM-DD HH:MM:SS" timestamp to a local epoch.
-sub ts_epoch {
-    my ($ts) = @_;
-    return undef unless $ts;
-    $ts =~ /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/;
-    return undef unless $1;
-    return timelocal($6, $5, $4, $3, $2 - 1, $1 - 1900);  # local
-} # ts_epoch
-
-# Add (or subtract) a number of calendar days to a "YYYY-MM-DD" string.
-# Uses local noon so DST transitions do not shift the derived date.
-sub date_plus_days {
-    my ($datestr, $k) = @_;
-    $datestr =~ /^(\d{4})-(\d{2})-(\d{2})/;
-    my $epoch = timelocal(0, 0, 12, $3, $2 - 1, $1 - 1900) + $k * 86400;
-    my ($Y, $M, $D) = (localtime($epoch))[5, 4, 3];
-    return sprintf("%04d-%02d-%02d", $Y + 1900, $M + 1, $D);
-} # date_plus_days
-
-# Whole-day difference (b - a) between two "YYYY-MM-DD" strings, at local noon.
-sub day_diff {
-    my ($a, $b) = @_;
-    $a =~ /^(\d{4})-(\d{2})-(\d{2})/;
-    my $ea = timelocal(0, 0, 12, $3, $2 - 1, $1 - 1900);
-    $b =~ /^(\d{4})-(\d{2})-(\d{2})/;
-    my $eb = timelocal(0, 0, 12, $3, $2 - 1, $1 - 1900);
-    return int(($eb - $ea) / 86400);
-} # day_diff
-
 # Foreground color for a hex background, matching styles::brewtextstyle.
 sub fg_for {
     my ($c, $hex) = @_;
@@ -179,21 +137,21 @@ sub render_timeline {
 
     # Reference "now" anchored on the chosen From day (first/rightmost column)
     my $end_ref = "$from 12:00:00";
-    my $end_day = eff_day_of($end_ref);
-    my $start_day = date_plus_days($end_day, -($days - 1));
+    my $end_day = dateutil::eff_day_of($end_ref);
+    my $start_day = dateutil::date_plus_days($end_day, -($days - 1));
 
     # Day buckets (effective day D -> local half-open [D 06:00, (D+1) 06:00))
     my @buckets;
     for my $k (0 .. $days - 1) {
-        my $D = date_plus_days($start_day, $k);
+        my $D = dateutil::date_plus_days($start_day, $k);
         push @buckets, {
             day   => $D,
             bs    => $D . " 06:00:00",
-            be    => date_plus_days($D, 1) . " 06:00:00",
+            be    => dateutil::date_plus_days($D, 1) . " 06:00:00",
         };
     }
     my $env_start = $start_day . " 06:00:00";
-    my $env_end   = date_plus_days($end_day, 1) . " 06:00:00";
+    my $env_end   = dateutil::date_plus_days($end_day, 1) . " 06:00:00";
 
     # Fetch overlapping tap periods
     my $sth = $c->{dbh}->prepare(q{
@@ -242,8 +200,8 @@ sub render_timeline {
 
         my $ge = $r->{Gone};
         my $fs_day = substr($r->{FirstSeen}, 0, 10);
-        my $ge_day = $ge ? substr($ge, 0, 10) : eff_day_of($end_ref);
-        my $dur = day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
+        my $ge_day = $ge ? substr($ge, 0, 10) : dateutil::eff_day_of($end_ref);
+        my $dur = dateutil::day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
 
         my $rec = {
             bid    => $bid,
@@ -302,7 +260,7 @@ sub render_timeline {
     # Staleness warning (above the table)
     my $warn_html = "";
     if ($latest_scrape) {
-        my $ep = ts_epoch($latest_scrape);
+        my $ep = dateutil::ts_epoch($latest_scrape);
         if ($ep && (time() - $ep) > 86400) {
             my $days = int((time() - $ep) / 86400);
             my $latest_day = substr($latest_scrape, 0, 10);
@@ -470,8 +428,8 @@ sub render_single_tap {
     while (my $r = $sth->fetchrow_hashref) {
         my $ge = $r->{Gone};
         my $fs_day = substr($r->{FirstSeen}, 0, 10);
-        my $ge_day = $ge ? substr($ge, 0, 10) : eff_day_of($end_ref);
-        my $dur = day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
+        my $ge_day = $ge ? substr($ge, 0, 10) : dateutil::eff_day_of($end_ref);
+        my $dur = dateutil::day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
         my $gone_disp = $ge ? substr($ge, 0, 10) : "still on";
         my @prices = keg_prices($r);
         my $price = @prices ? join(" ", map { util::htmlesc($_) } @prices) : "";

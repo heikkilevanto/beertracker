@@ -234,8 +234,8 @@ sub listbrewglasses {
   print "</div>\n";
   print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
   if ( $glcount) {
-    my $first = util::reldate($firstrec->{Date});
-    my $last  = util::reldate($lastrec->{Date});
+    my $first = dateutil::reldate($firstrec->{Date});
+    my $last  = dateutil::reldate($lastrec->{Date});
     if ( $first eq $last ) {
       print "$glcount Glasses on $first\n";
     } else {
