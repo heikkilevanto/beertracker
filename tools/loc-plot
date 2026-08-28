@@ -9,6 +9,7 @@ OUTFILE="$REPO/loc-stat.png"
 
 # Run loc-stat, skip the 2-line header; emit data as YYYY-MM-01 for full-date timefmt
 # Columns: date  loc  hours
+echo "Counting lines"
 DATA=$(cd "$REPO" && tools/loc-stat | tail -n +3 | awk '{print $1 "-01", $2, $3}')
 
 FIRST_YEAR=$(echo "$DATA" | head -1 | cut -d- -f1)
@@ -17,6 +18,7 @@ XMIN="$((FIRST_YEAR - 1))-07-01"
 XMAX="$((LAST_YEAR  + 1))-06-01"
 
 # Build gnuplot arrow+label commands for each tag
+echo "Getting version tags"
 TAG_CMDS=$(cd "$REPO" && git tag --sort=creatordate --format='%(creatordate:short) %(refname:short)' \
   | awk '
     BEGIN { n=0 }
@@ -31,6 +33,7 @@ TAG_CMDS=$(cd "$REPO" && git tag --sort=creatordate --format='%(creatordate:shor
     }
   ')
 
+echo "Plotting"
 gnuplot << GNUPLOT
 set terminal png size 1400,700
 set output "$OUTFILE"
