@@ -218,11 +218,10 @@ sub maininputform {
   my $pr = $rec->{Price} // "";
   $pr .= ".-" if ($pr && $pr > 0);
    $html .= "<input name='pr' id='pr' placeholder='pr' $sz4 value='$pr' />\n";
-   $html .= "<label data-empty=2 style='font-size:small; margin-left:0.5em;'><input type='checkbox' name='addcomment' id='addcomment' /> comment</label>\n";
    $html .= "</td></tr>\n";
 
   # Buttons
-  $html .= "<tr><td>\n";
+  $html .= "<tr style='white-space:nowrap'><td>\n";
   $html .= " <input type='hidden' name='o' value='$c->{op}' />\n";
   if ($c->{edit}) {
     $html .= " <input type='hidden' name='e' value='$rec->{Id}' />\n";
@@ -244,6 +243,7 @@ sub maininputform {
     $html .= " <a href='$c->{url}?o=$c->{op}'><span>cancel</span></a>\n";
     $html .= "</span>\n";
   }
+  $html .= "<label data-empty=2 style='font-size:small; margin-left:0.5em;'><input type='checkbox' name='addcomment' id='addcomment' /> comment</label>\n";
   $html .= "&nbsp;" ;
   $html .= "</td></tr>\n";
   $html .= "</table>\n";
