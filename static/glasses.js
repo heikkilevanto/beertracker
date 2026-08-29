@@ -394,5 +394,13 @@ function initGlassForm() {
   // (syncGeoDisabled is called again inside the GPS callback after checkbox is set)
   updateGeoFromLocation();
 
+  // Show a marker when a typed/scanned barcode differs from the selected
+  // brew's own code (so the user knows Upd Br is needed to attach it).
+  const barcodeInput = document.getElementById('barcode');
+  if (barcodeInput) {
+    barcodeInput.addEventListener('input', updateBarcodeMarker);
+  }
+  updateBarcodeMarker();
+
   initFieldHelp();
 }

@@ -247,6 +247,15 @@
   font-size: 0.85em;
 }
 
+/* Marker shown after the barcode field when the entered code differs from
+   the selected brew's own default code (Upd Br is needed to attach it). */
+.barcode-marker {
+  font-size: small;
+  color: #e0a000;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
 /* Inputform table layout */
 .inputform-table td:first-child {
   white-space: nowrap;

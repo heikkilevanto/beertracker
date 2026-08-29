@@ -179,7 +179,11 @@ sub maininputform {
     $tap = " $tap";
   }
    $html .= "<tr id='noteline' $hidenote><td>Tap <input name='tap' value='$tap' data-rawval='$rawtap' size='2' $clr/></td><td>\n";
-   $html .= "<input name='note' placeholder='note' value='$rec->{Note}' data-note='$rawnote' size='20' onfocus='value=value.trim();select();' autocapitalize='sentences'/>\n";
+   my $note_val  = util::htmlesc($rec->{Note} // "");
+   my $note_raw  = util::htmlesc($rawnote);
+   $html .= "<input name='note' placeholder='note' value=\"$note_val\" " .
+            "data-note=\"$note_raw\" size='20' " .
+            "onfocus='value=value.trim();select();' autocapitalize='sentences'/>\n";
    $html .= "</td></tr>\n";
 
    # Barcode for this glass, plus the override-checkbox for the brew code.
@@ -187,10 +191,12 @@ sub maininputform {
    $html .= "<tr id='barcodeline' $hidenote><td>\n";
    $html .= "<label><input type='checkbox' name='setbrewcode' id='setbrewcode' /> Upd Br</label>\n";
    $html .= "</td><td>\n";
-   $html .= "<input id='barcode' name='barcode' value='$barcode' " .
-            "placeholder='Barcode' size='12' $clr/>\n";
-   $html .= " <button type='button' onclick='startBarcodeScanning(\"barcode\")'>Scan</button>\n";
-   $html .= "</td></tr>\n";
+    $html .= "<input id='barcode' name='barcode' value='$barcode' " .
+             "placeholder='Barcode' size='12' $clr/>\n";
+    $html .= " <button type='button' onclick='startBarcodeScanning(\"barcode\")'>Scan</button>\n";
+    $html .= "</td></tr>\n";
+    $html .= "<tr id='barcode-marker-row' $hidenote><td></td>" .
+             "<td><span id='barcode-marker' class='barcode-marker' hidden></span></td></tr>\n";
 
    my $hidedgeo = "hidden";
    if ( $c->{edit} ) {

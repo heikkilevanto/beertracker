@@ -255,12 +255,16 @@ function initDropdown(container) {
       filterItems(filterInput, dropdownList);
     } else {
       applyItemSelection(item, filterInput, hiddenInput, dropdownList);
-      // A brew picked manually has no barcode; clear any stale value.
+      // A manually picked brew keeps any barcode the user already entered
+      // (e.g. scanned earlier) so it can be attached via Upd Br. Only the
+      // Upd Br checkbox is reset. Re-enable the barcode input in case a
+      // previous scan had disabled it (a matched brew's own code).
       if (hiddenInput.name === 'Brew') {
         const barcodeInput = document.getElementById('barcode');
-        if (barcodeInput) { barcodeInput.value = ''; barcodeInput.disabled = false; }
+        if (barcodeInput) { barcodeInput.disabled = false; }
         const checkbox = document.getElementById('setbrewcode');
         if (checkbox) { checkbox.checked = false; checkbox.disabled = false; }
+        updateBarcodeMarker();
       }
     }
   });
@@ -406,6 +410,54 @@ function initDropdown(container) {
       // Disable only when the code already is the brew's default: not
       // submitting it then loses nothing (postglass keeps the stored value).
       barcodeInput.disabled = (def === code);
+    }
+    updateBarcodeMarker();
+  }
+
+  // Build a brew-id -> default barcode map from the embedded #barcode-map JSON.
+  // A brew's own code is the entry whose def equals its key (code).
+  function getBrewDefaultMap() {
+    const out = {};
+    const mapEl = document.getElementById('barcode-map');
+    if (!mapEl) return out;
+    try {
+      const map = JSON.parse(mapEl.textContent);
+      for (const code in map) {
+        const e = map[code];
+        if (e && e.def && e.def === code && e.brew) {
+          out[e.brew] = code;
+        }
+      }
+    } catch (err) { /* ignore malformed map */ }
+    return out;
+  }
+
+  // Show a small marker in its own row under the barcode field when the
+  // selected brew already has a (different) default code than the one
+  // entered/scanned. Hidden when the brew has no code, no brew is selected,
+  // or the entered code matches it.
+  function updateBarcodeMarker() {
+    const marker = document.getElementById('barcode-marker');
+    const markerRow = document.getElementById('barcode-marker-row');
+    const barcodeInput = document.getElementById('barcode');
+    const brewHidden = document.getElementById('Brew');
+    if (!marker || !barcodeInput || !brewHidden) return;
+    const brewId = brewHidden.value;
+    const entered = (barcodeInput.value || '').trim();
+    if (!brewId || brewId === 'new' || !entered) {
+      marker.hidden = true;
+      if (markerRow) markerRow.hidden = true;
+      return;
+    }
+    const brewDefaults = getBrewDefaultMap();
+    const brewCode = brewDefaults[brewId];
+    if (brewCode && brewCode !== entered) {
+      marker.textContent = 'Current code: ' + brewCode;
+      marker.hidden = false;
+      if (markerRow) markerRow.hidden = false;
+    } else {
+      marker.hidden = true;
+      if (markerRow) markerRow.hidden = true;
     }
   }
 
