@@ -249,7 +249,7 @@ sub maininputform {
     $html .= " <a href='$c->{url}?o=$c->{op}'><span>cancel</span></a>\n";
     $html .= "</span>\n";
   }
-  $html .= "<label data-empty=2 style='font-size:small; margin-left:0.5em;'><input type='checkbox' name='addcomment' id='addcomment' /> comment</label>\n";
+  $html .= "<label style='font-size:small; margin-left:0.5em;'><input type='checkbox' name='addcomment' id='addcomment' /> comment</label>\n";
   $html .= "&nbsp;" ;
   $html .= "</td></tr>\n";
   $html .= "</table>\n";
