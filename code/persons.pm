@@ -124,6 +124,14 @@ sub postperson {
   util::error ("A Person must have a name" )
     unless $name || $submit =~ /Delete/i;
   $c->{cgi}->param('Tags', util::clean_tags(util::param($c, 'Tags')));
+  # Before deleting, clear RelatedPerson references pointing to this person
+  if ( $submit =~ /Delete/i ) {
+    my $id = $c->{edit};
+    if ( $id && $id !~ /^new/i ) {
+      print { $c->{log} } "Clearing RelatedPerson references to person $id before delete\n";
+      $c->{dbh}->do("UPDATE persons SET RelatedPerson = NULL WHERE RelatedPerson = ?", undef, $id);
+    }
+  }
   db::postrecord($c, "PERSONS");
   return;
 

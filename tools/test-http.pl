@@ -686,20 +686,28 @@ sub test_person_related {
            "Person B edit form shows Location copied from Person A ($locid)");
   }
 
-  # Cleanup: delete both persons
-  ($status, $headers, $body) = req("POST", "$BASE_URL",
-      { o => "Person", e => $id_b, id => $id_b, submit => "Delete Person" });
-  $loc = assert_post_redirect($status, $headers, "Person B delete");
-  if ( defined $loc ) {
-    ($status, $headers, $body) = req("GET", $loc);
-    assert(scalar($body !~ /\Q$name_b\E/), "Person B deleted from list");
-  }
+  # Delete Person A first (while B still references it), verify B's
+  # RelatedPerson is cleared
   ($status, $headers, $body) = req("POST", "$BASE_URL",
       { o => "Person", e => $id_a, id => $id_a, submit => "Delete Person" });
   $loc = assert_post_redirect($status, $headers, "Person A delete");
   if ( defined $loc ) {
     ($status, $headers, $body) = req("GET", $loc);
     assert(scalar($body !~ /\Q$name_a\E/), "Person A deleted from list");
+  }
+  # Check Person B: RelatedPerson should be cleared after A was deleted
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Person&e=$id_b");
+  assert_page_ok($status, $body, "Person B after A delete", "Editing Person");
+  assert(scalar($body !~ /name="RelatedPerson"[^>]*value="$id_a"/),
+         "Person B RelatedPerson cleared after Person A deleted");
+
+  # Cleanup: delete Person B
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Person", e => $id_b, id => $id_b, submit => "Delete Person" });
+  $loc = assert_post_redirect($status, $headers, "Person B delete");
+  if ( defined $loc ) {
+    ($status, $headers, $body) = req("GET", $loc);
+    assert(scalar($body !~ /\Q$name_b\E/), "Person B deleted from list");
   }
 } # test_person_related
 
