@@ -771,7 +771,7 @@ sub test_glass_roundtrip {
   ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&e=$id");
   assert_page_ok($status, $body, "glass edit form", "id='mainform'");
   assert(scalar($body =~ /name='vol'[^>]*value='11c'/), "glass edit form shows vol value='11c'");
-  assert(scalar($body =~ /name='note'[^>]*value='\Q$note\E'/), "glass edit form shows the note '$note'");
+  assert(scalar($body =~ /name='note'[^>]*value="\Q$note\E"/), "glass edit form shows the note '$note'");
 
   # Update: change the note. Must resend Location/Brew/vol — postglass
   # overwrites the glass with the posted params, and a missing vol would
