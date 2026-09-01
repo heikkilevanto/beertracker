@@ -542,6 +542,7 @@ sub insertrecord {
 
   my @sqlfields; # field names in sql
   my @values; # values to insert, in the same order
+  my $new_related_person_id; # Track related person id for back-reference
   for my $f ( db::tablefields($c, $table,undef,1)) {  # 1 indicates no -prefix
     my $val = util::param($c, $inputprefix.$f );
     $val = util::normalize_country($c, $val) if $f =~ /Country$/i;
@@ -569,7 +570,8 @@ sub insertrecord {
       } elsif ( $f eq "RelatedPerson" ) {
         print { $c->{log} } "Recursing to RelatedPerson ($inputprefix) \n";
         my $def = {};
-        $val = db::insertrecord($c, "PERSONS", "newperson", $def );
+        $new_related_person_id = db::insertrecord($c, "PERSONS", "newperson", $def );
+        $val = $new_related_person_id;
         print { $c->{log} } "Returned from NewPerson, id='$val'  \n";
       }
       else {
@@ -592,6 +594,18 @@ sub insertrecord {
   $sth->execute( @values );
   my $id = $c->{dbh}->last_insert_id(undef, undef, $table, undef) || undef;
   print { $c->{log} } "Inserted $table id '$id' ". util::loglist(@values) . " \n";
+  # Set RelatedPerson back-reference and copy Location for new related persons
+  if ( $new_related_person_id && $table eq "PERSONS" && $id ) {
+    print { $c->{log} } "Setting back-reference: RelatedPerson $new_related_person_id -> $id \n";
+    $c->{dbh}->do("UPDATE persons SET RelatedPerson = ? WHERE Id = ? AND RelatedPerson IS NULL",
+                  undef, $id, $new_related_person_id);
+    my $loc = util::param($c, $inputprefix . "Location");
+    if ( $loc ) {
+      print { $c->{log} } "Copying Location $loc to related person $new_related_person_id \n";
+      $c->{dbh}->do("UPDATE persons SET Location = ? WHERE Id = ? AND Location IS NULL",
+                    undef, $loc, $new_related_person_id);
+    }
+  }
   return $id;
 } # insertrecord
 

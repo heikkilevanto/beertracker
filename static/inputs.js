@@ -234,6 +234,19 @@ function initDropdown(container) {
               newRegionInp.addEventListener('input', () => { setDropdownValue(targetRegion, newRegionInp.value); });
             }
           }
+          // Auto-fill related person sub-form from parent person fields
+          if (hiddenInput.name.match(/RelatedPerson$/i)) {
+            const form = hiddenInput.closest('form');
+            if (form) {
+              ['Description', 'Contact'].forEach(fieldName => {
+                const parentInp = form.querySelector('[name="' + fieldName + '"]');
+                const newInp = newDiv.querySelector('[name="newperson' + fieldName + '"]');
+                if (parentInp && newInp && parentInp.value && !newInp.value) {
+                  newInp.value = parentInp.value;
+                }
+              });
+            }
+          }
         }
         return;
       } else if (action === 'clr') {
