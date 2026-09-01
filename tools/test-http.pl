@@ -26,6 +26,7 @@ use Getopt::Long;
 use LWP::UserAgent;
 use HTTP::Cookies;
 use POSIX qw(strftime);  # date/time for the glass round-trip POSTs
+use URI::Escape qw(uri_escape_utf8);
 
 ################################################################################
 # Config
@@ -213,6 +214,21 @@ my @TESTS = (
   { name => "person_new",    sets => [qw(quick person persons lists newrecords)],     test => \&test_person_new },
   { name => "filter_years",  sets => [qw(quick years stats yearstat filters)],        test => \&test_filter_years },
   { name => "static_assets", sets => [qw(quick static)],                              test => \&test_static_assets },
+  # Photo edit page (harvested id)
+  { name => "photo_edit",     sets => [qw(quick photo photos lists edits)],            test => \&test_photo_edit },
+  # Graph / Months / Ratings filter variants
+  { name => "graph_gstart_gend", sets => [qw(quick graph glasses mainlist filters)],   test => \&test_graph_gstart_gend },
+  { name => "graph_gmode",    sets => [qw(quick graph glasses mainlist filters)],      test => \&test_graph_gmode },
+  { name => "months_gstart_gend", sets => [qw(quick months stats monthstat filters)],  test => \&test_months_gstart_gend },
+  { name => "ratings_year_filter", sets => [qw(quick ratings stats ratestats filters)], test => \&test_ratings_year_filter },
+  { name => "ratings_brewtype_filter", sets => [qw(quick ratings stats ratestats filters)], test => \&test_ratings_brewtype_filter },
+  # Export display mode
+  { name => "export_display", sets => [qw(quick export)],                             test => \&test_export_display },
+  # Board / Taps loc= filter
+  { name => "board_loc",      sets => [qw(quick board graph beerboard filters)],       test => \&test_board_loc },
+  { name => "taps_loc",       sets => [qw(quick taps taphistory filters)],             test => \&test_taps_loc },
+  # Full list ec= (comment-derived date)
+  { name => "full_ec",        sets => [qw(quick full glasses mainlist filters)],       test => \&test_full_ec },
   # Tap Timeline (o=Taps): GET-only smoke + content; no DB writes, so safe in 'quick'
   { name => "taps",          sets => [qw(quick taps taphistory)],                    test => \&test_taps },
   { name => "taps_single",   sets => [qw(quick taps taphistory)],                    test => \&test_taps_single },
@@ -324,6 +340,7 @@ my %OP_ID_RE = (
   "Location" => qr{o=Location&e=(\d+)},
   "Person"   => qr{o=Person&e=(\d+)},
   "Comment"  => qr{o=Comment&e=(\d+)},
+  "Photos"   => qr{o=Photos&e=(\d+)},
   "Full"     => qr{o=Full&e=(\d+)},   # glass ids, on the main list
   "Graph"    => qr{o=Graph&e=(\d+)},  # glass ids, on the Graph page
 );
@@ -512,6 +529,106 @@ sub test_filter_years {
   assert_page_ok($status, $body, "Years q=$year", "Year <b>");
   assert(scalar($body =~ /q=$year&maxl=20/), "filtered Years page still links the $year row");
 } # test_filter_years
+
+# Harvest the first scraper location name from a Board or Taps page's <select>
+sub harvest_first_loc {
+  my $body = shift;
+  if ( $body =~ /<option value='([^']+)'/ ) {
+    return $1;
+  }
+  return undef;
+} # harvest_first_loc
+
+sub test_photo_edit {
+  my $id = get_first_id("Photos");
+  if ( !defined $id ) { skipmsg("Photos list has no ids to edit"); return; }
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Photos&e=$id");
+  assert_page_ok($status, $body, "Photo edit", "Edit Photo");
+  assert(scalar($body =~ /name='submit' value='Update Photo'/), "photo edit form has the Update button");
+  assert(scalar($body =~ /name='submit' value='Delete Photo'/), "photo edit form has the Delete button");
+} # test_photo_edit
+
+sub test_graph_gstart_gend {
+  # Graph with explicit date range — verify the page renders with custom dates
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Graph&gstart=2025-01-01&gend=2025-06-01");
+  assert_page_ok($status, $body, "Graph gstart/gend", "id='mainform'");
+  assert(scalar($body =~ /gstart=2025-01-01/), "Graph gstart/gend preserves gstart in links");
+  assert(scalar($body =~ /gend=2025-06-01/), "Graph gstart/gend preserves gend in links");
+} # test_graph_gstart_gend
+
+sub test_graph_gmode {
+  # Graph in money-spent mode — the mode toggle should link back to drinks mode
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Graph&gmode=price");
+  assert_page_ok($status, $body, "Graph gmode=price", "id='mainform'");
+  assert(scalar($body =~ /gmode=price/), "Graph gmode=price preserves gmode in links");
+  # In price mode, the mode toggle link should offer 'd' (drinks) without gmode
+  assert(scalar($body =~ /o=Graph&gstart=\S+[^>]*>\s*<span[^>]*>\s*d\s*<\/span>/s),
+         "Graph gmode=price has a 'd' (drinks) toggle link");
+} # test_graph_gmode
+
+sub test_months_gstart_gend {
+  # Months with date range — verify the page renders and preserves params
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Months&gstart=2024-01&gend=2024-06");
+  assert_page_ok($status, $body, "Months gstart/gend", "Show money spent");
+  assert(scalar($body =~ /gstart=2024-01/), "Months gstart/gend preserves gstart in links");
+  assert(scalar($body =~ /gend=2024-06/), "Months gstart/gend preserves gend in links");
+} # test_months_gstart_gend
+
+sub test_ratings_year_filter {
+  # Ratings filtered by year — the page should render with a Filtered column
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Ratings&year=2024");
+  assert_page_ok($status, $body, "Ratings year=2024", "Ratings statistics");
+  assert(scalar($body =~ /Filtered/), "Ratings year=2024 shows a Filtered column");
+} # test_ratings_year_filter
+
+sub test_ratings_brewtype_filter {
+  # Ratings filtered by brew type — the page should render with a Filtered column
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Ratings&brew_type=Beer");
+  assert_page_ok($status, $body, "Ratings brew_type=Beer", "Ratings statistics");
+  assert(scalar($body =~ /Filtered/), "Ratings brew_type=Beer shows a Filtered column");
+} # test_ratings_brewtype_filter
+
+sub test_export_display {
+  # Export in display mode — should show SQL output on screen
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Export&action=display");
+  assert_page_ok($status, $body, "Export display", "Export for");
+  assert(scalar($body =~ /-- Table: \w+ \(\d+ records\)/), "Export display shows SQL table headers");
+  assert(scalar($body =~ /<pre>/), "Export display wraps SQL in <pre> blocks");
+} # test_export_display
+
+sub test_board_loc {
+  # Board with a specific location — harvest a location from the Board's <select>
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Board");
+  my $loc = harvest_first_loc($body);
+  if ( !defined $loc ) { skipmsg("Board page has no scraper locations to filter by"); return; }
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Board&loc=" . uri_escape_utf8($loc));
+  assert_page_ok($status, $body, "Board loc=$loc", "id='mainform'");
+  # The page should either show beer data or a "no beer list" message for this location
+  my $has_content = scalar($body =~ /beerboard/) || scalar($body =~ /Sorry/);
+  assert($has_content, "Board loc=$loc shows beer data or a no-data message");
+} # test_board_loc
+
+sub test_taps_loc {
+  # Taps with a specific location — harvest a location from the Taps <select>
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Taps");
+  my $loc = harvest_first_loc($body);
+  if ( !defined $loc ) { skipmsg("Taps page has no scraper locations to filter by"); return; }
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Taps&loc=" . uri_escape_utf8($loc));
+  assert_page_ok($status, $body, "Taps loc=$loc", "Taps:");
+  assert(scalar($body =~ /<table class='timeline'/), "Taps loc=$loc timeline table is rendered");
+} # test_taps_loc
+
+sub test_full_ec {
+  # Full list with ec= (comment-derived date) — harvest a comment id from the
+  # Comment list page that has a glass, then fetch Full with ec=<id>.
+  my $cid = get_first_id("Comment");
+  if ( !defined $cid ) { skipmsg("Comment list has no ids for ec= test"); return; }
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&ec=$cid");
+  assert_page_ok($status, $body, "Full ec=$cid", "id='mainform'");
+  # The page should show a date in the filter form derived from the comment's glass
+  assert(scalar($body =~ /name="date" value="\d{4}-\d{2}-\d{2}"/),
+         "Full ec=$cid derives a date from the comment's glass");
+} # test_full_ec
 
 # Static assets: served directly, not through the fcgi script
 sub test_static_assets {
