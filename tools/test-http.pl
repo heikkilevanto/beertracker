@@ -231,6 +231,7 @@ my @TESTS = (
   { name => "filter_full",   sets => [qw(full graph glasses mainlist filters)],       test => \&test_filter_full },
   # POST round-trips — dev-guarded, never in 'quick'
   { name => "person_roundtrip", sets => [qw(posts roundtrip person persons)],         test => \&test_person_roundtrip },
+  { name => "person_related",   sets => [qw(posts roundtrip person persons)],         test => \&test_person_related },
   { name => "brew_roundtrip",     sets => [qw(posts roundtrip brew brews)],             test => \&test_brew_roundtrip },
   { name => "location_roundtrip", sets => [qw(posts roundtrip location locations)],       test => \&test_location_roundtrip },
   { name => "glass_roundtrip",    sets => [qw(posts roundtrip postglass glasses)],        test => \&test_glass_roundtrip },
@@ -621,6 +622,86 @@ sub test_person_roundtrip {
   assert_page_ok($status, $body, "Person list after delete", "Persons");
    assert(scalar($body !~ /\Q$name2\E/), "Person list no longer shows the deleted record '$name2'");
 } # test_person_roundtrip
+
+sub test_person_related {
+  # Test creating a person with an inline new related person.
+  # Verifies the back-reference (RelatedPerson on B points to A) and
+  # that Location is copied from A to B.
+  my $name_a = "TST" . time() . "A";
+  my $name_b = "TST" . time() . "B";
+  get_first_id("Person");
+
+  # Get a location id to assign to Person A
+  my $locid = get_first_id("Location");
+
+  # Create Person A with Description, Contact, Location, and RelatedPerson=new
+  # The sub-form fields for the related person are prefixed with "newperson"
+  my %form = (
+    o => "Person", e => "new",
+    Name => $name_a,
+    Description => "test-desc",
+    Contact => "test-contact",
+    submit => "Insert Person",
+  );
+  $form{Location} = $locid if defined $locid;
+  # RelatedPerson=new triggers the recursive insert for Person B
+  $form{RelatedPerson} = "new";
+  $form{newpersonName} = $name_b;
+
+  my ($status, $headers, $body) = req("POST", "$BASE_URL", \%form);
+  my $loc = assert_post_redirect($status, $headers, "Person with related insert");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Person list after related insert", "Persons");
+
+  # Both persons should appear on the list
+  assert(scalar($body =~ /\Q$name_a\E/), "Person list shows Person A '$name_a'");
+  assert(scalar($body =~ /\Q$name_b\E/), "Person list shows Person B '$name_b'");
+
+  # Harvest Person A's id
+  my $id_a = id_before_text($body, "Person", $name_a);
+  assert(defined $id_a, "harvested Person A id");
+  return unless defined $id_a;
+
+  # Harvest Person B's id
+  my $id_b = id_before_text($body, "Person", $name_b);
+  assert(defined $id_b, "harvested Person B id");
+  return unless defined $id_b;
+
+  # Verify Person A's edit form shows RelatedPerson pointing to B
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Person&e=$id_a");
+  assert_page_ok($status, $body, "Person A edit form", "Editing Person");
+  assert(scalar($body =~ /name="RelatedPerson"[^>]*value="$id_b"/),
+         "Person A edit form shows RelatedPerson = Person B ($id_b)");
+
+  # Verify Person B's edit form shows RelatedPerson pointing back to A
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Person&e=$id_b");
+  assert_page_ok($status, $body, "Person B edit form", "Editing Person");
+  assert(scalar($body =~ /name="RelatedPerson"[^>]*value="$id_a"/),
+         "Person B edit form shows RelatedPerson = Person A ($id_a) (back-reference)");
+
+  # If Location was set, verify it was copied to Person B
+  if (defined $locid) {
+    assert(scalar($body =~ /name="Location"[^>]*value="$locid"/),
+           "Person B edit form shows Location copied from Person A ($locid)");
+  }
+
+  # Cleanup: delete both persons
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Person", e => $id_b, id => $id_b, submit => "Delete Person" });
+  $loc = assert_post_redirect($status, $headers, "Person B delete");
+  if ( defined $loc ) {
+    ($status, $headers, $body) = req("GET", $loc);
+    assert(scalar($body !~ /\Q$name_b\E/), "Person B deleted from list");
+  }
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Person", e => $id_a, id => $id_a, submit => "Delete Person" });
+  $loc = assert_post_redirect($status, $headers, "Person A delete");
+  if ( defined $loc ) {
+    ($status, $headers, $body) = req("GET", $loc);
+    assert(scalar($body !~ /\Q$name_a\E/), "Person A deleted from list");
+  }
+} # test_person_related
 
 sub test_brew_roundtrip {
   # Plan Task 6: create a Brew through the web, verify it on the Brew list,
