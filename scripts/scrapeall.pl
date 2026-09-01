@@ -34,6 +34,7 @@ chdir($projectroot) or die "Cannot chdir to $projectroot: $!\n";
 # Load only the modules we need
 require "./code/db.pm";
 require "./code/util.pm";
+require "./code/dateutil.pm";
 require "./code/styles.pm";
 require "./code/taps.pm";
 require "./code/scrapeboard.pm";
