@@ -1,0 +1,10 @@
+#!/bin/bash
+# Run all test suites. Exit non-zero if any suite fails.
+# Examples:
+#   ./tools/testall          # quick tests from both suites
+#   ./tools/testall all      # all tests from both suites
+
+fail=0
+perl tools/test-unit "$@" || fail=1
+perl tools/test-http "$@" || fail=1
+exit $fail

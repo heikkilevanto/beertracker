@@ -303,6 +303,24 @@ Do not edit the schema file directly; implement schema changes as migrations in
 Once a migration is committed, pulled and run on the production system, it may
 be deleted.
 
+### Testing
+Two test scripts under `tools/` exercise the application without a framework:
+
+- `tools/test-http` — GET smoke tests and POST round-trip tests against the live
+  FastCGI dev server. Covers all core ops, edit pages, filters, static assets,
+  and CRUD round-trips for person/brew/location/glass/comment records. Requires a
+  running dev server. Run with `perl tools/test-http` (quick set by default) or
+  `perl tools/test-http all` for full coverage.
+- `tools/test-unit` — Pure function unit tests for util, dateutil, geo, comments,
+  glasses, and styles modules. No HTTP, no database, instant. Run with
+  `perl tools/test-unit`.
+- `tools/testall` — Wrapper that runs both suites: `./tools/testall`.
+
+Both scripts share the same selector conventions: no args runs `quick` tests,
+`all` runs everything, module names (e.g. `util`, `dateutil`) filter by module,
+and individual test names run exactly that test. Use `-v` for verbose output.
+Round-trip tests include non-ASCII characters (Danish ø) to verify UTF-8 handling.
+
 ### Git trickery
 The git hook `pre-commit` invokes `tools/makeversion.sh` which updates the
 code/VERSION.pm with the current version number and a count of commits since,

@@ -1,0 +1,407 @@
+#!/usr/bin/perl
+# Standalone pure-function unit tests for BeerTracker modules.
+# Run from the repo root: perl tools/test-unit
+# No LWP, no HTTP, no database, no CGI. Just require modules and call functions.
+#
+# Options:
+#   -h   this help text
+#   -l   list the tests
+#   -s   list the test sets (sets keywords) with a count of tests each
+#   -v   verbose: show each PASS/FAIL line and a header per test
+#   -q   quiet: no per-test summary lines
+# Optional selector arguments (one or more) select what to run; the tests
+# matching any of them are run:
+#   (no argument)  tests tagged 'quick' (the default)
+#   all            every test
+#   testname       run exactly that test
+#   selector       anything matching a sets entry (module name or group tag)
+# Unknown selectors are silently skipped (exit 0) so testall works.
+
+use strict;
+use warnings;
+use utf8;
+use Cwd;
+use Getopt::Long;
+
+# Add code/ to @INC so modules can be required
+my $basedir = getcwd();
+push @INC, "$basedir/code";
+
+# Load modules under test
+require util;
+require dateutil;
+require geo;
+require comments;
+require glasses;
+require styles;
+
+################################################################################
+# Config
+################################################################################
+my $help = 0;
+my $list = 0;
+my $sets = 0;
+my $verbose = 0;
+my $quiet = 0;
+GetOptions( "h|help" => \$help, "l|list" => \$list, "s|sets" => \$sets,
+            "v|verbose" => \$verbose, "q|quiet" => \$quiet, )
+  or die usage();
+
+sub usage {
+  return "Usage: $0 [options] [selector]\n" .
+         "  -h   this help text\n" .
+         "  -l   list the tests\n" .
+         "  -s   list the test sets (sets keywords) with a count of tests\n" .
+         "  -v   verbose: show each PASS/FAIL line and a header per test\n" .
+         "  -q   quiet: no per-test summary lines\n" .
+         "Selector (one or more, default: the 'quick' tests):\n" .
+         "  all       every test\n" .
+         "  testname  run exactly that test\n" .
+         "  keyword   any sets entry (module name or group tag)\n";
+} # usage
+
+################################################################################
+# Assertion helpers
+################################################################################
+my $pass = 0;
+my $fail = 0;
+my $skipped = 0;
+my $tpass = 0;  # Per-test counts, reset before each test
+my $tfail = 0;
+my $tskip = 0;
+
+sub assert {
+  my ($cond, $msg) = @_;
+  if ($cond) {
+    $pass++;
+    $tpass++;
+    print "PASS: $msg\n" if $verbose;
+  } else {
+    $fail++;
+    $tfail++;
+    print "FAIL: $msg\n";  # Always shown, even in quiet mode
+  }
+} # assert
+
+sub skipmsg {
+  my ($msg) = @_;
+  $skipped++;
+  $tskip++;
+  print "SKIP: $msg\n";
+} # skipmsg
+
+################################################################################
+# Test table
+################################################################################
+my @TESTS = (
+  { name => "util_trim",         sets => [qw(quick util)],       test => \&test_util_trim },
+  { name => "util_number",       sets => [qw(quick util)],       test => \&test_util_number },
+  { name => "util_unit",         sets => [qw(quick util)],       test => \&test_util_unit },
+  { name => "util_sizeprices",   sets => [qw(quick util)],       test => \&test_util_sizeprices },
+  { name => "util_tags",         sets => [qw(quick util)],       test => \&test_util_tags },
+  { name => "util_htmlesc",      sets => [qw(quick util)],       test => \&test_util_htmlesc },
+  { name => "dateutil_effday",   sets => [qw(quick dateutil)],   test => \&test_dateutil_effday },
+  { name => "dateutil_reldate",  sets => [qw(quick dateutil)],   test => \&test_dateutil_reldate },
+  { name => "dateutil_normalize",sets => [qw(quick dateutil)],   test => \&test_dateutil_normalize },
+  { name => "dateutil_misc",     sets => [qw(quick dateutil)],   test => \&test_dateutil_misc },
+  { name => "geo_haversine",     sets => [qw(quick geo)],        test => \&test_geo_haversine },
+  { name => "comments_rating",   sets => [qw(quick comments)],   test => \&test_comments_rating },
+  { name => "glasses_isempty",   sets => [qw(quick glasses)],    test => \&test_glasses_isempty },
+  { name => "styles_short",      sets => [qw(quick styles)],     test => \&test_styles_short },
+);
+
+################################################################################
+# Test selection
+################################################################################
+# Same logic as test-http: unknown selectors are silently skipped (exit 0)
+# so that testall works when a selector only matches one suite.
+sub select_tests {
+  my @selectors = @_;
+
+  if ( !@selectors ) {
+    return grep { my $s = $_->{sets};
+                  grep { $_ eq "quick" } @$s } @TESTS;
+  }
+
+  my @run;
+  my %seen;
+  foreach my $sel (@selectors) {
+    if ( $sel =~ /^all$/i ) {
+      return @TESTS;
+    }
+    my $lower = lc $sel;
+    foreach my $t (@TESTS) {
+      my $match = ( lc $t->{name} eq $lower ) ? 1 : 0;
+      if ( !$match ) {
+        foreach my $c (@{ $t->{sets} }) {
+          if ( index(lc $c, $lower) != -1 ) { $match = 1; last; }
+        }
+      }
+      push @run, $t if $match && !$seen{$t->{name}}++;
+    }
+  }
+  return @run;
+} # select_tests
+
+sub list_tests {
+  foreach my $t (@TESTS) {
+    print $t->{name} . " (" . join(", ", @{ $t->{sets} }) . ")\n";
+  }
+} # list_tests
+
+sub list_sets {
+  my %count;
+  foreach my $t (@TESTS) {
+    foreach my $c (@{ $t->{sets} }) {
+      $count{$c}++;
+    }
+  }
+  foreach my $kw (sort keys %count) {
+    print "$kw: $count{$kw}\n";
+  }
+} # list_sets
+
+################################################################################
+# Main
+################################################################################
+if ( $help ) {
+  print usage();
+  exit 0;
+}
+if ( $list ) {
+  list_tests();
+  exit 0;
+}
+if ( $sets ) {
+  list_sets();
+  exit 0;
+}
+
+my @run = select_tests(@ARGV);
+if ( !@run ) {
+  # Unknown selectors are silently skipped (Option B from the plan).
+  # Exit 0 so testall works when a selector only matches one suite.
+  exit 0;
+}
+
+foreach my $t (@run) {
+  print "\n" . $t->{name} . ":\n" if $verbose;
+  $tpass = 0;
+  $tfail = 0;
+  $tskip = 0;
+  $t->{test}->();
+  my $tline = "$t->{name}: $tpass PASS";
+  $tline .= ", $tskip SKIP" if $tskip;
+  $tline .= ", $tfail FAIL" if $tfail;
+  print "$tline\n" unless $quiet;
+}
+
+# Grand summary
+my %seen;
+foreach my $t (@run) {
+  foreach my $c (@{ $t->{sets} }) {
+    next if $c eq "quick";
+    $seen{$c} = 1;
+  }
+}
+my $nsets = scalar keys %seen;
+my $ntests = $pass + $fail;
+my $label = @ARGV ? join(", ", @ARGV) : "quick";
+if ( $fail == 0 ) {
+  print "$label done: $nsets sets, $ntests tests, all PASS";
+  print " ($skipped skipped)" if $skipped;
+  print "\n";
+} else {
+  print "$label done: $nsets sets, $ntests tests, $pass PASS, $fail FAIL";
+  print ", $skipped skipped" if $skipped;
+  print "\n";
+}
+exit($fail ? 1 : 0);
+
+################################################################################
+# Tests
+################################################################################
+
+# --- util.pm ---
+
+sub test_util_trim {
+  assert(util::trim("") eq "", "trim empty string");
+  assert(util::trim("  foo  bar  ") eq "foo bar", "trim internal whitespace collapsed");
+  assert(util::trim(undef) eq "", "trim undef returns empty");
+}
+
+sub test_util_number {
+  assert(util::number("4,5") eq "4.5", "number comma to dot");
+  assert(util::number("abc") eq "0", "number non-numeric to 0");
+  assert(util::number("x") eq "x", "number clear marker verbatim");
+  assert(util::number("  x") eq "  x", "number clear marker with leading space");
+  assert(util::number("45.-") eq "45", "number trailing .- stripped");
+  assert(util::number("-3") eq "-3", "number negative");
+  assert(util::number("") eq "0", "number empty to 0");
+  assert(util::number(undef) eq "0", "number undef to 0");
+}
+
+sub test_util_unit {
+  assert(util::unit(50, ".-") eq "50<span style='font-size: xx-small'>.-</span> ",
+         "unit normal value");
+  assert(util::unit(0, "d") eq "", "unit falsy value returns empty");
+  assert(util::unit(undef, "d") eq "", "unit undef value returns empty");
+}
+
+sub test_util_sizeprices {
+  {
+    my ($sizes, $out) = util::sizeprices([{vol=>33,price=>50},{vol=>50,price=>75}]);
+    assert(scalar(@$sizes) == 2, "sizeprices 2 sizes: count");
+    assert($out->{SizeS} == 33, "sizeprices 2 sizes: SizeS");
+    assert($out->{SizeL} == 50, "sizeprices 2 sizes: SizeL");
+  }
+  {
+    my ($sizes, $out) = util::sizeprices([{vol=>20},{vol=>33},{vol=>50}]);
+    assert(scalar(@$sizes) == 3, "sizeprices 3 sizes: count");
+    assert($out->{SizeS} == 20, "sizeprices 3 sizes: SizeS");
+    assert($out->{SizeM} == 33, "sizeprices 3 sizes: SizeM");
+    assert($out->{SizeL} == 50, "sizeprices 3 sizes: SizeL");
+  }
+  {
+    my ($sizes, $out) = util::sizeprices([{vol=>33}]);
+    assert(scalar(@$sizes) == 1, "sizeprices 1 size: count");
+    assert($out->{SizeS} == 33, "sizeprices 1 size: SizeS");
+  }
+  {
+    my ($sizes, $out) = util::sizeprices([]);
+    assert(scalar(@$sizes) == 0, "sizeprices empty: count");
+  }
+}
+
+sub test_util_tags {
+  assert(util::clean_tags("#foo #bar") eq "foo bar", "clean_tags strips leading #");
+  assert(util::clean_tags("") eq "", "clean_tags empty");
+  assert(util::clean_tags(undef) eq "", "clean_tags undef");
+}
+
+sub test_util_filter_tokens {
+  {
+    my @t = util::filter_tokens('IPA "New England"');
+    assert(scalar(@t) == 2, "filter_tokens quoted: count");
+    assert($t[0] eq "IPA", "filter_tokens quoted: first token");
+    assert($t[1] eq "New England", "filter_tokens quoted: second token");
+  }
+  {
+    my @t = util::filter_tokens("hello");
+    assert(scalar(@t) == 1, "filter_tokens single: count");
+    assert($t[0] eq "hello", "filter_tokens single: value");
+  }
+  {
+    my @t = util::filter_tokens("");
+    assert(scalar(@t) == 0, "filter_tokens empty: count");
+  }
+}
+
+sub test_util_htmlesc {
+  assert(util::htmlesc('<script>&"x"') eq "&lt;script&gt;&amp;&quot;x&quot;",
+         "htmlesc escapes special chars");
+  assert(util::htmlesc(undef) eq "", "htmlesc undef returns empty");
+}
+
+# --- dateutil.pm ---
+
+sub test_dateutil_effday {
+  assert(dateutil::eff_day_of("2026-01-01 01:00:00") eq "2025-12-31",
+         "eff_day_of before 6am = prev day");
+  assert(dateutil::eff_day_of("2026-01-01 07:00:00") eq "2026-01-01",
+         "eff_day_of after 6am = same day");
+  assert(dateutil::eff_day_of("2026-01-01 05:59:59") eq "2025-12-31",
+         "eff_day_of just before 6am cutoff");
+  assert(dateutil::eff_day_of(undef) eq "", "eff_day_of undef returns empty");
+}
+
+sub test_dateutil_reldate {
+  my $today = dateutil::datestr("%F", 0);
+  my $yesterday = dateutil::datestr("%F", -1);
+  assert(dateutil::reldate($today) eq "today", "reldate today");
+  assert(dateutil::reldate($yesterday) eq "yesterday", "reldate yesterday");
+  assert(dateutil::reldate("2020-01-01") eq "2020-01-01", "reldate passthrough");
+}
+
+sub test_dateutil_normalize {
+  assert(dateutil::normalize_date({}, "") eq "", "normalize_date empty");
+  assert(dateutil::normalize_date(undef, "Y") eq dateutil::datestr("%F", -1, 1),
+         "normalize_date Y -> yesterday");
+  assert(dateutil::normalize_date(undef, "-3d") eq dateutil::datestr("%F", -3, 1),
+         "normalize_date -3d -> 3 days ago");
+  assert(dateutil::normalize_date(undef, "2024-12-25") eq "2024-12-25",
+         "normalize_date ISO passthrough");
+}
+
+sub test_dateutil_misc {
+  # ts_epoch
+  my $ep = dateutil::ts_epoch("2026-06-15 12:00:00");
+  assert(defined $ep && $ep > 0, "ts_epoch returns numeric epoch");
+  assert(!defined dateutil::ts_epoch(undef), "ts_epoch undef returns undef");
+  assert(!defined dateutil::ts_epoch("bad"), "ts_epoch bad format returns undef");
+
+  # date_plus_days
+  assert(dateutil::date_plus_days("2026-01-01", 1) eq "2026-01-02",
+         "date_plus_days +1");
+  assert(dateutil::date_plus_days("2026-01-10", -5) eq "2026-01-05",
+         "date_plus_days -5");
+
+  # day_diff
+  assert(dateutil::day_diff("2026-01-01", "2026-01-10") == 9, "day_diff forward");
+  assert(dateutil::day_diff("2026-01-10", "2026-01-01") == -9, "day_diff backward");
+  assert(dateutil::day_diff("2026-01-01", "2026-01-01") == 0, "day_diff same");
+}
+
+# --- geo.pm ---
+
+sub test_geo_haversine {
+  my $same = geo::haversineKm(55.6761, 12.5683, 55.6761, 12.5683);
+  assert($same == 0, "haversineKm same point = 0");
+
+  my $cp = geo::haversineKm(55.6761, 12.5683, 48.8566, 2.3522);
+  assert($cp > 1000 && $cp < 1100, "haversineKm Copenhagen->Paris ~1027km ($cp)");
+
+  # geodist formatting
+  my $d0 = geo::geodist(55.6761, 12.5683, 55.6761, 12.5683);
+  assert($d0 eq "0.000", "geodist same point = 0.000 (3 decimals)");
+
+  my $d1 = geo::geodist(55.6761, 12.5683, 48.8566, 2.3522);
+  assert($d1 =~ /^\d+$/, "geodist long distance = integer (0 decimals)");
+}
+
+# --- comments.pm ---
+
+sub test_comments_rating {
+  assert(comments::get_rating_class(1) eq "rating-rubbish", "rating 1 = rubbish");
+  assert(comments::get_rating_class(3) eq "rating-rubbish", "rating 3 = rubbish");
+  assert(comments::get_rating_class(4) eq "rating-bronze",  "rating 4 = bronze");
+  assert(comments::get_rating_class(5) eq "rating-bronze",  "rating 5 = bronze");
+  assert(comments::get_rating_class(6) eq "rating-silver",  "rating 6 = silver");
+  assert(comments::get_rating_class(7) eq "rating-silver",  "rating 7 = silver");
+  assert(comments::get_rating_class(8) eq "rating-gold",    "rating 8 = gold");
+  assert(comments::get_rating_class(2.7) eq "rating-rubbish",
+         "rating 2.7 rounds to 3 = rubbish");
+  assert(comments::get_rating_class(3.5) eq "rating-bronze",
+         "rating 3.5 rounds to 4 = bronze");
+}
+
+# --- glasses.pm ---
+
+sub test_glasses_isempty {
+  assert(glasses::isemptyglass("Night"),      "isemptyglass Night");
+  assert(glasses::isemptyglass("Restaurant"),  "isemptyglass Restaurant");
+  assert(glasses::isemptyglass("Adjustment"),  "isemptyglass Adjustment");
+  assert(!glasses::isemptyglass("Beer"),       "isemptyglass Beer = false");
+  assert(!glasses::isemptyglass(""),           "isemptyglass empty = false");
+}
+
+# --- styles.pm ---
+
+sub test_styles_short {
+  assert(styles::shortbeerstyle("American IPA") eq "AIPA", "shortbeerstyle American IPA");
+  assert(styles::shortbeerstyle("New England IPA") eq "NEIPA", "shortbeerstyle NE IPA");
+  assert(styles::shortbeerstyle("Pils") eq "Lager", "shortbeerstyle Pils");
+  assert(styles::shortbeerstyle("Stout") eq "Stout", "shortbeerstyle Stout");
+  assert(styles::shortbeerstyle("") eq "", "shortbeerstyle empty");
+  assert(styles::shortbeerstyle(undef) eq "", "shortbeerstyle undef");
+}
