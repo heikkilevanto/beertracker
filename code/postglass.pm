@@ -77,6 +77,19 @@ sub postglass {
     if ( util::param($c, "pr") =~ /^\s*x/i ) {
       $glass->{Price} = undef;
     }
+    # Currency conversion for empty glasses
+    if (util::param($c, "pr") !~ /^\s*x/i) {
+      my ($converted, $origtext) = curprice($c, util::param($c, "pr"));
+      if (defined $converted) {
+        $glass->{Price} = $converted;
+        my $note = $glass->{Note} || "";
+        $note =~ s/\s*\[.*?\]\s*/ /g;  # strip any existing currency note
+        $note =~ s/^\s+|\s+$//g;        # trim
+        $note .= " " if $note;
+        $note .= "[$origtext]";
+        $glass->{Note} = $note;
+      }
+    }
     # Empty glasses must not have a tap attached
     $glass->{Tap} = undef;
     # Nor a barcode
@@ -91,7 +104,19 @@ sub postglass {
     $glass->{Tap} = undef;  # Don't inherit tap from previous glass
     $glass->{Barcode} = undef;  # Don't inherit barcode from previous glass
     gettimestamp($c, $glass);
-    $glass->{Price} = util::paramnumber($c, "pr");
+    # Currency conversion for adjustment glasses
+    my ($converted, $origtext) = curprice($c, util::param($c, "pr"));
+    if (defined $converted) {
+      $glass->{Price} = $converted;
+      my $note = $glass->{Note} || "";
+      $note =~ s/\s*\[.*?\]\s*/ /g;  # strip any existing currency note
+      $note =~ s/^\s+|\s+$//g;        # trim
+      $note .= " " if $note;
+      $note .= "[$origtext]";
+      $glass->{Note} = $note;
+    } else {
+      $glass->{Price} = util::paramnumber($c, "pr");
+    }
   } else { # real glass
     $glass->{Brew} = $brewid;
     $glass->{SubType} = $brew->{SubType} || $glass->{SubType};
@@ -404,6 +429,20 @@ sub fixprice {
     $glass->{Price} = 0;
     return;
   }
+  # Currency conversion: e.g., "5.5e" -> 41 DKK, note "[5.50 e]"
+  if ($rawpr && $rawpr !~ /^x/i) {
+    my ($converted, $origtext) = curprice($c, $rawpr);
+    if (defined $converted) {
+      $glass->{Price} = $converted;
+      my $note = $glass->{Note} || "";
+      $note =~ s/\s*\[.*?\]\s*/ /g;  # strip any existing currency note
+      $note =~ s/^\s+|\s+$//g;        # trim
+      $note .= " " if $note;
+      $note .= "[$origtext]";
+      $glass->{Note} = $note;
+      return;
+    }
+  }
   if  ( $pr =~ /^(\d+)[,.-]*$/ ){  # Already a good price, only digits
     $glass->{Price} = $1; # just the digits
     return
@@ -439,33 +478,35 @@ sub fixprice {
     # If still no price, leave empty
     return;
   }
-  # TODO - Currencies, next time I travel
   if ( $pr =~ /^x/i ) {  # X indicates no price, no guessing
     $glass->{Price} = undef;
     return;
   }
  } # fixprice
 
-# currency conversions
-# Not used at the moment, kept here for future reference
+# Currency conversion rates to DKK
 my %currency;
 $currency{"eur"} = 7.5;
-$currency{"e"} = 7.5;
-$currency{"usd"} = 6.3;  # Varies bit over time
-#$currency{"\$"} = 6.3;  # € and $ don't work, get filtered away in param
+$currency{"e"} = 7.5;     # shorthand for EUR
+$currency{"usd"} = 6.3;
+$currency{"gbp"} = 8.5;
+$currency{"p"} = 8.5;     # shorthand for GBP
+$currency{"sek"} = 0.65;
+$currency{"s"} = 0.65;    # shorthand for SEK
 
-############## Helper for currency conversion (not currently used)
+############## Helper for currency conversion
+# Returns (dkk_price, "orig_price currency") on match, empty list otherwise
 sub curprice {
-  my $v = shift;
-  #print { $c->{log} } "Checking '$v' for currency";
-  for my $c (keys(%currency)) {
-    if ( $v =~ /^(-?[0-9.]+) *$c/i ) {
-      #print { $c->{log} } "Found currency $c, worth " . $currency{$c};
-      my $dkk = int(0.5 + $1 * $currency{$c});
-      #print { $c->{log} } "That makes $dkk";
-      return $dkk;
+  my ($c, $v) = @_;
+  for my $cur (keys %currency) {
+    if ( $v =~ /^(-?[0-9.]+) *$cur$/i ) {
+      my $orig = $1;
+      my $dkk = int(0.5 + $orig * $currency{$cur});
+      print { $c->{log} } "curprice: '$orig $cur' -> $dkk DKK\n";
+      return ($dkk, "$orig $cur");
     }
   }
+  return ();
 } # curprice
 
 ################################################################################

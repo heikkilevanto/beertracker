@@ -251,6 +251,7 @@ my @TESTS = (
   { name => "brew_roundtrip",     sets => [qw(posts roundtrip brew brews)],             test => \&test_brew_roundtrip },
   { name => "location_roundtrip", sets => [qw(posts roundtrip location locations)],       test => \&test_location_roundtrip },
   { name => "glass_roundtrip",    sets => [qw(posts roundtrip postglass glasses)],        test => \&test_glass_roundtrip },
+  { name => "glass_currency_roundtrip", sets => [qw(posts roundtrip postglass glasses)],  test => \&test_glass_currency_roundtrip },
   { name => "comment_roundtrip",  sets => [qw(posts roundtrip comment comments)],          test => \&test_comment_roundtrip },
 );
 
@@ -1004,6 +1005,66 @@ sub test_glass_roundtrip {
   assert_page_ok($status, $body, "Full after glass delete", "id='mainform'");
   assert(scalar($body !~ /\Q$note2\E/), "Full page no longer shows the deleted record '$note2'");
 } # test_glass_roundtrip
+
+sub test_glass_currency_roundtrip {
+  # Currency round-trip: record a glass with a currency-suffixed price,
+  # verify the DKK conversion and the [price cur] note, then edit it
+  # with a different currency to verify the old note is replaced, not
+  # accumulated. Cleanup via delete at the end.
+  my $locid = get_first_id("Location");
+  if ( !defined $locid ) { skipmsg("Location list has no ids for a glass"); return; }
+  get_first_id("Full");
+
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full");
+  my ($brewid, $brewtype) = brew_with_defprice($body);
+  if ( !defined $brewid ) { skipmsg("no brew with a DefPrice in the dev data"); return; }
+
+  my $note = "TST" . time() . "cur";
+  my $date = strftime("%Y-%m-%d", localtime());
+  my $time = strftime("%H:%M", localtime());
+
+  # Insert: record a glass with pr='5.5e' (EUR). Should convert to 41 DKK
+  # and add '[5.5 e]' to the note.
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Full", Location => $locid, Brew => $brewid, selbrewtype => $brewtype,
+        date => $date, time => $time, vol => "33", alc => "4.6", pr => "5.5e",
+        note => $note, submit => "Record" });
+  my $loc = assert_post_redirect($status, $headers, "Glass currency insert");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Full after currency insert", "id='mainform'");
+  # The note field should contain both the user note and the currency marker
+  assert(scalar($body =~ /\Q$note\E.*\Q[5.5 e]\E/),
+         "Full page shows note with currency marker '[5.5 e]'");
+  my $id = id_before_text($body, "Full", $note);
+  assert(defined $id, "harvested the new glass id from the main list");
+  return unless defined $id;
+
+  # Edit: change the currency to USD (pr='10usd'). The old '[5.5 e]' note
+  # should be replaced by '[10 usd]', not accumulated.
+  my $note2 = $note . "upd";
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Full", e => $id, Location => $locid, Brew => $brewid,
+        selbrewtype => $brewtype, date => $date, time => $time, vol => "33",
+        alc => "4.6", pr => "10usd", note => $note2, submit => "Save" });
+  $loc = assert_post_redirect($status, $headers, "Glass currency update");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Full after currency update", "id='mainform'");
+  assert(scalar($body =~ /\Q$note2\E.*\Q[10 usd]\E/),
+         "Full page shows updated note with '[10 usd]'");
+  assert(scalar($body !~ /\Q[5.5 e]\E/),
+         "Full page no longer shows the old currency note '[5.5 e]'");
+
+  # Delete
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Full", e => $id, submit => "Del" });
+  $loc = assert_post_redirect($status, $headers, "Glass currency delete");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Full after currency delete", "id='mainform'");
+  assert(scalar($body !~ /\Q$note\E/), "Full page no longer shows the deleted record");
+} # test_glass_currency_roundtrip
 
 sub test_comment_roundtrip {
   # Plan Task 6b: attach a comment to an existing glass through the web (POST

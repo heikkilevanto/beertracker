@@ -155,6 +155,24 @@ For wine or other drinks bought by the bottle or box, enter the price as a negat
 
 Stats treat bottle prices as positive spending, so `-150` counts as 150.- spent.
 
+#### Foreign currencies
+
+When traveling, you can enter prices in a foreign currency by adding a suffix
+letter to the price. The system converts it to DKK (Danish Kroner) and stores
+the original price in the note field.
+
+Supported currencies:
+- **EUR** — suffix `e` (e.g. `5.5e` for 5.50 euros)
+- **USD** — suffix `u` (e.g. `8u` for 8 dollars)
+- **GBP** — suffix `p` (e.g. `4.5p` for 4.50 pounds)
+- **SEK** — suffix `s` (e.g. `65s` for 65 kronor)
+
+Example: typing `5.5e` stores a price of 41 DKK and adds `[5.5 e]` to the note
+field. When copying that glass, the original `5.5e` format is passed so you see
+the foreign price.
+
+Exchange rates are hardcoded in `postglass.pm` and may need periodic updating.
+
 ### Extra Fields
 
 Click "(more)" in the left column to reveal:

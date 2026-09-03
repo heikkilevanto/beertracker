@@ -34,6 +34,7 @@ require geo;
 require comments;
 require glasses;
 require styles;
+require postglass;
 
 ################################################################################
 # Config
@@ -108,6 +109,7 @@ my @TESTS = (
   { name => "comments_rating",   sets => [qw(quick comments)],   test => \&test_comments_rating },
   { name => "glasses_isempty",   sets => [qw(quick glasses)],    test => \&test_glasses_isempty },
   { name => "styles_short",      sets => [qw(quick styles)],     test => \&test_styles_short },
+  { name => "postglass_curprice", sets => [qw(quick postglass)], test => \&test_postglass_curprice },
 );
 
 ################################################################################
@@ -404,4 +406,40 @@ sub test_styles_short {
   assert(styles::shortbeerstyle("Stout") eq "Stout", "shortbeerstyle Stout");
   assert(styles::shortbeerstyle("") eq "", "shortbeerstyle empty");
   assert(styles::shortbeerstyle(undef) eq "", "shortbeerstyle undef");
+}
+
+# --- postglass.pm ---
+
+sub test_postglass_curprice {
+  require postglass;
+  my $c = { log => \*STDERR };
+
+  # EUR shorthand
+  my ($dkk, $orig) = postglass::curprice($c, "5.5e");
+  assert(defined $dkk && $dkk == 41, "curprice 5.5e -> 41 DKK");
+  assert($orig eq "5.5 e", "curprice 5.5e orig text");
+
+  # Full currency name
+  ($dkk, $orig) = postglass::curprice($c, "10eur");
+  assert(defined $dkk && $dkk == 75, "curprice 10eur -> 75 DKK");
+
+  # USD
+  ($dkk, $orig) = postglass::curprice($c, "20usd");
+  assert(defined $dkk && $dkk == 126, "curprice 20usd -> 126 DKK");
+
+  # GBP
+  ($dkk, $orig) = postglass::curprice($c, "8.5p");
+  assert(defined $dkk && $dkk == 72, "curprice 8.5p -> 72 DKK");
+
+  # SEK
+  ($dkk, $orig) = postglass::curprice($c, "100s");
+  assert(defined $dkk && $dkk == 65, "curprice 100s -> 65 DKK");
+
+  # No currency suffix — should return empty list
+  my @result = postglass::curprice($c, "45");
+  assert(scalar(@result) == 0, "curprice '45' returns empty (no match)");
+
+  # Negative price with currency
+  ($dkk, $orig) = postglass::curprice($c, "-5e");
+  assert(defined $dkk && $dkk == -37, "curprice -5e -> -37 DKK");
 }

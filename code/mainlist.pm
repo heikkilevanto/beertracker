@@ -344,7 +344,10 @@ sub buttonline {
     # For copy buttons, pass the original price only if volume matches, else leave empty to trigger guessing
     # Set price to 0 if the source glass has a negative price (bottle purchase), for all copy buttons
     my $copy_price = '';
-    if ( defined $rec->{price} && $rec->{price} < 0 ) {
+    # Check for currency note pattern like [5.50 e] - pass original format
+    if ($rec->{note} && $rec->{note} =~ /\[([0-9.]+) +(\w+)\]/) {
+      $copy_price = "$1$2";  # e.g., "5.50e"
+    } elsif ( defined $rec->{price} && $rec->{price} < 0 ) {
       $copy_price = 0;  # Negative price means bottle purchase, copy as zero price
     } elsif ( $rec->{vol} && $volx == $rec->{vol} && defined $rec->{price} ) {
       $copy_price = $rec->{price};  # Same volume, copy the price
