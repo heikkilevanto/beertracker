@@ -345,11 +345,27 @@ function initGlassForm() {
     localBt.type = 'hidden';
     localBt.setAttribute('data-brewtype-scope', '1');
     st.appendChild(localBt);
+    var lastBrewType = '';
     function syncSubType() {
-      localBt.value = bt.value;
+      var newBt = bt.value;
+      // When brew type changes, clear the old subtype and let default take over
+      if (newBt !== lastBrewType) {
+        var hidden = document.getElementById('SubType');
+        if (hidden) { hidden.value = ''; }
+        var flt = st.querySelector('.dropdown-filter');
+        if (flt) { flt.value = ''; }
+        lastBrewType = newBt;
+      }
+      localBt.value = newBt;
       var flt = st.querySelector('.dropdown-filter');
       var lst = st.querySelector('.dropdown-list');
       if (flt && lst) filterItems(flt, lst);
+      // Auto-select the most common subtype for the brew type if none selected
+      var hidden = document.getElementById('SubType');
+      if (hidden && !hidden.value && lst) {
+        var def = lst.querySelector('.dropdown-item[data-default="1"]:not([style*="display: none"])');
+        if (def) setDropdownValue(hidden, def.id);
+      }
     }
     bt.addEventListener('input', syncSubType);
     syncSubType();

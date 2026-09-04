@@ -46,7 +46,7 @@ sub dropdown {
   $simplenew = "simplenew" if ($opt->{simplenew});
   my $extraattr      = $opt->{extraattr}  || "";
   my $newdefaults    = $opt->{defaults}   || {};
-  my $required       = $opt->{required};
+  my $required       = $opt->{required} ? "required" : "";
   my $fieldorder     = $opt->{fieldorder};
 
   my $newdiv = "";
@@ -101,7 +101,7 @@ sub dropdown {
            autocomplete="off"
            placeholder="$inputname"
            value="$selectedname"
-           $disabled />
+           $disabled $required />
     <input type="hidden"
            id="$inputname"
            name="$inputname"
@@ -348,7 +348,11 @@ sub inputform {
         my $pass = "";
         if ( $f =~ /Alc/ ) {  # Alc field, but not in the glass itself
           # (that is lowercase 'alc'). Pass it to glass.alc
-          $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value; \"";
+          $pass = "onInput=\"var a=document.getElementById('alc'); if(a) a.value=this.value+'%'; \"";
+        } elsif ( $f eq "DefVol" ) {
+          $pass = "onInput=\"var v=document.getElementById('vol'); if(v) v.value=this.value+'c'; \"";
+        } elsif ( $f eq "DefPrice" ) {
+          $pass = "onInput=\"var p=document.getElementById('pr'); if(p) p.value=this.value+'.-'; \"";
         }
         my $required = "";
         if ( $f =~ /\b(?:Name|BrewType|SubType|LocType|LocSubType)\b/i ) {

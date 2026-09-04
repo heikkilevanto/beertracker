@@ -314,7 +314,7 @@ sub selectbrewtype_dropdown {
   my $c = shift;
   my $selected = shift || "";
   my $disabled = shift || "";
-  my $sql = "SELECT DISTINCT BrewType FROM brews WHERE BrewType IS NOT NULL AND BrewType != '' ORDER BY BrewType";
+  my $sql = "SELECT DISTINCT BrewType FROM brews WHERE BrewType IS NOT NULL AND BrewType != '' AND BrewType != 'Adjustment' ORDER BY BrewType";
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $bt = $sth->fetchrow_array ) {
@@ -331,14 +331,27 @@ sub selectbrewsubtype_dropdown {
   my $c = shift;
   my $selected = shift || "";
   my $disabled = shift || "";
-  my $sql = "SELECT DISTINCT BrewType, SubType FROM brews WHERE SubType IS NOT NULL AND SubType != '' ORDER BY BrewType, SubType";
+  my $sql = "
+    SELECT s.BrewType, s.SubType,
+           CASE WHEN r.rn = 1 THEN 1 ELSE 0 END AS is_default
+    FROM (SELECT DISTINCT BrewType, SubType FROM brews
+          WHERE SubType IS NOT NULL AND SubType != '') s
+    LEFT JOIN (
+      SELECT BrewType, SubType,
+             ROW_NUMBER() OVER (PARTITION BY BrewType ORDER BY COUNT(*) DESC) AS rn
+      FROM brews
+      WHERE SubType IS NOT NULL AND SubType != ''
+      GROUP BY BrewType, SubType
+    ) r ON s.BrewType = r.BrewType AND s.SubType = r.SubType
+    ORDER BY s.BrewType, s.SubType";
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $st = $sth->fetchrow_hashref ) {
     next unless $st->{SubType};
     my $sub   = util::htmlesc($st->{SubType});
     my $btype = util::htmlesc($st->{BrewType});
-    $opts .= "<div class='dropdown-item' id='$sub' brewtype='$btype'>$sub</div>\n";
+    my $defattr = $st->{is_default} ? " data-default='1'" : "";
+    $opts .= "<div class='dropdown-item' id='$sub' brewtype='$btype'$defattr>$sub</div>\n";
   }
   return inputs::dropdown($c, "SubType", $selected, $selected, $opts,
     { disabled => $disabled, simplenew => 1, required => 1 });
@@ -674,7 +687,6 @@ sub dedupbrews {
 ################################################################################
 # Update a brew, posted from the form in the selection above
 ################################################################################
-# TODO - Calculate subtype, if not set. Make a separate helper
 sub postbrew {
   my $c = shift; # context
   my $id = shift || $c->{edit};
