@@ -19,24 +19,28 @@ use URI::Escape qw(uri_escape_utf8);
 sub export_params {
   my $c = shift;
 
+  my $export_username = $c->{username};
+  if ( superuser::is_superuser($c) ) {
+    my $p = util::param($c, "export_username");
+    $export_username = $p if $p;
+  }
+
   my $sql = "SELECT
       min( strftime('%Y-01-01', Timestamp, '-06:00') ) AS first,
       max( strftime('%Y-%m-%d', Timestamp, '-06:00') ) AS last
-    FROM Glasses
-    WHERE Username = ?";
-  my $dates = db::queryrecord( $c, $sql, $c->{username} );
+    FROM Glasses";
+  my @params;
+  if ( $export_username ne '_all_' ) {
+    $sql .= " WHERE Username = ?";
+    push @params, $c->{username};
+  }
+  my $dates = db::queryrecord( $c, $sql, @params );
   my $datefrom = util::param($c, "datefrom", $dates->{first});
   my $dateto   = util::param($c, "dateto",   $dates->{last});
   my $mode     = util::param($c, "mode")   || "partial";
   my $schema   = util::param($c, "schema") || "none";
   my $action   = util::param($c, "action") || "";
   my $taps     = util::param($c, "taps")   || "none";
-
-  my $export_username = $c->{username};
-  if ( superuser::is_superuser($c) ) {
-    my $p = util::param($c, "export_username");
-    $export_username = $p if $p;
-  }
 
   return ( $datefrom, $dateto, $mode, $schema, $action, $taps, $export_username );
 
@@ -65,9 +69,11 @@ sub exportform {
   if ( superuser::is_superuser($c) ) {
     my @users = db::queryrecordarray($c,
       "SELECT DISTINCT Username FROM Glasses ORDER BY Username");
-    my $uopts = join("", map { "<div class='dropdown-item' id='$_'>$_</div>\n" } @users);
+    my $uopts = "<div class='dropdown-item' id='_all_'>All users</div>\n";
+    $uopts .= join("", map { "<div class='dropdown-item' id='$_'>$_</div>\n" } @users);
+    my $display = $export_username eq '_all_' ? "All users" : $export_username;
     $username_row = "<tr>\n  <td>User</td>\n  <td>\n" .
-      inputs::dropdown($c, "export_username", $export_username, $export_username, $uopts) .
+      inputs::dropdown($c, "export_username", $export_username, $display, $uopts) .
       "  </td>\n</tr>\n";
   }
 
@@ -200,7 +206,9 @@ sub delete_tarball {
   util::error("Invalid tarball name")
     unless $tarball =~ /^beertracker_export_[a-zA-Z0-9]+_\d{8}-\d{6}\.tgz$/;
 
-  my $export_photodir = user_photodir($c, $export_username);
+  # For all_users, tarball is stored in the superuser's photo dir
+  my $tar_user = $export_username eq '_all_' ? $c->{username} : $export_username;
+  my $export_photodir = user_photodir($c, $tar_user);
   my $path = "$export_photodir/$tarball";
   if (-f $path) {
     unlink $path or util::error("Could not delete $tarball: $!");
@@ -219,30 +227,43 @@ sub collect_ids {
   my ($c, $datefrom, $dateto, $mode, $taps_mode, $export_username) = @_;
 
   my %ids;
+  my $all_users = ($export_username eq '_all_');
 
   # Glasses ---
-  my @glasses_ids = db::queryrecordarray($c, "
-      SELECT Id FROM Glasses
-      WHERE Username=? AND strftime('%Y-%m-%d', Timestamp, '-06:00') BETWEEN ? AND ?
-  ", $export_username, $datefrom, $dateto);
+  my $glasses_sql = "SELECT Id FROM Glasses
+      WHERE strftime('%Y-%m-%d', Timestamp, '-06:00') BETWEEN ? AND ?";
+  my @glasses_params = ($datefrom, $dateto);
+  if ( !$all_users ) {
+    $glasses_sql .= " AND Username=?";
+    push @glasses_params, $export_username;
+  }
+  my @glasses_ids = db::queryrecordarray($c, $glasses_sql, @glasses_params);
   $ids{glasses} = \@glasses_ids;
   my $glasses_list = "NULL";
   $glasses_list = join(",", @glasses_ids) if (@glasses_ids);
 
   # Comments --- by owner and date range
-  my @comment_ids = db::queryrecordarray($c, "
-      SELECT Id FROM Comments
-      WHERE Username=? AND strftime('%Y-%m-%d', Ts, '-06:00') BETWEEN ? AND ?
-  ", $export_username, $datefrom, $dateto);
+  my $comment_sql = "SELECT Id FROM Comments
+      WHERE strftime('%Y-%m-%d', Ts, '-06:00') BETWEEN ? AND ?";
+  my @comment_params = ($datefrom, $dateto);
+  if ( !$all_users ) {
+    $comment_sql .= " AND Username=?";
+    push @comment_params, $export_username;
+  }
+  my @comment_ids = db::queryrecordarray($c, $comment_sql, @comment_params);
   $ids{comments} = \@comment_ids;
   my $comment_list = "NULL";
   $comment_list = join(",", @comment_ids) if (@comment_ids);
 
   # Photos --- by uploader and date range
-  my @photo_ids = db::queryrecordarray($c, "
-      SELECT Id FROM Photos
-      WHERE Uploader=? AND strftime('%Y-%m-%d', Ts, '-06:00') BETWEEN ? AND ?
-  ", $export_username, $datefrom, $dateto);
+  my $photo_sql = "SELECT Id FROM Photos
+      WHERE strftime('%Y-%m-%d', Ts, '-06:00') BETWEEN ? AND ?";
+  my @photo_params = ($datefrom, $dateto);
+  if ( !$all_users ) {
+    $photo_sql .= " AND Uploader=?";
+    push @photo_params, $export_username;
+  }
+  my @photo_ids = db::queryrecordarray($c, $photo_sql, @photo_params);
   $ids{photos} = \@photo_ids;
 
   # Supporting tables ---
@@ -417,7 +438,8 @@ sub show_export {
   my $ids    = collect_ids($c, $datefrom, $dateto, $mode, $taps, $export_username);
   my $tables = generate_sql($c, $ids, $schema);
 
-  print qq{<h2>Export for '$export_username', $datefrom to $dateto</h2>\n};
+  my $user_display = $export_username eq '_all_' ? 'All users' : "'$export_username'";
+  print qq{<h2>Export for $user_display, $datefrom to $dateto</h2>\n};
   print qq{<p><a href='$c->{url}?o=Export'><span>[Back to export form]</span></a></p>\n};
 
   for my $t (@$tables) {
@@ -440,12 +462,15 @@ sub make_tarball {
   my ($c, $with_photos) = @_;
   my ( $datefrom, $dateto, $mode, $schema, $action, $taps, $export_username ) = export_params($c);
 
+  my $all_users = ($export_username eq '_all_');
+
   my $ids    = collect_ids($c, $datefrom, $dateto, $mode, $taps, $export_username);
   my $tables = generate_sql($c, $ids, $schema);
 
   # Build SQL text
+  my $user_label = $all_users ? 'All users' : $export_username;
   my $sql_text  = "-- Export of BeerTracker data\n";
-  $sql_text    .= "-- for user '$export_username'\n";
+  $sql_text    .= "-- for user '$user_label'\n";
   $sql_text    .= "-- Date range: $datefrom to $dateto\n";
   $sql_text    .= "-- Export done at " . dateutil::datestr() . "\n\n";
   for my $t (@$tables) {
@@ -468,10 +493,11 @@ sub make_tarball {
     my @photo_ids = @{ $ids->{photos} || [] };
     if (@photo_ids) {
       my $id_list = join(",", @photo_ids);
-      # Photos may belong to the export_username, so build their photodir directly
-      my $export_photodir = user_photodir($c, $export_username);
-      my $sth = db::query($c, "SELECT Filename FROM Photos WHERE Id IN ($id_list)");
+      # For all_users, each photo may belong to a different user, so look up Uploader
+      my $sth = db::query($c, "SELECT Filename, Uploader FROM Photos WHERE Id IN ($id_list)");
       while ( my $row = db::nextrow($sth) ) {
+        my $photo_user = $all_users ? $row->{Uploader} : $export_username;
+        my $export_photodir = user_photodir($c, $photo_user);
         my $orig = $export_photodir . "/" . $row->{Filename} . "+orig.jpg";
         if (-f $orig) {
           my $basename = $row->{Filename} . "+orig.jpg";
@@ -485,10 +511,13 @@ sub make_tarball {
   }
 
   # Ensure destination photo dir exists and build tar path
-  my $export_photodir = user_photodir($c, $export_username);
+  # For all_users, store tarball in the superuser's photo dir
+  my $tar_user = $all_users ? $c->{username} : $export_username;
+  my $export_photodir = user_photodir($c, $tar_user);
   make_path($export_photodir);
   my $now_stamp = dateutil::datestr("%Y%m%d-%H%M%S", 0, 1);
-  my $tarname = "beertracker_export_${export_username}_${now_stamp}.tgz";
+  my $tarname_suffix = $all_users ? "allusers" : $export_username;
+  my $tarname = "beertracker_export_${tarname_suffix}_${now_stamp}.tgz";
   my $tarpath = "$export_photodir/$tarname";
 
   system("tar", "czf", $tarpath, "-C", $tmpdir, ".") == 0
