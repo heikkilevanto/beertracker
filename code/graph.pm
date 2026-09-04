@@ -222,8 +222,7 @@ sub makedatafile {
       my $fri = $date->epoch - $halfday;
       my $sun = ($date + $oneday*2.5)->epoch;
       #$g->{weekends} .= "set object $g->{wkendtag} rect from \"$fri\",-0.5 to \"$sun\",50 " .
-      $g->{weekends} .= "set object $g->{wkendtag} rect from $fri,-0.5 to $sun,50 " .
-        #"size $threedays,200
+      $g->{weekends} .= "set object $g->{wkendtag} rect from $fri,graph 0 to $sun,graph 1 " .
         "behind  fc rgbcolor \"$wkendcolor\"  fillstyle solid noborder \n";
       $g->{wkendtag}++;
       }
