@@ -218,7 +218,6 @@ sub yearbar {
 ################################################################################
 # Annual summary
 ################################################################################
-# TODO - Maybe count zero days as well
 # TODO - Now loops through all possible lines to get the sums, they could
 # be got a bit faster from the db. But it is fast enough as it is.
 

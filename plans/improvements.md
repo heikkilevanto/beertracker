@@ -22,28 +22,17 @@ days" entries. Deferred until more keg age data is available. See
 ## Statistics Improvements
 
 ### Expand Data Stats
-The current datastats in stats.pm has several TODOs:
-- Comments stats by brew type, night, restaurant
-- Rating stats (min/max/avg/count) by brewtype
-- Photo stats by brewtype or person
-- Identify brews that have one or no glasses (orphaned brews)
-
-### Zero-Day Tracking in Year Stats
-Count and display days with zero drinks in annual summaries. Useful for
-tracking drinking frequency and dry days. (TODO in yearstat.pm:221)
-
-### Monthly/Weekly Drinking Goals
-Set goals like "max 14 drinks per week" and track adherence on the graph.
-Visual indicators (green/yellow/red zones) for goal status.
+- Identify brews that have one or no glasses (orphaned brews). 
 
 ### Seasonal / Trend Analysis
 Show which beer styles are trending up/down over time. "NEIPAs are
 increasing" or "you're drinking more wine this year." Could be a new stats
-view or extension to monthstat.
+view.
 
 ### Price History Graph per Brew
 Currently listbrewprices shows a table. A price-over-time graph for a brew
 across locations would visualize price trends.
+Show also glass counts in the tap history
 
 ---
 

@@ -219,8 +219,12 @@ sub data_table {
   }
   my $fcount = 0;  # count of filtered ratings
   my $fsum = 0;    # And their sum for average
+  my $fmin = 0;
+  my $fmax = 0;
   my $acount = 0;  # Same for all ratings
   my $asum = 0;
+  my $amin = 0;
+  my $amax = 0;
 
   my $html = "";
   $html .= "<hr>\n";
@@ -243,10 +247,16 @@ sub data_table {
      </thead> <tbody>";
    for my $i ( reverse 1..9) {
     no warnings 'once'; my $lbl = $comments::ratings[$i];
-    $fcount += $filtered_rows->[$i] || 0;
-    $fsum += ( $filtered_rows->[$i] || 0 ) * $i;
-    $acount += $all_rows->[$i] || 0;
-    $asum += ( $all_rows->[$i] || 0 ) * $i;
+    my $fc = $filtered_rows->[$i] || 0;
+    my $ac = $all_rows->[$i] || 0;
+    $fcount += $fc;
+    $fsum += $fc * $i;
+    $fmin = $i if ($fc && (!$fmin || $i < $fmin));
+    $fmax = $i if ($fc && $i > $fmax);
+    $acount += $ac;
+    $asum += $ac * $i;
+    $amin = $i if ($ac && (!$amin || $i < $amin));
+    $amax = $i if ($ac && $i > $amax);
     my $rclass = comments::get_rating_class($i);
     $html .= "<tr><td align=right><b class='$rclass'>($i)</b></td><td><span class='$rclass'>$lbl</span></td>";
     my $ar = $all_rows->[$i] || "";
@@ -259,6 +269,9 @@ sub data_table {
   $html .= "<tr><td align=right colspan=2>Total ratings</td>\n";
   $html .= "<td align=right>$acount</td>\n";
   $html .= "<td align=right>$fcount</td>\n" if ($filtering);
+  $html .= "</tr><tr><td align=right colspan=2>Min-Max rating</td>\n";
+  $html .= "<td align=right>$amin - $amax</td>\n" if ($acount);
+  $html .= "<td align=right>$fmin - $fmax</td>\n" if ($filtering && $fcount);
   $html .= "</tr><tr><td align=right colspan=2>Average rating</td>\n";
   $html .= "<td align=right> \n";
   $html .= sprintf("%0.1f", $asum / $acount ) if ($asum);

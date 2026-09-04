@@ -119,10 +119,8 @@ sub datastats {
     print "<tr><td></td><td>$singles</td></tr> \n";
   }
 
-  # TODO: Comments, on brew type, night, restaurant
-  # TODO: Ratings, min/max/avg/count, on brewtype
   # TODO: Photos, on brewtype (night/rest) or person
-  # TODO: Persons - what to say of them? Have no categories.
+  # TODO: Persons - what to say of them? Have no categories. Tags?
 
   print "</table>\n";
 } # datastats
