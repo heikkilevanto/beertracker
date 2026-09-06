@@ -464,7 +464,7 @@ sub commentform {
   # JS: show/hide rows based on comment type, and "show all" toggle
   my $glass_is_empty = 0;
   $glass_is_empty = 1 if ($com->{glass_brewtype} && glasses::isemptyglass($com->{glass_brewtype}));
-    $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ var glassIsEmpty = $glass_is_empty; initCommentForm(); });</script>\n";
+    $s .= "<script>var glassIsEmpty = $glass_is_empty;</script>\n";
 
   return $s;
 } # commentform
