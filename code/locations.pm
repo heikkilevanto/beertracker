@@ -475,6 +475,7 @@ sub selectlocation {
   my $newprefix = shift || ""; # Prefix for new-location fields. Enables the "new"
   my $prods = shift || "";  # "prod" for prod locs only, "non" for non-prods only. Defaults to all
   my $disabled = shift || "";  # "disabled" or ""
+  my $disable_new = shift || "";  # If true, suppress the "new" action
 
   if ( $selected && $selected !~ /^\d+$/ ){
     print { $c->{log} } "selectlocation called with non-numerical 'selected' argument: '$selected' \n";
@@ -559,7 +560,7 @@ sub selectlocation {
   foreach my $entry (@$loc_field_order) {
     push @filtered_field_order, $entry unless $entry->[0] =~ $skip_re;
   }
-  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, { table => "LOCATIONS", newfield => $newfield, skip => $skip, disabled => $disabled, defaults => $defaults, fieldorder => \@filtered_field_order } );
+  my $s = inputs::dropdown( $c, $fieldname, $selected, $current, $opts, { table => "LOCATIONS", newfield => $disable_new ? "" : $newfield, skip => $skip, disabled => $disabled, defaults => $defaults, fieldorder => \@filtered_field_order } );
   $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ geotabledist(); });</script>\n";
   return $s;
 

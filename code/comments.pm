@@ -288,7 +288,7 @@ sub commentform {
   $s .= "<tr id='row-location'>\n";
   $s .= "  <td style='$lcol'>Location</td>\n";
   $s .= "  <td>\n";
-  $s .= locations::selectlocation($c, 'Location', $com->{Location}||'', '', 'non');
+  $s .= locations::selectlocation($c, 'Location', $com->{Location}||'', '', 'non', '', 1);
   $s .= "  </td>\n";
   $s .= "</tr>\n";
 
