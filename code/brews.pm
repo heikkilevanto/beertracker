@@ -552,6 +552,7 @@ sub selectbrew {
   my $c = shift; # context
   my $selected = shift || "";  # The id of the selected brew
   my $brewtype = shift || "";
+  my $disable_new = shift || "";
 
   # The opts list is expensive (large join over all brews). Cache it per user
   # and brewtype for the lifetime of the FastCGI process; cleared after POSTs.
@@ -627,7 +628,7 @@ sub selectbrew {
 
   my $defaults = {};
   $defaults->{BrewType} = $brewtype if $brewtype;
-  my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, { table => "BREWS", newfield => "newbrew", scan => 1, defaults => $defaults, fieldorder => $brew_field_order } );
+  my $s = inputs::dropdown( $c, "Brew", $selected, $current, $opts, { table => "BREWS", newfield => $disable_new ? "" : "newbrew", scan => 1, defaults => $defaults, fieldorder => $brew_field_order } );
 
   return $s;
 } # selectbrew

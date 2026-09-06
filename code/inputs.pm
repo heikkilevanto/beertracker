@@ -56,7 +56,7 @@ sub dropdown {
   if ($enablescan eq "scan") {
     $actions .= "<span class='action-link' data-action='scan' style='cursor: pointer;'>scan</span>";
   }
-  if ($tablename) {
+  if ($tablename && $newfieldprefix) {
     $actions .= "<span class='action-link' data-action='new' style='cursor: pointer;'>new</span>";
     my $tags_for_form = "";
     my @fields = db::tablefields($c, $tablename, "", 1);

@@ -280,7 +280,7 @@ sub commentform {
   $s .= "<tr id='row-brew'>\n";
   $s .= "  <td style='$lcol'>Brew</td>\n";
   $s .= "  <td>\n";
-  $s .= brews::selectbrew($c, $com->{Brew}||'');
+  $s .= brews::selectbrew($c, $com->{Brew}||'', "", 1);
   $s .= "  </td>\n";
   $s .= "</tr>\n";
 
