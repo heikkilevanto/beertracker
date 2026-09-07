@@ -7,9 +7,9 @@ use warnings;
 sub version_info {
     return {
         tag     => 'v3.5',
-        commits => 132,
-        date    => '2026-09-06 23:12:51 ',
-        commit  => 'c43ed8e',
+        commits => 133,
+        date    => '2026-09-07 14:13:28 ',
+        commit  => '0bffbe8',
         branch  => 'master',
     };
 }

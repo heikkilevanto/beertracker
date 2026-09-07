@@ -101,6 +101,9 @@ sub beerboard {
   foreach my $e ( sort {$a->{"id"} <=> $b->{"id"} } @$beerlist )  {
     $nbeers++;
     my $id = $e->{"id"} || 0;
+    if ( $id - $previd > 1 ) {
+      print "<tr><td align=center>. . .</td></tr>\n";
+    }
     my $processed_data = prepare_beer_entry_data($c, $e, $locparam, $ref_time);
     my $hiddenbuttons = generate_hidden_fields($c, $e, $locparam, $locid, $id, $processed_data);
     my $buttons_compact = render_beer_buttons($c, $e->{"sizePrice"}, $hiddenbuttons, 0, $e->{"alc"} || 0);
