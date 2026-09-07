@@ -25,7 +25,7 @@ use File::Copy;
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 52;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 53;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -42,6 +42,8 @@ our @MIGRATIONS = (
   [51, 'add lifecycle dates to locations and brews', \&mig_051_add_lifecycle_dates],
   # Issue 745 - backfill FirstSeen for producers from the oldest glass of their brews
   [52, 'backfill producer locations FirstSeen', \&mig_052_backfill_producer_firstseen],
+  # Issue 762 - mark tap_beers as unusual to exclude from age calculations
+  [53, 'add tap_beers.Unusual column', \&mig_053_add_tap_beers_unusual],
 );
 
 ################################################################################
@@ -262,6 +264,14 @@ sub mig_052_backfill_producer_firstseen {
                   JOIN brews ON glasses.Brew = brews.Id
                   WHERE brews.ProducerLocation = locations.Id)");
 } # mig_052_backfill_producer_firstseen
+
+
+# Issue 762 - add Unusual flag to tap_beers to exclude specific kegs from
+# average age calculations (e.g. forgotten kegs left on tap for a long time).
+sub mig_053_add_tap_beers_unusual {
+  my $c = shift;
+  db::execute($c, "ALTER TABLE tap_beers ADD COLUMN Unusual integer DEFAULT 0");
+} # mig_053_add_tap_beers_unusual
 
 
 ################################################################################

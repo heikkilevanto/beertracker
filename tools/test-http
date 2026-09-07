@@ -253,6 +253,7 @@ my @TESTS = (
   { name => "glass_roundtrip",    sets => [qw(posts roundtrip postglass glasses)],        test => \&test_glass_roundtrip },
   { name => "glass_currency_roundtrip", sets => [qw(posts roundtrip postglass glasses)],  test => \&test_glass_currency_roundtrip },
   { name => "comment_roundtrip",  sets => [qw(posts roundtrip comment comments)],          test => \&test_comment_roundtrip },
+  { name => "tap_action_roundtrip", sets => [qw(posts roundtrip taps beerboard)],          test => \&test_tap_action_roundtrip },
 );
 
 ################################################################################
@@ -1130,6 +1131,58 @@ sub test_comment_roundtrip {
   assert_page_ok($status, $body, "Full after comment delete", "id='mainform'");
   assert(scalar($body !~ /\Q$note2\E/), "glass page no longer shows the deleted comment '$note2'");
 } # test_comment_roundtrip
+
+sub test_tap_action_roundtrip {
+  # Test closing, reopening, and close-and-reopening a tap via the tap action form.
+  # Requires a scraper location with at least one active tap on the board.
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Board");
+  my $loc = harvest_first_loc($body);
+  if ( !defined $loc ) { skipmsg("Board page has no scraper locations"); return; }
+
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Board&loc=" . uri_escape_utf8($loc));
+  my $tap_beers_id;
+  if ( $body =~ /name='tap_beers_id' value='(\d+)'/ ) {
+    $tap_beers_id = $1;
+  }
+  if ( !defined $tap_beers_id ) {
+    skipmsg("Board for '$loc' has no active taps to manage");
+    return;
+  }
+
+  # Close the tap
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Taps", tap_beers_id => $tap_beers_id, tap_action => "close",
+        loc => $loc });
+  my $redir = assert_post_redirect($status, $headers, "tap close");
+  return unless defined $redir;
+
+  # Reopen the tap
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Taps", tap_beers_id => $tap_beers_id, tap_action => "reopen",
+        loc => $loc });
+  $redir = assert_post_redirect($status, $headers, "tap reopen");
+  return unless defined $redir;
+
+  # Close and reopen same
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Taps", tap_beers_id => $tap_beers_id, tap_action => "close_reopen",
+        loc => $loc });
+  $redir = assert_post_redirect($status, $headers, "tap close & reopen same");
+  return unless defined $redir;
+
+  # Mark unusual
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Taps", tap_beers_id => $tap_beers_id, tap_action => "",
+        mark_unusual => "1", loc => $loc });
+  $redir = assert_post_redirect($status, $headers, "tap mark unusual");
+  return unless defined $redir;
+
+  # Unmark unusual
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Taps", tap_beers_id => $tap_beers_id, tap_action => "",
+        loc => $loc });
+  $redir = assert_post_redirect($status, $headers, "tap unmark unusual");
+} # test_tap_action_roundtrip
 
 ################################################################################
 # Post-run: CopyProdData sync + debug.log scan

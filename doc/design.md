@@ -91,7 +91,9 @@ to act as defaults for similar fields in brews.
 
 ### tap_beers
 Track what beers various places have on tap now or in the past. Also what
-volumes the beer was sold at, and for what price.
+volumes the beer was sold at, and for what price. The `Unusual` flag excludes
+a keg from average age calculations (for kegs that are not representative,
+e.g. a forgotten keg left on tap for a long time).
 
 ### photos
 Metadata of photos. The actual files are stored in

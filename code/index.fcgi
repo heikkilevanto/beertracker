@@ -330,6 +330,8 @@ if ( $q->request_method eq "POST" ) {
       comments::postcomment($c);
     } elsif ( $c->{op} =~ /updateboard/i ) {
       scrapeboard::updateboard($c);
+    } elsif ( $c->{op} =~ /Taps/i ) {
+      taps::posttapaction($c);
     } else { # Default to posting a glass
       postglass::postglass($c);
     }

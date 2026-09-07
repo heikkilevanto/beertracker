@@ -755,7 +755,7 @@ sub listbrewtaps {
   my $global_sum = 0;
   my $global_cnt = 0;
   foreach my $tap (@history) {
-    next if $tap->{Days} >= 45;
+    next if $tap->{Days} >= 45 || $tap->{Unusual};
     $global_sum += $tap->{Days};
     $global_cnt++;
     $loc_sum{$tap->{Location}} += $tap->{Days};
@@ -771,7 +771,7 @@ sub listbrewtaps {
   if (@current) {
     print "<div style='white-space: nowrap;'>\n";
     foreach my $tap (@current) {
-      my $marker = $tap->{Days} >= 45 ? " ???" : "";
+      my $marker = ($tap->{Days} >= 45 || $tap->{Unusual}) ? " ???" : "";
       print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{LocationName}</span></a></b> since $tap->{Since} ($tap->{Days} days)$marker<br/>\n";
       if (exists $loc_avg{$tap->{Location}}) {
         my $avg = $loc_avg{$tap->{Location}};
@@ -795,7 +795,7 @@ sub listbrewtaps {
     print "</div>\n";
     print "<div style='display: none; white-space: nowrap;'>\n";
     foreach my $tap (@history) {
-      my $marker = $tap->{Days} >= 45 ? " ???" : "";
+      my $marker = ($tap->{Days} >= 45 || $tap->{Unusual}) ? " ???" : "";
       print "<b>#$tap->{Tap}</b> at <b><a href='$c->{url}?o=Location&e=$tap->{Location}'><span>$tap->{LocationName}</span></a></b> $tap->{Since} to $tap->{GoneFormatted} ($tap->{Days} days)$marker<br/>\n";
     }
     if (defined $global_avg) {

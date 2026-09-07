@@ -158,7 +158,7 @@ sub render_timeline {
                SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName,
                b.ShortName AS brew_shortname,
                b.BrewType, b.SubType, b.BrewStyle, b.Alc,
-               tb.FirstSeen, tb.Gone,
+               tb.FirstSeen, tb.Gone, tb.Unusual,
                pl.Name AS ProducerName, pl.ShortName AS prod_shortname,
                pl.Id AS ProducerId,
                tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL
@@ -223,6 +223,7 @@ sub render_timeline {
             first  => $fs_day,
             gone   => $ge ? $ge_day : "",
             days   => $dur,
+            unusual => $r->{Unusual} ? 1 : 0,
             prices => [ keg_prices($r) ],
         };
 
@@ -396,6 +397,42 @@ sub build_cells {
 # Single-tap detail view
 ################################################################################
 
+# Render one row in the tap detail table
+sub _render_tap_detail_row {
+    my ($c, $r, $tap, $end_ref) = @_;
+
+    my $ge = $r->{Gone};
+    my $fs_day = substr($r->{FirstSeen}, 0, 10);
+    my $ge_day = $ge ? substr($ge, 0, 10) : dateutil::eff_day_of($end_ref);
+    my $dur = dateutil::day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
+    my $gone_disp = $ge ? substr($ge, 0, 10) : "still on";
+    my @prices = keg_prices($r);
+    my $price = @prices ? join(" ", map { util::htmlesc($_) } @prices) : "";
+    my $unusual = $r->{Unusual} ? " <span style='color: #c44;'>Unusual</span>" : "";
+
+    my $style_disp = styles::brewstyledisplay($c, $r->{BrewType}, $r->{SubType},
+        "tap:$tap '" . ($r->{BrewName} // "") . "'");
+    my $prodname = $r->{prod_shortname} || $r->{ProducerName};
+    my $brewname = $r->{brew_shortname} || $r->{BrewName};
+    my $prod = $prodname
+        ? " <a href='$c->{url}?o=Location&e=" . util::htmlesc($r->{ProducerId})
+          . "'><span><i>" . util::htmlesc($prodname) . ":</i></span></a>"
+        : "";
+    my $brew = "<a href='$c->{url}?o=Brew&e=" . util::htmlesc($r->{Brew})
+        . "'><span><b>" . util::htmlesc($brewname || "?") . "</b></span></a>";
+    my $sep = $c->{mobile} ? "<br/>" : " ";
+    my $beer = "$prod$sep$brew";
+
+    print "<tr>";
+    print "<td>$style_disp</td>";
+    print "<td>$beer$unusual</td>";
+    print "<td>" . util::htmlesc(substr($r->{FirstSeen}, 0, 10))
+        . " &ndash; " . util::htmlesc($gone_disp) . "</td>";
+    print "<td>$dur</td>";
+    print "<td>$price</td>";
+    print "</tr>\n";
+} # _render_tap_detail_row
+
 sub render_single_tap {
     my ($c, $loc_id, $locname, $tap, $days, $from) = @_;
 
@@ -405,7 +442,7 @@ sub render_single_tap {
         SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName,
                b.ShortName AS brew_shortname,
                b.BrewType, b.SubType, b.BrewStyle,
-               tb.FirstSeen, tb.Gone,
+               tb.FirstSeen, tb.Gone, tb.Unusual,
                pl.Name AS ProducerName, pl.ShortName AS prod_shortname,
                pl.Id AS ProducerId,
                tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL
@@ -425,36 +462,15 @@ sub render_single_tap {
     print "<table class='tap-detail'>\n";
     print "<thead><tr><th>Style</th><th>Beer</th><th>On &ndash; Off</th>"
         . "<th>Days</th><th>Price</th></tr></thead>\n<tbody>\n";
+
+    # Read the first row (most recent keg) and render it
+    my $first = $sth->fetchrow_hashref;
+    if ($first) {
+        _render_tap_detail_row($c, $first, $tap, $end_ref);
+    }
+    # Render remaining rows
     while (my $r = $sth->fetchrow_hashref) {
-        my $ge = $r->{Gone};
-        my $fs_day = substr($r->{FirstSeen}, 0, 10);
-        my $ge_day = $ge ? substr($ge, 0, 10) : dateutil::eff_day_of($end_ref);
-        my $dur = dateutil::day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
-        my $gone_disp = $ge ? substr($ge, 0, 10) : "still on";
-        my @prices = keg_prices($r);
-        my $price = @prices ? join(" ", map { util::htmlesc($_) } @prices) : "";
-
-        my $style_disp = styles::brewstyledisplay($c, $r->{BrewType}, $r->{SubType},
-            "tap:$tap '" . ($r->{BrewName} // "") . "'");
-        my $prodname = $r->{prod_shortname} || $r->{ProducerName};
-        my $brewname = $r->{brew_shortname} || $r->{BrewName};
-        my $prod = $prodname
-            ? " <a href='$c->{url}?o=Location&e=" . util::htmlesc($r->{ProducerId})
-              . "'><span><i>" . util::htmlesc($prodname) . ":</i></span></a>"
-            : "";
-        my $brew = "<a href='$c->{url}?o=Brew&e=" . util::htmlesc($r->{Brew})
-            . "'><span><b>" . util::htmlesc($brewname || "?") . "</b></span></a>";
-        my $sep = $c->{mobile} ? "<br/>" : " ";
-        my $beer = "$prod$sep$brew";
-
-        print "<tr>";
-        print "<td>$style_disp</td>";
-        print "<td>$beer</td>";
-        print "<td>" . util::htmlesc(substr($r->{FirstSeen}, 0, 10))
-            . " &ndash; " . util::htmlesc($gone_disp) . "</td>";
-        print "<td>$dur</td>";
-        print "<td>$price</td>";
-        print "</tr>\n";
+        _render_tap_detail_row($c, $r, $tap, $end_ref);
     }
     print "</tbody></table>\n";
     $sth->finish;

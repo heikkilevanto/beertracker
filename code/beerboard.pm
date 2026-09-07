@@ -320,6 +320,7 @@ sub load_beerlist_from_db {
   my ($sql, @params);
   if ($as_of) {
     $sql = "SELECT
+        tb.Id AS tap_beers_id,
         tb.Tap, tb.Brew, b.Name AS beer,
         pl.Name AS maker, pl.Id AS maker_id,
         b.SubType AS type, b.Alc AS alc,
@@ -330,6 +331,7 @@ sub load_beerlist_from_db {
         pl.ShortName AS shortname,
         tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
         b.DefPrice, b.DefVol,
+        tb.Unusual,
         ur.rating_count, ur.average_rating, ur.comment_count,
         strftime('%Y-%m-%d', tb.FirstSeen) AS first_seen_date,
         strftime('%H:%M', tb.FirstSeen) AS first_seen_time,
@@ -339,11 +341,13 @@ sub load_beerlist_from_db {
          FROM tap_beers h
          WHERE h.Brew = tb.Brew AND h.Location = tb.Location
            AND h.Gone IS NOT NULL
+           AND h.Unusual = 0
            AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
          HAVING count(*) >= 2) as avg_days_on_tap,
         (SELECT count(*) FROM tap_beers h
          WHERE h.Brew = tb.Brew AND h.Location = tb.Location
            AND h.Gone IS NOT NULL
+           AND h.Unusual = 0
            AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
          HAVING count(*) >= 2) as tap_history_count
     FROM tap_beers tb
@@ -370,6 +374,7 @@ sub load_beerlist_from_db {
     @params = ($c->{username}, $c->{username}, $loc_id, $as_of, $as_of);
   } else {
     $sql = "SELECT
+        ct.Id AS tap_beers_id,
         ct.Tap, ct.Brew, ct.BrewName AS beer,
         pl.Name AS maker, pl.Id AS maker_id,
         b.SubType AS type, b.Alc AS alc,
@@ -380,6 +385,7 @@ sub load_beerlist_from_db {
         pl.ShortName AS shortname,
         tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
         b.DefPrice, b.DefVol,
+        tb.Unusual,
         ur.rating_count, ur.average_rating, ur.comment_count,
         strftime('%Y-%m-%d', tb.FirstSeen) AS first_seen_date,
         strftime('%H:%M', tb.FirstSeen) AS first_seen_time,
@@ -389,11 +395,13 @@ sub load_beerlist_from_db {
          FROM tap_beers h
          WHERE h.Brew = ct.Brew AND h.Location = ct.Location
            AND h.Gone IS NOT NULL
+           AND h.Unusual = 0
            AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
          HAVING count(*) >= 2) as avg_days_on_tap,
         (SELECT count(*) FROM tap_beers h
          WHERE h.Brew = ct.Brew AND h.Location = ct.Location
            AND h.Gone IS NOT NULL
+           AND h.Unusual = 0
            AND julianday(h.Gone) - julianday(h.FirstSeen) < 45
          HAVING count(*) >= 2) as tap_history_count
       FROM current_taps ct
@@ -470,7 +478,9 @@ sub load_beerlist_from_db {
       shortname => $row->{shortname},
       brewtype => $row->{brewtype},
       avg_days_on_tap => $row->{avg_days_on_tap},
-      tap_history_count => $row->{tap_history_count}
+      tap_history_count => $row->{tap_history_count},
+      tap_beers_id => $row->{tap_beers_id},
+      unusual => $row->{Unusual} ? 1 : 0
     };
   }
 
@@ -542,7 +552,9 @@ sub prepare_beer_entry_data {
     extlink_html => $extlink_html,
     dispmak_full => $dispmak_full,
     avg_days_on_tap => $e->{avg_days_on_tap},
-    tap_history_count => $e->{tap_history_count}
+    tap_history_count => $e->{tap_history_count},
+    tap_beers_id => $e->{tap_beers_id},
+    unusual => $e->{unusual}
   };
 }
 
@@ -694,6 +706,8 @@ sub render_beer_row {
   if ( $processed_data->{average_rating} ) {
     print " " . comments::avgratings($c, $processed_data->{rating_count}, $processed_data->{average_rating}, $processed_data->{comment_count});
   }
+  taps::render_tap_action_form($c, $processed_data->{tap_beers_id}, $locparam, 0, $processed_data->{unusual})
+      if $processed_data->{tap_beers_id};
   print "</td></tr> \n";
   if ($seenline) {
     print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td>&nbsp;</td><td colspan=4> $seenline";

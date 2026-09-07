@@ -363,7 +363,9 @@ the beer is served.
 If you selected the Extended display, each beer takes up a few lines. Where we
 have it, there will be a line telling how many times we have seen that beer
 before, when was the last time, how many ratings and their average, compressed
-into something like "3 rat=6.3"
+into something like "3 rat=6.3". After the "On for N days" line, a small
+[manage] link reveals a form to close the tap, close and reopen with the same
+beer, or mark the keg as unusual (which excludes it from age calculations).
 
 Before the beer board is always the graph (see bove), and under it the display
 continues as the full list (see above).
@@ -393,7 +395,10 @@ Clicking a beer cell opens a detail pane with the brew, its abv%, and a table of
 every keg of that brew seen in the window: tap number, on/off dates, duration
 (the clicked keg is highlighted), and prices. Tapping a tap number in the left
 column opens the single-tap view, which lists the full known history of that tap
-(not limited to the displayed window).
+(not limited to the displayed window). For the most recent keg on a tap, a small
+[manage] link reveals a form to close the tap, close and reopen with the same
+beer, reopen a wrongly closed keg, or mark the keg as unusual (which excludes
+it from age calculations).
 
 ### Stats
 Shows some statistics for each day, month, or year. On top is a line with links
