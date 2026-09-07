@@ -152,6 +152,7 @@ sub render_timeline {
     }
     my $env_start = $start_day . " 06:00:00";
     my $env_end   = dateutil::date_plus_days($end_day, 1) . " 06:00:00";
+    my $today = strftime("%Y-%m-%d", localtime(time()));
 
     # Fetch overlapping tap periods
     my $sth = $c->{dbh}->prepare(q{
@@ -220,8 +221,8 @@ sub render_timeline {
         push @{$kegs{$bid}}, {
             id     => $r->{Id},
             tap    => int($r->{Tap}),
-            first  => $fs_day,
-            gone   => $ge ? $ge_day : "",
+            first  => substr($r->{FirstSeen}, 0, 16),
+            gone   => $ge ? substr($ge, 0, 16) : "",
             days   => $dur,
             unusual => $r->{Unusual} ? 1 : 0,
             prices => [ keg_prices($r) ],
@@ -232,6 +233,7 @@ sub render_timeline {
         for my $i (0 .. $#buckets) {
             my $bk = $buckets[$i];
             next unless day_overlap($r->{FirstSeen}, $ge, $bk->{bs}, $bk->{be}, $end_ref);
+            next if $ge && $bk->{day} eq $today;
             my $cur = $tap_days{$tap}->[$i];
             if (!defined($cur) || $r->{FirstSeen} gt $cur->{fs}) {
                 $tap_days{$tap}->[$i] = $rec;
@@ -278,11 +280,17 @@ sub render_timeline {
     print $warn_html if $warn_html;
 
     my $N = scalar(@buckets);
-    my $table_w = 40 + $N * 22 + ($N + 1) * 2;  # + border-spacing
+    my $today_cols = 1;  # today's column is double width
+    my $table_w = 40 + ($N - $today_cols) * 22 + $today_cols * 48 + ($N + 1) * 2;  # + border-spacing
     print "<div class='overflow-auto'>\n"
         . "<table class='timeline' style='width:" . $table_w . "px'>\n";
-    print "<colgroup><col width='40'><col width='22' span='$N'></colgroup>\n";
-    my $today = strftime("%Y-%m-%d", localtime(time()));
+    # colgroup: tap column + day columns (today gets 44px, others 22px)
+    print "<colgroup><col width='40'>";
+    for my $bk (reverse @buckets) {
+        my $w = ($bk->{day} eq $today) ? 48 : 22;
+        print "<col width='$w'>";
+    }
+    print "</colgroup>\n";
     my $corner = ($from eq $today)
         ? "<th class='tapcol'><span>Tap</span></th>"
         : "<th class='tapcol'><a href='#' onclick='tapClearFrom(); return false;'>"
@@ -294,10 +302,14 @@ sub render_timeline {
         my $epoch = timelocal(0, 0, 12, $dd, $mm - 1, $yyyy - 1900);
         my $wday = (localtime($epoch))[6];
         my $weekend = ($wday == 0 || $wday == 6);
-        my $cls = "daycol" . ($weekend ? " weekend" : "");
+        my $is_today = ($bk->{day} eq $today);
+        my $cls = "daycol" . ($weekend ? " weekend" : "") . ($is_today ? " today" : "");
         my $is_first = ($i == 0) || ($dd eq "01");
         my ($mon, $daytxt);
-        if ($weekend) {
+        if ($is_today) {
+            $mon = "<span class='mon'>" . $MON_ABBR[$mm - 1] . "</span>";
+            $daytxt = "<span class='day'>$dd</span>";
+        } elsif ($weekend) {
             $mon = "<span class='mon wd'>" . $WDAY_ABBR[$wday] . "</span>";
             $daytxt = "<span class='day'>$dd</span>";
         } elsif ($is_first) {
@@ -309,8 +321,14 @@ sub render_timeline {
                 . $MON_ABBR[$mm - 1] . "</span>";
         }
         my $dattr = util::htmlesc($bk->{day});
-        print "<th class='$cls' style='cursor:pointer;' onclick='tapSetFrom(\"$dattr\")'>"
-            . "$mon$daytxt</th>\n";
+        if ($is_today) {
+            print "<th class='$cls' style='cursor:pointer;' onclick='tapSetFrom(\"$dattr\")'>"
+                . "<span class='day'>$dd</span> <span class='mon'>$MON_ABBR[$mm - 1]</span>"
+                . "<br/>$yyyy</th>\n";
+        } else {
+            print "<th class='$cls' style='cursor:pointer;' onclick='tapSetFrom(\"$dattr\")'>"
+                . "$mon$daytxt</th>\n";
+        }
         $i++;
     }
     print "</tr></thead>\n<tbody>\n";
@@ -383,7 +401,7 @@ sub build_cells {
         while ($j < @disp) {
             my $o = $disp[$j];
             my $same = (!defined($o) && !defined($rec))
-                || (defined($o) && defined($rec) && $o->{bid} eq $rec->{bid});
+                || (defined($o) && defined($rec) && $o->{bid} eq $rec->{bid} && $o->{kegid} eq $rec->{kegid});
             last unless $same;
             $j++;
         }
@@ -405,7 +423,7 @@ sub _render_tap_detail_row {
     my $fs_day = substr($r->{FirstSeen}, 0, 10);
     my $ge_day = $ge ? substr($ge, 0, 10) : dateutil::eff_day_of($end_ref);
     my $dur = dateutil::day_diff($fs_day, $ge_day) + 1;  # inclusive of both ends
-    my $gone_disp = $ge ? substr($ge, 0, 10) : "still on";
+    my $gone_disp = $ge ? substr($ge, 0, 16) : "still on";
     my @prices = keg_prices($r);
     my $price = @prices ? join(" ", map { util::htmlesc($_) } @prices) : "";
     my $unusual = $r->{Unusual} ? " <span style='color: #c44;'>Unusual</span>" : "";
@@ -426,7 +444,7 @@ sub _render_tap_detail_row {
     print "<tr>";
     print "<td>$style_disp</td>";
     print "<td>$beer$unusual</td>";
-    print "<td>" . util::htmlesc(substr($r->{FirstSeen}, 0, 10))
+    print "<td>" . util::htmlesc(substr($r->{FirstSeen}, 0, 16))
         . " &ndash; " . util::htmlesc($gone_disp) . "</td>";
     print "<td>$dur</td>";
     print "<td>$price</td>";

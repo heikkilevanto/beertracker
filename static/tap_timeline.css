@@ -39,9 +39,12 @@ table.timeline th.tapcol, table.timeline td.tapcol {
   width: 40px; font-weight: bold;
 }
 table.timeline th.daycol { width: 22px; }
+table.timeline th.daycol.today { width: 48px; white-space: normal; }
 .daycol .mon { display: block; font-size: .6em; line-height: 1; color: #aaa; }
 .daycol .mon.wd { color: #fff; }
 .daycol .day { display: block; font-size: .82em; line-height: 1.1; color: inherit; }
+.daycol.today .day, .daycol.today .mon { display: inline; font-size: .82em; }
+.daycol.today .mon { color: #aaa; }
 .daycol.weekend { background: var(--altbgcolor); border-width: 2px; border-color: rgba(255,255,255,0.7); }
 
 .tap-cell {

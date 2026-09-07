@@ -35,12 +35,12 @@ function kegHistory(bid, kegid) {
        + "<tr><th>Tap</th><th>On</th><th>Off</th><th>Days</th><th>Price</th><th></th></tr>";
   for (var i = 0; i < ks.length; i++) {
     var k = ks[i];
-    var off = k.gone ? k.gone : "\u2014";
+    var off = k.gone ? k.gone : "(still on)";
     var pr = (k.prices && k.prices.length) ? k.prices.join(" ") : "";
     var hl = (String(k.id) === String(kegid)) ? " class='hl'" : "";
     var unusual = k.unusual ? " <span style='color:#c44;'>Unusual</span>" : "";
     h += "<tr" + hl + "><td>#" + k.tap + "</td><td>" + escHtml(k.first) + "</td><td>"
-       + escHtml(off) + "</td><td>" + k.days + "d</td><td>" + escHtml(pr)
+       + escHtml(off) + "</td><td>" + k.days + "</td><td>" + escHtml(pr)
        + "<td>" + unusual;
     if (i === 0) {
       h += tapManageLink(k.id, k.gone ? 1 : 0, k.unusual ? 1 : 0);
