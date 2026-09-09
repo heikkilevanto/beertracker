@@ -665,6 +665,7 @@ sub render_beer_row {
     print "<a href='$c->{url}?o=Location&e=$e->{maker_id}' style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'><span>L$e->{maker_id}</span></a> ";
   }
   print "$processed_data->{dispmak_full}: ";
+  print "<span class='mobile-only-br'></span>";
   if ($e->{brew_id}) {
     print "<a href='$c->{url}?o=Brew&e=$e->{brew_id}' style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'><span>B$e->{brew_id}</span></a> ";
   }
