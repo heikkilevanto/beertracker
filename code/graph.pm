@@ -359,6 +359,7 @@ sub graphlinks {
   onelink($g, "&gt;&gt;", ($start+$range)->ymd, ($end+$range)->ymd ); # >>
   onelink($g, "w", ($t-14*$oneday)->ymd, ($t+2*$oneday)->ymd ); # extra future
   onelink($g, "m"); # default values
+  onelink($g, "2m", ($t - 2*$onemonth)->ymd );
   onelink($g, "3m", ($t - 3*$onemonth)->ymd );
   onelink($g, "6m", ($t - 6*$onemonth)->ymd );
   onelink($g, "Y",  ($t - $oneyear)->ymd );
