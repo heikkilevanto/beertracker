@@ -355,8 +355,8 @@ sub graphlinks {
   my $start = Time::Piece->strptime($g->{start},"%F");
   my $end = Time::Piece->strptime($g->{end},"%F");
   my $range = int( ($end - $start) * 0.9 );
-  onelink($g, "&lt;&lt;", ($start-$range)->ymd, ($end-$range)->ymd ); # <<
-  onelink($g, "&gt;&gt;", ($start+$range)->ymd, ($end+$range)->ymd ); # >>
+  onelink($g, "&lt;", ($start-$range)->ymd, ($end-$range)->ymd ); # <
+  onelink($g, "&gt;", ($start+$range)->ymd, ($end+$range)->ymd ); # >
   onelink($g, "w", ($t-14*$oneday)->ymd, ($t+2*$oneday)->ymd ); # extra future
   onelink($g, "m"); # default values
   onelink($g, "2m", ($t - 2*$onemonth)->ymd );
@@ -365,7 +365,7 @@ sub graphlinks {
   onelink($g, "Y",  ($t - $oneyear)->ymd );
   onelink($g, "2y", ($t - 2*$oneyear)->ymd );
   onelink($g, "5y", ($t - 5*$oneyear)->ymd );
-    onelink($g, "all", "2016-01-01",$t->ymd );  # Earlest known data in the system
+  onelink($g, "A", "2016-01-01",$t->ymd );  # Earlest known data in the system
   # Toggle between drinks and price, keeping the currently shown range
   my $toggle = '$';
   my $togglemode = "price";
