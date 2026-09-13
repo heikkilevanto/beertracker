@@ -94,10 +94,15 @@ sub listbrewprices {
       AND username = ?
     ORDER BY Timestamp DESC";
   my $sth = db::query($c, $sql, $brew->{Id}, $c->{username});
+  # Collapsed header: show default price summary
+  my $def_summary = "";
+  if ( $brew->{DefPrice} && $brew->{DefVol} ) {
+    $def_summary = " &mdash; " . util::unit($brew->{DefVol},"c") . " at " . util::unit($brew->{DefPrice},",-");
+  }
   print "<div onclick='toggleElement(this.nextElementSibling);'>";
-  print "Latest prices for <b>$brew->{Name}</b> <br/>\n";
+  print "Latest prices for <b>$brew->{Name}</b>$def_summary <br/>\n";
   print "</div>\n";
-  print "<div style='overflow-x: auto;'>";
+  print "<div style='overflow-x: auto; display:none;'>";
   print "<table >\n";
   my $sty = "style='white-space: nowrap;' ";
   while ( my $com = $sth->fetchrow_hashref ) {
