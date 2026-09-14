@@ -125,6 +125,8 @@ sub listbrewprices {
       title => "prices",
       maxrecords => 5,
       no_new_link => 1,
+      allbutton => 1,
+      hide_headers_default => 1,
   });
   print "</div>\n";
 

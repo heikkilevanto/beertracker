@@ -71,6 +71,7 @@ sub listrecords {
   my $initial_filter = $opt->{initial_filter} || {};
   my $no_new_link    = $opt->{no_new_link}    || 0;
   my $hide_headers_default = $opt->{hide_headers_default} || 0;
+  my $allbutton    = $opt->{allbutton}    || 0;
   my $gap_column = $opt->{gap_column};
   my $norecmessage = $opt->{norecmessage};
 
@@ -192,7 +193,7 @@ sub listrecords {
   $s .= "<!-- listrecords: $sql -->\n";
 
   # Header bar — always rendered, two lines
-  $s .= "<div class='lr-wrapper' data-lr-wrapper>\n";
+  $s .= "<div class='lr-wrapper' data-lr-wrapper data-initial-pagesize='$maxrecords'>\n";
   $s .= "<div class='lr-bar' style='display:flex; flex-direction:column; gap:2px;'>\n";
   $s .= "  <div style='display:flex; align-items:center; gap:4px;'>\n";
   $s .= "    <span class='lr-count'>0</span>&nbsp;<b>$title</b>\n";
@@ -201,16 +202,20 @@ sub listrecords {
     $s .= "       style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'><span>New</span></a>\n";
   }
   $s .= "    <span class='lr-clr' onclick='lr_clearfilters(this)'\n";
-  $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; margin-left:8px'>Clr</span>\n";
+  $s .= "          style='display:none; cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; margin-left:8px'>Clr</span>\n";
   $s .= "    <span class='lr-hdr' onclick='lr_toggleheaders(this)'\n";
   $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small'>Hdr</span>\n";
+  if ($allbutton) {
+    $s .= "    <span class='lr-all' onclick='lr_showall(this)'\n";
+    $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small'>All</span>\n";
+  }
   $s .= "    <span class='lr-help' onclick='lr_showhelp()'\n";
   $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; display:inline-block; width:1.6em; text-align:center'>?</span>\n";
   $s .= "  </div>\n";
   $s .= "  <div class='lr-page-nav-div' style='display:flex; align-items:center; flex-wrap:wrap; gap:8px;'>\n";
   $s .= "    Showing <select class='lr-size-select' onchange='lr_changesize(this)'>\n";
   my $found = 0;
-  foreach my $so (10, 20, 50, 100, 200) {
+  foreach my $so (5, 10, 20, 50, 100, 200) {
     my $sel = "";
     $sel = " selected" if ($so == $maxrecords);
     $s .= "      <option value='$so'$sel>$so</option>\n";
@@ -240,8 +245,8 @@ sub listrecords {
   $s .= "    <li><b>Navigate</b>: use the page size selector, <b>Prev</b>/<b>Next</b>, or the page dropdown to move between pages.</li>\n";
   $s .= "  </ul>\n";
   $s .= "</div>\n";
-  if ($hide_headers_default) {
-    $s .= "<script>(function(w){w.classList.add('lr-compact');})(document.querySelector('[data-lr-wrapper]'));<\/script>\n";
+  if ($hide_headers_default || $allbutton) {
+    $s .= "<script>(function(w){w.classList.add('lr-compact');})(document.currentScript.parentElement);<\/script>\n";
   }
 
   my $geotable = "";

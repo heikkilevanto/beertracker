@@ -167,6 +167,8 @@ function dochangefilter (inputElement, done) {
     table.dataset.lrFiltering = '0';
     table.dataset.currentPage = 1;
     lr_paginate(table);
+    const clr = wrapper.querySelector('.lr-clr');
+    if (clr) clr.style.display = 'none';
 
     const aggEl = wrapper.querySelector('[data-lr-agg]');
     if (aggEl) lr_update_footer(aggEl);
@@ -216,6 +218,7 @@ function dochangefilter (inputElement, done) {
     table.dataset.lrFiltering = '0';
     table.dataset.currentPage = 1;
     lr_paginate(table);
+    lr_showClr(wrapper);
 
     const aggEl = wrapper.querySelector('[data-lr-agg]');
     if (aggEl) lr_update_footer(aggEl);
@@ -285,13 +288,44 @@ function lr_clearfilters(el) {
   const wrapper = el.closest('[data-lr-wrapper]');
   const table = wrapper.querySelector('table');
   table.querySelectorAll('thead td input[data-col]').forEach(inp => { inp.value = ''; });
-  const first = table.querySelector('thead input[data-col]');
-  if (first) dochangefilter(first);
+  const initial = parseInt(wrapper.dataset.initialPagesize) || 20;
+  table.dataset.pageSize = initial;
+  table.dataset.currentPage = 1;
+  table.dataset.lrFiltering = '0';
+  const select = wrapper.querySelector('.lr-size-select');
+  if (select) select.value = String(initial);
+  const clr = wrapper.querySelector('.lr-clr');
+  if (clr) clr.style.display = 'none';
+  Array.from(table.tBodies).forEach(t => { t.style.display = ''; t.dataset.lrFs = '1'; });
+  lr_paginate(table);
 }
 
 function lr_toggleheaders(el) {
   const wrapper = el.closest('[data-lr-wrapper]');
   wrapper.classList.toggle('lr-compact');
+}
+
+function lr_showClr(wrapper) {
+  const clr = wrapper.querySelector('.lr-clr');
+  if (clr) clr.style.display = '';
+}
+
+function lr_showall(el) {
+  const wrapper = el.closest('[data-lr-wrapper]');
+  const table = wrapper.querySelector('table');
+  const initial = parseInt(wrapper.dataset.initialPagesize) || 20;
+  if (parseInt(table.dataset.pageSize) === 0) {
+    table.dataset.pageSize = initial;
+    const select = wrapper.querySelector('.lr-size-select');
+    if (select) select.value = String(initial);
+  } else {
+    table.dataset.pageSize = 0;
+    const select = wrapper.querySelector('.lr-size-select');
+    if (select) select.value = '0';
+  }
+  table.dataset.currentPage = 1;
+  lr_paginate(table);
+  lr_showClr(wrapper);
 }
 
 function lr_showhelp() {
@@ -378,6 +412,7 @@ function doSortTable(el, col, ascending) {
   table.dataset.sortDir = ascending ? "asc" : "desc";
 
   console.timeEnd("sort") ;
+  lr_showClr(wrapper);
 }
 
 function extractSortKey(recordRows, columnIndex) {
@@ -492,6 +527,7 @@ function lr_page(el, delta) {
   if (page < 1) page = 1;
   table.dataset.currentPage = page;
   lr_paginate(table);
+  lr_showClr(wrapper);
   return false;
 }
 
@@ -502,6 +538,7 @@ function lr_gopage(select) {
   const startRec = parseInt(select.value);
   table.dataset.currentPage = Math.floor((startRec - 1) / pageSize) + 1;
   lr_paginate(table);
+  lr_showClr(wrapper);
 }
 
 function lr_changesize(select) {
@@ -510,6 +547,7 @@ function lr_changesize(select) {
   table.dataset.pageSize = parseInt(select.value);
   table.dataset.currentPage = 1;
   lr_paginate(table);
+  lr_showClr(wrapper);
 }
 
 // Toggle visibility of an element, used in brews.pm and locations.pm
