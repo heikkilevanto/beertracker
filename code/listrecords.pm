@@ -756,6 +756,7 @@ sub listrecords {
       } elsif ( $fn eq "d" ) {
         if (defined $v && $v ne '') {
           $data_attrs .= " data-sort-key='$v'";
+          $data_attrs .= " data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'";
           $v = sprintf('%.1f', $v) . "<span style='font-size: xx-small'>d</span> ";
         } else {
           $v = "";
@@ -763,6 +764,7 @@ sub listrecords {
       } elsif ( $fn eq "Pr" ) {
         if ($v) {
           $data_attrs .= " data-sort-key='$v'";
+          $data_attrs .= " data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'";
           $v = util::unit($v, ".-");
         } else {
           $v = "";
@@ -770,6 +772,7 @@ sub listrecords {
       } elsif ( $fn eq "Vol" ) {
         if ($v) {
           $data_attrs .= " data-sort-key='$v'";
+          $data_attrs .= " data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'";
           $v = util::unit($v, "c");
         } else {
           $v = "";

@@ -104,7 +104,7 @@ sub listbrewprices {
       AND g.Brew = ?
       AND g.Username = ?
     GROUP BY g.Location, g.Volume, g.Price
-    ORDER BY 6 DESC
+    ORDER BY LastSeen DESC
   };
   my $sth = db::query($c, $sql, $brew->{Id}, $c->{username});
   my @rows;
@@ -116,7 +116,7 @@ sub listbrewprices {
 
   my $def_summary = "";
   if ( $brew->{DefPrice} && $brew->{DefVol} ) {
-    $def_summary = " &mdash; " . util::unit($brew->{DefVol},"c") . " at " . util::unit($brew->{DefPrice},",-");
+    $def_summary = " (def: " . util::unit($brew->{DefVol},"c") . "at " . util::unit($brew->{DefPrice},",-") . ")";
   }
 
   # Split: compact = up to 5 rows within 18 months; full = all rows
@@ -130,8 +130,9 @@ sub listbrewprices {
   }
   return unless @compact;  # nothing recent — hide section
 
-  # Collapsed header
-  print "<div onclick='toggleElement(this.nextElementSibling);'>";
+  # Collapsed header — toggles entire section
+  print "<div id='prices-section'>\n";
+  print "<div onclick='toggleElement(document.getElementById(\"prices-section\"));'>";
   print "Latest prices for <b>$brew->{Name}</b>$def_summary <br/>\n";
   print "</div>\n";
 
@@ -171,7 +172,7 @@ sub listbrewprices {
 
   # "More" link — only shown if there are more rows than the compact view
   if (scalar(@rows) > scalar(@compact)) {
-    print "<div onclick=\"document.getElementById('prices-compact').style.display='none'; document.getElementById('prices-full').style.display='block';\"><br/>";
+    print "<div id='prices-morelink' onclick=\"document.getElementById('prices-compact').style.display='none'; document.getElementById('prices-morelink').style.display='none'; document.getElementById('prices-full').style.display='block';\"><br/>";
     print "<span>More prices (" . scalar(@rows) . " total)</span>";
     print "</div>\n";
   }
@@ -191,10 +192,10 @@ sub listbrewprices {
       AND g.Brew = ?
       AND g.Username = ?
     GROUP BY g.Location, g.Volume, g.Price
-    ORDER BY 6 DESC
+    ORDER BY LastSeen_90px DESC
   };
   print "<div id='prices-full' style='display:none; overflow-x: auto;'>\n";
-  print "<div onclick=\"document.getElementById('prices-full').style.display='none'; document.getElementById('prices-compact').style.display='block';\"><br/>";
+  print "<div onclick=\"document.getElementById('prices-full').style.display='none'; document.getElementById('prices-compact').style.display='block'; document.getElementById('prices-morelink').style.display='block';\"><br/>";
   print "<span>Less</span>";
   print "</div>\n";
   print listrecords::listrecords($c, $full_sql, {
@@ -204,6 +205,8 @@ sub listbrewprices {
       no_new_link => 1,
   });
   print "</div>\n";
+
+  print "</div>\n"; # prices-section
 
   print "<!-- listbrewprices end -->\n";
   print "<hr/>\n";
