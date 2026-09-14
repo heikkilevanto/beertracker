@@ -25,7 +25,7 @@ use File::Copy;
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 53;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 54;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -44,6 +44,8 @@ our @MIGRATIONS = (
   [52, 'backfill producer locations FirstSeen', \&mig_052_backfill_producer_firstseen],
   # Issue 762 - mark tap_beers as unusual to exclude from age calculations
   [53, 'add tap_beers.Unusual column', \&mig_053_add_tap_beers_unusual],
+  # Drop LatestPrices view — replaced by hardcoded query in brews.pm
+  [54, 'drop LatestPrices view', \&mig_054_drop_latest_prices_view],
 );
 
 ################################################################################
@@ -272,6 +274,13 @@ sub mig_053_add_tap_beers_unusual {
   my $c = shift;
   db::execute($c, "ALTER TABLE tap_beers ADD COLUMN Unusual integer DEFAULT 0");
 } # mig_053_add_tap_beers_unusual
+
+
+# Drop LatestPrices view — the prices list is now a hardcoded query in brews.pm
+sub mig_054_drop_latest_prices_view {
+  my $c = shift;
+  db::execute($c, "DROP VIEW IF EXISTS LatestPrices");
+} # mig_054_drop_latest_prices_view
 
 
 ################################################################################

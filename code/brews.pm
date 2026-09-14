@@ -88,56 +88,123 @@ sub listbrewprices {
   my $c = shift; # context
   my $brew = shift;
   print "<!-- listbrewprices -->\n";
-  my $sql = "
-    SELECT * FROM LatestPrices
-    WHERE Brew = ?
-      AND username = ?
-    ORDER BY Timestamp DESC";
+
+  my $sql = qq{
+    SELECT
+      g.Location,
+      l.Name AS LocationName,
+      g.Volume,
+      g.Price,
+      count(*) AS Count,
+      strftime('%Y-%m-%d', min(g.Timestamp), '-06:00') AS FirstSeen,
+      strftime('%Y-%m-%d', max(g.Timestamp), '-06:00') AS LastSeen
+    FROM glasses g
+    LEFT JOIN locations l ON l.Id = g.Location
+    WHERE g.Price > 0
+      AND g.Brew = ?
+      AND g.Username = ?
+    GROUP BY g.Location, g.Volume, g.Price
+    ORDER BY 6 DESC
+  };
   my $sth = db::query($c, $sql, $brew->{Id}, $c->{username});
-  # Collapsed header: show default price summary
+  my @rows;
+  while ( my $r = $sth->fetchrow_hashref ) {
+    push @rows, $r;
+  }
+  $sth->finish;
+  return unless @rows;  # no prices at all — hide section
+
   my $def_summary = "";
   if ( $brew->{DefPrice} && $brew->{DefVol} ) {
     $def_summary = " &mdash; " . util::unit($brew->{DefVol},"c") . " at " . util::unit($brew->{DefPrice},",-");
   }
+
+  # Split: compact = up to 5 rows within 18 months; full = all rows
+  my ($cutoff) = db::queryarray($c,
+      "SELECT strftime('%Y-%m-%d', 'now', '-18 months', '-06:00')");
+  my @compact;
+  foreach my $r (@rows) {
+    next if $r->{LastSeen} lt $cutoff;
+    push @compact, $r;
+    last if scalar(@compact) >= 5;
+  }
+  return unless @compact;  # nothing recent — hide section
+
+  # Collapsed header
   print "<div onclick='toggleElement(this.nextElementSibling);'>";
   print "Latest prices for <b>$brew->{Name}</b>$def_summary <br/>\n";
   print "</div>\n";
-  print "<div style='overflow-x: auto; display:none;'>";
-  print "<table >\n";
-  my $sty = "style='white-space: nowrap;' ";
-  while ( my $com = $sth->fetchrow_hashref ) {
-    print "<tr><td $sty>\n";
-    print "$com->{Timestamp}<br/> \n";
-    print "<td $sty>\n";
-    print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
-    print "</td><td $sty>\n";
-    print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
-    print "</td><td $sty>\n";
-    if ( $com->{Price} && $com->{Volume} ) {
-      my $is_default = ( ($brew->{DefPrice} // "") eq $com->{Price} &&
-                         ($brew->{DefVol}   // "") eq $com->{Volume} );
+
+  # Compact table (visible by default)
+  print "<div id='prices-compact' style='overflow-x: auto;'>\n";
+  print "<table>\n";
+  my $ssty = "style='white-space: nowrap; width:1px;' ";
+  foreach my $r (@compact) {
+    print "<tr><td style='white-space: nowrap;'>\n";
+    print $r->{LocationName};
+    print "</td><td $ssty>\n";
+    print util::unit($r->{Volume},"c") if $r->{Volume};
+    print "</td><td $ssty>\n";
+    print util::unit($r->{Price},",-") if $r->{Price};
+    print "</td><td $ssty>\n";
+    if ( $r->{Price} && $r->{Volume} ) {
+      my $is_default = ( ($brew->{DefPrice} // "") eq $r->{Price} &&
+                         ($brew->{DefVol}   // "") eq $r->{Volume} );
       if ( !$is_default ) {
         print "<form method='POST' accept-charset='UTF-8' style='display:inline;'>\n";
         print "<input type='hidden' name='o' value='Brews' />\n";
         print "<input type='hidden' name='e' value='$brew->{Id}' />\n";
-        print "<input type='hidden' name='setdefaultprice' value='$com->{Price}' />\n";
-        print "<input type='hidden' name='setdefaultvol' value='$com->{Volume}' />\n";
+        print "<input type='hidden' name='setdefaultprice' value='$r->{Price}' />\n";
+        print "<input type='hidden' name='setdefaultvol' value='$r->{Volume}' />\n";
         print "<input type='submit' value='Def' style='font-size: x-small;' />\n";
         print "</form>\n";
       }
-    } else {
-      print "&nbsp;";
     }
-    print "</td><td $sty>\n";
-    print $com->{LocationName};
-    print " ($com->{Count})" if ($com->{Count} && $com->{Count} > 1);
-    print "</td>\n";
-    print "</tr>\n";
+    print "</td><td style='white-space: nowrap;'>\n";
+    print "$r->{FirstSeen} $r->{LastSeen}";
+    print "</td><td $ssty>\n";
+    print "$r->{Count}";
+    print "</td></tr>\n";
   }
-  print "</table></div>\n";
-  print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
-  print "</div>";
-  $sth->finish;
+  print "</table>\n";
+  print "</div>\n";
+
+  # "More" link — only shown if there are more rows than the compact view
+  if (scalar(@rows) > scalar(@compact)) {
+    print "<div onclick=\"document.getElementById('prices-compact').style.display='none'; document.getElementById('prices-full').style.display='block';\"><br/>";
+    print "<span>More prices (" . scalar(@rows) . " total)</span>";
+    print "</div>\n";
+  }
+
+  # Full listrecords table (hidden by default)
+  my $full_sql = qq{
+    SELECT
+      l.Name AS "Location_A",
+      g.Volume AS "Vol",
+      g.Price AS "Pr",
+      count(*) AS "Count",
+      strftime('%Y-%m-%d', max(g.Timestamp), '-06:00') AS "LastSeen_90px",
+      strftime('%Y-%m-%d', min(g.Timestamp), '-06:00') AS "FirstSeen_90px"
+    FROM glasses g
+    LEFT JOIN locations l ON l.Id = g.Location
+    WHERE g.Price > 0
+      AND g.Brew = ?
+      AND g.Username = ?
+    GROUP BY g.Location, g.Volume, g.Price
+    ORDER BY 6 DESC
+  };
+  print "<div id='prices-full' style='display:none; overflow-x: auto;'>\n";
+  print "<div onclick=\"document.getElementById('prices-full').style.display='none'; document.getElementById('prices-compact').style.display='block';\"><br/>";
+  print "<span>Less</span>";
+  print "</div>\n";
+  print listrecords::listrecords($c, $full_sql, {
+      params => [$brew->{Id}, $c->{username}],
+      title => "All prices for $brew->{Name}",
+      hide_headers_default => 1,
+      no_new_link => 1,
+  });
+  print "</div>\n";
+
   print "<!-- listbrewprices end -->\n";
   print "<hr/>\n";
 

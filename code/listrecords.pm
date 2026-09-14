@@ -289,7 +289,7 @@ sub listrecords {
       $styles[$i] = "";
       next;
     }
-    my $sty = "style='max-width:200px; min-width:0'"; # default
+    my $sty = "style='max-widthem measurements,:200px; min-width:0'"; # default
     $sty = "style='max-width:90px; min-width:0'" if ( $c->{mobile} );
     if ( $f =~ /^X/i ) {
       $sty = "style='display:none'";
@@ -309,7 +309,7 @@ sub listrecords {
       $sty = "style='max-width:70px; text-align:center'";
     } elsif ( $f =~ /^(Com|Count|d)$/ ) {
       $sty = "style='text-align:right; max-width:50px'";
-    } elsif ( $f =~ /^Pr$/ ) {
+    } elsif ( $f =~ /^(Pr|Vol)$/ ) {
       $sty = "style='text-align:right; max-width:35px'";
     } elsif ( $f =~ /^Photo$/ ) {
       $sty = "style='width:96px; text-align:center; padding:1px'";
@@ -345,6 +345,9 @@ sub listrecords {
         $styles[$i] = "";
         $sty = " size='" . (length($f) + 2) . "'";
         $sty .= " style='max-width:70px'" if ( $c->{mobile} );
+    } elsif ( $px_override{$i} ) {
+        $styles[$i] = "style='max-width:$px_override{$i}; min-width:0'";
+        $sty = " size='6' style='max-width:$px_override{$i}; min-width:0'";
     }
     $f =~ s/^-//;
     $f =~ s/'//g;
@@ -761,6 +764,13 @@ sub listrecords {
         if ($v) {
           $data_attrs .= " data-sort-key='$v'";
           $v = util::unit($v, ".-");
+        } else {
+          $v = "";
+        }
+      } elsif ( $fn eq "Vol" ) {
+        if ($v) {
+          $data_attrs .= " data-sort-key='$v'";
+          $v = util::unit($v, "c");
         } else {
           $v = "";
         }

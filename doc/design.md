@@ -341,6 +341,7 @@ top stats.
 
 When about to release a new version, try to follow this checklist:
 - [ ] Define a milestone for the release (can be done early)
+- [ ] Regenerate the lines vs hrs graph
 - [ ] Assign milestones to issues that need to be fixed for the release (also early)
 - [ ] Decide on a feature freeze. Bugs can still be fixed
 - [ ] Verify that each module is in a reasonable state. 
