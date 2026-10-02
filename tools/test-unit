@@ -35,6 +35,8 @@ require comments;
 require glasses;
 require styles;
 require postglass;
+require currencies;
+require mainlist;
 
 ################################################################################
 # Config
@@ -110,6 +112,7 @@ my @TESTS = (
   { name => "glasses_isempty",   sets => [qw(quick glasses)],    test => \&test_glasses_isempty },
   { name => "styles_short",      sets => [qw(quick styles)],     test => \&test_styles_short },
   { name => "postglass_curprice", sets => [qw(quick postglass)], test => \&test_postglass_curprice },
+  { name => "mainlist_currency",  sets => [qw(quick mainlist)],  test => \&test_mainlist_currency },
 );
 
 ################################################################################
@@ -408,7 +411,7 @@ sub test_styles_short {
   assert(styles::shortbeerstyle(undef) eq "", "shortbeerstyle undef");
 }
 
-# --- postglass.pm ---
+# --- postglass.pm / currencies ---
 
 sub test_postglass_curprice {
   require postglass;
@@ -417,29 +420,178 @@ sub test_postglass_curprice {
   # EUR shorthand
   my ($dkk, $orig) = postglass::curprice($c, "5.5e");
   assert(defined $dkk && $dkk == 41, "curprice 5.5e -> 41 DKK");
-  assert($orig eq "5.5 e", "curprice 5.5e orig text");
 
-  # Full currency name
+  # Full currency name (same conversion as shorthand)
   ($dkk, $orig) = postglass::curprice($c, "10eur");
   assert(defined $dkk && $dkk == 75, "curprice 10eur -> 75 DKK");
 
-  # USD
+  # USD full name
   ($dkk, $orig) = postglass::curprice($c, "20usd");
   assert(defined $dkk && $dkk == 126, "curprice 20usd -> 126 DKK");
 
-  # GBP
+  # USD shorthand 'u' (documented in manual; needs currencies.pm alias merge)
+  ($dkk, $orig) = postglass::curprice($c, "20u");
+  assert(defined $dkk && $dkk == 126, "curprice 20u -> 126 DKK");
+
+  # GBP shorthand
   ($dkk, $orig) = postglass::curprice($c, "8.5p");
   assert(defined $dkk && $dkk == 72, "curprice 8.5p -> 72 DKK");
 
-  # SEK
+  # GBP full name
+  ($dkk, $orig) = postglass::curprice($c, "8.5gbp");
+  assert(defined $dkk && $dkk == 72, "curprice 8.5gbp -> 72 DKK");
+
+  # SEK shorthand
   ($dkk, $orig) = postglass::curprice($c, "100s");
   assert(defined $dkk && $dkk == 65, "curprice 100s -> 65 DKK");
+
+  # SEK full name
+  ($dkk, $orig) = postglass::curprice($c, "100sek");
+  assert(defined $dkk && $dkk == 65, "curprice 100sek -> 65 DKK");
+
+  # Case-insensitive aliases
+  ($dkk, $orig) = postglass::curprice($c, "5.5E");
+  assert(defined $dkk && $dkk == 41, "curprice 5.5E -> 41 DKK");
+  ($dkk, $orig) = postglass::curprice($c, "10USD");
+  assert(defined $dkk && $dkk == 63, "curprice 10USD -> 63 DKK");
+
+  # Space between amount and currency (allowed by curprice pattern)
+  ($dkk, $orig) = postglass::curprice($c, "5.5 e");
+  assert(defined $dkk && $dkk == 41, "curprice '5.5 e' -> 41 DKK");
 
   # No currency suffix — should return empty list
   my @result = postglass::curprice($c, "45");
   assert(scalar(@result) == 0, "curprice '45' returns empty (no match)");
 
+  # Unknown currency suffix — must not convert
+  @result = postglass::curprice($c, "5.5xyz");
+  assert(scalar(@result) == 0, "curprice '5.5xyz' returns empty (unknown currency)");
+
+  # Empty string
+  @result = postglass::curprice($c, "");
+  assert(scalar(@result) == 0, "curprice '' returns empty");
+
   # Negative price with currency
   ($dkk, $orig) = postglass::curprice($c, "-5e");
   assert(defined $dkk && $dkk == -37, "curprice -5e -> -37 DKK");
-}
+
+  # --- Canonical note text (Part A: currencies.pm + always store ISO code) ---
+  # Until currencies.pm lands these fail: today curprice stores the alias
+  # as typed ("5.5 e" / "5.5 eur"), not the canonical code.
+
+  ($dkk, $orig) = postglass::curprice($c, "5.5e");
+  assert(defined $orig && $orig eq "5.5 EUR", "curprice 5.5e note is '5.5 EUR' (canonical)");
+
+  ($dkk, $orig) = postglass::curprice($c, "5.5eur");
+  assert(defined $orig && $orig eq "5.5 EUR", "curprice 5.5eur note is '5.5 EUR' (canonical)");
+
+  # Shorthand and full name must produce the same stored note
+  my (undef, $note_e)   = postglass::curprice($c, "5.5e");
+  my (undef, $note_eur) = postglass::curprice($c, "5.5eur");
+  assert(defined $note_e && defined $note_eur && $note_e eq $note_eur,
+         "curprice 5.5e and 5.5eur produce the same note");
+
+  ($dkk, $orig) = postglass::curprice($c, "20u");
+  assert(defined $orig && $orig eq "20 USD", "curprice 20u note is '20 USD' (canonical)");
+
+  ($dkk, $orig) = postglass::curprice($c, "20usd");
+  assert(defined $orig && $orig eq "20 USD", "curprice 20usd note is '20 USD' (canonical)");
+
+  ($dkk, $orig) = postglass::curprice($c, "8.5p");
+  assert(defined $orig && $orig eq "8.5 GBP", "curprice 8.5p note is '8.5 GBP' (canonical)");
+
+  ($dkk, $orig) = postglass::curprice($c, "100sek");
+  assert(defined $orig && $orig eq "100 SEK", "curprice 100sek note is '100 SEK' (canonical)");
+} # test_postglass_curprice
+
+# --- mainlist.pm currency helpers (sumline totals) ---
+
+sub test_mainlist_currency {
+  # note_currency: parse [amount token] and normalise via currencies.pm
+  my ($amt, $code) = mainlist::note_currency("nice [5.5 EUR]");
+  assert(defined $amt && $amt == 5.5 && defined $code && $code eq "EUR",
+         "note_currency canonical EUR");
+
+  ($amt, $code) = mainlist::note_currency("old [8 e]");
+  assert(defined $amt && $amt == 8 && defined $code && $code eq "EUR",
+         "note_currency shorthand e -> EUR");
+
+  ($amt, $code) = mainlist::note_currency("[10 usd]");
+  assert(defined $amt && $amt == 10 && defined $code && $code eq "USD",
+         "note_currency usd");
+
+  ($amt, $code) = mainlist::note_currency("[4.5 GBP]");
+  assert(defined $amt && $amt == 4.5 && defined $code && $code eq "GBP",
+         "note_currency GBP");
+
+  ($amt, $code) = mainlist::note_currency("[65 sek]");
+  assert(defined $amt && $amt == 65 && defined $code && $code eq "SEK",
+         "note_currency shorthand sek -> SEK");
+
+  my @none = mainlist::note_currency("no currency here");
+  assert(scalar(@none) == 0, "note_currency plain note returns empty");
+
+  @none = mainlist::note_currency(undef);
+  assert(scalar(@none) == 0, "note_currency undef returns empty");
+
+  @none = mainlist::note_currency("[5.5 XYZ]");
+  assert(scalar(@none) == 0, "note_currency unknown currency returns empty");
+
+  # currency_total: pick dominant by count, then sum, then code
+  my $glasses = [
+    { note => "[5.5 EUR]" },
+    { note => "[3 EUR]" },
+    { note => "[2 USD]" },
+  ];
+  my $tot = mainlist::currency_total($glasses);
+  assert(defined $tot && $tot->{code} eq "EUR" && $tot->{total} eq "8.50",
+         "currency_total EUR wins on count (8.50)");
+
+  $glasses = [
+    { note => "[3 SEK]" },
+    { note => "[2 SEK]" },
+    { note => "[50 EUR]" },
+  ];
+  $tot = mainlist::currency_total($glasses);
+  assert(defined $tot && $tot->{code} eq "SEK" && $tot->{total} eq "5.00",
+         "currency_total more glasses wins over higher sum");
+
+  $glasses = [
+    { note => "[1 EUR]" },
+    { note => "[5 USD]" },
+  ];
+  $tot = mainlist::currency_total($glasses);
+  assert(defined $tot && $tot->{code} eq "USD" && $tot->{total} eq "5.00",
+         "currency_total tie on count, higher sum wins");
+
+  # Mixed aliases for the same code group together
+  $glasses = [
+    { note => "[5.5 e]" },
+    { note => "[2.5 EUR]" },
+    { note => "[1 p]" },
+  ];
+  $tot = mainlist::currency_total($glasses);
+  assert(defined $tot && $tot->{code} eq "EUR" && $tot->{total} eq "8.00",
+         "currency_total groups e and EUR");
+
+  # Empty / no currency
+  $tot = mainlist::currency_total([{ note => "just a beer" }, { note => undef }]);
+  assert(!defined $tot, "currency_total undef when no currency notes");
+
+  $tot = mainlist::currency_total([]);
+  assert(!defined $tot, "currency_total undef for empty list");
+
+  # currency_sumline_text — brackets + short symbols; drop trailing .00
+  assert(mainlist::currency_sumline_text(undef) eq "",
+         "currency_sumline_text undef -> empty");
+  assert(mainlist::currency_sumline_text({ code => "EUR", total => "35.00" }) eq "[35\x{20AC}]",
+         "currency_sumline_text EUR whole number drops decimals");
+  assert(mainlist::currency_sumline_text({ code => "EUR", total => "8.50" }) eq "[8.5\x{20AC}]",
+         "currency_sumline_text EUR keeps needed decimals");
+  assert(mainlist::currency_sumline_text({ code => "USD", total => "5.00" }) eq "[5\$]",
+         "currency_sumline_text USD uses dollar symbol");
+  assert(mainlist::currency_sumline_text({ code => "GBP", total => "8.50" }) eq "[8.5\x{00A3}]",
+         "currency_sumline_text GBP uses pound symbol");
+  assert(mainlist::currency_sumline_text({ code => "SEK", total => "65.00" }) eq "[65SEK]",
+         "currency_sumline_text SEK keeps code (no short symbol)");
+} # test_mainlist_currency

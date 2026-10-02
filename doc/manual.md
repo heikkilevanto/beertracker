@@ -158,20 +158,31 @@ Stats treat bottle prices as positive spending, so `-150` counts as 150.- spent.
 #### Foreign currencies
 
 When traveling, you can enter prices in a foreign currency by adding a suffix
-letter to the price. The system converts it to DKK (Danish Kroner) and stores
-the original price in the note field.
+letter (or the full code) to the price. The system converts it to DKK (Danish
+Kroner) and stores the original price in the note field with the full currency
+code.
 
 Supported currencies:
-- **EUR** — suffix `e` (e.g. `5.5e` for 5.50 euros)
-- **USD** — suffix `u` (e.g. `8u` for 8 dollars)
-- **GBP** — suffix `p` (e.g. `4.5p` for 4.50 pounds)
-- **SEK** — suffix `s` (e.g. `65s` for 65 kronor)
+- **EUR** — suffix `e` or `eur` (e.g. `5.5e` or `5.5eur` for 5.50 euros)
+- **USD** — suffix `u` or `usd` (e.g. `8u` or `8usd` for 8 dollars)
+- **GBP** — suffix `p` or `gbp` (e.g. `4.5p` or `4.5gbp` for 4.50 pounds)
+- **SEK** — suffix `s` or `sek` (e.g. `65s` or `65sek` for 65 kronor)
 
-Example: typing `5.5e` stores a price of 41 DKK and adds `[5.5 e]` to the note
-field. When copying that glass, the original `5.5e` format is passed so you see
-the foreign price.
+Example: typing `5.5e` stores a price of 41 DKK and adds `[5.5 EUR]` to the
+note field (the full code is stored, not the shorthand). When copying that
+glass, the original amount is passed back in that form so you see the foreign
+price. Older notes may still use the shorthand (e.g. `[5.5 e]`); those are
+read the same way.
 
-Exchange rates are hardcoded in `postglass.pm` and may need periodic updating.
+Main-list summary lines show a total of foreign-currency amounts recorded in
+notes (for example `[35€]`). EUR and USD display as `€` and `$` on the
+summary line only — notes still store the full codes. Trailing zeros are
+dropped (`35.00` shows as `35`). If a location or day has glasses in more
+than one currency, only the dominant one is shown (most glasses, then higher
+total).
+
+Exchange rates are hardcoded in `code/currencies.pm` and may need periodic
+updating.
 
 ### Extra Fields
 

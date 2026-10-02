@@ -1025,7 +1025,7 @@ sub test_glass_currency_roundtrip {
   my $time = strftime("%H:%M", localtime());
 
   # Insert: record a glass with pr='5.5e' (EUR). Should convert to 41 DKK
-  # and add '[5.5 e]' to the note.
+  # and add '[5.5 EUR]' to the note (canonical code, not the shorthand).
   ($status, $headers, $body) = req("POST", "$BASE_URL",
       { o => "Full", Location => $locid, Brew => $brewid, selbrewtype => $brewtype,
         date => $date, time => $time, vol => "33", alc => "4.6", pr => "5.5e",
@@ -1035,14 +1035,14 @@ sub test_glass_currency_roundtrip {
   ($status, $headers, $body) = req("GET", $loc);
   assert_page_ok($status, $body, "Full after currency insert", "id='mainform'");
   # The note field should contain both the user note and the currency marker
-  assert(scalar($body =~ /\Q$note\E.*\Q[5.5 e]\E/),
-         "Full page shows note with currency marker '[5.5 e]'");
+  assert(scalar($body =~ /\Q$note\E.*\Q[5.5 EUR]\E/),
+         "Full page shows note with currency marker '[5.5 EUR]'");
   my $id = id_before_text($body, "Full", $note);
   assert(defined $id, "harvested the new glass id from the main list");
   return unless defined $id;
 
-  # Edit: change the currency to USD (pr='10usd'). The old '[5.5 e]' note
-  # should be replaced by '[10 usd]', not accumulated.
+  # Edit: change the currency to USD (pr='10usd'). The old '[5.5 EUR]' note
+  # should be replaced by '[10 USD]', not accumulated.
   my $note2 = $note . "upd";
   ($status, $headers, $body) = req("POST", "$BASE_URL",
       { o => "Full", e => $id, Location => $locid, Brew => $brewid,
@@ -1052,10 +1052,10 @@ sub test_glass_currency_roundtrip {
   return unless defined $loc;
   ($status, $headers, $body) = req("GET", $loc);
   assert_page_ok($status, $body, "Full after currency update", "id='mainform'");
-  assert(scalar($body =~ /\Q$note2\E.*\Q[10 usd]\E/),
-         "Full page shows updated note with '[10 usd]'");
-  assert(scalar($body !~ /\Q[5.5 e]\E/),
-         "Full page no longer shows the old currency note '[5.5 e]'");
+  assert(scalar($body =~ /\Q$note2\E.*\Q[10 USD]\E/),
+         "Full page shows updated note with '[10 USD]'");
+  assert(scalar($body !~ /\Q[5.5 EUR]\E/),
+         "Full page no longer shows the old currency note '[5.5 EUR]'");
 
   # Delete
   ($status, $headers, $body) = req("POST", "$BASE_URL",

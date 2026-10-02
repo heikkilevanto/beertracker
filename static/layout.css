@@ -31,6 +31,11 @@ table.listrecords { max-width: 750px; }
 /* Utility classes */
 .top-border { border-top: 2px solid white; }
 
+/* Main-list location/day summary lines: one nowrap row, may extend past screen */
+.sumline {
+  white-space: nowrap;
+}
+
 
 /* Media queries */
 .mobile-only-br::before {

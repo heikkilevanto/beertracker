@@ -17,6 +17,7 @@ require "./code/brews.pm";
 require "./code/locations.pm";
 require "./code/graph.pm";
 require "./code/glasses.pm";  # For findrec and volumes
+require "./code/currencies.pm";  # Currency codes, rates, aliases
 
 ################################################################################
 # POST handler for glass records
@@ -484,26 +485,21 @@ sub fixprice {
   }
  } # fixprice
 
-# Currency conversion rates to DKK
-my %currency;
-$currency{"eur"} = 7.5;
-$currency{"e"} = 7.5;     # shorthand for EUR
-$currency{"usd"} = 6.3;
-$currency{"gbp"} = 8.5;
-$currency{"p"} = 8.5;     # shorthand for GBP
-$currency{"sek"} = 0.65;
-$currency{"s"} = 0.65;    # shorthand for SEK
-
-############## Helper for currency conversion
-# Returns (dkk_price, "orig_price currency") on match, empty list otherwise
+# Currency conversion via currencies.pm.
+# Matches any alias (e/eur, u/usd, p/gbp, s/sek). Stores the canonical code
+# in the note, e.g. 5.5e -> (41, "5.5 EUR").
+# Returns (dkk_price, "orig_price CODE") on match, empty list otherwise
 sub curprice {
   my ($c, $v) = @_;
-  for my $cur (keys %currency) {
-    if ( $v =~ /^(-?[0-9.]+) *$cur$/i ) {
+  return () unless defined $v && $v ne "";
+  foreach my $alias (currencies::aliases()) {
+    my $cur = currencies::lookup($alias);
+    next unless $cur;
+    if ( $v =~ /^(-?[0-9.]+) *$alias$/i ) {
       my $orig = $1;
-      my $dkk = int(0.5 + $orig * $currency{$cur});
-      print { $c->{log} } "curprice: '$orig $cur' -> $dkk DKK\n";
-      return ($dkk, "$orig $cur");
+      my $dkk = int(0.5 + $orig * $cur->{rate});
+      print { $c->{log} } "curprice: '$orig $cur->{code}' -> $dkk DKK\n";
+      return ($dkk, "$orig $cur->{code}");
     }
   }
   return ();

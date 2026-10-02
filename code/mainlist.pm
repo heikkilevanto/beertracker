@@ -9,6 +9,8 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use URI::Escape qw(uri_escape_utf8);
 
+require "./code/currencies.pm";  # Currency codes/aliases for note parsing
+
 my $form_counter = 0;  # Counter for unique form IDs across page load
 
 
@@ -179,6 +181,58 @@ sub bloodalcnow {
   my $curba = $alcinbody / ( $bodyweight * .68 ); # non-fat weight
   return sprintf("%0.2f", $curba );
 } # bloodalcnow
+
+################################################################################
+# Foreign currency totals for summary lines
+################################################################################
+
+# Parse one note for a currency amount. Returns ($amount, $code) or ().
+# Accepts canonical codes and shorthands via currencies.pm (old notes too).
+sub note_currency {
+  my $note = shift;
+  return () unless defined $note && $note =~ /\[([0-9.]+) +(\w+)\]/;
+  my ($amount, $token) = ($1, $2);
+  my $code = currencies::code($token);
+  return () unless defined $code;
+  return ($amount, $code);
+} # note_currency
+
+# Dominant currency for a list of glass hashrefs ({note}).
+# Returns { code => 'EUR', total => "12.30" } or undef.
+# Ranking: most glasses, then higher sum, then code name.
+sub currency_total {
+  my $glasses = shift;
+  return undef unless $glasses && ref($glasses) eq "ARRAY";
+  my (%count, %sum);
+  foreach my $rec (@$glasses) {
+    next unless $rec && ref($rec) eq "HASH";
+    my ($amount, $code) = note_currency($rec->{note});
+    next unless defined $code;
+    $count{$code}++;
+    $sum{$code} += $amount;
+  }
+  return undef unless keys %count;
+  my ($best) = sort {
+    $count{$b} <=> $count{$a}
+      || $sum{$b} <=> $sum{$a}
+      || $a cmp $b
+  } keys %count;
+  return { code => $best, total => sprintf("%.2f", $sum{$best}) };
+} # currency_total
+
+# Display string for sumline, or "" if none. E.g. "[35€]"
+# Uses short symbols (EUR→€, USD→$) and drops unnecessary decimals;
+# notes keep full codes.
+sub currency_sumline_text {
+  my $result = shift;
+  return "" unless $result && ref($result) eq "HASH" && $result->{code};
+  my $sym = currencies::symbol($result->{code});
+  return "" unless defined $sym;
+  my $total = $result->{total} // "";
+  $total =~ s/\.?0+$// if $total =~ /\./;  # 35.00 -> 35, 8.50 -> 8.5
+  $total =~ s/\.$//;
+  return "[$total$sym]";
+} # currency_sumline_text
 
 ################################################################################
 # List glasses for one day
@@ -383,16 +437,19 @@ sub sumline {
   my $drinksum = shift;
   my $prsum = shift;
   my $balc = shift;
-  my $html = "";
-  #$html .= "<table border=0 style='table-layout: fixed' > <tr>";
-  $html .= "<table border=0 > <tr>";
-  my $attr = "align='right'  ";
-  $html .= "<td>=</td>\n";
-  $html .= "<td $attr width='50px' ><b>" . util::unit($prsum,".-") . "</b></td>\n";
-  $html .= "<td $attr width='50px' ><b>" . util::unit($drinksum, "d") . "</b></td>\n";
-  $html .= "<td $attr width='53px' ><b>" . util::unit($balc, "/\x{2080}\x{2080}") . "</b></td>\n";
-  $html .= "<td>&nbsp; <b>$txt</b></td>";
-  $html .= "</tr></table>";
+  my $cursum = shift;   # Optional "[35€]" or undef/empty
+  # Same style as numbersline: no table, no fixed widths. nowrap keeps
+  # "[35€]" on one line; long lines extend past the screen.
+  # Currency total is not bold; numbers and label are.
+  my $html = "<div class='sumline'><b>= ";
+  $html .= util::unit($prsum, ".-");
+  $html .= util::unit($drinksum, "d");
+  $html .= util::unit($balc, "/\x{2080}\x{2080}");
+  $html .= "</b> ";
+  if (defined $cursum && $cursum ne "") {
+    $html .= util::htmlesc($cursum) . " ";
+  }
+  $html .= "<b>$txt</b></div>\n";
   return $html;
 }
 
@@ -526,11 +583,13 @@ sub oneday {
   my $current_adjustment = undef;  # Track adjustment glass for current location session
   my $current_adjustment_price = 0;  # Track adjustment amount
   my $last_glass_time = undef;  # Track time of last glass in location session
+  my @locglasses = ();  # glasses in the current location session (for currency total)
   foreach my $rec (@glasses) {
     #print { $c->{log} } "oneday: id='$rec->{id} l='$rec->{loc}' \n";
     if ( $rec->{loc} != $loc ) {
       my $loc_total_with_adj = $locprsum + $current_adjustment_price;
-      $html .= sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba);
+      my $loccursum = currency_sumline_text(currency_total(\@locglasses));
+      $html .= sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba, $loccursum);
       $html .= adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
       ($lhtml, $effdate, $loc, $locname, $weekday, $date) = locationhead($c, $rec);
       $html .= $lhtml;
@@ -541,7 +600,9 @@ sub oneday {
       $current_adjustment = undef;  # Reset for new location
       $current_adjustment_price = 0;
       $last_glass_time = undef;
+      @locglasses = ();
     }
+    push @locglasses, $rec;
     # Sum prices only for non-empty glasses, skipping nights, restaurants, and adjustments
     if ($rec->{price} && $rec->{brewid} && $rec->{brewtype} ne 'Adjustment') {
       $dayprsum += abs($rec->{price});
@@ -567,10 +628,12 @@ sub oneday {
     $html .= "<br/>\n";
   }
   my $loc_total_with_adj = $locprsum + $current_adjustment_price;
-  $html .= sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba);
+  my $loccursum = currency_sumline_text(currency_total(\@locglasses));
+  $html .= sumline($c, $locname, $locdrsum, $loc_total_with_adj, $locmaxba, $loccursum);
   $html .= adjustment_form($c, $loc, $effdate, $locprsum, $current_adjustment, $current_adjustment_price, $last_glass_time);
   if ($location_count > 1) {
-    $html .= sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"});
+    my $daycursum = currency_sumline_text(currency_total(\@glasses));
+    $html .= sumline($c, $weekday, $daydrsum, $dayprsum, $balc->{"max"}, $daycursum);
   }
   $html .= "<hr/>";
   return $html;

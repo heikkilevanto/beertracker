@@ -72,6 +72,7 @@ require "./code/stats.pm"; # Various statistics
 require "./code/monthstat.pm"; # Monthly statistics
 require "./code/yearstat.pm"; # annual stats
 require "./code/mainlist.pm"; # The main "full" list
+require "./code/currencies.pm"; # Currency codes/rates/aliases
 require "./code/beerboard.pm"; # The beer board for the current bar
 require "./code/scrapeboard.pm"; # Scraping and updating beer boards
 require "./code/taps.pm"; # Updating tap_beers table
