@@ -34,7 +34,7 @@ foreach my $section ($dom->findnodes('//div[@class="menu-section"]')) {
     next unless $heading;
     my $heading_text = $heading->textContent;
     print STDERR "Section: '$heading_text'\n" if $debug;
-    if ($heading_text =~ /tap|menu/i) {
+    if ($heading_text =~ /tap|menu|draft|beer/i) {
         $tap_section = $section;
         last;
     }
