@@ -80,7 +80,7 @@ sub listrecords {
     if (ref $params eq 'ARRAY') { @cache_params = @$params; }
     else { @cache_params = ($params); }
   }
-  my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where, @cache_params);
+  my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where, @cache_params, $c->{mobile});
   my $cached = cache::get($c, $cache_key);
   if ( defined $cached ) {
     print { $c->{log} } "listrecords: cache hit for $sql_param\n";
