@@ -206,6 +206,7 @@ sub currency_total {
   my (%count, %sum);
   foreach my $rec (@$glasses) {
     next unless $rec && ref($rec) eq "HASH";
+    next if glasses::isemptyglass($rec->{brewtype});
     my ($amount, $code) = note_currency($rec->{note});
     next unless defined $code;
     $count{$code}++;
