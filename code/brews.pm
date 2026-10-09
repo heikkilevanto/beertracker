@@ -352,8 +352,16 @@ sub selectbrewsubtype_dropdown {
     my $defattr = $st->{is_default} ? " data-default='1'" : "";
     $opts .= "<div class='dropdown-item' id='$sub' brewtype='$btype'$defattr>$sub</div>\n";
   }
-  return inputs::dropdown($c, $inputname, $selected, $selected, $opts,
-    { disabled => $disabled, simplenew => 1, required => 1 });
+  # In a nested new-form (inputprefix set) render data-required instead of
+  # required, so the hidden filter does not block the outer form's submission
+  # (issue #776). initDropdown promotes it to required when the sub-form opens.
+  my %ddopts = ( disabled => $disabled, simplenew => 1 );
+  if ( $inputprefix ) {
+    $ddopts{data_required} = 1;
+  } else {
+    $ddopts{required} = 1;
+  }
+  return inputs::dropdown($c, $inputname, $selected, $selected, $opts, \%ddopts);
 } # selectbrewsubtype_dropdown
 
 ################################################################################

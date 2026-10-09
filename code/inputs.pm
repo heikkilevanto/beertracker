@@ -20,7 +20,7 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 #    ... );
 # Omit the "new" line if you don't want it
 # Optional args in hashref $opt (6th param):
-#   table, newfield, skip, disabled, scan, multi, prechips, simplenew, extraattr, defaults, required, fieldorder
+#   table, newfield, skip, disabled, scan, multi, prechips, simplenew, extraattr, defaults, required, data_required, fieldorder
 # Returns a string ready to be printed in a form
 
 
@@ -47,6 +47,12 @@ sub dropdown {
   my $extraattr      = $opt->{extraattr}  || "";
   my $newdefaults    = $opt->{defaults}   || {};
   my $required       = $opt->{required} ? "required" : "";
+  # Nested new-form fields must not block submission while hidden, so render
+  # data-required instead; initDropdown promotes it to required when the
+  # sub-form is opened. Auto-select and clr suppression treat both as required.
+  my $isrequired     = $opt->{required} || $opt->{data_required};
+  my $required_attr  = $required;
+  $required_attr = "data-required='1'" if ( !$required && $opt->{data_required} );
   my $fieldorder     = $opt->{fieldorder};
 
   my $newdiv = "";
@@ -71,7 +77,7 @@ sub dropdown {
     $newdiv .= "</div>";
   }
   # Auto-select first option if required and nothing selected
-  if ($required && !$selectedid) {
+  if ($isrequired && !$selectedid) {
     if ($options =~ m|<div class='dropdown-item' id='([^']+)'>([^<]*)</div>|) {
       $selectedid   = $1;
       $selectedname = $2;
@@ -79,7 +85,7 @@ sub dropdown {
   }
   # Add clear option if there are any actions (skip if required)
   if ($actions) {
-    $actions .= "<span class='action-link' data-action='clr' style='cursor: pointer;'>clr</span>" unless $required;
+    $actions .= "<span class='action-link' data-action='clr' style='cursor: pointer;'>clr</span>" unless $isrequired;
   }
 
   if ($actions) {
@@ -101,7 +107,7 @@ sub dropdown {
            autocomplete="off"
            placeholder="$inputname"
            value="$selectedname"
-           $disabled $required />
+           $disabled $required_attr />
     <input type="hidden"
            id="$inputname"
            name="$inputname"

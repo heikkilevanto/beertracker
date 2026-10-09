@@ -557,6 +557,17 @@ function applyItemSelection(item, filterInput, hiddenInput, dropdownList) {
     const toggle = document.getElementById("notetag");
     if (toggle) toggle.hidden = true;
   }
+
+  // An existing item was picked: re-hide the nested new-form and undo the
+  // required-promotion, or its empty required fields would block submission
+  const dropdownContainer = hiddenInput.closest('.dropdown');
+  const newDiv = dropdownContainer ? dropdownContainer.querySelector('.dropdown-new') : null;
+  if (newDiv) {
+    newDiv.hidden = true;
+    newDiv.querySelectorAll('[data-required="1"]').forEach(inp => {
+      inp.removeAttribute('required');
+    });
+  }
 } // applyItemSelection
 
 // Get or create the tag-suggestion row (prepended to the top of the list)
