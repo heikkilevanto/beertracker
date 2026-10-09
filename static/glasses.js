@@ -339,7 +339,7 @@ function initGlassForm() {
   // Cascading for BrewType/SubType in the newbrew sub-form
   (function() {
     var bt = document.getElementById('BrewType');
-    var st = document.getElementById('dropdown-SubType');
+    var st = document.getElementById('dropdown-newbrewSubType') || document.getElementById('dropdown-SubType');
     if (!bt || !st) return;
     var localBt = document.createElement('input');
     localBt.type = 'hidden';
@@ -350,7 +350,7 @@ function initGlassForm() {
       var newBt = bt.value;
       // When brew type changes, clear the old subtype and let default take over
       if (newBt !== lastBrewType) {
-        var hidden = document.getElementById('SubType');
+        var hidden = document.getElementById('newbrewSubType') || document.getElementById('SubType');
         if (hidden) { hidden.value = ''; }
         var flt = st.querySelector('.dropdown-filter');
         if (flt) { flt.value = ''; }
@@ -361,7 +361,7 @@ function initGlassForm() {
       var lst = st.querySelector('.dropdown-list');
       if (flt && lst) filterItems(flt, lst);
       // Auto-select the most common subtype for the brew type if none selected
-      var hidden = document.getElementById('SubType');
+      var hidden = document.getElementById('newbrewSubType') || document.getElementById('SubType');
       if (hidden && !hidden.value && lst) {
         var def = lst.querySelector('.dropdown-item[data-default="1"]:not([style*="display: none"])');
         if (def) setDropdownValue(hidden, def.id);

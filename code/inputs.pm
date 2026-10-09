@@ -333,7 +333,7 @@ sub inputform {
         my $curval = "";
         $curval = $rec->{$f} if ($rec && defined($rec->{$f}));
         $form .= "<td>\n";
-        $form .= brews::selectbrewsubtype_dropdown($c, $curval, $disabled);
+        $form .= brews::selectbrewsubtype_dropdown($c, $curval, $disabled, $inputprefix);
       } elsif ( $f =~ /^LocType$/i && $table eq "LOCATIONS" ) {
         my $curval = "";
         $curval = $rec->{$f} if ($rec && defined($rec->{$f}));

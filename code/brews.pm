@@ -328,6 +328,8 @@ sub selectbrewsubtype_dropdown {
   my $c = shift;
   my $selected = shift || "";
   my $disabled = shift || "";
+  my $inputprefix = shift || "";
+  my $inputname = $inputprefix . "SubType";
   my $sql = "
     SELECT s.BrewType, s.SubType,
            CASE WHEN r.rn = 1 THEN 1 ELSE 0 END AS is_default
@@ -350,7 +352,7 @@ sub selectbrewsubtype_dropdown {
     my $defattr = $st->{is_default} ? " data-default='1'" : "";
     $opts .= "<div class='dropdown-item' id='$sub' brewtype='$btype'$defattr>$sub</div>\n";
   }
-  return inputs::dropdown($c, "SubType", $selected, $selected, $opts,
+  return inputs::dropdown($c, $inputname, $selected, $selected, $opts,
     { disabled => $disabled, simplenew => 1, required => 1 });
 } # selectbrewsubtype_dropdown
 

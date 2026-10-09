@@ -12,7 +12,7 @@
 
 (function() {
   var brewTypeInput = document.getElementById('BrewType');
-  var subTypeDropdown = document.getElementById('dropdown-SubType');
+  var subTypeDropdown = document.getElementById('dropdown-newbrewSubType') || document.getElementById('dropdown-SubType');
   if (!brewTypeInput || !subTypeDropdown) return;
   var subTypeList = subTypeDropdown.querySelector('.dropdown-list');
   var subTypeFilter = subTypeDropdown.querySelector('.dropdown-filter');
