@@ -386,6 +386,21 @@ sub topline {
   $s .= topstats($c);
 
   $s .= "</div>\n";
+  # The top line is position:fixed, so it does not take up space in the
+  # flow. Measure its height and expose it as --topline-h, which
+  # .content-wrapper uses as padding-top (see static/base.css).
+  $s .= "<script>\n";
+  $s .= "(function() {\n";
+  $s .= "  var bar = document.querySelector('.top-line-wrapper');\n";
+  $s .= "  function setToplineH() {\n";
+  $s .= "    if (bar) {\n";
+  $s .= "      document.documentElement.style.setProperty('--topline-h', bar.offsetHeight + 'px');\n";
+  $s .= "    }\n";
+  $s .= "  }\n";
+  $s .= "  setToplineH();\n";
+  $s .= "  window.addEventListener('resize', setToplineH);\n";
+  $s .= "})();\n";
+  $s .= "</script>\n";
 } # topline
 
 

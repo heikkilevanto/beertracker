@@ -17,24 +17,53 @@ body {
      doesn't sit flush against the browser edge */
   margin: 0;
   padding: 0 0 0 5px;
-  font-size: 0.9rem; /* replaces '* { font-size: small; }' */
+  font-size: 1.1rem; /* was 0.9rem; bumped for readability (issue #775 follow-up) */
   font-family: sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Top line wrapper - stays at top */
+/* Top line wrapper - stays pinned at the top of the screen.
+   IMPORTANT: This uses position: fixed, NOT position: sticky.
+   History: we used to pin the bar with an inner scroll container
+   (html/body overflow: hidden + .content-wrapper as scroller), but that
+   broke mobile pull-to-refresh, so commit 71b3d03 made the body scroll
+   again and relied on position: sticky. That appeared to fail on mobile
+   Firefox (issue #775: the bar scrolled away), but the real cause was
+   the browser rendering the page zoomed (Firefox Android "Automatic
+   font sizing" / stored site zoom put the visual viewport at scale ~2).
+   While zoomed, browsers pan the visual viewport instead of scrolling
+   the document, and ALL pinned elements (fixed and sticky) move with
+   the page - no CSS can prevent that. With zoom at 100% both work.
+   We still use fixed, because it is pinned by construction and does
+   not depend on sticky working inside a flex container.
+   Do not change this back to sticky without testing on mobile Firefox.
+   If a user reports "the top bar scrolls away on my phone", first have
+   them check the browser zoom / font size settings.
+   Consequences of fixed:
+   - The bar no longer takes up space in the flow, so .content-wrapper
+     gets a padding-top matching the bar height (set via --topline-h by
+     the script in util::topline()).
+   - Pull-to-refresh keeps working, because the document itself is
+     still the (vertical and horizontal) scroll container.
+   - The body must stay horizontally scrollable (long lines by design),
+     so do NOT add overflow-x: hidden/clip to html or body. */
 .top-line-wrapper {
   background-color: var(--bgcolor, #000000);
   padding: 0.1em;
   border-bottom: 1px solid #666;
+  /* Pinned to the viewport edges: spans the full width (past the body's
+     left padding), and ignores page scrolling in both axes */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  /* If the bar content is wider than the screen, scroll it inside the
+     bar instead of letting it push the page sideways */
   overflow-x: auto;
   white-space: nowrap;
-  flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 1;
   /* Hide scrollbar while keeping scroll functionality */
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
@@ -44,16 +73,19 @@ body {
   display: none; /* Chrome/Safari/Opera */
 }
 
-/* Content wrapper - scrollable */
+/* Content wrapper - the page body, scrolled by the document.
+   padding-top offsets the fixed top line (same height, default is a
+   close estimate; the real value is set on :root as --topline-h). */
 .content-wrapper {
   flex: 1;
-  padding: 0;
+  padding: var(--topline-h, 1.6em) 0 0 0;
 }
 
-/* Wider screens (tablet/desktop) */
+/* Wider screens (tablet/desktop). Note: .content-wrapper must NOT lose
+   its padding-top here - the fixed top line overlaps the content on all
+   screen sizes. */
 @media screen and (min-width: 700px) {
-  .top-line-wrapper,
-  .content-wrapper {
+  .top-line-wrapper {
     padding: 0;
   }
 }
