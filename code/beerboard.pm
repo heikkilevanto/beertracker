@@ -9,6 +9,7 @@ use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 use POSIX qw(strftime localtime);
 use Time::Local;
+use URI::Escape qw(uri_escape_utf8);
 
 
 
@@ -263,13 +264,13 @@ sub render_location_selector {
   # Row 3: External links (www, untappd) + Reload + Exp — all on one line
   print "<tr>\n";
   print "<td>\n";
-  print " <a href='$url?o=Taps&loc=" . util::htmlesc($locparam) . "'><span>(History)</span></a> ";
+  print " <a href='$url?o=Taps&loc=" . uri_escape_utf8($locparam) . "'><span>(History)</span></a> ";
   my $locrec = db::findrecord($c,"LOCATIONS","Name",$locparam, "collate nocase");
   if ($locrec && $locrec->{Website}) {
-    print "<i><a href='$locrec->{Website}' target='_blank'><span>(www)</span></a></i> ";
+    print "<i><a href='" . util::htmlesc($locrec->{Website}) . "' target='_blank'><span>(www)</span></a></i> ";
   }
   if ($locrec->{UntappdLink}) {
-    print "<i><a href='$locrec->{UntappdLink}' target='_blank'><span>(Ut)</span></a></i> ";
+    print "<i><a href='" . util::htmlesc($locrec->{UntappdLink}) . "' target='_blank'><span>(Ut)</span></a></i> ";
   }
   print "</td>\n";
   print "<td>\n";

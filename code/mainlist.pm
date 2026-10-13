@@ -393,7 +393,7 @@ sub buttonline {
     $html .= "<form method='POST' style='display:inline;' class='no-print' onClick='setdate();'>\n";
     $html .= "<input type='hidden' name='Location'  value='$locid' />\n";
     $html .= "<input type='hidden' name='Brew'  value='$brewid' />\n";
-    $html .= "<input type='hidden' name='selbrewtype'  value='$rec->{brewtype}' />\n";
+    $html .= "<input type='hidden' name='selbrewtype'  value='" . util::htmlesc($rec->{brewtype}) . "' />\n";
     $html .= "<input type='hidden' name='date' id='date' value=' ' />\n";
     $html .= "<input type='hidden' name='time' id='time' value=' ' />\n";
     # For copy buttons, pass the original price only if volume matches, else leave empty to trigger guessing
@@ -413,7 +413,7 @@ sub buttonline {
     $html .= "<input type='hidden' name='tap' value='$tap_val' />\n";
     $html .= "<input type='hidden' name='orig_vol' value='$orig_vol_val' />\n";
     $html .= "<input type='hidden' name='o' value='$c->{op}' />\n";  # Stay on page
-    $html .= "<input type='hidden' name='q' value='$c->{qry}' />\n";
+    $html .= "<input type='hidden' name='q' value='" . util::htmlesc($c->{qry}) . "' />\n";
     $html .= "<input type='submit' name='submit' value='Copy $volx' " .
                 "style='display: inline; font-size: small' />\n";
     $html .= "</form>\n";

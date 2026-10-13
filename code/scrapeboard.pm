@@ -223,7 +223,7 @@ sub post_form {
   $form_id =~ s/\W/_/g;  # sanitize
   my $form = "<form id='$form_id' method='POST' accept-charset='UTF-8' action='$c->{url}' style='display:inline;'>";
   $form .= "<input type='hidden' name='o' value='$op'>";
-  $form .= "<input type='hidden' name='loc' value='$loc'>" if $loc;
+  $form .= "<input type='hidden' name='loc' value='" . util::htmlesc($loc) . "'>" if $loc;
   $form .= "</form>";
   $form .= "<a href='#' onclick='document.getElementById(\"$form_id\").submit(); return false;'><i>$label</i></a>\n";
   return $form;

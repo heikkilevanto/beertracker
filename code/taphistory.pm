@@ -373,7 +373,7 @@ sub render_timeline {
     my $det = JSON->new->encode(\%details);
     my $kegs_json = JSON->new->encode(\%kegs);
     print "<script>\n"
-        . "var TAP_LOC = '" . util::htmlesc($locname) . "';\n"
+        . "var TAP_LOC = '" . util::jssq($locname) . "';\n"
         . "var TAP_DETAILS = $det;\n"
         . "var TAP_KEGS = $kegs_json;\n"
         . "</script>\n";

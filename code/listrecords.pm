@@ -355,7 +355,6 @@ sub listrecords {
         $sty = " size='6' style='max-width:$px_override{$i}; min-width:0'";
     }
     $f =~ s/^-//;
-    $f =~ s/'//g;
 
     if ( $suffix_info[$i]{contline} ) {
         if ($hdr_cont_active) {
@@ -405,7 +404,7 @@ sub listrecords {
     } elsif ( $f  ) {
       my $on = $filter_events;
       $on = "" if ($f =~ /Chk/);
-      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='$f'$val_attr/>";
+      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='" . util::htmlesc($f) . "'$val_attr/>";
     } else {
       $hdr_input = "&nbsp;"
     }

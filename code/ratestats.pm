@@ -63,7 +63,8 @@ sub histogram_form {
     $brew_selname = '(all)' if ($brew_type eq '');
     $brew_selname = '(Non-empty)' if ($brew_type eq 'non_empty');
     while (my $v = $brews_sth->fetchrow_array) {
-        $brew_opts .= "<div class='dropdown-item' id='$v'>$v</div>\n";
+        my $escv = util::htmlesc($v);
+        $brew_opts .= "<div class='dropdown-item' id='$escv'>$escv</div>\n";
         $brew_selname = $v if ($v eq $brew_type);
     }
     $brews_sth->finish;

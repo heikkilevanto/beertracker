@@ -256,7 +256,8 @@ sub selectloctype_dropdown {
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $lt = $sth->fetchrow_array ) {
-    $opts .= "<div class='dropdown-item' id='$lt'>$lt</div>\n";
+    my $esclt = util::htmlesc($lt);
+    $opts .= "<div class='dropdown-item' id='$esclt'>$esclt</div>\n";
   }
   return inputs::dropdown($c, $inputname, $selected, $selected, $opts,
     { disabled => $disabled, simplenew => 1, required => 1 });
@@ -303,7 +304,7 @@ sub editlocation {
     $p = db::queryrecord($c, $sql, $c->{edit});
     util::error("Location #$c->{edit} not found") unless $p && $p->{Id};
      print "<b>Editing Location $p->{Id}: $p->{Name}</b><br/>\n";
-     print "<a href='$c->{url}?o=Taps&loc=" . util::htmlesc($p->{Name}) . "'><span>Tap History</span></a><br/>\n";
+     print "<a href='$c->{url}?o=Taps&loc=" . uri_escape_utf8($p->{Name} // "") . "'><span>Tap History</span></a><br/>\n";
    }
 
   if ( $p->{Id} ) {  # found the location
@@ -530,7 +531,7 @@ sub selectlocation {
         $dist = "<span lat=$lat lon=$lon style='pointer-events:none; font-size: xx-small;'> ??? </span>";
       }
       my $substtr = "";
-      $substtr = "locsubtype='$subtype'" if ($subtype);
+      $substtr = "locsubtype='" . util::htmlesc($subtype) . "'" if ($subtype);
       my $tags_attr = "";
       $tags_attr = " tags='" . util::htmlesc($tags) . "'" if ($tags);
       my $country_attr = "";

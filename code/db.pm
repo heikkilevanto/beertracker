@@ -248,7 +248,8 @@ sub querydropdown {
   my $selname = $selopt;
   $selname = $firstopt if ($selopt eq "");
   while ( my $v = $sth->fetchrow_array ) {
-    $opts .= "<div class='dropdown-item' id='$v'>$v</div>\n";
+    my $escv = util::htmlesc($v);
+    $opts .= "<div class='dropdown-item' id='$escv'>$escv</div>\n";
     $selname = $v if ($v eq $selopt);
   }
   $sth->finish;

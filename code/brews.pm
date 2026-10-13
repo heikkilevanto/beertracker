@@ -315,7 +315,8 @@ sub selectbrewtype_dropdown {
   my $sth = db::query($c, $sql);
   my $opts = "";
   while ( my $bt = $sth->fetchrow_array ) {
-    $opts .= "<div class='dropdown-item' id='$bt'>$bt</div>\n";
+    my $escbt = util::htmlesc($bt);
+    $opts .= "<div class='dropdown-item' id='$escbt'>$escbt</div>\n";
   }
   return inputs::dropdown($c, "BrewType", $selected, $selected, $opts,
     { disabled => $disabled, simplenew => 1, required => 1 });
@@ -620,8 +621,9 @@ sub selectbrew {
       }
       my $tags_attr = "";
       $tags_attr = " tags='" . util::htmlesc($tags_str) . "'" if ($tags_str);
-      $opts .= "<div class='dropdown-item' id='$id' alc='$alc' " .
-         "defprice='$defprice' defvol='$defvol' brewtype='$bt' seenat='$seenat'$tags_attr>$disp</div>\n";
+      $opts .= "<div class='dropdown-item' id='$id' alc='" . util::htmlesc($alc) . "' " .
+         "defprice='" . util::htmlesc($defprice) . "' defvol='" . util::htmlesc($defvol) .
+         "' brewtype='" . util::htmlesc($bt) . "' seenat='" . util::htmlesc($seenat) . "'$tags_attr>$disp</div>\n";
     }
     cache::set($c, $cache_key, $opts);
   }
