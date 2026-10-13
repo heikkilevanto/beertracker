@@ -80,7 +80,7 @@ sub dropdown {
   if ($isrequired && !$selectedid) {
     if ($options =~ m|<div class='dropdown-item' id='([^']+)'>([^<]*)</div>|) {
       $selectedid   = $1;
-      $selectedname = $2;
+      $selectedname = util::htmlunesc($2); # Read back our own HTML - get raw text
     }
   }
   # Add clear option if there are any actions (skip if required)
@@ -98,6 +98,7 @@ sub dropdown {
   $extraattrhtml = " $extraattr" if ($extraattr);
   my $chipsdiv  = "";
   $chipsdiv = "<div class='dropdown-chips'>$prechips</div>\n  " if ($multi eq 'multi');
+  my $escselected = util::htmlesc($selectedname);
   my $s = <<"HTML";
 <!-- DROPDOWN START: input='$inputname' -->
 <div id="dropdown-$inputname" class="dropdown"$multiattr$extraattrhtml>
@@ -106,7 +107,7 @@ sub dropdown {
            class="dropdown-filter"
            autocomplete="off"
            placeholder="$inputname"
-           value="$selectedname"
+           value="$escselected"
            $disabled $required_attr />
     <input type="hidden"
            id="$inputname"
@@ -204,7 +205,7 @@ sub inputform {
     while ( length($pl) > 20 && $pl =~ s/([A-Z])([a-z]+)/$1/ ) { } ;  # Shorten pl
     my $inpname = $inputprefix . $f;
     my $val = "";
-    $val = "value='$rec->{$f}'" if ( $rec && defined($rec->{$f}) );
+    $val = "value='" . util::htmlesc($rec->{$f}) . "'" if ( $rec && defined($rec->{$f}) );
     my $help_link_html = "";
     if (my $help = $help_for{$f}) {
       my $esc_help = util::htmlesc($help);
@@ -461,7 +462,7 @@ sub barcodeInput {
 
   my $s = "";
   $s .= "<td>\n";
-  $s .= "<input name='$fieldname' id='$fieldname' value='$value' $clr $disabled />\n";
+  $s .= "<input name='$fieldname' id='$fieldname' value='" . util::htmlesc($value) . "' $clr $disabled />\n";
   $s .= "<br>";
   my $hiddenclass = "class='barcode-scan-link'";
   $hiddenclass = "class='barcode-scan-link' hidden" if ($disabled);

@@ -115,7 +115,9 @@ sub param {
   util::error("No context c ") unless $c;
   util::error("No cgi in c") unless $c->{cgi};
   my $val = $c->{cgi}->param($tag) // $def;
-  $val =~ s/[^"a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%!#=_-]/_/g;
+  # Apostrophes are allowed (issue #774: scraped beer names contain them);
+  # they are escaped at output time by htmlesc/jssq instead.
+  $val =~ s/[^"a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%!#=_'-]/_/g;
   return $val;
 }
 
@@ -178,15 +180,44 @@ sub normalize_country {
   return $val;
 } # normalize_country
 
-# Escape HTML special characters
+# Escape HTML special characters.
+# Escapes ' too, so the result is safe in both single- and double-quoted
+# attributes, and in text content. Do not use inside <script> content
+# (entities are not decoded there) - use jssq for JS string literals.
 sub htmlesc {
   my $s = shift // '';
   $s =~ s/&/&amp;/g;
   $s =~ s/</&lt;/g;
   $s =~ s/>/&gt;/g;
   $s =~ s/"/&quot;/g;
+  $s =~ s/'/&#39;/g;
   return $s;
 } # htmlesc
+
+# Inverse of htmlesc (for the entities htmlesc emits).
+# Only for reading back HTML we generated ourselves, never for user input.
+sub htmlunesc {
+  my $s = shift // '';
+  $s =~ s/&#39;/'/g;
+  $s =~ s/&quot;/"/g;
+  $s =~ s/&gt;/>/g;
+  $s =~ s/&lt;/</g;
+  $s =~ s/&amp;/&/g; # must be last
+  return $s;
+} # htmlunesc
+
+# Escape a string for embedding in a single-quoted JS string literal
+# inside a <script> block. Also neutralizes </ to avoid breaking out of
+# the script tag.
+sub jssq {
+  my $s = shift // '';
+  $s =~ s/\\/\\\\/g;
+  $s =~ s/'/\\'/g;
+  $s =~ s/\n/\\n/g;
+  $s =~ s/\r/\\r/g;
+  $s =~ s{</}{<\\/}g;
+  return $s;
+} # jssq
 
 sub paramnumber {
   my $c = shift;

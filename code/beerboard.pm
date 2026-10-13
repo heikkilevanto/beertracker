@@ -220,7 +220,7 @@ sub render_location_selector {
   for my $l ( scrapeboard::get_scraper_locations($c) ) {
     my $sel = "";
     $sel = "selected" if ( $l eq $locparam);
-    print "<option value='$l' $sel>$l</option>\n";
+    print "<option value='" . util::htmlesc($l) . "' $sel>" . util::htmlesc($l) . "</option>\n";
   }
   print "</select>\n";
   print "</form>\n";
@@ -516,10 +516,6 @@ sub prepare_beer_entry_data {
   my $dispbeer_short = "<a href='$c->{url}?o=Brew&e=$e->{brew_id}'><b>$shortbeer</b></a>" if ($e->{brew_id});
   $dispbeer_short ||= $dispbeer;
 
-  $mak =~ s/'//g; # Apostrophes break the input form below
-  $beer =~ s/'//g; # So just drop them
-  $sty =~ s/'//g;
-
   # Compute external link (priority: DetailsLink > MakerSearchLink > DDG fallback)
   my $ddg_query = "";
   $ddg_query = "$mak $beer" if ($mak || $beer);
@@ -569,15 +565,15 @@ sub generate_hidden_fields {
     } else {
       $hiddenbuttons .= "<input type='hidden' name='type' value='Beer' />\n" ;
     }
-    $hiddenbuttons .= "<input type='hidden' name='country' value='$processed_data->{country}' />\n"
+    $hiddenbuttons .= "<input type='hidden' name='country' value='" . util::htmlesc($processed_data->{country}) . "' />\n"
       if ($processed_data->{country}) ;
-    $hiddenbuttons .= "<input type='hidden' name='maker' value='$processed_data->{mak}' />\n" ;
-    $hiddenbuttons .= "<input type='hidden' name='name' value='$processed_data->{beer}' />\n" ;
-    $hiddenbuttons .= "<input type='hidden' name='style' value='$processed_data->{origsty}' />\n" ;
-    $hiddenbuttons .= "<input type='hidden' name='subtype' value='$processed_data->{sty}' />\n" ;
+    $hiddenbuttons .= "<input type='hidden' name='maker' value='" . util::htmlesc($processed_data->{mak}) . "' />\n" ;
+    $hiddenbuttons .= "<input type='hidden' name='name' value='" . util::htmlesc($processed_data->{beer}) . "' />\n" ;
+    $hiddenbuttons .= "<input type='hidden' name='style' value='" . util::htmlesc($processed_data->{origsty}) . "' />\n" ;
+    $hiddenbuttons .= "<input type='hidden' name='subtype' value='" . util::htmlesc($processed_data->{sty}) . "' />\n" ;
     $hiddenbuttons .= "<input type='hidden' name='alc' value='$e->{alc}' />\n" ;
   }
-  $hiddenbuttons .= "<input type='hidden' name='loc' value='$locparam' />\n" ;
+  $hiddenbuttons .= "<input type='hidden' name='loc' value='" . util::htmlesc($locparam) . "' />\n" ;
   $hiddenbuttons .= "<input type='hidden' name='Location' value='$locid' />\n" ;
   $hiddenbuttons .= "<input type='hidden' name='tap' value='$id' />\n" ; # Signals this comes from a beer board
   $hiddenbuttons .= "<input type='hidden' name='o' value='board' />\n" ;  # come back to the board display
@@ -723,7 +719,7 @@ sub trigger_background_update {
   $form_id =~ s/\W/_/g;
   my $form = "<form id='$form_id' method='POST' action='$c->{url}' style='display:none;'>";
   $form .= "<input type='hidden' name='o' value='updateboard'>";
-  $form .= "<input type='hidden' name='loc' value='$locparam'>";
+  $form .= "<input type='hidden' name='loc' value='" . util::htmlesc($locparam) . "'>";
   $form .= "</form>";
   print $form;
   print "<script>document.addEventListener('DOMContentLoaded', function(){ scheduleBackgroundUpdate('$form_id', '$c->{url}'); });</script>\n";

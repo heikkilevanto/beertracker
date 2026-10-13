@@ -249,6 +249,7 @@ my @TESTS = (
   { name => "person_roundtrip", sets => [qw(posts roundtrip person persons)],         test => \&test_person_roundtrip },
   { name => "person_related",   sets => [qw(posts roundtrip person persons)],         test => \&test_person_related },
   { name => "brew_roundtrip",     sets => [qw(posts roundtrip brew brews)],             test => \&test_brew_roundtrip },
+  { name => "brew_apostrophe",    sets => [qw(posts roundtrip brew brews)],             test => \&test_brew_apostrophe },
   { name => "location_roundtrip", sets => [qw(posts roundtrip location locations)],       test => \&test_location_roundtrip },
   { name => "glass_roundtrip",    sets => [qw(posts roundtrip postglass glasses)],        test => \&test_glass_roundtrip },
   { name => "glass_currency_roundtrip", sets => [qw(posts roundtrip postglass glasses)],  test => \&test_glass_currency_roundtrip },
@@ -874,6 +875,55 @@ sub test_brew_roundtrip {
   assert_page_ok($status, $body, "Brew list after delete", "Brews");
   assert(scalar($body !~ /\Q$name2\E/), "Brew list no longer shows the deleted record '$name2'");
 } # test_brew_roundtrip
+
+sub test_brew_apostrophe {
+  # Issue #774: a brew name with an apostrophe must survive the edit screen.
+  # Single-word name: on list pages each word is wrapped in its own filter
+  # span, so multi-word names are not contiguous in the raw HTML.
+  my $name = "TST" . time() . "øl's";
+  (my $escname = $name) =~ s/'/&#39;/g;
+  get_first_id("Brew");
+
+  my ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => "new", Name => $name, BrewType => "Beer", submit => "Insert Brew" });
+  my $loc = assert_post_redirect($status, $headers, "Brew apostrophe insert");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Brew list after apostrophe insert", "Brews");
+  assert(scalar($body =~ /\Q$escname\E/), "Brew list shows the escaped name '$escname'");
+  my $id = id_before_text($body, "Brew", $escname);
+  assert(defined $id, "harvested the apostrophe Brew id from the list");
+  return unless defined $id;
+
+  # The edit form must render the apostrophe as &#39; inside value='...'
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
+  assert_page_ok($status, $body, "Brew edit with apostrophe", "Editing Brew");
+  assert(scalar($body =~ /name='Name' value='\Q$escname\E'/),
+         "edit form Name value holds the escaped name");
+  assert(scalar($body !~ /name='Name' value='\Q$name\E'/),
+         "edit form Name value has no raw unescaped apostrophe");
+
+  # Update the name (apostrophe kept), verify the list shows the new name
+  my $name2 = "TST" . (time() + 1) . "øl's";
+  (my $escname2 = $name2) =~ s/'/&#39;/g;
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => $id, id => $id, Name => $name2, BrewType => "Beer", submit => "Update Brew" });
+  $loc = assert_post_redirect($status, $headers, "Brew apostrophe update");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Brew list after apostrophe update", "Brews");
+  assert(scalar($body =~ /\Q$escname2\E/), "Brew list shows the updated escaped name");
+  assert(scalar($body !~ /\Q$escname\E/), "Brew list no longer shows the old escaped name");
+
+  # Delete it again
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => $id, id => $id, Name => $name2, BrewType => "Beer", submit => "Delete Brew" });
+  $loc = assert_post_redirect($status, $headers, "Brew apostrophe delete");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  assert_page_ok($status, $body, "Brew list after apostrophe delete", "Brews");
+  assert(scalar($body !~ /\Q$escname2\E/), "Brew list no longer shows the deleted apostrophe name");
+} # test_brew_apostrophe
 
 sub test_location_roundtrip {
   # Plan Task 6: create a Location through the web, verify it on the Location

@@ -98,11 +98,14 @@ sub skipmsg {
 ################################################################################
 my @TESTS = (
   { name => "util_trim",         sets => [qw(quick util)],       test => \&test_util_trim },
+  { name => "util_param",        sets => [qw(quick util)],       test => \&test_util_param },
   { name => "util_number",       sets => [qw(quick util)],       test => \&test_util_number },
   { name => "util_unit",         sets => [qw(quick util)],       test => \&test_util_unit },
   { name => "util_sizeprices",   sets => [qw(quick util)],       test => \&test_util_sizeprices },
   { name => "util_tags",         sets => [qw(quick util)],       test => \&test_util_tags },
   { name => "util_htmlesc",      sets => [qw(quick util)],       test => \&test_util_htmlesc },
+  { name => "util_htmlunesc",    sets => [qw(quick util)],       test => \&test_util_htmlunesc },
+  { name => "util_jssq",         sets => [qw(quick util)],       test => \&test_util_jssq },
   { name => "dateutil_effday",   sets => [qw(quick dateutil)],   test => \&test_dateutil_effday },
   { name => "dateutil_reldate",  sets => [qw(quick dateutil)],   test => \&test_dateutil_reldate },
   { name => "dateutil_normalize",sets => [qw(quick dateutil)],   test => \&test_dateutil_normalize },
@@ -235,6 +238,24 @@ sub test_util_trim {
   assert(util::trim(undef) eq "", "trim undef returns empty");
 }
 
+# util::param with a minimal mock CGI object (no real CGI needed)
+{
+  package MockCGI;
+  sub new { my ($class, $params) = @_; return bless { p => $params }, $class; }
+  sub param { my ($self, $k) = @_; return $self->{p}{$k}; }
+}
+
+sub test_util_param {
+  my $c = { cgi => MockCGI->new({ Name => "Mikkeller's IPA", Bad => "a<b>c",
+                                  Utf => "Øl øl", Dft => "" }) };
+  # Issue #774: apostrophes must survive input sanitization
+  assert(util::param($c, "Name") eq "Mikkeller's IPA", "param keeps apostrophe");
+  assert(util::param($c, "Utf") eq "Øl øl", "param keeps Scandinavian letters");
+  assert(util::param($c, "Bad") eq "a_b_c", "param replaces <> with underscore");
+  assert(util::param($c, "Dft", "x") eq "", "param empty value stays empty");
+  assert(util::param($c, "Missing", "fallback") eq "fallback", "param default for missing");
+}
+
 sub test_util_number {
   assert(util::number("4,5") eq "4.5", "number comma to dot");
   assert(util::number("abc") eq "0", "number non-numeric to 0");
@@ -306,6 +327,33 @@ sub test_util_htmlesc {
   assert(util::htmlesc('<script>&"x"') eq "&lt;script&gt;&amp;&quot;x&quot;",
          "htmlesc escapes special chars");
   assert(util::htmlesc(undef) eq "", "htmlesc undef returns empty");
+  # Issue #774: apostrophes must be escaped for single-quoted attributes
+  assert(util::htmlesc("Mikkeller's IPA") eq "Mikkeller&#39;s IPA",
+         "htmlesc escapes apostrophe");
+  assert(util::htmlesc(q{a'b"c}) eq "a&#39;b&quot;c",
+         "htmlesc escapes apostrophe and double quote");
+}
+
+sub test_util_htmlunesc {
+  assert(util::htmlunesc("Mikkeller&#39;s IPA") eq "Mikkeller's IPA",
+         "htmlunesc decodes apostrophe entity");
+  assert(util::htmlunesc("&lt;b&gt; &amp; &quot;q&quot; &#39;")
+         eq q{<b> & "q" '}, "htmlunesc decodes all htmlesc entities");
+  assert(util::htmlunesc(undef) eq "", "htmlunesc undef returns empty");
+  # Round-trip with htmlesc, incl. a literal &amp; in the source text
+  my $raw = q{Fish & Chips &amp; "O'Brien's" <ok>};
+  assert(util::htmlunesc(util::htmlesc($raw)) eq $raw,
+         "htmlunesc(htmlesc(x)) round-trips");
+}
+
+sub test_util_jssq {
+  assert(util::jssq("It's") eq "It\\'s", "jssq escapes single quote");
+  assert(util::jssq("a\\b") eq "a\\\\b", "jssq escapes backslash");
+  assert(util::jssq("a\nb") eq "a\\nb", "jssq escapes newline");
+  assert(util::jssq("a\rb") eq "a\\rb", "jssq escapes carriage return");
+  assert(util::jssq("x</script>y") eq "x<\\/script>y",
+         "jssq neutralizes closing script tag");
+  assert(util::jssq(undef) eq "", "jssq undef returns empty");
 }
 
 # --- dateutil.pm ---
