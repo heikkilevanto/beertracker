@@ -21,17 +21,16 @@ function updateAdjustment(formId, expected) {
   return true;
 }
 
-// Wire the summary table (the element right before the adjform div) click to
-// toggle its adjustment form. Binding to the specific preceding table keeps each
-// row independent regardless of when this runs (deferred / DOMContentLoaded).
+// Wire the summary line (the .sumline div right before the adjform div) click
+// to toggle its adjustment form. The sumline is the immediate preceding
+// sibling, and it is a block element, so a click anywhere on that line works.
+// Binding to the specific preceding element keeps each row independent
+// regardless of when this runs (deferred / DOMContentLoaded).
 function initAdjForm(formId) {
   var adj = document.getElementById('adjform_' + formId);
   if (!adj) return;
-  var table = adj.previousElementSibling;
-  while (table && (table.tagName !== 'TABLE')) {
-    table = table.previousElementSibling;
-  }
-  if (!table) return;
-  table.style.cursor = 'pointer';
-  table.onclick = function() { toggleAdjForm(formId); };
+  var sumline = adj.previousElementSibling;
+  if (!sumline) return;
+  sumline.style.cursor = 'pointer';
+  sumline.onclick = function() { toggleAdjForm(formId); };
 }

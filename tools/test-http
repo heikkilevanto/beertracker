@@ -298,6 +298,24 @@ sub test_full {
   assert_page_ok($status, $body, "Full", "id='mainform'");
   assert(scalar($body =~ /Older records/), "Full page has the 'Older records' link");
   remember_first_id($body, "Full");
+
+  # The click handler in static/mainlist.js binds to the element immediately
+  # preceding each adjustment form, which must be its location sumline. If the
+  # sumline markup changes, the correction form stops opening on click.
+  my @lines = split(/\n/, $body);
+  my $adjforms = 0;
+  my $after_sumline = 0;
+  foreach my $i (0 .. $#lines) {
+    next unless $lines[$i] =~ /^<div id='adjform_/;
+    $adjforms++;
+    $after_sumline++ if ($i > 0 && $lines[$i - 1] =~ /^<div class='sumline'>.*<\/div>$/);
+  }
+  if ($adjforms == 0) {
+    skipmsg("Full page has no adjustment forms (no Adjustment brew configured)");
+  } else {
+    assert($adjforms == $after_sumline,
+      "Full page: all $adjforms adjustment forms directly follow their sumline line (got $after_sumline)");
+  }
 } # test_full
 
 sub test_default {
