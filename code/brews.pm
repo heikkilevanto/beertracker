@@ -651,9 +651,10 @@ sub dedupbrews {
   foreach my $paramname ($c->{cgi}->param) {
     if ( $paramname =~ /^Chk(\d+)$/ ) {
       my $dup = $1;
-      # Merge lifecycle dates from the duplicate before it is deleted.
-      # Released/FirstSeen: earliest wins; Discontinued: latest wins.
-      db::merge_dates($c, "BREWS", $id, $dup,
+      # Merge all fields from the duplicate before it is deleted.
+      # Released/FirstSeen: earliest wins; Discontinued: latest wins; other
+      # fields are copied if the kept brew lacks a value, conflicts are logged.
+      db::merge_fields($c, "BREWS", $id, $dup,
         { earliest => [qw(Released FirstSeen)], latest => [qw(Discontinued)] });
 
       my $sql = "UPDATE GLASSES SET Brew = ? WHERE Brew = ?  ";

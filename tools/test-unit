@@ -37,6 +37,7 @@ require styles;
 require postglass;
 require currencies;
 require mainlist;
+require db;
 
 ################################################################################
 # Config
@@ -116,6 +117,7 @@ my @TESTS = (
   { name => "styles_short",      sets => [qw(quick styles)],     test => \&test_styles_short },
   { name => "postglass_curprice", sets => [qw(quick postglass)], test => \&test_postglass_curprice },
   { name => "mainlist_currency",  sets => [qw(quick mainlist)],  test => \&test_mainlist_currency },
+  { name => "db_merge_fields",    sets => [qw(quick db)],        test => \&test_db_merge_fields },
 );
 
 ################################################################################
@@ -436,6 +438,79 @@ sub test_comments_rating {
          "rating 2.7 rounds to 3 = rubbish");
   assert(comments::get_rating_class(3.5) eq "rating-bronze",
          "rating 3.5 rounds to 4 = bronze");
+}
+
+# --- db.pm ---
+
+sub test_db_merge_fields {
+  my ($u, $w);
+
+  # Dup values copied when the kept record has none (empty string or undef)
+  ($u, $w) = db::plan_merge_fields(
+      { Id => 1, Name => "Foo", Alc => "", Description => undef },
+      { Id => 2, Name => "Foo", Alc => "5.5", Description => "Nice" });
+  assert(scalar(@$u) == 2, "two fields to copy");
+  assert($u->[0][0] eq "Alc" && $u->[0][1] eq "5.5", "Alc copied from dup");
+  assert($u->[1][0] eq "Description" && $u->[1][1] eq "Nice", "Description copied from dup");
+  assert(scalar(@$w) == 0, "no warnings when kept values are empty");
+
+  # Nothing to do when the duplicate has no values
+  ($u, $w) = db::plan_merge_fields(
+      { Id => 1, Name => "Foo", Tags => "ipa" },
+      { Id => 2, Name => "Foo", Tags => "", Website => undef });
+  assert(scalar(@$u) == 0 && scalar(@$w) == 0, "no changes when dup values are empty");
+
+  # Equal values are ignored
+  ($u, $w) = db::plan_merge_fields(
+      { Id => 1, Name => "Foo", Barcode => "123" },
+      { Id => 2, Name => "Foo", Barcode => "123" });
+  assert(scalar(@$u) == 0 && scalar(@$w) == 0, "equal values ignored");
+
+  # Conflicting values: kept value stays, field reported as a warning
+  ($u, $w) = db::plan_merge_fields(
+      { Id => 1, Name => "Foo", Tags => "ipa" },
+      { Id => 2, Name => "Foo", Tags => "ale" });
+  assert(scalar(@$u) == 0, "conflict does not overwrite kept value");
+  assert(scalar(@$w) == 1 && $w->[0][0] eq "Tags" &&
+         $w->[0][1] eq "ipa" && $w->[0][2] eq "ale", "conflict reported with both values");
+
+  # A different name is a conflict too, not a silent overwrite
+  ($u, $w) = db::plan_merge_fields(
+      { Id => 1, Name => "Foo IPA" },
+      { Id => 2, Name => "Foo IPA 2019" });
+  assert(scalar(@$u) == 0 && scalar(@$w) == 1 && $w->[0][0] eq "Name",
+         "different names warn");
+
+  # Earliest date wins (also handles a partial year vs a full date)
+  ($u, $w) = db::plan_merge_fields(
+      { Id => 1, Released => "2020-05-01", FirstSeen => "2021" },
+      { Id => 2, Released => "2019-12-31", FirstSeen => "2020" },
+      { earliest => [qw(Released FirstSeen)] });
+  assert(scalar(@$u) == 2 && $u->[0][0] eq "FirstSeen" && $u->[0][1] eq "2020" &&
+         $u->[1][0] eq "Released" && $u->[1][1] eq "2019-12-31", "earliest date wins");
+  assert(scalar(@$w) == 0, "no warnings for earliest dates");
+
+  # Latest date wins
+  ($u, $w) = db::plan_merge_fields(
+      { Id => 1, Discontinued => "2022-01-01" },
+      { Id => 2, Discontinued => "2023-06-01" },
+      { latest => [qw(Discontinued)] });
+  assert(scalar(@$u) == 1 && $u->[0][1] eq "2023-06-01", "latest date wins");
+
+  # An older duplicate date does not overwrite a newer kept date
+  ($u, $w) = db::plan_merge_fields(
+      { Id => 1, Discontinued => "2023-06-01" },
+      { Id => 2, Discontinued => "2022-01-01" },
+      { latest => [qw(Discontinued)] });
+  assert(scalar(@$u) == 0 && scalar(@$w) == 0, "older duplicate date loses silently");
+
+  # Id is never merged, and skip fields are ignored entirely
+  ($u, $w) = db::plan_merge_fields(
+      { Id => 1, Name => "Foo", Scraper => "old" },
+      { Id => 2, Name => "Bar", Scraper => "new" },
+      { skip => [qw(Scraper)] });
+  assert(scalar(@$u) == 0, "no updates for Id and skipped fields");
+  assert(scalar(@$w) == 1 && $w->[0][0] eq "Name", "only non-skipped conflicts warn");
 }
 
 # --- glasses.pm ---

@@ -395,9 +395,10 @@ sub deduplocations {
   foreach my $paramname ($c->{cgi}->param) {
     if ( $paramname =~ /^Chk(\d+)$/ ) {
       my $dup = $1;
-      # Merge lifecycle dates from the duplicate before it is deleted.
-      # Opened/FirstSeen: earliest wins; Closed: latest wins.
-      db::merge_dates($c, "LOCATIONS", $id, $dup,
+      # Merge all fields from the duplicate before it is deleted.
+      # Opened/FirstSeen: earliest wins; Closed: latest wins; other fields are
+      # copied if the kept location lacks a value, conflicts are logged.
+      db::merge_fields($c, "LOCATIONS", $id, $dup,
         { earliest => [qw(Opened FirstSeen)], latest => [qw(Closed)] });
 
       my $sql = "UPDATE GLASSES SET Location = ? WHERE Location = ?  ";
@@ -417,6 +418,24 @@ sub deduplocations {
       $rows = db::execute($c, $sql, $id, $dup);
       util::error("Deduplicate Locations: Failed to update BREWS") unless defined $rows;
       print { $c->{log} } "Updated $rows brews from $dup to $id\n";
+
+      $sql = "UPDATE TAP_BEERS SET Location = ? WHERE Location = ?  ";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
+      $rows = db::execute($c, $sql, $id, $dup);
+      util::error("Deduplicate Locations: Failed to update tap_beers") unless defined $rows;
+      print { $c->{log} } "Updated $rows tap_beers from $dup to $id\n";
+
+      $sql = "UPDATE COMMENTS SET Location = ? WHERE Location = ?  ";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
+      $rows = db::execute($c, $sql, $id, $dup);
+      util::error("Deduplicate Locations: Failed to update comments") unless defined $rows;
+      print { $c->{log} } "Updated $rows comments from $dup to $id\n";
+
+      $sql = "UPDATE PHOTOS SET Location = ? WHERE Location = ?  ";
+      print { $c->{log} } "$sql with '$id' and '$dup' \n";
+      $rows = db::execute($c, $sql, $id, $dup);
+      util::error("Deduplicate Locations: Failed to update photos") unless defined $rows;
+      print { $c->{log} } "Updated $rows photos from $dup to $id\n";
 
       $sql = "DELETE FROM LOCATIONS WHERE Id = ? ";
       $rows = db::execute($c, $sql, $dup);

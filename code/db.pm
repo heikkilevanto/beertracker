@@ -431,53 +431,93 @@ sub can_delete {
 } # can_delete
 
 
-########## Merge lifecycle dates from a duplicate record into the kept record
-# Args: $c, $table, $kept_id, $dup_id, $opts
+########## Plan a field-by-field merge of a duplicate record into a kept record
+# Pure function, no database access. Args: $kept (hashref), $dup (hashref), $opts
 #   opts->{earliest} => arrayref of fields where the earliest date wins
 #   opts->{latest}   => arrayref of fields where the latest date wins
-# For each field: if the kept record has no value, the duplicate's value is
-# copied over. If both have values, the earliest (or latest, per opts) wins.
+#   opts->{skip}     => arrayref of fields to ignore entirely (Id always ignored)
+# Returns (\@updates, \@warnings):
+#   \@updates  => [ [field, newvalue], ... ] fields to write to the kept record
+#   \@warnings => [ [field, keptvalue, dupvalue], ... ] fields where both records
+#                 have different values; the kept value is kept
+# For each field: if the duplicate has no value (undef or empty string), nothing
+# happens. If the kept record has no value, the duplicate's value is copied.
+# If both have values: fields with an earliest/latest rule pick the winner,
+# any other field keeps the kept value and is reported as a warning.
 # Dates are compared as strings (YYYY-MM-DD sorts lexically; a partial year
-# like '2019' sorts before any '2019-...' date). Logs each merged field and
-# updates the kept record when anything changed.
-sub merge_dates {
+# like '2019' sorts before any '2019-...' date).
+sub plan_merge_fields {
+  my $kept = shift;
+  my $dup  = shift;
+  my $opts = shift || {};
+  my %skip = map { $_ => 1 } ( "Id", @{ $opts->{skip} || [] } );
+  my %earliest = map { $_ => 1 } @{ $opts->{earliest} || [] };
+  my %latest   = map { $_ => 1 } @{ $opts->{latest}   || [] };
+
+  my @updates;
+  my @warnings;
+  my %fields = map { $_ => 1 } ( keys %$kept, keys %$dup );
+  foreach my $f ( sort keys %fields ) {
+    next if $skip{$f};
+    my $kv = $kept->{$f} // "";
+    my $dv = $dup->{$f}  // "";
+    next if $dv eq "";
+    if ( $kv eq "" ) {
+      push @updates, [ $f, $dv ];
+      next;
+    }
+    next if $kv eq $dv;
+    if ( $earliest{$f} || $latest{$f} ) {
+      # The rule decides the winner, no warning either way
+      my $win = 0;
+      $win = 1 if ( $earliest{$f} && $dv lt $kv );
+      $win = 1 if ( $latest{$f}   && $dv gt $kv );
+      push @updates, [ $f, $dv ] if $win;
+      next;
+    }
+    push @warnings, [ $f, $kv, $dv ];
+  }
+  return (\@updates, \@warnings);
+} # plan_merge_fields
+
+
+########## Merge all fields of a duplicate record into the kept record
+# Args: $c, $table, $kept_id, $dup_id, $opts (see plan_merge_fields)
+# Copies every field the kept record is missing, keeps the kept record's value
+# when both differ (logging a warning, so no value is silently overwritten),
+# and applies the earliest/latest rules for the given date fields.
+# Logs each copied field and each conflict, then updates the kept record in
+# a single UPDATE when anything changed.
+sub merge_fields {
   my $c = shift;
   my $table = shift;
   my $kept_id = shift;
   my $dup_id  = shift;
   my $opts = shift || {};
-  my @earliest = @{ $opts->{earliest} || [] };
-  my @latest   = @{ $opts->{latest}   || [] };
-  return unless (@earliest || @latest);
 
   my $kept = getrecord($c, $table, $kept_id) or return;
   my $dup  = getrecord($c, $table, $dup_id)  or return;
 
-  my %earliest = map { $_ => 1 } @earliest;
-  my %latest   = map { $_ => 1 } @latest;
+  my ($updates, $warnings) = plan_merge_fields($kept, $dup, $opts);
+
   my @sets;
   my @values;
-  foreach my $f (@earliest, @latest) {
-    my $kv = $kept->{$f} // "";
-    my $dv = $dup->{$f}  // "";
-    next if $dv eq "";
-    my $win = 0;
-    if ( $kv eq "" ) {
-      $win = 1;
-    } elsif ( $earliest{$f} && $dv lt $kv ) {
-      $win = 1;
-    } elsif ( $latest{$f} && $dv gt $kv ) {
-      $win = 1;
-    }
-    next unless $win;
+  foreach my $u (@$updates) {
+    my ($f, $dv) = @$u;
     push @sets, "$f = ?";
     push @values, $dv;
-    print { $c->{log} } "merge_dates: $table $kept_id: $f '$kv' <- '$dv' (from $dup_id)\n";
+    print { $c->{log} } "merge_fields: $table $kept_id: $f '" .
+        ($kept->{$f} // "") . "' <- '$dv' (from $dup_id)\n";
+  }
+  foreach my $w (@$warnings) {
+    my ($f, $kv, $dv) = @$w;
+    print { $c->{log} } "merge_fields: WARNING $table $kept_id: $f differs: " .
+        "kept '$kv' vs dup '$dv' (from $dup_id)\n";
   }
   if (@sets) {
     db::execute($c, "UPDATE $table SET " . join(", ", @sets) . " WHERE Id = ?", @values, $kept_id);
   }
-} # merge_dates
+} # merge_fields
 
 
 ########## Update a record directly from CGI parameters
