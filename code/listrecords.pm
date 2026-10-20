@@ -74,13 +74,20 @@ sub listrecords {
   my $allbutton    = $opt->{allbutton}    || 0;
   my $gap_column = $opt->{gap_column};
   my $norecmessage = $opt->{norecmessage};
+  my $sql_limit    = $opt->{sql_limit};
+
+  my $showall = 0;
+  if ($sql_limit) {
+    $showall = util::param($c, "showall") ? 1 : 0;
+  }
 
   my @cache_params = ();
   if ($params) {
     if (ref $params eq 'ARRAY') { @cache_params = @$params; }
     else { @cache_params = ($params); }
   }
-  my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where, @cache_params, $c->{mobile});
+  my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where, @cache_params, $c->{mobile},
+                       "lim" . ($showall ? "all" : ($sql_limit || "")));
   my $cached = cache::get($c, $cache_key);
   if ( defined $cached ) {
     print { $c->{log} } "listrecords: cache hit for $sql_param\n";
@@ -168,6 +175,12 @@ sub listrecords {
   $where = "WHERE $where" if ($where);
 
   my $sql = "SELECT * FROM ($sql_param) $where";
+  my $truncated = 0;
+  if ($sql_limit && !$showall) {
+    $sql_limit = int($sql_limit);
+    # Fetch one extra row to detect truncation
+    $sql .= " LIMIT " . ($sql_limit + 1);
+  }
   my @paramarr = ();
   if ( $params ) {
     if (ref $params eq 'ARRAY') { @paramarr = @$params; }
@@ -439,6 +452,11 @@ sub listrecords {
 
   my ($rowcount, $prev_gap) = (0, 0);
   while ( my @rec = $list_sth->fetchrow_array ) {
+    if ($sql_limit && !$showall && $rowcount >= $sql_limit) {
+      # We fetched one extra row beyond the limit — mark truncated and stop
+      $truncated = 1;
+      last;
+    }
     if ($gap_col_idx >= 0 && defined $rec[$gap_col_idx] && $rec[$gap_col_idx] ne '') {
       my $curr_gap = $rec[$gap_col_idx];
       my $daydiff = $prev_gap - $curr_gap;
@@ -880,6 +898,12 @@ sub listrecords {
   }
   if ($rowcount > 0) {
     $s .= "<script>var c=document.querySelector('[data-lr-wrapper] .lr-count');if(c)c.textContent='$rowcount ';<\/script>\n";
+  }
+  if ($truncated) {
+    $s .= "<div class='lr-truncated' style='padding:4px 0; color:#888'>\n";
+    $s .= "  Showing first $sql_limit records (most recent first).\n";
+    $s .= "  <a href='$url?o=$op&showall=1'><span>Show all</span></a>\n";
+    $s .= "</div>\n";
   }
   $s .= "</div>\n";
   $s .= "<!-- listrecords: table body done -->\n";

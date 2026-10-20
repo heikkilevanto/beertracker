@@ -76,7 +76,7 @@ sub listbrews {
     LEFT JOIN brew_ratings r ON r.Brew = brews.Id AND r.Username = users.Username
     GROUP BY brews.Id, users.Username
     ORDER BY "Last" DESC},
-    { where => "xUsername = ?", params => $c->{username}, title => "Brews" });
+    { where => "xUsername = ?", params => $c->{username}, title => "Brews", sql_limit => 500 });
   return;
 } # listbrews
 
