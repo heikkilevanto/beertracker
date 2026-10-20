@@ -495,7 +495,7 @@ sub listrecords {
       }
       my $word_split = 1;
       if ( $fn eq "Name" ) {
-        $v = _word_spans($v, $i);
+        $v = _word_spans($v);
         $v = "<b>$v</b>";
         $word_split = 0;
       } elsif ( $suffix_info[$i]{link} ) {
@@ -540,7 +540,7 @@ sub listrecords {
           }
           my $dispstyle = styles::brewtextstyle($c, $style_str, "$c->{op}:$rec[0] $brewtype/" . ($subtype // ""));
           (my $filter_str = $style_str) =~ s/,/ /g;
-          $v = _word_spans($filter_str, $i);
+          $v = _word_spans($filter_str);
           my $hidden = "";
           $hidden = "<span style='display:none'>Beer </span>" if ($brewtype eq 'Beer' && $subtype);
           $v = $hidden . "<span $dispstyle>$v</span>";
@@ -601,13 +601,13 @@ sub listrecords {
         $word_split = 0;
       } elsif ( $fn eq "Prod" ) {
         if ($v) {
-          $v = _word_spans($v, $i);
+          $v = _word_spans($v);
           $v = "<i>$v</i>";
         }
         $word_split = 0;
       } elsif ( $fn eq "BrewName" ) {
         if ($v) {
-          $v = _word_spans($v, $i);
+          $v = _word_spans($v);
           $v = "<b>$v</b>";
         }
         $word_split = 0;
@@ -793,7 +793,7 @@ sub listrecords {
               . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
               . "><span>L:$id</span></a>";
             if ($name) {
-              $link .= " " . _word_spans($name, $i);
+              $link .= " " . _word_spans($name);
             }
             push @parts, $link;
           }
@@ -822,7 +822,7 @@ sub listrecords {
         $word_split = 0;
       }
       if ( $word_split && $v !~ /</ ) {
-        $v = _word_spans($v, $i);
+        $v = _word_spans($v);
       }
       my $cell_events = " ondblclick='fieldclick_cell(event,this,$i)'";
       $cell_events = "" if ($suffix_info[$i]{nofilter});
@@ -923,11 +923,12 @@ sub listrecords {
 
 ################################################################################
 # Split cell text by whitespace into individual clickable words.
-# Each word is rendered as a clickable <span> for column filtering.
-# The JS fieldclick_word handler strips non-allowed characters on click.
+# Each word is rendered as a <span class='fw'> for column filtering.
+# A delegated click handler in listrecords.js picks these up and finds the
+# column via the nearest data-col ancestor. The JS strips non-allowed
+# characters on click.
 sub _word_spans {
     my $v = shift;
-    my $col_idx = shift;
     return $v if $v eq '';
 
     my @segments = grep { length } split /\s+/, $v;
@@ -936,7 +937,7 @@ sub _word_spans {
 
     my @spans;
     foreach my $seg (@segments) {
-        push @spans, "<span onclick='fieldclick_word(event,this,$col_idx)'>" . util::htmlesc($seg) . "</span>";
+        push @spans, "<span class='fw'>" . util::htmlesc($seg) . "</span>";
     }
 
     return join(" ", @spans);

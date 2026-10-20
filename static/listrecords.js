@@ -253,6 +253,16 @@ function fieldclick(event,el,index) {
   }
 }
 
+// Filter-word spans are marked class='fw' by listrecords.pm. The column comes
+// from the nearest data-col ancestor, so no per-word onclick is needed.
+document.addEventListener('click', function(e) {
+  const w = e.target.closest('span.fw');
+  if (!w) return;
+  const cell = w.closest('[data-col]');
+  if (!cell) return;
+  fieldclick_word(e, w, cell.getAttribute('data-col'));
+});
+
 function fieldclick_word(event, el, col) {
   var token = el.textContent;
   token = token.replace(/[^a-zA-Z0-9ñÑåÅæÆøØöÖäÄéÉáÁāĀüÜß &-]/g, '');
