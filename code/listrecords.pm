@@ -199,18 +199,16 @@ sub listrecords {
   $s .= "    <span class='lr-count'>0</span>&nbsp;<b>$title</b>\n";
   if ( $title !~ /^Photos/i && !$no_new_link ) {
     $s .= "    <a href=\"$url?o=$op&e=new\"\n";
-    $s .= "       style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'><span>New</span></a>\n";
+    $s .= "       class='lr-btn'><span>New</span></a>\n";
   }
-  $s .= "    <span class='lr-clr' onclick='lr_clearfilters(this)'\n";
-  $s .= "          style='display:none; cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; margin-left:8px'>Clr</span>\n";
-  $s .= "    <span class='lr-hdr' onclick='lr_toggleheaders(this)'\n";
-  $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small'>Hdr</span>\n";
+  $s .= "    <span class='lr-btn lr-clr' onclick='lr_clearfilters(this)'\n";
+  $s .= "          style='display:none; margin-left:8px'>Clr</span>\n";
+  $s .= "    <span class='lr-btn lr-hdr' onclick='lr_toggleheaders(this)'>Hdr</span>\n";
   if ($allbutton) {
-    $s .= "    <span class='lr-all' onclick='lr_showall(this)'\n";
-    $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small'>All</span>\n";
+    $s .= "    <span class='lr-btn lr-all' onclick='lr_showall(this)'>All</span>\n";
   }
-  $s .= "    <span class='lr-help' onclick='lr_showhelp()'\n";
-  $s .= "          style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; display:inline-block; width:1.6em; text-align:center'>?</span>\n";
+  $s .= "    <span class='lr-btn lr-help' onclick='lr_showhelp()'\n";
+  $s .= "          style='display:inline-block; width:1.6em; text-align:center'>?</span>\n";
   $s .= "  </div>\n";
   $s .= "  <div class='lr-page-nav-div' style='display:flex; align-items:center; flex-wrap:wrap; gap:8px;'>\n";
   $s .= "    Showing <select class='lr-size-select' onchange='lr_changesize(this)'>\n";
@@ -504,7 +502,7 @@ sub listrecords {
           my $entity = $suffix_info[$i]{link};
           my $pfx = uc(substr($entity, 0, 1));
           $v = "<a href='$url?o=$entity&e=$v'"
-             . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+             . " class='lr-btn'"
              . "><span>${pfx}:$v</span></a>";
         }
         $word_split = 0;
@@ -516,7 +514,7 @@ sub listrecords {
           elsif ($c->{op} =~ /Location/i) { $op2 = "Location"; $pfx = "L"; }
           if ( $op2 eq $c->{op} ) {
             $v = "<a href='$url?o=$op2&e=$v'"
-               . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+               . " class='lr-btn'"
                . "><span>$v</span></a>";
           } else {
             $v = "<a href='$url?o=$op2&e=$v'><span>${pfx}[$v]</span></a>: ";
@@ -587,7 +585,7 @@ sub listrecords {
             my $escname = util::htmlesc($name);
             if ($pid) {
               push @out, "<a href='$url?o=Person&e=$pid'"
-                . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+                . " class='lr-btn'"
                 . "><span>P:$pid</span></a>"
                 . " <span data-filter='\"" . $escname . "\"' onclick='fieldclick(event,this,$i)'>"
                 . $escname . "</span>";
@@ -790,7 +788,7 @@ sub listrecords {
             my ($id, $name) = split(/::/, $entry, 2);
             next unless $id && !$seen{$id}++;
             my $link = "<a href='$url?o=Location&e=$id'"
-              . " style='cursor:pointer; border:1px solid #888; border-radius:4px; padding:0 5px; font-size:small; text-decoration:none; color:inherit'"
+              . " class='lr-btn'"
               . "><span>L:$id</span></a>";
             if ($name) {
               $link .= " " . _word_spans($name);

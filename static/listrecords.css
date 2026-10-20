@@ -1,6 +1,12 @@
 /* listrecords.pm styling (moved out of the inline <style> block) */
 
 .lr-wrapper { overflow-x: auto; }
+/* Small button-like links and header control buttons. Was an inline style
+   repeated on every link cell; keeps text inside the span styled by <a>. */
+.lr-btn {
+  cursor: pointer; border: 1px solid #888; border-radius: 4px;
+  padding: 0 5px; font-size: small; text-decoration: none; color: inherit;
+}
 table[data-page-size] { border-collapse: separate; border-spacing: 0; }
 .top-border td { border-top: 2px solid white; }
 .null-value { color: #999; font-style: italic; }
