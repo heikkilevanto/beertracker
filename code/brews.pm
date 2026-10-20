@@ -51,7 +51,8 @@ sub listbrews {
     SELECT
       brews.Id AS "Id_A_link=Brew",
       brews.Name AS "Name_A_cont",
-      brews.BrewType || ', ' || brews.SubType AS "Type_A",
+      brews.BrewType || ', ' || brews.SubType AS "Type_A_cont",
+      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as=Stats",
       (SELECT Id || ':' || Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
         AS "Photo_R3_noheader_nofilter",
 
@@ -59,7 +60,6 @@ sub listbrews {
       brews.Alc AS "Alc",
       ploc.Id AS "PlocId_A_link=Location_noheader_cont",
       ploc.Name AS "Producer_A_cont",
-      r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as=Stats",
 
       '' AS TR2,
       count(glasses.Id) AS "Count",
