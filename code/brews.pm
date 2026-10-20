@@ -57,14 +57,13 @@ sub listbrews {
 
       '' AS TR1,
       brews.Alc AS "Alc",
-      CASE WHEN brews.Discontinued IS NOT NULL AND brews.Discontinued != '' THEN 'X' ELSE '' END AS "Discont",
-      ploc.Id AS "PlocId_A_link=Location_cont",
+      ploc.Id AS "PlocId_A_link=Location_noheader_cont",
       ploc.Name AS "Producer_A_cont",
       r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as=Stats",
 
       '' AS TR2,
       count(glasses.Id) AS "Count",
-      locations.Id AS "LocId_A_link=Location_cont",
+      locations.Id AS "LocId_A_link=Location_noheader_cont",
       locations.Name AS "Location_A_as=LocName_cont",
       } . db::lastseen_sql() . qq{ AS "Last",
 
