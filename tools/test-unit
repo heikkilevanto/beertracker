@@ -121,6 +121,7 @@ my @TESTS = (
   { name => "db_merge_fields",    sets => [qw(quick db)],        test => \&test_db_merge_fields },
   { name => "lr_suffixes",        sets => [qw(quick listrecords)], test => \&test_lr_suffixes },
   { name => "lr_helpers",         sets => [qw(quick listrecords)], test => \&test_lr_helpers },
+  { name => "lr_fielddef",        sets => [qw(quick listrecords)], test => \&test_lr_fielddef },
 );
 
 ################################################################################
@@ -880,3 +881,110 @@ sub test_lr_helpers {
     assert($tds eq "<td>a</td>\n", "photo_colspan no-op when not set");
   }
 } # test_lr_helpers
+
+sub test_lr_fielddef {
+  my $def;
+
+  # Exact rules: Id/IdClr 40px center; placeholder only on IdClr
+  $def = listrecords::field_def("Id", 0);
+  assert($def->{style} eq "style='max-width:40px; text-align:center'",
+         "fielddef Id 40px center");
+  assert(!defined $def->{placeholder}, "fielddef Id no placeholder override");
+  assert($def->{word_split} == 0, "fielddef Id word_split 0");
+  $def = listrecords::field_def("IdClr", 0);
+  assert($def->{style} eq "style='max-width:40px; text-align:center'",
+         "fielddef IdClr 40px center");
+  assert($def->{placeholder} eq "Id", "fielddef IdClr placeholder Id");
+
+  # Stats / Photo styles
+  $def = listrecords::field_def("Stats", 0);
+  assert($def->{style} eq "style='max-width:100px; text-align:center'",
+         "fielddef Stats 100px center");
+  $def = listrecords::field_def("Photo", 0);
+  assert($def->{style} eq "style='width:96px; text-align:center; padding:1px'",
+         "fielddef Photo 96px thumb");
+
+  # Family rules: Id|Alc family picks up aliased ids
+  foreach my $name (qw(BrewId CommentId LocId GlassId)) {
+    $def = listrecords::field_def($name, 0);
+    assert($def->{style} eq "style='max-width:55px; text-align:center'",
+           "fielddef $name Id-family 55px center");
+  }
+
+  # Rate|Rating must win over Comment for CommentRating
+  $def = listrecords::field_def("CommentRating", 0);
+  assert($def->{style} eq "style='text-align:center; font-weight:bold; max-width:50px'",
+         "fielddef CommentRating hits Rate rule");
+  assert($def->{style} !~ /italic/, "fielddef CommentRating not the Comment rule");
+
+  # LocName|PersonName family
+  $def = listrecords::field_def("GlassLocName", 0);
+  assert($def->{style} eq "style='font-weight: bold; max-width:200px;' ",
+         "fielddef GlassLocName bold (trailing space quirk preserved)");
+
+  # Comment family (after Rate and LocName in rule order)
+  foreach my $name (qw(CommentText Description)) {
+    $def = listrecords::field_def($name, 0);
+    assert($def->{style} eq "style='max-width:200px; min-width:0; font-style: italic' ",
+           "fielddef $name italic Comment family");
+  }
+
+  # Non-matches fall through to the default
+  foreach my $name (qw(LocationName Closed Day Caption)) {
+    $def = listrecords::field_def($name, 0);
+    assert($def->{style} eq "style='max-width:200px; min-width:0'",
+           "fielddef $name falls through to default");
+    assert($def->{word_split} == 1, "fielddef $name default word_split");
+  }
+  # LocationName must NOT match the LocName family
+  $def = listrecords::field_def("LocationName", 0);
+  assert($def->{style} !~ /font-weight/, "fielddef LocationName not LocName family");
+
+  # Hidden prefix rule wins over everything
+  foreach my $name (qw(xUsername X_Gap)) {
+    $def = listrecords::field_def($name, 0);
+    assert($def->{style} eq "style='display:none'", "fielddef $name display:none");
+    assert($def->{hidden} == 1, "fielddef $name hidden flag");
+  }
+
+  # Mobile variants: Type and Geo style/label
+  $def = listrecords::field_def("Type", 1);
+  assert($def->{style} eq "style='max-width:100px; text-align:center'",
+         "fielddef Type mobile 100px");
+  $def = listrecords::field_def("Type", 0);
+  assert($def->{style} eq "style='max-width:200px; text-align:center'",
+         "fielddef Type desktop 200px");
+  $def = listrecords::field_def("Geo", 1);
+  assert($def->{label} eq "km", "fielddef Geo mobile label km");
+  assert($def->{style} eq "style='max-width:55px; min-width:0; text-align:right' ",
+         "fielddef Geo mobile style (trailing space quirk)");
+  $def = listrecords::field_def("Geo", 0);
+  assert($def->{label} eq "Dist (km)", "fielddef Geo desktop label");
+  assert($def->{style} eq "style='max-width:100px; min-width:0; text-align:right' ",
+         "fielddef Geo desktop style (trailing space quirk)");
+  assert($def->{word_split} == 0, "fielddef Geo word_split 0");
+
+  # Default fall-through is mobile-aware too
+  $def = listrecords::field_def("Caption", 1);
+  assert($def->{style} eq "style='max-width:90px; min-width:0'",
+         "fielddef default mobile 90px");
+
+  # Dropped handlers: these names must fall through to the default
+  foreach my $name (qw(IsGeneric Sub Photos Website UntappdLink SearchLink DetailsLink)) {
+    $def = listrecords::field_def($name, 0);
+    assert($def->{style} eq "style='max-width:200px; min-width:0'",
+           "fielddef $name dropped handler falls through");
+    assert($def->{word_split} == 1, "fielddef $name dropped handler word_split");
+  }
+
+  # Chk flags
+  $def = listrecords::field_def("Chk", 0);
+  assert($def->{no_events} == 1, "fielddef Chk no_events");
+  assert($def->{style} eq "style='text-align:center;max-width:50px'",
+         "fielddef Chk style (no space after first semicolon quirk)");
+
+  # Sim trailing-space quirk
+  $def = listrecords::field_def("Sim", 0);
+  assert($def->{style} eq "style='max-width:55px; min-width:0; text-align:right' ",
+         "fielddef Sim style (trailing space quirk)");
+} # test_lr_fielddef

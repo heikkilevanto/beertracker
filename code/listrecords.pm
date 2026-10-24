@@ -155,6 +155,98 @@ sub _maybe_photo_colspan {
 } # _maybe_photo_colspan
 
 ################################################################################
+# Field definitions. An ordered rule list; first match wins. Styles are
+# verbatim from the old header if/elsif chain (including the trailing-space
+# quirks on some rules — they reach the HTML and the lrcompare gate checks
+# byte-identical output). Header lookup keys on the RAW post-suffix-strip
+# column name; body lookup keys on the as= alias when present.
+#
+# Ordering constraints (keep the old chain's order):
+#   - ^X first: it wins over everything for hidden columns.
+#   - Exact Id/IdClr/Alc rules before the Id|Alc family rule.
+#   - Rate|Rating before Comment|Description (CommentRating).
+#   - Id|Alc family before Comment|Description (CommentId).
+#   - LocName|PersonName before Comment|Description (no live collision,
+#     but keep the old order to stay mechanical).
+my @FIELD_DEFS = (
+  { re   => qr/^X/i,            style => "style='display:none'", hidden => 1 },
+  { name => "Id",               style => "style='max-width:40px; text-align:center'",
+    word_split => 0 },
+  { name => "IdClr",            style => "style='max-width:40px; text-align:center'",
+    placeholder => "Id", word_split => 0 },
+  { name => "Alc",              style => "style='max-width:55px; text-align:center'",
+    word_split => 0 },
+  { re   => qr/Id|Alc/,         style => "style='max-width:55px; text-align:center'" },
+  { name => "Stats",            style => "style='max-width:100px; text-align:center'" },
+  { name => "Last",             style => "style='max-width:100px'" },
+  { name => "LastProd",         style => "style='max-width:100px'" },
+  { name => "Ts",               style => "style='max-width:100px'" },
+  { name => "Type",             style => "style='max-width:200px; text-align:center'",
+    mobile_style => "style='max-width:100px; text-align:center'",
+    word_split => 0 },
+  { re   => qr/^(Com|Count)$/,  style => "style='text-align:right; max-width:50px'" },
+  { name => "d",                style => "style='text-align:right; max-width:50px'",
+    word_split => 0 },
+  { re   => qr/^(Pr|Vol)$/,     style => "style='text-align:right; max-width:35px'",
+    word_split => 0 },
+  { name => "Photo",            style => "style='width:96px; text-align:center; padding:1px'",
+    word_split => 0 },
+  { re   => qr/Rate|Rating/,    # MUST stay before the Comment rule
+    style => "style='text-align:center; font-weight:bold; max-width:50px'" },
+  { name => "Chk",              style => "style='text-align:center;max-width:50px'",
+    no_events => 1, word_split => 0 },
+  { re   => qr/LocName|PersonName/,
+    style => "style='font-weight: bold; max-width:200px;' " },
+  { re   => qr/Comment|Description/i,
+    style => "style='max-width:200px; min-width:0; font-style: italic' " },
+  { name => "Sim",              style => "style='max-width:55px; min-width:0; text-align:right' ",
+    word_split => 0 },
+  { name => "Geo",              # label and style depend on $c->{mobile}
+    style => "style='max-width:100px; min-width:0; text-align:right' ",
+    mobile_style => "style='max-width:55px; min-width:0; text-align:right' ",
+    label => "Dist (km)", mobile_label => "km",
+    word_split => 0 },
+);
+# Fall-through (no match): default style, word_split => 1, identity format.
+my $FIELD_DEFAULT = {
+  style        => "style='max-width:200px; min-width:0'",
+  mobile_style => "style='max-width:90px; min-width:0'",
+  word_split   => 1,
+};
+
+# Pure: no $c, no dbh. Returns a fresh hashref for the first matching rule,
+# with the mobile style/label already resolved and word_split defaulted.
+# Body-only format rules (Name, Prod, BrewName, Day, Locations, ...) are
+# added in a later step together with the body dispatch.
+sub field_def {
+  my ($name, $mobile) = @_;
+  my $rule;
+  foreach my $cand (@FIELD_DEFS) {
+    if ( defined $cand->{name} ) {
+      if ( $name eq $cand->{name} ) { $rule = $cand; last; }
+    } elsif ( $name =~ $cand->{re} ) {
+      $rule = $cand;
+      last;
+    }
+  }
+  my %def = $rule ? %$rule : ();
+  my $style = $def{style};
+  my $mobile_style = $def{mobile_style};
+  if ( !defined $style ) {
+    $style = $FIELD_DEFAULT->{style};
+    $mobile_style = $FIELD_DEFAULT->{mobile_style};
+  }
+  $def{style} = ( $mobile && defined $mobile_style ) ? $mobile_style : $style;
+  delete $def{mobile_style};
+  if ( defined $def{mobile_label} ) {
+    $def{label} = $mobile ? $def{mobile_label} : $def{label};
+  }
+  delete $def{mobile_label};
+  $def{word_split} = 1 unless exists $def{word_split};
+  return \%def;
+} # field_def
+
+################################################################################
 # listrecords - thin dispatcher. The rendering body lives in _render().
 ################################################################################
 
@@ -418,25 +510,18 @@ sub _render {
       my $w = "100px";
       $w = "200px" unless $c->{mobile};
       $sty = "style='max-width:$w; text-align:center'";
-    } elsif ( $f =~ /^(Sub)$/ ) {
-      $sty = "style='max-width:70px; text-align:center'";
     } elsif ( $f =~ /^(Com|Count|d)$/ ) {
       $sty = "style='text-align:right; max-width:50px'";
     } elsif ( $f =~ /^(Pr|Vol)$/ ) {
       $sty = "style='text-align:right; max-width:35px'";
     } elsif ( $f =~ /^Photo$/ ) {
       $sty = "style='width:96px; text-align:center; padding:1px'";
-    } elsif ( $f =~ /^Photos$/ ) {
-      $sty = "style='text-align:left; max-width:250px; padding:1px'";
     } elsif ( $f =~ /Rate|Rating/ ) {
       $sty = "style='text-align:center; font-weight:bold; max-width:50px'";
     } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
       $sty = "style='text-align:center;max-width:50px'";
     } elsif ( $f =~ /LocName|PersonName/ ) {
       $sty = "style='font-weight: bold; max-width:200px;' ";
-    } elsif ( $f =~ /isGeneric/i ) {
-      $sty = "style='font-weight: bold; max-width:100px;' ";
-      $f = "Generic";
     } elsif ( $f =~ /Comment|Description/i ) {
       $sty = "style='max-width:200px; min-width:0; font-style: italic' ";
     } elsif ( $f =~ /Sim/ ) {  # name similarity
@@ -450,8 +535,6 @@ sub _render {
         $sty = "style='max-width:100px; min-width:0; text-align:right' ";
         $f = "Dist (km)";
       }
-    } elsif ( $f =~ /^None/i ) {
-      $f = "";
     }
     $styles[$i] = $sty;
     if ( $auto_override{$i} ) {
@@ -619,10 +702,6 @@ sub _render {
           }
         }
         $word_split = 0;
-      } elsif ( $fn eq "Sub" ) {
-        if ($v) {
-          $v = "[$v]";
-        }
       } elsif ( $fn eq "Type" ) {
         $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
         if ($v) {
@@ -648,8 +727,6 @@ sub _render {
           my $display = util::unit($v,"%");
           $v = "<span data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'>$display</span>";
         }
-      } elsif ( $fn eq "LocName" ) {
-        # bare location name — no @ prefix, link prefix handles identification
       } elsif ( $fn eq "CountryRegion" ) {
         my ($country, $region) = split(/;/, $v, 2);
         $country = '' unless defined $country;
@@ -789,8 +866,6 @@ sub _render {
         } else {
           $v = "";
         }
-      } elsif ( $fn eq "Comment" ) {
-        $v = "$v";
       } elsif ( $fn eq "Photo" ) {
         my $photoid;
         if ($v =~ /^(\d+):(.*)$/) {
@@ -817,28 +892,6 @@ sub _render {
           _colspan_last_td(\$tds);  # Best-effort: may fail if last td already has colspan
           $photo_skipped = 1;
           next;
-        }
-      } elsif ( $fn eq "Photos" ) {
-        if ($v) {
-          my @fns = split(/\|/, $v);
-          $v = join('', map { photos::imagetag($c, $_, "thumb") } @fns);
-        }
-        if (!$v) {
-          _close_cont(\$tds, \$cont_active);
-          if (_colspan_last_td(\$tds)) {
-            $photo_skipped = 1;
-            next;
-          }
-        }
-      } elsif ( $fn eq "IsGeneric" ) {
-        $v = "Gen" if ($v);
-      } elsif ( $fn =~ /^(Website|UntappdLink|SearchLink|DetailsLink)$/i ) {
-        if ($v) {
-          my $label = "www";
-          $label = "Ut"     if ($fn =~ /Untappd/i);
-          $label = "search" if ($fn =~ /Search/i);
-          $v = util::extlink($v, $label);
-          $word_split = 0;
         }
       } elsif ( $fn eq "Day" ) {
         if ($v) {

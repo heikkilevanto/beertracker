@@ -7,9 +7,14 @@ Step 2 (suffix table) done. Step 3 (helpers) done — note: the body
 keeps `$photo_skipped` set for the whole row (verified in rendered
 output), so `_maybe_photo_colspan` deliberately does not reset the flag;
 the header photo logic is a rowspan countdown, not a boolean, and stays
-inline. Next: step 4 (`@FIELD_DEFS`). Working agreement: each numbered
-step is its own commit, but only when I say so after reviewing and
-testing.
+inline. Step 4 done: `@FIELD_DEFS` + `field_def()` carry styles/labels/
+flags (format code-refs deliberately deferred to step 6 to avoid ~300
+lines of dormant duplication); dead handlers dropped (header: Sub,
+Photos, isGeneric, ^None; body: Sub, Photos, IsGeneric,
+Website|UntappdLink|SearchLink|DetailsLink, no-op LocName, no-op
+Comment). Next: step 5 (`_render_header()`). Working agreement: each
+numbered step is its own commit, but only when I say so after reviewing
+and testing.
 
 ## Problem
 `listrecords.pm` is the largest module. The `listrecords` function is ~880 lines,
