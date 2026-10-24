@@ -2,9 +2,10 @@
 
 **Status (2026-10-24):** Step 0a done on master (`b438d27`). Step 0b done
 (`78e2ac1`). Step 0c / implementation step 1 done on branch
-`769-listrecords-refactor` (committed together with this plan update). Next:
-step 2 (suffix table). Working agreement: each numbered step is its own
-commit, but only when I say so after reviewing and testing.
+`769-listrecords-refactor` (committed together with this plan update).
+Step 2 (suffix table) done. Next: step 3 (helpers). Working agreement:
+each numbered step is its own commit, but only when I say so after
+reviewing and testing.
 
 ## Problem
 `listrecords.pm` is the largest module. The `listrecords` function is ~880 lines,
@@ -639,7 +640,7 @@ run it with a phone User-Agent too (same assertion, mobile styles covered).
    comments/prices/glasses/dedup, location visits/producer brews/dedup,
    comment sibling lists) and a mobile-UA pass — an extension beyond the
    original plan, agreed with the maintainer.
-2. **Suffix table** — replace lines 105–164 with `parse_field_suffixes` +
+2. DONE. **Suffix table** — replace lines 105–164 with `parse_field_suffixes` +
    `@SUFFIX_DEFS`. Unit tests: `lr_suffixes`. Gate: `perl -c`,
    `listrecords_compare` all OK, `tools/testall`.
 3. **Helpers** — `_close_cont`, `_maybe_photo_colspan` (pure refactor).

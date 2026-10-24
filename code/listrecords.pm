@@ -55,6 +55,83 @@ sub _colspan_last_td {
 }
 
 ################################################################################
+# Column-name suffix parsing. Each column name from the SQL can carry stacked
+# suffixes (_R2_C3_A_90px_cont ...) that are stripped one per pass, repeatedly,
+# until nothing recognizable is left. Order matters: one suffix per pass, first
+# matching rule wins. Rules are [regex, key, fixed-value?]; a rule without a
+# fixed value stores the first capture group. Aggregate stacking: the last
+# one stripped wins (e.g. Rate_avg_cnt_A ends with aggregate => "avg").
+my @SUFFIX_DEFS = (
+  [qr/_R(\d+)$/,                  'rowspan'],
+  [qr/_C(\d+)$/,                  'colspan'],
+  [qr/_as=([^_]+)$/,              'as_name'],
+  [qr/_(\d+px)$/,                 'width_px'],
+  [qr/_A$/,                       'auto_width', 1],
+  [qr/_filter$/,                  'filter', 1],
+  [qr/_nofilter$/,                'nofilter', 1],
+  [qr/_noheader$/,                'noheader', 1],
+  [qr/_link=([A-Z][a-zA-Z]+)$/,   'link'],
+  [qr/_contline$/,                'contline', 1],
+  [qr/_cont$/,                    'cont', 1],
+  [qr/_sum$/,                     'aggregate', 'sum'],
+  [qr/_avg$/,                     'aggregate', 'avg'],
+  [qr/_cnt$/,                     'aggregate', 'cnt'],
+);
+
+# Pure: no $c, no dbh. Returns a hashref with per-column arrays kept in
+# alignment with the input list:
+#   base       => \@base_names     fields with suffixes stripped
+#   suffix     => \@suffix_info    per-column hashref (rowspan, cont, ...)
+#   extra_attr => \@extra_attr     rowspan/colspan attrs for the <td>s
+#   px         => \%px_override    _Npx width overrides, keyed by column index
+#   auto       => \%auto_override  _A flags, keyed by column index
+#   warnings   => \@warnings       unrecognized-suffix messages; the caller
+#                                  writes them to $c->{log} with sql context
+sub parse_field_suffixes {
+  my ($raw_fields) = @_;
+  my @base = @$raw_fields;
+  my @suffix;
+  my @extra_attr = ("") x scalar(@base);
+  my %px;
+  my %auto;
+  my @warnings;
+  for (my $i = 0; $i < scalar(@base); $i++) {
+    my $suf = {};
+    my $orig_field = $base[$i];
+    my $changed;
+    do {
+      $changed = 0;
+      foreach my $def (@SUFFIX_DEFS) {
+        my ($re, $key, $fixed) = @$def;
+        if ( $base[$i] =~ s/$re// ) {
+          my $val = defined $fixed ? $fixed : $1;
+          $suf->{$key} = $val;
+          if ( $key eq 'rowspan' ) { $extra_attr[$i] = "rowspan='$val'"; }
+          if ( $key eq 'colspan' ) { $extra_attr[$i] = "colspan='$val'"; }
+          if ( $key eq 'width_px' ) { $px{$i} = $val; }
+          if ( $key eq 'auto_width' ) { $auto{$i} = 1; }
+          $changed = 1;
+          last;
+        }
+      }
+      # Unrecognized suffix: warn, do not strip, leave the name as-is.
+      if ( !$changed && $base[$i] =~ /_([a-z][a-zA-Z0-9]*)$/ ) {
+        push @warnings, "Unrecognized suffix '_$1' in column '$orig_field'";
+      }
+    } while ($changed);
+    $suffix[$i] = $suf;
+  }
+  return {
+    base       => \@base,
+    suffix     => \@suffix,
+    extra_attr => \@extra_attr,
+    px         => \%px,
+    auto       => \%auto,
+    warnings   => \@warnings,
+  };
+} # parse_field_suffixes
+
+################################################################################
 # listrecords - thin dispatcher. The rendering body lives in _render().
 ################################################################################
 
@@ -153,69 +230,14 @@ sub _render {
   my $intro_sth = db::query($c, "$sql_param LIMIT 0");
   @fields = @{$intro_sth->{NAME}};
   $intro_sth->finish;
-  my @extra_attr = ("") x scalar(@fields);
-  my %px_override;
-  my %auto_override;
-  my @suffix_info;  # array of hashrefs, one per column
-  for (my $i = 0; $i < scalar(@fields); $i++) {
-      my $suf = {};
-      my $field = $fields[$i];
-      my $orig_field = $field;
-      my $changed;
-      do {
-          $changed = 0;
-          if ($field =~ s/_R(\d+)$//) {
-              $suf->{rowspan} = $1;
-              $extra_attr[$i] = "rowspan='$1'";
-              $changed = 1;
-          } elsif ($field =~ s/_C(\d+)$//) {
-              $suf->{colspan} = $1;
-              $extra_attr[$i] = "colspan='$1'";
-              $changed = 1;
-            } elsif ($field =~ s/_as=([^_]+)$//) {
-                $suf->{as_name} = $1;
-               $changed = 1;
-          } elsif ($field =~ s/_(\d+px)$//) {
-              $suf->{width_px} = $1;
-              $px_override{$i} = $1;
-              $changed = 1;
-           } elsif ($field =~ s/_A$//) {
-               $suf->{auto_width} = 1;
-               $auto_override{$i} = 1;
-               $changed = 1;
-           } elsif ($field =~ s/_filter$//) {
-               $suf->{filter} = 1;
-               $changed = 1;
-           } elsif ($field =~ s/_nofilter$//) {
-               $suf->{nofilter} = 1;
-               $changed = 1;
-           } elsif ($field =~ s/_noheader$//) {
-               $suf->{noheader} = 1;
-               $changed = 1;
-               } elsif ($field =~ s/_link=([A-Z][a-zA-Z]+)$//) {
-                   $suf->{link} = $1;
-                  $changed = 1;
-            } elsif ($field =~ s/_contline$//) {
-                $suf->{contline} = 1;
-                $changed = 1;
-            } elsif ($field =~ s/_cont$//) {
-                $suf->{cont} = 1;
-                $changed = 1;
-            } elsif ($field =~ s/_sum$//) {
-                $suf->{aggregate} = 'sum';
-                $changed = 1;
-            } elsif ($field =~ s/_avg$//) {
-                $suf->{aggregate} = 'avg';
-                $changed = 1;
-            } elsif ($field =~ s/_cnt$//) {
-                $suf->{aggregate} = 'cnt';
-                $changed = 1;
-           } elsif ($field =~ /_([a-z][a-zA-Z0-9]*)$/) {
-                print { $c->{log} } "WARNING: listrecords: Unrecognized suffix '_$1' in column '$orig_field' (sql: $sql_param)\n";
-           }
-      } while ($changed);
-      $fields[$i] = $field;
-      $suffix_info[$i] = $suf;
+  my $parsed = parse_field_suffixes(\@fields);
+  @fields = @{$parsed->{base}};
+  my @extra_attr = @{$parsed->{extra_attr}};
+  my %px_override = %{$parsed->{px}};
+  my %auto_override = %{$parsed->{auto}};
+  my @suffix_info = @{$parsed->{suffix}};  # array of hashrefs, one per column
+  foreach my $warnmsg (@{$parsed->{warnings}}) {
+    print { $c->{log} } "WARNING: listrecords: $warnmsg (sql: $sql_param)\n";
   }
   my $gap_col_idx = -1;
   if ($gap_column) {

@@ -38,6 +38,7 @@ require postglass;
 require currencies;
 require mainlist;
 require db;
+require listrecords;
 
 ################################################################################
 # Config
@@ -118,6 +119,7 @@ my @TESTS = (
   { name => "postglass_curprice", sets => [qw(quick postglass)], test => \&test_postglass_curprice },
   { name => "mainlist_currency",  sets => [qw(quick mainlist)],  test => \&test_mainlist_currency },
   { name => "db_merge_fields",    sets => [qw(quick db)],        test => \&test_db_merge_fields },
+  { name => "lr_suffixes",        sets => [qw(quick listrecords)], test => \&test_lr_suffixes },
 );
 
 ################################################################################
@@ -718,3 +720,93 @@ sub test_mainlist_currency {
   assert(mainlist::currency_sumline_text({ code => "SEK", total => "65.00" }) eq "[65SEK]",
          "currency_sumline_text SEK keeps code (no short symbol)");
 } # test_mainlist_currency
+
+# --- listrecords.pm ---
+
+sub test_lr_suffixes {
+  # Simple: auto width + link
+  {
+    my $r = listrecords::parse_field_suffixes(["Id_A_link=Brew"]);
+    assert($r->{base}[0] eq "Id", "suffixes: Id_A_link=Brew base Id");
+    assert($r->{suffix}[0]{auto_width} && $r->{suffix}[0]{link} eq "Brew",
+           "suffixes: Id_A_link=Brew has auto_width and link=Brew");
+    assert($r->{extra_attr}[0] eq "", "suffixes: Id_A_link=Brew no extra_attr");
+  }
+  # Stacked with rowspan side effect
+  {
+    my $r = listrecords::parse_field_suffixes(["Photo_R3_noheader_nofilter"]);
+    assert($r->{base}[0] eq "Photo", "suffixes: Photo_R3_noheader_nofilter base Photo");
+    assert($r->{suffix}[0]{rowspan} == 3, "suffixes: Photo_R3 rowspan 3");
+    assert($r->{extra_attr}[0] eq "rowspan='3'", "suffixes: Photo_R3 extra_attr rowspan='3'");
+    assert($r->{suffix}[0]{noheader} && $r->{suffix}[0]{nofilter},
+           "suffixes: Photo_R3 has noheader and nofilter");
+  }
+  # Colspan + cont + auto
+  {
+    my $r = listrecords::parse_field_suffixes(["Name_A_C2_cont"]);
+    assert($r->{base}[0] eq "Name", "suffixes: Name_A_C2_cont base Name");
+    assert($r->{suffix}[0]{colspan} == 2, "suffixes: Name_A_C2_cont colspan 2");
+    assert($r->{extra_attr}[0] eq "colspan='2'", "suffixes: Name_A_C2_cont extra_attr colspan='2'");
+    assert($r->{suffix}[0]{cont} && $r->{suffix}[0]{auto_width},
+           "suffixes: Name_A_C2_cont has cont and auto_width");
+  }
+  # Width override
+  {
+    my $r = listrecords::parse_field_suffixes(["LastSeen_90px"]);
+    assert($r->{base}[0] eq "LastSeen", "suffixes: LastSeen_90px base LastSeen");
+    assert($r->{px}{0} eq "90px", "suffixes: LastSeen_90px px override 90px");
+  }
+  # Aggregate stacking: last stripped wins (avg, not cnt)
+  {
+    my $r = listrecords::parse_field_suffixes(["Rate_avg_cnt_A"]);
+    assert($r->{base}[0] eq "Rate", "suffixes: Rate_avg_cnt_A base Rate");
+    assert($r->{suffix}[0]{aggregate} eq "avg", "suffixes: Rate_avg_cnt_A aggregate is avg (last wins)");
+    assert($r->{suffix}[0]{auto_width}, "suffixes: Rate_avg_cnt_A auto_width");
+  }
+  # as= alias, value cannot contain underscores
+  {
+    my $r = listrecords::parse_field_suffixes(["LocationName_A_filter_as=LocName"]);
+    assert($r->{base}[0] eq "LocationName", "suffixes: as= alias base LocationName");
+    assert($r->{suffix}[0]{as_name} eq "LocName", "suffixes: as= alias as_name LocName");
+    assert($r->{suffix}[0]{filter} && $r->{suffix}[0]{auto_width},
+           "suffixes: as= alias also has filter and auto_width");
+  }
+  # contline vs cont
+  {
+    my $r = listrecords::parse_field_suffixes(["Last_A_contline"]);
+    assert($r->{base}[0] eq "Last" && $r->{suffix}[0]{contline} && !$r->{suffix}[0]{cont},
+           "suffixes: Last_A_contline is contline, not cont");
+  }
+  {
+    my $r = listrecords::parse_field_suffixes(["Last_cont"]);
+    assert($r->{base}[0] eq "Last" && $r->{suffix}[0]{cont} && !$r->{suffix}[0]{contline},
+           "suffixes: Last_cont is cont");
+  }
+  # Unrecognized suffix: warn, do not strip
+  {
+    my $r = listrecords::parse_field_suffixes(["Foo_bar"]);
+    assert($r->{base}[0] eq "Foo_bar", "suffixes: unrecognized suffix not stripped");
+    assert(scalar(@{$r->{warnings}}) == 1, "suffixes: unrecognized suffix one warning");
+    assert($r->{warnings}[0] =~ /'_bar'/ && $r->{warnings}[0] =~ /'Foo_bar'/,
+           "suffixes: warning names the suffix and the original field");
+  }
+  # Mixed batch keeps per-column alignment
+  {
+    my $r = listrecords::parse_field_suffixes(["Name_A", "Photo_R2", "Alc", "Rate_avg"]);
+    assert($r->{base}[0] eq "Name" && $r->{base}[1] eq "Photo"
+           && $r->{base}[2] eq "Alc" && $r->{base}[3] eq "Rate",
+           "suffixes: mixed batch bases aligned");
+    assert($r->{suffix}[0]{auto_width} && !$r->{suffix}[2]{auto_width},
+           "suffixes: mixed batch suffix flags aligned");
+    assert($r->{extra_attr}[1] eq "rowspan='2'" && $r->{extra_attr}[0] eq "",
+           "suffixes: mixed batch extra_attr aligned");
+    assert($r->{suffix}[3]{aggregate} eq "avg", "suffixes: mixed batch Rate_avg aggregate avg");
+  }
+  # No suffix at all
+  {
+    my $r = listrecords::parse_field_suffixes(["Name", "Alc"]);
+    assert($r->{base}[0] eq "Name" && $r->{base}[1] eq "Alc", "suffixes: plain names unchanged");
+    assert(scalar(@{$r->{warnings}}) == 0, "suffixes: no warnings for plain names");
+    assert(!%{$r->{px}} && !%{$r->{auto}}, "suffixes: no px/auto overrides for plain names");
+  }
+} # test_lr_suffixes
