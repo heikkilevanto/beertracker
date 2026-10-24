@@ -305,7 +305,7 @@ sub listrecords {
       $styles[$i] = "";
       next;
     }
-    my $sty = "style='max-widthem measurements,:200px; min-width:0'"; # default
+    my $sty = "style='max-width:200px; min-width:0'"; # default
     $sty = "style='max-width:90px; min-width:0'" if ( $c->{mobile} );
     if ( $f =~ /^X/i ) {
       $sty = "style='display:none'";
