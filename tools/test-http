@@ -245,11 +245,8 @@ my @TESTS = (
   { name => "comment_new",   sets => [qw(comment comments glasses newrecords)],       test => \&test_comment_new },
   { name => "filter_board",  sets => [qw(board graph beerboard filters)],             test => \&test_filter_board },
   { name => "filter_full",   sets => [qw(full graph glasses mainlist filters)],       test => \&test_filter_full },
-  # #769 listrecords refactor: structural shape + old-vs-new in-request
-  # compare (dev only, deleted with the compare scaffolding in the final
-  # #769 step; listrecords_structure stays)
+  # #769 listrecords refactor: structural shape test for the list pages
   { name => "listrecords_structure", sets => [qw(listrecords http)],                    test => \&test_listrecords_structure },
-  { name => "listrecords_compare", sets => [qw(listrecords http)],                    test => \&test_listrecords_compare },
   # POST round-trips — dev-guarded, never in 'quick'
   { name => "person_roundtrip", sets => [qw(posts roundtrip person persons)],         test => \&test_person_roundtrip },
   { name => "person_related",   sets => [qw(posts roundtrip person persons)],         test => \&test_person_related },
@@ -355,31 +352,6 @@ sub test_person   { test_op_page_remember("Person", "Persons"); } # test_person
 sub test_brew     { test_op_page_remember("Brew", "Brews"); } # test_brew
 sub test_photos   { test_op_page("Photos", "Photos for"); } # test_photos
 
-################################################################################
-# #769 scaffolding: old-vs-new in-request compare (dev only)
-################################################################################
-# With ?lrcompare=1, listrecords renders both the frozen reference
-# (listrecordsorig.pm) and the current implementation over the same rows and
-# appends <!-- lr-compare: OK --> or ... DIFF. This is the byte-identical gate
-# for the refactor. The whole thing (reference module, compare branch, these
-# tests) is deleted in the final #769 step.
-
-# Fetch $url with lrcompare=1 and assert the compare said OK. Pages with
-# several listrecords calls carry one marker per call: any DIFF fails, and at
-# least one OK must be present. A page with no listrecords table at all (e.g.
-# a comment with no siblings) is skipped, not failed.
-sub assert_lrcompare_ok {
-  my ($url, $what) = @_;
-  my ($status, $headers, $body) = req("GET", $url);
-  assert_page_ok($status, $body, $what, "listrecords");
-  if ( $body !~ /lr-compare: (OK|DIFF)/ ) {
-    skipmsg("$what: no listrecords compare marker (page has no list)");
-    return;
-  }
-  assert(scalar($body !~ /lr-compare: DIFF/), "$what: no DIFF marker");
-  assert(scalar($body =~ /lr-compare: OK/),   "$what: at least one OK marker");
-} # assert_lrcompare_ok
-
 # Structural shape of a rendered listrecords page: catches missing thead,
 # unclosed tables and lost tbody splitting. Not style regressions — that is
 # what the compare test is for.
@@ -399,35 +371,6 @@ sub test_listrecords_structure {
     assert_listrecords_shape($body, "List $op");
   }
 } # test_listrecords_structure
-
-sub test_listrecords_compare {
-  return unless $on_dev;   # reference + compare branch exist only during #769
-
-  # The six list pages, desktop UA
-  foreach my $op (qw(Brew Location Comment Photos Person short)) {
-    assert_lrcompare_ok("$BASE_URL?o=$op&lrcompare=1", "Compare $op");
-  }
-
-  # Detail pages: these exercise the sub-lists the list pages never render
-  # (brew comments/prices/glasses/dedup, location visits/producer brews,
-  # comment sibling lists). Harvest one id from each list.
-  foreach my $op (qw(Brew Location Person Comment)) {
-    my $id = get_first_id($op);
-    if ( !defined $id ) { skipmsg("Compare $op detail: no id harvested"); next; }
-    assert_lrcompare_ok("$BASE_URL?o=$op&e=$id&lrcompare=1", "Compare $op detail");
-  }
-
-  # Mobile variant: same assertion, iPhone UA (index.fcgi sniffs the UA for
-  # the mobile styles). req() does not take headers, so set one on $ua.
-  my $iphone_ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
-                . "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 "
-                . "Mobile/15E148 Safari/604.1";
-  my $old_ua = $ua->default_header("User-Agent" => $iphone_ua);
-  foreach my $op (qw(Brew Location Comment Photos Person short)) {
-    assert_lrcompare_ok("$BASE_URL?o=$op&lrcompare=1", "Compare $op (mobile)");
-  }
-  $ua->default_header("User-Agent" => $old_ua);
-} # test_listrecords_compare
 
 ################################################################################
 # Id harvesting from rendered list pages (no DB access)
