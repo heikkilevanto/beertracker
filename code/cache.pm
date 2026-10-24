@@ -18,6 +18,7 @@ my $clears = 0;
 sub get {
   my $c   = shift;
   my $key = shift;
+  return undef if $c->{cache_disable};  # e.g. the #769 lrcompare branch
   if ( exists $c->{cache}{$key} ) {
     $hits++;
     $c->{cache_hits}++;    # per-request, for the dev/test footer diagnostic
@@ -33,6 +34,7 @@ sub set {
   my $c     = shift;
   my $key   = shift;
   my $value = shift;
+  return if $c->{cache_disable};  # e.g. the #769 lrcompare branch
   $c->{cache}{$key} = $value;
   $c->{cache_sets}++;      # per-request, for the dev/test footer diagnostic
 } # set

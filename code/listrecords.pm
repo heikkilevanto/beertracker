@@ -55,10 +55,65 @@ sub _colspan_last_td {
 }
 
 ################################################################################
-# listrecords itself
+# listrecords - thin dispatcher. The rendering body lives in _render().
 ################################################################################
 
 sub listrecords {
+  my $c = shift;
+  my $sql_param = shift;
+  my $opt = shift || {};
+
+  # #769 scaffolding: render with the frozen reference and the current
+  # implementation over the same rows, compare, and always serve the
+  # current result. Inert without the lrcompare param. Deleted when the
+  # refactor is done.
+  if ( util::param($c, "lrcompare") ) {
+    require "./code/listrecordsorig.pm";  # frozen pre-#769 module; only loaded here
+    $c->{cache_disable} = 1;  # both renders share a cache key; bypass or the
+                              # second render gets the first one's result
+    my $old = listrecordsorig::listrecords($c, $sql_param, $opt);
+    my $new = _render($c, $sql_param, $opt);
+    if ( $old eq $new ) {
+      $new .= "<!-- lr-compare: OK -->\n";
+    } else {
+      # Binary-search the common prefix length (= first differing offset).
+      # A byte-by-byte scan is far too slow in Perl for MB-sized pages.
+      my $minlen = length($old) < length($new) ? length($old) : length($new);
+      my ($lo, $hi) = (0, $minlen);  # prefix of length $lo is equal
+      while ( $lo < $hi ) {
+        my $mid = int(($lo + $hi + 1) / 2);
+        if ( substr($old, 0, $mid) eq substr($new, 0, $mid) ) { $lo = $mid; }
+        else { $hi = $mid - 1; }
+      }
+      my $off = $lo;
+      my $user = $c->{username} || "unknown";
+      # Dump to the datadir, not /tmp: Apache's PrivateTmp hides /tmp from
+      # the user, and the datadir is already per-user and writable.
+      my $dumpbase = "$c->{datadir}lrcompare-$user";
+      print { $c->{log} } "lrcompare: DIFF at offset $off (old " . length($old)
+          . " bytes, new " . length($new) . " bytes, sql: $sql_param);\n"
+          . "lrcompare: wrote $dumpbase-old.html and $dumpbase-new.html\n";
+      if ( open my $fh, ">:encoding(UTF-8)", "$dumpbase-old.html" ) {
+        print $fh $old;
+        close $fh;
+      }
+      if ( open my $fh, ">:encoding(UTF-8)", "$dumpbase-new.html" ) {
+        print $fh $new;
+        close $fh;
+      }
+      $new .= "<!-- lr-compare: DIFF -->\n";
+    }
+    return $new;
+  }
+
+  return _render($c, $sql_param, $opt);
+} # listrecords
+
+################################################################################
+# _render - the actual listrecords body
+################################################################################
+
+sub _render {
   my $c = shift;
   my $sql_param = shift;
   my $opt = shift || {};

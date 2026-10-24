@@ -1,5 +1,11 @@
 # Plan: Refactor listrecords.pm
 
+**Status (2026-10-24):** Step 0a done on master (`b438d27`). Step 0b done
+(`78e2ac1`). Step 0c / implementation step 1 done on branch
+`769-listrecords-refactor` (committed together with this plan update). Next:
+step 2 (suffix table). Working agreement: each numbered step is its own
+commit, but only when I say so after reviewing and testing.
+
 ## Problem
 `listrecords.pm` is the largest module. The `listrecords` function is ~880 lines,
 with most of that in two massive loops: header generation (lines 283–448) and
@@ -54,7 +60,7 @@ This plan uses an ordered rule list instead (see below).
 
 ## Step 0 — Setup before the refactor
 
-**0a (own commit). Fix the corrupted default style**, line 308:
+**0a DONE (commit `b438d27` on master). Fix the corrupted default style**, line 308:
 `"style='max-widthem measurements,:200px; min-width:0'"` →
 `"style='max-width:200px; min-width:0'"`. The corruption was introduced by
 commit `539f86d`. This is a real behavior change (restores max-width on
@@ -62,7 +68,7 @@ default columns) — isolate it in its own commit so the refactor itself stays
 behavior-neutral. **Create the frozen reference (0c) only after this fix**,
 so the style fix is outside the comparison.
 
-**0b (own commit). Remove the `rand()` aggregate-footer id**, line 885
+**0b DONE (commit `78e2ac1`). Remove the `rand()` aggregate-footer id**, line 885
 (`my $fid = "lr-agg-" . int(rand(999999));`). The id exists only so the inline
 script emitted right after the footer div can `getElementById` it — nothing
 else uses it: all of `static/listrecords.js` finds the footer via
@@ -92,7 +98,7 @@ other `rand()`/`time()` in the output path) — and the compare becomes a plain
 string `eq`. Behavior-visible change (HTML + inline script) → own commit,
 before the reference is frozen.
 
-**0c (one commit = implementation step 1). Create the frozen reference
+**0c DONE (this commit = implementation step 1). Create the frozen reference
 and the compare mode:**
 
 - Copy `code/listrecords.pm` to `code/listrecordsorig.pm`, rename the package
@@ -412,7 +418,6 @@ sides.
 - `code/listrecordsorig.pm` — frozen pre-refactor reference, **deleted in the
   final step**
 - `code/cache.pm` — 2-line `cache_disable` flag, **deleted in the final step**
-  (or kept if we decide it is generally useful)
 - `tools/test-unit` — new `listrecords` test set (see Test plan)
 - `tools/test-http` — `listrecords_structure` + `listrecords_compare` tests
   (see Test plan)
@@ -565,8 +570,9 @@ if ( util::param($c, "lrcompare") ) {
   if ( $old eq $new ) {
     $new .= "<!-- lr-compare: OK -->\n";
   } else {
-    # log first-diff offset to $c->{log}, write both strings to /tmp for a
-    # full external diff, append:
+    # log first-diff offset (binary search, see below) to $c->{log},
+    # write both strings to $c->{datadir}lrcompare-<user>-{old,new}.html
+    # for a full external diff, append:
     $new .= "<!-- lr-compare: DIFF -->\n";
   }
   return $new;   # always serve the new implementation
@@ -575,6 +581,18 @@ if ( util::param($c, "lrcompare") ) {
 
 Key details:
 
+- **The first-diff offset is found by binary search, not a byte scan.**
+  A byte-by-byte `substr` loop in pure Perl takes minutes on the ~1MB Brew
+  page (two string allocations per byte) — Apache kills the worker first, and
+  the DIFF log line (which comes after the scan) never appears, which looks
+  like a silent hang. Binary search on the common prefix is O(log n) memcmp
+  probes and finishes in well under a second. (Found the hard way: forcing
+  the DIFF path during harness verification wedged two FCGI workers at 100%
+  CPU for minutes each.)
+- **DIFF dumps go to `$c->{datadir}`, not `/tmp`.** Apache runs with
+  `PrivateTmp=yes`: files written to `/tmp` land in a systemd-private
+  namespace owned by root that the user cannot read. The datadir
+  (`./beerdata/`) is already per-user, writable, and readable.
 - **Cache bypass is mandatory, or the comparison is meaningless.** Both
   implementations compute the *same* cache key, so the second render would
   get the first one's cached HTML and report a false OK. Set
@@ -607,14 +625,20 @@ run it with a phone User-Agent too (same assertion, mobile styles covered).
 
 ## Implementation order
 
-0. Commit: fix the corrupted default style (line 308) — Step 0a.
-   Commit: remove the `rand()` aggregate-footer id (line 885) — Step 0b.
-1. **Compare setup** — split `listrecords()` into a thin dispatcher plus
+0. DONE: commit `b438d27` (master) — fix the corrupted default style
+   (Step 0a). DONE: commit `78e2ac1` — remove the `rand()`
+   aggregate-footer id (Step 0b).
+1. DONE (this commit). **Compare setup** — split `listrecords()` into a thin dispatcher plus
    `_render()` holding the body unchanged; create `listrecordsorig.pm` from
    the fixed code (step 0c); add the `lrcompare` branch + `cache_disable`
    (step 0c); add the `listrecords_compare` HTTP test. Gate: test reports OK
    for all six pages (old-vs-old, trivially identical — it proves the harness
-   itself works, including the cache bypass).
+   itself works, including the cache bypass). Verified, plus a forced-DIFF
+   run that detected a deliberate one-line change at the right offset in
+   0.36s. The test also covers the detail-page sub-lists (brew
+   comments/prices/glasses/dedup, location visits/producer brews/dedup,
+   comment sibling lists) and a mobile-UA pass — an extension beyond the
+   original plan, agreed with the maintainer.
 2. **Suffix table** — replace lines 105–164 with `parse_field_suffixes` +
    `@SUFFIX_DEFS`. Unit tests: `lr_suffixes`. Gate: `perl -c`,
    `listrecords_compare` all OK, `tools/testall`.
@@ -636,8 +660,10 @@ run it with a phone User-Agent too (same assertion, mobile styles covered).
    below), `tools/testall all`, optionally re-run compare after a
    `copyproddata` (the compare is data-independent — copy freely).
 8. **Delete the scaffolding** — remove `listrecordsorig.pm`, the `lrcompare`
-   branch in `listrecords()`, and the `cache_disable` lines in `cache.pm`
-   (final state should not carry dead tooling). Gate: `tools/testall all` +
+   branch in `listrecords()`, the `cache_disable` lines in `cache.pm`, and
+   the `listrecords_compare` test (table entry + sub) in `tools/test-http`
+   (final state should not carry dead tooling; agreed: drop `cache_disable`
+   too, not keep it). Keep `listrecords_structure`. Gate: `tools/testall all` +
    one manual browse of the six pages. Commit.
 
 Commit after each numbered step. Steps 1–7 are behavior-neutral for normal
