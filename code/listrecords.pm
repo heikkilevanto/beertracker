@@ -132,6 +132,29 @@ sub parse_field_suffixes {
 } # parse_field_suffixes
 
 ################################################################################
+# Close an open cont/contline td, if one is active. Used at linebreaks, at
+# contline starts, and at end of header/row.
+sub _close_cont {
+  my ($s_ref, $active_ref) = @_;
+  if ($$active_ref) {
+    $$s_ref .= "</td>\n";
+    $$active_ref = 0;
+  }
+} # _close_cont
+
+# Apply the empty-photo colspan fixup to the last td, if one is owed.
+# The flag is deliberately NOT reset here: in the body it stays set for the
+# whole row, so every segment-ending td after a skipped photo gets the fixup
+# (the photo column and its rowspan would otherwise leave each row segment
+# one column short). Callers reset it per row.
+sub _maybe_photo_colspan {
+  my ($s_ref, $skipped_ref) = @_;
+  if ($$skipped_ref) {
+    _colspan_last_td($s_ref);
+  }
+} # _maybe_photo_colspan
+
+################################################################################
 # listrecords - thin dispatcher. The rendering body lives in _render().
 ################################################################################
 
@@ -367,10 +390,7 @@ sub _render {
     my $filter_events = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
     my $break = linebreak($c,$f);
     if ( $break ) {
-      if ($hdr_cont_active) {
-        $s .= "</td>\n";
-        $hdr_cont_active = 0;
-      }
+      _close_cont(\$s, \$hdr_cont_active);
       $hdr_contline_rest = 0;
       if ($hdr_photo_rs_rem > 1) {
         _colspan_last_td(\$s);
@@ -445,20 +465,13 @@ sub _render {
     $f =~ s/^-//;
 
     if ( $suffix_info[$i]{contline} ) {
-        if ($hdr_cont_active) {
-            $s .= "</td>\n";
-            $hdr_cont_active = 0;
-        }
+        _close_cont(\$s, \$hdr_cont_active);
         $hdr_contline_rest = 1;
     }
     if ( $suffix_info[$i]{noheader} ) {
-        if ($hdr_cont_active) {
-            if ($hdr_contline_rest) {
-                # contline chain active — keep cell open for next column
-            } else {
-                $s .= "</td>\n";
-                $hdr_cont_active = 0;
-            }
+        # contline chain active — keep cell open for next column
+        if ( !$hdr_contline_rest ) {
+            _close_cont(\$s, \$hdr_cont_active);
         }
         if ( !$suffix_info[$i]{nofilter} ) {
             push @hidden_filters, "<input type=text style='display:none' data-col='$i' $filter_events/>\n";
@@ -508,9 +521,7 @@ sub _render {
         $hdr_cont_active = 0;
     }
   }
-  if ($hdr_cont_active) {
-    $s .= "</td>\n";
-  }
+  _close_cont(\$s, \$hdr_cont_active);
   foreach my $i (keys %px_override) {
       $styles[$i] = "style='max-width:$px_override{$i}; min-width:0'";
   }
@@ -560,22 +571,14 @@ sub _render {
       my $fn = $fields[$i];
       my $linebreak = linebreak($c,$fn);
       if ( $linebreak ) {
-        if ($cont_active) {
-          $tds .= "</td>\n";
-          $cont_active = 0;
-        }
+        _close_cont(\$tds, \$cont_active);
         $contline_rest = 0;
-        if ($photo_skipped) {
-          _colspan_last_td(\$tds);
-        }
+        _maybe_photo_colspan(\$tds, \$photo_skipped);
         $tds .= $linebreak;
         next;
       }
       if ( $suffix_info[$i]{contline} ) {
-        if ($cont_active) {
-          $tds .= "</td>\n";
-          $cont_active = 0;
-        }
+        _close_cont(\$tds, \$cont_active);
         $contline_rest = 1;
       }
       $fn = $suffix_info[$i]{as_name} if $suffix_info[$i]{as_name};
@@ -810,10 +813,7 @@ sub _render {
         $v = photos::imagetag($c, $v, "thumb", $editurl);
         $word_split = 0;
         if (!$v) {
-          if ($cont_active) {
-            $tds .= "</td>\n";
-            $cont_active = 0;
-          }
+          _close_cont(\$tds, \$cont_active);
           _colspan_last_td(\$tds);  # Best-effort: may fail if last td already has colspan
           $photo_skipped = 1;
           next;
@@ -824,10 +824,7 @@ sub _render {
           $v = join('', map { photos::imagetag($c, $_, "thumb") } @fns);
         }
         if (!$v) {
-          if ($cont_active) {
-            $tds .= "</td>\n";
-            $cont_active = 0;
-          }
+          _close_cont(\$tds, \$cont_active);
           if (_colspan_last_td(\$tds)) {
             $photo_skipped = 1;
             next;
@@ -937,12 +934,8 @@ sub _render {
         $cont_active = 0;
       }
     }
-    if ($cont_active) {
-      $tds .= "</td>\n";
-    }
-    if ($photo_skipped) {
-      _colspan_last_td(\$tds);
-    }
+    _close_cont(\$tds, \$cont_active);
+    _maybe_photo_colspan(\$tds, \$photo_skipped);
 
     my $hidden_style = "";
     $hidden_style = " style='display:none'" if ($maxrecords > 0 && $rowcount > $maxrecords);

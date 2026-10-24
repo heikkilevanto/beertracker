@@ -7,9 +7,9 @@ use warnings;
 sub version_info {
     return {
         tag     => 'v3.5',
-        commits => 168,
-        date    => '2026-10-24 14:40:47 ',
-        commit  => '049e099',
+        commits => 169,
+        date    => '2026-10-24 15:03:47 ',
+        commit  => '67f3207',
         branch  => '769-listrecords-refactor',
     };
 }

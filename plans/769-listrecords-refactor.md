@@ -3,9 +3,13 @@
 **Status (2026-10-24):** Step 0a done on master (`b438d27`). Step 0b done
 (`78e2ac1`). Step 0c / implementation step 1 done on branch
 `769-listrecords-refactor` (committed together with this plan update).
-Step 2 (suffix table) done. Next: step 3 (helpers). Working agreement:
-each numbered step is its own commit, but only when I say so after
-reviewing and testing.
+Step 2 (suffix table) done. Step 3 (helpers) done — note: the body
+keeps `$photo_skipped` set for the whole row (verified in rendered
+output), so `_maybe_photo_colspan` deliberately does not reset the flag;
+the header photo logic is a rowspan countdown, not a boolean, and stays
+inline. Next: step 4 (`@FIELD_DEFS`). Working agreement: each numbered
+step is its own commit, but only when I say so after reviewing and
+testing.
 
 ## Problem
 `listrecords.pm` is the largest module. The `listrecords` function is ~880 lines,
@@ -365,11 +369,14 @@ sub _close_cont { my ($s_ref, $active_ref) = @_;
 } # _close_cont
 ```
 
-**photo colspan** — appears ~4 times:
+**photo colspan** — appears ~4 times (body only; the header uses a rowspan
+countdown, not a boolean, and stays inline):
 
 ```perl
+# Does NOT reset the flag: the body keeps it set for the whole row, so
+# every segment-ending td after a skipped photo gets the fixup.
 sub _maybe_photo_colspan { my ($s_ref, $skipped_ref) = @_;
-  if ($$skipped_ref) { _colspan_last_td($s_ref); $$skipped_ref = 0; }
+  if ($$skipped_ref) { _colspan_last_td($s_ref); }
 } # _maybe_photo_colspan
 ```
 
@@ -643,8 +650,9 @@ run it with a phone User-Agent too (same assertion, mobile styles covered).
 2. DONE. **Suffix table** — replace lines 105–164 with `parse_field_suffixes` +
    `@SUFFIX_DEFS`. Unit tests: `lr_suffixes`. Gate: `perl -c`,
    `listrecords_compare` all OK, `tools/testall`.
-3. **Helpers** — `_close_cont`, `_maybe_photo_colspan` (pure refactor).
-   Unit tests: `lr_helpers`. Gate: compare OK.
+3. DONE. **Helpers** — `_close_cont`, `_maybe_photo_colspan` (pure refactor;
+   the photo helper does not reset the flag — see Status note). Unit tests:
+   `lr_helpers`. Gate: compare OK.
 4. **Define `@FIELD_DEFS` + `field_def`** — move styles, labels, flags, and
    the simple format code-refs (Name, Id, IdClr, Alc, Pr, Vol, d, Chk, Sim,
    Geo, Type, Ts, Last, LastProd, Stats, CountryRegion, PersonName, Prod,

@@ -120,6 +120,7 @@ my @TESTS = (
   { name => "mainlist_currency",  sets => [qw(quick mainlist)],  test => \&test_mainlist_currency },
   { name => "db_merge_fields",    sets => [qw(quick db)],        test => \&test_db_merge_fields },
   { name => "lr_suffixes",        sets => [qw(quick listrecords)], test => \&test_lr_suffixes },
+  { name => "lr_helpers",         sets => [qw(quick listrecords)], test => \&test_lr_helpers },
 );
 
 ################################################################################
@@ -810,3 +811,72 @@ sub test_lr_suffixes {
     assert(!%{$r->{px}} && !%{$r->{auto}}, "suffixes: no px/auto overrides for plain names");
   }
 } # test_lr_suffixes
+
+sub test_lr_helpers {
+  # linebreak: only TR* fields break; $c is unused
+  assert(listrecords::linebreak(undef, "TR1") eq "</tr>\n<tr>\n",
+         "linebreak TR1 returns row break");
+  assert(listrecords::linebreak(undef, "TRfoo") eq "</tr>\n<tr>\n",
+         "linebreak TR prefix is enough");
+  assert(listrecords::linebreak(undef, "Name") eq "",
+         "linebreak non-TR returns empty");
+
+  # _word_spans: one span per whitespace-separated word, html-escaped
+  {
+    my $w = listrecords::_word_spans("foo bar");
+    assert($w eq "<span class='fw'>foo</span> <span class='fw'>bar</span>",
+           "word_spans two words");
+    assert(listrecords::_word_spans("single") eq "<span class='fw'>single</span>",
+           "word_spans single word");
+    assert(listrecords::_word_spans("a&b<c>") eq "<span class='fw'>a&amp;b&lt;c&gt;</span>",
+           "word_spans escapes html");
+    assert(listrecords::_word_spans("") eq "", "word_spans empty stays empty");
+  }
+
+  # _colspan_last_td: add colspan to the last td, with the known carve-outs
+  {
+    my $tds = "<td a='1'>x</td>\n<td b='2'>y</td>\n";
+    assert(listrecords::_colspan_last_td(\$tds) == 1, "colspan_last_td adds colspan");
+    assert($tds =~ m{<td b='2' colspan='2'>}, "colspan_last_td on the last td only");
+
+    $tds = "<td colspan='2'>x</td>\n";
+    assert(listrecords::_colspan_last_td(\$tds) == 0, "colspan_last_td skips td with colspan");
+    assert($tds eq "<td colspan='2'>x</td>\n", "colspan_last_td leaves existing colspan alone");
+
+    $tds = "<td>c</td>\n<td style='display:none'>h</td>\n";
+    listrecords::_colspan_last_td(\$tds);
+    assert($tds =~ m{<td colspan='2'>c</td>} && $tds =~ m{display:none'>h</td>},
+           "colspan_last_td walks past trailing display:none td");
+
+    $tds = "no td here";
+    assert(listrecords::_colspan_last_td(\$tds) == 0, "colspan_last_td no td returns 0");
+  }
+
+  # _close_cont: close an open cont cell, no-op otherwise
+  {
+    my $s = "<td>open";
+    my $active = 1;
+    listrecords::_close_cont(\$s, \$active);
+    assert($s eq "<td>open</td>\n" && !$active, "close_cont closes and resets");
+
+    $s = "<td>closed</td>\n";
+    $active = 0;
+    listrecords::_close_cont(\$s, \$active);
+    assert($s eq "<td>closed</td>\n" && !$active, "close_cont no-op when inactive");
+  }
+
+  # _maybe_photo_colspan: apply when owed; deliberately does not reset the
+  # flag (the body needs the fixup at every later segment break in the row)
+  {
+    my $tds = "<td>a</td>\n";
+    my $skipped = 1;
+    listrecords::_maybe_photo_colspan(\$tds, \$skipped);
+    assert($tds =~ m{colspan='2'}, "photo_colspan applies when set");
+    assert($skipped == 1, "photo_colspan keeps the flag set");
+
+    $tds = "<td>a</td>\n";
+    $skipped = 0;
+    listrecords::_maybe_photo_colspan(\$tds, \$skipped);
+    assert($tds eq "<td>a</td>\n", "photo_colspan no-op when not set");
+  }
+} # test_lr_helpers
