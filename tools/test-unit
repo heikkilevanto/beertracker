@@ -930,7 +930,7 @@ sub test_lr_fielddef {
   }
 
   # Non-matches fall through to the default
-  foreach my $name (qw(LocationName Closed Day Caption)) {
+  foreach my $name (qw(LocationName Closed Caption)) {
     $def = listrecords::field_def($name, 0);
     assert($def->{style} eq "style='max-width:200px; min-width:0'",
            "fielddef $name falls through to default");
@@ -962,7 +962,10 @@ sub test_lr_fielddef {
   assert($def->{label} eq "Dist (km)", "fielddef Geo desktop label");
   assert($def->{style} eq "style='max-width:100px; min-width:0; text-align:right' ",
          "fielddef Geo desktop style (trailing space quirk)");
-  assert($def->{word_split} == 0, "fielddef Geo word_split 0");
+  # The old Sim/Geo/d/Alc/IdClr handlers never touched word_split: values
+  # stay word-splittable where plain (numbers, coords). Only handlers that
+  # set it in the old chain get word_split => 0.
+  assert($def->{word_split} == 1, "fielddef Geo word_split 1 (old handler left it on)");
 
   # Default fall-through is mobile-aware too
   $def = listrecords::field_def("Caption", 1);
@@ -987,4 +990,47 @@ sub test_lr_fielddef {
   $def = listrecords::field_def("Sim", 0);
   assert($def->{style} eq "style='max-width:55px; min-width:0; text-align:right' ",
          "fielddef Sim style (trailing space quirk)");
+  assert($def->{word_split} == 1, "fielddef Sim word_split 1 (old handler left it on)");
+
+  # Body format rules: only exact handler names carry a format code-ref;
+  # family matches stay identity (CommentRating, LocName, GlassLocName).
+  foreach my $name (qw(Name CountryRegion Prod BrewName Day Locations)) {
+    $def = listrecords::field_def($name, 0);
+    assert(ref $def->{format} eq "CODE", "fielddef $name has a body format");
+    assert($def->{word_split} == 0, "fielddef $name word_split 0");
+  }
+  $def = listrecords::field_def("Rate", 0);
+  assert(ref $def->{format} eq "CODE", "fielddef Rate has a body format");
+  $def = listrecords::field_def("CommentRating", 0);
+  assert(!defined $def->{format}, "fielddef CommentRating stays identity in the body");
+  $def = listrecords::field_def("PersonName", 0);
+  assert(ref $def->{format} eq "CODE", "fielddef PersonName has a body format");
+  assert($def->{word_split} == 0, "fielddef PersonName word_split 0");
+  $def = listrecords::field_def("GlassLocName", 0);
+  assert(!defined $def->{format}, "fielddef GlassLocName stays identity in the body");
+  assert($def->{word_split} == 1, "fielddef GlassLocName word_split 1");
+  $def = listrecords::field_def("LocName", 0);
+  assert(!defined $def->{format}, "fielddef LocName stays identity in the body");
+
+  # The old handlers that never set word_split keep the default
+  foreach my $name (qw(Alc d Pr Vol Stats Ts)) {
+    $def = listrecords::field_def($name, 0);
+    assert($def->{word_split} == 1, "fielddef $name word_split 1 (old handler left it on)");
+    assert(ref $def->{format} eq "CODE", "fielddef $name has a body format");
+  }
+  # IdClr had no body handler at all — identity in the body
+  $def = listrecords::field_def("IdClr", 0);
+  assert(!defined $def->{format}, "fielddef IdClr stays identity in the body");
+  assert($def->{word_split} == 1, "fielddef IdClr word_split 1");
+  # Last and LastProd share one format code-ref
+  my $fmt_last = listrecords::field_def("Last", 0)->{format};
+  my $fmt_lastprod = listrecords::field_def("LastProd", 0)->{format};
+  assert(ref $fmt_last eq "CODE" && $fmt_last == $fmt_lastprod,
+         "fielddef Last and LastProd share one format");
+  # Id/Type/Chk/Photo handlers set word_split => 0 in the old chain
+  foreach my $name (qw(Id Type Chk Photo)) {
+    $def = listrecords::field_def($name, 0);
+    assert($def->{word_split} == 0, "fielddef $name word_split 0");
+    assert(ref $def->{format} eq "CODE", "fielddef $name has a body format");
+  }
 } # test_lr_fielddef

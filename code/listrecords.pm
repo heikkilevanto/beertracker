@@ -164,48 +164,443 @@ sub _maybe_photo_colspan {
 # Ordering constraints (keep the old chain's order):
 #   - ^X first: it wins over everything for hidden columns.
 #   - Exact Id/IdClr/Alc rules before the Id|Alc family rule.
-#   - Rate|Rating before Comment|Description (CommentRating).
+#   - Exact Rate before the Rate|Rating family (CommentRating stays identity
+#     in the body), and Rate|Rating before Comment|Description (CommentRating
+#     must get the Rate style).
 #   - Id|Alc family before Comment|Description (CommentId).
-#   - LocName|PersonName before Comment|Description (no live collision,
-#     but keep the old order to stay mechanical).
+#   - Exact PersonName before the LocName|PersonName family (LocName and
+#     GlassLocName stay identity in the body); LocName|PersonName before
+#     Comment|Description (no live collision, but keep the old order).
+#   - Body-only rules (Name, CountryRegion, Prod, BrewName, Day, Locations)
+#     go last: they have no header style of their own and must not shadow
+#     the style families above.
+################################################################################
+# Body value formatters. One sub per format code-ref in @FIELD_DEFS; each gets
+# the $ctx hashref (see _render_body_row) and returns the new cell value, or
+# sets $ctx->{skip} to drop the cell (empty Photo). Referenced from the rules
+# as \&_fmt_x. Subs appear in the same order as the rules below.
+################################################################################
+
+sub _fmt_id {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    my $op2 = "Brew";
+    my $pfx = "B";
+    if ($ctx->{c}{op} =~ /Photo/i) { $op2 = "Photos"; $pfx = "P"; }
+    elsif ($ctx->{c}{op} =~ /Location/i) { $op2 = "Location"; $pfx = "L"; }
+    if ( $op2 eq $ctx->{c}{op} ) {
+      $v = "<a href='$ctx->{url}?o=$op2&e=$v'"
+         . " class='lr-btn'"
+         . "><span>$v</span></a>";
+    } else {
+      $v = "<a href='$ctx->{url}?o=$op2&e=$v'><span>${pfx}[$v]</span></a>: ";
+    }
+  }
+  return $v;
+} # _fmt_id
+
+sub _fmt_alc {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    ${$ctx->{data_attrs}} .= " data-sort-key='$v'";
+    my $display = util::unit($v,"%");
+    $v = "<span data-col='$ctx->{i}' data-filter='$v' onclick='fieldclick(event,this)'>$display</span>";
+  }
+  return $v;
+} # _fmt_alc
+
+sub _fmt_stats {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  my ( $cnt, $avg, $com ) = split (";", $v);
+  ${$ctx->{data_attrs}} .= " data-sort-key='$avg'" if ($avg);
+  $v = comments::avgratings($ctx->{c}, $cnt, $avg, $com);
+  if ($v) {
+    if ($avg) {
+      my $favg = sprintf("%.1f", $avg);
+      $v = "<span data-col='$ctx->{i}' data-filter='$favg' onclick='fieldclick(event,this)'>$v</span>";
+    }
+  }
+  return $v;
+} # _fmt_stats
+
+# Shared by the Last and LastProd rules; branches on $ctx->{fn}.
+sub _fmt_last {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ( $v ne '' ) {
+    my ($date, $wd, $time) = dateutil::splitdate($v);
+    my $disp = "$time $wd";
+    $disp = "$date" if ( $date lt $ctx->{cutoff} );
+    ${$ctx->{data_attrs}} .= " data-sort-key='$date $time'";
+    ${$ctx->{data_attrs}} .= " title='$date $time $wd'" if ( $ctx->{fn} eq "Last" );
+    $disp = "[$disp]" if ( $ctx->{fn} eq "LastProd" );
+    $v = "<span data-col='$ctx->{i}' data-filter='$date' onclick='fieldclick(event,this)'>"
+       . "<span style='position:absolute;left:-9999px'>$date </span>$disp</span>";
+  } else {
+    $v = "";
+  }
+  return $v;
+} # _fmt_last
+
+sub _fmt_ts {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    my ($date, $time) = split(' ', $v);
+    if ($date && $time) {
+      my ($y, $m, $d) = split('-', $date);
+      my $epoch = POSIX::mktime(0, 0, 0, $d, $m-1, $y-1900);
+      my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" );
+      my $wd = $weekdays[(localtime($epoch))[6]];
+      my $disp = "$time $wd";
+      $disp = "$date" if ( $date lt $ctx->{cutoff} );
+      ${$ctx->{data_attrs}} .= " data-sort-key='$date $time' title='$date $time $wd'";
+      $v = "<span data-col='$ctx->{i}' data-filter='$date' onclick='fieldclick(event,this)'>"
+         . "<span style='position:absolute;left:-9999px'>$date </span>$disp</span>";
+    }
+  }
+  return $v;
+} # _fmt_ts
+
+sub _fmt_type {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  my $c = $ctx->{c};
+  my $rec = $ctx->{rec};
+  $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
+  if ($v) {
+    my ($brewtype, $subtype) = split(/,\s*/, $v, 2);  # Split on comma
+    my $style_str;
+    if ($brewtype eq 'Beer') {
+      $style_str = $subtype || 'Beer';
+    } else {
+      $style_str = $brewtype;
+      $style_str .= ",$subtype" if $subtype;
+    }
+    my $dispstyle = styles::brewtextstyle($c, $style_str, "$c->{op}:$rec->[0] $brewtype/" . ($subtype // ""));
+    (my $filter_str = $style_str) =~ s/,/ /g;
+    $v = _word_spans($filter_str);
+    my $hidden = "";
+    $hidden = "<span style='display:none'>Beer </span>" if ($brewtype eq 'Beer' && $subtype);
+    $v = $hidden . "<span $dispstyle>$v</span>";
+  }
+  return $v;
+} # _fmt_type
+
+sub _fmt_d {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if (defined $v && $v ne '') {
+    ${$ctx->{data_attrs}} .= " data-sort-key='$v'";
+    ${$ctx->{data_attrs}} .= " data-col='$ctx->{i}' data-filter='$v' onclick='fieldclick(event,this)'";
+    $v = sprintf('%.1f', $v) . "<span style='font-size: xx-small'>d</span> ";
+  } else {
+    $v = "";
+  }
+  return $v;
+} # _fmt_d
+
+sub _fmt_pr {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    ${$ctx->{data_attrs}} .= " data-sort-key='$v'";
+    ${$ctx->{data_attrs}} .= " data-col='$ctx->{i}' data-filter='$v' onclick='fieldclick(event,this)'";
+    $v = util::unit($v, ".-");
+  } else {
+    $v = "";
+  }
+  return $v;
+} # _fmt_pr
+
+sub _fmt_vol {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    ${$ctx->{data_attrs}} .= " data-sort-key='$v'";
+    ${$ctx->{data_attrs}} .= " data-col='$ctx->{i}' data-filter='$v' onclick='fieldclick(event,this)'";
+    $v = util::unit($v, "c");
+  } else {
+    $v = "";
+  }
+  return $v;
+} # _fmt_vol
+
+sub _fmt_photo {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  my $c = $ctx->{c};
+  my $rec = $ctx->{rec};
+  my $fields = $ctx->{fields};
+  my $photoid;
+  if ($v =~ /^(\d+):(.*)$/) {
+      $photoid = $1;
+      $v = $2;
+  }
+  my $editurl;
+  if (defined $photoid) {
+      $editurl = "$c->{url}?o=Photos&e=$photoid";
+  } else {
+      my $id_idx;
+      for (my $j = 0; $j < scalar(@$fields); $j++) {
+          if ($fields->[$j] eq 'Id' || $fields->[$j] eq 'IdClr') {
+              $id_idx = $j;
+              last;
+          }
+      }
+      $editurl = "$c->{url}?o=Photos&e=$rec->[$id_idx]";
+  }
+  $v = photos::imagetag($c, $v, "thumb", $editurl);
+  ${$ctx->{word_split}} = 0;
+  if (!$v) {
+    $ctx->{skip} = 1;
+  }
+  return $v;
+} # _fmt_photo
+
+sub _fmt_rate {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    ${$ctx->{data_attrs}} .= " data-sort-key='$v'";
+    my $rclass = comments::get_rating_class($v);
+    $v = "<b class='$rclass'>($v)</b>";
+  }
+  return $v;
+} # _fmt_rate
+
+sub _fmt_chk {
+  my ($ctx) = @_;
+  return "<input type=checkbox name=Chk$ctx->{id} />";
+} # _fmt_chk
+
+sub _fmt_personname {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    my @persons = split(/; /, $v);
+    my @out;
+    foreach my $entry (@persons) {
+      my ($name, $pid) = split(/\|/, $entry, 2);
+      my $escname = util::htmlesc($name);
+      if ($pid) {
+        push @out, "<a href='$ctx->{url}?o=Person&e=$pid'"
+          . " class='lr-btn'"
+          . "><span>P:$pid</span></a>"
+          . " <span data-filter='\"" . $escname . "\"' onclick='fieldclick(event,this,$ctx->{i})'>"
+          . $escname . "</span>";
+      } else {
+        push @out, "<span data-filter='\"" . $escname . "\"' onclick='fieldclick(event,this,$ctx->{i})'>"
+          . $escname . "</span>";
+      }
+    }
+    $v = join("; ", @out);
+  }
+  return $v;
+} # _fmt_personname
+
+sub _fmt_sim {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  my $fields = $ctx->{fields};
+  my $rec = $ctx->{rec};
+  if ( $v && $ctx->{extraparams} && $ctx->{extraparams}{refname} ) {
+    my $name_idx;
+    for (my $j = 0; $j < scalar(@$fields); $j++) {
+      if ($fields->[$j] eq 'Name') {
+        $name_idx = $j;
+        last;
+      }
+    }
+    if (defined $name_idx) {
+      my $thisname = $rec->[$name_idx];
+      $v = util::namesimilarity($ctx->{extraparams}{refname}, $thisname);
+    } else {
+      $v = "";
+    }
+  } else {
+    $v = "";
+  }
+  return $v;
+} # _fmt_sim
+
+sub _fmt_geo {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ( $v && $ctx->{extraparams} && $ctx->{extraparams}{lat} && $ctx->{extraparams}{lon} ) {
+    my ( $lat, $lon ) = split(' ', $v);
+    if ( $ctx->{extraparams}{lat} eq '?' ) {
+      ${$ctx->{data_attrs}} .= " lat=$lat lon=$lon";
+      $v = '?';
+    } else {
+      my $dist = geo::geodist( $ctx->{extraparams}{lat}, $ctx->{extraparams}{lon}, $lat, $lon );
+      $v = "<span data-col='$ctx->{i}' data-filter='$dist' onclick='fieldclick(event,this)'>$dist</span>";
+    }
+  } elsif ( $v ) {
+    # no reference lat/lon, show raw coordinates
+    my ( $lat, $lon ) = split(' ', $v);
+    $v = "$lat, $lon" if $lat;
+  } else {
+    $v = "";
+  }
+  return $v;
+} # _fmt_geo
+
+sub _fmt_name {
+  my ($ctx) = @_;
+  my $v = _word_spans($ctx->{v});
+  $v = "<b>$v</b>";
+  return $v;
+} # _fmt_name
+
+sub _fmt_countryregion {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  my $i = $ctx->{i};
+  my ($country, $region) = split(/;/, $v, 2);
+  $country = '' unless defined $country;
+  $region  = '' unless defined $region;
+  $region =~ s/^\s+|\s+$//g;
+  my @parts;
+  if ($region ne '' && $country eq 'Denmark') {
+      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
+  } elsif ($country eq 'Denmark') {
+      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>DK</span>";
+  } elsif ($region ne '') {
+      my $code = $country;
+      if (exists $util::COUNTRY_CODES{$country}) {
+          $code = (split /,\s*/, $util::COUNTRY_CODES{$country})[0];
+      }
+      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($code) . "</span>";
+      push @parts, ", ";
+      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
+  } elsif ($country ne '') {
+      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($country) . "</span>";
+  }
+  $v = join("", @parts);
+  $v .= "&nbsp;&nbsp;" if @parts;
+  return $v;
+} # _fmt_countryregion
+
+sub _fmt_prod {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    $v = _word_spans($v);
+    $v = "<i>$v</i>";
+  }
+  return $v;
+} # _fmt_prod
+
+sub _fmt_brewname {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    $v = _word_spans($v);
+    $v = "<b>$v</b>";
+  }
+  return $v;
+} # _fmt_brewname
+
+sub _fmt_day {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    my ($date, $wd) = dateutil::splitdate($v);
+    $wd =~ s/Sun/<b>Sun<\/b>/;
+    $v = "<a href='$ctx->{url}?o=Graph&date=$date&ndays=1'><span>$date $wd</span></a>";
+  }
+  return $v;
+} # _fmt_day
+
+sub _fmt_locations {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if ($v) {
+    my %seen;
+    my @parts;
+    foreach my $entry (split(/,/, $v)) {
+      $entry =~ s/^\s+|\s+$//;
+      my ($id, $name) = split(/::/, $entry, 2);
+      next unless $id && !$seen{$id}++;
+      my $link = "<a href='$ctx->{url}?o=Location&e=$id'"
+        . " class='lr-btn'"
+        . "><span>L:$id</span></a>";
+      if ($name) {
+        $link .= " " . _word_spans($name);
+      }
+      push @parts, $link;
+    }
+    $v = join(", ", @parts);
+  }
+  return $v;
+} # _fmt_locations
+
 my @FIELD_DEFS = (
   { re   => qr/^X/i,            style => "style='display:none'", hidden => 1 },
   { name => "Id",               style => "style='max-width:40px; text-align:center'",
-    word_split => 0 },
+    word_split => 0, format => \&_fmt_id },
   { name => "IdClr",            style => "style='max-width:40px; text-align:center'",
-    placeholder => "Id", word_split => 0 },
+    placeholder => "Id" },
   { name => "Alc",              style => "style='max-width:55px; text-align:center'",
-    word_split => 0 },
+    format => \&_fmt_alc },
   { re   => qr/Id|Alc/,         style => "style='max-width:55px; text-align:center'" },
-  { name => "Stats",            style => "style='max-width:100px; text-align:center'" },
-  { name => "Last",             style => "style='max-width:100px'" },
-  { name => "LastProd",         style => "style='max-width:100px'" },
-  { name => "Ts",               style => "style='max-width:100px'" },
+  { name => "Stats",            style => "style='max-width:100px; text-align:center'",
+    format => \&_fmt_stats },
+  # Last and LastProd share _fmt_last; it branches on $ctx->{fn}
+  { name => "Last",             style => "style='max-width:100px'",
+    format => \&_fmt_last },
+  { name => "LastProd",         style => "style='max-width:100px'",
+    format => \&_fmt_last },
+  { name => "Ts",               style => "style='max-width:100px'",
+    format => \&_fmt_ts },
   { name => "Type",             style => "style='max-width:200px; text-align:center'",
     mobile_style => "style='max-width:100px; text-align:center'",
-    word_split => 0 },
+    word_split => 0, format => \&_fmt_type },
   { re   => qr/^(Com|Count)$/,  style => "style='text-align:right; max-width:50px'" },
   { name => "d",                style => "style='text-align:right; max-width:50px'",
-    word_split => 0 },
-  { re   => qr/^(Pr|Vol)$/,     style => "style='text-align:right; max-width:35px'",
-    word_split => 0 },
+    format => \&_fmt_d },
+  { name => "Pr",               style => "style='text-align:right; max-width:35px'",
+    format => \&_fmt_pr },
+  { name => "Vol",              style => "style='text-align:right; max-width:35px'",
+    format => \&_fmt_vol },
   { name => "Photo",            style => "style='width:96px; text-align:center; padding:1px'",
-    word_split => 0 },
+    word_split => 0, format => \&_fmt_photo },
+  # Exact Rate before the Rate|Rating family: the family style serves
+  # CommentRating etc., but only fn="Rate" gets the body format.
+  { name => "Rate",             style => "style='text-align:center; font-weight:bold; max-width:50px'",
+    format => \&_fmt_rate },
   { re   => qr/Rate|Rating/,    # MUST stay before the Comment rule
     style => "style='text-align:center; font-weight:bold; max-width:50px'" },
   { name => "Chk",              style => "style='text-align:center;max-width:50px'",
-    no_events => 1, word_split => 0 },
+    no_events => 1, word_split => 0, format => \&_fmt_chk },
+  # Exact PersonName before the LocName|PersonName family: LocName and
+  # GlassLocName stay identity in the body (old no-op handler).
+  { name => "PersonName",       style => "style='font-weight: bold; max-width:200px;' ",
+    word_split => 0, format => \&_fmt_personname },
   { re   => qr/LocName|PersonName/,
     style => "style='font-weight: bold; max-width:200px;' " },
   { re   => qr/Comment|Description/i,
     style => "style='max-width:200px; min-width:0; font-style: italic' " },
   { name => "Sim",              style => "style='max-width:55px; min-width:0; text-align:right' ",
-    word_split => 0 },
+    format => \&_fmt_sim },
   { name => "Geo",              # label and style depend on $c->{mobile}
     style => "style='max-width:100px; min-width:0; text-align:right' ",
     mobile_style => "style='max-width:55px; min-width:0; text-align:right' ",
     label => "Dist (km)", mobile_label => "km",
-    word_split => 0 },
+    format => \&_fmt_geo },
+  # Body-only rules (no header style of their own; placed at the end so the
+  # style families above win the header lookup). Formats reproduce the old
+  # body if/elsif handlers verbatim.
+  { name => "Name",             word_split => 0, format => \&_fmt_name },
+  { name => "CountryRegion",    word_split => 0, format => \&_fmt_countryregion },
+  { name => "Prod",             word_split => 0, format => \&_fmt_prod },
+  { name => "BrewName",         word_split => 0, format => \&_fmt_brewname },
+  { name => "Day",              word_split => 0, format => \&_fmt_day },
+  { name => "Locations",        word_split => 0, format => \&_fmt_locations },
 );
 # Fall-through (no match): default style, word_split => 1, identity format.
 my $FIELD_DEFAULT = {
@@ -216,8 +611,7 @@ my $FIELD_DEFAULT = {
 
 # Pure: no $c, no dbh. Returns a fresh hashref for the first matching rule,
 # with the mobile style/label already resolved and word_split defaulted.
-# Body-only format rules (Name, Prod, BrewName, Day, Locations, ...) are
-# added in a later step together with the body dispatch.
+# The optional format code-ref is the body value handler (see _render_body_row).
 sub field_def {
   my ($name, $mobile) = @_;
   my $rule;
@@ -379,6 +773,143 @@ sub _render_header {
   $s .=  "<!-- listrecords: table headers done, now the body -->\n";
   return $s;
 } # _render_header
+
+################################################################################
+# _render_body_row - one <tr> of body cells for @rec. Per-row cont/contline/
+# photo state lives here; $st carries the column config and the memoized
+# @body_def lookups (keyed on the as= alias when present). Each rule's
+# format code-ref gets a $ctx hashref (v, fn, i, rec, fields, c, url,
+# extraparams, cutoff, id, and refs to data_attrs / word_split); it returns
+# the new value, or sets $ctx->{skip} to drop the cell (empty Photo).
+sub _render_body_row {
+  my ($c, $st, $rec) = @_;
+  my $fields      = $st->{fields};        # base names, suffixes stripped
+  my $suffix      = $st->{suffix};        # per-column suffix info hashrefs
+  my $extra_attr  = $st->{extra_attr};    # rowspan/colspan attrs
+  my $styles      = $st->{styles};        # per-column body style (from header)
+  my $body_def    = $st->{body_def};      # field_def() result per column
+  my $url         = $st->{url};
+  my $extraparams = $st->{extraparams};
+  my $cutoff      = $st->{cutoff};
+
+  my $tds = "";
+  my $id = $rec->[0]; # Id has to be first if using the Check pseudofield
+  my $cont_active = 0;
+  my $contline_rest = 0;
+  my $photo_skipped = 0;
+  for ( my $i=0; $i < scalar( @$rec ); $i++ ) {
+    my $v = $rec->[$i];
+    my $was_null_field = !defined $v;
+    $v //= "";
+
+    my $fn = $fields->[$i];
+    my $linebreak = linebreak($c,$fn);
+    if ( $linebreak ) {
+      _close_cont(\$tds, \$cont_active);
+      $contline_rest = 0;
+      _maybe_photo_colspan(\$tds, \$photo_skipped);
+      $tds .= $linebreak;
+      next;
+    }
+    if ( $suffix->[$i]{contline} ) {
+      _close_cont(\$tds, \$cont_active);
+      $contline_rest = 1;
+    }
+    $fn = $suffix->[$i]{as_name} if $suffix->[$i]{as_name};
+    my $data_attrs = "data-col='$i'";
+    if ( my $ag = $suffix->[$i]{aggregate} ) {
+        my $raw = $rec->[$i];
+        if (defined $raw && !ref $raw && $raw =~ /^[+-]?\d+\.?\d*$/) {
+            $data_attrs .= " data-agg-val='$raw'";
+        }
+    }
+    my $def = $body_def->[$i];
+    my $word_split = $def->{word_split};
+    # Old chain order: the Name handler wins over a _link= suffix; the
+    # suffix case wins over the name rules (Id_A_link=Brew gets the link
+    # markup, not the Id handler).
+    if ( $suffix->[$i]{link} && !( $fn eq "Name" && $def->{format} ) ) {
+      if ($v) {
+        $data_attrs .= " data-sort-key='$v'";
+        my $entity = $suffix->[$i]{link};
+        my $pfx = uc(substr($entity, 0, 1));
+        $v = "<a href='$url?o=$entity&e=$v'"
+           . " class='lr-btn'"
+           . "><span>${pfx}:$v</span></a>";
+      }
+      $word_split = 0;
+    } elsif ( $def->{format} ) {
+      my $ctx = {
+        v           => $v,
+        fn          => $fn,
+        i           => $i,
+        rec         => $rec,
+        fields      => $fields,
+        c           => $c,
+        url         => $url,
+        extraparams => $extraparams,
+        cutoff      => $cutoff,
+        id          => $id,
+        data_attrs  => \$data_attrs,
+        word_split  => \$word_split,
+      };
+      $v = $def->{format}->($ctx);
+      if ( $ctx->{skip} ) {
+        _close_cont(\$tds, \$cont_active);
+        _colspan_last_td(\$tds);  # Best-effort: may fail if last td already has colspan
+        $photo_skipped = 1;
+        next;
+      }
+    }
+    if ( $was_null_field && $fn =~ /^(Type|Sub|LocType|LocSubType|BrewType)$/i && !$v ) {
+      $v = "<span class='null-value'>NULL</span>";
+    }
+    if ( $suffix->[$i]{filter} ) {
+        $word_split = 0;
+        if ($v ne '' && $v !~ /</) {
+            my $escaped = util::htmlesc($v);
+            if ($v !~ /"/) {
+                $v = "<span data-col='$i' data-filter='&quot;$escaped&quot;' onclick='fieldclick(event,this)'>$escaped</span>";
+            } else {
+                $v = "<span data-col='$i' data-filter='$escaped' onclick='fieldclick(event,this)'>$escaped</span>";
+            }
+        }
+    }
+    if ( $suffix->[$i]{nofilter} ) {
+      if ( $v !~ /</ ) {
+          $v = util::htmlesc($v);
+      }
+      $word_split = 0;
+    }
+    if ( $word_split && $v !~ /</ ) {
+      $v = _word_spans($v);
+    }
+    my $cell_events = " ondblclick='fieldclick_cell(event,this,$i)'";
+    $cell_events = "" if ($suffix->[$i]{nofilter});
+    my $cell;
+    if (length $v) {
+        $cell = "<span ${data_attrs}${cell_events}>$v</span>\n";
+    } else {
+        $cell = "";
+    }
+    if ($cont_active) {
+      $tds .= $cell;
+    } else {
+      $tds .= "<td $styles->[$i] $extra_attr->[$i]>$cell";
+    }
+    if ($suffix->[$i]{cont} || $contline_rest) {
+      $cont_active = 1;
+    } else {
+      $tds .= "</td>\n";
+      $cont_active = 0;
+    }
+  }
+  _close_cont(\$tds, \$cont_active);
+  _maybe_photo_colspan(\$tds, \$photo_skipped);
+  my $tr = "<tr data-first=1 class='top-border'>\n";
+  $tr .= "$tds</tr>\n";
+  return $tr;
+} # _render_body_row
 
 ################################################################################
 # listrecords - thin dispatcher. The rendering body lives in _render().
@@ -608,6 +1139,14 @@ sub _render {
     $hdr_def[$i] = field_def($fields[$i], $c->{mobile});
   }
 
+  # The body lookup is keyed on the as= alias when present (the header keys
+  # on the raw name) — this encodes the old chain's quirk in one place.
+  my @body_def;
+  for (my $i = 0; $i < scalar(@fields); $i++) {
+    my $name = $suffix_info[$i]{as_name} || $fields[$i];
+    $body_def[$i] = field_def($name, $c->{mobile});
+  }
+
   $s .= _render_header($c, {
     fields         => \@fields,
     suffix         => \@suffix_info,
@@ -620,6 +1159,17 @@ sub _render {
   });
 
   my $cutoff = dateutil::datestr("%F", -7);  # a week ago, display full date
+
+  my $body_st = {
+    fields      => \@fields,
+    suffix      => \@suffix_info,
+    extra_attr  => \@extra_attr,
+    styles      => \@styles,
+    body_def    => \@body_def,
+    url         => $url,
+    extraparams => $extraparams,
+    cutoff      => $cutoff,
+  };
 
   my ($rowcount, $prev_gap) = (0, 0);
   while ( my @rec = $list_sth->fetchrow_array ) {
@@ -641,360 +1191,12 @@ sub _render {
       }
     }
     $rowcount++;
-    my $tds = "";
-    my $id = $rec[0]; # Id has to be first if using the Check pseudofield
-    my $cont_active = 0;
-    my $contline_rest = 0;
-    my $photo_skipped = 0;
-    for ( my $i=0; $i < scalar( @rec ); $i++ ) {
-      my $v = $rec[$i];
-      my $was_null_field = !defined $v;
-      $v //= "";
-
-      my $fn = $fields[$i];
-      my $linebreak = linebreak($c,$fn);
-      if ( $linebreak ) {
-        _close_cont(\$tds, \$cont_active);
-        $contline_rest = 0;
-        _maybe_photo_colspan(\$tds, \$photo_skipped);
-        $tds .= $linebreak;
-        next;
-      }
-      if ( $suffix_info[$i]{contline} ) {
-        _close_cont(\$tds, \$cont_active);
-        $contline_rest = 1;
-      }
-      $fn = $suffix_info[$i]{as_name} if $suffix_info[$i]{as_name};
-      my $data_attrs = "data-col='$i'";
-      if ( my $ag = $suffix_info[$i]{aggregate} ) {
-          my $raw = $rec[$i];
-          if (defined $raw && !ref $raw && $raw =~ /^[+-]?\d+\.?\d*$/) {
-              $data_attrs .= " data-agg-val='$raw'";
-          }
-      }
-      my $word_split = 1;
-      if ( $fn eq "Name" ) {
-        $v = _word_spans($v);
-        $v = "<b>$v</b>";
-        $word_split = 0;
-      } elsif ( $suffix_info[$i]{link} ) {
-        if ($v) {
-          $data_attrs .= " data-sort-key='$v'";
-          my $entity = $suffix_info[$i]{link};
-          my $pfx = uc(substr($entity, 0, 1));
-          $v = "<a href='$url?o=$entity&e=$v'"
-             . " class='lr-btn'"
-             . "><span>${pfx}:$v</span></a>";
-        }
-        $word_split = 0;
-      } elsif ( $fn eq "Id" ) {
-        if ($v) {
-          my $op2 = "Brew";
-          my $pfx = "B";
-          if ($c->{op} =~ /Photo/i) { $op2 = "Photos"; $pfx = "P"; }
-          elsif ($c->{op} =~ /Location/i) { $op2 = "Location"; $pfx = "L"; }
-          if ( $op2 eq $c->{op} ) {
-            $v = "<a href='$url?o=$op2&e=$v'"
-               . " class='lr-btn'"
-               . "><span>$v</span></a>";
-          } else {
-            $v = "<a href='$url?o=$op2&e=$v'><span>${pfx}[$v]</span></a>: ";
-          }
-        }
-        $word_split = 0;
-      } elsif ( $fn eq "Type" ) {
-        $v =~ s/[ ,]*$//; # trailing commas from db join if no subtype
-        if ($v) {
-          my ($brewtype, $subtype) = split(/,\s*/, $v, 2);  # Split on comma
-          my $style_str;
-          if ($brewtype eq 'Beer') {
-            $style_str = $subtype || 'Beer';
-          } else {
-            $style_str = $brewtype;
-            $style_str .= ",$subtype" if $subtype;
-          }
-          my $dispstyle = styles::brewtextstyle($c, $style_str, "$c->{op}:$rec[0] $brewtype/" . ($subtype // ""));
-          (my $filter_str = $style_str) =~ s/,/ /g;
-          $v = _word_spans($filter_str);
-          my $hidden = "";
-          $hidden = "<span style='display:none'>Beer </span>" if ($brewtype eq 'Beer' && $subtype);
-          $v = $hidden . "<span $dispstyle>$v</span>";
-          $word_split = 0;
-        }
-      } elsif ( $fn eq "Alc" ) {
-        if ($v) {
-          $data_attrs .= " data-sort-key='$v'";
-          my $display = util::unit($v,"%");
-          $v = "<span data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'>$display</span>";
-        }
-      } elsif ( $fn eq "CountryRegion" ) {
-        my ($country, $region) = split(/;/, $v, 2);
-        $country = '' unless defined $country;
-        $region  = '' unless defined $region;
-        $region =~ s/^\s+|\s+$//g;
-        my @parts;
-        if ($region ne '' && $country eq 'Denmark') {
-            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
-        } elsif ($country eq 'Denmark') {
-            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>DK</span>";
-        } elsif ($region ne '') {
-            my $code = $country;
-            if (exists $util::COUNTRY_CODES{$country}) {
-                $code = (split /,\s*/, $util::COUNTRY_CODES{$country})[0];
-            }
-            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($code) . "</span>";
-            push @parts, ", ";
-            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
-        } elsif ($country ne '') {
-            push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($country) . "</span>";
-        }
-        $v = join("", @parts);
-        $v .= "&nbsp;&nbsp;" if @parts;
-        $word_split = 0;
-      } elsif ( $fn eq "PersonName" ) {
-        if ($v) {
-          my @persons = split(/; /, $v);
-          my @out;
-          foreach my $entry (@persons) {
-            my ($name, $pid) = split(/\|/, $entry, 2);
-            my $escname = util::htmlesc($name);
-            if ($pid) {
-              push @out, "<a href='$url?o=Person&e=$pid'"
-                . " class='lr-btn'"
-                . "><span>P:$pid</span></a>"
-                . " <span data-filter='\"" . $escname . "\"' onclick='fieldclick(event,this,$i)'>"
-                . $escname . "</span>";
-            } else {
-              push @out, "<span data-filter='\"" . $escname . "\"' onclick='fieldclick(event,this,$i)'>"
-                . $escname . "</span>";
-            }
-          }
-          $v = join("; ", @out);
-        }
-        $word_split = 0;
-      } elsif ( $fn eq "Prod" ) {
-        if ($v) {
-          $v = _word_spans($v);
-          $v = "<i>$v</i>";
-        }
-        $word_split = 0;
-      } elsif ( $fn eq "BrewName" ) {
-        if ($v) {
-          $v = _word_spans($v);
-          $v = "<b>$v</b>";
-        }
-        $word_split = 0;
-      } elsif ( $fn eq "Stats" ) {  # Combined ratings averages
-        my ( $cnt, $avg, $com ) = split (";", $v);
-        $data_attrs .= " data-sort-key='$avg'" if ($avg);
-        $v = comments::avgratings($c, $cnt, $avg, $com);
-        if ($v) {
-          if ($avg) {
-            my $favg = sprintf("%.1f", $avg);
-            $v = "<span data-col='$i' data-filter='$favg' onclick='fieldclick(event,this)'>$v</span>";
-          }
-        }
-      } elsif ( $fn eq "Rate" ) {
-        if ($v) {
-          $data_attrs .= " data-sort-key='$v'";
-          my $rclass = comments::get_rating_class($v);
-          $v = "<b class='$rclass'>($v)</b>";
-        }
-      } elsif ( $fn eq "Chk" ) {
-        $v = "<input type=checkbox name=Chk$id />";
-        $word_split = 0;
-      } elsif ( $fn eq "Ts" ) {
-        if ($v) {
-          my ($date, $time) = split(' ', $v);
-          if ($date && $time) {
-            my ($y, $m, $d) = split('-', $date);
-            my $epoch = POSIX::mktime(0, 0, 0, $d, $m-1, $y-1900);
-            my @weekdays = ( "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" );
-            my $wd = $weekdays[(localtime($epoch))[6]];
-            my $disp = "$time $wd";
-            $disp = "$date" if ( $date lt $cutoff );
-            $data_attrs .= " data-sort-key='$date $time' title='$date $time $wd'";
-            $v = "<span data-col='$i' data-filter='$date' onclick='fieldclick(event,this)'>"
-               . "<span style='position:absolute;left:-9999px'>$date </span>$disp</span>";
-          }
-        }
-      } elsif ( $fn eq "Last" || $fn eq "LastProd" ) {
-        if ( $v ne '' ) {
-          my ($date, $wd, $time) = dateutil::splitdate($v);
-          my $disp = "$time $wd";
-          $disp = "$date" if ( $date lt $cutoff );
-          $data_attrs .= " data-sort-key='$date $time'";
-          $data_attrs .= " title='$date $time $wd'" if ( $fn eq "Last" );
-          $disp = "[$disp]" if ( $fn eq "LastProd" );
-          $v = "<span data-col='$i' data-filter='$date' onclick='fieldclick(event,this)'>"
-             . "<span style='position:absolute;left:-9999px'>$date </span>$disp</span>";
-        } else {
-          $v = "";
-        }
-      } elsif ( $fn eq "Sim" ) { # Name similarity
-        if ( $v && $extraparams && $extraparams->{refname} ) {
-          my $name_idx;
-          for (my $j = 0; $j < scalar(@fields); $j++) {
-            if ($fields[$j] eq 'Name') {
-              $name_idx = $j;
-              last;
-            }
-          }
-          if (defined $name_idx) {
-            my $thisname = $rec[$name_idx];
-            $v = util::namesimilarity($extraparams->{refname}, $thisname);
-          } else {
-            $v = "";
-          }
-        } else {
-          $v = "";
-        }
-      } elsif ( $fn eq "Geo" ) { # Geo dist
-        if ( $v && $extraparams && $extraparams->{lat} && $extraparams->{lon} ) {
-          my ( $lat, $lon ) = split(' ', $v);
-          if ( $extraparams->{lat} eq '?' ) {
-            $data_attrs .= " lat=$lat lon=$lon";
-            $v = '?';
-          } else {
-            my $dist = geo::geodist( $extraparams->{lat}, $extraparams->{lon}, $lat, $lon );
-            $v = "<span data-col='$i' data-filter='$dist' onclick='fieldclick(event,this)'>$dist</span>";
-          }
-        } elsif ( $v ) {
-          # no reference lat/lon, show raw coordinates
-          my ( $lat, $lon ) = split(' ', $v);
-          $v = "$lat, $lon" if $lat;
-        } else {
-          $v = "";
-        }
-      } elsif ( $fn eq "Photo" ) {
-        my $photoid;
-        if ($v =~ /^(\d+):(.*)$/) {
-            $photoid = $1;
-            $v = $2;
-        }
-        my $editurl;
-        if (defined $photoid) {
-            $editurl = "$c->{url}?o=Photos&e=$photoid";
-        } else {
-            my $id_idx;
-            for (my $j = 0; $j < scalar(@fields); $j++) {
-                if ($fields[$j] eq 'Id' || $fields[$j] eq 'IdClr') {
-                    $id_idx = $j;
-                    last;
-                }
-            }
-            $editurl = "$c->{url}?o=Photos&e=$rec[$id_idx]";
-        }
-        $v = photos::imagetag($c, $v, "thumb", $editurl);
-        $word_split = 0;
-        if (!$v) {
-          _close_cont(\$tds, \$cont_active);
-          _colspan_last_td(\$tds);  # Best-effort: may fail if last td already has colspan
-          $photo_skipped = 1;
-          next;
-        }
-      } elsif ( $fn eq "Day" ) {
-        if ($v) {
-          my ($date, $wd) = dateutil::splitdate($v);
-          $wd =~ s/Sun/<b>Sun<\/b>/;
-          $v = "<a href='$url?o=Graph&date=$date&ndays=1'><span>$date $wd</span></a>";
-        }
-        $word_split = 0;
-      } elsif ( $fn eq "d" ) {
-        if (defined $v && $v ne '') {
-          $data_attrs .= " data-sort-key='$v'";
-          $data_attrs .= " data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'";
-          $v = sprintf('%.1f', $v) . "<span style='font-size: xx-small'>d</span> ";
-        } else {
-          $v = "";
-        }
-      } elsif ( $fn eq "Pr" ) {
-        if ($v) {
-          $data_attrs .= " data-sort-key='$v'";
-          $data_attrs .= " data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'";
-          $v = util::unit($v, ".-");
-        } else {
-          $v = "";
-        }
-      } elsif ( $fn eq "Vol" ) {
-        if ($v) {
-          $data_attrs .= " data-sort-key='$v'";
-          $data_attrs .= " data-col='$i' data-filter='$v' onclick='fieldclick(event,this)'";
-          $v = util::unit($v, "c");
-        } else {
-          $v = "";
-        }
-      } elsif ( $fn eq "Locations" ) {
-        if ($v) {
-          my %seen;
-          my @parts;
-          foreach my $entry (split(/,/, $v)) {
-            $entry =~ s/^\s+|\s+$//;
-            my ($id, $name) = split(/::/, $entry, 2);
-            next unless $id && !$seen{$id}++;
-            my $link = "<a href='$url?o=Location&e=$id'"
-              . " class='lr-btn'"
-              . "><span>L:$id</span></a>";
-            if ($name) {
-              $link .= " " . _word_spans($name);
-            }
-            push @parts, $link;
-          }
-          $v = join(", ", @parts);
-        }
-        $word_split = 0;
-      }
-      if ( $was_null_field && $fn =~ /^(Type|Sub|LocType|LocSubType|BrewType)$/i && !$v ) {
-        $v = "<span class='null-value'>NULL</span>";
-      }
-      if ( $suffix_info[$i]{filter} ) {
-          $word_split = 0;
-          if ($v ne '' && $v !~ /</) {
-              my $escaped = util::htmlesc($v);
-              if ($v !~ /"/) {
-                  $v = "<span data-col='$i' data-filter='&quot;$escaped&quot;' onclick='fieldclick(event,this)'>$escaped</span>";
-              } else {
-                  $v = "<span data-col='$i' data-filter='$escaped' onclick='fieldclick(event,this)'>$escaped</span>";
-              }
-          }
-      }
-      if ( $suffix_info[$i]{nofilter} ) {
-        if ( $v !~ /</ ) {
-            $v = util::htmlesc($v);
-        }
-        $word_split = 0;
-      }
-      if ( $word_split && $v !~ /</ ) {
-        $v = _word_spans($v);
-      }
-      my $cell_events = " ondblclick='fieldclick_cell(event,this,$i)'";
-      $cell_events = "" if ($suffix_info[$i]{nofilter});
-      my $cell;
-      if (length $v) {
-          $cell = "<span ${data_attrs}${cell_events}>$v</span>\n";
-      } else {
-          $cell = "";
-      }
-      if ($cont_active) {
-        $tds .= $cell;
-      } else {
-        $tds .= "<td $styles[$i] $extra_attr[$i]>$cell";
-      }
-      if ($suffix_info[$i]{cont} || $contline_rest) {
-        $cont_active = 1;
-      } else {
-        $tds .= "</td>\n";
-        $cont_active = 0;
-      }
-    }
-    _close_cont(\$tds, \$cont_active);
-    _maybe_photo_colspan(\$tds, \$photo_skipped);
+    my $tr = _render_body_row($c, $body_st, \@rec);
 
     my $hidden_style = "";
     $hidden_style = " style='display:none'" if ($maxrecords > 0 && $rowcount > $maxrecords);
     $s .= "<tbody data-lr-fs='1'$hidden_style>\n";
-    $s .= "<tr data-first=1 class='top-border'>\n";
-    $s .= "$tds</tr>\n";
+    $s .= $tr;
     $s .= "</tbody>\n";
   }
   if ($rowcount == 0) {
