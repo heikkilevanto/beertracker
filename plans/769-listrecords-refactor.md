@@ -12,9 +12,12 @@ flags (format code-refs deliberately deferred to step 6 to avoid ~300
 lines of dormant duplication); dead handlers dropped (header: Sub,
 Photos, isGeneric, ^None; body: Sub, Photos, IsGeneric,
 Website|UntappdLink|SearchLink|DetailsLink, no-op LocName, no-op
-Comment). Next: step 5 (`_render_header()`). Working agreement: each
-numbered step is its own commit, but only when I say so after reviewing
-and testing.
+Comment). Step 5 done: `_render_header()` extracted with the `@hdr_def`
+memo and rule-based dispatch; `initial_filter` now keyed on the raw name
+on both sides (Approach step 7); `listrecords_structure` HTTP test added.
+Next: step 6 (`_render_body_row()`). Working agreement: each numbered
+step is its own commit, but only when I say so after reviewing and
+testing.
 
 ## Problem
 `listrecords.pm` is the largest module. The `listrecords` function is ~880 lines,
@@ -658,16 +661,18 @@ run it with a phone User-Agent too (same assertion, mobile styles covered).
 3. DONE. **Helpers** — `_close_cont`, `_maybe_photo_colspan` (pure refactor;
    the photo helper does not reset the flag — see Status note). Unit tests:
    `lr_helpers`. Gate: compare OK.
-4. **Define `@FIELD_DEFS` + `field_def`** — move styles, labels, flags, and
-   the simple format code-refs (Name, Id, IdClr, Alc, Pr, Vol, d, Chk, Sim,
-   Geo, Type, Ts, Last, LastProd, Stats, CountryRegion, PersonName, Prod,
-   BrewName, Photo, Day, Locations) into rules. Drop the dead handlers
-   (Approach step 6). Unit tests: `lr_fielddef`. Gate: compare OK.
-5. **Extract `_render_header()`** — state hashref, `@hdr_def` memo, dispatch
-   via rules, initial_filter raw-name fix (Approach step 7). Gate: compare
-   OK, `listrecords_structure` HTTP test.
+4. DONE. **Define `@FIELD_DEFS` + `field_def`** — styles, labels, flags moved
+   into rules; the simple format code-refs (Name, Id, IdClr, Alc, Pr, Vol, d,
+   Chk, Sim, Geo, Type, Ts, Last, LastProd, Stats, CountryRegion, PersonName,
+   Prod, BrewName, Photo, Day, Locations) move in step 6 with the body
+   dispatch, to avoid ~300 lines of dormant duplication. Dead handlers
+   dropped (Approach step 6). Unit tests: `lr_fielddef`. Gate: compare OK.
+5. DONE. **Extract `_render_header()`** — state hashref, `@hdr_def` memo,
+   dispatch via rules, initial_filter raw-name fix (Approach step 7). Gate:
+   compare OK, `listrecords_structure` HTTP test (added here, kept in step 8).
 6. **Extract `_render_body_row()`** — state hashref, `@body_def` memo, the
-   `$ctx` format contract including skip/data_attrs/word_split. This is the
+   `$ctx` format contract including skip/data_attrs/word_split, and the
+   format code-refs into the rules (see step 4). This is the
    riskiest step; take the comparison here seriously (contline spans, photo
    colspan, empty cells). Gate: compare OK, `tools/testall`.
 7. **Soak with the compare still in place** — manual spot checks (list

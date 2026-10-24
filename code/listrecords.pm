@@ -247,6 +247,140 @@ sub field_def {
 } # field_def
 
 ################################################################################
+# _render_header - the <thead> block. Filter inputs double as column headers.
+# Fills @{$st->{styles}} with one style string per column for the body <td>s.
+# The field-def lookup is keyed on the raw post-suffix-strip name (the body
+# keys on the as= alias when present) — the caller passes the memoized
+# lookups as $st->{hdr_def}. The display label comes from the rule (Geo is
+# renamed to "km"/"Dist (km)"), with the leading-dash strip applied on top,
+# matching the old chain's rename-then-strip order.
+sub _render_header {
+  my ($c, $st) = @_;
+  my $fields         = $st->{fields};         # base names, suffixes stripped
+  my $suffix         = $st->{suffix};         # per-column suffix info hashrefs
+  my $extra_attr     = $st->{extra_attr};     # rowspan/colspan attrs
+  my $hdr_def        = $st->{hdr_def};        # field_def() result per column
+  my $px             = $st->{px};             # _Npx width overrides
+  my $auto           = $st->{auto};           # _A auto-width flags
+  my $initial_filter = $st->{initial_filter};
+  my $styles         = $st->{styles};         # OUT: per-column body style
+
+  my $s = "";
+  $s .=  "<!-- listrecords: table headers -->\n";
+  $s .= "<thead>";
+  # Filter inputs also work as column headers, and sort buttons on dbl-click
+  $s .= "<tr class='top-border lr-filter-row'>\n";
+  my $hdr_cont_active = 0;
+  my $hdr_contline_rest = 0;
+  my $hdr_photo_rs_rem = 0;
+  my @hidden_filters;
+  for ( my $i=0; $i < scalar( @$fields ); $i++ ) {
+    my $def = $hdr_def->[$i];
+    my $label = $def->{label};
+    $label = $fields->[$i] unless defined $label;
+    my $filter_events = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
+    my $break = linebreak($c, $fields->[$i]);
+    if ( $break ) {
+      _close_cont(\$s, \$hdr_cont_active);
+      $hdr_contline_rest = 0;
+      if ($hdr_photo_rs_rem > 1) {
+        _colspan_last_td(\$s);
+      }
+      if ($hdr_photo_rs_rem) {
+        $hdr_photo_rs_rem--;
+      }
+      $s .= $break;
+      $styles->[$i] = "";
+      next;
+    }
+    my $sty = $def->{style};
+    $styles->[$i] = $sty;
+    if ( $auto->{$i} ) {
+        $styles->[$i] = "";
+        $sty = " size='" . (length($label) + 2) . "'";
+        $sty .= " style='max-width:70px'" if ( $c->{mobile} );
+    } elsif ( $px->{$i} ) {
+        $styles->[$i] = "style='max-width:$px->{$i}; min-width:0'";
+        $sty = " size='6' style='max-width:$px->{$i}; min-width:0'";
+    }
+    my $f = $label;
+    $f =~ s/^-//;
+
+    if ( $suffix->[$i]{contline} ) {
+        _close_cont(\$s, \$hdr_cont_active);
+        $hdr_contline_rest = 1;
+    }
+    if ( $suffix->[$i]{noheader} ) {
+        # contline chain active — keep cell open for next column
+        if ( !$hdr_contline_rest ) {
+            _close_cont(\$s, \$hdr_cont_active);
+        }
+        if ( !$suffix->[$i]{nofilter} ) {
+            push @hidden_filters, "<input type=text style='display:none' data-col='$i' $filter_events/>\n";
+        }
+        if ($hdr_contline_rest) {
+            # contline chain active — skip empty td (for multi-row header layouts)
+        } elsif ( $f =~ /^Photos?$/ ) {
+            _colspan_last_td(\$s);
+            $hdr_photo_rs_rem = $suffix->[$i]{rowspan} || 0;
+        } elsif ( $suffix->[$i]{cont} ) {
+            # noheader + cont: start empty td but keep open for next column
+            $s .= "<td $styles->[$i] $extra_attr->[$i]>\n";
+            $hdr_cont_active = 1;
+        } else {
+            $s .= "<td $styles->[$i] $extra_attr->[$i]></td>\n";
+        }
+        next;
+    }
+
+    # Initial filter value: keyed on the raw name on both header and footer
+    # (the footer already uses it; the old header used the renamed name).
+    my $val_attr = "";
+    if ($initial_filter && exists $initial_filter->{$fields->[$i]}) {
+        $val_attr = " value='" . util::htmlesc($initial_filter->{$fields->[$i]}) . "'";
+    }
+    my $hdr_input;
+    if ( $suffix->[$i]{nofilter} ) {
+        $hdr_input = $f;
+    } elsif ( $f ) {
+      my $on = $filter_events;
+      $on = "" if ($def->{no_events});
+      my $ph = $def->{placeholder};
+      $ph = $f unless defined $ph;
+      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='" . util::htmlesc($ph) . "'$val_attr/>";
+    } else {
+      $hdr_input = "&nbsp;"
+    }
+    if ($hdr_cont_active) {
+        $s .= $hdr_input;
+    } else {
+        $s .= "<td $sty $extra_attr->[$i]>$hdr_input";
+    }
+    if ($suffix->[$i]{cont} || $hdr_contline_rest) {
+        $hdr_cont_active = 1;
+    } else {
+        $s .= "</td>\n";
+        $hdr_cont_active = 0;
+    }
+  }
+  _close_cont(\$s, \$hdr_cont_active);
+  foreach my $i (keys %$px) {
+      $styles->[$i] = "style='max-width:$px->{$i}; min-width:0'";
+  }
+  foreach my $i (keys %$auto) {
+      $styles->[$i] = "";
+  }
+  if ($hdr_photo_rs_rem > 0) {
+    _colspan_last_td(\$s);
+  }
+  $s .= "</tr>\n";
+  $s .= join('', @hidden_filters);
+  $s .= "</thead>\n";
+  $s .=  "<!-- listrecords: table headers done, now the body -->\n";
+  return $s;
+} # _render_header
+
+################################################################################
 # listrecords - thin dispatcher. The rendering body lives in _render().
 ################################################################################
 
@@ -467,157 +601,23 @@ sub _render {
   $s .= "<table class='listrecords' $tableattrs>\n";
   my @styles;  # One for each column
 
-  # Table headers
-  $s .=  "<!-- listrecords: table headers -->\n";
+  # Memoized field-def lookups for the header, keyed on the raw
+  # post-suffix-strip name (the body keys on the as= alias when present).
+  my @hdr_def;
+  for (my $i = 0; $i < scalar(@fields); $i++) {
+    $hdr_def[$i] = field_def($fields[$i], $c->{mobile});
+  }
 
-  $s .= "<thead>";
-  # Filter inputs also work as column headers, and sort buttons on dbl-click
-  $s .= "<tr class='top-border lr-filter-row'>\n";
-  my $hdr_cont_active = 0;
-  my $hdr_contline_rest = 0;
-  my $hdr_photo_rs_rem = 0;
-  my @hidden_filters;
-  for ( my $i=0; $i < scalar( @fields ); $i++ ) {
-    my $f = $fields[$i];
-    my $filter_events = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
-    my $break = linebreak($c,$f);
-    if ( $break ) {
-      _close_cont(\$s, \$hdr_cont_active);
-      $hdr_contline_rest = 0;
-      if ($hdr_photo_rs_rem > 1) {
-        _colspan_last_td(\$s);
-      }
-      if ($hdr_photo_rs_rem) {
-        $hdr_photo_rs_rem--;
-      }
-      $s .= $break;
-      $styles[$i] = "";
-      next;
-    }
-    my $sty = "style='max-width:200px; min-width:0'"; # default
-    $sty = "style='max-width:90px; min-width:0'" if ( $c->{mobile} );
-    if ( $f =~ /^X/i ) {
-      $sty = "style='display:none'";
-    } elsif ( $f eq "Id" || $f eq "IdClr" ) {
-      $sty = "style='max-width:40px; text-align:center'";
-    } elsif ( $f =~ /Id|Alc/ ) {
-      $sty = "style='max-width:55px; text-align:center'";
-    } elsif ( $f =~ /^(Stats)$/ ) {
-      $sty = "style='max-width:100px; text-align:center'";
-    } elsif ( $f =~ /^(Last|LastProd|Ts)$/ ) {
-      $sty = "style='max-width:100px'";
-    } elsif ( $f =~ /^(Type)$/ ) {
-      my $w = "100px";
-      $w = "200px" unless $c->{mobile};
-      $sty = "style='max-width:$w; text-align:center'";
-    } elsif ( $f =~ /^(Com|Count|d)$/ ) {
-      $sty = "style='text-align:right; max-width:50px'";
-    } elsif ( $f =~ /^(Pr|Vol)$/ ) {
-      $sty = "style='text-align:right; max-width:35px'";
-    } elsif ( $f =~ /^Photo$/ ) {
-      $sty = "style='width:96px; text-align:center; padding:1px'";
-    } elsif ( $f =~ /Rate|Rating/ ) {
-      $sty = "style='text-align:center; font-weight:bold; max-width:50px'";
-    } elsif ( $f =~ /Chk/) { # Pseudo-field for a checkbox
-      $sty = "style='text-align:center;max-width:50px'";
-    } elsif ( $f =~ /LocName|PersonName/ ) {
-      $sty = "style='font-weight: bold; max-width:200px;' ";
-    } elsif ( $f =~ /Comment|Description/i ) {
-      $sty = "style='max-width:200px; min-width:0; font-style: italic' ";
-    } elsif ( $f =~ /Sim/ ) {  # name similarity
-      $sty = "style='max-width:55px; min-width:0; text-align:right' ";
-      $f = "Sim";
-    } elsif ( $f =~ /Geo/ ) {  # geo distance
-      if ( $c->{mobile} ) {
-        $sty = "style='max-width:55px; min-width:0; text-align:right' ";
-        $f = "km";
-      } else {
-        $sty = "style='max-width:100px; min-width:0; text-align:right' ";
-        $f = "Dist (km)";
-      }
-    }
-    $styles[$i] = $sty;
-    if ( $auto_override{$i} ) {
-        $styles[$i] = "";
-        $sty = " size='" . (length($f) + 2) . "'";
-        $sty .= " style='max-width:70px'" if ( $c->{mobile} );
-    } elsif ( $px_override{$i} ) {
-        $styles[$i] = "style='max-width:$px_override{$i}; min-width:0'";
-        $sty = " size='6' style='max-width:$px_override{$i}; min-width:0'";
-    }
-    $f =~ s/^-//;
-
-    if ( $suffix_info[$i]{contline} ) {
-        _close_cont(\$s, \$hdr_cont_active);
-        $hdr_contline_rest = 1;
-    }
-    if ( $suffix_info[$i]{noheader} ) {
-        # contline chain active — keep cell open for next column
-        if ( !$hdr_contline_rest ) {
-            _close_cont(\$s, \$hdr_cont_active);
-        }
-        if ( !$suffix_info[$i]{nofilter} ) {
-            push @hidden_filters, "<input type=text style='display:none' data-col='$i' $filter_events/>\n";
-        }
-        if ($hdr_contline_rest) {
-            # contline chain active — skip empty td (for multi-row header layouts)
-        } elsif ( $f =~ /^Photos?$/ ) {
-            _colspan_last_td(\$s);
-            $hdr_photo_rs_rem = $suffix_info[$i]{rowspan} || 0;
-        } elsif ( $suffix_info[$i]{cont} ) {
-            # noheader + cont: start empty td but keep open for next column
-            $s .= "<td $styles[$i] $extra_attr[$i]>\n";
-            $hdr_cont_active = 1;
-        } else {
-            $s .= "<td $styles[$i] $extra_attr[$i]></td>\n";
-        }
-        next;
-    }
-
-    my $val_attr = "";
-    if ($initial_filter && exists $initial_filter->{$f}) {
-        $val_attr = " value='" . util::htmlesc($initial_filter->{$f}) . "'";
-    }
-    my $hdr_input;
-    if ( $suffix_info[$i]{nofilter} ) {
-        $hdr_input = $f;
-    } elsif ( $f eq "Id" || $f eq "IdClr" ) {
-      $hdr_input = "<input type=text data-col='$i' $sty $filter_events placeholder='Id'$val_attr/>";
-    } elsif ( $f eq "Name" ) {
-      $hdr_input = "<input type=text data-col='$i' $sty $filter_events placeholder='Name'$val_attr/>";
-    } elsif ( $f  ) {
-      my $on = $filter_events;
-      $on = "" if ($f =~ /Chk/);
-      $hdr_input = "<input type=text data-col='$i' $sty $on placeholder='" . util::htmlesc($f) . "'$val_attr/>";
-    } else {
-      $hdr_input = "&nbsp;"
-    }
-    if ($hdr_cont_active) {
-        $s .= $hdr_input;
-    } else {
-        $s .= "<td $sty $extra_attr[$i]>$hdr_input";
-    }
-    if ($suffix_info[$i]{cont} || $hdr_contline_rest) {
-        $hdr_cont_active = 1;
-    } else {
-        $s .= "</td>\n";
-        $hdr_cont_active = 0;
-    }
-  }
-  _close_cont(\$s, \$hdr_cont_active);
-  foreach my $i (keys %px_override) {
-      $styles[$i] = "style='max-width:$px_override{$i}; min-width:0'";
-  }
-  foreach my $i (keys %auto_override) {
-      $styles[$i] = "";
-  }
-  if ($hdr_photo_rs_rem > 0) {
-    _colspan_last_td(\$s);
-  }
-  $s .= "</tr>\n";
-  $s .= join('', @hidden_filters);
-  $s .= "</thead>\n";
-  $s .=  "<!-- listrecords: table headers done, now the body -->\n";
+  $s .= _render_header($c, {
+    fields         => \@fields,
+    suffix         => \@suffix_info,
+    extra_attr     => \@extra_attr,
+    hdr_def        => \@hdr_def,
+    px             => \%px_override,
+    auto           => \%auto_override,
+    initial_filter => $initial_filter,
+    styles         => \@styles,
+  });
 
   my $cutoff = dateutil::datestr("%F", -7);  # a week ago, display full date
 

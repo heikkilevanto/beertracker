@@ -245,8 +245,10 @@ my @TESTS = (
   { name => "comment_new",   sets => [qw(comment comments glasses newrecords)],       test => \&test_comment_new },
   { name => "filter_board",  sets => [qw(board graph beerboard filters)],             test => \&test_filter_board },
   { name => "filter_full",   sets => [qw(full graph glasses mainlist filters)],       test => \&test_filter_full },
-  # #769 listrecords refactor: old-vs-new in-request compare — dev only,
-  # deleted with the compare scaffolding in the final #769 step
+  # #769 listrecords refactor: structural shape + old-vs-new in-request
+  # compare (dev only, deleted with the compare scaffolding in the final
+  # #769 step; listrecords_structure stays)
+  { name => "listrecords_structure", sets => [qw(listrecords http)],                    test => \&test_listrecords_structure },
   { name => "listrecords_compare", sets => [qw(listrecords http)],                    test => \&test_listrecords_compare },
   # POST round-trips — dev-guarded, never in 'quick'
   { name => "person_roundtrip", sets => [qw(posts roundtrip person persons)],         test => \&test_person_roundtrip },
@@ -377,6 +379,26 @@ sub assert_lrcompare_ok {
   assert(scalar($body !~ /lr-compare: DIFF/), "$what: no DIFF marker");
   assert(scalar($body =~ /lr-compare: OK/),   "$what: at least one OK marker");
 } # assert_lrcompare_ok
+
+# Structural shape of a rendered listrecords page: catches missing thead,
+# unclosed tables and lost tbody splitting. Not style regressions — that is
+# what the compare test is for.
+sub assert_listrecords_shape {
+  my ($body, $what) = @_;
+  assert(scalar($body =~ /<table class='listrecords'/), "$what has the listrecords table");
+  assert(scalar($body =~ /<thead>/) && scalar($body =~ m{</thead>}), "$what has a complete thead");
+  assert(scalar($body =~ /lr-filter-row/), "$what has the filter row");
+  assert(scalar($body =~ /<tbody/), "$what has at least one tbody");
+  assert(scalar($body =~ m{</table>}), "$what table is closed");
+} # assert_listrecords_shape
+
+sub test_listrecords_structure {
+  foreach my $op (qw(Brew Location Comment Photos Person short)) {
+    my ($status, $headers, $body) = req("GET", "$BASE_URL?o=$op");
+    assert_page_ok($status, $body, "List $op", "listrecords");  # <table class=...>
+    assert_listrecords_shape($body, "List $op");
+  }
+} # test_listrecords_structure
 
 sub test_listrecords_compare {
   return unless $on_dev;   # reference + compare branch exist only during #769
