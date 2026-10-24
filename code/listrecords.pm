@@ -882,8 +882,7 @@ sub listrecords {
     my $has_footer;
     for my $i (0..$#fields) { $has_footer = 1 if $suffix_info[$i]{aggregate} }
     if ($has_footer) {
-      my $fid = "lr-agg-" . int(rand(999999));
-      $s .= "<div id='$fid' data-lr-agg style='display:flex;flex-wrap:wrap;gap:0.5em 1em;padding:2px 0'>\n";
+      $s .= "<div data-lr-agg style='display:flex;flex-wrap:wrap;gap:0.5em 1em;padding:2px 0'>\n";
       for my $i (0..$#fields) {
         my $ag = $suffix_info[$i]{aggregate} or next;
         my $fn = $suffix_info[$i]{as_name} || $fields[$i];
@@ -893,7 +892,9 @@ sub listrecords {
             . "<b>" . util::htmlesc($fn) . "</b>: </span>\n";
       }
       $s .= "</div>\n";
-      $s .= "<script>document.addEventListener('DOMContentLoaded', function(){ lr_update_footer(document.getElementById('$fid')); });<\/script>\n";
+      $s .= "<script>(function(){ var d = document.currentScript.previousElementSibling;\n"
+          . "document.addEventListener('DOMContentLoaded', function(){ lr_update_footer(d); });\n"
+          . "})();<\/script>\n";
     }
   }
   if ($rowcount > 0) {
