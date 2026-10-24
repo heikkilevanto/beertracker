@@ -391,7 +391,9 @@ sub editbrew {
     $submit = "Insert";
   } else {
     $p = db::getrecord($c, "BREWS", $c->{edit});
-    print "<b>Editing Brew $p->{Id}: $p->{Name}</b><br/>\n";
+    if ( $p && $p->{Id} ) {
+      print "<b>Editing Brew $p->{Id}: $p->{Name}</b><br/>\n";
+    }
   }
   if ( $p->{Id} ) {  # found the brew
     print "\n<form method='POST' accept-charset='UTF-8' class='no-print' " .
