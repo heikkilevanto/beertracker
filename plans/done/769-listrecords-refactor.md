@@ -25,9 +25,20 @@ to match the old handlers exactly: IdClr/Alc/d/Sim/Geo keep word_split=1
 PersonName/Prod/BrewName/Chk/Photo/Day/Locations set 0. Pr|Vol split into
 exact rules (the anchored family was only those two names). Note: Day is
 now a body-only rule, so it is no longer a field_def fall-through.
-Next: step 7 (soak with the compare still in place). Working agreement:
-each numbered step is its own commit, but only when I say so after
-reviewing and testing.
+The format code-refs were subsequently extracted to named `_fmt_*` subs
+(folded into the step-6 commit at the maintainer's request, keeping the
+table as a compact dispatch summary). Step 7 done: soak with the compare
+in place — `tools/testall all` green except two pre-existing brew
+round-trip failures (the Brew list orders by last-drink and is capped at
+500 rows, so never-drunken brews sort past the cap on a full dev DB;
+fixed in separate commits: tests verify via showall=1 + the id-keyed
+edit form, and editbrew's missing-record header no longer logs
+uninitialized warnings). Mobile/initial-filter spot checks done. Step 8
+done: scaffolding deleted (`listrecordsorig.pm`, the `lrcompare` branch,
+`cache_disable` in cache.pm, the `listrecords_compare` test);
+`listrecords_structure` kept. All done — the module is refactored and
+the tooling is gone. Working agreement: each numbered step is its own
+commit, but only when I say so after reviewing and testing.
 
 ## Problem
 `listrecords.pm` is the largest module. The `listrecords` function is ~880 lines,
@@ -684,15 +695,17 @@ run it with a phone User-Agent too (same assertion, mobile styles covered).
    `$ctx` format contract including skip/data_attrs/word_split, and the
    format code-refs into the rules (see step 4). Gate: compare OK,
    `tools/testall`.
-7. **Soak with the compare still in place** — manual spot checks (list
-   below), `tools/testall all`, optionally re-run compare after a
-   `copyproddata` (the compare is data-independent — copy freely).
-8. **Delete the scaffolding** — remove `listrecordsorig.pm`, the `lrcompare`
-   branch in `listrecords()`, the `cache_disable` lines in `cache.pm`, and
-   the `listrecords_compare` test (table entry + sub) in `tools/test-http`
-   (final state should not carry dead tooling; agreed: drop `cache_disable`
-   too, not keep it). Keep `listrecords_structure`. Gate: `tools/testall all` +
-   one manual browse of the six pages. Commit.
+7. DONE. **Soak with the compare still in place** — `tools/testall all`
+   (the compare is data-independent — copyproddata ran along the way).
+   The only failures were two pre-existing brew round-trip tests, fixed
+   in separate commits. Mobile/initial-filter spot checks done via curl;
+   browser-level JS interactions left for the maintainer.
+8. DONE. **Delete the scaffolding** — `listrecordsorig.pm`, the
+   `lrcompare` branch in `listrecords()`, the `cache_disable` lines in
+   `cache.pm`, and the `listrecords_compare` test (table entry + subs)
+   in `tools/test-http` removed. `listrecords_structure` kept. Gate:
+   `tools/testall all` green (compare's 126 assertions gone, everything
+   else passes) + the six pages browsed.
 
 Commit after each numbered step. Steps 1–7 are behavior-neutral for normal
 (non-`lrcompare`) requests and independently revertable; step 0 is the only
@@ -765,3 +778,6 @@ intended rendering change; step 8 only removes scaffolding.
   future refactor that wants the same pattern.
 - **No schema or SQL changes.** All changes are Perl, confined to
   listrecords.pm, the temporary reference/scaffolding, and test tooling.
+
+(Done with a lot of help from MiMo-V2.6, first the free -Flash, then when I run
+out of openrouters daily limit, the -Pro, which cost me less than $0.50
