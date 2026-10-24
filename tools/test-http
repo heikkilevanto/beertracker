@@ -932,6 +932,12 @@ sub test_brew_roundtrip {
   # Plan Task 6: create a Brew through the web, verify it on the Brew list,
   # update it, and delete it — all through HTTP, no DB access.
   # postbrew() has a Delete branch (brews.pm:783), so the delete step works.
+  # The list orders by last drink time and the SQL is capped at 500 rows
+  # (sql_limit in listbrews), so a brand-new brew with no glasses sorts past
+  # the cap on a full dev DB — the post-insert list fetch uses showall=1 to
+  # see it. Update and delete are verified on the id-keyed edit form: those
+  # checks are precise regardless of list size (and the old list greps after
+  # update/delete could pass spuriously when the record was past the cap).
   my $name = "TST" . time() . "øl";
   get_first_id("Brew");
 
@@ -939,7 +945,7 @@ sub test_brew_roundtrip {
       { o => "Brew", e => "new", Name => $name, BrewType => "Beer", submit => "Insert Brew" });
   my $loc = assert_post_redirect($status, $headers, "Brew insert");
   return unless defined $loc;
-  ($status, $headers, $body) = req("GET", $loc);
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&showall=1");
   assert_page_ok($status, $body, "Brew list after insert", "Brews");
   assert(scalar($body =~ /\Q$name\E/), "Brew list shows the new record '$name'");
   my $id = id_before_text($body, "Brew", $name);
@@ -948,35 +954,36 @@ sub test_brew_roundtrip {
     assert(scalar($body =~ /\Qo=Brew&e=$id\E/), "the harvested id links to the Brew edit page");
   }
 
-  # Update the brew: change the name, submit, verify the old name is gone
-  # and the new one appears on the list page.
+  # Update the brew: change the name, submit, verify on the edit form.
   return unless defined $id;
   my $name2 = "TST" . time() . "updøl";
   ($status, $headers, $body) = req("POST", "$BASE_URL",
       { o => "Brew", e => $id, id => $id, Name => $name2, BrewType => "Beer", submit => "Update Brew" });
   $loc = assert_post_redirect($status, $headers, "Brew update");
   return unless defined $loc;
-  ($status, $headers, $body) = req("GET", $loc);
-  assert_page_ok($status, $body, "Brew list after update", "Brews");
-  assert(scalar($body !~ /\Q$name\E/), "Brew list no longer shows the old name '$name'");
-  assert(scalar($body =~ /\Q$name2\E/), "Brew list shows the updated name '$name2'");
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
+  assert_page_ok($status, $body, "Brew edit after update", "Editing Brew");
+  assert(scalar($body =~ /name='Name' value='\Q$name2\E'/), "edit form shows the updated name '$name2'");
+  assert(scalar($body !~ /name='Name' value='\Q$name\E'/), "edit form no longer shows the old name '$name'");
 
   # Delete the brew: POST with submit=Delete Brew, handled by postbrew()
   # (brews.pm:783). Deleting an existing brew with no child glasses should
-  # succeed.
+  # succeed. The edit page must then report the id as not found.
   ($status, $headers, $body) = req("POST", "$BASE_URL",
       { o => "Brew", e => $id, id => $id, Name => $name2, BrewType => "Beer", submit => "Delete Brew" });
   $loc = assert_post_redirect($status, $headers, "Brew delete");
   return unless defined $loc;
-  ($status, $headers, $body) = req("GET", $loc);
-  assert_page_ok($status, $body, "Brew list after delete", "Brews");
-  assert(scalar($body !~ /\Q$name2\E/), "Brew list no longer shows the deleted record '$name2'");
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
+  assert_page_ok($status, $body, "Brew edit after delete", "Oops");
+  assert(scalar($body =~ /Brew id '$id' not found/), "deleted brew id $id reports not found");
 } # test_brew_roundtrip
 
 sub test_brew_apostrophe {
   # Issue #774: a brew name with an apostrophe must survive the edit screen.
   # Single-word name: on list pages each word is wrapped in its own filter
   # span, so multi-word names are not contiguous in the raw HTML.
+  # The post-insert list fetch uses showall=1 (see test_brew_roundtrip);
+  # update and delete are verified on the id-keyed edit form.
   my $name = "TST" . time() . "øl's";
   (my $escname = $name) =~ s/'/&#39;/g;
   get_first_id("Brew");
@@ -985,7 +992,7 @@ sub test_brew_apostrophe {
       { o => "Brew", e => "new", Name => $name, BrewType => "Beer", submit => "Insert Brew" });
   my $loc = assert_post_redirect($status, $headers, "Brew apostrophe insert");
   return unless defined $loc;
-  ($status, $headers, $body) = req("GET", $loc);
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&showall=1");
   assert_page_ok($status, $body, "Brew list after apostrophe insert", "Brews");
   assert(scalar($body =~ /\Q$escname\E/), "Brew list shows the escaped name '$escname'");
   my $id = id_before_text($body, "Brew", $escname);
@@ -1000,26 +1007,28 @@ sub test_brew_apostrophe {
   assert(scalar($body !~ /name='Name' value='\Q$name\E'/),
          "edit form Name value has no raw unescaped apostrophe");
 
-  # Update the name (apostrophe kept), verify the list shows the new name
+  # Update the name (apostrophe kept), verify on the edit form
   my $name2 = "TST" . (time() + 1) . "øl's";
   (my $escname2 = $name2) =~ s/'/&#39;/g;
   ($status, $headers, $body) = req("POST", "$BASE_URL",
       { o => "Brew", e => $id, id => $id, Name => $name2, BrewType => "Beer", submit => "Update Brew" });
   $loc = assert_post_redirect($status, $headers, "Brew apostrophe update");
   return unless defined $loc;
-  ($status, $headers, $body) = req("GET", $loc);
-  assert_page_ok($status, $body, "Brew list after apostrophe update", "Brews");
-  assert(scalar($body =~ /\Q$escname2\E/), "Brew list shows the updated escaped name");
-  assert(scalar($body !~ /\Q$escname\E/), "Brew list no longer shows the old escaped name");
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
+  assert_page_ok($status, $body, "Brew edit after apostrophe update", "Editing Brew");
+  assert(scalar($body =~ /name='Name' value='\Q$escname2\E'/),
+         "edit form shows the updated escaped name");
+  assert(scalar($body !~ /name='Name' value='\Q$escname\E'/),
+         "edit form no longer shows the old escaped name");
 
-  # Delete it again
+  # Delete it again; the edit page must then report the id as not found.
   ($status, $headers, $body) = req("POST", "$BASE_URL",
       { o => "Brew", e => $id, id => $id, Name => $name2, BrewType => "Beer", submit => "Delete Brew" });
   $loc = assert_post_redirect($status, $headers, "Brew apostrophe delete");
   return unless defined $loc;
-  ($status, $headers, $body) = req("GET", $loc);
-  assert_page_ok($status, $body, "Brew list after apostrophe delete", "Brews");
-  assert(scalar($body !~ /\Q$escname2\E/), "Brew list no longer shows the deleted apostrophe name");
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
+  assert_page_ok($status, $body, "Brew edit after apostrophe delete", "Oops");
+  assert(scalar($body =~ /Brew id '$id' not found/), "deleted brew id $id reports not found");
 } # test_brew_apostrophe
 
 sub test_location_roundtrip {
