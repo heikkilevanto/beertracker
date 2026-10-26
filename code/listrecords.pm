@@ -154,26 +154,7 @@ sub _maybe_photo_colspan {
   }
 } # _maybe_photo_colspan
 
-################################################################################
-# Field definitions. An ordered rule list; first match wins. Styles are
-# verbatim from the old header if/elsif chain (including the trailing-space
-# quirks on some rules — they reach the HTML as-is, so keep them verbatim
-# when editing this table). Header lookup keys on the RAW post-suffix-strip
-# column name; body lookup keys on the as= alias when present.
-#
-# Ordering constraints (keep the old chain's order):
-#   - ^X first: it wins over everything for hidden columns.
-#   - Exact Id/IdClr/Alc rules before the Id|Alc family rule.
-#   - Exact Rate before the Rate|Rating family (CommentRating stays identity
-#     in the body), and Rate|Rating before Comment|Description (CommentRating
-#     must get the Rate style).
-#   - Id|Alc family before Comment|Description (CommentId).
-#   - Exact PersonName before the LocName|PersonName family (LocName and
-#     GlassLocName stay identity in the body); LocName|PersonName before
-#     Comment|Description (no live collision, but keep the old order).
-#   - Body-only rules (Name, CountryRegion, Prod, BrewName, Day, Locations)
-#     go last: they have no header style of their own and must not shadow
-#     the style families above.
+
 ################################################################################
 # Body value formatters. One sub per format code-ref in @FIELD_DEFS; each gets
 # the $ctx hashref (see _render_body_row) and returns the new cell value, or
@@ -539,6 +520,26 @@ sub _fmt_locations {
   return $v;
 } # _fmt_locations
 
+################################################################################
+# Field definitions. An ordered rule list; first match wins. Styles are
+# verbatim from the old header if/elsif chain (including the trailing-space
+# quirks on some rules — they reach the HTML as-is, so keep them verbatim
+# when editing this table). Header lookup keys on the RAW post-suffix-strip
+# column name; body lookup keys on the as= alias when present.
+#
+# Ordering constraints (keep the old chain's order):
+#   - ^X first: it wins over everything for hidden columns.
+#   - Exact Id/IdClr/Alc rules before the Id|Alc family rule.
+#   - Exact Rate before the Rate|Rating family (CommentRating stays identity
+#     in the body), and Rate|Rating before Comment|Description (CommentRating
+#     must get the Rate style).
+#   - Id|Alc family before Comment|Description (CommentId).
+#   - Exact PersonName before the LocName|PersonName family (LocName and
+#     GlassLocName stay identity in the body); LocName|PersonName before
+#     Comment|Description (no live collision, but keep the old order).
+#   - Body-only rules (Name, CountryRegion, Prod, BrewName, Day, Locations)
+#     go last: they have no header style of their own and must not shadow
+#     the style families above.
 my @FIELD_DEFS = (
   { re   => qr/^X/i,            style => "style='display:none'", hidden => 1 },
   { name => "Id",               style => "style='max-width:40px; text-align:center'",
@@ -957,6 +958,8 @@ sub _render {
   }
   my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where, @cache_params, $c->{mobile},
                        "lim" . ($showall ? "all" : ($sql_limit || "")));
+  # Note, the key does not cover all possible combinations, but seems to be
+  # enough for the current use cases.
   my $cached = cache::get($c, $cache_key);
   if ( defined $cached ) {
     print { $c->{log} } "listrecords: cache hit for $sql_param\n";
