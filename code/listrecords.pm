@@ -11,22 +11,19 @@ use warnings;
 use feature 'unicode_strings';
 use utf8;  # Source code and string literals are utf-8
 
-use POSIX qw(strftime localtime locale_h);
-
-# TODO - This is basically one too-long function.
+use POSIX qw(localtime);
 
 ################################################################################
 # A helper to decide to make a line break in the display format
 # Returns the string to do so, or nothing if not a TR field
 sub linebreak {
-  my $c = shift;
   my $field = shift;
   my $tags = "</tr>\n<tr>\n";  # Stop previous line and start a new one
   if ( $field =~ /^TR/i ) {
     return $tags;
   }
   return ""; # Not a line break at all
-}
+} # linebreak
 
 
 ################################################################################
@@ -52,7 +49,7 @@ sub _colspan_last_td {
   return 0 if substr($$tds_ref, $lt, $gt - $lt) =~ /colspan/i;
   substr($$tds_ref, $gt, 0) = " colspan='2'";
   return 1;
-}
+} # _colspan_last_td
 
 ################################################################################
 # Column-name suffix parsing. Each column name from the SQL can carry stacked
@@ -104,7 +101,7 @@ sub parse_field_suffixes {
       foreach my $def (@SUFFIX_DEFS) {
         my ($re, $key, $fixed) = @$def;
         if ( $base[$i] =~ s/$re// ) {
-          my $val = defined $fixed ? $fixed : $1;
+          my $val = $fixed // $1;
           $suf->{$key} = $val;
           if ( $key eq 'rowspan' ) { $extra_attr[$i] = "rowspan='$val'"; }
           if ( $key eq 'colspan' ) { $extra_attr[$i] = "colspan='$val'"; }
@@ -318,21 +315,21 @@ sub _fmt_photo {
   my $fields = $ctx->{fields};
   my $photoid;
   if ($v =~ /^(\d+):(.*)$/) {
-      $photoid = $1;
-      $v = $2;
+    $photoid = $1;
+    $v = $2;
   }
   my $editurl;
   if (defined $photoid) {
-      $editurl = "$c->{url}?o=Photos&e=$photoid";
+    $editurl = "$c->{url}?o=Photos&e=$photoid";
   } else {
-      my $id_idx;
-      for (my $j = 0; $j < scalar(@$fields); $j++) {
-          if ($fields->[$j] eq 'Id' || $fields->[$j] eq 'IdClr') {
-              $id_idx = $j;
-              last;
-          }
+    my $id_idx;
+    for (my $j = 0; $j < scalar(@$fields); $j++) {
+      if ($fields->[$j] eq 'Id' || $fields->[$j] eq 'IdClr') {
+        $id_idx = $j;
+        last;
       }
-      $editurl = "$c->{url}?o=Photos&e=$rec->[$id_idx]";
+    }
+    $editurl = "$c->{url}?o=Photos&e=$rec->[$id_idx]";
   }
   $v = photos::imagetag($c, $v, "thumb", $editurl);
   ${$ctx->{word_split}} = 0;
@@ -447,19 +444,19 @@ sub _fmt_countryregion {
   $region =~ s/^\s+|\s+$//g;
   my @parts;
   if ($region ne '' && $country eq 'Denmark') {
-      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
+    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
   } elsif ($country eq 'Denmark') {
-      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>DK</span>";
+    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>DK</span>";
   } elsif ($region ne '') {
-      my $code = $country;
-      if (exists $util::COUNTRY_CODES{$country}) {
-          $code = (split /,\s*/, $util::COUNTRY_CODES{$country})[0];
-      }
-      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($code) . "</span>";
-      push @parts, ", ";
-      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
+    my $code = $country;
+    if (exists $util::COUNTRY_CODES{$country}) {
+      $code = (split /,\s*/, $util::COUNTRY_CODES{$country})[0];
+    }
+    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($code) . "</span>";
+    push @parts, ", ";
+    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
   } elsif ($country ne '') {
-      push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($country) . "</span>";
+    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($country) . "</span>";
   }
   $v = join("", @parts);
   $v .= "&nbsp;&nbsp;" if @parts;
@@ -541,7 +538,7 @@ sub _fmt_locations {
 #     go last: they have no header style of their own and must not shadow
 #     the style families above.
 my @FIELD_DEFS = (
-  { re   => qr/^X/i,            style => "style='display:none'", hidden => 1 },
+  { re   => qr/^X/i,            style => "style='display:none'" },
   { name => "Id",               style => "style='max-width:40px; text-align:center'",
     word_split => 0, format => \&_fmt_id },
   { name => "IdClr",            style => "style='max-width:40px; text-align:center'",
@@ -624,17 +621,22 @@ sub field_def {
       last;
     }
   }
-  my %def = $rule ? %$rule : ();
+  my %def;
+  %def = %$rule if $rule;
   my $style = $def{style};
   my $mobile_style = $def{mobile_style};
   if ( !defined $style ) {
     $style = $FIELD_DEFAULT->{style};
     $mobile_style = $FIELD_DEFAULT->{mobile_style};
   }
-  $def{style} = ( $mobile && defined $mobile_style ) ? $mobile_style : $style;
+  if ( $mobile && defined $mobile_style ) {
+    $def{style} = $mobile_style;
+  } else {
+    $def{style} = $style;
+  }
   delete $def{mobile_style};
-  if ( defined $def{mobile_label} ) {
-    $def{label} = $mobile ? $def{mobile_label} : $def{label};
+  if ( $mobile && defined $def{mobile_label} ) {
+    $def{label} = $def{mobile_label};
   }
   delete $def{mobile_label};
   $def{word_split} = 1 unless exists $def{word_split};
@@ -674,7 +676,7 @@ sub _render_header {
     my $label = $def->{label};
     $label = $fields->[$i] unless defined $label;
     my $filter_events = "oninput='changefilter(this);' ondblclick='event.preventDefault(); sortTable(this,$i); return false;'";
-    my $break = linebreak($c, $fields->[$i]);
+    my $break = linebreak($fields->[$i]);
     if ( $break ) {
       _close_cont(\$s, \$hdr_cont_active);
       $hdr_contline_rest = 0;
@@ -706,26 +708,26 @@ sub _render_header {
         $hdr_contline_rest = 1;
     }
     if ( $suffix->[$i]{noheader} ) {
-        # contline chain active — keep cell open for next column
-        if ( !$hdr_contline_rest ) {
-            _close_cont(\$s, \$hdr_cont_active);
-        }
-        if ( !$suffix->[$i]{nofilter} ) {
-            push @hidden_filters, "<input type=text style='display:none' data-col='$i' $filter_events/>\n";
-        }
-        if ($hdr_contline_rest) {
-            # contline chain active — skip empty td (for multi-row header layouts)
-        } elsif ( $f =~ /^Photos?$/ ) {
-            _colspan_last_td(\$s);
-            $hdr_photo_rs_rem = $suffix->[$i]{rowspan} || 0;
-        } elsif ( $suffix->[$i]{cont} ) {
-            # noheader + cont: start empty td but keep open for next column
-            $s .= "<td $styles->[$i] $extra_attr->[$i]>\n";
-            $hdr_cont_active = 1;
-        } else {
-            $s .= "<td $styles->[$i] $extra_attr->[$i]></td>\n";
-        }
-        next;
+      # contline chain active — keep cell open for next column
+      if ( !$hdr_contline_rest ) {
+        _close_cont(\$s, \$hdr_cont_active);
+      }
+      if ( !$suffix->[$i]{nofilter} ) {
+        push @hidden_filters, "<input type=text style='display:none' data-col='$i' $filter_events/>\n";
+      }
+      if ($hdr_contline_rest) {
+        # contline chain active — skip empty td (for multi-row header layouts)
+      } elsif ( $f =~ /^Photos?$/ ) {
+        _colspan_last_td(\$s);
+        $hdr_photo_rs_rem = $suffix->[$i]{rowspan} || 0;
+      } elsif ( $suffix->[$i]{cont} ) {
+        # noheader + cont: start empty td but keep open for next column
+        $s .= "<td $styles->[$i] $extra_attr->[$i]>\n";
+        $hdr_cont_active = 1;
+      } else {
+        $s .= "<td $styles->[$i] $extra_attr->[$i]></td>\n";
+      }
+      next;
     }
 
     # Initial filter value: keyed on the raw name on both header and footer
@@ -759,12 +761,6 @@ sub _render_header {
     }
   }
   _close_cont(\$s, \$hdr_cont_active);
-  foreach my $i (keys %$px) {
-      $styles->[$i] = "style='max-width:$px->{$i}; min-width:0'";
-  }
-  foreach my $i (keys %$auto) {
-      $styles->[$i] = "";
-  }
   if ($hdr_photo_rs_rem > 0) {
     _colspan_last_td(\$s);
   }
@@ -804,7 +800,7 @@ sub _render_body_row {
     $v //= "";
 
     my $fn = $fields->[$i];
-    my $linebreak = linebreak($c,$fn);
+    my $linebreak = linebreak($fn);
     if ( $linebreak ) {
       _close_cont(\$tds, \$cont_active);
       $contline_rest = 0;
@@ -819,17 +815,17 @@ sub _render_body_row {
     $fn = $suffix->[$i]{as_name} if $suffix->[$i]{as_name};
     my $data_attrs = "data-col='$i'";
     if ( my $ag = $suffix->[$i]{aggregate} ) {
-        my $raw = $rec->[$i];
-        if (defined $raw && !ref $raw && $raw =~ /^[+-]?\d+\.?\d*$/) {
-            $data_attrs .= " data-agg-val='$raw'";
-        }
+      my $raw = $rec->[$i];
+      if (defined $raw && !ref $raw && $raw =~ /^[+-]?\d+\.?\d*$/) {
+        $data_attrs .= " data-agg-val='$raw'";
+      }
     }
     my $def = $body_def->[$i];
     my $word_split = $def->{word_split};
     # Old chain order: the Name handler wins over a _link= suffix; the
     # suffix case wins over the name rules (Id_A_link=Brew gets the link
     # markup, not the Id handler).
-    if ( $suffix->[$i]{link} && !( $fn eq "Name" && $def->{format} ) ) {
+    if ( $suffix->[$i]{link} && $fn ne "Name" ) {
       if ($v) {
         $data_attrs .= " data-sort-key='$v'";
         my $entity = $suffix->[$i]{link};
@@ -866,19 +862,19 @@ sub _render_body_row {
       $v = "<span class='null-value'>NULL</span>";
     }
     if ( $suffix->[$i]{filter} ) {
-        $word_split = 0;
-        if ($v ne '' && $v !~ /</) {
-            my $escaped = util::htmlesc($v);
-            if ($v !~ /"/) {
-                $v = "<span data-col='$i' data-filter='&quot;$escaped&quot;' onclick='fieldclick(event,this)'>$escaped</span>";
-            } else {
-                $v = "<span data-col='$i' data-filter='$escaped' onclick='fieldclick(event,this)'>$escaped</span>";
-            }
+      $word_split = 0;
+      if ($v ne '' && $v !~ /</) {
+        my $escaped = util::htmlesc($v);
+        if ($v !~ /"/) {
+          $v = "<span data-col='$i' data-filter='&quot;$escaped&quot;' onclick='fieldclick(event,this)'>$escaped</span>";
+        } else {
+          $v = "<span data-col='$i' data-filter='$escaped' onclick='fieldclick(event,this)'>$escaped</span>";
         }
+      }
     }
     if ( $suffix->[$i]{nofilter} ) {
       if ( $v !~ /</ ) {
-          $v = util::htmlesc($v);
+        $v = util::htmlesc($v);
       }
       $word_split = 0;
     }
@@ -889,9 +885,9 @@ sub _render_body_row {
     $cell_events = "" if ($suffix->[$i]{nofilter});
     my $cell;
     if (length $v) {
-        $cell = "<span ${data_attrs}${cell_events}>$v</span>\n";
+      $cell = "<span ${data_attrs}${cell_events}>$v</span>\n";
     } else {
-        $cell = "";
+      $cell = "";
     }
     if ($cont_active) {
       $tds .= $cell;
@@ -913,117 +909,18 @@ sub _render_body_row {
 } # _render_body_row
 
 ################################################################################
-# listrecords - thin dispatcher. The rendering body lives in _render().
+# _render_toolbar - the header bar with buttons and page navigation
 ################################################################################
-
-sub listrecords {
-  my $c = shift;
-  my $sql_param = shift;
-  my $opt = shift || {};
-
-  return _render($c, $sql_param, $opt);
-} # listrecords
-
-################################################################################
-# _render - the actual listrecords body
-################################################################################
-
-sub _render {
-  my $c = shift;
-  my $sql_param = shift;
-  my $opt = shift || {};
-  my $where          = $opt->{where}          || "";
-  my $params         = $opt->{params};
-  my $extraparams    = $opt->{extraparams};
-  my $maxrecords     = $opt->{maxrecords}     || 20;
-  my $browsersortcol = $opt->{browsersortcol};
-  my $title          = $opt->{title}          || "";
-  my $initial_filter = $opt->{initial_filter} || {};
-  my $no_new_link    = $opt->{no_new_link}    || 0;
-  my $hide_headers_default = $opt->{hide_headers_default} || 0;
-  my $allbutton    = $opt->{allbutton}    || 0;
-  my $gap_column = $opt->{gap_column};
-  my $norecmessage = $opt->{norecmessage};
-  my $sql_limit    = $opt->{sql_limit};
-
-  my $showall = 0;
-  if ($sql_limit) {
-    $showall = util::param($c, "showall") ? 1 : 0;
-  }
-
-  my @cache_params = ();
-  if ($params) {
-    if (ref $params eq 'ARRAY') { @cache_params = @$params; }
-    else { @cache_params = ($params); }
-  }
-  my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where, @cache_params, $c->{mobile},
-                       "lim" . ($showall ? "all" : ($sql_limit || "")));
-  # Note, the key does not cover all possible combinations, but seems to be
-  # enough for the current use cases.
-  my $cached = cache::get($c, $cache_key);
-  if ( defined $cached ) {
-    print { $c->{log} } "listrecords: cache hit for $sql_param\n";
-    return $cached;
-  }
-
-  my @fields;
-  my $intro_sth = db::query($c, "$sql_param LIMIT 0");
-  @fields = @{$intro_sth->{NAME}};
-  $intro_sth->finish;
-  my $parsed = parse_field_suffixes(\@fields);
-  @fields = @{$parsed->{base}};
-  my @extra_attr = @{$parsed->{extra_attr}};
-  my %px_override = %{$parsed->{px}};
-  my %auto_override = %{$parsed->{auto}};
-  my @suffix_info = @{$parsed->{suffix}};  # array of hashrefs, one per column
-  foreach my $warnmsg (@{$parsed->{warnings}}) {
-    print { $c->{log} } "WARNING: listrecords: $warnmsg (sql: $sql_param)\n";
-  }
-  my $gap_col_idx = -1;
-  if ($gap_column) {
-    for (my $i = 0; $i < scalar(@fields); $i++) {
-      if ($fields[$i] eq $gap_column) {
-        $gap_col_idx = $i;
-        last;
-      }
-    }
-  }
-
-  $where = "WHERE $where" if ($where);
-
-  my $sql = "SELECT * FROM ($sql_param) $where";
-  my $truncated = 0;
-  if ($sql_limit && !$showall) {
-    $sql_limit = int($sql_limit);
-    # Fetch one extra row to detect truncation
-    $sql .= " LIMIT " . ($sql_limit + 1);
-  }
-  my @paramarr = ();
-  if ( $params ) {
-    if (ref $params eq 'ARRAY') { @paramarr = @$params; }
-    else { @paramarr = ($params); }
-  }
-  my $list_sth = db::query($c, $sql);
-  $list_sth = db::query($c, $sql, @paramarr) if (@paramarr);
-  if ( $norecmessage ) {
-    my $peek = $list_sth->fetchrow_arrayref;
-    if ( !$peek ) {
-      $list_sth->finish;
-      return "<i>" . util::htmlesc($norecmessage) . "</i>\n";
-    }
-    $list_sth->finish;
-    $list_sth = db::query($c, $sql);
-    $list_sth = db::query($c, $sql, @paramarr) if (@paramarr);
-  }
-
+sub _render_toolbar {
+  my ($c, $opt) = @_;
   my $url = $c->{url};
   my $op = $c->{op};
+  my $title = $opt->{title};
+  my $maxrecords = $opt->{maxrecords};
+  my $no_new_link = $opt->{no_new_link};
+  my $allbutton = $opt->{allbutton};
 
   my $s = "";
-  $s .= "<!-- listrecords: $sql -->\n";
-
-  # Header bar — always rendered, two lines
-  $s .= "<div class='lr-wrapper' data-lr-wrapper data-initial-pagesize='$maxrecords'>\n";
   $s .= "<div class='lr-bar' style='display:flex; flex-direction:column; gap:2px;'>\n";
   $s .= "  <div style='display:flex; align-items:center; gap:4px;'>\n";
   $s .= "    <span class='lr-count'>0</span>&nbsp;<b>$title</b>\n";
@@ -1061,6 +958,14 @@ sub _render {
   $s .= "    <a href='#' class='lr-next' onclick='return lr_page(this,1)'><span>Next</span></a>\n";
   $s .= "  </div>\n";
   $s .= "</div>\n";
+  return $s;
+} # _render_toolbar
+
+################################################################################
+# _render_help_popup - the help popup with sorting/filtering instructions
+################################################################################
+sub _render_help_popup {
+  my $s = "";
   $s .= "<div class='lr-help-popup' id='lr-help-popup'>\n";
   $s .= "  <span class='lr-help-popup-close' onclick='lr_hidehelp()'>&times;</span>\n";
   $s .= "  <h3>Sorting &amp; Filtering</h3>\n";
@@ -1073,6 +978,107 @@ sub _render {
   $s .= "    <li><b>Navigate</b>: use the page size selector, <b>Prev</b>/<b>Next</b>, or the page dropdown to move between pages.</li>\n";
   $s .= "  </ul>\n";
   $s .= "</div>\n";
+  return $s;
+} # _render_help_popup
+
+################################################################################
+# listrecords - the main entry point
+################################################################################
+
+sub listrecords {
+  my $c = shift;
+  my $sql_param = shift;
+  my $opt = shift || {};
+  my $where          = $opt->{where}          || "";
+  my $params         = $opt->{params};
+  my $extraparams    = $opt->{extraparams};
+  my $maxrecords     = $opt->{maxrecords}     || 20;
+  my $browsersortcol = $opt->{browsersortcol};
+  my $title          = $opt->{title}          || "";
+  my $initial_filter = $opt->{initial_filter} || {};
+  my $no_new_link    = $opt->{no_new_link}    || 0;
+  my $hide_headers_default = $opt->{hide_headers_default} || 0;
+  my $allbutton    = $opt->{allbutton}    || 0;
+  my $gap_column = $opt->{gap_column};
+  my $norecmessage = $opt->{norecmessage};
+  my $sql_limit    = $opt->{sql_limit};
+
+  my $showall = 0;
+  if ($sql_limit) {
+    $showall = util::param($c, "showall") ? 1 : 0;
+  }
+
+  my @paramarr = ();
+  if ($params) {
+    if (ref $params eq 'ARRAY') { @paramarr = @$params; }
+    else { @paramarr = ($params); }
+  }
+  my $cache_key = join("\x1e", "listrecords", $c->{username}, $sql_param, $where, @paramarr, $c->{mobile},
+                       "lim" . ($showall ? "all" : ($sql_limit || "")));
+  # Note, the key does not cover all possible combinations, but seems to be
+  # enough for the current use cases.
+  my $cached = cache::get($c, $cache_key);
+  if ( defined $cached ) {
+    print { $c->{log} } "listrecords: cache hit for $sql_param\n";
+    return $cached;
+  }
+
+  my $intro_sth = db::query($c, "$sql_param LIMIT 0");
+  my @fields = @{$intro_sth->{NAME}};
+  $intro_sth->finish;
+  my $parsed = parse_field_suffixes(\@fields);
+  @fields = @{$parsed->{base}};
+  my @extra_attr = @{$parsed->{extra_attr}};
+  my %px_override = %{$parsed->{px}};
+  my %auto_override = %{$parsed->{auto}};
+  my @suffix_info = @{$parsed->{suffix}};  # array of hashrefs, one per column
+  foreach my $warnmsg (@{$parsed->{warnings}}) {
+    print { $c->{log} } "WARNING: listrecords: $warnmsg (sql: $sql_param)\n";
+  }
+  my $gap_col_idx = -1;
+  if ($gap_column) {
+    for (my $i = 0; $i < scalar(@fields); $i++) {
+      if ($fields[$i] eq $gap_column) {
+        $gap_col_idx = $i;
+        last;
+      }
+    }
+  }
+
+  $where = "WHERE $where" if ($where);
+
+  my $sql = "SELECT * FROM ($sql_param) $where";
+  my $truncated = 0;
+  if ($sql_limit && !$showall) {
+    $sql_limit = int($sql_limit);
+    # Fetch one extra row to detect truncation
+    $sql .= " LIMIT " . ($sql_limit + 1);
+  }
+  my $list_sth = db::query($c, $sql, @paramarr);
+  my @firstrec;
+  if ( $norecmessage ) {
+    @firstrec = $list_sth->fetchrow_array;
+    if ( !@firstrec ) {
+      $list_sth->finish;
+      return "<i>" . util::htmlesc($norecmessage) . "</i>\n";
+    }
+  }
+
+  my $url = $c->{url};
+  my $op = $c->{op};
+
+  my $s = "";
+  $s .= "<!-- listrecords: $sql -->\n";
+
+  # Header bar — always rendered, two lines
+  $s .= "<div class='lr-wrapper' data-lr-wrapper data-initial-pagesize='$maxrecords'>\n";
+  $s .= _render_toolbar($c, {
+    title       => $title,
+    maxrecords  => $maxrecords,
+    no_new_link => $no_new_link,
+    allbutton   => $allbutton,
+  });
+  $s .= _render_help_popup();
   if ($hide_headers_default || $allbutton) {
     $s .= "<script>(function(w){w.classList.add('lr-compact');})(document.currentScript.parentElement);<\/script>\n";
   }
@@ -1132,7 +1138,9 @@ sub _render {
   };
 
   my ($rowcount, $prev_gap) = (0, 0);
-  while ( my @rec = $list_sth->fetchrow_array ) {
+  my @rec = @firstrec;
+  @rec = $list_sth->fetchrow_array unless @rec;
+  while ( @rec ) {
     if ($sql_limit && !$showall && $rowcount >= $sql_limit) {
       # We fetched one extra row beyond the limit — mark truncated and stop
       $truncated = 1;
@@ -1158,6 +1166,7 @@ sub _render {
     $s .= "<tbody data-lr-fs='1'$hidden_style>\n";
     $s .= $tr;
     $s .= "</tbody>\n";
+    @rec = $list_sth->fetchrow_array;
   }
   if ($rowcount == 0) {
     $s .= "<tbody data-lr-fs='1'></tbody>\n";
@@ -1227,7 +1236,7 @@ sub _render {
 
   cache::set($c, $cache_key, $s);
   return $s;
-}
+} # listrecords
 
 ################################################################################
 # Split cell text by whitespace into individual clickable words.
@@ -1236,20 +1245,20 @@ sub _render {
 # column via the nearest data-col ancestor. The JS strips non-allowed
 # characters on click.
 sub _word_spans {
-    my $v = shift;
-    return $v if $v eq '';
+  my $v = shift;
+  return $v if $v eq '';
 
-    my @segments = grep { length } split /\s+/, $v;
+  my @segments = grep { length } split /\s+/, $v;
 
-    return util::htmlesc($v) unless @segments;
+  return util::htmlesc($v) unless @segments;
 
-    my @spans;
-    foreach my $seg (@segments) {
-        push @spans, "<span class='fw'>" . util::htmlesc($seg) . "</span>";
-    }
+  my @spans;
+  foreach my $seg (@segments) {
+    push @spans, "<span class='fw'>" . util::htmlesc($seg) . "</span>";
+  }
 
-    return join(" ", @spans);
-}
+  return join(" ", @spans);
+} # _word_spans
 
 ################################################################################
 1; # Tell perl that the module loaded fine

@@ -814,12 +814,12 @@ sub test_lr_suffixes {
 } # test_lr_suffixes
 
 sub test_lr_helpers {
-  # linebreak: only TR* fields break; $c is unused
-  assert(listrecords::linebreak(undef, "TR1") eq "</tr>\n<tr>\n",
+  # linebreak: only TR* fields break
+  assert(listrecords::linebreak("TR1") eq "</tr>\n<tr>\n",
          "linebreak TR1 returns row break");
-  assert(listrecords::linebreak(undef, "TRfoo") eq "</tr>\n<tr>\n",
+  assert(listrecords::linebreak("TRfoo") eq "</tr>\n<tr>\n",
          "linebreak TR prefix is enough");
-  assert(listrecords::linebreak(undef, "Name") eq "",
+  assert(listrecords::linebreak("Name") eq "",
          "linebreak non-TR returns empty");
 
   # _word_spans: one span per whitespace-separated word, html-escaped
@@ -944,7 +944,6 @@ sub test_lr_fielddef {
   foreach my $name (qw(xUsername X_Gap)) {
     $def = listrecords::field_def($name, 0);
     assert($def->{style} eq "style='display:none'", "fielddef $name display:none");
-    assert($def->{hidden} == 1, "fielddef $name hidden flag");
   }
 
   # Mobile variants: Type and Geo style/label
