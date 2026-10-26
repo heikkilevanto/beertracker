@@ -23,6 +23,7 @@ use Cwd qw(cwd);
 use File::Copy;
 use Time::Piece;
 use Time::HiRes qw(gettimeofday);
+use Unicode::Normalize qw(NFC);  # Core Perl module
 
 # Text::LevenshteinXS - for calculating string similarity (edit distance)
 # Alternative: use Text::Levenshtein qw(distance); # pure Perl version

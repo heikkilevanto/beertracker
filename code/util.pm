@@ -11,6 +11,7 @@ use POSIX qw(strftime localtime);
 use Carp qw(longmess);
 use JSON;
 use URI::Escape qw(uri_escape_utf8);
+use Unicode::Normalize qw(NFC);  # Core Perl module
 
 
 ################################################################################
@@ -115,11 +116,16 @@ sub param {
   util::error("No context c ") unless $c;
   util::error("No cgi in c") unless $c->{cgi};
   my $val = $c->{cgi}->param($tag) // $def;
+  # Normalize to precomposed form (NFC): turns e+combining-acute into ê,
+  # so we only need to match precomposed letters below, not combining marks.
+  $val = NFC($val);
   # Apostrophes are allowed (issue #774: scraped beer names contain them);
   # they are escaped at output time by htmlesc/jssq instead.
-  $val =~ s/[^"a-zA-ZñÑåÅæÆøØÅöÖäÄéÉáÁāĀüÜß\/ 0-9.,&:\(\)\[\]?%!#=_'-]/_/g;
+  # \p{L} matches any Unicode letter (Latin, Greek, Cyrillic, ...), which
+  # covers European diacritics without listing them explicitly.
+  $val =~ s/[^\p{L}\/ 0-9.,&:\(\)\[\]?%!#=_°'-]/_/g;
   return $val;
-}
+} # param
 
 # Normalise a Tags field: strip leading '#' from each word, collapse whitespace.
 sub clean_tags {
