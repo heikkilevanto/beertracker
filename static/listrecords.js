@@ -500,6 +500,11 @@ function lr_updateInfo(table, currPage, totalVisible, totalPages) {
     const grandTotal = Array.from(table.tBodies).filter(function(t) { return t.rows.length > 0; }).length;
     if (table.dataset.lrFiltering === '1') {
       countSpan.textContent = '…/' + grandTotal + ' ';
+    } else if (wrapper.dataset.lrTruncated && totalVisible >= grandTotal) {
+      // Truncated list, no active filtering: show "Recent: N" on desktop, "N+" on mobile
+      countSpan.textContent = wrapper.dataset.lrMobile
+        ? grandTotal + '+ '
+        : 'Recent: ' + grandTotal + ' ';
     } else {
       countSpan.textContent = totalVisible < grandTotal ? totalVisible + '/' + grandTotal + ' ' : grandTotal + ' ';
     }

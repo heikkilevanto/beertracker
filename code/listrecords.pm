@@ -1192,7 +1192,15 @@ sub listrecords {
     }
   }
   if ($rowcount > 0) {
-    $s .= "<script>var c=document.querySelector('[data-lr-wrapper] .lr-count');if(c)c.textContent='$rowcount ';<\/script>\n";
+    # Set count and truncation info on the wrapper; lr_updateInfo in
+    # listrecords.js reads these to show "Recent: N" when truncated.
+    my $count_text = "$rowcount ";
+    my $trunc_attr = "";
+    if ($truncated) {
+      $trunc_attr = "w.dataset.lrTruncated='$sql_limit';";
+      $trunc_attr .= "w.dataset.lrMobile='1';" if ($c->{mobile});
+    }
+    $s .= "<script>var w=document.querySelector('[data-lr-wrapper]');if(w){$trunc_attr var c=w.querySelector('.lr-count');if(c)c.textContent='$count_text';}</script>\n";
   }
   if ($truncated) {
     $s .= "<div class='lr-truncated' style='padding:4px 0; color:#888'>\n";
