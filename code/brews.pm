@@ -151,97 +151,46 @@ sub listbrewglasses {
   my $c = shift; # context
   my $brew = shift;
   print "<!-- listbrewglasses -->\n";
-  my $sql = "
-    SELECT
-      COMMENTS.Id AS Cid,
-      strftime('%Y-%m-%d', GLASSES.Timestamp,'-06:00') AS Date,
-      strftime('%H:%M', GLASSES.Timestamp) AS Time,
-      comments.Rating AS Rating,
-      COMMENTS.Comment,
-      GLASSES.Id AS Gid,
-      GLASSES.Brew AS Brew,
-      GLASSES.Volume,
-      GLASSES.Price,
-      LOCATIONS.Name AS Loc,
-      LOCATIONS.Id AS Lid
-      FROM GLASSES
-      LEFT JOIN COMMENTS ON COMMENTS.Glass = GLASSES.Id
-      LEFT JOIN LOCATIONS ON LOCATIONS.Id = GLASSES.Location
-      WHERE GLASSES.Brew = ?
-        AND GLASSES.username = ?
-      ORDER BY GLASSES.Timestamp DESC ";
-  my $sth = db::query($c, $sql, $brew->{Id}, $c->{username});
-  my $glcount = 0;
-  my %years;
-  my $firstrec;
-  my $lastrec;
-  while ( my $com = $sth->fetchrow_hashref ) {
-    $glcount++;
-    $firstrec = $com unless($firstrec);
-    $lastrec = $com;
-    my $year = substr($com->{Date}, 0, 4);
-    push @{$years{$year}}, $com;
-  }
   print "<div onclick='toggleElement(this.nextElementSibling);'><br/>";
   print "When and where: </div>\n";
   print "<div style='overflow-x: auto; display:none'>\n";
-  my $latest_year = (sort {$b cmp $a} keys %years)[0] if %years;
-  for my $year (sort {$b cmp $a} keys %years) {
-    my $count = scalar @{$years{$year}};
-    my $display = 'display: none; ';
-    $display = '' if ($year eq $latest_year);
-    print "<div style='overflow-x: auto; $display'>\n";
-    print "<br><div style='font-weight: bold;'>$year</div>\n";
-    print "<table style='white-space: nowrap;'>\n";
-    for my $com (@{$years{$year}}) {
-      print "<tr><td>\n";
-      print "<span style='font-size: xx-small'>" .
-            "[$com->{Gid}]</span></td>\n";
-      print "<td><a href='$c->{url}?o=Full&e=$com->{Gid}'><span>";
-      print "$com->{Date} </span></a>";
-      my $tim = $com->{Time};
-      $tim = "($tim)" if ($tim lt "06:00");
-      print "$tim\n";
-      print "</td>\n";
-
-      print "<td>\n";
-      print util::unit($com->{Volume},"c")   if ( $com->{Volume} ) ;
-      print "</td><td>\n";
-
-      print util::unit($com->{Price},",-")   if ( $com->{Price} ) ;
-      print "</td><td>\n";
-
-      if ( $com->{Rating} ) {
-        print "<b>($com->{Rating})</b>" ;
-      } elsif ( $com->{Comment} ) {
-        print "<b>(*)</b>\n"  ;
-      }
-      print "</td><td>\n";
-
-      print "<a href='$c->{url}?o=Location&e=$com->{Lid}' ><span>@<b>$com->{Loc}</b></span></a> &nbsp;";
-      print "</td>\n";
-      print "</tr>\n";
-    }
-    print "</table>\n";
-    print "</div>\n";
-    print "<div onclick='toggleElement(this.previousElementSibling);' style='cursor: pointer;'>";
-    print "<b>$count</b> times in <b>$year</b></div>\n";
-  }
+  # One row per glass: comments are pulled with correlated subqueries, so a
+  # glass with several comments does not appear more than once. All glasses
+  # are fetched (no sql_limit) so client-side filtering sees the whole
+  # history - typing a year in the Date column replaces the old year summaries.
+  my $sql = qq{
+    SELECT
+      g.Id AS "Id_A_link=Full_noheader_nofilter",
+      strftime('%Y-%m-%d', g.Timestamp, '-06:00') AS "Date",
+      CASE WHEN strftime('%H:%M', g.Timestamp) < '06:00'
+           THEN '(' || strftime('%H:%M', g.Timestamp) || ')'
+           ELSE strftime('%H:%M', g.Timestamp) END AS "Time",
+      g.Volume AS "Vol",
+      g.Price AS "Pr",
+      (SELECT c.Rating FROM comments c
+        WHERE c.Glass = g.Id AND c.Rating IS NOT NULL AND c.Rating != ''
+        ORDER BY c.Id DESC LIMIT 1) AS "Rating_as=Rate",
+      (CASE WHEN (SELECT count(*) FROM comments c
+                  WHERE c.Glass = g.Id
+                    AND c.Comment IS NOT NULL AND c.Comment != '') > 0
+            THEN '*' ELSE '' END) AS "Com",
+      loc.Id   AS "Lid_A_link=Location_noheader_cont",
+      loc.Name AS "Location_A_as=LocName_cont"
+    FROM glasses g
+    LEFT JOIN locations loc ON loc.Id = g.Location
+    WHERE g.Brew = ?
+      AND g.Username = ?
+    ORDER BY g.Timestamp DESC};
+  print listrecords::listrecords($c, $sql, {
+      params => [$brew->{Id}, $c->{username}],
+      title => "Glasses",
+      maxrecords => 5,
+      no_new_link => 1,
+      allbutton => 1,
+      hide_headers_default => 1,
+      norecmessage => "Not a single glass",
+  });
   print "</div>\n";
-  print "<div onclick='toggleElement(this.previousElementSibling);'><br/>";
-  if ( $glcount) {
-    my $first = dateutil::reldate($firstrec->{Date});
-    my $last  = dateutil::reldate($lastrec->{Date});
-    if ( $first eq $last ) {
-      print "$glcount Glasses on $first\n";
-    } else {
-      print "$glcount Glasses between $first and $last\n";
-    }
-  } else {
-    print "Not a single glass";
-  }
-  print "</div>";
-  $sth->finish;
   print "<!-- listbrewglasses end -->\n";
   print "<hr/>\n";
 

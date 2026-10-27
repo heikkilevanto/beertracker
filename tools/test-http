@@ -462,6 +462,15 @@ sub test_brew_edit {
   if ( !defined $id ) { skipmsg("Brew list has no ids to edit"); return; }
   my ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
   assert_page_ok($status, $body, "Brew edit", "Editing Brew");
+
+  # Issue #768: "When and where" renders the brew's glasses through
+  # listrecords (5 most recent by default), the per-year summaries are gone.
+  assert(scalar($body =~ /When and where:/), "Brew edit has the 'When and where' section");
+  assert(scalar($body !~ /times in <b>\d{4}/), "Brew edit has no per-year glass summaries");
+  if ( $body !~ /Not a single glass/ ) {
+    assert(scalar($body =~ /Id_A_link=Full_noheader_nofilter/), "Brew edit lists its glasses via listrecords");
+    assert(scalar($body =~ /<table class='listrecords'/), "Brew edit glasses list has the listrecords table");
+  }
 } # test_brew_edit
 
 sub test_location_edit {
