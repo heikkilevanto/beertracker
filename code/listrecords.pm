@@ -281,6 +281,19 @@ sub _fmt_d {
   return $v;
 } # _fmt_d
 
+sub _fmt_g {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  if (defined $v && $v ne '') {
+    ${$ctx->{data_attrs}} .= " data-sort-key='$v'";
+    ${$ctx->{data_attrs}} .= " data-col='$ctx->{i}' data-filter='$v' onclick='fieldclick(event,this)'";
+    $v = sprintf('%d', $v) . "<span style='font-size: xx-small'>g</span> ";
+  } else {
+    $v = "";
+  }
+  return $v;
+} # _fmt_g
+
 sub _fmt_pr {
   my ($ctx) = @_;
   my $v = $ctx->{v};
@@ -489,7 +502,8 @@ sub _fmt_day {
   if ($v) {
     my ($date, $wd) = dateutil::splitdate($v);
     $wd =~ s/Sun/<b>Sun<\/b>/;
-    $v = "<a href='$ctx->{url}?o=Graph&date=$date&ndays=1'><span>$date $wd</span></a>";
+    my $label = $wd ? "$date $wd" : $date;
+    $v = "<a href='$ctx->{url}?o=Graph&date=$date&ndays=1'><span>$label</span></a>";
   }
   return $v;
 } # _fmt_day
@@ -558,7 +572,9 @@ my @FIELD_DEFS = (
   { name => "Type",             style => "style='max-width:200px; text-align:center'",
     mobile_style => "style='max-width:100px; text-align:center'",
     word_split => 0, format => \&_fmt_type },
-  { re   => qr/^(Com|Count)$/,  style => "style='text-align:right; max-width:50px'" },
+  { name => "Count",            style => "style='text-align:right; max-width:50px'",
+    format => \&_fmt_g },
+  { re   => qr/^Com$/,          style => "style='text-align:right; max-width:50px'" },
   { name => "d",                style => "style='text-align:right; max-width:50px'",
     format => \&_fmt_d },
   { name => "Pr",               style => "style='text-align:right; max-width:35px'",
@@ -575,6 +591,8 @@ my @FIELD_DEFS = (
     style => "style='text-align:center; font-weight:bold; max-width:50px'" },
   { name => "Chk",              style => "style='text-align:center;max-width:50px'",
     no_events => 1, word_split => 0, format => \&_fmt_chk },
+  { name => "Wd",               style => "style='text-align:center; max-width:40px'" },
+  { re   => qr/^(Start|End)$/,  style => "style='text-align:center; max-width:55px'" },
   # Exact PersonName before the LocName|PersonName family: LocName and
   # GlassLocName stay identity in the body (old no-op handler).
   { name => "PersonName",       style => "style='font-weight: bold; max-width:200px;' ",
@@ -597,7 +615,9 @@ my @FIELD_DEFS = (
   { name => "CountryRegion",    word_split => 0, format => \&_fmt_countryregion },
   { name => "Prod",             word_split => 0, format => \&_fmt_prod },
   { name => "BrewName",         word_split => 0, format => \&_fmt_brewname },
-  { name => "Day",              word_split => 0, format => \&_fmt_day },
+  { name => "Day",              style => "style='max-width:100px; min-width:0'",
+    mobile_style => "style='max-width:90px; min-width:0'",
+    word_split => 0, format => \&_fmt_day },
   { name => "Locations",        word_split => 0, format => \&_fmt_locations },
 );
 # Fall-through (no match): default style, word_split => 1, identity format.
@@ -1182,7 +1202,7 @@ sub listrecords {
         my $fn = $suffix_info[$i]{as_name} || $fields[$i];
         my $rate_attr = "";
         $rate_attr = " data-rate='1'" if ($fn =~ /Rate|Rating/);
-        $s .= "<span data-col='$i' data-aggregate='$ag'$rate_attr style='white-space:nowrap'>"
+        $s .= "<span data-col='$i' data-aggregate='$ag' data-fn='$fn'$rate_attr style='white-space:nowrap'>"
             . "<b>" . util::htmlesc($fn) . "</b>: </span>\n";
       }
       $s .= "</div>\n";

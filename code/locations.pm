@@ -109,52 +109,43 @@ sub listlocations {
 ################################################################################
 # List location visits
 ################################################################################
-# TODO - Make the month+count a link to the mainlist, with filtering for the
-# location and date range in that month. If I want to have filtering in the main
+# One row per date with at least one glass. Most recent dates first, 5 shown
+# by default with an All button. The date links to the mainlist for that day.
 sub locationvisits {
   my $c = shift;
   my $locrec = shift;
-  my @monthnames = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
   my $listsql = q{
     SELECT
-       strftime ('%Y-%m', timestamp,'-06:00') AS month,
-       count( distinct( strftime( '%d', timestamp, '-06:00' ) ) ) AS daycount
+      date(timestamp, '-06:00') AS "Day",
+      CASE strftime('%w', timestamp, '-06:00')
+        WHEN '0' THEN 'Sun' WHEN '1' THEN 'Mon' WHEN '2' THEN 'Tue'
+        WHEN '3' THEN 'Wed' WHEN '4' THEN 'Thu' WHEN '5' THEN 'Fri'
+        WHEN '6' THEN 'Sat'
+      END AS "Wd",
+      CASE WHEN strftime('%H:%M', MIN(timestamp)) < '06:00'
+           THEN '(' || strftime('%H:%M', MIN(timestamp)) || ')'
+           ELSE strftime('%H:%M', MIN(timestamp)) END AS "Start",
+      CASE WHEN strftime('%H:%M', MAX(timestamp)) < '06:00'
+           THEN '(' || strftime('%H:%M', MAX(timestamp)) || ')'
+           ELSE strftime('%H:%M', MAX(timestamp)) END AS "End",
+      ROUND(SUM(Price), 0) AS "Pr_sum",
+      ROUND(SUM(StDrinks), 1) AS "d_sum",
+      count(*) AS "Count"
     FROM glasses
     WHERE Location = ?
       AND username = ?
-    GROUP BY month
-    ORDER BY timestamp
+    GROUP BY date(timestamp, '-06:00')
+    ORDER BY date(timestamp, '-06:00') DESC
   };
-  my $sth = db::query($c, $listsql, $locrec->{Id}, $c->{username} );
-  my $currentyear = "";
-  my ( $y, $m, $d );
-  my $totalvisits = 0;
-  my $table_html = "";
-  while ( my $visit = db::nextrow($sth)) {
-    my $eff = $visit->{month};
-    ( $y, $m ) = split('-', $eff );
-    if ( $y ne $currentyear ) {
-      $table_html .= "<br>\n";
-      $table_html .= "<b>$y:</b> ";
-      $currentyear=$y;
-    }
-    $table_html .= "$monthnames[$m-1]: <b>$visit->{daycount}</b> ";
-    $totalvisits += $visit->{daycount};
-  }
-  $table_html .= "<br/>\n";
-  $sth->finish;
-  return if $totalvisits == 0;
-
-  print "<div onclick='toggleElement(this.nextElementSibling);'>";
-  print "<b>$totalvisits visits to $locrec->{Name}</b> [$locrec->{Id}]";
-  print "</div>\n";
-  print "<div style='display:none'>";
-  print $table_html;
-  print "<div onclick='toggleElement(this.parentElement);'>";
-  print "Total $totalvisits visits";
-  print "</div>\n";
-  print "</div>\n";
-
+  print listrecords::listrecords($c, $listsql, {
+      params => [$locrec->{Id}, $c->{username}],
+      title => "Visits",
+      maxrecords => 5,
+      allbutton => 1,
+      hide_headers_default => 1,
+      no_new_link => 1,
+      norecmessage => "No visits",
+  });
   print "<hr/>\n";
 } # locationvisits
 
@@ -355,7 +346,8 @@ sub editlocation {
 
           hide_headers_default => 1,
           no_new_link => 1,
-          maxrecords => 10,
+          maxrecords => 5,
+          allbutton => 1,
           norecmessage => "No comments",
       });
       print "<hr/>\n";
@@ -370,10 +362,11 @@ sub editlocation {
                        AND xUsername = ?},
             params => [$p->{Id}, $p->{Id}, $c->{username}],
             title => "Producer comments",
-  
+
             hide_headers_default => 1,
             no_new_link => 1,
-            maxrecords => 10,
+            maxrecords => 5,
+            allbutton => 1,
             norecmessage => "No producer comments",
         });
         print "<hr/>\n";

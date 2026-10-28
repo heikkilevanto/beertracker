@@ -28,12 +28,12 @@ function changefilter (inputElement) {
   }, 300); // Adjust delay as needed}
 }
 
-function dochangefilter (inputElement, done) {
+function dochangefilter (inputElement, done, keepcompact) {
   const table = inputElement.closest('table');
   if (!table) return;
   const gen = lrTableGen(table) + 1; // claim this pass's generation
   lrFilterGen.set(table, gen);
-  table.closest('[data-lr-wrapper]')?.classList.remove('lr-compact');
+  if (!keepcompact) table.closest('[data-lr-wrapper]')?.classList.remove('lr-compact');
 
   const filterinputs = table.querySelectorAll('thead input');
 
@@ -608,7 +608,12 @@ function lr_update_footer(aggEl) {
     if (ag === 'sum') result = sum;
     else if (ag === 'avg') result = count ? (sum / count).toFixed(1) : '';
     else if (ag === 'cnt') result = count;
-    if (cell.dataset.rate && result !== '' && ag === 'avg') {
+    const fn = cell.dataset.fn;
+    if (fn === 'd' && result !== '') {
+      cell.textContent = Number(result).toFixed(1) + 'd';
+    } else if (fn === 'Pr' && result !== '') {
+      cell.textContent = Math.round(result) + '.-';
+    } else if (cell.dataset.rate && result !== '' && ag === 'avg') {
       let rclass = 'rating-gold';
       if (result <= 3) rclass = 'rating-rubbish';
       else if (result <= 5) rclass = 'rating-bronze';
@@ -643,8 +648,8 @@ function autoFilterTable(col, token) {
       });
       if (hasData) {
         input.value = '';
-        dochangefilter(input);
+        dochangefilter(input, null, true);
       }
     }
-  });
+  }, true);
 }
