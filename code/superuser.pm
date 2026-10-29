@@ -25,6 +25,22 @@ my $STARTUP_DIR = abs_path(cwd());
 use URI::Escape qw(uri_escape_utf8);
 
 ################################################################################
+# Verify that the user is a superuser
+################################################################################
+# TODO - This could be stored in $c, or even retrieved from the db. For now,
+# a simple check is sufficient
+sub checksuperuser {
+  my $c = shift;
+  util::error("Not allowed") unless $c->{username} eq "heikki";
+}
+
+sub is_superuser {
+  my $c = shift;
+  return 1 if ( $c->{username} eq "heikki" );
+  return 0;
+} # is_superuser
+
+################################################################################
 # Copy production database to dev
 # Needs to be before the HTML head, as it forwards back to the page
 ################################################################################
@@ -54,22 +70,10 @@ sub copyproddata {
   return;
 } # copyproddata
 
-################################################################################
-# Verify that the user is a superuser
-################################################################################
-# TODO - This could be stored in $c, or even retrieved from the db. For now,
-# a simple check is sufficient
-sub checksuperuser {
-  my $c = shift;
-  util::error("Not allowed") unless $c->{username} eq "heikki";
-}
 
-sub is_superuser {
-  my $c = shift;
-  return 1 if ( $c->{username} eq "heikki" );
-  return 0;
-} # is_superuser
-
+################################################################################
+# Helper for git stuff
+################################################################################
 # Helper: check superuser, validate param 'p' (must start with 'beertracker').
 # Returns ($p, $gitdir) where $gitdir is the absolute path to the repo.
 # Never chdirs - callers prefix shell commands with "cd $gitdir &&" instead.

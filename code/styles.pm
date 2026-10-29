@@ -14,7 +14,7 @@ use Carp qw(longmess);
 # Brew colors
 ################################################################################
 
-my %warned;
+my %warned; # Track what warnings we have already logged
 
 # Returns the background color for the brew
 # Takes a style string as the argument. That way it can also

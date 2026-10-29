@@ -199,7 +199,7 @@ sub monthstat {
         $t .= "$d<br/>$dw<br/>$p";
         if ( $calm eq $lastym && $monthprices{$calm} ) {
           $p = "";
-my $price_div = $dayofmonth;
+          my $price_div = $dayofmonth;
           $price_div = $dayofmonth - $monthfirstday{$calm} + 1 if ($calm eq $firstym);
           $p = int( $monthprices{$calm} / $price_div * 30 );
           $t .= "<br/>~$p";
@@ -275,7 +275,7 @@ my $price_div = $dayofmonth;
       $max = "NaN";
       $max = int(2 * $avg - $min) if ($avg ne "NaN");
       $max = 0 if ($max ne "NaN" && $max < 0);
-$arrow_max_s = "NaN";
+      $arrow_max_s = "NaN";
       $arrow_max_s = sprintf("%3.1f", $max) if ($max ne "NaN");
       $max = "NaN" if ($max ne "NaN" && $max > $proj_cap);
     } else {

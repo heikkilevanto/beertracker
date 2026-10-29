@@ -3,6 +3,7 @@
 # Consolidated from util.pm and taphistory.pm. The -6h "effective day"
 # convention for late-night drinking lives only in eff_day_of; reldate and
 # other helpers derive from it so the rule has a single source of truth.
+# Except that it is mentioned in various SQL statements as well
 
 package dateutil;
 
