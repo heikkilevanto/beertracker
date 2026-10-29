@@ -500,13 +500,22 @@ sub _fmt_day {
   my ($ctx) = @_;
   my $v = $ctx->{v};
   if ($v) {
-    my ($date, $wd) = dateutil::splitdate($v);
-    $wd =~ s/Sun/<b>Sun<\/b>/;
-    my $label = $wd ? "$date $wd" : $date;
-    $v = "<a href='$ctx->{url}?o=Graph&date=$date&ndays=1'><span>$label</span></a>";
+    my ($date) = dateutil::splitdate($v);
+    $v = "<a href='$ctx->{url}?o=Graph&date=$date&ndays=1'><span>$date</span></a>";
   }
   return $v;
 } # _fmt_day
+
+sub _fmt_wd {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  return "" unless $v;
+  my $spans = _word_spans($v);
+  if ($v eq "Sun") {
+    return "<b>$spans</b>";
+  }
+  return $spans;
+} # _fmt_wd
 
 sub _fmt_locations {
   my ($ctx) = @_;
@@ -591,7 +600,8 @@ my @FIELD_DEFS = (
     style => "style='text-align:center; font-weight:bold; max-width:50px'" },
   { name => "Chk",              style => "style='text-align:center;max-width:50px'",
     no_events => 1, word_split => 0, format => \&_fmt_chk },
-  { name => "Wd",               style => "style='text-align:center; max-width:40px'" },
+  { name => "Wd",               style => "style='text-align:center; max-width:40px'",
+    word_split => 0, format => \&_fmt_wd },
   { re   => qr/^(Start|End)$/,  style => "style='text-align:center; max-width:55px'" },
   # Exact PersonName before the LocName|PersonName family: LocName and
   # GlassLocName stay identity in the body (old no-op handler).

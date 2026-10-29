@@ -133,7 +133,12 @@ sub datastats {
 sub dailystats {
   my $c = shift;
   my $sql = "SELECT
-    strftime('%Y-%m-%d %w', glasses.Timestamp, '-06:00') AS \"Day\",
+    date(glasses.Timestamp, '-06:00') AS \"Day\",
+    CASE strftime('%w', glasses.Timestamp, '-06:00')
+      WHEN '0' THEN 'Sun' WHEN '1' THEN 'Mon' WHEN '2' THEN 'Tue'
+      WHEN '3' THEN 'Wed' WHEN '4' THEN 'Thu' WHEN '5' THEN 'Fri'
+      WHEN '6' THEN 'Sat'
+    END AS \"Wd\",
     floor(julianday(glasses.Timestamp, '-06:00', '12:00')) AS \"X_Gap\",
     SUM(StDrinks) AS \"d\",
     SUM(CASE WHEN glasses.BrewType = 'Adjustment' THEN glasses.price

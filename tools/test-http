@@ -342,7 +342,24 @@ sub test_months {
   assert($status == 200, "Months money mode returns HTTP 200 (got $status)");
   assert(scalar($body =~ /Show drinks/), "Months page (money mode) has the 'Show drinks' link");
 } # test_months
-sub test_short    { test_op_page("short", "Daily stats"); } # test_short
+sub test_short {
+  my ($status, $headers, $body) = req("GET", "$BASE_URL?o=short");
+  assert_page_ok($status, $body, "short", "Daily stats");
+  # Date and weekday are separate columns. The combined date cell used to
+  # overflow its max-width and overlap the drinks column.
+  assert(scalar($body =~ /placeholder='Wd'/), "short page has the Wd column");
+  assert(scalar($body =~ /\?o=Graph&date=\d{4}-\d{2}-\d{2}&ndays=1'><span>\d{4}-\d{2}-\d{2}<\/span>/),
+         "short page Day cells show the date only");
+  assert(!scalar($body =~ /<span>\d{4}-\d{2}-\d{2} (?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)<\/span>/),
+         "short page has no combined date+weekday cells");
+  assert(scalar($body =~ /data-col='1'[^>]*>(?:<b>)?<span class='fw'>(?:Sun|Mon|Tue|Wed|Thu|Fri|Sat)<\/span>/),
+         "short page Wd cells show the weekday");
+  if ($body =~ /<b><span class='fw'>Sun<\/span><\/b>/) {
+    assert(1, "short page bolds Sunday in the Wd column");
+  } else {
+    skipmsg("short page has no Sunday rows to check bolding");
+  }
+} # test_short
 sub test_datastats { test_op_page("DataStats", "Data file stats"); } # test_datastats
 sub test_ratings  { test_op_page("Ratings", "Ratings statistics"); } # test_ratings
 sub test_export   { test_op_page("Export", "Export data"); } # test_export
