@@ -27,7 +27,8 @@ use Cwd;
 ################################################################################
 
 my $HTPASSWD_FILE     = "./.htpasswd";
-my $HTPASSWD_FALLBACK = "/var/www/html/beertracker/.htpasswd";
+my $HTPASSWD_FALLBACK = "/etc/lsd/htpasswd.lsd";
+
 my $SECRET_FILE       = "/etc/lsd/login.secret";
 my $COOKIE_NAME       = "lsd_login";
 my $COOKIE_MAX_AGE    = 14 * 86400;  # 14 days in seconds
