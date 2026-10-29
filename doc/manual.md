@@ -28,8 +28,7 @@ the brewery name, the list shows only beers from that brewery. Same for location
 etc. You can also filter only those entries that have ratings on them, or comments.
 This is good if you want to look up a beer before buying.
 
-There are dedicated lists for beers, breweries, locations, etc. Those can be
-selected from the "show" pull-down in the input form.
+There are dedicated lists for brews, locations, comments, persons, and photos. Those can be selected from the ☰ Menu at the top of the page.
 
 ---
 
@@ -44,7 +43,7 @@ Click the **?** button (next to the Record button) to see a help popup for the c
 The main fields are:
 - Date and Time (usually auto-filled to now)
 - Location (pick from your history or add a new one)
-- Type (Beer, Wine, Booze, or Restaurant/Night/Bar for visits without specific drinks)
+- Type (Beer, Wine, Booze, or Restaurant/Night/Meal for visits without specific drinks)
 - Which beer/wine/booze you're drinking
 - Volume, alcohol %, and price
 
@@ -104,7 +103,12 @@ Filter shortcuts in the dropdown:
 If the system knows the drink, the volume, alcohol, and price fields will auto-fill 
 from the brew.
 
-To add a new beer, select "new brew" and fill in the details. The brewery field also lets you pick from recent breweries or add a new one.
+To add a new beer, select "new" and fill in the details. The brewery field also lets you pick from recent breweries or add a new one.
+
+The "scan" button opend a barcode scanner. If we find a barcode we have seen 
+before, its details will be automatically filled in. If not, the barcode field
+(under more fields) will be filled, and the "Upd Br" box checked, so if we then 
+choose an existing brew, its barcode will get updated. 
 
 ### Volume
 
@@ -196,6 +200,12 @@ Click "(more)" in the left column to reveal:
 
 **Upd Geo** checkbox causes the locations geo coordinates to be updated. 
 
+**Barcode** - A barcode field with a "Scan" button. Scanning a bar code will
+fill the barcode field for the glass, and checking the "Upd Br" box will update
+it for the brew as well. 
+
+
+
 ### Buttons
 
 **Record** - Save a new entry
@@ -207,6 +217,8 @@ Click "(more)" in the left column to reveal:
 **Clr** - Clear all text fields to start fresh
 
 **cancel** - Stop editing and go back to normal mode (only when editing)
+
+**comment** checkbox - Check this to open the comment form after saving, so you can add a comment and rating right away.
 
 ### Tips
 
@@ -264,7 +276,10 @@ changes to that record.
 ---
 
 ## The main menu
-The "Show" menu allows you to choose what gets shown under the input form.
+The ☰ Menu at the top of the page gives access to all pages and lists. It is
+organized into groups: Main (list, graph, beer board), Stats (days, months,
+years, data, ratings, tap history), List/Edit (brews, locations, comments,
+persons, photos), and More (export, debug, about).
 
 ### Full list
 It shows a list of beers you have had, most recent first. There are many ways
@@ -304,7 +319,7 @@ and the average of them, as well as the geo location for that entry (mostly
 for debugging the geo stuff)
 
 The last line has a link for editing the entry - that puts all the values in
-the input fileds above, where you can correct mistakes. (See above.)
+the input fields above, where you can correct mistakes. (See above.)
 That line also has a few "Copy" buttons, defaulting to most likely sizes you
 might drink again. You can click those buttons on any beer entry, and the system
 will create a new entry for todays date and time, with that amount of that beer.
@@ -313,9 +328,9 @@ That is by far the easiest way to enter data.
 At the end of each day or location there will be summaries on how much you have
 drank there.
 
-Clickin on the location summary line offers you to enter a payment adjustment,
+Clicking on the location summary line offers you to enter a payment adjustment,
 in case the actual bill differs from what you expected (free drinks, tips,
-outdated prices). It tells what the system exptected you to pay, and you can
+outdated prices). It tells what the system expected you to pay, and you can
 enter what you actually paid. That creates an "empty" glass of "Adjustment"
 type to record the difference. Makes a difference for some statistics etc.
 
@@ -333,13 +348,11 @@ higher weights for the more recent days.
 days, including today.
 
 Under the graph are navigation buttons:
-* "<<" and ">>" move the graph earlier and later in time
-* "2w", "Month", "3m", "6m", "Year", "2y", and "All" adjsut how long time is
-shown in the graph
-* [-] and [+] fine tune the zoom factor
-
-Clicking on the graph itself zooms it to double the size. Clicking again zooms
-back.
+* "<" and ">" move the graph earlier and later in time
+* "w", "m", "2m", "3m", "6m", "Y", "2y", "5y", and "A" adjust how long time is
+shown in the graph (week, month, 2 months, 3 months, 6 months, year, 2 years,
+5 years, and all)
+* "d" or "$" toggles between showing drinks and money spent
 
 Under the graph is the usual full list. Since we have calculated the floating
 averages for the graph, they are shown in the list for each day too.
@@ -347,15 +360,18 @@ averages for the graph, they are shown in the list for each day too.
 ### Beer Board
 This is a list of beers available on the current location (or Ølbaren, if no
 list available for that location). There is a pull-down for selecting the location
-out of the few I have scripted access to. There are couple of links nex to it:
-* www links to the home page of the bar, if known
-* (PA) filters the list so it only shows Pale Ales, IPAs and suchlike, as those
-are what I most often drink.
+out of the few I have scripted access to. The controls are in a collapsible
+section at the top; click to open or close it. When open, it shows:
+* A datetime field and "Show" button to view the board as it was at a past date.
+* A text filter box with (PA) and (Clr) buttons. (PA) filters the list to show
+only Pale Ales, IPAs and suchlike. (Clr) clears any active filter. Filtering
+is done in the browser (JS), so it is instant.
+* www and untappd links to the home page of the bar, if known
 * (Reload) forces a reload of the beer list. Otherwise the system caches the
 list for a couple of hours to make things go faster. Useful if you see the
 bartender writing a new one on the blackboard.
-* (all) expands all the entries, making the list more informative, but also
-using up much more space on the screen.
+* (Exp) / (Collapse All) toggles between the simple and expanded display.
+* (History) opens the Tap Timeline for the location.
 
 In the simple form, each beer is on a line of its own. The lines can get wider
 than your phone screen, you can scroll sideways to read the rest. The important
@@ -371,14 +387,15 @@ the beer is served.
 * Country
 * Style (simplified)
 
-If you selected the Extended display, each beer takes up a few lines. Where we
+If you selected the Expanded display, each beer takes up a few lines. Where we
 have it, there will be a line telling how many times we have seen that beer
 before, when was the last time, how many ratings and their average, compressed
-into something like "3 rat=6.3". After the "On for N days" line, a small
+into something like "3 rat=6.3". There is also a tap duration estimate showing
+how long the keg is likely to last. After the "On for N days" line, a small
 [manage] link reveals a form to close the tap, close and reopen with the same
 beer, or mark the keg as unusual (which excludes it from age calculations).
 
-Before the beer board is always the graph (see bove), and under it the display
+Before the beer board is always the graph (see above), and under it the display
 continues as the full list (see above).
 
 ### Tap Timeline
@@ -446,48 +463,49 @@ biggest spending locations first. The list shows also the number of drinks at
 the location. The sorting defaults to money, but can be changed to number of
 drinks.
 
+#### Data
+Shows various data statistics about the database contents: totals for glasses,
+brews, locations, persons, comments, and photos. Useful for getting an overview
+of how much data the system holds.
+
+#### Ratings
+A histogram of the ratings you have given, from 1 to 9. Shows min and max
+rating statistics, and links to the highest and lowest rated brews.
+
 ### Lists
-There are several lists of variosu kinds of records. All the lists default to 
+There are several lists of various kinds of records. All the lists default to 
 chronological order with the most recent first, but can be sorted by clicking 
 on any header field.
 
 The list headers can shown / hidden with the "Hdr" button. When shown, you can
-enter a filter term into any of the inputs. See the help text for more advanced
-features. 
+enter a filter term into any of the inputs. See the help text (the "?" button)
+for more advanced features. The "All" button shows all fields. The "Clr" button
+clears any active filters. When a list is truncated, the count shows "Recent: N"
+with a "Show all" link to load everything.
+
+#### Brews
+Lists the brews you have had, with name, type/subtype, rating statistics,
+photo, alcohol, producer, where you had it last, and when. Limited to 500
+records by default; use "Show all" to see everything.
 
 #### Location
-Shows a list of the most recent watering holes you have visited. For each there
-is
-* Name of the place. Clicking on this gets you to the full list, filtered by
-that location.
-* Link to the beer board of the location, if known to the system
-* Link to the bars web page, if known to the system
-* Link to a DuckDuckGo search of the place name
-* Last time you visited, and how many visits the system knows about
-* The last beer you drank there: Brewery and name. These are links that filter
-the location list by that beer or brewery.
+Shows a list of places you have visited. For each there is
+* Name of the place, with type and subtype (e.g. [Bar, Beer]). Clicking the
+name gets you to the full list, filtered by that location.
+* Rating statistics (count; average; comments)
+* Geo coordinates, country, and region
+* Last time you visited, and when you last had a product of theirs (for producers)
+* Tags, and whether the place is closed
 
-#### Brewery
-Shows the most recent breweries you have been enjoying, with about the same data
-as for the location list, except that it lists where you had the beer last.
-The list excludes all "special" breweries that have a comma in their names.
+#### Comments
+Shows all your comments with the glass they are attached to, the comment text,
+rating, and any tagged persons. Multiple comments can exist per glass.
 
-#### Beer
-Lists the beers you have had. On the left is the beer name with a count how many
-of them you have had, and on the right side when and where you had it last, and
-the style, alcohol, and brewery of the beer. Also this list excludes the "special"
-breweries, so it only shows things that really are beers.
+#### Persons
+Shows the people you have tracked, with their details and related persons.
 
-#### Wine and Booze
-Much like the beer list, these show record types "Wine" and "Booze".
-
-#### Restaurant
-Shows a list of the "Restaurant" type records. Shows the style of the place,
-what you had there, how much you spent (total price, for one person), and ratings
-if you rated the place.
-
-#### Style
-Lists all beer styles known to the system, when and where you last had one.
+#### Photos
+Shows uploaded photos with their metadata and the record they are attached to.
 
 ### About
 Contains the copyright message, and all kind of useful details I didn't know

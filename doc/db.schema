@@ -1,5 +1,5 @@
 # Beertracker database schema
-# Schema dumped at 2026-08-19 12:52 with beertracker-dev/scripts/dbdump.sh
+# Schema dumped at 2026-10-28 18:24 with beertracker-dev/scripts/dbdump.sh
 # Do not edit directly, unless you plan to run scripts/dbchange immediately
 # The schema lives inside the sqlite database!
 # Most changes must be done by adding a migration to migrate.pm, then they will be applied
@@ -32,7 +32,7 @@ create table glasses (
     StDrinks decimal, -- Calculated from volume and alc
     Note text, -- note for this one glass, like what mixed beer
     Tap integer, -- Which tap number the brew came from
-    Barcode text, -- Scanned from the bottle (or such)
+    Barcode text,
 
     foreign key (Brew) references Brews(id),
     foreign key (Location) references Locations(id)
@@ -65,9 +65,9 @@ create table brews (
     DetailsLink text, -- Link to producers or untappd page about the brew
     ShortName text, -- Shortened name for tight displays
     Parent integer references brews(Id), -- Where this was copied from
-    Released text,  -- When it came on the market (possbly just yyyy)
-    Discontinued text, -- Marks no longer available
-    FirstSeen text,  -- First time we saw it
+    Released text,
+    Discontinued text,
+    FirstSeen text,
 
     foreign key (ProducerLocation) references Locations(id)
 );
@@ -119,8 +119,8 @@ drop table if exists comment_persons;
 create table comment_persons (
   Comment integer not null,
   Person  integer not null,
-  primary key (Comment, Person),
 
+  primary key (Comment, Person),
   foreign key (Comment) references comments(Id) on delete cascade,
   foreign key (Person)  references persons(Id)
 );
@@ -151,10 +151,9 @@ create table locations (
   UntappdLink text, -- Link to untappd for the producer
   ShortName text,  -- Shortened name for tight displays
   Scraper text,  -- Scraper script and args, "untappd.pl foobar/999999"
-  Opened text,  -- When the place opened, guess, can be just yyyy
-  Closed text, -- Indicates place is closed
-  FirstSeen text -- First time we saw it
-);
+  Opened text,
+  Closed text,
+  FirstSeen text);
 
 -- table "tap_beers"
 drop table if exists "tap_beers";
@@ -173,6 +172,7 @@ create table if not exists "tap_beers" (
   "SizeS" decimal, "PriceS" decimal,
   "SizeM" decimal, "PriceM" decimal,
   "SizeL" decimal, "PriceL" decimal,
+  "Unusual" integer default 0,  -- Unusual kegs (half kegs etc) excluded from timing estimates
 
 	primary key("Id"),
 	foreign key("Brew") references "Brews"("id"),
@@ -247,33 +247,6 @@ create view glassrec as
   left join locations ploc on ploc.id = Brews.ProducerLocation
   where glasses.Location = locations.id
 ;
-
--- view LatestPrices
-drop view if exists LatestPrices;
-create view LatestPrices as
-select
-  g.Username,
-  g.Location,
-  l.Name as LocationName,
-  g.Brew,
-  g.Volume,
-  g.Price,
-  g.Timestamp,
-  latest.Count
-from glasses g
-join (
-  select Username, Location, Brew, Volume, max(Timestamp) as MaxTime, count(*) as Count
-  from glasses
-	where price > 0
-  group by Username, Location, Brew, Volume
-) latest
-   on g.Username = latest.Username
- and g.Location = latest.Location
- and g.Brew = latest.Brew
- and g.Volume = latest.Volume
- and g.Timestamp = latest.MaxTime
-left join Locations l on l.Id = g.Location
-where g.Price > 0;
 
 -- view current_taps
 drop view if exists current_taps;

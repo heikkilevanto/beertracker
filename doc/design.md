@@ -131,6 +131,7 @@ Main operations:
 - `code/mainlist.pm` - The main "full" list
 - `code/graph.pm` - The daily graph
 - `code/beerboard.pm` - The beer board for the current bar
+- `code/taphistory.pm` - The Tap Timeline: location tap history visualization
 - `code/glasses.pm` - Main input for and the full list
 - `code/postglass.pm` - POST handling for glass records
 
@@ -155,6 +156,8 @@ Other utilities:
 - `code/db.pm` - Various database helpers
 - `code/geo.pm` - Geo coordinate stuff
 - `code/inputs.pm` - Helper routines for input forms
+- `code/dateutil.pm` - Date/time helpers (moved from util and taphistory)
+- `code/currencies.pm` - Currency codes, exchange rates, and aliases
 - `code/listrecords.pm` - A way to produce a nice list from db records
 - `code/migrate.pm` - DB migration system: detects version mismatch, shows form, runs migrations
 - `code/scrapeboard.pm` - Scraping and updating beer boards
@@ -176,18 +179,22 @@ calls `listrecords::listrecords()` with the query and optional WHERE
 clause and bind params — it handles the HTML rendering, caching, filtering, 
 and pagination. The SQL query itself carries its own `ORDER BY`.
 
-Column display semantics are driven by suffix tags on the view's column names:
+Column display semantics are driven by suffix tags on the view's column names.
+Suffixes can be stacked (e.g. `Rate_avg_cnt_A`); one is stripped per pass until
+nothing recognizable remains. The last aggregate suffix stripped wins.
 
-- `_link:Entity` — renders value as a link to `?o=Entity&e=value`
+- `_link=Entity` — renders value as a link to `?o=Entity&e=value`
 - `_cont` — merges the next column into this table cell
 - `_contline` — all following columns inherit `_cont` until a `TR`
 - `_A` — auto-width column
 - `_R<N>` — rowspan (for photo thumbnails)
 - `_C<N>` — colspan
-- `_as:DisplayName` — override the column header
+- `_Npx` — fixed column width in pixels
+- `_as=DisplayName` — override the column header
 - `_filter` — clicking puts the whole field value into the filter
 - `_nofilter` — no filter input in the header
 - `_noheader` — no header cell
+- `_sum`, `_avg`, `_cnt` — aggregate suffix (last one stripped wins)
 - `'' as TR<N>` — row break
 
 Per-word token filtering is the default: cell values are split into clickable
@@ -217,14 +224,16 @@ BeerTracker requires the following Perl modules:
 - `HTML::Entities`
 - `Text::LevenshteinXS`
 - `Digest::SHA`, `Authen::Htpasswd`
+- `Unicode::Normalize` 
 
 The code calls external programs
 - `gnuplot` for various graphs
 - `git` for git operations (superuser only)
+- `curl` for fetching untappd pages (scripts/untappd.pl, to bypass Cloudflare TLS fingerprinting)
 
 To install all required modules on Debian/Ubuntu, run:
 ```
-sudo apt-get install libcgi-pm-perl libdbi-perl libjson-perl libwww-perl libtime-piece-perl liburi-perl libxml-libxml-perl git gnuplot
+sudo apt-get install libcgi-pm-perl libdbi-perl libjson-perl libwww-perl libtime-piece-perl liburi-perl libxml-libxml-perl libhtml-parser-perl libtext-levenshteinxs-perl libdigest-sha-perl libauthen-htpasswd-perl sqlite3 git gnuplot curl
 ```
 
 The js code makes use of quagga.min.js for scanning bar codes.
@@ -306,7 +315,7 @@ Once a migration is committed, pulled and run on the production system, it may
 be deleted.
 
 ### Testing
-Two test scripts under `tools/` exercise the application without a framework:
+Three test tools under `tools/` exercise the application without a framework:
 
 - `tools/test-http` — GET smoke tests and POST round-trip tests against the live
   FastCGI dev server. Covers all core ops, edit pages, filters, static assets,
@@ -314,8 +323,8 @@ Two test scripts under `tools/` exercise the application without a framework:
   running dev server. Run with `perl tools/test-http` (quick set by default) or
   `perl tools/test-http all` for full coverage.
 - `tools/test-unit` — Pure function unit tests for util, dateutil, geo, comments,
-  glasses, and styles modules. No HTTP, no database, instant. Run with
-  `perl tools/test-unit`.
+  glasses, styles, postglass, mainlist, currencies, db, and listrecords modules.
+  No HTTP, no database, instant. Run with `perl tools/test-unit`.
 - `tools/testall` — Wrapper that runs both suites: `./tools/testall`.
 
 Both scripts share the same selector conventions: no args runs `quick` tests,
@@ -350,7 +359,7 @@ When about to release a new version, try to follow this checklist:
 - [ ] Check design.md and manual.md are up to date
 - [ ] Use the release candidate for a couple of days to find last details
 - [ ] Draft release notes
-- [ ] Make sure the db.schema is up to date
+- [ ] Make sure the db.schema is up to date. Check only one column per line.
 - [ ] Remove migration routines, except 001 which is needed to init an empty base.
 - [ ] Tag the version locally. 
 - [ ] Make a small commit, or run tools/makeversion manually. Commit the version number. push --tags
