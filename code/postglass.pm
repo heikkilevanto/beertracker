@@ -498,7 +498,6 @@ sub curprice {
     if ( $v =~ /^(-?[0-9.]+) *$alias$/i ) {
       my $orig = $1;
       my $dkk = int(0.5 + $orig * $cur->{rate});
-      print { $c->{log} } "curprice: '$orig $cur->{code}' -> $dkk DKK\n";
       return ($dkk, "$orig $cur->{code}");
     }
   }

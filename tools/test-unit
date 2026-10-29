@@ -20,25 +20,22 @@
 use strict;
 use warnings;
 use utf8;
-use Cwd;
 use Getopt::Long;
 
-# Add code/ to @INC so modules can be required
-my $basedir = getcwd();
-push @INC, "$basedir/code";
-
-# Load modules under test
-require util;
-require dateutil;
-require geo;
-require comments;
-require glasses;
-require styles;
-require postglass;
-require currencies;
-require mainlist;
-require db;
-require listrecords;
+# Load modules under test. Use the same "./code/foo.pm" require style as
+# index.fcgi and the modules use internally (postglass.pm, mainlist.pm), so
+# %INC keys match and no module is compiled twice. Must run from repo root.
+require "./code/util.pm";
+require "./code/dateutil.pm";
+require "./code/geo.pm";
+require "./code/comments.pm";
+require "./code/glasses.pm";
+require "./code/styles.pm";
+require "./code/postglass.pm";
+require "./code/currencies.pm";
+require "./code/mainlist.pm";
+require "./code/db.pm";
+require "./code/listrecords.pm";
 
 ################################################################################
 # Config
@@ -541,7 +538,6 @@ sub test_styles_short {
 # --- postglass.pm / currencies ---
 
 sub test_postglass_curprice {
-  require postglass;
   my $c = { log => \*STDERR };
 
   # EUR shorthand
