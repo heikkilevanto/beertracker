@@ -338,17 +338,27 @@ sub editlocation {
       print photos::photo_form($c, location => $p->{Id}, public_default => 1, return_url => $return_url);
       print "&nbsp;<a href='$c->{url}?o=Comment&e=new&location=$p->{Id}&commenttype=location' onclick='event.stopPropagation()'><span>(new comment)</span></a>\n";
       print "<hr/>\n";
+      # Comments of type "location" that directly comment on this location
       print listrecords::listrecords($c, comments::comments_list_sql(), {
-          where => q{CAST("LocId_A_link=Location" AS INTEGER) = ? AND xUsername = ?},
+          where => q{CAST("LocId_A_link=Location" AS INTEGER) = ? AND xUsername = ? AND CommentType_A = 'location'},
           params => [$p->{Id}, $c->{username}],
-          title => "Comments",
-          initial_filter => { CommentType => "location" },
-
+          title => "Comments on $p->{Name}",
           hide_headers_default => 1,
           no_new_link => 1,
           maxrecords => 5,
           allbutton => 1,
-          norecmessage => "No comments",
+          norecmessage => "No direct comments",
+      });
+      # Other comments that mention the location (any other comment type)
+      print listrecords::listrecords($c, comments::comments_list_sql(), {
+          where => q{CAST("LocId_A_link=Location" AS INTEGER) = ? AND xUsername = ? AND COALESCE(CommentType_A, '') != 'location'},
+          params => [$p->{Id}, $c->{username}],
+          title => "Other comments mentioning $p->{Name}",
+          hide_headers_default => 1,
+          no_new_link => 1,
+          maxrecords => 5,
+          allbutton => 1,
+          norecmessage => "No other comments",
       });
       print "<hr/>\n";
       locationvisits($c, $p );
