@@ -100,14 +100,27 @@ sub editperson {
 
   if ( $c->{edit} !~ /^new/i ) {
     my $name = $p->{Name} // "";
+    # Comments of type "person" that directly comment on this person
     print listrecords::listrecords($c, comments::comments_list_sql(), {
-        where => "EXISTS (SELECT 1 FROM comment_persons cp WHERE cp.Comment = \"Id_A_link=Comment\" AND cp.Person = ?) AND xUsername = ?",
+        where => q{EXISTS (SELECT 1 FROM comment_persons cp WHERE cp.Comment = "Id_A_link=Comment" AND cp.Person = ?) AND xUsername = ? AND CommentType_A = 'person'},
         params => [$p->{Id}, $c->{username}],
-        title => "Comments mentioning $name",
-        initial_filter => { CommentType => "person" },
+        title => "Comments on $name",
         hide_headers_default => 1,
         no_new_link => 1,
-        norecmessage => "No comments",
+        maxrecords => 5,
+        allbutton => 1,
+        norecmessage => "No direct comments",
+    });
+    # Other comments that mention the person (any other comment type)
+    print listrecords::listrecords($c, comments::comments_list_sql(), {
+        where => q{EXISTS (SELECT 1 FROM comment_persons cp WHERE cp.Comment = "Id_A_link=Comment" AND cp.Person = ?) AND xUsername = ? AND COALESCE(CommentType_A, '') != 'person'},
+        params => [$p->{Id}, $c->{username}],
+        title => "Other comments mentioning $name",
+        hide_headers_default => 1,
+        no_new_link => 1,
+        maxrecords => 5,
+        allbutton => 1,
+        norecmessage => "No other comments",
     });
   }
 } # editperson
