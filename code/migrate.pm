@@ -33,19 +33,6 @@ our $CODE_DB_VERSION = 54;  # Bump this when you add migrations
 our @MIGRATIONS = (
   # Keep this here, it is needed when starting from an empty database
   [1, 'create globals table', \&mig_001_create_globals_table],
-  # Add index to speed up the per-user brew list last-seen join
-  [49, 'add idx_glasses_brew_user_ts index', \&mig_049_add_glasses_brew_user_ts_index],
-  # Issue 744 - barcodes live on the glass; volume/price/alc per (Brew, Barcode)
-  [50, 'add glasses.Barcode column and index', \&mig_050_add_glasses_barcode],
-  # Issue 745 - lifecycle dates: when places opened/closed, brews released/discontinued,
-  # plus an auto-collected FirstSeen date
-  [51, 'add lifecycle dates to locations and brews', \&mig_051_add_lifecycle_dates],
-  # Issue 745 - backfill FirstSeen for producers from the oldest glass of their brews
-  [52, 'backfill producer locations FirstSeen', \&mig_052_backfill_producer_firstseen],
-  # Issue 762 - mark tap_beers as unusual to exclude from age calculations
-  [53, 'add tap_beers.Unusual column', \&mig_053_add_tap_beers_unusual],
-  # Drop LatestPrices view — replaced by hardcoded query in brews.pm
-  [54, 'drop LatestPrices view', \&mig_054_drop_latest_prices_view],
 );
 
 ################################################################################
@@ -171,6 +158,7 @@ sub _backup_db {
 # Migration subs
 ################################################################################
 
+# Do not delete, this is needed to bootstrap an empty database
 sub mig_001_create_globals_table {
   my $c = shift;
   db::execute($c, "CREATE TABLE IF NOT EXISTS globals (k TEXT PRIMARY KEY, v TEXT)");
@@ -178,109 +166,6 @@ sub mig_001_create_globals_table {
 } # mig_001_create_globals_table
 
 
-# Composite index to speed up the brew list query's glasses join per user:
-#   left join glasses on glasses.Brew = brews.Id and glasses.Username = users.Username
-sub mig_049_add_glasses_brew_user_ts_index {
-  my $c = shift;
-  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_glasses_brew_user_ts ON glasses(Brew, Username, Timestamp)");
-} # mig_049_add_glasses_brew_user_ts_index
-
-
-# Issue 744 - barcode lives on the glass, not just on the brew.
-# Each glass records the exact barcode scanned at that drinking event; the
-# brew's single Barcode stays as a fallback/seed.
-sub mig_050_add_glasses_barcode {
-  my $c = shift;
-  db::execute($c, "ALTER TABLE glasses ADD COLUMN Barcode text");
-  db::execute($c, "CREATE INDEX IF NOT EXISTS idx_glasses_barcode ON glasses (Username, Barcode, Timestamp)");
-} # mig_050_add_glasses_barcode
-
-
-# Issue 745 - lifecycle dates for locations and brews.
-# Dates may be partial (just a year, e.g. '2019'); they are stored as entered.
-# FirstSeen is full YYYY-MM-DD, backfilled from existing data:
-#   - brews: earliest date seen on tap
-#   - locations: earliest glass (with the shared -06:00 day offset)
-sub mig_051_add_lifecycle_dates {
-  my $c = shift;
-  db::execute($c, "ALTER TABLE locations ADD COLUMN Opened text");
-  db::execute($c, "ALTER TABLE locations ADD COLUMN Closed text");
-  db::execute($c, "ALTER TABLE locations ADD COLUMN FirstSeen text");
-  db::execute($c, "ALTER TABLE brews ADD COLUMN Released text");
-  db::execute($c, "ALTER TABLE brews ADD COLUMN Discontinued text");
-  db::execute($c, "ALTER TABLE brews ADD COLUMN FirstSeen text");
-
-  # Backfill FirstSeen for brews: the earliest of the first tap appearance and
-  # the first glass, whichever came first (a brew can be drunk long before it
-  # ever shows up on a tap)
-  db::execute($c, "UPDATE brews SET FirstSeen = (
-      SELECT MIN(first_seen) FROM (
-        SELECT strftime('%Y-%m-%d', MIN(tap_beers.FirstSeen)) AS first_seen
-          FROM tap_beers WHERE tap_beers.Brew = brews.Id
-        UNION ALL
-        SELECT strftime('%Y-%m-%d', MIN(glasses.Timestamp), '-06:00')
-          FROM glasses WHERE glasses.Brew = brews.Id
-      ))
-    WHERE EXISTS (SELECT 1 FROM tap_beers WHERE tap_beers.Brew = brews.Id)
-       OR EXISTS (SELECT 1 FROM glasses WHERE glasses.Brew = brews.Id)");
-
-  # Backfill FirstSeen for locations that have glasses
-  db::execute($c, "UPDATE locations SET FirstSeen = (
-      SELECT strftime('%Y-%m-%d', MIN(glasses.Timestamp), '-06:00')
-      FROM glasses WHERE glasses.Location = locations.Id)
-    WHERE EXISTS (SELECT 1 FROM glasses WHERE glasses.Location = locations.Id)");
-
-  # The brew_taps view references FirstSeen and Gone unqualified. Now that
-  # locations also has a FirstSeen column (joined against by this view), the
-  # unqualified FirstSeen became ambiguous and the view broke. Rebuild it with
-  # qualified column references; same columns/order as before.
-  db::execute($c, "DROP VIEW IF EXISTS brew_taps");
-  db::execute($c, q{
-    CREATE VIEW brew_taps AS
-    SELECT
-      tap_beers.*,
-      locations.Name AS LocationName,
-      round(julianday(coalesce(tap_beers.Gone, 'now')) - julianday(tap_beers.FirstSeen)) AS Days,
-      strftime('%Y-%m-%d', tap_beers.FirstSeen) AS Since,
-      strftime('%Y-%m-%d', tap_beers.Gone) AS GoneFormatted
-    FROM tap_beers
-    JOIN locations ON tap_beers.Location = locations.Id
-  });
-} # mig_051_add_lifecycle_dates
-
-
-# Issue 745 - the location FirstSeen backfill in mig_051 only looked at glasses
-# drunk AT the location. Producers are rarely drunk at, so their FirstSeen is
-# usually never filled. Backfill it from the oldest glass of any brew made by
-# the producer (brews.ProducerLocation), same -06:00 day offset as elsewhere.
-sub mig_052_backfill_producer_firstseen {
-  my $c = shift;
-  db::execute($c, "UPDATE locations SET FirstSeen = (
-      SELECT strftime('%Y-%m-%d', MIN(glasses.Timestamp), '-06:00')
-      FROM glasses
-      JOIN brews ON glasses.Brew = brews.Id
-      WHERE brews.ProducerLocation = locations.Id)
-    WHERE LocType = 'Producer'
-      AND (FirstSeen IS NULL OR FirstSeen = '')
-      AND EXISTS (SELECT 1 FROM glasses
-                  JOIN brews ON glasses.Brew = brews.Id
-                  WHERE brews.ProducerLocation = locations.Id)");
-} # mig_052_backfill_producer_firstseen
-
-
-# Issue 762 - add Unusual flag to tap_beers to exclude specific kegs from
-# average age calculations (e.g. forgotten kegs left on tap for a long time).
-sub mig_053_add_tap_beers_unusual {
-  my $c = shift;
-  db::execute($c, "ALTER TABLE tap_beers ADD COLUMN Unusual integer DEFAULT 0");
-} # mig_053_add_tap_beers_unusual
-
-
-# Drop LatestPrices view — the prices list is now a hardcoded query in brews.pm
-sub mig_054_drop_latest_prices_view {
-  my $c = shift;
-  db::execute($c, "DROP VIEW IF EXISTS LatestPrices");
-} # mig_054_drop_latest_prices_view
 
 
 ################################################################################
