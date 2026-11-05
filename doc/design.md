@@ -31,9 +31,9 @@ use it for real in January 2016, and have been using the system ever since.
 - v3.3 Mar'26: Fast cgi, caching, db migration tool, barcodes, multi-persons
 - v3.4 May'26: Tags, country/region, scraper for untappd, more links, bottle/box
 - v3.5 Jul'26: Improved lists with filtering, Id links, UI improvements, bugfixes
+- v3.6 Nov'26: Tap history, improved barcode, currencies, refactoring, tests
 
 ## Architecture
-
 BeerTracker is a lightweight web application built with procedural Perl FastCGI
 and SQLite as the backend. The main entry point is `index.fcgi`, which
 loads short, focused modules for handling forms, reports, and utilities. This
@@ -50,6 +50,10 @@ heavy frameworks.
 
 
 ## BeerTracker Database Schema
+The schema lives in the sqlite database, which is the official source of truth.
+Most schema changes are done by migration routines in migrate.pm. Thescript 
+tools/dbdump.sh exports the schema into doc/db.schema. tools/dbchange can be
+used for importing the schema.db into the database, should that be needed.
 
 ### glasses
 Stores individual drinking events, either actual drinks or placeholders like
@@ -350,7 +354,6 @@ top stats.
 
 When about to release a new version, try to follow this checklist:
 - [ ] Define a milestone for the release (can be done early)
-- [ ] Regenerate the lines vs hrs graph
 - [ ] Assign milestones to issues that need to be fixed for the release (also early)
 - [ ] Decide on a feature freeze. Bugs can still be fixed
 - [ ] Verify that each module is in a reasonable state. 
@@ -361,6 +364,8 @@ When about to release a new version, try to follow this checklist:
 - [ ] Draft release notes
 - [ ] Make sure the db.schema is up to date. Check only one column per line.
 - [ ] Remove migration routines, except 001 which is needed to init an empty base.
+- [ ] Regenerate the lines vs hrs graph
+- [ ] Update the version numbers in the beginning of this document
 - [ ] Tag the version locally. 
 - [ ] Make a small commit, or run tools/makeversion manually. Commit the version number. push --tags
 - [ ] Use GitHub to release a version
