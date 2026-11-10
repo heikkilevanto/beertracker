@@ -20,7 +20,10 @@ my $clr = "Onfocus='value=value.trim();select();' autocapitalize='words'";
 #    ... );
 # Omit the "new" line if you don't want it
 # Optional args in hashref $opt (6th param):
-#   table, newfield, skip, disabled, scan, multi, prechips, simplenew, extraattr, defaults, required, data_required, fieldorder
+#   table, newfield, skip, disabled, scan, multi, prechips, simplenew, extraattr, defaults, required, data_required, fieldorder,
+#   id (element id, for pages with several dropdowns sharing one inputname),
+#   placeholder (visible hint when nothing is selected; defaults to inputname),
+#   readonly (no free text - pick from the list only)
 # Returns a string ready to be printed in a form
 
 
@@ -54,6 +57,11 @@ sub dropdown {
   my $required_attr  = $required;
   $required_attr = "data-required='1'" if ( !$required && $opt->{data_required} );
   my $fieldorder     = $opt->{fieldorder};
+  # Element id (defaults to the input name) so several dropdowns with the same
+  # inputname on one page still get distinct ids for the init script to find.
+  my $optid          = $opt->{id} || $inputname;
+  my $placeholder    = $opt->{placeholder} || $inputname;
+  my $readonly       = $opt->{readonly} ? "readonly" : "";
 
   my $newdiv = "";
   my $actions = "";
@@ -101,16 +109,16 @@ sub dropdown {
   my $escselected = util::htmlesc($selectedname);
   my $s = <<"HTML";
 <!-- DROPDOWN START: input='$inputname' -->
-<div id="dropdown-$inputname" class="dropdown"$multiattr$extraattrhtml>
+<div id="dropdown-$optid" class="dropdown"$multiattr$extraattrhtml>
   $chipsdiv<div class="dropdown-main">
     <input type="text"
            class="dropdown-filter"
            autocomplete="off"
-           placeholder="$inputname"
+           placeholder="$placeholder"
            value="$escselected"
-           $disabled $required_attr />
+           $disabled $readonly $required_attr />
     <input type="hidden"
-           id="$inputname"
+           id="$optid"
            name="$inputname"
            value="$selectedid" />
     <div class="dropdown-list">
@@ -119,7 +127,7 @@ sub dropdown {
   </div>
   $newdiv
 </div>
-<script>document.addEventListener('DOMContentLoaded', function(){ initDropdown(document.getElementById('dropdown-$inputname')); });</script>
+<script>document.addEventListener('DOMContentLoaded', function(){ initDropdown(document.getElementById('dropdown-$optid')); });</script>
 <!-- DROPDOWN END: input='$inputname' -->
 HTML
 

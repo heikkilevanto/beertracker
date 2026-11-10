@@ -332,7 +332,7 @@ sub load_beerlist_from_db {
         pl.ShortName AS shortname,
         tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
         b.DefPrice, b.DefVol,
-        tb.Unusual,
+        tb.Unusual, tb.Gone,
         ur.rating_count, ur.average_rating, ur.comment_count,
         strftime('%Y-%m-%d', tb.FirstSeen) AS first_seen_date,
         strftime('%H:%M', tb.FirstSeen) AS first_seen_time,
@@ -386,7 +386,7 @@ sub load_beerlist_from_db {
         pl.ShortName AS shortname,
         tb.SizeS, tb.PriceS, tb.SizeM, tb.PriceM, tb.SizeL, tb.PriceL,
         b.DefPrice, b.DefVol,
-        tb.Unusual,
+        tb.Unusual, tb.Gone,
         ur.rating_count, ur.average_rating, ur.comment_count,
         strftime('%Y-%m-%d', tb.FirstSeen) AS first_seen_date,
         strftime('%H:%M', tb.FirstSeen) AS first_seen_time,
@@ -481,7 +481,8 @@ sub load_beerlist_from_db {
       avg_days_on_tap => $row->{avg_days_on_tap},
       tap_history_count => $row->{tap_history_count},
       tap_beers_id => $row->{tap_beers_id},
-      unusual => $row->{Unusual} ? 1 : 0
+      unusual => $row->{Unusual} ? 1 : 0,
+      gone => $row->{Gone} ? 1 : 0
     };
   }
 
@@ -551,7 +552,8 @@ sub prepare_beer_entry_data {
     avg_days_on_tap => $e->{avg_days_on_tap},
     tap_history_count => $e->{tap_history_count},
     tap_beers_id => $e->{tap_beers_id},
-    unusual => $e->{unusual}
+    unusual => $e->{unusual},
+    gone => $e->{gone}
   };
 }
 
@@ -704,7 +706,9 @@ sub render_beer_row {
   if ( $processed_data->{average_rating} ) {
     print " " . comments::avgratings($c, $processed_data->{rating_count}, $processed_data->{average_rating}, $processed_data->{comment_count});
   }
-  taps::render_tap_action_form($c, $processed_data->{tap_beers_id}, $locparam, 0, $processed_data->{unusual})
+  # The options follow the keg's current state, even in the "as of" view, since
+  # the POST acts on the live tap_beers row (close sets Gone, reopen clears it).
+  taps::render_tap_action_form($c, $processed_data->{tap_beers_id}, $locparam, $processed_data->{gone}, $processed_data->{unusual})
       if $processed_data->{tap_beers_id};
   print "</td></tr> \n";
   if ($seenline) {

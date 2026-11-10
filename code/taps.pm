@@ -80,87 +80,67 @@ sub update_taps {
 # Render the tap action form (shared between beer board and tap history)
 # $tap_beers_id: the tap_beers row Id
 # $locname: location name (for redirect back)
-# $is_gone: if true, the keg is closed — show "reopen" instead of "close & reopen"
+# $is_gone: if true, the keg is closed - show "reopen" instead of "close & reopen"
+# $is_unusual: current value of the Unusual flag
 ################################################################################
 
-sub render_tap_action_form {
+# Returns the [manage] link and its hidden form as a single wrapper element,
+# so the tap timeline can move the whole block around as one node.
+sub tap_action_form_html {
   my ($c, $tap_beers_id, $locname, $is_gone, $is_unusual) = @_;
 
   my $form_id = "tapact_$tap_beers_id";
 
-  # The [manage] link - inline, same line as surrounding text
-  print "<span style='font-size: x-small;'> ";
-  print "<span style='cursor: pointer; color: #888;' "
-      . "onclick=\"var f=document.getElementById('$form_id'); "
-      . "f.style.display=(f.style.display==='none'?'block':'none');\">[manage]</span>\n";
-  print "</span>\n";
-
-  # The form - hidden div, opens on a new line below
-  print "<div id='$form_id' style='display: none; font-size: x-small; margin-top: 2px;'>\n";
-  _render_tap_action_form_fields($c, $tap_beers_id, $locname, $is_gone, $is_unusual);
-  print "</div>\n";
-} # render_tap_action_form
-
-# Render the actual form in a table row (called separately for tap history)
-sub render_tap_action_form_row {
-  my ($c, $tap_beers_id, $locname, $is_gone, $colspan, $is_unusual) = @_;
-
-  my $form_id = "tapact_$tap_beers_id";
-
-  print "<tr id='$form_id' style='display: none;'>\n";
-  print "<td colspan='$colspan' style='border: none; padding: 4px 6px;'>\n";
-  _render_tap_action_form_fields($c, $tap_beers_id, $locname, $is_gone, $is_unusual);
-  print "</td></tr>\n";
-} # render_tap_action_form_row
-
-# Shared: render the actual form fields
-sub _render_tap_action_form_fields {
-  my ($c, $tap_beers_id, $locname, $is_gone, $is_unusual) = @_;
-
-  print "<form method='POST' accept-charset='UTF-8' class='no-print' "
-      . "style='display: inline;'>\n";
-  print "<input type='hidden' name='o' value='Taps' />\n";
-  print "<input type='hidden' name='tap_beers_id' value='$tap_beers_id' />\n";
-  print "<input type='hidden' name='loc' value='" . util::htmlesc($locname) . "' />\n";
-  print "<input type='hidden' name='redir_op' value='" . util::htmlesc($c->{op}) . "' />\n";
-
-  # Styled dropdown using our dropdown CSS classes
-  my @opts;
+  # "Leave keg open" is the implicit default (an empty tap_action), but it is
+  # offered as a real option so a selection can be undone before submitting.
+  my @opts = (["", "Leave keg open"]);
   if ($is_gone) {
     push @opts, ["reopen", "Reopen this keg"];
   } else {
     push @opts, ["close", "Close tap"];
     push @opts, ["close_reopen", "Close &amp; reopen same"];
   }
-
-  print "<div class='dropdown' style='max-width: 14em; display: inline-block; vertical-align: middle;'>\n";
-  print "  <div class='dropdown-main'>\n";
-  print "    <input type='text' class='dropdown-filter' autocomplete='off' "
-      . "placeholder='Leave keg open' value='' readonly\n"
-      . "    onfocus=\"var dl=this.parentElement.querySelector('.dropdown-list'); "
-      . "dl.style.display='block'; this.value='';\"\n"
-      . "    onblur=\"var dl=this.parentElement.querySelector('.dropdown-list'); "
-      . "var self=this; setTimeout(function(){ dl.style.display='none'; self.value=''; }, 200);\"\n"
-      . "    style='font-size: x-small; width: 10em;' />\n";
-  print "    <input type='hidden' name='tap_action' value='' />\n";
-  print "    <div class='dropdown-list'>\n";
-  for my $opt (@opts) {
-    print "      <div class='dropdown-item' id='$opt->[0]' "
-        . "onmousedown=\"this.closest('form').querySelector('input[name=tap_action]').value='$opt->[0]'; "
-        . "this.closest('.dropdown').querySelector('.dropdown-filter').value='$opt->[1]';\">"
-        . "$opt->[1]</div>\n";
+  my $options = "";
+  foreach my $opt (@opts) {
+    $options .= "  <div class='dropdown-item' id='$opt->[0]'>$opt->[1]</div>\n";
   }
-  print "    </div>\n";
-  print "  </div>\n";
-  print "</div>\n";
+
+  my $dropdown = inputs::dropdown($c, "tap_action", "", "", $options, {
+    id          => "tap_action_$tap_beers_id",
+    placeholder => "Leave keg open",
+    readonly    => 1,
+    extraattr   => "style='max-width: 14em; display: inline-block; vertical-align: middle;'",
+  });
 
   my $checked = $is_unusual ? " checked" : "";
-  print "<br/>\n";
-  print "<input type='checkbox' name='mark_unusual' value='1'$checked /> <span>Unusual</span>\n";
-  print "<br/>\n";
-  print "<input type='submit' value='Update Keg' />\n";
-  print "</form>\n";
-} # _render_tap_action_form_fields
+  my $s = "";
+  # display:inline keeps the [manage] link on the same line as the surrounding
+  # board text; the form inside it becomes a block on its own line when opened.
+  $s .= "<div id='$form_id' class='tapact' style='display: inline; font-size: x-small;'> ";
+  $s .= "<span style='cursor: pointer; color: #888;' "
+      . "onclick=\"var f=this.parentNode.querySelector('.tapact-form'); "
+      . "f.style.display=(f.style.display==='none'?'block':'none');\">[manage]</span>\n";
+  $s .= "<form method='POST' accept-charset='UTF-8' class='no-print tapact-form' "
+      . "style='display: none; font-size: x-small; margin-top: 2px;'>\n";
+  $s .= "<input type='hidden' name='o' value='Taps' />\n";
+  $s .= "<input type='hidden' name='tap_beers_id' value='$tap_beers_id' />\n";
+  $s .= "<input type='hidden' name='loc' value='" . util::htmlesc($locname) . "' />\n";
+  $s .= "<input type='hidden' name='redir_op' value='" . util::htmlesc($c->{op}) . "' />\n";
+  $s .= $dropdown;
+  $s .= "<br/>\n";
+  $s .= "<input type='checkbox' name='mark_unusual' value='1'$checked /> <span>Unusual</span>\n";
+  $s .= "<br/>\n";
+  $s .= "<input type='submit' value='Update Keg' />\n";
+  $s .= "</form>\n";
+  $s .= "</div>\n";
+  return $s;
+} # tap_action_form_html
+
+sub render_tap_action_form {
+  my ($c, $tap_beers_id, $locname, $is_gone, $is_unusual) = @_;
+
+  print tap_action_form_html($c, $tap_beers_id, $locname, $is_gone, $is_unusual);
+} # render_tap_action_form
 
 ################################################################################
 # POST handler for tap actions (close, close & reopen, reopen, mark unusual)

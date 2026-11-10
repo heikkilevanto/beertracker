@@ -277,6 +277,25 @@ sub render_timeline {
     print "<div id='details'><span class='close' onclick='closeDetails()'>&#10005;</span>"
         . "<div id='details-body'></div></div>";
 
+    # Pre-rendered [manage] blocks, one per brew (its latest keg in the window,
+    # which is the one the timeline offers to manage). tap_timeline.js moves the
+    # matching block into the details panel on click, and puts it back here when
+    # the panel is rebuilt for another brew.
+    my %latest_keg;
+    foreach my $bid (keys %kegs) {
+        foreach my $k (@{$kegs{$bid}}) {
+            $latest_keg{$bid} = $k
+                if (!$latest_keg{$bid} || $k->{first} gt $latest_keg{$bid}{first});
+        }
+    }
+    print "<div id='tapforms' hidden>\n";
+    foreach my $bid (sort keys %latest_keg) {
+        my $k = $latest_keg{$bid};
+        print taps::tap_action_form_html($c, $k->{id}, $locname,
+            $k->{gone} ? 1 : 0, $k->{unusual} ? 1 : 0);
+    }
+    print "</div>\n";
+
     print $warn_html if $warn_html;
 
     my $N = scalar(@buckets);
@@ -373,7 +392,6 @@ sub render_timeline {
     my $det = JSON->new->encode(\%details);
     my $kegs_json = JSON->new->encode(\%kegs);
     print "<script>\n"
-        . "var TAP_LOC = '" . util::jssq($locname) . "';\n"
         . "var TAP_DETAILS = $det;\n"
         . "var TAP_KEGS = $kegs_json;\n"
         . "</script>\n";
