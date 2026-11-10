@@ -733,6 +733,24 @@ sub filtered_list {
 } # filtered_list
 
 ################################################################################
+# Gap line for days with no records
+################################################################################
+# Returns a centered line "N zero days/day" between two shown days,
+# or "" if the days are consecutive. Text color is bright green ("#00ff00")
+# matching the zero days marker style in graph.pm, and "N zero days/day"
+# (singular without 's' for 1 missing day).
+sub gapline {
+  my $prev_date = shift;  # newer day, "YYYY-MM-DD"
+  my $cur_date = shift;   # older day, "YYYY-MM-DD"
+  return "" unless $prev_date;
+  my $missing = dateutil::day_diff($cur_date, $prev_date) - 1;
+  return "" if $missing < 1;
+  my $unit = "days";
+  $unit = "day" if $missing == 1;
+  return "<div style='text-align:center;color:#00ff00'>$missing zero $unit</div>\n<hr/>\n";
+} # gapline
+
+################################################################################
 # mainlist itself
 ################################################################################
 
@@ -788,13 +806,18 @@ sub mainlist {
     $html .= filtered_list($c);
   } else {
     my $days_shown = 0;
+    my $prev_date;
     while ( $days_shown < $ndays && db::peekrow($c->{sth}) ) {
+      my ($cur_date) = split(' ', db::peekrow($c->{sth})->{effdate});
+      $html .= gapline($prev_date, $cur_date);
       $html .= oneday($c);
+      $prev_date = $cur_date;
       $days_shown++;
     }
     my $next_rec = db::peekrow($c->{sth});
     if ($next_rec) {
       my ($new_date) = split(' ', $next_rec->{effdate});
+      $html .= gapline($prev_date, $new_date);
       $html .= qq{<a href="$c->{url}?o=$c->{op}&date=$new_date&ndays=$original_ndays"><span>Older records</span></a><br/>\n};
     }
     $c->{sth}->finish;
