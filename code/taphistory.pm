@@ -158,7 +158,7 @@ sub render_timeline {
     my $sth = $c->{dbh}->prepare(q{
                SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName,
                b.ShortName AS brew_shortname,
-               b.BrewType, b.SubType, b.BrewStyle, b.Alc,
+               b.BrewType, b.SubType, b.BrewStyle, b.Alc, b.Tags,
                tb.FirstSeen, tb.Gone, tb.Unusual,
                pl.Name AS ProducerName, pl.ShortName AS prod_shortname,
                pl.Id AS ProducerId,
@@ -193,6 +193,7 @@ sub render_timeline {
                 prod  => ($r->{prod_shortname} || $r->{ProducerName}) || "",
                 prodid=> $r->{ProducerId} || "",
                 alc   => $r->{Alc},
+                emoji => styles::tag_emojis($r->{Tags}),
                 color => "#$bg",
                 fg    => fg_for($c, $bg),
             };
@@ -447,7 +448,7 @@ sub _render_tap_detail_row {
     my $unusual = $r->{Unusual} ? " <span style='color: #c44;'>Unusual</span>" : "";
 
     my $style_disp = styles::brewstyledisplay($c, $r->{BrewType}, $r->{SubType},
-        "tap:$tap '" . ($r->{BrewName} // "") . "'");
+        "tap:$tap '" . ($r->{BrewName} // "") . "'", $r->{Tags});
     my $prodname = $r->{prod_shortname} || $r->{ProducerName};
     my $brewname = $r->{brew_shortname} || $r->{BrewName};
     my $prod = $prodname
@@ -477,7 +478,7 @@ sub render_single_tap {
     my $sth = $c->{dbh}->prepare(q{
         SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName,
                b.ShortName AS brew_shortname,
-               b.BrewType, b.SubType, b.BrewStyle,
+               b.BrewType, b.SubType, b.BrewStyle, b.Tags,
                tb.FirstSeen, tb.Gone, tb.Unusual,
                pl.Name AS ProducerName, pl.ShortName AS prod_shortname,
                pl.Id AS ProducerId,

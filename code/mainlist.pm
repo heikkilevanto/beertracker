@@ -282,7 +282,7 @@ sub nameline {
    }
    my $style_url = uri_escape_utf8($style_str);
    $html .= "<a href='$c->{url}?o=$c->{op}&q=$style_url'>" .
-     styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}, "glass:$rec->{id} '" . ($rec->{brewname} // "") . "' $rec->{brewtype}/" . ($rec->{subtype} // "")) .
+     styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}, "glass:$rec->{id} '" . ($rec->{brewname} // "") . "' $rec->{brewtype}/" . ($rec->{subtype} // ""), $rec->{tags}) .
      "</a> \n";
   $html .= "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
   if ( $rec->{brewname} ) {

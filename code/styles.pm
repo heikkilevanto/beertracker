@@ -16,6 +16,11 @@ use Carp qw(longmess);
 
 my %warned; # Track what warnings we have already logged
 
+# Emoji for known brew tags. Unknown tags fall back to a small '#'.
+my %TAG_EMOJI = (
+  xmas => "\x{1F384}", # 🎄
+);
+
 # Returns the background color for the brew
 # Takes a style string as the argument. That way it can also
 # be used for the few non-brew items that need special color, like restaurants
@@ -95,12 +100,31 @@ sub brewtextstyle {
   return "style='background-color:#$bkg;color:$fg;'";
 }
 
+# Returns HTML with an emoji for each known tag. Unknown tags get a small '#'.
+sub tag_emojis {
+  my $tags = shift // "";
+  my $html = "";
+  foreach my $tag ( split /\s+/, $tags ) {
+    next unless $tag;
+    $tag =~ s/^#+//;
+    next unless $tag;
+    $tag = lc($tag);
+    if ( exists $TAG_EMOJI{$tag} ) {
+      $html .= $TAG_EMOJI{$tag};
+    } else {
+      $html .= "<span style='font-size: smaller;'>#</span>";
+    }
+  }
+  return $html;
+} # tag_emojis
+
 # Returns HTML for a styled display of the brew type and subtype
 sub brewstyledisplay {
   my $c = shift;
   my $brewtype = shift;
   my $subtype = shift;
   my $line = shift || "";  # Optional caller context for log messages
+  my $tags = shift || "";  # Optional space-separated brew tags
   my $style_str;
   if ($brewtype eq 'Beer') {
     $style_str = $subtype || 'Beer';
@@ -109,7 +133,8 @@ sub brewstyledisplay {
     $style_str .= ",$subtype" if $subtype;
   }
   my $dispstyle = brewtextstyle($c, $style_str, $line);
-  return "<span $dispstyle>[$style_str]</span>";
+  my $emoji = tag_emojis($tags);
+  return "<span $dispstyle>[$style_str$emoji]</span>";
 }
 
 # Helper to shorten a beer style

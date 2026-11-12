@@ -263,7 +263,14 @@ sub _fmt_type {
     $v = _word_spans($filter_str);
     my $hidden = "";
     $hidden = "<span style='display:none'>Beer </span>" if ($brewtype eq 'Beer' && $subtype);
-    $v = $hidden . "<span $dispstyle>$v</span>";
+    my $tags = "";
+    for my $j ( 0 .. $#{ $ctx->{fields} } ) {
+      my $field = $ctx->{fields}->[$j];
+      next unless $field eq 'Tags' || $field eq 'xTags';
+      $tags = $rec->[$j] // "";
+      last;
+    }
+    $v = $hidden . "<span $dispstyle>$v" . styles::tag_emojis($tags) . "</span>";
   }
   return $v;
 } # _fmt_type

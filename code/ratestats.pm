@@ -308,7 +308,7 @@ sub top_rated_glasses {
     my $sql = qq{
         SELECT ranked.Id, ranked.Brew, ranked.Timestamp, ranked.Location,
                ranked.GlassName, ranked.glass_avg, ranked.BrewType,
-               ranked.SubType,
+               ranked.SubType, ranked.Tags,
                COALESCE(br.average_rating, lr.average_rating) AS average_rating,
                COALESCE(br.rating_count, lr.rating_count) AS rating_count,
                COALESCE(br.comment_count, lr.comment_count) AS comment_count,
@@ -316,7 +316,7 @@ sub top_rated_glasses {
         FROM (
           SELECT g.Id, g.Brew, g.Timestamp, g.Location,
                  COALESCE(b.Name, g.BrewType) AS GlassName,
-                 g.BrewType, g.SubType,
+                 g.BrewType, g.SubType, b.Tags AS Tags,
                  AVG(c.Rating) AS glass_avg,
                  ROW_NUMBER() OVER (
                    PARTITION BY CASE
@@ -421,7 +421,7 @@ sub top_rated_glasses {
 
       # Brew name (or BrewType for non-brew items like Night) + brew type badge
       my $styledisp = styles::brewstyledisplay($c, $row->{BrewType}, $row->{SubType},
-        "glass:$row->{Id} $row->{GlassName} $row->{BrewType}/" . ($row->{SubType} // ""));
+        "glass:$row->{Id} $row->{GlassName} $row->{BrewType}/" . ($row->{SubType} // ""), $row->{Tags});
       # If the glass name matches the brew type (e.g. "Restaurant [Restaurant,Modern]"),
       # strip the duplicate brew type from the badge
       if (defined $row->{GlassName} && defined $row->{BrewType} && $row->{GlassName} eq $row->{BrewType}) {

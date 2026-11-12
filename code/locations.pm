@@ -169,6 +169,7 @@ sub producerbrews {
         brews.Alc AS "Alc",
         CASE WHEN brews.Discontinued IS NOT NULL AND brews.Discontinued != '' THEN 'X' ELSE '' END AS "Discont",
         brews.BrewType || ', ' || brews.SubType AS "Type_A_cont",
+        brews.Tags AS xTags,
         r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_A",
         strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
           strftime('%H:%M', max(glasses.Timestamp)) AS "Last",

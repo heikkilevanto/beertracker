@@ -10,7 +10,7 @@ function showDetails(el) {
   var styleUrl = encodeURIComponent(d.sub);
   var html = "<a href='?o=Full&q=" + styleUrl + "'>"
        + "<span class='stylebadge' style='background:" + d.color + ";color:" + d.fg + "'>"
-       + "[" + escHtml(d.sub) + "]</span></a> "
+       + "[" + escHtml(d.sub) + (d.emoji || "") + "]</span></a> "
        + "<a href='?o=Location&e=" + d.prodid + "'><span><i>" + escHtml(d.prod) + ":</i></span></a> "
        + "<a href='?o=Brew&e=" + bid + "'><span><b>" + escHtml(d.name) + "</b></span></a>"
        + " <span style='font-size:x-small;'>[" + bid + "]</span>"

@@ -326,6 +326,7 @@ sub load_beerlist_from_db {
         pl.Name AS maker, pl.Id AS maker_id,
         b.SubType AS type, b.Alc AS alc,
         b.BrewType AS brewtype,
+        b.Tags AS tags,
         b.DetailsLink AS details_link,
         b.ShortName AS brew_shortname,
         pl.SearchLink AS maker_search_link,
@@ -380,6 +381,7 @@ sub load_beerlist_from_db {
         pl.Name AS maker, pl.Id AS maker_id,
         b.SubType AS type, b.Alc AS alc,
         b.BrewType AS brewtype,
+        b.Tags AS tags,
         b.DetailsLink AS details_link,
         b.ShortName AS brew_shortname,
         pl.SearchLink AS maker_search_link,
@@ -478,6 +480,7 @@ sub load_beerlist_from_db {
       maker_search_link => $row->{maker_search_link},
       shortname => $row->{shortname},
       brewtype => $row->{brewtype},
+      tags => $row->{tags} || "",
       avg_days_on_tap => $row->{avg_days_on_tap},
       tap_history_count => $row->{tap_history_count},
       tap_beers_id => $row->{tap_beers_id},
@@ -636,13 +639,15 @@ sub render_beer_row {
   my $data_brewtype = util::htmlesc($e->{brewtype} || "");
 
   # Clickable style label — opens controls + filters by style
-  my $style_disp = styles::brewstyledisplay($c, "Beer", $processed_data->{origsty});
+  my $style_disp = styles::brewstyledisplay($c, "Beer", $processed_data->{origsty}, "Board:$e->{id}", $e->{tags});
   my $style_link = "<a href='#' data-fstyle=\"" . util::htmlesc($processed_data->{origsty} || "") . "\" onclick='openControlsAndFilter(this.getAttribute(\"data-fstyle\")); return false;'>$style_disp</a>";
+  my $tap_marker = styles::tag_emojis($e->{tags});
+  $tap_marker = "#" if $tap_marker eq "";
 
   # Compact row
   print "<tr id='compact_$id' style='$bg display: $compact_display;' " .
     "data-style='$data_style' data-maker='$data_maker' data-name='$data_name' data-brewtype='$data_brewtype'>\n";
-  print "<td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" ><span $beerstyle>#$dispid</span></td>\n";
+  print "<td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" ><span $beerstyle>$tap_marker$dispid</span></td>\n";
   print "<td>$buttons_compact</td>\n";
   print "<td style='font-size: x-small;' align=center>$e->{alc}</td>\n";
   print "<td>$processed_data->{dispbeer_short} $processed_data->{dispmak} ";
@@ -656,7 +661,7 @@ sub render_beer_row {
   # Expanded rows
   print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td colspan=5><hr></td></tr>\n";
   print "<tr class='expanded_$id' style='$bg display: $expanded_display;'><td align=right $beerstyle onclick=\"toggleBeer('$id'); return false;\" >";
-  print "<span $beerstyle id='here'>#$dispid</span> ";
+  print "<span $beerstyle id='here'>$tap_marker$dispid</span> ";
   print "</td>\n";
   print "<td colspan=4 >";
   print "<span style='white-space:nowrap;overflow:hidden;text-overflow:clip;max-width:100px'>\n";

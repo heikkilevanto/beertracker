@@ -230,6 +230,7 @@ sub brewdeduplist {
         r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS Stats,
         brews.Alc AS Alc,
         brews.BrewType || ', ' || brews.Subtype AS "Type_A",
+        brews.Tags AS xTags,
         '' AS TR1,
         'Chk' AS Chk,
         ploc.Name AS Producer,
@@ -529,6 +530,7 @@ sub selectbrew {
         BREWS.Alc,
         BREWS.DefPrice,
         BREWS.DefVol,
+        BREWS.Tags,
         GROUP_CONCAT(DISTINCT SeenLocations.Name) AS SeenAt,
         br.rating_count,
         br.average_rating,
@@ -546,7 +548,7 @@ sub selectbrew {
     my $list_sth = db::query($c, $sql, $c->{username});
 
     $opts = "";
-    while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {
+    while ( my ($id, $bt, $su, $na, $generic, $pr, $alc, $defprice, $defvol, $tags, $seenat, $rating_count, $average_rating, $comment_count )  = $list_sth->fetchrow_array ) {
       my $disp = "";
       if ($pr && $na !~ /\Q$pr\E/ ) {
         $disp .= "<i><span style='font-size: x-small;'>$pr:</span></i> ";
@@ -554,7 +556,7 @@ sub selectbrew {
       $disp .= "<b>$na</b>" if ($na);
       $disp .= " <span style='font-size: xx-small;'>";
       $disp .= " " . util::unit($alc, "%") if $alc;
-      my $style_html = styles::brewstyledisplay($c, $bt, $su, "brew:$id '$na' $bt/" . ($su // ""));
+      my $style_html = styles::brewstyledisplay($c, $bt, $su, "brew:$id '$na' $bt/" . ($su // ""), $tags);
       # Remove main type if there's a subtype (e.g., [Wine,Red] -> [Red])
       if ($su) {
         $style_html =~ s/\[$bt,([^\]]+)\]/[$1]/;
