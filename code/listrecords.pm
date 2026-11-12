@@ -468,26 +468,25 @@ sub _fmt_countryregion {
   $region  = '' unless defined $region;
   $region =~ s/^\s+|\s+$//g;
   my $flag = styles::country_flag($country);
-  my @parts;
-  if ($region ne '' && $country eq 'Denmark') {
-    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
-  } elsif ($country eq 'Denmark') {
-    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>DK</span>";
-  } elsif ($region ne '') {
-    my $code = $country;
-    if (exists $util::COUNTRY_CODES{$country}) {
-      $code = (split /,\s*/, $util::COUNTRY_CODES{$country})[0];
+  my $out = "";
+  if ($region ne '') {
+    my $rspan = "<span data-col='$i' data-filter='" . util::htmlesc($region)
+      . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
+    if ($flag) {
+      my $cspan = "<span data-col='$i' data-filter='" . util::htmlesc($country)
+        . "' title='" . util::htmlesc($country)
+        . "' onclick='fieldclick(event,this)'>$flag</span>";
+      $out = "$cspan $rspan";
+    } else {
+      $out = $rspan;
     }
-    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($code) . "</span>";
-    push @parts, ", ";
-    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
   } elsif ($country ne '') {
-    push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($country) . "</span>";
+    my $esc = util::htmlesc($country);
+    my $disp = $flag ? "$flag $esc" : $esc;
+    $out = "<span data-col='$i' data-filter='$esc' onclick='fieldclick(event,this)'>$disp</span>";
   }
-  $v = join("", @parts);
-  $v = "$flag $v" if $flag && $v;
-  $v .= "&nbsp;&nbsp;" if @parts;
-  return $v;
+  $out .= "&nbsp;&nbsp;" if $out ne "";
+  return $out;
 } # _fmt_countryregion
 
 sub _fmt_prod {
