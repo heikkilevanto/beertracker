@@ -673,6 +673,15 @@ sub postbrew {
     util::error ("A brew must have a name" ) unless $name;
     #util::error ("A brew must have a type" ) unless util::param($c, "newbrewBrewType");
 
+    # An 'x' tag means "no tags" (same convention as an x price) - clear it.
+    my $tagparam = $section . "Tags";
+    my $tagval = util::clean_tags(util::param($c, $tagparam));
+    if ( $tagval =~ /^x$/i ) {
+      $c->{cgi}->param($tagparam, "");
+    } elsif ( $tagval eq "" ) {
+      my $holiday = qr/(?:^|[^A-Za-z])(?:Jule|Yule|Joulu|Xmas|Christmas|Noel|Santa|Nisse)/i;
+      $c->{cgi}->param($tagparam, "xmas") if $name =~ $holiday;
+    }
 
     my $defaults = {};
     $defaults->{BrewType} = util::param($c, "selbrewtype");
