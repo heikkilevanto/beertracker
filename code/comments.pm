@@ -710,6 +710,8 @@ sub comments_list_sql {
       COALESCE(brew_comment.Name, brew_glass.Name) AS "BrewName_A_contline",
       COALESCE(ploc_comment.Id, ploc_glass.Id) AS "ProdLocId_A_link=Location",
       COALESCE(ploc_comment.Name, ploc_glass.Name) AS "Prod_A",
+      COALESCE(NULLIF(brew_comment.Country,''), ploc_comment.Country,
+               NULLIF(brew_glass.Country,''), ploc_glass.Country) AS xCountry,
 
       '' AS TR2,
       comments.Rating AS "Rate_avg_cnt_A",

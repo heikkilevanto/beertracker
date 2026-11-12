@@ -327,6 +327,7 @@ sub load_beerlist_from_db {
         b.SubType AS type, b.Alc AS alc,
         b.BrewType AS brewtype,
         b.Tags AS tags,
+        COALESCE(NULLIF(b.Country, ''), pl.Country) AS origin_country,
         b.DetailsLink AS details_link,
         b.ShortName AS brew_shortname,
         pl.SearchLink AS maker_search_link,
@@ -382,6 +383,7 @@ sub load_beerlist_from_db {
         b.SubType AS type, b.Alc AS alc,
         b.BrewType AS brewtype,
         b.Tags AS tags,
+        COALESCE(NULLIF(b.Country, ''), pl.Country) AS origin_country,
         b.DetailsLink AS details_link,
         b.ShortName AS brew_shortname,
         pl.SearchLink AS maker_search_link,
@@ -481,6 +483,7 @@ sub load_beerlist_from_db {
       shortname => $row->{shortname},
       brewtype => $row->{brewtype},
       tags => $row->{tags} || "",
+      origin_country => $row->{origin_country} || "",
       avg_days_on_tap => $row->{avg_days_on_tap},
       tap_history_count => $row->{tap_history_count},
       tap_beers_id => $row->{tap_beers_id},
@@ -531,6 +534,9 @@ sub prepare_beer_entry_data {
   $dispmak_full = "<a href='$c->{url}?o=Location&e=$e->{maker_id}'><span>$mak</span></a>" if ($e->{maker_id});
 
   my $country = $e->{'country'} || "";
+  my $flag = styles::country_flag($e->{origin_country});
+  $dispmak = "$flag $dispmak" if ($flag && $dispmak);
+  $dispmak_full = "$flag $dispmak_full" if ($flag && $dispmak_full);
 
   return {
     mak => $mak,

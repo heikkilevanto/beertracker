@@ -306,12 +306,16 @@ sub inputform {
           my $esc    = util::htmlesc($country);
           my $suffix = "";
           $suffix = " [$util::COUNTRY_CODES{$country}]" if (exists $util::COUNTRY_CODES{$country});
-          $opts .= "  <div class='dropdown-item' id='$esc'>$esc$suffix</div>\n";
+          my $flag = styles::country_flag($country);
+          my $disp = $flag ? "$flag $esc" : $esc;
+          $opts .= "  <div class='dropdown-item' id='$esc'>$disp$suffix</div>\n";
         }
         my $curval = "";
         $curval = util::htmlesc($rec->{$f}) if ($rec && defined($rec->{$f}));
+        my $curflag = styles::country_flag($curval);
+        my $curdisp = $curflag ? "$curflag $curval" : $curval;
         $form .= "<td>\n";
-        $form .= dropdown($c, $inpname, $curval, $curval, $opts, { disabled => $disabled, simplenew => 1 });
+        $form .= dropdown($c, $inpname, $curval, $curdisp, $opts, { disabled => $disabled, simplenew => 1 });
       } elsif ( $f =~ /^Region$/i ) {
         my $cr = locations::distinct_countries_and_regions($c);
         my $opts = "";

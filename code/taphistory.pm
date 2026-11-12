@@ -159,6 +159,7 @@ sub render_timeline {
                SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName,
                b.ShortName AS brew_shortname,
                b.BrewType, b.SubType, b.BrewStyle, b.Alc, b.Tags,
+               COALESCE(NULLIF(b.Country, ''), pl.Country) AS origin_country,
                tb.FirstSeen, tb.Gone, tb.Unusual,
                pl.Name AS ProducerName, pl.ShortName AS prod_shortname,
                pl.Id AS ProducerId,
@@ -194,6 +195,7 @@ sub render_timeline {
                 prodid=> $r->{ProducerId} || "",
                 alc   => $r->{Alc},
                 emoji => styles::tag_emojis($r->{Tags}),
+                prodflag => styles::country_flag($r->{origin_country}),
                 color => "#$bg",
                 fg    => fg_for($c, $bg),
             };
@@ -211,6 +213,7 @@ sub render_timeline {
             name   => $d->{name},
             style  => $d->{style},
             prod   => $d->{prod},
+            prodflag => $d->{prodflag},
             bg     => $d->{color},
             fg     => $d->{fg},
             since  => $fs_day,
@@ -376,6 +379,7 @@ sub render_timeline {
                     . "onclick='showDetails(this)'>"
                     . util::htmlesc($rec->{name})
                     . ($rec->{prod} ? " <span class='tap-prod'>"
+                        . ($rec->{prodflag} ? $rec->{prodflag} . " " : "")
                         . util::htmlesc($rec->{prod}) . "</span>" : "")
                     . "</span></td>\n";
             }
@@ -450,6 +454,8 @@ sub _render_tap_detail_row {
     my $style_disp = styles::brewstyledisplay($c, $r->{BrewType}, $r->{SubType},
         "tap:$tap '" . ($r->{BrewName} // "") . "'", $r->{Tags});
     my $prodname = $r->{prod_shortname} || $r->{ProducerName};
+    my $prodflag = styles::country_flag($r->{origin_country});
+    $prodname = "$prodflag $prodname" if ($prodflag && $prodname);
     my $brewname = $r->{brew_shortname} || $r->{BrewName};
     my $prod = $prodname
         ? " <a href='$c->{url}?o=Location&e=" . util::htmlesc($r->{ProducerId})
@@ -479,6 +485,7 @@ sub render_single_tap {
         SELECT tb.Id, tb.Tap, tb.Brew, b.Name AS BrewName,
                b.ShortName AS brew_shortname,
                b.BrewType, b.SubType, b.BrewStyle, b.Tags,
+               COALESCE(NULLIF(b.Country, ''), pl.Country) AS origin_country,
                tb.FirstSeen, tb.Gone, tb.Unusual,
                pl.Name AS ProducerName, pl.ShortName AS prod_shortname,
                pl.Id AS ProducerId,

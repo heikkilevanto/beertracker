@@ -46,6 +46,7 @@ sub glassquery {
       brews.IsGeneric AS generic,
       brews.DetailsLink AS brewlink,
       brews.Tags AS tags,
+      COALESCE(NULLIF(brews.Country, ''), locations.Country) AS origin_country,
       locations.name AS producer,
       locations.Id AS prodid,
       locations.SearchLink AS prodsearchlink,
@@ -284,7 +285,11 @@ sub nameline {
    $html .= "<a href='$c->{url}?o=$c->{op}&q=$style_url'>" .
      styles::brewstyledisplay($c, $rec->{brewtype}, $rec->{subtype}, "glass:$rec->{id} '" . ($rec->{brewname} // "") . "' $rec->{brewtype}/" . ($rec->{subtype} // ""), $rec->{tags}) .
      "</a> \n";
-  $html .= "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$rec->{producer}:</i></span></a> " if ( $rec->{producer} );
+  if ( $rec->{producer} ) {
+    my $flag = styles::country_flag($rec->{origin_country});
+    my $producer = $flag ? "$flag $rec->{producer}" : $rec->{producer};
+    $html .= "<a href='$c->{url}?o=Location&e=$rec->{prodid}' ><span><i>$producer:</i></span></a> ";
+  }
   if ( $rec->{brewname} ) {
     $html .= "<a href='$c->{url}?o=Brew&e=$rec->{brewid}' ><span><b>$rec->{brewname}</b></span></a> " ;
   } elsif ($locationid) {

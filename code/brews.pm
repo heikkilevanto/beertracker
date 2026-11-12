@@ -55,6 +55,7 @@ sub listbrews {
       brews.BrewType || ', ' || brews.SubType AS "Type_A_cont",
       r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as=Stats",
       brews.Tags AS "Tags_A",
+      COALESCE(NULLIF(brews.Country,''), ploc.Country) AS xCountry,
       (SELECT Id || ':' || Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
         AS "Photo_R3_noheader_nofilter",
 
@@ -231,6 +232,7 @@ sub brewdeduplist {
         brews.Alc AS Alc,
         brews.BrewType || ', ' || brews.Subtype AS "Type_A",
         brews.Tags AS xTags,
+        COALESCE(NULLIF(brews.Country,''), ploc.Country) AS xCountry,
         '' AS TR1,
         'Chk' AS Chk,
         ploc.Name AS Producer,

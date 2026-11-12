@@ -138,7 +138,7 @@ sub clean_tags {
 # Map of country names to ISO search suffixes, used to annotate country dropdowns.
 # United Kingdom gets extra aliases for common searches.
 our %COUNTRY_CODES = (
-  'Denmark'        => 'DK',           'United Kingdom' => 'UK, GB, Eng',
+  'Denmark'        => 'DK',           'United Kingdom' => 'GB, UK, Eng',
   'South Africa'   => 'ZA',           'Norway'         => 'NO',
   'Spain'          => 'ES',           'France'         => 'FR',
   'Belgium'        => 'BE',           'Italy'          => 'IT',
@@ -149,6 +149,9 @@ our %COUNTRY_CODES = (
   'Chile'          => 'CL',           'Poland'         => 'PL',
   'Austria'        => 'AT',           'Japan'          => 'JP',
   'Finland'        => 'FI',           'Canada'         => 'CA',
+  'Greenland'      => 'GL',           'China'          => 'CN',
+  'Netherlands'    => 'NL',           'Portugal'       => 'PT',
+  'Lebanon'        => 'LB',
 );
 
 # Reverse lookup: code/alias (uppercase) => canonical country name.

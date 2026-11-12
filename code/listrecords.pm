@@ -159,6 +159,17 @@ sub _maybe_photo_colspan {
 # as \&_fmt_x. Subs appear in the same order as the rules below.
 ################################################################################
 
+# Return the first matching field value from the current row.
+sub _field_value {
+  my ($ctx, @names) = @_;
+  my %want = map { $_ => 1 } @names;
+  for my $j ( 0 .. $#{ $ctx->{fields} } ) {
+    my $field = $ctx->{fields}->[$j];
+    return $ctx->{rec}->[$j] // "" if $want{$field};
+  }
+  return "";
+} # _field_value
+
 sub _fmt_id {
   my ($ctx) = @_;
   my $v = $ctx->{v};
@@ -263,13 +274,7 @@ sub _fmt_type {
     $v = _word_spans($filter_str);
     my $hidden = "";
     $hidden = "<span style='display:none'>Beer </span>" if ($brewtype eq 'Beer' && $subtype);
-    my $tags = "";
-    for my $j ( 0 .. $#{ $ctx->{fields} } ) {
-      my $field = $ctx->{fields}->[$j];
-      next unless $field eq 'Tags' || $field eq 'xTags';
-      $tags = $rec->[$j] // "";
-      last;
-    }
+    my $tags = _field_value($ctx, 'Tags', 'xTags');
     $v = $hidden . "<span $dispstyle>$v" . styles::tag_emojis($tags) . "</span>";
   }
   return $v;
@@ -462,6 +467,7 @@ sub _fmt_countryregion {
   $country = '' unless defined $country;
   $region  = '' unless defined $region;
   $region =~ s/^\s+|\s+$//g;
+  my $flag = styles::country_flag($country);
   my @parts;
   if ($region ne '' && $country eq 'Denmark') {
     push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($region) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($region) . "</span>";
@@ -479,6 +485,7 @@ sub _fmt_countryregion {
     push @parts, "<span data-col='$i' data-filter='" . util::htmlesc($country) . "' onclick='fieldclick(event,this)'>" . util::htmlesc($country) . "</span>";
   }
   $v = join("", @parts);
+  $v = "$flag $v" if $flag && $v;
   $v .= "&nbsp;&nbsp;" if @parts;
   return $v;
 } # _fmt_countryregion
@@ -487,11 +494,23 @@ sub _fmt_prod {
   my ($ctx) = @_;
   my $v = $ctx->{v};
   if ($v) {
+    my $flag = styles::country_flag(_field_value($ctx, 'xCountry', 'Country'));
     $v = _word_spans($v);
     $v = "<i>$v</i>";
+    $v = "$flag $v" if $flag;
   }
   return $v;
 } # _fmt_prod
+
+sub _fmt_producer {
+  my ($ctx) = @_;
+  my $v = $ctx->{v};
+  return $v unless $v;
+  my $flag = styles::country_flag(_field_value($ctx, 'xCountry', 'Country'));
+  $v = _word_spans($v);
+  $v = "$flag $v" if $flag;
+  return $v;
+} # _fmt_producer
 
 sub _fmt_brewname {
   my ($ctx) = @_;
@@ -631,6 +650,7 @@ my @FIELD_DEFS = (
   { name => "Name",             word_split => 0, format => \&_fmt_name },
   { name => "CountryRegion",    word_split => 0, format => \&_fmt_countryregion },
   { name => "Prod",             word_split => 0, format => \&_fmt_prod },
+  { name => "Producer",         word_split => 0, format => \&_fmt_producer },
   { name => "BrewName",         word_split => 0, format => \&_fmt_brewname },
   { name => "Day",              style => "style='max-width:100px; min-width:0'",
     mobile_style => "style='max-width:90px; min-width:0'",

@@ -113,6 +113,7 @@ my @TESTS = (
   { name => "comments_rating",   sets => [qw(quick comments)],   test => \&test_comments_rating },
   { name => "glasses_isempty",   sets => [qw(quick glasses)],    test => \&test_glasses_isempty },
   { name => "styles_short",      sets => [qw(quick styles)],     test => \&test_styles_short },
+  { name => "styles_flag",       sets => [qw(quick styles)],     test => \&test_styles_flag },
   { name => "postglass_curprice", sets => [qw(quick postglass)], test => \&test_postglass_curprice },
   { name => "mainlist_currency",  sets => [qw(quick mainlist)],  test => \&test_mainlist_currency },
   { name => "mainlist_tags",      sets => [qw(quick mainlist)],  test => \&test_mainlist_tags },
@@ -537,6 +538,22 @@ sub test_styles_short {
   assert(styles::shortbeerstyle("Stout") eq "Stout", "shortbeerstyle Stout");
   assert(styles::shortbeerstyle("") eq "", "shortbeerstyle empty");
   assert(styles::shortbeerstyle(undef) eq "", "shortbeerstyle undef");
+}
+
+sub test_styles_flag {
+  my $gb = "\x{1F1EC}\x{1F1E7}";
+  my $de = "\x{1F1E9}\x{1F1EA}";
+  my $us = "\x{1F1FA}\x{1F1F8}";
+  assert(styles::country_flag("United Kingdom") eq $gb, "country_flag United Kingdom");
+  assert(styles::country_flag("GB") eq $gb, "country_flag GB alias");
+  assert(styles::country_flag("Eng") eq $gb, "country_flag Eng alias");
+  assert(styles::country_flag("Germany") eq $de, "country_flag Germany");
+  assert(styles::country_flag("United States") eq $us, "country_flag United States");
+  assert(styles::country_flag("Denmark") eq "", "country_flag Denmark suppressed");
+  assert(styles::country_flag("DK") eq "", "country_flag DK suppressed");
+  assert(styles::country_flag("Narnia") eq "", "country_flag unknown");
+  assert(styles::country_flag("") eq "", "country_flag empty");
+  assert(styles::country_flag(undef) eq "", "country_flag undef");
 }
 
 # --- postglass.pm / currencies ---

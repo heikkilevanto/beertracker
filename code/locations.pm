@@ -170,6 +170,7 @@ sub producerbrews {
         CASE WHEN brews.Discontinued IS NOT NULL AND brews.Discontinued != '' THEN 'X' ELSE '' END AS "Discont",
         brews.BrewType || ', ' || brews.SubType AS "Type_A_cont",
         brews.Tags AS xTags,
+        COALESCE(NULLIF(brews.Country,''), ploc.Country) AS xCountry,
         r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_A",
         strftime('%Y-%m-%d %w ', max(glasses.Timestamp), '-06:00') ||
           strftime('%H:%M', max(glasses.Timestamp)) AS "Last",
@@ -561,7 +562,12 @@ sub selectlocation {
       $country_attr = " country='" . util::htmlesc($country) . "'" if ($country);
       my $region_attr = "";
       $region_attr = " region='" . util::htmlesc($region) . "'" if ($region);
-      $opts .= "      <div class='dropdown-item' id='$id' $substtr$tags_attr$country_attr$region_attr>$name $type $dist</div>\n";
+      my $dispname = $name;
+      if ( $prods eq "prod" ) {
+        my $flag = styles::country_flag($country);
+        $dispname = "$flag $dispname" if $flag;
+      }
+      $opts .= "      <div class='dropdown-item' id='$id' $substtr$tags_attr$country_attr$region_attr>$dispname $type $dist</div>\n";
     }
     cache::set($c, $cache_key, $opts);
   }

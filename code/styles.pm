@@ -118,6 +118,30 @@ sub tag_emojis {
   return $html;
 } # tag_emojis
 
+my %COUNTRY_FLAGS;
+
+# Returns the Unicode flag for a known country. Denmark is deliberately blank.
+sub country_flag {
+  my $country = shift // "";
+  $country =~ s/^\s+|\s+$//g;
+  return "" unless $country;
+  unless (%COUNTRY_FLAGS) {
+    foreach my $name ( keys %util::COUNTRY_CODES ) {
+      my @codes = split /,\s*/, $util::COUNTRY_CODES{$name};
+      next unless @codes;
+      my $code = uc($codes[0]);
+      $COUNTRY_FLAGS{uc($name)} = $code;
+      foreach my $alias (@codes) {
+        $COUNTRY_FLAGS{uc($alias)} = $code;
+      }
+    }
+  }
+  my $code = $COUNTRY_FLAGS{uc($country)} // "";
+  return "" if $code eq "" || $code eq "DK";
+  return "" unless $code =~ /^[A-Z]{2}$/;
+  return join("", map { chr(0x1F1E6 + ord($_) - ord("A")) } split //, $code);
+} # country_flag
+
 # Returns HTML for a styled display of the brew type and subtype
 sub brewstyledisplay {
   my $c = shift;
