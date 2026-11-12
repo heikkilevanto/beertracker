@@ -252,6 +252,8 @@ my @TESTS = (
   { name => "person_related",   sets => [qw(posts roundtrip person persons)],         test => \&test_person_related },
   { name => "brew_roundtrip",     sets => [qw(posts roundtrip brew brews)],             test => \&test_brew_roundtrip },
   { name => "brew_apostrophe",    sets => [qw(posts roundtrip brew brews)],             test => \&test_brew_apostrophe },
+  { name => "brew_tags_roundtrip", sets => [qw(posts roundtrip brew brews)],            test => \&test_brew_tags_roundtrip },
+  { name => "q_tag_filter",       sets => [qw(posts roundtrip full glasses mainlist)],  test => \&test_q_tag_filter },
   { name => "location_roundtrip", sets => [qw(posts roundtrip location locations)],       test => \&test_location_roundtrip },
   { name => "glass_roundtrip",    sets => [qw(posts roundtrip postglass glasses)],        test => \&test_glass_roundtrip },
   { name => "glass_currency_roundtrip", sets => [qw(posts roundtrip postglass glasses)],  test => \&test_glass_currency_roundtrip },
@@ -999,6 +1001,116 @@ sub test_brew_apostrophe {
   assert_page_ok($status, $body, "Brew edit after apostrophe delete", "Oops");
   assert(scalar($body =~ /Brew id '$id' not found/), "deleted brew id $id reports not found");
 } # test_brew_apostrophe
+
+sub test_brew_tags_roundtrip {
+  # Issue #784: brews carry free-form Tags. Insert a value with a leading
+  # space and leading '#'s, then confirm the stored value has neither, that
+  # the brews list has a Tags column, and that the edit form renders the
+  # chip widget. No DB access — everything is checked through HTTP.
+  my $name = "TST" . time() . "tagøl";
+  my $tagtok = "tsttag" . time();
+  get_first_id("Brew");
+
+  my ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => "new", Name => $name, BrewType => "Beer",
+        Tags => " #$tagtok #xmas ", submit => "Insert Brew" });
+  my $loc = assert_post_redirect($status, $headers, "Brew tags insert");
+  return unless defined $loc;
+
+  # The brews list must have a Tags column, showing the stored tag
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&showall=1");
+  assert_page_ok($status, $body, "Brew list after tags insert", "Brews");
+  assert(scalar($body =~ /placeholder='Tags'/), "Brew list has a Tags column");
+  assert(scalar($body =~ /\Q$tagtok\E/), "Brew list shows the stored tag '$tagtok'");
+  my $id = id_before_text($body, "Brew", $name);
+  assert(defined $id, "harvested the tagged Brew id from the list");
+  return unless defined $id;
+
+  # Edit form: the hidden Tags input holds the cleaned value — no leading
+  # space and no '#', and the chip widget is rendered
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
+  assert_page_ok($status, $body, "Brew edit with tags", "Editing Brew");
+  assert(scalar($body =~ /name='Tags' id='Tags' value='\Q$tagtok\E xmas'/),
+         "stored Tags have no leading space and no #");
+  assert(scalar($body !~ /name='Tags' id='Tags' value=' /),
+         "stored Tags value does not start with a space");
+  assert(scalar($body =~ /tags-input-Tags/), "edit form renders the tags chip widget");
+
+  # Delete it again; the edit page must then report the id as not found.
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => $id, id => $id, Name => $name, BrewType => "Beer",
+        Tags => "$tagtok xmas", submit => "Delete Brew" });
+  $loc = assert_post_redirect($status, $headers, "Brew tags delete");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$id");
+  assert_page_ok($status, $body, "Brew tags edit after delete", "Oops");
+  assert(scalar($body =~ /Brew id '$id' not found/), "deleted tagged brew id $id reports not found");
+} # test_brew_tags_roundtrip
+
+sub test_q_tag_filter {
+  # Issue #784: the main-list q filter searches brew tags only for tokens
+  # starting with '#'. Tag a brew with a token that appears nowhere else,
+  # drink it, then filter: '#token' must match, the bare token must not.
+  my $locid = get_first_id("Location");
+  if ( !defined $locid ) { skipmsg("Location list has no ids for a glass"); return; }
+  # Warm-up GET (get_first_id) absorbs the one-time fcgi reload bounce
+  get_first_id("Full");
+
+  my $name = "TST" . time() . "øl";
+  my $tagtok = "tstq" . time();
+  my $note = "TST" . time() . "qnote";
+
+  # Insert a brew tagged with a token that appears in no name, note or style
+  my ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => "new", Name => $name, BrewType => "Beer",
+        Tags => " #$tagtok ", submit => "Insert Brew" });
+  my $loc = assert_post_redirect($status, $headers, "q-tag brew insert");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&showall=1");
+  my $brewid = id_before_text($body, "Brew", $name);
+  assert(defined $brewid, "harvested the tagged Brew id for the q filter");
+  return unless defined $brewid;
+
+  # A glass for that brew, so it appears in the main list
+  my $date = strftime("%Y-%m-%d", localtime());
+  my $time = strftime("%H:%M", localtime());
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Full", Location => $locid, Brew => $brewid, selbrewtype => "Beer",
+        date => $date, time => $time, vol => "11", alc => "4.6", pr => "50",
+        note => $note, submit => "Record" });
+  $loc = assert_post_redirect($status, $headers, "q-tag glass insert");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", $loc);
+  my $gid = id_before_text($body, "Full", $note);
+  assert(defined $gid, "harvested the new glass id from the main list");
+
+  # '#token' matches the tag
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&q=%23$tagtok");
+  assert_page_ok($status, $body, "Full q=#tag", "id='mainform'");
+  assert(scalar($body !~ /No matches for/), "q=#$tagtok matches the tagged glass");
+
+  # A bare token must not search the tags
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Full&q=$tagtok");
+  assert_page_ok($status, $body, "Full q=tag without #", "id='mainform'");
+  assert(scalar($body =~ /No matches for '\Q$tagtok\E'/),
+         "q=$tagtok (no #) does not search the tags");
+
+  # Cleanup: delete the glass, then the brew
+  if ( defined $gid ) {
+    ($status, $headers, $body) = req("POST", "$BASE_URL",
+        { o => "Full", e => $gid, submit => "Del" });
+    $loc = assert_post_redirect($status, $headers, "q-tag glass delete");
+  }
+  ($status, $headers, $body) = req("POST", "$BASE_URL",
+      { o => "Brew", e => $brewid, id => $brewid, Name => $name,
+        BrewType => "Beer", Tags => $tagtok, submit => "Delete Brew" });
+  $loc = assert_post_redirect($status, $headers, "q-tag brew delete");
+  return unless defined $loc;
+  ($status, $headers, $body) = req("GET", "$BASE_URL?o=Brew&e=$brewid");
+  assert_page_ok($status, $body, "q-tag brew edit after delete", "Oops");
+  assert(scalar($body =~ /Brew id '$brewid' not found/),
+         "deleted q-tag brew id $brewid reports not found");
+} # test_q_tag_filter
 
 sub test_location_roundtrip {
   # Plan Task 6: create a Location through the web, verify it on the Location

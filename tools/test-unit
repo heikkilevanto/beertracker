@@ -115,6 +115,7 @@ my @TESTS = (
   { name => "styles_short",      sets => [qw(quick styles)],     test => \&test_styles_short },
   { name => "postglass_curprice", sets => [qw(quick postglass)], test => \&test_postglass_curprice },
   { name => "mainlist_currency",  sets => [qw(quick mainlist)],  test => \&test_mainlist_currency },
+  { name => "mainlist_tags",      sets => [qw(quick mainlist)],  test => \&test_mainlist_tags },
   { name => "db_merge_fields",    sets => [qw(quick db)],        test => \&test_db_merge_fields },
   { name => "lr_suffixes",        sets => [qw(quick listrecords)], test => \&test_lr_suffixes },
   { name => "lr_helpers",         sets => [qw(quick listrecords)], test => \&test_lr_helpers },
@@ -306,6 +307,9 @@ sub test_util_tags {
   assert(util::clean_tags("#foo #bar") eq "foo bar", "clean_tags strips leading #");
   assert(util::clean_tags("") eq "", "clean_tags empty");
   assert(util::clean_tags(undef) eq "", "clean_tags undef");
+  # Leading/trailing whitespace (e.g. the "not user-edited" marker) must not
+  # survive into the stored value (issue #784)
+  assert(util::clean_tags(" #foo  #bar ") eq "foo bar", "clean_tags strips surrounding spaces");
 }
 
 sub test_util_filter_tokens {
@@ -718,6 +722,49 @@ sub test_mainlist_currency {
   assert(mainlist::currency_sumline_text({ code => "SEK", total => "65.00" }) eq "[65SEK]",
          "currency_sumline_text SEK keeps code (no short symbol)");
 } # test_mainlist_currency
+
+# --- mainlist.pm tag filtering (issue #784) ---
+
+sub test_mainlist_tags {
+  # has_tag_prefix: case-insensitive word-prefix match on a tag string
+  assert(mainlist::has_tag_prefix("xmas ipa", "xmas"), "has_tag_prefix exact word");
+  assert(mainlist::has_tag_prefix("xmas ipa", "xm"), "has_tag_prefix word prefix");
+  assert(mainlist::has_tag_prefix("XMAS", "xmas"), "has_tag_prefix is case-insensitive");
+  assert(!mainlist::has_tag_prefix("xmas", "mas"), "has_tag_prefix is not a substring match");
+  assert(!mainlist::has_tag_prefix("xmas", "yule"), "has_tag_prefix rejects a missing tag");
+  assert(!mainlist::has_tag_prefix("", "xmas"), "has_tag_prefix rejects empty tags");
+  assert(!mainlist::has_tag_prefix(undef, "xmas"), "has_tag_prefix rejects undef tags");
+  assert(mainlist::has_tag_prefix("xmas", ""), "bare # matches a tagged record");
+  assert(!mainlist::has_tag_prefix("", ""), "bare # does not match an untagged record");
+
+  # matching_rec: only tokens starting with '#' look at the tags
+  my $rec = { brewname => "Ebeltoft Jule-IPA", subtype => "IPA",
+              producer => "Mikkeller", tags => "xmas ipa" };
+  my $c = { qry => "#xmas" };
+  assert(mainlist::matching_rec($c, $rec), "q=#xmas matches a tagged record");
+
+  $c->{qry} = "#xma";
+  assert(mainlist::matching_rec($c, $rec), "q=#xma prefix-matches the tag");
+
+  $c->{qry} = "xmas";
+  assert(!mainlist::matching_rec($c, $rec), "q=xmas does not search the tags");
+
+  $c->{qry} = "#yule";
+  assert(!mainlist::matching_rec($c, $rec), "q=#yule misses a record lacking that tag");
+
+  $c->{qry} = "IPA #xmas";
+  assert(mainlist::matching_rec($c, $rec), "q=IPA #xmas ANDs a field token with a tag token");
+
+  $c->{qry} = "IPA #yule";
+  assert(!mainlist::matching_rec($c, $rec), "q=IPA #yule fails when the tag is missing");
+
+  # A glass with no brew has no tags at all
+  my $untagged = { brewname => "Some Beer", tags => undef };
+  $c->{qry} = "#xmas";
+  assert(!mainlist::matching_rec($c, $untagged), "q=#xmas rejects a record without tags");
+  $c->{qry} = "Some";
+  assert(mainlist::matching_rec($c, $untagged), "field tokens still match records without tags");
+} # test_mainlist_tags
 
 # --- listrecords.pm ---
 

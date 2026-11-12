@@ -25,7 +25,7 @@ use File::Copy;
 # The runner executes entries with id > globals.db_version, in list order.
 ################################################################################
 
-our $CODE_DB_VERSION = 54;  # Bump this when you add migrations
+our $CODE_DB_VERSION = 55;  # Bump this when you add migrations
 
 # Note - the description should always start with the issue number, if known.
 # Note - the function names must reflect the DB version number!
@@ -33,6 +33,8 @@ our $CODE_DB_VERSION = 54;  # Bump this when you add migrations
 our @MIGRATIONS = (
   # Keep this here, it is needed when starting from an empty database
   [1, 'create globals table', \&mig_001_create_globals_table],
+  # Issue 784 - free-form tags on brews, like persons and locations already have
+  [55, 'Add Tags column to brews and seed xmas tags', \&mig_055_add_brews_tags],
 );
 
 ################################################################################
@@ -164,6 +166,29 @@ sub mig_001_create_globals_table {
   db::execute($c, "CREATE TABLE IF NOT EXISTS globals (k TEXT PRIMARY KEY, v TEXT)");
   db::execute($c, "INSERT OR REPLACE INTO globals(k,v) VALUES('db_version','0')");
 } # mig_001_create_globals_table
+
+# Issue 784 - free-form tags on brews, space separated words.
+# Also seed the obvious ones: a name containing a word that starts with a
+# holiday keyword gets 'xmas'. A word starts at the beginning of the name or
+# after anything that is not a letter, so digits and punctuation delimit too
+# ("3XMAS" matches). Deliberately crude - false positives and negatives are
+# expected, and get fixed by hand afterwards.
+sub mig_055_add_brews_tags {
+  my $c = shift;
+  db::execute($c, "ALTER TABLE brews ADD COLUMN Tags TEXT DEFAULT ''");
+
+  my $holiday = qr/(?:^|[^A-Za-z])(?:Jule|Yule|Xmas|Christmas|Noel|Santa|Nisse)/i;
+  my $sth = db::query($c, "SELECT Id, Name FROM brews");
+  my @ids;
+  while ( my ($id, $name) = $sth->fetchrow_array ) {
+    push @ids, $id if ( defined $name && $name =~ $holiday );
+  }
+  $sth->finish;
+  foreach my $id (@ids) {
+    db::execute($c, "UPDATE brews SET Tags = 'xmas' WHERE Id = ?", $id);
+  }
+  print { $c->{log} } "migrate: tagged " . scalar(@ids) . " brews as xmas\n";
+} # mig_055_add_brews_tags
 
 
 

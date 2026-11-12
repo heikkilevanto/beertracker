@@ -16,6 +16,7 @@ our $brew_field_order = [
   [ "BrewType",        "Beer, Cider, Wine, Spirit, etc.", "r" ],
   [ "SubType",         "NEIPA, Imperial Stout, etc." ],
   [ "BrewStyle",       "Style description (West Coast IPA, etc.)" ],
+  [ "Tags",            "Space separated tags, e.g. xmas" ],
   [ "ProducerLocation","The brewery or producer" ],
   [ "Country",         "", "a" ],
   [ "Region",          "Region within the country", "a" ],
@@ -53,6 +54,7 @@ sub listbrews {
       brews.Name AS "Name_A_cont",
       brews.BrewType || ', ' || brews.SubType AS "Type_A_cont",
       r.rating_count || ';' || r.average_rating || ';' || r.comment_count AS "Stats_as=Stats",
+      brews.Tags AS "Tags_A",
       (SELECT Id || ':' || Filename FROM photos WHERE Brew = brews.Id ORDER BY Ts DESC LIMIT 1)
         AS "Photo_R3_noheader_nofilter",
 
@@ -350,7 +352,8 @@ sub editbrew {
     print "<input type='hidden' name='e' value='$p->{Id}' />\n";
     print "<input type='hidden' name='id' value='$p->{Id}' />\n";
 
-    print inputs::inputform($c, "BREWS", $p, undef, undef, undef, undef, undef, $brew_field_order);
+    print inputs::inputform($c, "BREWS", $p, undef, undef, undef, undef,
+        db::all_tags($c, "BREWS"), $brew_field_order);
 
 
     if ( $p->{Id} ne "new" ) {

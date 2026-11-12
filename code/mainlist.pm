@@ -45,6 +45,7 @@ sub glassquery {
       brews.ShortName AS shortname,
       brews.IsGeneric AS generic,
       brews.DetailsLink AS brewlink,
+      brews.Tags AS tags,
       locations.name AS producer,
       locations.Id AS prodid,
       locations.SearchLink AS prodsearchlink,
@@ -645,8 +646,24 @@ sub oneday {
 # Grep-style filtering
 ################################################################################
 
+# True if the space-separated tag string $tags has a word starting with $want
+# (case-insensitive word-prefix match, mirroring the #tag filtering in the
+# dropdowns). An empty $want matches any record that has at least one tag,
+# so a bare '#' finds all tagged records.
+sub has_tag_prefix {
+  my $tags = shift // "";
+  my $want = shift // "";
+  foreach my $tag ( split /\s+/, $tags ) {
+    next unless $tag;
+    return 1 if ( $want eq "" || lc($tag) =~ /^\Q$want\E/ );
+  }
+  return 0;
+} # has_tag_prefix
+
 # Return true if $rec matches the current filter query $c->{qry}.
 # Empty/undefined query matches all. Tokens use AND-logic across fields.
+# Tokens starting with '#' match against the brew tags only, so 'IPA #xmas'
+# works while a plain 'xmas' never searches the tags (issue #784).
 sub matching_rec {
   my $c = shift;
   my $rec = shift;
@@ -655,11 +672,16 @@ sub matching_rec {
   return 1 unless @tokens;
   foreach my $token (@tokens) {
     my $matched = 0;
-    for my $field (qw(brewname producer locname subtype brewtype shortname note tap)) {
-      my $val = $rec->{$field};
-      next unless defined $val && $val ne "";
-      $matched = 1 if ( $val =~ /\Q$token\E/i );
-      last if $matched;
+    if ( $token =~ /^#(.*)$/ ) {
+      my $want = lc($1);
+      $matched = has_tag_prefix($rec->{tags}, $want);
+    } else {
+      for my $field (qw(brewname producer locname subtype brewtype shortname note tap)) {
+        my $val = $rec->{$field};
+        next unless defined $val && $val ne "";
+        $matched = 1 if ( $val =~ /\Q$token\E/i );
+        last if $matched;
+      }
     }
     return 0 unless $matched;
   }
@@ -794,7 +816,7 @@ sub mainlist {
     $html .= qq{<input type="hidden" name="o" value="$c->{op}" />\n};
     $html .= qq{<table>\n};
     my $qry_esc = util::htmlesc($c->{qry});
-    $html .= qq{<tr><td>Filter:</td><td><input type="text" name="q" value="$qry_esc" style="width: 10em;" /></td></tr>\n};
+    $html .= qq{<tr><td>Filter:</td><td><input type="text" name="q" value="$qry_esc" style="width: 10em;" /> <span style='font-size: x-small;'>#tag = filter by tags</span></td></tr>\n};
     $html .= qq{<tr><td>Date from:</td><td><input type="text" name="date" value="$date" style="width: 8em;" /></td></tr>\n};
     $html .= qq{<tr><td><input type="submit" value="Show" /></td><td><input type="number" name="ndays" value="$original_ndays" style="width: 3em;" /> days &nbsp; <a href="$c->{url}?o=$c->{op}"><span>clr</span></a></td></tr>\n};
     $html .= qq{</table>\n};

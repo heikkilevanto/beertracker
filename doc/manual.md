@@ -259,6 +259,11 @@ entered when creating a new record, or when editing an existing one. Many dropdo
 offer filtering by tags by typing a '#'. Many lists show tags, and can be sorted
 or filtered by them.
 
+The Filter box on the main list searches tags as well, but only for words that
+start with '#': `IPA #xmas` shows IPAs tagged xmas, while `xmas` alone searches
+the regular fields (names, styles, notes) only. A lone `#` matches everything
+that has at least one tag.
+
 ---
 
 ## Editing
